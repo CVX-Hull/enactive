@@ -1,3 +1,9 @@
+---
+owner: maintainer
+review_trigger: Product scope, entry points or setup changes
+status: active
+---
+
 # CDDA Player
 
 A local harness for real **Cataclysm: Dark Days Ahead** with a normal graphical

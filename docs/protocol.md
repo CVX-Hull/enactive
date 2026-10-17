@@ -1,7 +1,12 @@
+---
+owner: maintainer
+review_trigger: Native bridge, controller, input, observation or skill change
+status: active
+---
+
 # Bridge and guarded-play contract
 
-Owner: maintainer. Status: active. Protocol version: 1.
-Review trigger: native bridge, controller, input, observation or skill change.
+Protocol version: 1.
 
 This is the detailed current contract supporting [architecture](architecture.md).
 Authority rules are [S-PROTOCOL](engineering.md#s-protocol-command-and-observation-authority).

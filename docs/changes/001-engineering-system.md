@@ -1,3 +1,10 @@
+---
+date: '2026-10-17'
+owner: lead
+scope: Change brief 001 — A maintainable, reviewable engineering system
+status: historical
+---
+
 # Change brief 001 — A maintainable, reviewable engineering system
 
 Owner: lead. Status: implemented and verified locally. Authorized by the user's request to implement

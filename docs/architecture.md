@@ -1,7 +1,12 @@
+---
+owner: maintainer
+review_trigger: Boundary, authority, supported behavior or deployment change
+status: active
+---
+
 # Current architecture
 
-Owner: maintainer. Status: active implemented MVP architecture.
-Review on boundary, authority, supported behavior or deployment change.
+Implemented MVP architecture.
 Protocol version: 1. Dated verification: [MVP acceptance](acceptance/2026-10-17-mvp.md).
 
 ## Scope and responsibilities
@@ -38,6 +43,43 @@ dispatch; it cannot cancel an already-started engine activity. Raw upstream debu
 screens outside supported input contexts may need native dismissal. A service
 restart retires undispatched work without replay; a game restart invalidates old
 session authority. Full details: [protocol and guarded play](protocol.md).
+
+## Action and recovery views
+
+These are **current behavior** explanations for the operator and maintainer;
+[protocol](protocol.md) owns the detailed contract. They summarize the implemented
+flow, not a new API or fresh native verification.
+
+### What happens when the agent acts?
+
+![Current action sequence: observed authority is checked before input; a ready response requires interpretation, while a timeout freezes dispatch.](diagrams/action.svg)
+
+Read top to bottom: vertical columns identify responsibilities; solid arrows are
+requests/input and dashed arrows are observations/results. The two alternative
+outcomes are mutually exclusive paths for this request. The controller obtains
+current authority but rejects a stale planner choice instead of silently updating
+it. The native bridge validates again before delivery. A rejection dispatches no
+input. The eligible next boundary can be a prompt: `ready` does not prove success.
+After timeout, observe to reconcile and explicitly resume; never replay blindly.
+The spectator shows the returned frame/state. [Editable sequence](diagrams/action.mmd).
+
+### How do I recover control?
+
+![Current recovery workflow: reconcile after startup or uncertainty, remain paused, explicitly resume, and pause or take over when needed.](diagrams/recovery.svg)
+
+Rounded boxes are operator workflow states; arrow labels are the conditions that
+change them. The initial dot marks controller startup/restart; attached notes
+state limits. This is a workflow summary, not an exhaustive combination of internal
+flags. Paused dispatch can coexist with an unresolved input; its timeout still
+requires reconciliation. Successful observation restores current knowledge, not
+proof of the prior objective. Resume must succeed with current authority; concurrent
+pause/takeover can prevent it. If observation fails, remain frozen and inspect the
+native window; dismiss unsupported screens there if necessary. A game restart
+invalidates old session authority. No arrow replays an uncertain action.
+
+Pause/takeover stops **new remote dispatch**. An already-running game activity
+may continue and require native interruption. Follow the [recovery procedure](runbook.md#pause-timeout-and-recovery)
+for operational steps. [Editable state view](diagrams/recovery.mmd).
 
 ## Observation and deployment boundaries
 

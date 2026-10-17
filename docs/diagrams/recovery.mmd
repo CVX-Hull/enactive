@@ -1,0 +1,24 @@
+---
+title: Current recovery — restore knowledge before control
+---
+stateDiagram-v2
+  accTitle: Current operator recovery workflow
+  accDescr: Startup or an uncertain transport outcome requires reconciliation. After a fresh eligible observation, remote dispatch stays paused until explicit resume succeeds. Pause or native input disables further dispatch. A pending request can still time out while paused. Pause does not cancel an already-running game activity; native interruption may be necessary. No recovery path automatically replays an action.
+  direction TB
+  state "Reconciliation required" as Frozen
+  state "Remote dispatch paused" as Paused
+  state "Remote dispatch enabled" as Enabled
+  [*] --> Frozen: Controller starts or restarts
+  Frozen --> Paused: Eligible observe succeeds after any pending deadline
+  Paused --> Enabled: Explicit resume accepted with current authority
+  Enabled --> Paused: Pause or native takeover
+  Enabled --> Frozen: Dispatch outcome unknown
+  Paused --> Frozen: Pending input times out or transport fails
+  note right of Frozen
+    Observe current state.
+    Never replay uncertain input.
+  end note
+  note right of Paused
+    Existing activity can continue.
+    Use native interruption if needed.
+  end note

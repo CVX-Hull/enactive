@@ -1,0 +1,44 @@
+{
+  "theme": "base",
+  "fontFamily": "Open Sans",
+  "deterministicIds": true,
+  "deterministicIDSeed": "cdda-player",
+  "themeVariables": {
+    "fontSize": "18px",
+    "primaryColor": "#eaf3f5",
+    "primaryTextColor": "#182f3b",
+    "primaryBorderColor": "#426676",
+    "lineColor": "#426676",
+    "secondaryColor": "#f8f3df",
+    "tertiaryColor": "#f5f7f8",
+    "noteBkgColor": "#f8f3df",
+    "noteTextColor": "#182f3b",
+    "fontFamily": "Open Sans",
+    "labelBoxBkgColor": "#eaf3f5",
+    "labelTextColor": "#182f3b",
+    "actorBkg": "#eaf3f5",
+    "signalTextColor": "#182f3b"
+  },
+  "flowchart": {
+    "htmlLabels": false,
+    "curve": "linear",
+    "nodeSpacing": 40,
+    "rankSpacing": 65,
+    "wrappingWidth": 300
+  },
+  "sequence": {
+    "useMaxWidth": true,
+    "actorFontSize": 18,
+    "messageFontSize": 17,
+    "noteFontSize": 17,
+    "wrap": true,
+    "width": 160,
+    "mirrorActors": false,
+    "actorFontFamily": "Open Sans",
+    "messageFontFamily": "Open Sans",
+    "noteFontFamily": "Open Sans"
+  },
+  "state": {
+    "useMaxWidth": true
+  }
+}

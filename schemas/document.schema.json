@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Document stewardship metadata",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "owner",
+    "status"
+  ],
+  "properties": {
+    "owner": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "status": {
+      "enum": [
+        "active",
+        "proposed",
+        "historical",
+        "superseded"
+      ]
+    },
+    "review_trigger": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "scope": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "replacement": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "enum": [
+              "active",
+              "proposed"
+            ]
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "review_trigger"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "historical"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "date",
+          "scope"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "status": {
+            "const": "superseded"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "replacement",
+          "scope"
+        ]
+      }
+    }
+  ]
+}

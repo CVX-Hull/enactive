@@ -1,3 +1,10 @@
+---
+date: '2026-10-17'
+owner: maintainer
+scope: ADR 003 — Reuse established development controls
+status: historical
+---
+
 # ADR 003 — Reuse established development controls
 
 Owner: maintainer. Status: accepted after local integrated verification, 2026-10-17.

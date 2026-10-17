@@ -1,0 +1,25 @@
+---
+title: Current action flow — acknowledgment is not success
+---
+sequenceDiagram
+  accTitle: Current bounded action and its possible outcome
+  accDescr: The planner chooses from an observation. The controller checks current authority without refreshing a stale choice. The native bridge validates and dispatches normal input. A ready response means another input boundary, not objective success. A deadline produces uncertainty and frozen remote dispatch; no automatic retry.
+  participant P as Codex planner
+  participant C as Controller
+  participant B as Native bridge
+  participant G as CDDA engine
+  P->>C: Action + observed session/revision
+  C->>B: Observe current input boundary
+  B-->>C: Current frame and authority
+  Note over C,B: Reject stale choices, pause or invalid input
+  C->>B: Valid input + identity + expiry
+  B->>G: Normal input at eligible boundary
+  alt Next eligible input boundary arrives
+    G-->>B: Rendered result or prompt
+    B-->>C: ready + new frame and state
+    C-->>P: Result to interpret
+    Note over P,C: Verify the objective from observation
+  else Deadline or transport failure
+    C-->>P: Outcome unknown, dispatch frozen
+    Note over C,G: Observe to reconcile, never replay blindly
+  end

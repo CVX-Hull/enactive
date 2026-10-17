@@ -1,7 +1,13 @@
+---
+owner: maintainer
+review_trigger: Toolchain, dependency pins, setup stages or checks change
+status: active
+---
+
 # Local setup and checks
 
 The controller uses Python's standard library. Use Python 3.12 or newer and an
-existing Node.js runtime for JavaScript syntax checks. Native builds require
+existing Node.js 22.13+ runtime for JavaScript and diagram checks. Native builds require
 macOS, existing Xcode command-line tools (`clang++`, `make`, `hdiutil`, `ditto`,
 `otool`, `install_name_tool`, `codesign`), and enough disk space for roughly 1 GB
 of unpacked game source plus several GB of compiler output. Setup never installs
@@ -56,6 +62,46 @@ UV_CACHE_DIR="$PWD/.cache/uv" UV_PYTHON_DOWNLOADS=never uv pip compile --upgrade
 The current resolution/install was verified on Python 3.14/macOS. CI defines a
 Python 3.14/Linux install but has not run remotely. Other interpreter/host combinations
 require their own validation before a support claim.
+
+## Install and maintain visual documentation tools
+
+From this repository root, using the existing Node.js 22.13+ and npm:
+
+```sh
+npm --userconfig /dev/null --cache "$PWD/.cache/npm" ci --ignore-scripts --no-audit --no-fund
+.venv/bin/python tools/diagrams.py --install-browser
+```
+
+`package-lock.json` pins packages/integrity; the pinned Puppeteer version selects
+Chrome 155.0.8059.79. `.puppeteerrc.cjs` keeps browser downloads and temporary profiles
+under `.cache/`. Package install scripts are disabled; the second command is the
+explicit browser download through the local Puppeteer CLI. The wrapper clears
+ambient Puppeteer overrides for both installation and rendering, and rejects
+symlinks that send outputs, receipts or caches outside the checkout before writing.
+No global npm packages, system browser changes, OS
+package installation or background service is needed. Keep runtime caches local;
+checks never fetch dependencies. Headless rendering may need permission in a
+restricted execution sandbox. A denied launch is a failed check, not a passed render.
+
+```sh
+# Change .mmd sources or render config, then regenerate and inspect the SVGs:
+.venv/bin/python tools/diagrams.py --write
+# Read-only with respect to tracked files: checks hashes and renders into .cache
+.venv/bin/python tools/diagrams.py
+# Forecast maintenance without modifying records:
+.venv/bin/python tools/governance.py --as-of 2027-01-16
+```
+
+The forecast deliberately fails if the chosen date is after a control's due date;
+it does not replace today's common check. Review the control and record evidence
+before updating its due date. The generated maintenance table is in [controls](controls.md#maintenance).
+
+For a deliberate renderer upgrade, edit exact direct versions in `package.json`,
+run the same local npm command with `install` instead of `ci`, review lock changes
+and upstream notices, install the selected browser, regenerate/inspect diagrams,
+and run the common lane including real-renderer rejection. Avoid global installs
+or an unpinned `npx` fallback. Other hosts must be verified before support claims.
+See [ADR 004](decisions/004-documentation-controls.md) for costs and limits.
 
 ## Explicit native stages
 
@@ -137,7 +183,12 @@ success. Exact acceptance is tracked in
 The common lane also runs governance, dependency-boundary and protocol-version
 checks described in the [control map](controls.md). To update the generated map
 after changing its registry, run `.venv/bin/python tools/governance.py --write`; the normal
-check fails on stale generated output. This does not establish native compatibility.
+check fails on stale generated output. It also validates document YAML metadata,
+control lifecycle/references/review dates and diagram receipts, and renders all
+Mermaid sources with the local browser. Neither metadata nor rendering establishes
+semantic truth or native compatibility. SVG byte equality across hosts is not
+required: the receipt checks source/config/tool-lock and output identity, while
+rendering verifies the local renderer can process the current source.
 
 This compiles Python syntax in memory, runs selected Ruff correctness diagnostics,
 checks Import Linter dependency contracts, checks browser JavaScript syntax with

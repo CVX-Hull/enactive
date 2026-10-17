@@ -1,7 +1,12 @@
+---
+owner: maintainer
+review_trigger: Behavior, control failures, release or constraints change
+status: active
+---
+
 # Engineering standards and workflow
 
-Owner: maintainer; lead adjudicates design and verification. Status: active.
-Review on changed behavior, control failures, release or changed constraints.
+The lead adjudicates design and verification.
 Principles are in the [charter](charter.md); implemented controls and gaps are in
 [controls](controls.md). Each numbered standard below is mandatory in its scope.
 An exception needs scope, reason, owner and revisit/expiry in [work](work.md).
@@ -121,12 +126,45 @@ frequency; no universal line/page count or documentation-volume target applies.
 Use a diagram only when it clarifies a boundary or interaction. Generate mechanical
 reference from an existing authoritative structure when it reduces duplication.
 
+Stewardship metadata lives in YAML front matter, checked by `tools/documents.py`:
+all Markdown in docs/ and README/AGENTS/NOTICE identifies owner and status. Active
+or proposed material needs a review trigger; historical records need date and
+scope; superseded material needs scope and a repository-relative replacement.
+Proposals are not implemented contracts. Accepted ADRs are dated rationale;
+architecture/protocol remain authoritative about current behavior. Metadata is
+not a claim of accuracy. Review current guidance at C-MAINTENANCE's recorded due
+date and earlier on its page-specific trigger; do not refresh dates without work.
+
+Choose explanations for understanding, procedures for doing, reference for exact
+contracts and walkthroughs for learning. Add these when a real reader need exists;
+do not create empty categories. Significant change briefs show before/after user
+consequences, affected boundaries, alternatives and evidence. Use capability tables,
+dated screenshots or demonstrations when they convey more than additional prose.
+
+### Visual explanations
+
+Each diagram must answer a named reader question at a stated scope, with a title
+and current/proposed/historical status in its host page. Explain element types,
+arrow meanings and abbreviations. Label relationships and authority boundaries;
+separate logical responsibilities from actual process boundaries. Preserve relevant
+failure/recovery paths and limits, including uncertainty. Never use color alone
+to convey meaning. Provide a text equivalent and an authoritative contract link.
+
+Use versioned Mermaid sources and generated SVGs, with accessible titles and
+descriptions. Update source, rendering and explanatory text together. Render with
+the pinned local tool; inspect the result at ordinary window width for readable
+labels, clipping and ambiguity. For a changed boundary/flow, an independent reviewer
+checks the visual against the contract and relevant implementation. The lead
+records the inspection in acceptance; neither parsing nor hashes prove meaning.
+Retire or supersede visuals with their parent document. Avoid duplicate copies of
+the same diagram and extra detail that forces the user to reconstruct the big picture.
+
 The user must be able to find purpose, current capabilities/limits, architectural
 rationale, next change/tradeoffs and supporting evidence from the overview and
 its immediate links. Preserve consequential limitations in plain language.
 Retire inaccurate guidance; mark superseded decisions with replacements and keep
 useful history. Archived plans/reports are not current instructions.
-Controls: C-GOVERNANCE, C-USABILITY, C-REVIEW, C-MAINTENANCE.
+Controls: C-GOVERNANCE, C-USABILITY, C-REVIEW, C-MAINTENANCE, C-VISUAL.
 
 ## S-WORK Reviewable and proportionate changes
 
@@ -160,6 +198,41 @@ critical controls for negative-case tests demonstrating detection of violations.
 Controls: C-GOVERNANCE, C-PORTABLE, C-NATIVE, C-RELEASE, C-MAINTENANCE.
 
 ## Workflow and maintenance
+
+### Control lifecycle and evidence
+
+The registry owns each control's definition and latest maintenance record. Its
+generated [maintenance table](controls.md#maintenance) is the review entry point.
+`proposed` means not relied upon; `active` means required in mapped standards;
+`deprecated` means no standard may rely on it while its replacement/removal is
+managed; `retired` preserves rationale/history and has no periodic review duty.
+Only active controls support standards. Activation needs an owner, defined scope,
+mechanism, failure response, limitations, maintenance review and acceptance evidence
+appropriate to its claims. Deprecation/retirement needs rationale and any replacement;
+replace standard mappings in the same change. Replacements cannot point to self or
+form cycles. Changes are reviewed in Git; snapshot checks do not prove who approved
+a transition. Re-activation requires a fresh review rather than reviving an old pass.
+
+Keep three facts distinct: the control exists; it was exercised with a particular
+result; its effectiveness has been assessed within a stated scope. `last_exercise`
+links to a dated execution/review result recording candidate, environment, lane,
+outcome and limits, not merely implementation source. Null means no recorded exercise.
+Maintenance review records findings, effectiveness, cost and follow-up with evidence.
+It can be unassessed; a fresh metadata review must not refresh native execution dates.
+Exercise and maintenance review are independent events. Dated reports retain prior
+observations when the latest record changes. A failure remains in history after repair.
+
+Active/deprecated controls need a next review within 90 days of the recorded review,
+with event triggers requiring earlier work. Common checks fail **after** the due date.
+The standalone `tools/governance.py --as-of YYYY-MM-DD` forecasts maintenance only;
+it never renews records and cannot substitute for the common command's current-date
+check. No check or background job edits dates automatically. At an overdue failure,
+the owner reviews the control, records evidence/findings/actions, then chooses a
+justified new date or retires/replaces it. Do not advance dates just to pass a check.
+An exception in work identifies scope, owner, expiry, reason and mitigation; it
+does not silently suppress a failed mechanical gate or override user constraints.
+
+### Change and review cadence
 
 Define outcome/failure conditions → inspect real interfaces → brief/design where
 needed → implement a cohesive slice → run relevant checks → review risk and

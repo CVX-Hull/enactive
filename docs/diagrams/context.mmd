@@ -1,0 +1,18 @@
+---
+title: Current system — who decides and who controls
+---
+flowchart TB
+  accTitle: Current CDDA Player system context
+  accDescr: You direct Codex and can pause the harness or take over in the native game. Codex chooses bounded inputs from observations. The local harness validates inputs and shows actual rendered frames. CDDA alone decides game outcomes. Arrows name information or control flow; boxes are responsibilities, not all separate processes.
+  U["You · operator\nSet direction; retain control"]
+  P["Codex · active chat\nChoose bounded actions"]
+  H["Local harness\nValidate inputs; show real frames"]
+  G["Windowed CDDA\nDecide and render outcomes"]
+  U -->|Goals and direction| P
+  P -->|Bounded action from observed state| H
+  H -->|Frames and visible state| P
+  H -->|Validated request via local files| G
+  G -->|Actual frames and input state| H
+  H -->|Browser spectator view| U
+  U -->|Pause remote dispatch| H
+  U -->|Native keys: takeover| G

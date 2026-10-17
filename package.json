@@ -1,0 +1,11 @@
+{
+  "name": "cdda-player-docs",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Project-local documentation rendering; no runtime game dependencies",
+  "engines": {"node": ">=22.13.0"},
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "12.0.0",
+    "puppeteer": "25.14.0"
+  }
+}

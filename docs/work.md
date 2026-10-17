@@ -1,18 +1,22 @@
+---
+owner: lead
+review_trigger: Each integration checkpoint and maintenance finding
+status: active
+---
+
 # Active work and decisions
 
-Owner: lead. Status: current board. Review at each integration checkpoint.
 Current product summary: [overview](overview.md). Historical MVP outcomes and
 failures: [2026-10-17 acceptance](acceptance/2026-10-17-mvp.md).
 
 ## Latest completed increment
 
-[Brief 001](changes/001-engineering-system.md) is verified: charter and progressive
-overview, current architecture/protocol and decision history, ten standards mapped
-to eleven controls, mature development tools, historical provenance and operating
-maintenance practices. See [acceptance](acceptance/2026-10-17-engineering-system.md)
-for execution scope, independent review, failed attempts and remaining limitations.
-
-No implementation slice is active. No current blocker or approved exception.
+[Brief 002](changes/002-documentation-review.md) is verified: documentation metadata,
+control lifecycle and review records, local overdue checks, three rendered visual
+explanations and a first-session walkthrough. See [acceptance](acceptance/2026-10-17-documentation-review.md)
+for checks, independent findings/fixes, visual inspection and evidence limits.
+The consolidated [project goal](goal.md) includes the previously accepted MVP and
+engineering-system increments. No current blocker or approved exception.
 The next proposed product slice is native activity interruption and error-screen
 recovery; it requires its own design/acceptance and is not started by this board.
 
@@ -32,8 +36,11 @@ recovery; it requires its own design/acceptance and is not started by this board
 On changed behavior: update authoritative contract, controls, guide and overview
 as relevant. At release and before resumed work after dormancy: inspect high-risk
 procedures, exceptions, evidence availability and dependency/research freshness.
-During active development review external drift every 90 days; next baseline due
-2027-01-15, earlier on relevant change. No scheduled automation is installed.
+During active development review external drift within the dates in the
+[maintenance table](controls.md#maintenance), earlier on relevant change. No
+scheduled automation is installed. The first baseline is not longitudinal evidence
+of effectiveness. Track the browser/dependency burden and whether the three visuals
+actually reduce review questions; revisit the toolchain if costs outweigh that value.
 
 Record an exception here with standard, exact scope, reason, accountable owner,
 expiry/revisit, mitigation and disposition. Never waive user constraints or erase

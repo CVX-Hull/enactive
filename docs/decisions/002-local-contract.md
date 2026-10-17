@@ -1,3 +1,10 @@
+---
+date: '2026-10-17'
+owner: maintainer
+scope: ADR 002 — Local serialized bridge and small service
+status: historical
+---
+
 # ADR 002 — Local serialized bridge and small service
 
 Owner: maintainer. Status: accepted; reconstructed from the implemented MVP on

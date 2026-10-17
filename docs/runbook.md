@@ -1,7 +1,12 @@
+---
+owner: maintainer
+review_trigger: Launch, control, recovery, recording or storage changes
+status: active
+---
+
 # Operate, recover and retain evidence
 
-Owner: maintainer. Status: active procedure. Review on launch, control, recovery,
-recording or storage changes. Supported scope: one prepared local macOS game.
+Supported scope: one prepared local macOS game.
 For fresh installation use [setup](setup.md); use [overview](overview.md) for limits.
 
 ## Start and observe

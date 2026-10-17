@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import ast
+from datetime import date
 import json
 from pathlib import Path, PurePosixPath
 import re
@@ -54,10 +55,63 @@ def schema_errors(root: Path, name: str, data: object, label: str) -> list[str]:
             for error in sorted(validator.iter_errors(data), key=lambda e: str(e.json_path))]
 
 
-def check_registry(root: Path, registry: dict) -> list[str]:
+def check_lifecycle(root: Path, controls: list[dict], as_of: date) -> list[str]:
+    """Validate current state and recorded chronology; no history or execution proof."""
+    errors = []
+    by_id = {control["id"]: control for control in controls}
+    for control in controls:
+        identifier = control["id"]
+        status = control["status"]
+        if status in ("deprecated", "retired") and not control["rationale"]:
+            errors.append(f"{identifier}: {status} requires rationale")
+        replacement = control["replacement"]
+        if replacement == identifier:
+            errors.append(f"{identifier}: replacement cannot reference self")
+        elif replacement is not None and replacement not in by_id:
+            errors.append(f"{identifier}: unknown replacement {replacement}")
+        visited = {identifier}
+        cursor = replacement
+        while cursor in by_id:
+            if cursor in visited:
+                errors.append(f"{identifier}: replacement cycle")
+                break
+            visited.add(cursor)
+            cursor = by_id[cursor]["replacement"]
+        exercise = control["last_exercise"]
+        review = control["maintenance_review"]
+        due = date.fromisoformat(control["next_review"]) if control["next_review"] else None
+        for field, record in (("last_exercise", exercise), ("maintenance_review", review)):
+            if record is None:
+                continue
+            if date.fromisoformat(record["date"]) > as_of:
+                errors.append(f"{identifier}: {field} date is in the future as of {as_of}")
+            for reference in record["evidence"]:
+                if not local_reference(root, reference):
+                    errors.append(f"{identifier}: invalid or missing {field} evidence reference {reference!r}")
+        if status in ("active", "deprecated"):
+            if review is None:
+                errors.append(f"{identifier}: {status} requires maintenance review")
+            if due is None:
+                errors.append(f"{identifier}: {status} requires next_review")
+            elif as_of > due:
+                errors.append(f"{identifier}: maintenance overdue since {due} (as of {as_of})")
+        if review is not None:
+            reviewed = date.fromisoformat(review["date"])
+            if due is not None:
+                if due < reviewed:
+                    errors.append(f"{identifier}: next_review is before maintenance review")
+                if status in ("active", "deprecated") and (due - reviewed).days > 90:
+                    errors.append(f"{identifier}: next_review exceeds 90 days after maintenance review")
+        elif due is not None:
+            errors.append(f"{identifier}: next_review requires a maintenance review")
+    return errors
+
+
+def check_registry(root: Path, registry: dict, *, as_of: date | None = None) -> list[str]:
     errors = schema_errors(root, "control-registry", registry, "registry")
     if errors:
         return errors
+    errors += check_lifecycle(root, registry["controls"], as_of or date.today())
     principles = re.findall(r"^## (P-[A-Z]+)\b", (root / "docs/charter.md").read_text(), re.M)
     if len(principles) != len(set(principles)):
         errors.append("charter: duplicate principle ID")
@@ -67,6 +121,7 @@ def check_registry(root: Path, registry: dict) -> list[str]:
         errors.append("engineering: duplicate or missing mandatory standard IDs")
     mappings = document_mappings(engineering)
     control_ids = [control["id"] for control in registry["controls"]]
+    active_ids = {control["id"] for control in registry["controls"] if control["status"] == "active"}
     for control in registry["controls"]:
         for reference in control["evidence"]:
             if not local_reference(root, reference):
@@ -86,12 +141,14 @@ def check_registry(root: Path, registry: dict) -> list[str]:
             for item in standard[field]:
                 if item not in known:
                     errors.append(f"{identifier}: unknown {field} reference {item}")
+                elif field == "controls" and item not in active_ids:
+                    errors.append(f"{identifier}: non-active control reference {item}")
             used.update(standard[field])
         if (standard["principles"], standard["controls"]) != mappings.get(identifier):
             errors.append(f"{identifier}: registry mapping differs from engineering.md")
     if seen != STANDARDS:
         errors.append(f"registry: mandatory standard mapping mismatch; missing={sorted(STANDARDS - seen)}, unknown={sorted(seen - STANDARDS)}")
-    for label, orphaned in (("control", set(control_ids) - used_controls),
+    for label, orphaned in (("control", active_ids - used_controls),
                             ("principle", set(principles) - used_principles)):
         if orphaned:
             errors.append(f"registry: orphan {label} IDs {sorted(orphaned)}")
@@ -99,8 +156,10 @@ def check_registry(root: Path, registry: dict) -> list[str]:
 
 
 def render_map(registry: dict) -> str:
-    lines = ["# Control map", "", "<!-- Generated by tools/governance.py --write; edit control-registry.json. -->", "",
-             "Owner: maintainer. Status: implemented control inventory, not a test-run report.",
+    lines = ["---", "owner: maintainer", "status: active",
+             "review_trigger: Changed standards, mechanisms, evidence or coverage", "---", "",
+             "# Control map", "", "<!-- Generated by tools/governance.py --write; edit control-registry.json. -->", "",
+             "This is an implemented control inventory, not a test-run report.",
              "Review on changed standards, mechanisms, evidence or coverage. The",
              "[registry](control-registry.json) owns these mappings; [engineering](engineering.md)",
              "owns mandatory wording and [charter](charter.md) owns principles.", "",
@@ -111,6 +170,18 @@ def render_map(registry: dict) -> str:
     for standard in registry["standards"]:
         identifier = standard["id"]
         lines.append(f"| {identifier} | {', '.join(standard['principles'])} | {', '.join(standard['controls'])} |")
+    lines += ["", "## Maintenance", "",
+              "Dates are recorded evidence dates. Normal checks evaluate due dates as of the printed",
+              "evaluation date; they do not renew records. Use `--as-of YYYY-MM-DD` to forecast.",
+              "Active and deprecated controls fail after their due date. Event triggers can require earlier review.", "",
+              "| Control | Lifecycle | Last exercise | Maintenance review | Effectiveness | Next review |",
+              "| --- | --- | --- | --- | --- | --- |"]
+    for control in registry["controls"]:
+        exercise, review = control["last_exercise"], control["maintenance_review"]
+        lines.append(f"| {control['id']} | {control['status']} | "
+                     f"{exercise['date'] if exercise else 'unrecorded'} | "
+                     f"{review['date'] if review else 'unreviewed'} | "
+                     f"{review['effectiveness'] if review else 'unassessed'} | {control['next_review'] or 'none'} |")
     lines += ["", "## Mechanisms and coverage", ""]
     for control in registry["controls"]:
         lines += [f"### {control['id']} — {control['name']} ({control['mode']})", "",
@@ -121,6 +192,24 @@ def render_map(registry: dict) -> str:
                   "Evidence / implementation: " + ", ".join(
                       f"[{ref}](../{ref})" for ref in control["evidence"]) + ".", "",
                   f"Coverage gap: {control['limitations']}", ""]
+        lines += [f"Lifecycle: {control['status']}. Rationale: {control['rationale'] or 'none recorded'}. "
+                  f"Replacement: {control['replacement'] or 'none'}.", ""]
+        exercise = control["last_exercise"]
+        if exercise is None:
+            lines += ["Last exercise: unrecorded; no execution claim.", ""]
+        else:
+            lines += [f"Last exercise: {exercise['date']}. Outcome: {exercise['outcome']}",
+                      f"Scope: {exercise['scope']}",
+                      "Exercise evidence: " + ", ".join(f"[{ref}](../{ref})" for ref in exercise["evidence"]) + ".", ""]
+        review = control["maintenance_review"]
+        if review is None:
+            lines += ["Maintenance review: unrecorded.", ""]
+        else:
+            lines += [f"Maintenance review: {review['date']}. Effectiveness: {review['effectiveness']}.",
+                      f"Findings: {review['findings']}", f"Cost: {review['cost']}",
+                      f"Follow-up: {review['follow_up']}",
+                      "Review evidence: " + ", ".join(f"[{ref}](../{ref})" for ref in review["evidence"]) + ".", ""]
+        lines += [f"Next review: {control['next_review'] or 'none'}.", ""]
     lines += ["## Interpreting results", "",
               "Run `.venv/bin/python tools/check.py` for the portable lane; update this map with",
               "`.venv/bin/python tools/governance.py --write`. The latter validates before writing and",
@@ -204,13 +293,26 @@ def check_manifests(root: Path) -> list[str]:
     return errors
 
 
+def parse_as_of(value: str) -> date:
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", value):
+        raise argparse.ArgumentTypeError("expected YYYY-MM-DD")
+    try:
+        return date.fromisoformat(value)
+    except ValueError as error:
+        raise argparse.ArgumentTypeError(str(error)) from error
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--write", action="store_true", help="regenerate docs/controls.md after validation")
+    parser.add_argument("--as-of", type=parse_as_of, default=None,
+                        help="evaluate maintenance as of YYYY-MM-DD (default: today); never renew records")
     args = parser.parse_args(argv)
     try:
+        as_of = args.as_of or date.today()
+        print(f"Maintenance evaluated as of {as_of}.", flush=True)
         registry = json.loads((ROOT / "docs/control-registry.json").read_text())
-        errors = check_registry(ROOT, registry)
+        errors = check_registry(ROOT, registry, as_of=as_of)
         errors += check_protocol(ROOT) + check_manifests(ROOT)
         if not args.write and not errors:
             errors += check_generated(ROOT, registry)

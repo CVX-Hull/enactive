@@ -1,3 +1,10 @@
+---
+date: '2026-10-17'
+owner: maintainer
+scope: ADR 001 — Native Tiles integration
+status: historical
+---
+
 # ADR 001 — Native Tiles integration
 
 Owner: maintainer. Status: accepted; extracted from the implemented MVP design

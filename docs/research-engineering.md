@@ -1,3 +1,9 @@
+---
+owner: maintainer
+review_trigger: Requirements or process change; release or active periodic maintenance
+status: active
+---
+
 # Engineering research and project consequences
 
 Owner: maintainer. Status: evidence synthesis reviewed 2026-10-17.
@@ -65,3 +71,25 @@ retains project relationships, file containment and narrow protocol forms. Local
 negative fixtures test our configuration, not a reimplementation of those tools.
 Dependencies bring update/compatibility obligations, tracked by pinned versions,
 hashes, source/license provenance and the existing maintenance review.
+
+## Documentation and visual review increment — 2026-10-17
+
+The lead re-read the primary pages below, checked actual local APIs and reviewed
+the controller/native sources before drawing current behavior. These are design
+inputs, not experimental evidence that our new process improves productivity.
+
+| Source / scope | Supported guidance | Application and boundary |
+| --- | --- | --- |
+| [C4 notation](https://c4model.com/diagrams/notation) and [review checklist](https://c4model.com/diagrams/checklist), full pages | Identify diagram scope, elements and relationships; make notation understandable | Context, sequence and recovery views answer different questions; plain-language legends and manual source-based review; no requirement to draw every C4 level |
+| [Google documentation practices](https://google.github.io/styleguide/docguide/best_practices.html), full page re-read | Keep useful material current with code and remove misleading duplication | Same-change source/render/text maintenance; historical briefs cannot replace current contracts |
+| [Diataxis application](https://diataxis.fr/how-to-use-diataxis/), full guide re-read | Improve around reader needs instead of filling a preplanned taxonomy | Add a real first-session walkthrough; keep operating instructions and protocol details in their existing homes |
+| [DORA documentation quality](https://dora.dev/capabilities/documentation-quality/), capability synthesis | Clarity, findability and reliability are documentation quality dimensions | Review user questions and operating tasks; no causal productivity percentage or doc-count target inferred for this project |
+| [Mermaid CLI release](https://github.com/mermaid-js/mermaid-cli/releases/tag/12.0.0), release notes and installed package | Browser-backed rendering, embedded fonts and explicit runtime requirements | Pin packages/browser; inspect SVGs and detect stale inputs/artifacts; parser success cannot establish useful meaning |
+| [Python Frontmatter](https://python-frontmatter.readthedocs.io/en/latest/), usage/API | Structured metadata can be parsed with an established library | Use YAML and JSON Schema, leaving project-specific status and reference rules bounded |
+
+Control lifecycle states, the latest-record/history split and the 90-day bound are
+our proportional design choices. No source establishes them as universally optimal.
+Maintenance findings must distinguish a successful negative fixture, a reviewer
+walkthrough and long-term operational effectiveness. The latter remains unmeasured.
+[ADR 004](decisions/004-documentation-controls.md) records tooling costs, alternatives,
+the cross-platform freshness contract and reconsideration triggers.

@@ -1,3 +1,9 @@
+---
+owner: maintainer
+review_trigger: Engineering standards or contributor workflow changes
+status: active
+---
+
 # CDDA Player
 
 Start with [the overview](docs/overview.md), then [engineering standards](docs/engineering.md).

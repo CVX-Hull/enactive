@@ -3,3 +3,4 @@ jsonschema
 import-linter
 ruff
 markdown-it-py
+python-frontmatter

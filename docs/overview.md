@@ -1,7 +1,11 @@
+---
+owner: maintainer
+review_trigger: Capabilities, guarantees, architecture, priorities or decisions change
+status: active
+---
+
 # Project overview
 
-Owner: maintainer. Status: current product summary, reviewed 2026-10-17.
-Update when capabilities, guarantees, architecture, priorities or decisions change.
 This is a versioned overview, not a live process-status page.
 
 ## What we are building
@@ -11,22 +15,20 @@ and retain control. The harness makes observations, actions and uncertainty visi
 It currently needs Codex in an active chat to choose goals and interpret scenes.
 The service alone does not play autonomously.
 
+The consolidated implementation [goal](goal.md) records the full requested scope.
 Direction and constraints live in the [charter](charter.md). This page summarizes
 current behavior; detailed promises live in [architecture](architecture.md).
 
 ## How it works
 
-```text
-You ── goals and direction ──> Codex planner
-You ── pause / native takeover ─────────────────────────────┐
-Codex ── observed-state-bound request ──> Controller         │
-                                         │ validates       │
-                                         v                 v
-                                     Game bridge ──> Real CDDA
-                                         ^                 │
-                                         └── input state ──┘
-Real rendered frames + state ──> Controller ──> Spectator ──> You
-```
+Current system context: **who decides, what you see, and where you retain control**.
+
+![Current CDDA Player context: you direct Codex, the local harness validates inputs and shows real frames, and CDDA decides outcomes.](diagrams/context.svg)
+
+Boxes show responsibilities, not four independent local processes. Arrows name
+information/control flow. The harness contains the Python controller and browser
+spectator; the native bridge runs inside CDDA. Codex planning needs this active
+chat. [Editable diagram](diagrams/context.mmd).
 
 CDDA decides game outcomes. The controller checks whether a requested input is
 allowed in the observed state. The viewer shows actual game frames and control
@@ -52,10 +54,10 @@ trap or damage guarantee and no general combat policy.
 
 ## Current direction and decisions
 
-The latest completed increment establishes a maintainable, reviewable engineering
-system using established development tools. Its tradeoffs are in the
-[change brief](changes/001-engineering-system.md); results are in
-[engineering acceptance](acceptance/2026-10-17-engineering-system.md).
+The documentation increment adds visual explanations, lifecycle records and
+maintenance checks. Its [brief](changes/002-documentation-review.md) explains
+before/after behavior, alternatives and cost; [acceptance](acceptance/2026-10-17-documentation-review.md)
+records verification and limitations. [Work](work.md) owns current status.
 Next priorities and any open issues are in [work](work.md). Current priorities are control
 reliability and evidence quality before expanding unattended play. A future
 interrupt protocol needs a separate design and native acceptance.
@@ -71,6 +73,12 @@ for design and evidence; code-level detail is optional. Significant proposals
 state the problem, visible change, alternatives, maintenance cost, reversibility,
 evidence and uncertainties, and whether your decision is needed. Routine work
 continues under agreed direction. Changes to your constraints require your input.
+
+For a first session, use the [spectator walkthrough](walkthrough.md). To review
+behavior, follow the [action and recovery views](architecture.md#action-and-recovery-views).
+For governance, the [maintenance table](controls.md#maintenance) separates last
+exercise, maintenance review, effectiveness and next review. These are recorded
+observations, not live badges. [Work](work.md) owns open decisions and exceptions.
 
 [Run and recover](runbook.md) · [Standards and workflow](engineering.md) ·
 [Research basis](research.md) · [Environment history](environment.md)

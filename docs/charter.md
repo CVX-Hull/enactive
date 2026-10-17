@@ -1,7 +1,12 @@
+---
+owner: maintainer
+review_trigger: Goals, constraints, stakeholders or assumptions change
+status: active
+---
+
 # Purpose, constraints and principles
 
-Owner: project maintainer; the user owns product direction and constraints.
-Status: active. Review on changed goals, constraints, stakeholders or assumptions.
+The user owns product direction and constraints.
 
 ## Purpose and success
 

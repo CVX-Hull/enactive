@@ -1,3 +1,10 @@
+---
+owner: maintainer
+review_trigger: Controller redesign or release; fast-moving evidence older than 90
+  active days
+status: active
+---
+
 # Evidence and design consequences
 
 Owner: lead. Evidence reviewed: 2026-10-17. Refresh at controller redesign or

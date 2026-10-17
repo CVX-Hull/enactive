@@ -1,10 +1,16 @@
+---
+owner: lead
+review_trigger: Setup, dependency installation or cleanup changes
+status: active
+---
+
 # Environment ledger
 
-Owner: lead. Updated: 2026-10-17. Review whenever setup or cleanup changes.
+Installation history through 2026-10-17; this is not live environment status.
 
 ## Project isolation
 
-New installations live in `.runtime/`; Python dependencies will live in `.venv/`.
+Game installations live in `.runtime/`; Python dependencies live in `.venv/`.
 Game launch must pass the absolute `.runtime/user/` path via `--userdir` and use
 `FULLSCREEN=no`. Existing Xcode/Clang, Python, uv and read-only system libraries
 may be used. New tooling is installed locally. No shell profile or global
@@ -111,3 +117,19 @@ hook/profile/package or remote was added. License provenance is in [NOTICE](../N
 Restricted-network resolution failed with DNS denial; the authorized network run
 resolved and installed the lock successfully. Restricted loopback test runs failed
 with EPERM; the full 60-test lane then passed with loopback permission, with no skips. These are distinct from game acceptance.
+
+## Documentation-review increment
+
+Added python-frontmatter 1.3.0 and PyYAML 6.0.3 to the existing project .venv,
+preserving earlier lock versions. Installed Mermaid CLI 12.0.0 / Mermaid 12.2.0
+and Puppeteer 25.14.0 in node_modules (195 packages in this resolution). npm cache
+is .cache/npm; Chrome for Testing 155.0.8059.79 is in .cache/puppeteer; temporary
+renderer profiles and render outputs stay under .cache. No global npm/Python
+install, shell/profile change or system browser modification was requested.
+Checks launch only a headless renderer, never fullscreen or the game.
+
+The tracked SVGs and small historical screenshot copy support offline reading.
+Render previews are disposable under .cache/diagrams; curated acceptance logs
+stay in .runtime/evidence. Preserve source diagrams, receipt, font notices and
+acceptance before removing local caches. A fresh checkout uses setup to reinstall
+the pinned renderer; deleting a cache does not revoke historical acceptance.

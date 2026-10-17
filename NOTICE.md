@@ -1,3 +1,9 @@
+---
+owner: maintainer
+review_trigger: Dependencies, source pins, licenses or distributed assets change
+status: active
+---
+
 # Third-party provenance
 
 This project modifies and runs Cataclysm: Dark Days Ahead by the Cataclysm and
@@ -35,3 +41,19 @@ reviewed on 2026-10-17; original license files remain in their distributions.
 
 Preserve upstream license files when redistributing these packages. Tool choice
 and primary project links are recorded in [ADR 003](docs/decisions/003-development-controls.md).
+
+## Documentation assets and tools
+
+python-frontmatter and PyYAML are MIT licensed; their exact versions and hashes
+are in the Python lock. Mermaid CLI/Mermaid are MIT and Puppeteer is Apache-2.0;
+npm's lock records all resolved package versions/integrity and license metadata.
+Original package notices stay in project-local node_modules; Chrome for Testing
+keeps its upstream notices in the downloaded browser directory.
+
+Generated SVGs embed Open Sans font data from Fontsource. Font packages use
+OFL-1.1; retain [Open Sans notice](docs/assets/OFL-OpenSans.txt) and
+[Recursive notice](docs/assets/OFL-Recursive.txt) with distributed diagram assets.
+Recursive is supplied by the renderer although these diagrams select Open Sans.
+The tracked spectator example is an unchanged historical CDDA/UltiCa screenshot;
+it retains the upstream game/art attribution described above and is not original
+project artwork. Its source identity and date are in the walkthrough and MVP manifest.

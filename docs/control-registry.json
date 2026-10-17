@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "standards": [
     {
       "id": "S-UX",
@@ -109,7 +109,8 @@
         "C-GOVERNANCE",
         "C-USABILITY",
         "C-REVIEW",
-        "C-MAINTENANCE"
+        "C-MAINTENANCE",
+        "C-VISUAL"
       ]
     },
     {
@@ -164,7 +165,29 @@
       ],
       "failure_response": "Preserve failure output, fix the cause and rerun before claiming portable acceptance.",
       "limitations": "Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing.",
-      "enforcement": "Invoked by common command, opt-in local hook and CI recipe; hook can be bypassed and no hosted required check is configured."
+      "enforcement": "Invoked by common command, opt-in local hook and CI recipe; hook can be bypassed and no hosted required check is configured.",
+      "status": "active",
+      "rationale": null,
+      "replacement": null,
+      "last_exercise": {
+        "date": "2026-10-17",
+        "outcome": "Passed within the dated acceptance scope; limitations retained.",
+        "scope": "Common lane on the documentation increment: 84 Python tests, four production-viewer scenarios, Ruff, imports, links, metadata, lifecycle and real rendering.",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ]
+      },
+      "maintenance_review": {
+        "date": "2026-10-17",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ],
+        "effectiveness": "effective",
+        "findings": "Common lane passed 84 Python tests and four viewer scenarios, including new lifecycle, metadata and real-renderer regressions; this is scoped detection evidence, not long-term defect-rate evidence.",
+        "cost": "Full local lane took under a minute; long-term false-alarm and review cost unmeasured.",
+        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+      },
+      "next_review": "2027-01-15"
     },
     {
       "id": "C-RUNTIME",
@@ -185,7 +208,29 @@
       ],
       "failure_response": "Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.",
       "limitations": "Tests exercise fake-bridge and browser fixtures. Native takeover and engine input behavior need C-NATIVE. Pause cannot cancel an already-running activity; no structured damage/trap or combat guarantee.",
-      "enforcement": "Implemented at runtime; regression execution is C-PORTABLE. Source references alone establish no behavioral pass."
+      "enforcement": "Implemented at runtime; regression execution is C-PORTABLE. Source references alone establish no behavioral pass.",
+      "status": "active",
+      "rationale": null,
+      "replacement": null,
+      "last_exercise": {
+        "date": "2026-10-17",
+        "outcome": "Observed in dated MVP probes; no broader runtime guarantee.",
+        "scope": "Native takeover, stale authority rejection, timeout freeze and spectator checks in the recorded host/scenarios.",
+        "evidence": [
+          "docs/acceptance/2026-10-17-mvp.md"
+        ]
+      },
+      "maintenance_review": {
+        "date": "2026-10-17",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ],
+        "effectiveness": "unassessed",
+        "findings": "Definition and recovery diagrams checked against implementation and historical MVP evidence; native execution was not repeated and its exercise date is unchanged.",
+        "cost": "No runtime changes or new native validation cost in this increment.",
+        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+      },
+      "next_review": "2027-01-15"
     },
     {
       "id": "C-NATIVE",
@@ -203,25 +248,71 @@
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
       "limitations": "Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.",
-      "enforcement": "Required by S-PROTOCOL/S-DELIVERY and release review; manual, outside the portable gate."
+      "enforcement": "Required by S-PROTOCOL/S-DELIVERY and release review; manual, outside the portable gate.",
+      "status": "active",
+      "rationale": null,
+      "replacement": null,
+      "last_exercise": {
+        "date": "2026-10-17",
+        "outcome": "Fresh build and real-game probes passed in dated MVP acceptance.",
+        "scope": "Recorded Mac, pinned CDDA build, menu/input/rendering, movement, supplies, takeover, danger and save/reload probes.",
+        "evidence": [
+          "docs/acceptance/2026-10-17-mvp.md"
+        ]
+      },
+      "maintenance_review": {
+        "date": "2026-10-17",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ],
+        "effectiveness": "unassessed",
+        "findings": "Historical real-game evidence remains explicit; no documentation or mock-test result is substituted for fresh native acceptance.",
+        "cost": "Native build and gameplay remain a separate costly lane, required on relevant changes.",
+        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+      },
+      "next_review": "2027-01-15"
     },
     {
       "id": "C-USABILITY",
       "name": "Operator understanding review",
       "mode": "manual",
       "scope": "Overview, navigation, control ownership, freshness, recovery limits and next decision.",
-      "mechanism": "Review whether an operator can find purpose, current capabilities/limits, rationale, next change/tradeoffs and evidence from overview and immediate links; inspect ordinary and stale/paused/error flows when changed.",
+      "mechanism": "Walk overview and immediate links for purpose, capabilities/limits, rationale, decisions and evidence; inspect changed visuals at ordinary window width, text equivalents and consequential failure/recovery paths against current contracts. Inspect UI flows when changed.",
       "owner": "lead with operator feedback",
       "trigger": "user-facing behavior/guidance change and milestone review",
       "evidence": [
         "docs/overview.md",
         "docs/changes/001-engineering-system.md",
         "docs/runbook.md",
-        "web/app.js"
+        "web/app.js",
+        "docs/walkthrough.md",
+        "docs/architecture.md"
       ],
       "failure_response": "Correct misleading flows or guidance and retain consequential limits before milestone acceptance.",
       "limitations": "Human judgment; no automated usability score or user study is claimed. Document links alone do not demonstrate comprehension.",
-      "enforcement": "Required review under S-UX/S-DOCS/S-WORK; no automatic usability gate."
+      "enforcement": "Required review under S-UX/S-DOCS/S-WORK; no automatic usability gate.",
+      "status": "active",
+      "rationale": null,
+      "replacement": null,
+      "last_exercise": {
+        "date": "2026-10-17",
+        "outcome": "Passed within the dated acceptance scope; limitations retained.",
+        "scope": "Overview/immediate-link user questions, context/action/recovery visuals and walkthrough; ordinary-width heuristic review, not a user study.",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ]
+      },
+      "maintenance_review": {
+        "date": "2026-10-17",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ],
+        "effectiveness": "partially_effective",
+        "findings": "Lead and independent reader review found the overview, immediate links and three 900-pixel visual previews answer the intended questions; optional recovery wording clarified. No user study or assistive-technology test.",
+        "cost": "Three visuals and one walkthrough; reviewer inspection required after changed flows.",
+        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+      },
+      "next_review": "2027-01-15"
     },
     {
       "id": "C-BOUNDARY",
@@ -240,7 +331,29 @@
       ],
       "failure_response": "Remove reversed dependency or review the boundary and checker together before accepting changed architecture.",
       "limitations": "Static import graph with configured external roots. Dynamic imports, external-package internals, undeclared libraries and semantic C++ isolation remain review concerns; this is not comprehensive module layering.",
-      "enforcement": "Common command runs the real lint-imports executable and propagates failure; temporary source fixtures exercise allowed composition and direct/indirect forbidden imports."
+      "enforcement": "Common command runs the real lint-imports executable and propagates failure; temporary source fixtures exercise allowed composition and direct/indirect forbidden imports.",
+      "status": "active",
+      "rationale": null,
+      "replacement": null,
+      "last_exercise": {
+        "date": "2026-10-17",
+        "outcome": "Passed within the dated acceptance scope; limitations retained.",
+        "scope": "Two Import Linter contracts and direct/indirect forbidden import fixtures; no runtime boundary changes.",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ]
+      },
+      "maintenance_review": {
+        "date": "2026-10-17",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ],
+        "effectiveness": "effective",
+        "findings": "Configured import contracts and their forbidden direct/indirect dependency fixtures passed; no runtime architecture changes.",
+        "cost": "Two static contracts; dynamic imports and broader architecture still need review.",
+        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+      },
+      "next_review": "2027-01-15"
     },
     {
       "id": "C-REVIEW",
@@ -258,14 +371,36 @@
       ],
       "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process.",
-      "enforcement": "Required under S-AGENT and change workflow; no automated approval or remote branch protection configured."
+      "enforcement": "Required under S-AGENT and change workflow; no automated approval or remote branch protection configured.",
+      "status": "active",
+      "rationale": null,
+      "replacement": null,
+      "last_exercise": {
+        "date": "2026-10-17",
+        "outcome": "Passed within the dated acceptance scope; limitations retained.",
+        "scope": "Independent design, controls and reader reviews; three material findings repaired and re-reviewed.",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ]
+      },
+      "maintenance_review": {
+        "date": "2026-10-17",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ],
+        "effectiveness": "effective",
+        "findings": "Independent controls review found three material issues in new checks; lead repaired them and reviewer confirmed resolution. Reader review found no required correction.",
+        "cost": "Separate design, controls and reader review; measured productivity benefit unknown.",
+        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+      },
+      "next_review": "2027-01-15"
     },
     {
       "id": "C-GOVERNANCE",
       "name": "Registry, evidence schema and map validation",
       "mode": "automatic",
-      "scope": "Mandatory standard mappings, principle/control IDs, local references, curated manifest metadata and generated map.",
-      "mechanism": "jsonschema Draft 2020-12 with FormatChecker validates local record schemas. Bounded repository checks validate ID relationships, exact standard mappings, non-orphan references and contained evidence files, relative artifact references and generated output freshness.",
+      "scope": "Standard mappings, control lifecycle/maintenance, document stewardship, local references, curated manifest metadata and generated map.",
+      "mechanism": "Existing jsonschema validates records and YAML metadata parsed by python-frontmatter; project checks enforce current lifecycle relationships, safe references, active-only mappings, due dates, protocol source agreement and generated-map freshness. --as-of explicitly forecasts maintenance; the common command evaluates today.",
       "owner": "maintainer",
       "trigger": "common command; regenerate map after registry change",
       "evidence": [
@@ -275,11 +410,36 @@
         "docs/acceptance/2026-10-17-mvp-manifest.json",
         "schemas/control-registry.schema.json",
         "schemas/acceptance-manifest.schema.json",
-        "docs/decisions/003-development-controls.md"
+        "docs/decisions/003-development-controls.md",
+        "tools/documents.py",
+        "tests/test_documents.py",
+        "schemas/document.schema.json"
       ],
       "failure_response": "Fix missing/unknown mappings, unsafe references or metadata; regenerate stale map with --write and inspect the result.",
-      "limitations": "Schemas and relationship checks validate structure and identity formats, not normative prose truth, artifact byte hashes, media availability, historical observations, owner performance or actual execution. Evidence fragments are not validated.",
-      "enforcement": "Common command fails; negative tests exercise mapping/field/reference/drift failures. Normal mode never rewrites the map."
+      "limitations": "Structure, recorded dates and local file existence are checked, not prose truth, artifact hashes outside diagram receipts, media availability, actual review/execution, owner performance or historical lifecycle authorization. Due checks run only when invoked; fragment targets are not validated.",
+      "enforcement": "Common command fails; negative tests exercise mapping/field/reference/drift failures. Normal mode never rewrites the map.",
+      "status": "active",
+      "rationale": null,
+      "replacement": null,
+      "last_exercise": {
+        "date": "2026-10-17",
+        "outcome": "Passed within the dated acceptance scope; limitations retained.",
+        "scope": "Lifecycle/schema/mapping/reference/date/metadata/protocol/map checks and negative fixtures; standalone overdue forecast.",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ]
+      },
+      "maintenance_review": {
+        "date": "2026-10-17",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ],
+        "effectiveness": "effective",
+        "findings": "Lifecycle, metadata, reference, due-date, protocol and generated-map checks passed with negative cases. Review caught live-date coupling in test fixtures; isolated dates now allow legitimate future renewal.",
+        "cost": "Project-specific relationship checks use existing parsers and JSON Schema; declarations still need semantic review.",
+        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+      },
+      "next_review": "2027-01-15"
     },
     {
       "id": "C-PROTOCOL",
@@ -299,7 +459,29 @@
       ],
       "failure_response": "Resolve version drift; for a refactor/version change review and update checker plus contract, then run required native acceptance.",
       "limitations": "Narrow source drift detector, not a robust C++ parser or protocol conformance proof. Refactored representations fail for review; matching literals cannot prove runtime behavior.",
-      "enforcement": "Common command fails on version drift or unrecognized source form; each representation has a negative fixture."
+      "enforcement": "Common command fails on version drift or unrecognized source form; each representation has a negative fixture.",
+      "status": "active",
+      "rationale": null,
+      "replacement": null,
+      "last_exercise": {
+        "date": "2026-10-17",
+        "outcome": "Passed within the dated acceptance scope; limitations retained.",
+        "scope": "Six recognized protocol-v1 source forms and drift fixtures; no fresh native execution.",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ]
+      },
+      "maintenance_review": {
+        "date": "2026-10-17",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ],
+        "effectiveness": "effective",
+        "findings": "Current source forms and intentional version-drift fixtures passed; matching source literals do not prove native runtime conformance.",
+        "cost": "Narrow source recognizer must change with an intentional protocol refactor.",
+        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+      },
+      "next_review": "2027-01-15"
     },
     {
       "id": "C-SETUP",
@@ -320,7 +502,29 @@
       ],
       "failure_response": "Stop failed stage, preserve diagnostics and retry only after identifying the corrupt input or owned workspace.",
       "limitations": "Portable fixtures do not perform fresh downloads, native compilation/signing or install. Existing-host recipe is historical; broader hosts remain unverified.",
-      "enforcement": "Implemented stage guards plus portable setup regressions; native reproducibility requires C-NATIVE and manual provenance review."
+      "enforcement": "Implemented stage guards plus portable setup regressions; native reproducibility requires C-NATIVE and manual provenance review.",
+      "status": "active",
+      "rationale": null,
+      "replacement": null,
+      "last_exercise": {
+        "date": "2026-10-17",
+        "outcome": "Fresh isolated build and launch recorded in dated MVP acceptance.",
+        "scope": "Project-owned download/extract/build stages and installation on the recorded Mac; no broader host claim.",
+        "evidence": [
+          "docs/acceptance/2026-10-17-mvp.md"
+        ]
+      },
+      "maintenance_review": {
+        "date": "2026-10-17",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ],
+        "effectiveness": "partially_effective",
+        "findings": "Existing setup guards passed portable fixtures. New documentation dependencies and browser installed locally; ambient browser overrides and escaping output/cache symlinks now fail or are isolated. No fresh native build.",
+        "cost": "Two added Python packages, 195 npm packages and one pinned browser; native setup cost remains separate.",
+        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+      },
+      "next_review": "2027-01-15"
     },
     {
       "id": "C-RELEASE",
@@ -338,14 +542,36 @@
       ],
       "failure_response": "Hold the affected acceptance/release claim until failed or unexecuted required lanes are resolved or scope is explicitly reduced.",
       "limitations": "Working-tree hook does not prove a partially staged candidate; no tag, publication, remote required check or release automation is installed.",
-      "enforcement": "Manual requirement; local hook and portable CI recipe support review but do not enforce release authority."
+      "enforcement": "Manual requirement; local hook and portable CI recipe support review but do not enforce release authority.",
+      "status": "active",
+      "rationale": null,
+      "replacement": null,
+      "last_exercise": {
+        "date": "2026-10-17",
+        "outcome": "Staged source export common lane passed in dated acceptance.",
+        "scope": "Recorded tree ef964cecc2133caf59b61c86556c9d3aaa455510; no remote release/branch protection claim.",
+        "evidence": [
+          "docs/acceptance/2026-10-17-engineering-system.md"
+        ]
+      },
+      "maintenance_review": {
+        "date": "2026-10-17",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ],
+        "effectiveness": "partially_effective",
+        "findings": "Candidate scope and validation lanes inspected; current scripts/docs are verified by the common lane while native evidence remains historical. The final checkpoint identifies delivered source.",
+        "cost": "Local hook supports verification but is bypassable; no remote enforcement or publication.",
+        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+      },
+      "next_review": "2027-01-15"
     },
     {
       "id": "C-MAINTENANCE",
       "name": "Drift, recovery and retention review",
       "mode": "manual",
       "scope": "Active guidance, dependency/research freshness, failure evidence and project-owned cleanup.",
-      "mechanism": "Review on behavior change/release/resumption and at least every 90 days during active development; record blockers/exceptions/lessons and check ownership/retention before cleanup.",
+      "mechanism": "Review active guidance/visuals, controls and dependencies on changed behavior/failure/release/resumption and within recorded periodic dates. Record findings, effectiveness, cost and follow-up in registry with dated evidence; promote repeated defects into tests or revise/retire controls. C-GOVERNANCE detects elapsed due dates when invoked.",
       "owner": "maintainer; lead tracks active work",
       "trigger": "behavior/control failure, release, resumed work or active-development review interval",
       "evidence": [
@@ -356,8 +582,75 @@
         "docs/environment.md"
       ],
       "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
-      "limitations": "Manual policy with no scheduler, drift measurement or deletion job. No guarantee that elapsed review dates or storage availability are monitored automatically.",
-      "enforcement": "Required review under S-OPS/S-AGENT/S-DOCS/S-EVIDENCE; tracked through work and release review, outside portable gate."
+      "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",
+      "enforcement": "Manual requirements under S-OPS/S-AGENT/S-DOCS/S-EVIDENCE, with registry fields, references and overdue dates enforced by C-GOVERNANCE in the common lane.",
+      "status": "active",
+      "rationale": null,
+      "replacement": null,
+      "last_exercise": {
+        "date": "2026-10-17",
+        "outcome": "Passed within the dated acceptance scope; limitations retained.",
+        "scope": "Manual baseline review of 12 controls and active documentation; long-term effectiveness unmeasured.",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ]
+      },
+      "maintenance_review": {
+        "date": "2026-10-17",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ],
+        "effectiveness": "unassessed",
+        "findings": "First explicit maintenance baseline reviewed definitions, evidence limits, guide drift, dependency burden and reviewer findings. Deliberate future-date forecast detects overdue records. Long-term effectiveness is not yet observable.",
+        "cost": "Review due within 90 days and earlier on events; no background scheduler or automatic date renewal.",
+        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+      },
+      "next_review": "2027-01-15"
+    },
+    {
+      "id": "C-VISUAL",
+      "name": "Rendered visual documentation",
+      "mode": "automatic",
+      "scope": "Mermaid sources and generated SVGs in docs/diagrams.",
+      "mechanism": "Pinned local Mermaid CLI renders every source in a headless project-local browser. Hash receipt covers sources, config, wrapper, package lock and tracked SVGs; title/description and root SVG ID are required. Explicit --write regenerates; normal checks leave tracked files unchanged.",
+      "owner": "documentation maintainer",
+      "trigger": "common command; source, renderer configuration or dependency changes require rendered review",
+      "evidence": [
+        "tools/diagrams.py",
+        "tests/test_diagrams.py",
+        "docs/diagrams/rendered.json",
+        "docs/architecture.md",
+        "docs/overview.md",
+        "package.json",
+        "package-lock.json",
+        ".puppeteerrc.cjs",
+        "docs/decisions/004-documentation-controls.md"
+      ],
+      "failure_response": "Fix syntax or missing setup; regenerate stale output and inspect the rendered result. Never call a denied browser launch a passed check. Resolve semantic/readability findings through C-USABILITY/C-REVIEW.",
+      "limitations": "Receipt freshness is not cross-host byte equality or proof against deliberate falsification. Rendering and SVG metadata do not prove meaning, accessibility for every reader or readable layout. Human rendered inspection is required; Linux CI remains unverified.",
+      "enforcement": "Common command fails on renderer errors, missing title/description/ID or changed input/output receipts; negative fixtures include a real parse failure. No global installation or automatic fetch.",
+      "status": "active",
+      "rationale": "Required to keep user-facing visual explanations reviewable and synchronized.",
+      "replacement": null,
+      "last_exercise": {
+        "date": "2026-10-17",
+        "outcome": "Passed within the dated acceptance scope; limitations retained.",
+        "scope": "Three Mermaid renders, receipt and accessibility/ID checks, real syntax rejection, environment isolation and pre-write containment regressions.",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ]
+      },
+      "maintenance_review": {
+        "date": "2026-10-17",
+        "evidence": [
+          "docs/acceptance/2026-10-17-documentation-review.md"
+        ],
+        "effectiveness": "effective",
+        "findings": "All three real renders passed and were inspected at ordinary width. Negative cases detect drift, malformed Mermaid, missing accessibility/style metadata and escaping destinations. Real Puppeteer probe rejects ambient browser drift.",
+        "cost": "195 local npm packages, one pinned browser and approximately 1.1 MB of SVGs; ongoing upgrade/readability cost unmeasured.",
+        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+      },
+      "next_review": "2027-01-15"
     }
   ]
 }

@@ -15,4 +15,6 @@ jobs:
           node-version: '22'
       - run: python -m venv .venv
       - run: .venv/bin/python -m pip install --cache-dir .cache/pip --require-hashes -r requirements-dev.lock
+      - run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" ci --ignore-scripts --no-audit --no-fund
+      - run: .venv/bin/python tools/diagrams.py --install-browser
       - run: .venv/bin/python tools/check.py

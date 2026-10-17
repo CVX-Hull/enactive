@@ -1,3 +1,10 @@
+---
+date: '2026-10-17'
+owner: lead
+scope: Engineering-system acceptance — 2026-10-17
+status: historical
+---
+
 # Engineering-system acceptance — 2026-10-17
 
 Owner: lead. Status: locally verified increment. Scope: documentation, development
