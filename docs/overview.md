@@ -71,6 +71,11 @@ measured benefit. Its [tracked outcome](https://github.com/CVX-Hull/cdda-player/
 links the design, implementation and evaluation work; it is not current gameplay
 capability.
 
+The accepted foundation design specifies [native operator recovery](design/native-control.md)
+and [waypoint-and-return gameplay](design/gameplay.md). Its
+[brief](changes/004-gameplay-foundation.md) explains the source findings, ownership
+and verification gates. These designs do not yet expand running-game capabilities.
+
 No platform migration or new hosted service is being proposed. We will reopen
 platform and transport choices when requirements or measured maintenance costs
 justify it, using the [decision records](decisions/002-local-contract.md).

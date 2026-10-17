@@ -17,6 +17,11 @@ status. Existing native interruption/recovery work remains a prerequisite rather
 than a duplicate deliverable. Tracking the proposal does not make it implemented
 or commit us to an additional model tier.
 
+The first implementation design is developed in the [foundation brief](changes/004-gameplay-foundation.md),
+with [native control](design/native-control.md) and [gameplay](design/gameplay.md)
+contracts. This broader research proposal remains background; it does not override
+those scoped design decisions or the current runtime protocol.
+
 ## Recommendation for the owner
 
 Use a **capable planner, a deterministic supervisor, and bounded executable

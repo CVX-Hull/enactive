@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-17",
+  "scope": "Read-only source inspection for issues6 and17; not native execution",
+  "harness_base": "806c0ba60141ce5601f734865720d6c87047afc4",
+  "upstream_commit": "7b2efa5cea38e4d4d97dd0e63b28b9148623da59",
+  "source_archive_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "local_inspected_tree": "/tmp/cdda-player-build-6jt343nd/game/CleverRaven-Cataclysm-DDA-0fb5d5b",
+  "note": "Local input_context/main/SDL include the existing harness patch; hashes describe inspected bytes, not pristine upstream. URLs in the design pin upstream functions.",
+  "inspected_file_sha256": {
+    "src/do_turn.cpp": "34e7a85f5eda6ad0f7d63e25bfc23b71b68b01cd6cfc35b76398edcccc5fe2bc",
+    "src/game.cpp": "197398412f600802c611045b0e1b63551fadf3653f4bff13f57ecca9f80e5af3",
+    "src/output.cpp": "3ca681eeda796f33a518ecf8a9ec8ea1de0d1d49130e52b84d02237a4637fa82",
+    "src/debug.cpp": "d89793cf60fc496d0808988f1df16dd57264f14f9d1ab0406f7d798c20b1b7df",
+    "src/player_activity.cpp": "73e15d2e3d34a23d1996aaca89928fbba215da8c3bad8d7b35c85610c12ad3cb",
+    "src/character.cpp": "6e67b293b21aacaa8bd8e4690672f4573840ef188a63420f1ead07b1cc4c655c",
+    "src/input_context.cpp": "c42779f13c7df4febbb274298538494522e04ca4c603f51623dce9055f22f6b7",
+    "src/main.cpp": "309b5160adc98cfa790d535e09a7b4f8c06357bc1232ac2773212834d418abb7",
+    "src/sdltiles.cpp": "912e9890dc0ecd2561690b4091cdced6392291ef1ee707cdc8bc9fbd0b0bbe87",
+    "data/raw/keybindings.json": "5b55b23960b42f52249398254a7557303a0987ce6a7f5a23f0f39ef1e00be3b3"
+  },
+  "reuse_versions": {
+    "py_trees": "2.6.0 / 2026-09-10",
+    "transitions": "0.9.3 / 2025-07-02",
+    "codehack": "1a3024fac1e67e9264deadbf00384aa5a37718bb"
+  },
+  "local_evidence": ".runtime/evidence/design-round/",
+  "retention": "Keep source/reuse snapshots, reviewer findings, checks and diagram PNG through implementation and native acceptance of #8/#24. Do not delete saves. Public documents and this manifest remain in Git; ignored large/local evidence is not bundled on a fresh clone."
+}

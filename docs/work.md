@@ -22,6 +22,10 @@ tracks the [tiered-gameplay proposal](research-tiered-gameplay.md), its bounded
 implementation slices, evaluation gates and maintenance follow-ups. Native
 interruption/recovery remains in [its existing outcome](https://github.com/CVX-Hull/cdda-player/issues/5).
 
+The [foundation design brief](changes/004-gameplay-foundation.md) connects the native
+and gameplay investigation contracts to their bounded implementation handoffs.
+Live readiness and allocations remain in the Project, not in this navigation page.
+
 Use Direction for outcomes and sequencing, Execution for delivery stage, and
 Needs attention for issues labeled blocked, decision-needed or risk. At checkpoints,
 the lead marks aging review/validation work with a risk label and records the cause;
