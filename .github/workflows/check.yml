@@ -4,7 +4,7 @@ permissions:
   contents: read
 jobs:
   controller:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -17,4 +17,17 @@ jobs:
       - run: .venv/bin/python -m pip install --cache-dir .cache/pip --require-hashes -r requirements-dev.lock
       - run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" ci --ignore-scripts --no-audit --no-fund
       - run: .venv/bin/python tools/diagrams.py --install-browser
+      - name: Allow the project Chrome sandbox on this disposable runner
+        run: |
+          chrome_path=$(node --input-type=module -e "import puppeteer from 'puppeteer'; process.stdout.write(await puppeteer.executablePath())")
+          test -x "$chrome_path"
+          case "$chrome_path" in "$GITHUB_WORKSPACE"/.cache/puppeteer/chrome/*/chrome-linux64/chrome) ;; *) exit 1 ;; esac
+          sudo tee /etc/apparmor.d/cdda-project-chrome >/dev/null <<EOF
+          abi <abi/4.0>,
+          include <tunables/global>
+          profile cdda-project-chrome "$chrome_path" flags=(unconfined) {
+            userns,
+          }
+          EOF
+          sudo apparmor_parser -r /etc/apparmor.d/cdda-project-chrome
       - run: .venv/bin/python tools/check.py

@@ -59,8 +59,9 @@ same project cache, then install and run the full lane including negative fixtur
 UV_CACHE_DIR="$PWD/.cache/uv" UV_PYTHON_DOWNLOADS=never uv pip compile --upgrade --no-config --default-index https://pypi.org/simple --python .venv/bin/python --generate-hashes --output-file requirements-dev.lock requirements-dev.in
 ```
 
-The current resolution/install was verified on Python 3.14/macOS. CI defines a
-Python 3.14/Linux install but has not run remotely. Other interpreter/host combinations
+The current resolution/install was verified on Python 3.14/macOS. Hosted CI uses
+Python 3.14 and Node 22 on Ubuntu 24.04; its first run exposed a Chrome sandbox
+startup failure. Required checks must pass before integration. Other interpreter/host combinations
 require their own validation before a support claim.
 
 ## Install and maintain visual documentation tools
@@ -78,10 +79,17 @@ under `.cache/`. Package install scripts are disabled; the second command is the
 explicit browser download through the local Puppeteer CLI. The wrapper clears
 ambient Puppeteer overrides for both installation and rendering, and rejects
 symlinks that send outputs, receipts or caches outside the checkout before writing.
-No global npm packages, system browser changes, OS
-package installation or background service is needed. Keep runtime caches local;
+The local macOS recipe needs no global npm packages, system browser changes, OS
+package installation or background service. Keep runtime caches local;
 checks never fetch dependencies. Headless rendering may need permission in a
 restricted execution sandbox. A denied launch is a failed check, not a passed render.
+
+On the disposable GitHub Ubuntu runner only, the workflow installs a path-specific
+AppArmor profile allowing the downloaded Chrome to create its sandbox namespaces.
+Chrome sandboxing stays enabled; no global user-namespace sysctl is changed. This
+follows [Chromium's scoped profile guidance](https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md).
+The runner is discarded after the job. This is not a local setup instruction or
+permission to modify the operator's host.
 
 ```sh
 # Change .mmd sources or render config, then regenerate and inspect the SVGs:

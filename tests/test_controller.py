@@ -91,7 +91,9 @@ class ControllerTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.root = Path(self.temp.name)
-        self.controller = Controller(self.root, timeout=0.25)
+        # Functional exchanges use real files/threads on shared CI runners.
+        # Short deadline behavior is exercised with explicit per-call timeouts below.
+        self.controller = Controller(self.root, timeout=2.0)
         self.addCleanup(self.temp.cleanup)
         self.addCleanup(self.controller.close)
 
@@ -107,7 +109,7 @@ class ControllerTests(unittest.TestCase):
         self.controller.close()
         bridge = self.root / ".runtime" / "bridge"
         atomic_json(bridge / "request.json", {"kind": "key", "key": "x", "id": "old"})
-        self.controller = Controller(self.root, timeout=0.1)
+        self.controller = Controller(self.root, timeout=2.0)
         self.addCleanup(self.controller.close)
         self.assertTrue((bridge / "pause").exists())
         self.assertFalse((bridge / "request.json").exists())
