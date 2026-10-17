@@ -1,0 +1,156 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CDDA Player historical native acceptance manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "kind",
+    "date",
+    "report",
+    "source_commit",
+    "identity_note",
+    "platform",
+    "upstream_pin",
+    "source_sha256",
+    "freetype_sha256",
+    "initial_build_binary_sha256",
+    "installed_binary_sha256",
+    "artifacts",
+    "video",
+    "verified_at",
+    "verification_scope",
+    "limitations"
+  ],
+  "properties": {
+    "schema_version": {
+      "type": "integer",
+      "const": 1
+    },
+    "kind": {
+      "const": "historical-native-acceptance"
+    },
+    "date": {
+      "type": "string",
+      "format": "date"
+    },
+    "report": {
+      "$ref": "#/$defs/text"
+    },
+    "source_commit": {
+      "type": "string",
+      "minLength": 40,
+      "maxLength": 40,
+      "pattern": "^[0-9a-f]+$"
+    },
+    "identity_note": {
+      "$ref": "#/$defs/text"
+    },
+    "platform": {
+      "$ref": "#/$defs/text"
+    },
+    "upstream_pin": {
+      "$ref": "#/$defs/text"
+    },
+    "source_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "freetype_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "initial_build_binary_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "installed_binary_sha256": {
+      "$ref": "#/$defs/sha256"
+    },
+    "artifacts": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sha256",
+          "bytes",
+          "availability"
+        ],
+        "properties": {
+          "sha256": {
+            "$ref": "#/$defs/sha256"
+          },
+          "bytes": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "availability": {
+            "enum": [
+              "local-only; not included in Git",
+              "removed",
+              "retained externally"
+            ]
+          }
+        }
+      }
+    },
+    "video": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "speed",
+        "duration_seconds",
+        "capture_interval_ms",
+        "note"
+      ],
+      "properties": {
+        "speed": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "duration_seconds": {
+          "type": "number",
+          "exclusiveMinimum": 0
+        },
+        "capture_interval_ms": {
+          "type": "array",
+          "minItems": 2,
+          "maxItems": 2,
+          "items": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "note": {
+          "$ref": "#/$defs/text"
+        }
+      }
+    },
+    "verified_at": {
+      "type": "string",
+      "format": "date"
+    },
+    "verification_scope": {
+      "$ref": "#/$defs/text"
+    },
+    "limitations": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/$defs/text"
+      }
+    }
+  },
+  "$defs": {
+    "text": {
+      "type": "string",
+      "minLength": 1,
+      "pattern": "\\S"
+    },
+    "sha256": {
+      "type": "string",
+      "minLength": 64,
+      "maxLength": 64,
+      "pattern": "^[0-9a-f]+$"
+    }
+  }
+}

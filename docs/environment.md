@@ -11,8 +11,9 @@ may be used. New tooling is installed locally. No shell profile or global
 service configuration is authorized by the project workflow.
 
 Created `.venv/` using the existing Python 3.14.7 interpreter with uv's cache
-redirected to `.cache/uv`. The controller currently uses only the standard
-library; no Python packages were installed globally or into this environment.
+redirected to `.cache/uv`. At that initial MVP checkpoint the controller used only the standard
+library and no Python packages had been installed into the environment. Development
+tools were added later as recorded below; no global Python packages were installed.
 Git was initialized locally with a `main` branch. The initial documentation
 commit uses the explicit per-command identity `Codex <codex@localhost>`; no
 global identity, hooks, remote, or credential configuration was changed.
@@ -94,3 +95,19 @@ spectator on 127.0.0.1:8766. Port 8765 belonged to an existing service and was l
 alone. Remote game control is paused; TURN_DURATION=0 means the visible zombie
 does not advance while the game awaits input. No background scheduled agent or
 startup service was installed.
+
+## Engineering-system development tools, 2026-10-17
+
+Reused existing uv 0.12.18, Python 3.14.7 and Node 26.9.0 read-only. Resolved
+PyPI packages with `--no-config`, explicit public index, UV_PYTHON_DOWNLOADS=never
+and UV_CACHE_DIR set to this checkout's `.cache/uv`; installed with artifact hashes
+into this checkout's `.venv` only. The lock records all 14 transitive packages.
+Direct tools: jsonschema 4.26.0, Import Linter 2.15, Ruff 0.17.1 and markdown-it-py
+4.2.0. No game/runtime dependency or existing system installation changed.
+Ruff cache is `.cache/ruff`; Import Linter runs without cache. CI's pip cache is
+configured as `.cache/pip` within its checkout. No scheduler, cleanup job, global
+hook/profile/package or remote was added. License provenance is in [NOTICE](../NOTICE.md).
+
+Restricted-network resolution failed with DNS denial; the authorized network run
+resolved and installed the lock successfully. Restricted loopback test runs failed
+with EPERM; the full 60-test lane then passed with loopback permission, with no skips. These are distinct from game acceptance.

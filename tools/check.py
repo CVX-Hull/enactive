@@ -2,28 +2,38 @@
 """Portable controller checks; native compilation/gameplay are separate acceptance."""
 from __future__ import annotations
 
-import re
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 from urllib.parse import unquote, urlsplit
 
+try:
+    from markdown_it import MarkdownIt
+except ImportError as error:
+    raise SystemExit("Development dependencies are missing; use .venv/bin/python after installing requirements-dev.lock (see docs/setup.md).") from error
+
 ROOT = Path(__file__).resolve().parents[1]
-REQUIRED_DOCS = ("README.md", "AGENTS.md", "docs/engineering.md", "docs/architecture.md",
-                 "docs/work.md", "docs/environment.md", "docs/research.md", "docs/setup.md")
+REQUIRED_DOCS = ("README.md", "AGENTS.md", "docs/overview.md", "docs/charter.md",
+                 "docs/engineering.md", "docs/architecture.md", "docs/protocol.md",
+                 "docs/controls.md", "docs/runbook.md", "docs/work.md",
+                 "docs/environment.md", "docs/research.md", "docs/setup.md")
 
 
 def check_documents(root: Path) -> list[str]:
     errors = [f"Missing required document: {name}" for name in REQUIRED_DOCS
               if not (root / name).is_file()]
     markdown = [root / "README.md", root / "AGENTS.md", *sorted((root / "docs").rglob("*.md"))]
+    parser = MarkdownIt("commonmark").enable("table")
     for document in markdown:
         if not document.is_file():
             continue
-        text = re.sub(r"```.*?```", "", document.read_text(), flags=re.S)
-        for match in re.finditer(r"\]\((<[^>]+>|[^\s)]+)(?:\s+\"[^\"]*\")?\)", text):
-            link = match.group(1).strip("<>")
+        for token in (child for block in parser.parse(document.read_text())
+                      for child in (block.children or [])):
+            link = token.attrGet("href") if token.type == "link_open" else (
+                token.attrGet("src") if token.type == "image" else None)
+            if link is None:
+                continue
             parsed = urlsplit(link)
             if parsed.scheme or parsed.netloc or not parsed.path:
                 continue
@@ -39,10 +49,16 @@ def run(command: list[str], **kwargs) -> None:
 
 
 def main() -> int:
+    import_linter = Path(sys.executable).parent / "lint-imports"
+    if not import_linter.is_file():
+        raise ValueError(f"Import Linter is missing beside {sys.executable}; use the project .venv with requirements-dev.lock installed (see docs/setup.md)")
     for directory in ("harness", "tools", "tests"):
         for path in sorted((ROOT / directory).rglob("*.py")):
             compile(path.read_bytes(), str(path), "exec")
     print("Python syntax: passed", flush=True)
+    run([sys.executable, "-m", "ruff", "check", "--config", "pyproject.toml",
+         "harness", "tools", "tests"])
+    run([str(import_linter), "--config", "pyproject.toml", "--no-cache", "--no-logo"])
     node = shutil.which("node")
     if node is None:
         raise ValueError("Node.js is required for JavaScript syntax checks; use an existing/local runtime")
@@ -52,6 +68,7 @@ def main() -> int:
     if errors:
         raise ValueError("\n".join(errors))
     print("Required documents and local Markdown file links: passed", flush=True)
+    run([sys.executable, "tools/governance.py"])
     run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"])
     run([node, "tests/test_viewer.cjs"])
     run(["git", "diff", "--check"])

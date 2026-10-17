@@ -1,0 +1,63 @@
+{
+  "schema_version": 1,
+  "kind": "historical-native-acceptance",
+  "date": "2026-10-17",
+  "report": "docs/acceptance/2026-10-17-mvp.md",
+  "source_commit": "88dd803681a6d464692b1176a4becc67e62af5a2",
+  "identity_note": "Repository checkpoint containing the demonstrated implementation; hashes identify tested binaries. Build recipe output hash precedes final incremental SPACE fix and installation/signing, so it is not the installed binary hash.",
+  "platform": "macOS 26.6.2 arm64; Apple Clang 21",
+  "upstream_pin": "native/upstream.json",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "freetype_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+  "initial_build_binary_sha256": "17672376d33ac468b2cbadd3a9fcc1d5030a51e95f094bb770a987a48bd2b2ae",
+  "installed_binary_sha256": "7f83a0661ae4970dea890edceb516386950f0e2951b5adae66acf5d4ca3c62b7",
+  "artifacts": {
+    ".runtime/evidence/environment-audit.json": {
+      "sha256": "1e1bd3f0f9945b724c5d4aa9dac000b8ad8eac5fb62a6755279b82a521107901",
+      "bytes": 165,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/gameplay-8x.mp4": {
+      "sha256": "759086dd49cff23b901bace2227a896fb4cbe661107e98b54fa93e5ba1b098a8",
+      "bytes": 3756193,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/spectator-final.png": {
+      "sha256": "e37a42eba9b9a720c50905acdfb1027970e7e99e3637333e8ec9585723e4f995",
+      "bytes": 273741,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/zombie-interrupt.png": {
+      "sha256": "1f461aa3ea09d71033634f20ef3e7a8cc7d55f2a836ba2923b4c2a5b83ff3065",
+      "bytes": 284417,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261017-150952-cf4e58a5/events.jsonl": {
+      "sha256": "aa4ca410e1104dfa687af3d970d76e04727568b2c0b190eb3e04539d8861c57f",
+      "bytes": 109399,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261017-152033-c13a3850/events.jsonl": {
+      "sha256": "0b81906f4693191c15a45a60b2d6ac8e1cac0f25dfc8c1fe4805973527da3dbe",
+      "bytes": 510589,
+      "availability": "local-only; not included in Git"
+    }
+  },
+  "video": {
+    "speed": 8,
+    "duration_seconds": 75.75,
+    "capture_interval_ms": [
+      1792264815823,
+      1792265420903
+    ],
+    "note": "Actual renderer frames. Ends before the separately captured zombie encounter."
+  },
+  "verified_at": "2026-10-17",
+  "verification_scope": "Local curated artifact and journal bytes hashed during governance implementation; original gameplay observations remain historical. No new gameplay probe was run.",
+  "limitations": [
+    "Media/journals are ignored and available only in the originating checkout until deliberately retained elsewhere.",
+    "Video ends before the separately recorded zombie encounter.",
+    "Hashes establish byte identity, not independent behavioral proof.",
+    "No fresh native build or graphical acceptance is implied by this metadata."
+  ]
+}

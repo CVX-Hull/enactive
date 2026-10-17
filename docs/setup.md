@@ -13,13 +13,49 @@ Run from the repository root. No flags prints read-only status:
 python3 tools/setup.py
 python3 tools/setup.py --help
 python3 tools/setup.py --venv
+# Install pinned development controls as described below, then:
 .venv/bin/python tools/check.py
 ```
 
-The optional `.venv/` has no pip or third-party dependencies. It uses the Python
-interpreter that creates it; it does not download Python. Existing environments
-are preserved. See [the environment ledger](environment.md) for this Mac's
-existing toolchain and earlier feasibility build.
+The optional `.venv/` starts without pip or third-party packages and uses the
+interpreter that creates it; setup does not download Python. Existing environments
+are preserved. Running the game/controller still needs only the standard library.
+Development checks require the pinned tools below. See the [environment ledger](environment.md)
+for this Mac's existing toolchain and installation history.
+
+## Install development controls locally
+
+Use an existing `uv` executable with an explicit project cache and interpreter:
+
+```sh
+UV_CACHE_DIR="$PWD/.cache/uv" UV_PYTHON_DOWNLOADS=never uv pip install --no-config --default-index https://pypi.org/simple --python .venv/bin/python --require-hashes -r requirements-dev.lock
+```
+
+If uv is unavailable, use the standard library's local pip bootstrap:
+
+```sh
+.venv/bin/python -m ensurepip
+.venv/bin/python -m pip --isolated install --index-url https://pypi.org/simple --cache-dir "$PWD/.cache/pip" --require-hashes -r requirements-dev.lock
+```
+
+Neither route installs global packages. Dependency installation needs network
+access; running checks afterward is offline. Use the project interpreter explicitly.
+Missing tools fail checks with a setup instruction; checks never install or upgrade
+anything automatically. [Tool selection](decisions/003-development-controls.md)
+explains reuse, scope and limitations. Direct requirements and all transitive
+versions/hashes are in [requirements-dev.in](../requirements-dev.in) and
+[requirements-dev.lock](../requirements-dev.lock).
+
+For deliberate upgrades, review tool changelogs and regenerate the lock with the
+same project cache, then install and run the full lane including negative fixtures:
+
+```sh
+UV_CACHE_DIR="$PWD/.cache/uv" UV_PYTHON_DOWNLOADS=never uv pip compile --upgrade --no-config --default-index https://pypi.org/simple --python .venv/bin/python --generate-hashes --output-file requirements-dev.lock requirements-dev.in
+```
+
+The current resolution/install was verified on Python 3.14/macOS. CI defines a
+Python 3.14/Linux install but has not run remotely. Other interpreter/host combinations
+require their own validation before a support claim.
 
 ## Explicit native stages
 
@@ -90,7 +126,7 @@ The local-header recipe passed a full native rebuild in a fresh workspace on
 and a hostile-creature interruption. This validates this Mac's toolchain, not
 all macOS versions. Unit checks alone do not establish native build or gameplay
 success. Exact acceptance is tracked in
-[work.md](work.md).
+[MVP acceptance](acceptance/2026-10-17-mvp.md).
 
 ## Common checks and local hook
 
@@ -98,11 +134,17 @@ success. Exact acceptance is tracked in
 .venv/bin/python tools/check.py
 ```
 
-This compiles Python syntax in memory, checks browser JavaScript syntax with
-Node.js, runs delayed-image viewer regressions, validates required documents and local Markdown file targets, runs all
-unit tests (including real loopback HTTP tests), and checks staged/unstaged Git
-diff whitespace. It fails if Node.js is unavailable, a link is broken, or a test
-fails. Fragment anchors and external web availability are not checked. HTTP
+The common lane also runs governance, dependency-boundary and protocol-version
+checks described in the [control map](controls.md). To update the generated map
+after changing its registry, run `.venv/bin/python tools/governance.py --write`; the normal
+check fails on stale generated output. This does not establish native compatibility.
+
+This compiles Python syntax in memory, runs selected Ruff correctness diagnostics,
+checks Import Linter dependency contracts, checks browser JavaScript syntax with
+Node.js, runs delayed-image viewer regressions, validates required documents and
+local Markdown file/image targets using markdown-it-py, runs all unit tests
+(including real loopback HTTP tests), and checks staged/unstaged Git diff whitespace. It fails if Node.js is unavailable, a link is broken, or a test
+fails. Fragment anchors, raw HTML links and external web availability are not checked. HTTP
 tests require permission to bind loopback; a sandbox denial is a failed check,
 not permission to skip those tests.
 
@@ -120,3 +162,15 @@ The hook checks the current working tree; review staged paths and diff before
 committing, especially when partially staging changes. It is convenience
 enforcement, not a security boundary. Native and graphical acceptance remain
 separate, as specified in [engineering.md](engineering.md).
+
+## Evidence and releases
+
+Before a release/checkpoint, inspect the staged diff and candidate scope, run the
+common lane against that candidate, and record exact commit/tree identity, tools,
+results and unexecuted lanes in a dated acceptance report. If partially staging,
+check an isolated export of the staged candidate rather than treating a working-tree
+hook as proof. Native changes additionally follow the [native acceptance lane](runbook.md#native-acceptance-lane).
+Hosted required checks are unconfigured until a remote is explicitly authorized.
+
+Current [standards](engineering.md) define release scope; [operations](runbook.md)
+own evidence retention and recovery. No release tag or publication is automatic.

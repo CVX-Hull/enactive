@@ -19,3 +19,19 @@ The setup recipe downloads FreeType 2.14.3 headers from its official release;
 its license files remain in the extracted source. No third-party game binary,
 complete source tree, or library is vendored into Git. Preserve the original
 notices and review the applicable licenses before redistributing a built app.
+
+## Development tooling
+
+Development-only Python tools are installed locally from PyPI; none are vendored
+in Git or required by the runtime controller. [requirements-dev.lock](requirements-dev.lock)
+records exact versions and artifact hashes. Installed distribution metadata was
+reviewed on 2026-10-17; original license files remain in their distributions.
+
+- jsonschema, jsonschema-specifications, attrs, referencing, rpds-py, Ruff,
+  markdown-it-py, mdurl and Rich: MIT.
+- Import Linter, Grimp and Pygments: BSD-2-Clause.
+- Click: BSD-3-Clause.
+- typing_extensions: PSF-2.0.
+
+Preserve upstream license files when redistributing these packages. Tool choice
+and primary project links are recorded in [ADR 003](docs/decisions/003-development-controls.md).

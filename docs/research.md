@@ -6,14 +6,9 @@ our engineering inferences; they are not a claim to exhaust the literature.
 
 ## Engineering
 
-| Primary source | Read / scope | Consequence |
-| --- | --- | --- |
-| [Google documentation practices](https://google.github.io/styleguide/docguide/best_practices.html) | Full guide; maintainable source-adjacent docs | One authoritative home per fact, update with behavior |
-| [Google review standard](https://google.github.io/eng-practices/review/reviewer/standard.html) | Full guide; overall code health rather than perfection | Independent review scaled to risk; no endless stylistic gates |
-| [DORA continuous integration](https://dora.dev/capabilities/continuous-integration/) | Full page; organizational evidence | Small integrated changes and fast repeatable checks; no claim of a guaranteed individual productivity effect |
-| [DORA version control](https://dora.dev/capabilities/version-control/) | Explorer source review | Version code, configuration and reproducible setup together |
-| [Diataxis](https://www.diataxis.fr/start-here/) | Explorer guide review | Separate how-to, reference and explanation when useful, without four empty document trees |
-| [SRE eliminating toil](https://sre.google/workbook/eliminating-toil/) | Explorer chapter review | Automate repeated failure-prone checks; retire useless process |
+The authoritative [engineering research synthesis](research-engineering.md) records
+primary sources, read scope, project consequences and limitations for principles,
+standards, controls, progressive documentation and long-term maintenance.
 
 ## Recent agentic coding evidence
 

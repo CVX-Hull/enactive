@@ -1,23 +1,21 @@
 # CDDA Player
 
-Read `docs/engineering.md`, `docs/architecture.md`, and the current work in
-`docs/work.md` before changing boundaries. Global skills are optional reference
-material, not this project's prescribed process. Do not import ceremony without
-a concrete project need. User instructions take precedence.
+Start with [the overview](docs/overview.md), then [engineering standards](docs/engineering.md).
+Read [architecture](docs/architecture.md), [protocol](docs/protocol.md) and
+[current work](docs/work.md) before changing relevant boundaries. Follow S-AGENT
+for delegation: the lead owns design/integration/verification; one implementation
+writer at a time; named agent_type; clean-context workers/reviewers; bounded briefs.
 
-- Keep new dependencies, game binaries, saves, caches, and build outputs under
-  this project or its explicitly recorded temporary build directory. Never
-  install global packages, change shell profiles, or modify other applications.
-- Never launch fullscreen. Use the project user directory explicitly.
-- Lead retains design, ownership briefs, adjudication, escalation, integration,
-  and final verification. Explorers are read-only; workers own bounded named
-  paths; reviewers read fresh context. Always name agent_type; workers and
-  reviewers use fork_turns=none. One implementation writer at a time.
-- Every brief identifies paths, decisions, and acceptance checks. Verify returned
-  evidence. Take work back after two failed repair attempts or ownership drift.
-- Preserve real CDDA behavior. No hidden state in normal observations, no save
-  editing to win a demo, no bypassing engine validations.
-- Tests and demo evidence are distinct. Never replace a real-game failure with
-  a passing mock. Record failures and unknown outcomes honestly.
-- Keep authoritative docs updated with behavior changes. No speculative APIs,
-  unsolicited frameworks, or silent scope changes.
+- User instructions take precedence. Global skills are optional references;
+  do not import ceremony without a concrete project need.
+- New dependencies, saves, caches and outputs stay project-local or in explicitly
+  recorded owned temporary builds. No global installs/profiles/application changes.
+- Never launch fullscreen. Use the prepared wrapper and explicit project userdir.
+- Preserve real CDDA behavior: player-visible observations only; no save editing
+  or engine-validation bypass to manufacture a demonstration.
+- Tests, native builds and graphical acceptance are separate evidence lanes.
+  Record failure and uncertainty; never replace a real failure with a passing mock.
+- Keep the overview and authoritative contracts current with behavior. Historical
+  reports, proposals and superseded ADRs are evidence, not current instructions.
+- Run the common checks and inspect staged changes before checkpointing. Control
+  definitions, coverage limits and gaps are in [the control map](docs/controls.md).

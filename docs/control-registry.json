@@ -1,0 +1,363 @@
+{
+  "schema_version": 1,
+  "standards": [
+    {
+      "id": "S-UX",
+      "principles": [
+        "P-AUTHORITY",
+        "P-TRUTH",
+        "P-REVIEW",
+        "P-UNCERTAINTY"
+      ],
+      "controls": [
+        "C-PORTABLE",
+        "C-RUNTIME",
+        "C-NATIVE",
+        "C-USABILITY"
+      ]
+    },
+    {
+      "id": "S-ARCH",
+      "principles": [
+        "P-CHANGE",
+        "P-ISOLATION",
+        "P-REVIEW"
+      ],
+      "controls": [
+        "C-BOUNDARY",
+        "C-REVIEW",
+        "C-GOVERNANCE"
+      ]
+    },
+    {
+      "id": "S-PROTOCOL",
+      "principles": [
+        "P-AUTHORITY",
+        "P-TRUTH",
+        "P-UNCERTAINTY"
+      ],
+      "controls": [
+        "C-PROTOCOL",
+        "C-RUNTIME",
+        "C-PORTABLE",
+        "C-NATIVE"
+      ]
+    },
+    {
+      "id": "S-CODE",
+      "principles": [
+        "P-CHANGE",
+        "P-UNCERTAINTY",
+        "P-KNOWLEDGE"
+      ],
+      "controls": [
+        "C-PORTABLE",
+        "C-REVIEW",
+        "C-BOUNDARY"
+      ]
+    },
+    {
+      "id": "S-DELIVERY",
+      "principles": [
+        "P-ISOLATION",
+        "P-CHANGE",
+        "P-KNOWLEDGE"
+      ],
+      "controls": [
+        "C-SETUP",
+        "C-RELEASE",
+        "C-NATIVE",
+        "C-REVIEW"
+      ]
+    },
+    {
+      "id": "S-OPS",
+      "principles": [
+        "P-AUTHORITY",
+        "P-UNCERTAINTY",
+        "P-ISOLATION"
+      ],
+      "controls": [
+        "C-RUNTIME",
+        "C-PORTABLE",
+        "C-NATIVE",
+        "C-MAINTENANCE"
+      ]
+    },
+    {
+      "id": "S-AGENT",
+      "principles": [
+        "P-TRUTH",
+        "P-KNOWLEDGE",
+        "P-REVIEW"
+      ],
+      "controls": [
+        "C-REVIEW",
+        "C-PORTABLE",
+        "C-NATIVE",
+        "C-MAINTENANCE"
+      ]
+    },
+    {
+      "id": "S-DOCS",
+      "principles": [
+        "P-KNOWLEDGE",
+        "P-REVIEW",
+        "P-CHANGE"
+      ],
+      "controls": [
+        "C-GOVERNANCE",
+        "C-USABILITY",
+        "C-REVIEW",
+        "C-MAINTENANCE"
+      ]
+    },
+    {
+      "id": "S-WORK",
+      "principles": [
+        "P-REVIEW",
+        "P-CHANGE",
+        "P-KNOWLEDGE"
+      ],
+      "controls": [
+        "C-REVIEW",
+        "C-RELEASE",
+        "C-USABILITY"
+      ]
+    },
+    {
+      "id": "S-EVIDENCE",
+      "principles": [
+        "P-TRUTH",
+        "P-KNOWLEDGE",
+        "P-UNCERTAINTY"
+      ],
+      "controls": [
+        "C-GOVERNANCE",
+        "C-PORTABLE",
+        "C-NATIVE",
+        "C-RELEASE",
+        "C-MAINTENANCE"
+      ]
+    }
+  ],
+  "controls": [
+    {
+      "id": "C-PORTABLE",
+      "name": "Portable regression lane",
+      "mode": "automatic",
+      "scope": "Controller, HTTP adapter, setup and spectator regressions.",
+      "mechanism": "Common command compiles Python, runs selected Ruff correctness diagnostics, Import Linter contracts, JavaScript syntax checks, Python tests and delayed-image viewer tests; markdown-it-py parses document links/images before contained file-target checks; diff whitespace is checked.",
+      "owner": "maintainer",
+      "trigger": "each integration checkpoint and configured CI event",
+      "evidence": [
+        "tools/check.py",
+        "tests/test_controller.py",
+        "tests/test_server.py",
+        "tests/test_setup.py",
+        "tests/test_viewer.cjs",
+        ".github/workflows/check.yml",
+        ".githooks/pre-commit",
+        "pyproject.toml",
+        "requirements-dev.lock",
+        "tests/test_devtools.py"
+      ],
+      "failure_response": "Preserve failure output, fix the cause and rerun before claiming portable acceptance.",
+      "limitations": "Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing.",
+      "enforcement": "Invoked by common command, opt-in local hook and CI recipe; hook can be bypassed and no hosted required check is configured."
+    },
+    {
+      "id": "C-RUNTIME",
+      "name": "Live authority and input guards",
+      "mode": "runtime",
+      "scope": "Single-controller dispatch, HTTP trust boundary and spectator input freshness.",
+      "mechanism": "Controller validates authority, bounds inputs, serializes dispatch and freezes uncertain outcomes; server validates origin/token and frame paths; viewer waits for matching image decode.",
+      "owner": "controller and viewer maintainer",
+      "trigger": "every relevant request, observation and image decode",
+      "evidence": [
+        "harness/controller.py",
+        "harness/server.py",
+        "web/app.js",
+        "tests/test_controller.py",
+        "tests/test_server.py",
+        "tests/test_viewer.cjs",
+        "docs/protocol.md"
+      ],
+      "failure_response": "Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.",
+      "limitations": "Tests exercise fake-bridge and browser fixtures. Native takeover and engine input behavior need C-NATIVE. Pause cannot cancel an already-running activity; no structured damage/trap or combat guarantee.",
+      "enforcement": "Implemented at runtime; regression execution is C-PORTABLE. Source references alone establish no behavioral pass."
+    },
+    {
+      "id": "C-NATIVE",
+      "name": "Native build and real-game acceptance",
+      "mode": "manual",
+      "scope": "Changed native/input/rendering/protocol/compiler/source-pin behavior and new support claims.",
+      "mechanism": "Follow native acceptance probes, inspect actual game/spectator frames and record dated outcomes, environment, candidate and hashes.",
+      "owner": "integration maintainer; lead verifies evidence",
+      "trigger": "relevant native boundary change or new native release/support claim",
+      "evidence": [
+        "docs/runbook.md#native-acceptance-lane",
+        "docs/setup.md",
+        "docs/acceptance/2026-10-17-mvp.md",
+        "docs/acceptance/2026-10-17-mvp-manifest.json"
+      ],
+      "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
+      "limitations": "Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.",
+      "enforcement": "Required by S-PROTOCOL/S-DELIVERY and release review; manual, outside the portable gate."
+    },
+    {
+      "id": "C-USABILITY",
+      "name": "Operator understanding review",
+      "mode": "manual",
+      "scope": "Overview, navigation, control ownership, freshness, recovery limits and next decision.",
+      "mechanism": "Review whether an operator can find purpose, current capabilities/limits, rationale, next change/tradeoffs and evidence from overview and immediate links; inspect ordinary and stale/paused/error flows when changed.",
+      "owner": "lead with operator feedback",
+      "trigger": "user-facing behavior/guidance change and milestone review",
+      "evidence": [
+        "docs/overview.md",
+        "docs/changes/001-engineering-system.md",
+        "docs/runbook.md",
+        "web/app.js"
+      ],
+      "failure_response": "Correct misleading flows or guidance and retain consequential limits before milestone acceptance.",
+      "limitations": "Human judgment; no automated usability score or user study is claimed. Document links alone do not demonstrate comprehension.",
+      "enforcement": "Required review under S-UX/S-DOCS/S-WORK; no automatic usability gate."
+    },
+    {
+      "id": "C-BOUNDARY",
+      "name": "Architectural dependency contracts",
+      "mode": "automatic",
+      "scope": "Declared controller and server dependency boundaries, including indirect imports through harness modules.",
+      "mechanism": "Import Linter uses the pyproject.toml forbidden contracts: controller cannot depend on server, CLI, declared network modules or build tooling; server cannot depend on CLI/tools; CLI may compose both.",
+      "owner": "harness maintainer",
+      "trigger": "common command; architecture changes require rule review",
+      "evidence": [
+        "pyproject.toml",
+        "tools/check.py",
+        "tests/test_devtools.py",
+        "docs/architecture.md",
+        "docs/decisions/003-development-controls.md"
+      ],
+      "failure_response": "Remove reversed dependency or review the boundary and checker together before accepting changed architecture.",
+      "limitations": "Static import graph with configured external roots. Dynamic imports, external-package internals, undeclared libraries and semantic C++ isolation remain review concerns; this is not comprehensive module layering.",
+      "enforcement": "Common command runs the real lint-imports executable and propagates failure; temporary source fixtures exercise allowed composition and direct/indirect forbidden imports."
+    },
+    {
+      "id": "C-REVIEW",
+      "name": "Design and independent change review",
+      "mode": "manual",
+      "scope": "Consequential designs, implementation, tests, delegation and exceptions.",
+      "mechanism": "Lead owns design/integration and verifies returned evidence; bounded workers have named paths; fresh-context review assesses contracts, risk and maintainability before checkpoint.",
+      "owner": "lead; reviewer supplies independent findings",
+      "trigger": "significant change, new boundary/guarantee/dependency or integration checkpoint",
+      "evidence": [
+        "AGENTS.md",
+        "docs/engineering.md",
+        "docs/changes/001-engineering-system.md",
+        "docs/work.md"
+      ],
+      "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
+      "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process.",
+      "enforcement": "Required under S-AGENT and change workflow; no automated approval or remote branch protection configured."
+    },
+    {
+      "id": "C-GOVERNANCE",
+      "name": "Registry, evidence schema and map validation",
+      "mode": "automatic",
+      "scope": "Mandatory standard mappings, principle/control IDs, local references, curated manifest metadata and generated map.",
+      "mechanism": "jsonschema Draft 2020-12 with FormatChecker validates local record schemas. Bounded repository checks validate ID relationships, exact standard mappings, non-orphan references and contained evidence files, relative artifact references and generated output freshness.",
+      "owner": "maintainer",
+      "trigger": "common command; regenerate map after registry change",
+      "evidence": [
+        "tools/governance.py",
+        "tests/test_governance.py",
+        "docs/control-registry.json",
+        "docs/acceptance/2026-10-17-mvp-manifest.json",
+        "schemas/control-registry.schema.json",
+        "schemas/acceptance-manifest.schema.json",
+        "docs/decisions/003-development-controls.md"
+      ],
+      "failure_response": "Fix missing/unknown mappings, unsafe references or metadata; regenerate stale map with --write and inspect the result.",
+      "limitations": "Schemas and relationship checks validate structure and identity formats, not normative prose truth, artifact byte hashes, media availability, historical observations, owner performance or actual execution. Evidence fragments are not validated.",
+      "enforcement": "Common command fails; negative tests exercise mapping/field/reference/drift failures. Normal mode never rewrites the map."
+    },
+    {
+      "id": "C-PROTOCOL",
+      "name": "Protocol v1 source agreement",
+      "mode": "automatic",
+      "scope": "Native emitter/validator, controller send/validator, server advertisement and protocol document version.",
+      "mechanism": "Recognize the current two C++ literal forms, Python AST dictionary/comparison literals and document version; require each to represent v1 exactly once.",
+      "owner": "bridge and controller maintainer",
+      "trigger": "common command; any protocol representation change requires checker review",
+      "evidence": [
+        "tools/governance.py",
+        "tests/test_governance.py",
+        "native/cdda_harness.cpp",
+        "harness/controller.py",
+        "harness/server.py",
+        "docs/protocol.md"
+      ],
+      "failure_response": "Resolve version drift; for a refactor/version change review and update checker plus contract, then run required native acceptance.",
+      "limitations": "Narrow source drift detector, not a robust C++ parser or protocol conformance proof. Refactored representations fail for review; matching literals cannot prove runtime behavior.",
+      "enforcement": "Common command fails on version drift or unrecognized source form; each representation has a negative fixture."
+    },
+    {
+      "id": "C-SETUP",
+      "name": "Isolated pinned setup",
+      "mode": "runtime",
+      "scope": "Explicit download/extract/build/install stages and checkout-owned temporary workspaces.",
+      "mechanism": "Setup verifies checksums, extraction paths and build ownership; preserves existing app/environment, records local manifests and never launches the game automatically.",
+      "owner": "build maintainer",
+      "trigger": "each requested setup stage and dependency/compiler change",
+      "evidence": [
+        "tools/setup.py",
+        "tools/prepare_game.py",
+        "tools/patch_game.py",
+        "native/upstream.json",
+        "tests/test_setup.py",
+        "docs/setup.md",
+        "docs/environment.md"
+      ],
+      "failure_response": "Stop failed stage, preserve diagnostics and retry only after identifying the corrupt input or owned workspace.",
+      "limitations": "Portable fixtures do not perform fresh downloads, native compilation/signing or install. Existing-host recipe is historical; broader hosts remain unverified.",
+      "enforcement": "Implemented stage guards plus portable setup regressions; native reproducibility requires C-NATIVE and manual provenance review."
+    },
+    {
+      "id": "C-RELEASE",
+      "name": "Exact candidate and evidence review",
+      "mode": "manual",
+      "scope": "Checkpoint/release scope, source provenance and validation lanes.",
+      "mechanism": "Inspect staged diff and candidate identity, run common checks against exact candidate, review pins/open exceptions and require relevant native probes for affected claims.",
+      "owner": "lead or releasing maintainer",
+      "trigger": "checkpoint, release or support claim",
+      "evidence": [
+        "docs/setup.md#evidence-and-releases",
+        "docs/engineering.md",
+        "docs/runbook.md#native-acceptance-lane",
+        "native/upstream.json"
+      ],
+      "failure_response": "Hold the affected acceptance/release claim until failed or unexecuted required lanes are resolved or scope is explicitly reduced.",
+      "limitations": "Working-tree hook does not prove a partially staged candidate; no tag, publication, remote required check or release automation is installed.",
+      "enforcement": "Manual requirement; local hook and portable CI recipe support review but do not enforce release authority."
+    },
+    {
+      "id": "C-MAINTENANCE",
+      "name": "Drift, recovery and retention review",
+      "mode": "manual",
+      "scope": "Active guidance, dependency/research freshness, failure evidence and project-owned cleanup.",
+      "mechanism": "Review on behavior change/release/resumption and at least every 90 days during active development; record blockers/exceptions/lessons and check ownership/retention before cleanup.",
+      "owner": "maintainer; lead tracks active work",
+      "trigger": "behavior/control failure, release, resumed work or active-development review interval",
+      "evidence": [
+        "docs/work.md",
+        "docs/runbook.md",
+        "docs/research-engineering.md",
+        "docs/research.md",
+        "docs/environment.md"
+      ],
+      "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
+      "limitations": "Manual policy with no scheduler, drift measurement or deletion job. No guarantee that elapsed review dates or storage availability are monitored automatically.",
+      "enforcement": "Required review under S-OPS/S-AGENT/S-DOCS/S-EVIDENCE; tracked through work and release review, outside portable gate."
+    }
+  ]
+}

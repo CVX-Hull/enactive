@@ -1,0 +1,24 @@
+[tool.ruff]
+cache-dir = ".cache/ruff"
+
+[tool.ruff.lint]
+select = ["E9", "F63", "F7", "F82"]
+
+[tool.importlinter]
+root_package = "harness"
+include_external_packages = true
+
+[[tool.importlinter.contracts]]
+name = "Controller remains independent of adapters and tooling"
+type = "forbidden"
+source_modules = ["harness.controller"]
+forbidden_modules = [
+    "harness.server", "harness.__main__", "http", "urllib", "socket",
+    "tools", "subprocess", "argparse",
+]
+
+[[tool.importlinter.contracts]]
+name = "Server does not depend on CLI or build tooling"
+type = "forbidden"
+source_modules = ["harness.server"]
+forbidden_modules = ["harness.__main__", "tools"]
