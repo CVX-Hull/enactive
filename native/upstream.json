@@ -1,0 +1,16 @@
+{
+  "release": "0.I-1",
+  "commit_short": "7b2efa5",
+  "commit": "7b2efa5cea38e4d4d97dd0e63b28b9148623da59",
+  "annotated_tag_object": "0fb5d5b67811b68ad15798cda13d2b5ec07526cd",
+  "source_url": "https://api.github.com/repos/CleverRaven/Cataclysm-DDA/tarball/refs/tags/0.I-1",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "macos_url": "https://github.com/CleverRaven/Cataclysm-DDA/releases/download/0.I-1/cdda-osx-with-graphics-universal-2026-09-19-2324.dmg",
+  "macos_sha256": "8c169974d93762d1bedffee75c6847eb70a1d5b05e6448c1b829e314ba8bfaf6",
+  "source_files": {
+    "Makefile": "d6e2c585e55562e4a88fc7fbe7b4bdd55874c6844952c5e633815328971d50e6",
+    "src/input_context.cpp": "b097561a600be533c16f298a87897962d14b13de3f9d87e0de47123a9739972a",
+    "src/main.cpp": "c7d35485c7c6a7b42d552485c7f82e66064e9b3014685711380a648c3c0f9454",
+    "src/sdltiles.cpp": "22a75ef59b4bf193aef823ce768021356780897e64ab32882d1fbec25e173d7b"
+  }
+}

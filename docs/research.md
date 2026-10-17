@@ -43,11 +43,15 @@ maintenance question rather than expanding bibliography for its own sake.
 | --- | --- | --- |
 | [Leave No Observation Behind (A2C2)](https://arxiv.org/html/2509.23224v1), Sept 2025 | Full text; robot action-chunk correction. Results are task/hardware dependent. | Fresh observations within bounded routines; interrupts override stale plans |
 | [SmolVLA](https://arxiv.org/html/2506.01844v1), June 2025 | Full text; trained robotic policy and asynchronous execution. Robot weights do not directly solve CDDA. | Separate planning latency from responsive low-level controls; reuse deterministic skills |
+| [FASTER](https://arxiv.org/html/2603.19199v3), May 2026 revision | Full methods, experiments and limitations read. Horizon-aware sampling and streaming reduce reaction delay on tested robots/GPUs; long-horizon simulation accuracy can decline. Timing model and hardware limit transfer. | Measure first-action latency separately from throughput; prefer short verified near-term actions. CDDA can wait between turns, so no diffusion policy or continuous-motion machinery is needed |
+| [Acting While Understanding](https://arxiv.org/html/2606.15285v1), June 2026 | Full text reviewed. Separates semantic computation from action generation; naive stale semantic reuse hurts LIBERO-Long, mitigated by history and delay training. Mostly single-arm manipulation and assumes a reusable model interface. | Keep goals separate from immediate guarded control, refresh on scene changes, retain action history. This inspires the hierarchy; it does not validate a CDDA policy |
 | [Hi Robot](https://arxiv.org/abs/2502.19417), Feb 2025 | Abstract/metadata only; hierarchical reasoning lead | Supports a research direction, not quantitative evidence here |
 | [FindingDory](https://arxiv.org/abs/2506.15635), June 2025 | Abstract only; long-horizon memory lead | Provenance-aware memory is a design hypothesis to test, not an established CDDA improvement |
 
 Recent discovery leads eMEM (2606.03374) and MeMoREval (2610.12561) need further
-paper/benchmark verification before importing their results. We do not call a
+paper/benchmark verification before importing their results. eMEM's accessible
+text also contains an incomplete-ablation placeholder, so its numerical claims
+are not adopted. We do not call a
 new abstract state of the art. The MVP uses no learned motor policy: game
 actions are discrete and engine validation is available. Its hierarchy is an
 engineering inference from control literature, validated by our own acceptance

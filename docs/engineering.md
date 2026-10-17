@@ -12,7 +12,7 @@ one place; link rather than clone. Add a separate decision record only when a
 choice has material alternatives, consequences, or a reversal trigger; the
 initial decisions fit in architecture.md.
 
-Enforcement: the common check command will validate required documents and
+Enforcement: `python tools/check.py` validates required documents and
 local Markdown links. A behavior-changing diff must update the relevant
 contract and acceptance evidence; an independent reviewer checks semantic drift
 that a link checker cannot detect. A checklist is not proof of accuracy.
@@ -59,7 +59,8 @@ Enforcement: a single project check command runs compilation/syntax checks,
 behavior tests, and documentation checks. Python formatting/lint tooling, if
 added, runs from the project environment. Tests cover stale commands, duplicate
 delivery, pause/takeover, timeout ambiguity, invalid input, and context changes.
-Native compilation and real game tests are separate lanes. Tests may not be
+Delayed-image viewer regressions execute production JavaScript with controlled
+decode completion. Native compilation and real game tests are separate lanes. Tests may not be
 weakened to make a diff pass. Any changed expectation needs a reason grounded in
 the contract, not the generated output. Review examines dependencies and
 unnecessary scope as well as functionality.

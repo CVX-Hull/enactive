@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="controller-token" content="__CONTROLLER_TOKEN__">
+  <title>CDDA · Local spectator</title>
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/" aria-label="CDDA spectator home"><span class="brand-mark">C</span><span>CATACLYSM<span class="brand-sub">LOCAL SPECTATOR</span></span></a>
+    <div class="connection"><span id="connection-dot" class="dot"></span><span id="connection">Connecting</span><span class="separator">/</span><span id="age">No observation</span></div>
+    <div class="controls"><button id="observe" class="quiet">Observe</button><button id="resume" class="quiet">Resume</button><button id="pause" class="pause">Ⅱ Pause control</button></div>
+  </header>
+  <main>
+    <section class="stage" aria-label="Native game view">
+      <div class="stage-heading"><div><span class="eyebrow">THE WORLD, AS SEEN BY THE PLAYER</span><h1>Live game view <span id="control-state" class="badge">PAUSED · UNRECONCILED</span></h1></div><span id="category" class="mono">—</span></div>
+      <div id="frame-shell" class="frame-shell stale">
+        <img id="frame" alt="Actual frame captured by the native CDDA Tiles renderer" hidden>
+        <div id="frame-placeholder" class="placeholder"><span class="placeholder-mark">◇</span><strong>Waiting for the game</strong><span>Start CDDA with the project bridge enabled,<br>then observe an input boundary.</span></div>
+        <span id="frame-note" class="frame-note">NO NATIVE FRAME</span>
+      </div>
+      <div class="stage-footer"><span><span class="dot small"></span> ORIGINAL TILES RENDERER</span><span id="latency">Latency —</span><span id="position">Player position —</span></div>
+      <div id="error" class="error" role="alert" hidden></div>
+      <details class="evidence"><summary>Control and observation details</summary><p>One input at a time. A ready response means the engine returned to input. Check the scene to verify the intended result.</p><p>Native keyboard input pauses remote control. A pause cannot undo an input already dispatched.</p></details>
+    </section>
+    <aside>
+      <section class="panel goal-panel"><div class="panel-heading"><span class="eyebrow">CURRENT OBJECTIVE</span><span class="tiny">PLANNER</span></div><form id="goal-form"><label for="goal" class="sr-only">Current objective</label><textarea id="goal" rows="3" placeholder="Set a goal for this session…" maxlength="2000"></textarea><div class="form-footer"><span>Recorded for the planner</span><button class="text-button" type="submit">Save goal ↗</button></div></form></section>
+      <section class="panel timeline-panel"><div class="panel-heading"><span class="eyebrow">SESSION TIMELINE</span><span id="event-count" class="tiny">0 EVENTS</span></div><ol id="timeline"><li class="empty">Your observations and inputs appear here.</li></ol><div class="journal"><span class="dot small"></span><span id="journal">Local journal</span></div></section>
+      <details class="advanced"><summary>Advanced controls &amp; details</summary>
+      <section class="panel action-panel"><div class="panel-heading"><span class="eyebrow">SINGLE INPUT</span><span id="revision" class="tiny mono">REV —</span></div><form id="action-form"><label for="action">Registered native action</label><div class="input-row"><select id="action"><option value="">Observe to load actions</option></select><button type="submit" class="send">Send</button></div></form><form id="key-form"><label for="key">Key / named navigation key</label><div class="input-row"><input id="key" placeholder="e.g. i, ENTER, ESC" autocomplete="off" maxlength="10"><button type="submit" class="send">Send</button></div></form><details><summary>Guarded cardinal walk · up to 8 tiles</summary><form id="walk-form"><div class="input-row"><select id="direction" aria-label="Direction"><option value="north">North</option><option value="east">East</option><option value="south">South</option><option value="west">West</option></select><input id="steps" type="number" min="1" max="8" value="1" aria-label="Steps"><button type="submit" class="send">Walk</button></div><p class="hint">Stops on any visible creature, unknown terrain, furniture, changed context or unexpected movement. No automatic damage guard.</p></form></details><p id="authority" class="hint">Inputs use the displayed observation’s session and revision.</p></section>
+      <section class="panel result-panel"><div class="panel-heading"><span class="eyebrow">LAST RESULT</span><span id="result-status" class="tiny">—</span></div><pre id="last-result">No command sent.</pre></section>
+      </details>
+    </aside>
+  </main>
+  <footer class="page-footer"><span>CDDA PLAYER <span class="muted">/</span> PRIVATE LOOPBACK SESSION</span><span>Native game authority · No hidden map state</span></footer>
+</body>
+</html>
