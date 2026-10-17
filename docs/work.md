@@ -30,6 +30,11 @@ native-v2 and gameplay-evidence interfaces for the accepted source increment. It
 [acceptance](acceptance/2026-10-17-foundation-implementation.md) separates portable,
 build and real native evidence; live closure and remaining work are in GitHub.
 
+The [recovery and memory brief](changes/006-recovery-memory.md) records the frozen
+interfaces, migration and handoffs. Its [acceptance](acceptance/2026-10-17-recovery-memory.md)
+separates Python recovery, passive memory and targeted native probes from future
+public controls and integrated gameplay. Live allocation and status remain in GitHub.
+
 Use Direction for outcomes and sequencing, Execution for delivery stage, and
 Needs attention for issues labeled blocked, decision-needed or risk. At checkpoints,
 the lead marks aging review/validation work with a risk label and records the cause;

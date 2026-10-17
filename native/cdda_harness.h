@@ -5,7 +5,7 @@
 
 namespace cdda_harness
 {
-enum class boundary_kind { normal_play, activity_poll, debug_prompt, menu, unsupported };
+enum class boundary_kind { normal_play, activity_poll, interrupt_confirmation, debug_prompt, menu, unsupported };
 // Game-thread-only stack. Destruction restores the caller even during unwinding.
 class scope
 {
@@ -16,6 +16,27 @@ class scope
         scope( const scope & ) = delete;
         scope &operator=( const scope & ) = delete;
 };
+// Marks only the injected pause's native cancellation invocation.
+class interrupt_owner
+{
+    public:
+        interrupt_owner();
+        ~interrupt_owner();
+        interrupt_owner( const interrupt_owner & ) = delete;
+        interrupt_owner &operator=( const interrupt_owner & ) = delete;
+};
+// Used only around the two pinned cancellation query_yn call sites.
+class interrupt_query
+{
+    public:
+        interrupt_query();
+        ~interrupt_query();
+        interrupt_query( const interrupt_query & ) = delete;
+        interrupt_query &operator=( const interrupt_query & ) = delete;
+    private:
+        bool active;
+};
+void activity_interruptible( bool value );
 void playing( bool value );
 void boundary();
 bool poll( keyboard_mode mode, input_event &event );

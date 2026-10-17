@@ -183,3 +183,20 @@ Only the prepared project app was launched, windowed with its explicit userdir.
 Normal UI saves were retained. A tutorial-load diagnostic was preserved and the
 failed load closed without saving; regular H/Day profiles supplied other probes.
 The game was saved and quit normally, and both controller sessions were stopped.
+
+## 2026-10-17 recovery and memory increment
+
+Created two isolated implementation worktrees under `.runtime/worktrees/`; the lead
+alone integrated source and owned all native runtime. Fresh owned extraction/build:
+`/private/tmp/cdda-player-build-8cyhfag6`. Reused pinned dependencies and existing
+project-local tools; no global installation, profile, Git identity or application
+setting changed. The preceding build manifest and old bridge were archived before
+cutover. No save was edited or removed. H and Day were saved normally; the existing
+tutorial load error remains unresolved and its evidence is retained.
+
+The [acceptance report](acceptance/2026-10-17-recovery-memory.md) records final build
+and installed hashes, the offline wire-v3 cutover, temporary acceptance drivers,
+real windowed probes and scope limits. One fault probe briefly suspended an exact
+owned native PID, then resumed it before cleanup. All native and acceptance-server
+processes were stopped after final probes. Logs/frames, unresolved admissions,
+archived incident bytes and the useful current build remain local for retention.

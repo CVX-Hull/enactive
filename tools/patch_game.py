@@ -38,7 +38,7 @@ def replace_once(path: Path, old: str, new: str) -> None:
 
 for name in ("cdda_harness.h", "cdda_harness.cpp"):
     shutil.copyfile(ROOT / "native" / name, source / "src" / name)
-for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp"):
+for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp", "game.cpp"):
     path = source / "src" / name
     text = path.read_text()
     if '#include "cdda_harness.h"' not in text:
@@ -57,6 +57,30 @@ replace_once(source / "src/handle_action.cpp",
 replace_once(source / "src/do_turn.cpp", 'void handle_key_blocking_activity()\n{',
     'void handle_key_blocking_activity()\n{\n'
     '    cdda_harness::scope harness_activity( cdda_harness::boundary_kind::activity_poll );')
+# Eligibility is exactly the native keyboard-pause policy, never private activity data.
+replace_once(source / "src/do_turn.cpp",
+    '    if( has_unfinished_activity || u.has_destination() ) {',
+    '    cdda_harness::activity_interruptible( ( has_unfinished_activity || u.has_destination() ) &&\n'
+    '            u.activity.is_interruptible_with_kb() );\n'
+    '    if( has_unfinished_activity || u.has_destination() ) {')
+replace_once(source / "src/do_turn.cpp",
+    '                g->cancel_activity_query( _( "Confirm:" ) );',
+    '                cdda_harness::interrupt_owner harness_interrupt;\n'
+    '                g->cancel_activity_query( _( "Confirm:" ) );')
+# Lambdas restrict ownership to these exact calls; other cancel_auto_move callers
+# execute the wrapper without an active interrupt owner and retain ordinary policy.
+replace_once(source / "src/game.cpp",
+    '    if( query_yn( _( "%s Cancel auto move?" ), text ) )  {',
+    '    if( [&]() {\n'
+    '        cdda_harness::interrupt_query harness_query;\n'
+    '        return query_yn( _( "%s Cancel auto move?" ), text );\n'
+    '    }() )  {')
+replace_once(source / "src/game.cpp",
+    '    if( query_yn( "%s %s", text, u.activity.get_stop_phrase() ) ) {',
+    '    if( [&]() {\n'
+    '        cdda_harness::interrupt_query harness_query;\n'
+    '        return query_yn( "%s %s", text, u.activity.get_stop_phrase() );\n'
+    '    }() ) {')
 replace_once(source / "src/debug.cpp",
     '    for( bool stop = false; !stop; ) {\n        ui_manager::redraw();',
     '    cdda_harness::scope harness_debug( cdda_harness::boundary_kind::debug_prompt );\n'

@@ -9,15 +9,15 @@
     "tools/diagrams.py": "f36470eeee167ab0039e17f9b6288e6d0d620df704419dbffa864bad54b7d4c1",
     "docs/diagrams/action.mmd": "e336746259893f76f0be296e86cacada2cdd0bd626a901232c6e720392108a81",
     "docs/diagrams/context.mmd": "ab7a504ffd6c627b29226cef6000a3f4b58b0f7697e5337d473a2a48c1920d63",
-    "docs/diagrams/native-recovery.mmd": "1e0184a533cda6e7622dc9e71cb4cdb7f6a2686f6ccd78a899713a07216f7055",
+    "docs/diagrams/native-recovery.mmd": "888d860aad2f27c3b8398e9822e015c7caf5c5e4976be8b77cc272297714c306",
     "docs/diagrams/recovery.mmd": "3a29b59da36d5eb58d9eddf592a57dbdbc17dcfcc9c082ff8374d26f50f1301d",
     "docs/diagrams/tiered-gameplay.mmd": "763b5a8c2b882a84d61d4e1a48275b06d5b5cb52f540587c204bf7c96d5639f0"
   },
   "outputs": {
     "docs/diagrams/action.svg": "7bd335d170d92d98b83322369bfe93b6e307c5b7a9bc9e64de0a13f3f3101038",
     "docs/diagrams/context.svg": "cbdd849c9ce9d285c32159ce9e1efbcdab8ec6b25aaaf514cbc1e623d706421e",
-    "docs/diagrams/native-recovery.svg": "267808cfe11dc5c8aa131b0c084c6493dfa46b5c228470d9b546d660e59337f6",
-    "docs/diagrams/recovery.svg": "9ad39e1fcbc01f077781e89610233e592b57c0b89ac70816d73ebebb83ec6b9c",
+    "docs/diagrams/native-recovery.svg": "134be8fac023122f9596df40bc7b1e9eddc41b5e0ee7d883a0fecd3df2f09bf5",
+    "docs/diagrams/recovery.svg": "963d312dc4b37a7f38e99fcecb6800569680360786935803147f9fd6c7ed37a4",
     "docs/diagrams/tiered-gameplay.svg": "d042979b06d5df84ed7e6fb9c1de61763c69f2ee5ecfcb75022129b7f58f4239"
   }
 }

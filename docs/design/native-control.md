@@ -9,10 +9,11 @@ review_trigger: Pinned engine input, activity, debug prompt, bridge protocol or 
 Investigation for [#6](https://github.com/CVX-Hull/cdda-player/issues/6), based on
 CDDA 0.I-1 commit `7b2efa5cea38e4d4d97dd0e63b28b9148623da59` and harness base
 `806c0ba`. Boundary/session authority and durable revocation are implemented in
-[#29](https://github.com/CVX-Hull/cdda-player/issues/29); the recovery operations and
-UI in this design remain future work under #30/#31/#8. The current
-[protocol](../protocol.md) still pauses new dispatch only. No new native behavior
-was built or demonstrated in this investigation.
+[#29](https://github.com/CVX-Hull/cdda-player/issues/29); the v3 transport increment implements the Python recovery operations under #30.
+Public UI/CLI and broader acceptance remain #31/#8. The current
+[protocol](../protocol.md) owns implemented envelopes and limits; this document
+retains the source rationale and wider operator design. The original investigation
+itself did not build or demonstrate native recovery.
 
 ## What the source establishes
 
@@ -47,23 +48,23 @@ When a raw debug prompt is visible, display the original frame and **Continue pa
 this error once**. That operator action sends one Space to this exact prompt; it
 does not select “ignore future errors”, copy to the clipboard or declare the problem
 fixed. Preserve the error evidence. All recovery leaves gameplay paused and requires
-fresh normal-play observation plus explicit resume before new gameplay.
+fresh normal-play or supported-menu observation plus explicit resume before new gameplay.
 
-Proposed operator flow: **what a recovery request can establish, and when control
-can resume**. Boxes are steps, not processes; arrows name outcomes. The uncertain
+Current Python transport flow: **what a recovery request can establish, and when
+control can resume**. The proposed public buttons remain future work. Boxes are steps, not processes; arrows name outcomes. The uncertain
 path preserves native fallback rather than declaring success.
 
-![Proposed recovery: pause, use an exact engine prompt, reconcile, then explicitly resume only at normal play.](../diagrams/native-recovery.svg)
+![Current Python recovery: pause, use an exact engine prompt, reconcile, then explicitly resume only at normal play or a supported menu.](../diagrams/native-recovery.svg)
 
 The activity and debug branches both return to observation. Neither an answer nor
 a dismissal proves task completion. [Editable diagram](../diagrams/native-recovery.mmd).
 
 ## Boundary identity and scope
 
-Native wire version 2 is implemented across the producer and consumers. Reject mixed versions; retain the v1 source/release in Git for
-historical recovery only. A rollback must deploy the coherent earlier system and
-validate its data transition; no current runtime reader accepts v1 and no mixed-version
-operation is supported. Follow S-MIGRATION for every change.
+Native wire version 3 is the current producer/consumer contract. Reject older
+and mixed versions. Prior releases remain historical source, with no current
+runtime reader. Rollback requires a coordinated system and validated data
+transition. Follow S-MIGRATION for every change.
 
 Rotate the native session on every `playing(true)` world entry and on world exit,
 not merely at process creation. At the investigation base, the coordinate origin
@@ -75,9 +76,7 @@ session commands on either channel and require fresh reconciliation after transi
 Add a discriminated `boundary` record to observations: kind `normal_play`,
 `activity_poll`, `interrupt_confirmation`, `debug_prompt`, `menu` or `unsupported`;
 opaque boundary instance ID; allowed recovery operations; operator-control generation;
-and optional owning interrupt request ID. In the implemented foundation, recovery
-operations are empty and the interrupt request ID is null. The later recovery
-implementation will advertise only native keyboard-interruption eligibility and
+and optional owning interrupt request ID. The v3 transport advertises only native keyboard-interruption eligibility and
 visible confirmation affordances, not
 hidden activity targets, remaining work, inventory, NPC state or absolute position.
 Scene export is restricted to normal play. Boundaries without rendered evidence
@@ -103,21 +102,21 @@ One existing controller process remains the host writer. Add a separate, bounded
 control inbox because a gameplay command may still be waiting for its result.
 Use the existing atomic-JSON/rename pattern, not an additional service or OS-event
 injector. `control.json → control-claimed.json → control-response.json` has a separate
-ID namespace, seen-ID ledger and nonblocking host control lock. At most one recovery
-request is unresolved. It cannot overwrite `request.json` or its pending disposition.
+ID namespace, seen-ID ledger and nonblocking host control lock. At most one recovery request occupies the live slot; earlier unknown outcomes
+remain historical admissions after explicit post-expiry reconciliation. It cannot overwrite `request.json` or its pending disposition.
 
-All recovery requests: protocol 2, unique ID, session, expected native operator-control
+All recovery requests: protocol 3, unique ID, session, expected native operator-control
 generation, host revocation token, kind, creation/expiry, maximum 4096 bytes. Use a two-second expiry; a
 late request is rejected and never automatically resent. A manual repeat requires
 new evidence and a new ID. Host restart pauses, retires unclaimed work and preserves
 uncertain claimed work for reconciliation, on both channels. The process lock
-outlives both writers. The local token/origin rules still apply at HTTP ingress.
+outlives both writers. The ordinary HTTP ingress rejects recovery; #31 owns its later operator surface.
 The planner facade does not expose recovery actions; they are explicit operator
 controls, not a cryptographic isolation boundary from arbitrary local code.
 
 Publish a durable atomic host revocation token `(controller_boot_id, counter)` before
 each Pause (even when already paused), takeover, new run lease, shutdown or restart
-retirement. Capture the token after a recovery request's own initial Pause. Both v2
+retirement. Capture the token after a recovery request's own initial Pause. Both v3
 gameplay and recovery envelopes carry their admission token. The native final gate
 reads it immediately before committing an input; a mismatch, missing or malformed
 token rejects delivery, even if the file was already claimed. This closes the case
@@ -183,12 +182,14 @@ that resumable backlog will never run later. Display these limits to the operato
 
 Portable tests cover envelopes, identity races, state mapping and negative dispatch.
 Patch anchoring/hash checks and a real native build cover integration with this pin.
-#8 owns real windowed probes with source/build identity, before/after frames and traces.
+#30's [targeted acceptance](../acceptance/2026-10-17-recovery-memory.md) records
+source/build identity, before/after frames and traces; #8 retains the broader
+integrated acceptance.
 A labelled test-only debug prompt probe may exercise the real prompt function, but
 must not manufacture a passing gameplay outcome or conceal the historical error.
 Test-injected diagnostics and naturally encountered errors are separate evidence.
 
-Unresolved until implementation/native acceptance: precise hook coverage for nested
+Native acceptance must establish: precise hook coverage for nested
 activity/query paths, frame capture timing at raw debug, effective stop latency and
 backlog behavior of WAIT in the selected legitimate save. These are named acceptance
 risks, not reasons to assert stronger guarantees. If a hook cannot establish unique

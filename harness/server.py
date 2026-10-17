@@ -21,7 +21,7 @@ class Server(ThreadingHTTPServer):
         super().__init__(("127.0.0.1", port), Handler)
         self.port = self.server_address[1]
         atomic_json(controller.bridge / "controller.json", {
-            "protocol": 2, "port": self.port, "token": controller.token})
+            "protocol": 3, "port": self.port, "token": controller.token})
 
     def server_close(self) -> None:
         super().server_close()

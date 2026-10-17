@@ -48,7 +48,7 @@ and the frame before deciding again. See the [protocol](protocol.md).
 
 Pause prevents subsequent remote dispatch. Native keyboard/button input also
 latches takeover. Neither guarantee cancels an already-running native activity;
-use the native window to interrupt it. Do not spam remote keys to escape a stall.
+use explicit operator recovery below or the native window to interrupt it. Do not spam remote keys to escape a stall.
 
 For a timeout or frozen viewer: preserve the error/journal and last frame; inspect
 the native window. Unsupported upstream error screens may need native dismissal.
@@ -59,7 +59,7 @@ For service restart: stop that service normally, start one controller, observe
 and reconcile, then resume. For a game crash/restart: preserve diagnostics, launch
 the prepared wrapper, use normal CDDA load UI, and acquire new session authority.
 Old-session commands must not be reused, including after normal save/reload in the
-same process. Native-v2 deliberately rejects mixed v1/v2 components; restart a
+same process. Native-v3 rejects older and mixed components; restart a
 matching controller and native build, then observe. No save-file repair/editing is prescribed.
 
 Input admissions are durably retained in `.runtime/bridge/admissions/` before
@@ -67,13 +67,36 @@ dispatch. An unresolved request remains unknown across reconciliation and servic
 restart; the current scene is not proof of its old result. Do not delete admissions
 or rewrite journals to clear this condition. Preserve them with incident evidence.
 At `activity_poll`, `debug_prompt` or `unsupported`, observation is allowed but
-remote key/action/Resume is denied. Return to a supported boundary through normal
+remote key/action/Resume is denied. Return to a supported boundary through explicit recovery or normal
 native controls, then observe and explicitly resume. Pause only revokes input
 that has not crossed the final native commit check; it cannot undo a prior input.
 
 Use CDDA's normal Save menu before quitting. Stop the controller with Ctrl-C; it
 leaves remote control paused. Saves are in `.runtime/user/`. Never treat a stale
 frame or old acceptance record as proof a current process is healthy.
+
+## Python operator recovery
+
+Public recovery buttons/CLI are follow-on [#31](https://github.com/CVX-Hull/cdda-player/issues/31).
+An operator controlling the existing Python `Controller` instance can call
+`recover`; never start a second controller to obtain this API. Obtain fresh
+observation and pass its session and control generation explicitly. At an eligible
+activity poll use `request_interrupt`. Inspect the actual returned owned prompt,
+then call `answer_interrupt` with YES or NO and its exact boundary, revision,
+frame and originating interruption ID. At a raw debug prompt, preserve the error
+frame and use `continue_debug_once` with its exact evidence. This sends one Space;
+it does not repair the error or suppress later ones. Exact argument names are in
+the [protocol](protocol.md#explicit-operator-recovery).
+
+Check the returned status and then observe: prompt opening and answer delivery
+are different from activity cancellation. WAIT may resume backlog. Unsupported
+activities and failed recovery remain paused and require native controls. Ordinary
+key/action/Resume stays forbidden at recovery boundaries; never auto-confirm.
+A recovery timeout preserves `control_pending`, its durable admission and unknown
+history separately from the original gameplay request. Passive status cannot clear
+the live slot. After the fixed two-second native deadline, an explicit fresh
+observe can reconcile transport capacity; it cannot establish the old outcome.
+Any next recovery must be a deliberate new request against current evidence.
 
 ## Native acceptance lane
 
@@ -135,10 +158,18 @@ an incident archive and document the explicit transition to a fresh bridge with
 unresolved work still tracked. No replay or save editing is permitted. Historical
 reports and journals stay immutable; they need no runtime reader.
 
-Build manifests require `schema_version: 1`; evidence stores require store version 1.
+Build manifests require `schema_version: 1`; evidence stores require store version 2.
 Never just relabel an unknown file. A reviewed one-time build-manifest migration
 must first verify workspace ownership, pinned source/headers and binary hashes,
 then record before/after hashes. Alternatively preserve the old manifest/workspace
 and use a fresh extraction. Permanent setup/startup paths only read current formats.
 Remove temporary converters after recording their operation. Roll back only as a
 coordinated system with a validated data transition, never by enabling a fallback.
+
+For the wire-v3 cutover, archive the stopped bridge with original hashes under
+`.runtime/incidents/` and start a fresh bridge. Do not relabel old requests. Carry
+unresolved identities as verified `incident/1` references in
+`historical-incidents.json`; startup validates referenced bytes without parsing
+old protocol records. These remain visible historical unknowns and grant no
+execution permission. Evidence store format 2 accepts only current-v3 observations;
+archive earlier stores and start new task stores, preserving original metadata.

@@ -9,7 +9,7 @@ from harness import __main__ as cli
 
 class DiscoveryTests(unittest.TestCase):
     def test_mixed_or_missing_protocol_never_contacts_service(self):
-        for version in (None, 1, 3, True, "2"):
+        for version in (None, 1, 2, 4, True, 3.0, "3"):
             with self.subTest(version=version):
                 config = {"port": 8766, "token": "local", "protocol": version}
                 output = StringIO()
@@ -21,7 +21,7 @@ class DiscoveryTests(unittest.TestCase):
                 self.assertIn("Unsupported service protocol", output.getvalue())
 
     def test_matching_service_uses_discovered_port(self):
-        config = {"port": 8766, "token": "local", "protocol": 2}
+        config = {"port": 8766, "token": "local", "protocol": 3}
         opener = Mock()
         opener.open.return_value = BytesIO(b'{"paused":true}')
         with patch.object(cli, "read_json", return_value=config), \

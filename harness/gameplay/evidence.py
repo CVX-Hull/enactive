@@ -39,15 +39,16 @@ _SCENE = _object({
         "required": ["dx", "dy", "visible"], "additionalProperties": False}, 8, 8),
 })
 _OBSERVATION = _object({
-    "protocol": {"type": "integer", "const": 2}, "id": _text(128, empty=True),
+    "protocol": {"type": "integer", "const": 3}, "id": _text(128, empty=True),
     "session": {**_ID, "pattern": "^[A-Za-z0-9_-]+$"}, "revision": _INT,
     "category": _text(128, empty=True), "actions": _array(_text(128), 512),
     "status": {"enum": ["ready", "rejected", "dispatched"]}, "error": _text(4096, empty=True),
     "paused": {"type": "boolean"}, "timestamp_ms": _INT, "frame_ok": {"type": "boolean"},
     "frame": _text(300, empty=True), "in_game": {"type": "boolean"},
     "boundary": _object({"kind": _BOUNDARY, "id": _ID, "control_generation": _INT,
-                          "recovery_operations": {"type": "array", "maxItems": 0},
-                          "interrupt_request_id": {"type": "null"}}),
+                          "recovery_operations": {"type": "array", "maxItems": 1, "uniqueItems": True,
+                                                  "items": {"enum": ["request_interrupt", "answer_interrupt", "continue_debug_once"]}},
+                          "interrupt_request_id": {"anyOf": [_ID, {"type": "null"}]}}),
     "scene": {"anyOf": [_SCENE, {"type": "null"}]},
 })
 
@@ -99,7 +100,9 @@ def _validate_observation(value: dict[str, Any] | str | bytes) -> dict[str, Any]
     if observation["status"] == "dispatched" or observation["frame_ok"] is not True:
         raise EvidenceError("A failed or unfinished capture is missing evidence")
     if (observation["boundary"]["kind"] != "normal_play" or observation["in_game"] is not True
-            or observation["category"] != "DEFAULTMODE" or observation["scene"] is None):
+            or observation["category"] != "DEFAULTMODE" or observation["scene"] is None
+            or observation["boundary"]["recovery_operations"] != []
+            or observation["boundary"]["interrupt_request_id"] is not None):
         raise EvidenceError("Current evidence requires positively marked normal play")
     if not re.fullmatch(r"frame-" + re.escape(observation["session"]) + r"-[1-9][0-9]*\.png", observation["frame"]):
         raise EvidenceError("Frame identity must match its native session and immutable basename")
@@ -168,9 +171,11 @@ class EvidenceStore:
             raise EvidenceError("Another writer owns this evidence store") from exc
         self._entries: dict[str, _Entry] = {}
         self._current: EvidenceRef | None = None
+        self._authority_generation = 0
         self._session: str | None = None
         self._retired_sessions: list[str] = []
         self._blocked: list[str] = []
+        self._disputed: list[str] = []
         self._reservation: CapacityReservation | None = None
         self._interpretations: tuple[Interpretation, ...] = ()
         self.invalid_reason = "Observe after opening the store"
@@ -188,6 +193,7 @@ class EvidenceStore:
 
     @_serialized
     def close(self) -> None:
+        self._authority_generation += 1
         self._current = None
         self._reservation = None
         self._lock.close()
@@ -214,19 +220,22 @@ class EvidenceStore:
                 if manifest.is_symlink() or manifest.stat().st_size > 34 * 1024 * 1024:
                     raise EvidenceError("Invalid evidence manifest")
                 value = json.loads(manifest.read_bytes())
-                if (type(value) is not dict or set(value) != {"store_version", "entries", "session", "retired_sessions", "blocked"}
-                        or type(value["store_version"]) is not int or value["store_version"] != 1
+                if (type(value) is not dict or set(value) != {"store_version", "entries", "session", "retired_sessions", "blocked", "disputed"}
+                        or type(value["store_version"]) is not int or value["store_version"] != 2
                         or type(value["entries"]) is not list or len(value["entries"]) > MAX_FRAMES
                         or type(value["retired_sessions"]) is not list or len(value["retired_sessions"]) > MAX_FRAMES
                         or any(type(s) is not str or not 1 <= len(s) <= 128 for s in value["retired_sessions"])
                         or type(value["blocked"]) is not list or len(value["blocked"]) > MAX_FRAMES
                         or any(type(s) is not str or not re.fullmatch("[a-f0-9]{64}", s) for s in value["blocked"])
+                        or type(value["disputed"]) is not list or len(value["disputed"]) > MAX_FRAMES
+                        or any(type(s) is not str or not re.fullmatch("[a-f0-9]{64}", s) for s in value["disputed"])
                         or (value["session"] is not None and (type(value["session"]) is not str
                             or not re.fullmatch("[A-Za-z0-9_-]{1,128}", value["session"])))):
                     raise EvidenceError("Malformed evidence manifest")
                 self._session = value["session"]
                 self._retired_sessions = value["retired_sessions"]
                 self._blocked = value["blocked"]
+                self._disputed = value["disputed"]
                 for item in value["entries"]:
                     if type(item) is not dict or set(item) != {"reference", "observation", "initial_lag_seconds"}:
                         raise EvidenceError("Malformed retained observation")
@@ -239,7 +248,12 @@ class EvidenceStore:
                     if ref != expected or ref.observation_id in self._entries:
                         raise EvidenceError("Retained metadata contradicts observation identity")
                     self._entries[ref.observation_id] = _Entry(ref, observation, lag)
-                    self._verify_file(ref)
+                if not set(self._disputed) <= self._entries.keys():
+                    raise EvidenceError("Disputed source is not retained")
+                # Load all metadata before verification can persist a dispute;
+                # otherwise a bad early frame could truncate later entries.
+                for entry in self._entries.values():
+                    self.verify(entry.reference)
             except (OSError, ValueError, TypeError, KeyError, RecursionError) as exc:
                 if isinstance(exc, EvidenceError):
                     raise
@@ -247,8 +261,8 @@ class EvidenceStore:
         self._usage()
 
     def _save(self) -> None:
-        value = {"store_version": 1, "session": self._session, "retired_sessions": self._retired_sessions,
-                 "blocked": self._blocked,
+        value = {"store_version": 2, "session": self._session, "retired_sessions": self._retired_sessions,
+                 "blocked": self._blocked, "disputed": self._disputed,
                  "entries": [{"reference": item.reference.to_dict(), "observation": item.observation,
                               "initial_lag_seconds": item.initial_lag_seconds} for item in self._entries.values()]}
         temporary = self.directory / ("evidence-" + uuid.uuid4().hex + ".tmp")
@@ -270,6 +284,10 @@ class EvidenceStore:
                            digest, observation["boundary"]["kind"])
 
     def _invalidate(self, reason: str, *disputed: str) -> None:
+        self._authority_generation += 1
+        for identity in disputed:
+            if identity in self._entries and identity not in self._disputed:
+                self._disputed.append(identity)
         identities = disputed + (() if self._current is None else (self._current.observation_id,))
         for identity in identities:
             if identity in self._entries and identity not in self._blocked:
@@ -301,9 +319,30 @@ class EvidenceStore:
         try:
             self._verify_file(reference)
         except EvidenceError as exc:
-            self._invalidate(str(exc))
+            self._invalidate(str(exc), reference.observation_id)
             self._save()
             raise
+
+    @_serialized
+    def source_status(self, reference: EvidenceRef) -> str:
+        """Sticky historical validity, independent of present freshness/authority.
+
+        Conflicting sources remain disputed after newer observations and reopen.
+        A stale or old-session source can remain retained historical evidence.
+        Neither status grants permission to use it as current command authority.
+        """
+        self.verify(reference)
+        return "disputed" if reference.observation_id in self._disputed else "retained"
+
+    @_serialized
+    def authority_generation(self) -> int:
+        """Process-local invalidation/identity generation, never an execution token.
+
+        Returning to an earlier retained frame cannot conceal intervening changes.
+        This is meaningful only for this store instance; reopening has no current
+        authority, and task memory is never restored across instances.
+        """
+        return self._authority_generation
 
     def _fresh(self, entry: _Entry, now_monotonic: float, now_timestamp_ms: int) -> None:
         if type(now_monotonic) not in (int, float) or not math.isfinite(now_monotonic):
@@ -319,7 +358,7 @@ class EvidenceStore:
     def ingest(self, value: dict[str, Any] | str | bytes, *, received_monotonic: float,
                now_monotonic: float, now_timestamp_ms: int,
                reservation: CapacityReservation | None = None) -> EvidenceRef:
-        """Retain a native-v2 normal-play observation with its actual first receipt.
+        """Retain a native-v3 normal-play observation with its actual first receipt.
 
         Repeated source identity reuses original receipt/lag and immutable copied
         source; bridge-cache eviction is harmless after initial retention. Altered
@@ -398,6 +437,8 @@ class EvidenceStore:
             if reservation is not None:
                 self._check_reservation(reservation)
                 self._reservation = None
+            if self._current != entry.reference:
+                self._authority_generation += 1
             self._current = entry.reference
             self.invalid_reason = ""
             self._save()

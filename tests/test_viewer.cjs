@@ -26,7 +26,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8'), 
 const run = source => vm.runInContext(source, context);
 function render(revision, frame, changes = {}) {
   context.input = {connection: 'fresh', age_ms: 0, pause_requested: false, frozen: false,
-    latency_ms: 10, goal: '', events: [], state: {protocol: 2, boundary: {kind: 'normal_play'}, session: 'test', revision, frame,
+    latency_ms: 10, goal: '', events: [], state: {protocol: 3, boundary: {kind: 'normal_play'}, session: 'test', revision, frame,
       frame_ok: true, status: 'ready', actions: [], ...changes}};
   run('render(input)');
 }
@@ -65,7 +65,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   render(8, 'frame-menu.png', {boundary: {kind: 'menu'}});
   await decode();
   assert.equal(run('authority().expected_revision'), 8);
-  render(9, 'frame-old.png', {protocol: 1});
+  render(9, 'frame-old.png', {protocol: 2});
   await decode();
   assert.throws(() => run('authority()'), /native control/);
   console.log('Viewer regressions passed: image authority, cleared choices, stale/obsolete decode, boundary admission and mixed version.');

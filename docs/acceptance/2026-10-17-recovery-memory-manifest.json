@@ -1,0 +1,481 @@
+{
+  "schema_version": 1,
+  "kind": "historical-native-acceptance",
+  "date": "2026-10-17",
+  "identity_note": "Source commit identifies the final runtime implementation; seven source hashes match native-final-candidate-receipt.json. Probes 01\u201321 used the earlier receipt, 22\u201350 the final receipt. Subsequent acceptance-only checkpoints are identified by the enclosing protected PR.",
+  "platform": "macOS 26.6.2 arm64; Apple Clang 21; Python 3.14.7",
+  "report": "docs/acceptance/2026-10-17-recovery-memory.md",
+  "artifacts": {
+    ".runtime/evidence/recovery-memory-round/01-loaded-observe.json": {
+      "bytes": 4702,
+      "sha256": "8c417c2c0b663eeb5d5b99f23f2761cc33b01a2cb00a6c2c31b8b84655c3412d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/02-resume.json": {
+      "bytes": 4703,
+      "sha256": "94c15b1275d9d3a6a12dcd70a7fdbf139d2d596f0521ee5ed929dbb71e0a7593",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/03-wait-menu.json": {
+      "bytes": 780,
+      "sha256": "1dc31198728831476c43fad8440d38f86028faa89735802d240f709476e821f5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/04-wait-duration.json": {
+      "bytes": 780,
+      "sha256": "585c908020d66723178b7522f55afb05d2a7b33ca49173e9e4965dce01b66958",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/05-start-wait.json": {
+      "bytes": 739,
+      "sha256": "0890b20ba98f81db94c82f056d264afdee2ad0d58d73719a11eaa9b4b85a1a03",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/06-unrelated-prompt-rejected.json": {
+      "bytes": 103,
+      "sha256": "24c0ce6876bb856c8b56771b55f89d256604ed0a89a2b5539b6adf9ec0b8a706",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/07-owned-interrupt.json": {
+      "bytes": 898,
+      "sha256": "25aff499233eec7a8f5cd5376c604dcb35f2bf5f77e7419d945b89dffef3abf7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/08-owned-interrupt.json": {
+      "bytes": 898,
+      "sha256": "e63f860b49c6f5e13a75d1f598da5ec5b1b817e99f26088bf74b76b640408631",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/09-owned-interrupt.json": {
+      "bytes": 918,
+      "sha256": "4eeb1fb9f3afe5e27903f6c59fb34a2abe4c21e2e8808615aff4bb4888515fa4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/10-answer-no.json": {
+      "bytes": 138,
+      "sha256": "ee9a4bac6000a2a9fe976928736fd780b430706348c6ea69d9d4a9250c4cd6a6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/11-answer-no.json": {
+      "bytes": 138,
+      "sha256": "cab50b45c42fafc0ff489c4730977a31a323d82dee1e362a813b1fdfaaa6d2ee",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/12-answer-no-before.png": {
+      "bytes": 286857,
+      "sha256": "d462a31282e14d0927fd5cdcc32b816a9d426663e61fb929aaedba539ae7ed0d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/12-answer-no-selected.json": {
+      "bytes": 1152,
+      "sha256": "f566684ae35ba3f3c52134f2d14244711df2bb4a3f598d047438acf64d3307ec",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/12-answer-no.json": {
+      "bytes": 887,
+      "sha256": "c06131e5310cc9dd1a450d0b9c380b23b09cfb3c8cf30c495b0b2510ed4eee1f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/13-owned-interrupt-yes.json": {
+      "bytes": 919,
+      "sha256": "a00d1f9ce9cf641a9eaf28dada28f025c22742363399294171b4b73290078252",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/14-answer-yes-before.png": {
+      "bytes": 268186,
+      "sha256": "1280d7c884f8ad6afddfc9755f445c6a6a241b9dac3b7a5d3daa5890118bf414",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/14-answer-yes-selected.json": {
+      "bytes": 1155,
+      "sha256": "5a8e498f9811cb98130ddc2800dea107dbc3cdd47b873bebc24aa3c98a425e6a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/14-answer-yes.json": {
+      "bytes": 888,
+      "sha256": "74f7bc64438fc2d13751ce9e4537049fe07461135f8bd9abf9450967f9f87bf6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/15-after-yes.json": {
+      "bytes": 4687,
+      "sha256": "46c7fad9a35a9dc2b5b6fc5ff17463d6d3caceb16efae44c4928715cf333e3d3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/16-debug-continue-before.png": {
+      "bytes": 9862,
+      "sha256": "17b2eff96c31f3fe4dc3074cd1835295467740530c100fed9d6612fe9062c466",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/16-debug-continue-selected.json": {
+      "bytes": 862,
+      "sha256": "f326c78f68ec0aac77b9e567d4716320e604dceb109a19906e4684cccf011903",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/16-debug-continue.json": {
+      "bytes": 687,
+      "sha256": "4a027f1a38c6ab107f5921e7f2c68255a6ef5f555bde117b027bddcda466eed9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/17-expired-claim-timeout-fault.json": {
+      "bytes": 764,
+      "sha256": "0a2a2c7af41b7480ebae8752c3a91e57ef229cc0c49aa958002751d46e2d8b8f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/17-expired-claim-timeout.json": {
+      "bytes": 6214,
+      "sha256": "399bd8ae354454941918dd6f6a309809f2ca3a49882600c3a4f6ba3890682867",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/18-restarted-unknown.json": {
+      "bytes": 4326,
+      "sha256": "eaf3d511e4266aef183b51a931fb9d4718144f30328f4aa316f6d2281f174223",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/19-expired-claim-observed.json": {
+      "bytes": 579,
+      "sha256": "3e815a815a72e91e6e8ca34e2ed7abbd349da5c64edd99f9402869e3c32dba84",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/20-reconciled-unknown-retained.json": {
+      "bytes": 5675,
+      "sha256": "6ee02242ff8bb7ed215eb2bf1d8162da8976cba8f4299bee13bbc32be5d9b7b1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/21-second-debug-continue-before.png": {
+      "bytes": 10283,
+      "sha256": "5cd2c804e8916f9ecc7b29948f4b36c2dc9a6a440e890d6aefc0dede7a1ab69f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/21-second-debug-continue-selected.json": {
+      "bytes": 862,
+      "sha256": "b50bbccf5bfc65451df8ade7a9493f7b91c5ef96db5bbd9ae381653ecc1de56b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/21-second-debug-continue.json": {
+      "bytes": 687,
+      "sha256": "1232de30854e00a3b9017f2e4559fb322970b860fb57ce063e5705ef2d30eca4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/22-pre-load.json": {
+      "bytes": 773,
+      "sha256": "ebbc0eb091ea38616e8c3006a5f127c1bbe7dec3e60bb3a00579eb63f9c2cbdf",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/23-pre-load-resume.json": {
+      "bytes": 774,
+      "sha256": "2d11dc2e376e7ab24ab8663f0dfca071e493f75e3aca09e94fce337ccfe5a589",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/24-real-load-timeout.json": {
+      "bytes": 213,
+      "sha256": "5ea5b536a4519844dec8b935c782c8dba9207254c5c072cdd9e4c2c05b9a7132",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/25-original-pending-at-debug.json": {
+      "bytes": 11624,
+      "sha256": "372892211e6cc62e671f1ec1777c67edc4de0499ed1b6e5d32483e336875692e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/26-debug-with-original-pending-before.png": {
+      "bytes": 9862,
+      "sha256": "17b2eff96c31f3fe4dc3074cd1835295467740530c100fed9d6612fe9062c466",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/26-debug-with-original-pending-selected.json": {
+      "bytes": 838,
+      "sha256": "5f32740ef9f187bb6fc1ad1b0ff19f3374c9a141fb7c197c49cf49604722ce9f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/26-debug-with-original-pending.json": {
+      "bytes": 678,
+      "sha256": "61b1d220da612064940b0ba9049e0cb3e3f657945f7dafc5a365083362d0194f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/27-pending-after-recovery.json": {
+      "bytes": 13248,
+      "sha256": "02e6633b4fe93fcfeebd6b3e55a7e0ca35bc304cff4994ae45a2779ffb735178",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/28-next-debug-fresh.json": {
+      "bytes": 13282,
+      "sha256": "ddbfa84d87fd678d2f9e306886f9050447e71b51895e3724f9e10a607d550cb8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/29-control-short-timeout-before.png": {
+      "bytes": 10283,
+      "sha256": "5cd2c804e8916f9ecc7b29948f4b36c2dc9a6a440e890d6aefc0dede7a1ab69f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/29-control-short-timeout-selected.json": {
+      "bytes": 840,
+      "sha256": "221a1f4eac330f30449ab1aa17c8797578e380717de2b3480d2a00ba364e977a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/29-control-short-timeout.json": {
+      "bytes": 199,
+      "sha256": "c778e91e815e4d3f8c0f9228919d8aeb3115a0608042b44a252b4159febedcd5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/30-both-pending.json": {
+      "bytes": 16364,
+      "sha256": "93c50170cc3ef05d92901e471acfe9a317abb98a21ddbd6136f2cf2523066984",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/31-both-restarted.json": {
+      "bytes": 7013,
+      "sha256": "0ddeca0632c01cde279876f07964fd40f5401d337775b35ef8d29a485dcad6db",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/32-both-reconciled.json": {
+      "bytes": 569,
+      "sha256": "f3339e7163e7ebfc02f6365da166b1ff368fe2f04297ee06c9800b29e5d92d01",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/33-after-both-reconcile.json": {
+      "bytes": 8397,
+      "sha256": "eb53d2a8b5df2ab1394b6867ee3440b4a8935877268f2a810e53dd965c67cc6e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/34-final-second-debug-before.png": {
+      "bytes": 10283,
+      "sha256": "5cd2c804e8916f9ecc7b29948f4b36c2dc9a6a440e890d6aefc0dede7a1ab69f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/34-final-second-debug-selected.json": {
+      "bytes": 842,
+      "sha256": "f32b447de92984479b9d035031605696b81ac0a608fc48be0d6e9060f6d37217",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/34-final-second-debug.json": {
+      "bytes": 679,
+      "sha256": "c76ed56fd9b5de6a0c55b7a1c965e0ddc70cf474cd45df3ba281537639881efc",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/35-final-relaunch.json": {
+      "bytes": 779,
+      "sha256": "d1ea95a2ff2b6fec2ecf4840dbe215a0aacb45459207686c9ac5154e49379fb3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/36-final-h-loaded.json": {
+      "bytes": 4680,
+      "sha256": "2c42008421fb95facb2ba1c6026f356cd4b0f731c29d478a88224c559d77f775",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/37-final-wait-no-request.json": {
+      "bytes": 916,
+      "sha256": "c29df18a885c89f2463b9a789a90086bd2fb1c7faab48c838b8366b273789041",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/38-final-wait-no-before.png": {
+      "bytes": 268179,
+      "sha256": "f58918013fd70060ba963a413125c178a98e2d72bc1ab39d6ad73ffdb51009f3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/38-final-wait-no-selected.json": {
+      "bytes": 1148,
+      "sha256": "ff5967eb8ff3c5a10b6f8439f64d4e910265192ed8e571d7c5244f6e3d829065",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/38-final-wait-no.json": {
+      "bytes": 886,
+      "sha256": "3605642e94cd498426a7e6375c1e80634a5021ef0c9ef318193456371e265b74",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/39-final-unrelated-distraction.json": {
+      "bytes": 22068,
+      "sha256": "457bc22e867629b6b26161eb0f093ea4bf33899b152473d9caa2255760ce56fa",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/40-final-unsupported-rejected.json": {
+      "bytes": 103,
+      "sha256": "24c0ce6876bb856c8b56771b55f89d256604ed0a89a2b5539b6adf9ec0b8a706",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/41-final-wait-yes-request.json": {
+      "bytes": 917,
+      "sha256": "3aacbc00a275cebf967187ad06a274c53ddf5013da152a59a14c56f6007ca598",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/42-final-wait-yes-before.png": {
+      "bytes": 255712,
+      "sha256": "0a3028a1fe3b2e4ede04c70e818de83498df76afc1b2e1aed2fa220a5ceceac5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/42-final-wait-yes-selected.json": {
+      "bytes": 1151,
+      "sha256": "abb9244da5e57fd40d0807dd2855ecae3451ecef0f6d2656251703119dd04679",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/42-final-wait-yes.json": {
+      "bytes": 886,
+      "sha256": "245bb8348358ec389c1846acc2365d7a74a69f92e101496fb1a17e729a8b8449",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/43-final-after-yes.json": {
+      "bytes": 4691,
+      "sha256": "418f0cf8450eeec3b2ff2f57c01ee64ac22308e93b3395d37015975d72a8b890",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/44-final-finished-rejected.json": {
+      "bytes": 103,
+      "sha256": "24c0ce6876bb856c8b56771b55f89d256604ed0a89a2b5539b6adf9ec0b8a706",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/45-final-saved-title.json": {
+      "bytes": 790,
+      "sha256": "63a36d739ed432c6dbc31fcf21610dbbee7553fe1099ed7d2e683048821c1b49",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/46-native-stale-generation.json": {
+      "bytes": 2716,
+      "sha256": "99e219df37cf5e8fd977d83f7042bbf7685453dc02fe0754eb12e39cc16f70b5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/47-native-stale-prompt.json": {
+      "bytes": 2681,
+      "sha256": "f50519090de0d289d70483e262d41f8b7348ad478e7cd1f57ca10adcecc1deec",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/48-native-stale-frame.json": {
+      "bytes": 2653,
+      "sha256": "d55bbef54bde382eca3335251478d14610164464d43c8e97ca0dd447c7a83c5e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/49-native-old-version.json": {
+      "bytes": 2692,
+      "sha256": "950386d85f79ee5bc49a24556f4f0abfcd072923a767d28f22408464a1565cea",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/50-native-later-pause.json": {
+      "bytes": 2680,
+      "sha256": "6538a792a16f3ac82de82fcec9f5ce5fa88347980ad5c368def8496ff1d9c456",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/diagram-final-render.txt": {
+      "bytes": 97,
+      "sha256": "964e2aad385f415134958a3e3e33b461bfa9c332743a0bc645773b7ee58407d1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/final-after-no.png": {
+      "bytes": 272836,
+      "sha256": "ab13a109fd6792dd3aa842acaec606f86c7feaeeda89f97b5c73413542b4c70b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/final-negative-unchanged.png": {
+      "bytes": 76454,
+      "sha256": "1c24c9281c8eb6fa0a49b8484f822f2ad96024ae681a89445b34bbad3324531f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/final-spectator-after-yes.png": {
+      "bytes": 256292,
+      "sha256": "a7543deb213969a00ab5f072c4a64f201f13c9149f7b9e5e3835574fe2564f72",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/final-third-debug.png": {
+      "bytes": 75162,
+      "sha256": "1e64820d9bb3f29ed6a10ea135849abc15cb8735f8d25479b649601370f97e54",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/integrated-common-first.txt": {
+      "bytes": 1929,
+      "sha256": "9568cc00faf2149a95e451d9307ff39bf0b739cac0ab4ee955b32bd0daaf388b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/integrated-common.txt": {
+      "bytes": 29168,
+      "sha256": "e6fd6c2650744e8c6a1c742d1f14f18ba9271432d5ef04c7c280d81550e7448e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/integrated-memory-repaired.txt": {
+      "bytes": 163,
+      "sha256": "c48c96c333d73414d2914739a145f74f1155a00268a5605ca8ff29ca84562104",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/integrated-recovery-tests.txt": {
+      "bytes": 293,
+      "sha256": "261101bf0b6b68c009d9d670bc8691aedbff5955b1bc9c8d859693e2bfd611fe",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/native-candidate-receipt.json": {
+      "bytes": 1812,
+      "sha256": "8e9a622fa4258b4ef02bdeb9878c1af8ba8ae0a94b3aabec23211a87b1a9da96",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/native-final-candidate-receipt.json": {
+      "bytes": 2133,
+      "sha256": "55abc79d3cdf51c401d52895228bd51dd1ba42c62fffd7d42cbee6c0f8ddec17",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/native-recovery-final.png": {
+      "bytes": 110967,
+      "sha256": "4948bb7c3a83d247c2d55eacc2b9f14bfbd46f28dcadbf35ddfaf712612669d3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/native-v3-debug-identity-build.txt": {
+      "bytes": 21650,
+      "sha256": "dfd1021bc6d961c1cb68a9305fb0b3489c0e08a4408152f549c639ff273a9bf1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/native-v3-reviewed-build.txt": {
+      "bytes": 21650,
+      "sha256": "dfd1021bc6d961c1cb68a9305fb0b3489c0e08a4408152f549c639ff273a9bf1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/negative-native-probes.txt": {
+      "bytes": 298,
+      "sha256": "f984ea2477bc5ea1789f1489e625500a0392f9acc7549a9880d08fcfb73a18ba",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/negative_native_probes.py": {
+      "bytes": 2226,
+      "sha256": "819a626deccb8aa35f7a2ec9604690d76e3bd38f5fe83b6ba69972febf06d91f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/operator_driver.py": {
+      "bytes": 4975,
+      "sha256": "39be0e49889f558c3893e8d6f0c9f5ecaa0343a8169c037521a5cd731a03ef41",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/final-common.txt": {
+      "bytes": 29168,
+      "sha256": "aca0fe4ff054c47384cf035f7e6279fd07dab505fad4af59d06cf67afa9bfdd2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/implementation-commit.txt": {
+      "bytes": 29622,
+      "sha256": "e355d609e98ab25eb0854656294a9edaa7da447451373fca265d8fb031ceebb6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/gitleaks-staged.txt": {
+      "bytes": 111,
+      "sha256": "f6cdc44dacfe8938608b5c3c90023d68aba0f8400b1a8109a078d04b705f1b1f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/gitleaks-staged.json": {
+      "bytes": 3,
+      "sha256": "37517e5f3dc66819f61f5a7bb8ace1921282415f10551d2defa5c3eb0985b570",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/recovery-memory-round/branch-rule-before-publication.json": {
+      "bytes": 1178,
+      "sha256": "8d29acedd9016c7bb77ebb2082f70b2c9d1d6db76a60ac15b2bd249ab72fcd87",
+      "availability": "local-only; not included in Git"
+    }
+  },
+  "video": null,
+  "source_commit": "0ea61ecc7406490a4296cff16bae2b990f0d7007",
+  "upstream_pin": "native/upstream.json",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "freetype_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+  "initial_build_binary_sha256": "2cfc9409a80bb7ff140c1e89f4e0c95ee5fbd57177e556ca530407eac4d3caf5",
+  "installed_binary_sha256": "838f924e9228999625462ec3465c8d85b6321dc43c7a6e1f84aa7de4b4255433",
+  "verified_at": "2026-10-17",
+  "verification_scope": "Lead inspected native/spectator frames and JSON outcomes; independent reviewer verified runtime source/build hashes, 730 archived files and scoped probe claims. Original files hashed locally. Portable, build and graphical lanes remain separate.",
+  "limitations": [
+    "One pinned macOS host. Public recovery controls, full integrated recovery and actual gameplay memory pipeline remain follow-ons.",
+    "Probes 01\u201321 use the earlier candidate; 22\u201350 use final installed binary. Earlier orphan-claim injection is not an actual native claim.",
+    "Control timeout in dual-identity restart probe retired before claim. Precise claim-to-commit timing remains portable/source evidence.",
+    "Large local artifacts unavailable on fresh clone. Keep saves, incidents and unresolved admissions; never replay.",
+    "Still frames, no video; hashes identify bytes rather than semantic truth. Tutorial errors remain unresolved."
+  ]
+}

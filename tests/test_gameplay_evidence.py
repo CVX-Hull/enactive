@@ -1,4 +1,4 @@
-"""Synthetic native-v2 observations only; never real CDDA/pipeline acceptance."""
+"""Synthetic native-v3 observations only; never real CDDA/pipeline acceptance."""
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
 import base64
@@ -24,7 +24,7 @@ def png(marker=b"synthetic"):
 
 
 def observation(number=1, *, session="synthetic-world", timestamp_ms=1_000_000):
-    return {"protocol": 2, "id": "", "session": session, "revision": number,
+    return {"protocol": 3, "id": "", "session": session, "revision": number,
             "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT"],
             "status": "ready", "error": "", "paused": False,
             "timestamp_ms": timestamp_ms, "frame_ok": True,
@@ -83,6 +83,27 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(Path(ref.frame_path).read_bytes(), png())
         self.assertNotEqual(Path(ref.frame_path).parent, self.bridge)
         self.assertEqual(self.store.position(ref), (0, 0, 0))
+
+    def test_generation_preserves_intervening_identity_and_rejection_events(self):
+        first = self.publish()
+        initial = self.store.authority_generation()
+        ref = self.ingest(first)
+        observed = self.store.authority_generation()
+        self.assertGreater(observed, initial)
+        self.ingest(first)
+        self.assertEqual(self.store.authority_generation(), observed)
+        second = dict(first, frame="frame-synthetic-world-2.png")
+        self.ingest(self.publish(second))
+        changed = self.store.authority_generation()
+        self.assertGreater(changed, observed)
+        with self.assertRaises(EvidenceError):
+            self.ingest(dict(second, frame_ok=False))
+        self.assertGreater(self.store.authority_generation(), changed)
+        self.ingest(first)
+        self.assertEqual(self.current(), ref)
+        self.assertGreater(self.store.authority_generation(), observed)
+        # Invalidation history is independent of historical truth.
+        self.assertEqual(self.store.source_status(ref), "retained")
 
     def test_original_survives_bridge_cache_eviction_and_reopen(self):
         value = self.publish()
@@ -304,8 +325,9 @@ class EvidenceTests(unittest.TestCase):
 
     def test_wire_version_unknown_fields_bool_int_and_boundary_extra_fields_reject(self):
         changes = (
-            lambda v: v.update(protocol=1), lambda v: v.update(protocol=True),
-            lambda v: v.update(protocol=2.0), lambda v: v.update(revision=True),
+            lambda v: v.update(protocol=1), lambda v: v.update(protocol=2),
+            lambda v: v.update(protocol=4), lambda v: v.update(protocol=True),
+            lambda v: v.update(protocol=3.0), lambda v: v.update(revision=True),
             lambda v: v.update(revision=1.0), lambda v: v.update(timestamp_ms=True),
             lambda v: v.update(hidden_position=[1, 2, 3]), lambda v: v.pop("boundary"),
             lambda v: v["boundary"].update(control_generation=True),
@@ -538,7 +560,7 @@ class EvidenceTests(unittest.TestCase):
         self.store.close()
         manifest = self.directory / "evidence.json"
         original = manifest.read_bytes()
-        for version in (None, 0, 2, True, 1.0):
+        for version in (None, 0, 1, 3, True, 2.0):
             with self.subTest(version=version):
                 value = json.loads(original)
                 if version is None:
@@ -551,6 +573,43 @@ class EvidenceTests(unittest.TestCase):
                     self.open_store()
                 self.assertEqual(manifest.read_bytes(), before)
                 self.assertEqual(Path(ref.frame_path).read_bytes(), png())
+
+    def test_dispute_survives_new_evidence_and_reopen_without_confusing_staleness(self):
+        first = self.ingest()
+        second_value = self.publish(observation(2))
+        second = self.ingest(second_value)
+        disputed = observation()
+        disputed["scene"]["position"] = [1, 0, 0]
+        with self.assertRaises(EvidenceError):
+            self.ingest(disputed)
+        third = self.ingest(self.publish(observation(3)))
+        self.assertEqual(self.store.source_status(first), "disputed")
+        self.assertEqual(self.store.source_status(second), "retained")
+        with self.assertRaises(EvidenceError):
+            self.current(now_monotonic=104, now_timestamp_ms=1_004_000)
+        self.assertEqual(self.store.source_status(third), "retained")
+        self.store.close()
+        self.store = self.open_store()
+        self.assertEqual(self.store.source_status(first), "disputed")
+        self.assertEqual(self.store.source_status(third), "retained")
+
+    def test_corruption_stays_disputed_after_restoration_and_reopen(self):
+        first = self.ingest()
+        second = self.ingest(self.publish(observation(2)))
+        frame = Path(first.frame_path)
+        original = frame.read_bytes()
+        frame.chmod(0o600)
+        frame.write_bytes(png(b"corrupt"))
+        self.store.close()
+        with self.assertRaises(EvidenceError):
+            self.open_store()
+        persisted = json.loads((self.directory / "evidence.json").read_text())
+        self.assertEqual(len(persisted["entries"]), 2)
+        self.assertIn(first.observation_id, persisted["disputed"])
+        frame.write_bytes(original)
+        self.store = self.open_store()
+        self.assertEqual(self.store.source_status(first), "disputed")
+        self.assertEqual(self.store.source_status(second), "retained")
 
 
 if __name__ == "__main__":

@@ -134,10 +134,10 @@ displacement with a blocked result; retain the evidence and do not claim success
 
 | Predicate | Evidence available today | Gap/disposition |
 | --- | --- | --- |
-| Position and unit displacement | Native-v2 relative position and session rotate on world entry/exit, including same-process reload | Future task/supervisor consumers must invalidate task origins and candidates on session replacement |
+| Position and unit displacement | Native-v3 relative position and session rotate on world entry/exit, including same-process reload | Future task/supervisor consumers must invalidate task origins and candidates on session replacement |
 | Next tile and creature stop | CLEAR neighboring terrain/furniture; UI visible-creature list | No farther route knowledge; missing or stale values block |
 | Matching frame, turn and authority | Native frame/status/session/revision/turn; passive adapter validates retained originals and receipt age | Real end-to-end pipeline acceptance remains #33 |
-| Ordinary play rather than running activity or raw error | Native-v2 positive boundary discriminator; category and `in_game` alone remain insufficient | Future execution consumers must require normal_play; recovery controls remain separate |
+| Ordinary play rather than running activity or raw error | Native-v3 positive boundary discriminator; category and `in_game` alone remain insufficient | Future execution consumers must require normal_play; recovery controls remain separate |
 | Damage, trap absence, safe water or inventory | Not structured guarantees | Excluded from deterministic predicates; no new exports selected for this task |
 
 Thus #19 uses the implemented passive observation adapter and negative-case
@@ -232,3 +232,9 @@ unknown timeout, restart, contradictory memory, exhausted budgets, binding rejec
 missing frame and no-progress repetition. Unit/contract replay tests prove software
 responses only. #8 verifies native control; #24 verifies actual windowed gameplay and
 matched model outcomes. #23 verifies readable ordinary, paused, stale and slow states.
+
+The [bounded memory increment](../changes/006-recovery-memory.md) implements passive
+TaskMemory over EvidenceStore. Current records, invalidation, retention ceilings
+and limitations are owned by the [protocol](../protocol.md#passive-task-memory).
+This does not implement the proposed supervisor, skill execution, model tiers or
+waypoint-and-return outcome described above.

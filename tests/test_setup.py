@@ -48,7 +48,8 @@ class SetupTests(unittest.TestCase):
             "Makefile": "-mmacosx-version-min=10.15\n-mmacosx-version-min=10.15\n",
             "src/input_context.cpp": "const std::string &input_context::handle_input( const int timeout )\n{\n        next_action = inp_mngr.get_input_event( preferred_keyboard_mode );\n}",
             "src/handle_action.cpp": "input_context game::get_player_input( std::string &action )\n{\n}",
-            "src/do_turn.cpp": "void handle_key_blocking_activity()\n{\n}",
+            "src/do_turn.cpp": 'void handle_key_blocking_activity()\n{\n    if( has_unfinished_activity || u.has_destination() ) {\n                g->cancel_activity_query( _( "Confirm:" ) );\n}\n}',
+            "src/game.cpp": '    if( query_yn( _( "%s Cancel auto move?" ), text ) )  {\n}\n    if( query_yn( "%s %s", text, u.activity.get_stop_phrase() ) ) {\n}',
             "src/debug.cpp": "    for( bool stop = false; !stop; ) {\n        ui_manager::redraw();\n}",
             "src/main.cpp": "        while( !do_turn() ) {}",
             "src/sdltiles.cpp": ("    while( SDL_PollEvent( &ev ) ) {\n        imclient->process_input( &ev );\n}\n"
@@ -72,7 +73,7 @@ class SetupTests(unittest.TestCase):
         return subprocess.run([sys.executable, str(repository / "tools/patch_game.py"), str(source)],
                               text=True, capture_output=True, check=False)
 
-    def test_native_v2_patch_is_repeatable_and_scopes_exact_input_paths(self):
+    def test_native_v3_patch_is_repeatable_and_scopes_exact_input_paths(self):
         repository, source = self.patch_fixture()
         first = self.run_patch(repository, source)
         self.assertEqual(first.returncode, 0, first.stderr)
@@ -84,6 +85,10 @@ class SetupTests(unittest.TestCase):
         self.assertIn("harness_player( uquit == QUIT_WATCH", (source / "src/handle_action.cpp").read_text())
         self.assertIn("boundary_kind::activity_poll", (source / "src/do_turn.cpp").read_text())
         self.assertIn("boundary_kind::debug_prompt", (source / "src/debug.cpp").read_text())
+        activity = (source / "src/do_turn.cpp").read_text()
+        self.assertIn("activity_interruptible( ( has_unfinished_activity || u.has_destination() ) &&", activity)
+        self.assertIn("cdda_harness::interrupt_owner harness_interrupt;", activity)
+        self.assertEqual((source / "src/game.cpp").read_text().count("interrupt_query harness_query"), 2)
         sdl = (source / "src/sdltiles.cpp").read_text()
         self.assertEqual(sdl.count("cdda_harness::poll("), 3)
         self.assertLess(sdl.index("cdda_harness::capture_frame();"), sdl.index("SDL_RenderPresent("))

@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import fcntl
+import hashlib
+import re
+import copy
 import json
 import os
 from pathlib import Path
@@ -13,6 +16,8 @@ from typing import Any
 
 MAX_REQUEST = 4096
 MAX_WAIT = 15.0
+RECOVERY_KINDS = frozenset({"request_interrupt", "answer_interrupt", "continue_debug_once"})
+CONTROL_TERMINAL = frozenset({"prompt_opened", "answer_delivered", "dismissal_delivered", "not_applicable", "rejected"})
 NAMED_KEYS = frozenset({"ENTER", "ESC", "UP", "DOWN", "LEFT", "RIGHT", "TAB",
                         "BACKSPACE", "SPACE", "PAGEUP", "PAGEDOWN"})
 DIRECTIONS = {"north": (0, -1, "UP"), "south": (0, 1, "DOWN"),
@@ -66,7 +71,7 @@ def validate_state(value: dict[str, Any], request_id: str | None = None) -> None
     required = {"id": str, "session": str, "revision": int, "category": str,
                 "actions": list, "status": str, "error": str, "paused": bool,
                 "timestamp_ms": int, "frame_ok": bool, "in_game": bool, "frame": str}
-    if type(value.get("protocol")) is not int or value["protocol"] != 2:
+    if type(value.get("protocol")) is not int or value["protocol"] != 3:
         raise ControlError("Unsupported response protocol; observe after fixing the bridge")
     if request_id is not None and value.get("id") != request_id:
         raise ControlError("Response id does not match request")
@@ -85,12 +90,71 @@ def validate_state(value: dict[str, Any], request_id: str | None = None) -> None
             or not isinstance(boundary["kind"], str) or boundary["kind"] not in BOUNDARY_KINDS
             or not isinstance(boundary["id"], str) or not boundary["id"]
             or type(boundary["control_generation"]) is not int or boundary["control_generation"] < 0
-            or boundary["recovery_operations"] != [] or boundary["interrupt_request_id"] is not None):
+            or not isinstance(boundary["recovery_operations"], list)):
+        raise ControlError("Malformed or unsupported native boundary")
+    operations = boundary["recovery_operations"]
+    owner = boundary["interrupt_request_id"]
+    expected = {"activity_poll": ["request_interrupt"], "interrupt_confirmation": ["answer_interrupt"],
+                "debug_prompt": ["continue_debug_once"]}.get(boundary["kind"], [])
+    if (operations not in ([], expected) or (boundary["kind"] == "interrupt_confirmation"
+            and (not isinstance(owner, str) or not owner or operations != expected))
+            or (boundary["kind"] != "interrupt_confirmation" and owner is not None)):
         raise ControlError("Malformed or unsupported native boundary")
     if boundary["kind"] != "normal_play" and value.get("scene") is not None:
         raise ControlError("Scene outside normal play")
     if value.get("scene") is not None and not isinstance(value["scene"], dict):
         raise ControlError("Malformed native scene")
+
+
+def validate_control_request(request: dict[str, Any]) -> None:
+    fields = {"protocol", "id", "kind", "session", "control_generation", "authority", "created_ms", "deadline_ms"}
+    kind = request.get("kind")
+    if not isinstance(kind, str) or kind not in RECOVERY_KINDS:
+        raise ControlError("Unsupported stored control kind")
+    if kind != "request_interrupt":
+        fields |= {"boundary_id", "revision", "frame"}
+        if (not isinstance(request.get("boundary_id"), str) or not request["boundary_id"]
+                or type(request.get("revision")) is not int or request["revision"] < 0
+                or not isinstance(request.get("frame"), str) or not request["frame"]):
+            raise ControlError("Malformed control prompt binding")
+    if kind == "answer_interrupt":
+        fields |= {"interrupt_request_id", "choice"}
+        if (not isinstance(request.get("interrupt_request_id"), str) or not request["interrupt_request_id"]
+                or not isinstance(request.get("choice"), str) or request["choice"] not in {"YES", "NO"}):
+            raise ControlError("Malformed interrupt answer")
+    authority = request.get("authority")
+    try:
+        valid_id = str(uuid.UUID(request.get("id", ""))) == request.get("id")
+    except (ValueError, TypeError, AttributeError):
+        valid_id = False
+    if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 3
+            or not valid_id or len(request["id"]) > 80
+            or not isinstance(request.get("session"), str) or not request["session"]
+            or type(request.get("control_generation")) is not int or request["control_generation"] < 0
+            or type(request.get("created_ms")) is not int or type(request.get("deadline_ms")) is not int
+            or request["created_ms"] < 0 or request["created_ms"] > int(time.time() * 1000) + 1000
+            or request["deadline_ms"] != request["created_ms"] + 2000
+            or not isinstance(authority, dict) or set(authority) != {"controller_boot_id", "counter"}
+            or not isinstance(authority["controller_boot_id"], str) or not authority["controller_boot_id"]
+            or type(authority["counter"]) is not int or authority["counter"] < 0
+            or len(json.dumps(request).encode()) > MAX_REQUEST):
+        raise ControlError("Unsupported stored control format; preserve evidence and reconcile offline")
+
+
+def validate_control_response(value: dict[str, Any], request_id: str | None = None) -> None:
+    if (set(value) != {"protocol", "id", "status", "error", "state"}
+            or type(value.get("protocol")) is not int or value["protocol"] != 3
+            or not isinstance(value.get("id"), str) or not value["id"]
+            or not isinstance(value.get("status"), str) or value["status"] not in CONTROL_TERMINAL | {"dispatched"}
+            or not isinstance(value.get("error"), str) or not isinstance(value.get("state"), dict)
+            or (request_id is not None and value["id"] != request_id)):
+        raise ControlError("Malformed or unsupported control response")
+    validate_state(value["state"])
+    if value["status"] == "prompt_opened":
+        state = value["state"]
+        if (not state["frame_ok"] or state["boundary"]["kind"] != "interrupt_confirmation"
+                or state["boundary"]["interrupt_request_id"] != value["id"]):
+            raise ControlError("Prompt result lacks fresh owned confirmation")
 
 
 class Controller:
@@ -110,6 +174,7 @@ class Controller:
             raise ControlError("Timeout must be greater than 0 and at most 15 seconds")
         self.timeout = timeout
         self.command_lock = threading.Lock()
+        self.control_lock = threading.Lock()
         self.data_lock = threading.RLock()
         self.state: dict[str, Any] | None = None
         self.frozen = True
@@ -124,15 +189,22 @@ class Controller:
         self.latency_ms: int | None = None
         self.transport_error = "Observe to reconcile, then explicitly resume"
         self.pending: dict[str, Any] | None = None
+        self.control_pending: dict[str, Any] | None = None
+        self.control_unknown_outcomes: list[dict[str, Any]] = []
+        self.control_admitted: dict[str, dict[str, Any]] = {}
+        self.historical_unknowns: tuple[dict[str, Any], ...] = ()
         self.token = secrets.token_urlsafe(32)
         local_session = time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
         self.journal = self.root / ".runtime" / "sessions" / local_session / "events.jsonl"
         self.journal.parent.mkdir(parents=True, exist_ok=True)
         self.admissions = self.bridge / "admissions"
         self.admissions.mkdir(mode=0o700, exist_ok=True)
+        self.control_admissions = self.bridge / "control-admissions"
+        self.control_admissions.mkdir(mode=0o700, exist_ok=True)
         self._revoke()
         self._pause_file()
         try:
+            self._load_historical()
             restored_input_ids: set[str] = set()
             for path in sorted(self.admissions.glob("*.json")):
                 admission = read_json(path)
@@ -140,6 +212,26 @@ class Controller:
                     self._restore_request(admission, "startup found unresolved durable admission; never replay")
                     if admission["kind"] in {"key", "action", "resume"}:
                         restored_input_ids.add(admission["id"])
+            inbox = read_json(self.bridge / "request.json")
+            if inbox is not None:
+                self._restore_request(inbox, "startup retired unclaimed request")
+            for path in sorted(self.control_admissions.glob("*.json")):
+                admission = read_json(path)
+                if admission is not None:
+                    self._restore_control(admission, "startup found unresolved control admission")
+            for name in ("control.json", "control-claimed.json"):
+                stored = read_json(self.bridge / name)
+                if stored is not None:
+                    validate_control_request(stored)
+                    if self.control_admitted.get(stored["id"]) != stored:
+                        raise ControlError("Control inbox/claim lacks its exact durable admission")
+                    self._restore_control(stored, "startup found control request; never replay")
+            control_response = read_json(self.bridge / "control-response.json")
+            if control_response is not None:
+                validate_control_response(control_response)
+                if control_response["status"] == "dispatched" and control_response["id"] not in self.control_admitted:
+                    raise ControlError("Dispatched control response lacks a current durable admission")
+                self._reconcile_control(control_response)
             claimed = read_json(self.bridge / "claimed.json")
             if claimed is not None:
                 self._restore_request(claimed, "startup found claimed request")
@@ -155,8 +247,212 @@ class Controller:
             self.close()
             raise
         retired = self._retire("startup")
+        self._retire("startup", control=True)
         self._record({"kind": "startup"}, {"status": "paused", "retirement": retired,
-                     "error": self.transport_error})
+                     "error": self.transport_error, "historical_unknowns": list(self.historical_unknowns)})
+
+    def _load_historical(self) -> None:
+        value = read_json(self.bridge / "historical-incidents.json")
+        if value is None:
+            return
+        if (set(value) != {"schema", "incidents"} or value["schema"] != "incident/1"
+                or not isinstance(value["incidents"], list) or len(value["incidents"]) > 64):
+            raise ControlError("Unsupported historical incident references")
+        seen = set()
+        references = []
+        archive = (self.root / ".runtime/incidents").resolve()
+        for item in value["incidents"]:
+            if (not isinstance(item, dict) or set(item) != {"id", "channel", "source_path", "source_sha256", "reason"}
+                    or not isinstance(item["id"], str) or not 1 <= len(item["id"]) <= 128
+                    or not isinstance(item["channel"], str) or item["channel"] not in {"gameplay", "control"}
+                    or not isinstance(item["reason"], str) or not 1 <= len(item["reason"]) <= 1024
+                    or not isinstance(item["source_path"], str) or not 1 <= len(item["source_path"]) <= 1024
+                    or not isinstance(item["source_sha256"], str)
+                    or re.fullmatch(r"[0-9a-f]{64}", item["source_sha256"]) is None
+                    or (item["channel"], item["id"]) in seen):
+                raise ControlError("Malformed historical incident reference")
+            relative = Path(item["source_path"])
+            source = (self.root / relative).resolve()
+            if (relative.is_absolute() or relative.parts[:2] != (".runtime", "incidents")
+                    or not archive.is_relative_to(self.root / ".runtime")
+                    or not source.is_relative_to(archive) or not source.is_file()):
+                raise ControlError("Historical source is missing or outside the owned archive")
+            with source.open("rb") as stream:
+                data = stream.read(1_048_577)
+            if len(data) > 1_048_576 or hashlib.sha256(data).hexdigest() != item["source_sha256"]:
+                raise ControlError("Historical source size or SHA-256 mismatch")
+            seen.add((item["channel"], item["id"]))
+            references.append(item.copy())
+        self.historical_unknowns = tuple(references)
+
+    def _restore_control(self, request: dict[str, Any], reason: str) -> None:
+        validate_control_request(request)
+        previous = self.control_admitted.get(request["id"])
+        if previous is not None and previous != request:
+            raise ControlError("Conflicting durable control identity")
+        self.control_admitted[request["id"]] = request.copy()
+        if self.control_pending is None or request["created_ms"] > self.control_pending["created_ms"]:
+            self.control_pending = request.copy()
+        self._control_unknown(request, reason)
+
+    def _control_unknown(self, request: dict[str, Any], reason: str) -> None:
+        if any(item["request"]["id"] == request["id"] for item in self.control_unknown_outcomes):
+            return
+        outcome = {"status": "unknown", "reason": reason, "request": request.copy()}
+        self.control_unknown_outcomes.append(outcome)
+        self.control_unknown_outcomes = self.control_unknown_outcomes[-60:]
+        self._record({"kind": "control_unresolved", "id": request["id"]}, outcome)
+
+    def _reconcile_control(self, response: dict[str, Any] | None = None, *, retire: bool = True) -> dict[str, Any] | None:
+        with self.data_lock:
+            response = read_json(self.bridge / "control-response.json") if response is None else response
+            if response is None:
+                return None
+            validate_control_response(response)
+            request = self.control_admitted.get(response["id"])
+            if request is None:
+                return None
+            status = response["status"]
+            allowed = {"request_interrupt": {"prompt_opened", "not_applicable"},
+                       "answer_interrupt": {"answer_delivered"},
+                       "continue_debug_once": {"dismissal_delivered"}}[request["kind"]] | {"dispatched", "rejected"}
+            if status not in allowed:
+                raise ControlError("Control result does not match admitted operation")
+            native = response["state"]
+            if status not in {"rejected", "not_applicable"} and (native["session"] != request["session"]
+                    or native["boundary"]["control_generation"] <= request["control_generation"] or not native["paused"]):
+                raise ControlError("Control result has stale session/generation or resumed gameplay")
+            if self.state is None or native["timestamp_ms"] >= self.state["timestamp_ms"]:
+                self._accept(native)
+            if retire and status in CONTROL_TERMINAL:
+                if self.control_pending is not None and self.control_pending["id"] == request["id"]:
+                    self.control_pending = None
+                self.control_admitted.pop(request["id"])
+                (self.control_admissions / f'{request["id"]}.json').unlink(missing_ok=True)
+                for outcome in self.control_unknown_outcomes:
+                    if outcome["request"]["id"] == request["id"]:
+                        outcome["transport_result"] = status
+                self._record(request, response)
+            return response
+
+    def _reconcile_expired_control(self, observed: dict[str, Any]) -> None:
+        # Only an explicit successful fresh observe can retire the live slot. The
+        # durable admission remains uncertainty; passive status never rearms it.
+        with self.data_lock:
+            self._reconcile_control()
+            pending = self.control_pending
+            if pending is None or self.control_lock.locked():
+                return
+            if (int(time.time() * 1000) <= pending["deadline_ms"] or not observed["frame_ok"]
+                    or int(time.time() * 1000) - observed["timestamp_ms"] > 3000):
+                return
+            self._revoke()
+            self._pause_file()
+            self._retire("reconcile", control=True)
+            claimed = read_json(self.bridge / "control-claimed.json")
+            if claimed is not None:
+                validate_control_request(claimed)
+                if claimed["id"] != pending["id"] or claimed["deadline_ms"] >= int(time.time() * 1000):
+                    raise ControlError("Control claim cannot safely reconcile")
+                destination = self.bridge / f'control-cancelled-reconcile-{uuid.uuid4().hex}.json'
+                try:
+                    os.rename(self.bridge / "control-claimed.json", destination)
+                except FileNotFoundError:
+                    pass  # Native completed its claim; revoked token still prevents delivery.
+            self._control_unknown(pending, "expired control reconciled without establishing outcome")
+            self.control_pending = None
+
+    def recover(self, kind: str, *, timeout: float | None = None, **payload: Any) -> dict[str, Any]:
+        """Explicit local operator API; never called through ordinary execute ingress."""
+        wait = self.timeout if timeout is None else timeout
+        acquired = False
+        request = None
+        try:
+            if isinstance(wait, bool) or not isinstance(wait, (int, float)) or not 0 < wait <= MAX_WAIT:
+                raise ControlError("Timeout must be greater than 0 and at most 15 seconds")
+            if not isinstance(kind, str) or kind not in RECOVERY_KINDS:
+                raise ControlError("Unknown recovery operation")
+            acquired = self.control_lock.acquire(blocking=False)
+            if not acquired:
+                raise ControlError("Recovery writer is active")
+            with self.data_lock:
+                if self.closed:
+                    raise ControlError("Controller is closed")
+                if self.control_pending is not None or (self.bridge / "control.json").exists() or (self.bridge / "control-claimed.json").exists():
+                    raise ControlError("Recovery is pending; explicitly observe after expiry to reconcile")
+                self.pause()  # Revoke before admission, including when already paused.
+                state = self.state
+                required = {"expected_session", "expected_control_generation"}
+                if kind != "request_interrupt":
+                    required |= {"expected_boundary_id", "expected_revision", "expected_frame"}
+                if kind == "answer_interrupt":
+                    required |= {"interrupt_request_id", "choice"}
+                if set(payload) != required or state is None:
+                    raise ControlError("Recovery requires explicit current session/generation and exact prompt evidence")
+                boundary = state["boundary"]
+                if (type(payload["expected_control_generation"]) is not int
+                        or payload["expected_session"] != state["session"]
+                        or payload["expected_control_generation"] != boundary["control_generation"]):
+                    raise ControlError("Stale recovery session or control generation")
+                if not state["frame_ok"] or int(time.time() * 1000) - state["timestamp_ms"] > 3000:
+                    raise ControlError("Recovery requires a fresh rendered boundary")
+                if kind not in boundary["recovery_operations"]:
+                    raise ControlError("Recovery operation is not advertised at this boundary")
+                created = int(time.time() * 1000)
+                request = {"protocol": 3, "id": str(uuid.uuid4()), "kind": kind, "session": state["session"],
+                           "control_generation": boundary["control_generation"], "authority": self.authority.copy(),
+                           "created_ms": created, "deadline_ms": created + 2000}
+                if kind != "request_interrupt":
+                    if (not state["frame_ok"] or created - state["timestamp_ms"] > 3000
+                            or payload["expected_boundary_id"] != boundary["id"]
+                            or type(payload["expected_revision"]) is not int or payload["expected_revision"] != state["revision"]
+                            or payload["expected_frame"] != state["frame"]):
+                        raise ControlError("Stale recovery prompt, revision or frame")
+                    request.update(boundary_id=boundary["id"], revision=state["revision"], frame=state["frame"])
+                if kind == "answer_interrupt":
+                    if payload["interrupt_request_id"] != boundary["interrupt_request_id"]:
+                        raise ControlError("Interrupt owner does not match")
+                    request.update(interrupt_request_id=payload["interrupt_request_id"], choice=payload["choice"])
+                validate_control_request(request)
+                atomic_json(self.control_admissions / f'{request["id"]}.json', request)
+                self.control_admitted[request["id"]] = request.copy()
+                self.control_pending = request.copy()
+                atomic_json(self.bridge / "control.json", request)
+            started = time.monotonic()
+            while time.monotonic() - started < min(wait, 2.0):
+                if self.closed:
+                    raise ControlError("Controller stopped during recovery; never replay")
+                response = self._reconcile_control()
+                if response is not None and response["id"] == request["id"] and response["status"] in CONTROL_TERMINAL:
+                    return response
+                time.sleep(0.015)
+            with self.data_lock:
+                self._revoke()
+                self._pause_file()
+                self._control_unknown(request, "control wait reached; delivery is unknown")
+                self.frozen = True
+                self.transport_error = "Recovery outcome unknown; explicitly observe after expiry to reconcile"
+                retirement = self._retire("timeout", control=True)
+            outcome = {"status": "unknown", "id": request["id"], "error": self.transport_error, "retirement": retirement}
+            self._record(request, outcome)
+            return outcome
+        except (ControlError, OSError) as exc:
+            with self.data_lock:
+                if acquired:
+                    self._revoke()
+                    self._pause_file()
+                    self.pause_requested = True
+                if request is not None and request["id"] in self.control_admitted:
+                    self._control_unknown(request, str(exc))
+                    self.frozen = True
+            outcome = {"status": "controller_error", "error": str(exc)}
+            if request is not None:
+                outcome["id"] = request["id"]
+            self._record({"kind": kind, **payload}, outcome)
+            return outcome
+        finally:
+            if acquired:
+                self.control_lock.release()
 
     def _restore_request(self, request: dict[str, Any], reason: str) -> None:
         """Restore only current-format uncertainty; never translate older records."""
@@ -177,7 +473,7 @@ class Controller:
             fields.add(kind)
             if not isinstance(request.get(kind), str) or not request[kind]:
                 raise ControlError("Malformed stored input; migrate or archive offline")
-        if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 2
+        if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 3
                 or not isinstance(request.get("id"), str) or not request["id"]
                 or type(request.get("deadline_ms")) is not int):
             raise ControlError("Unsupported stored request format; migrate or archive offline")
@@ -195,8 +491,9 @@ class Controller:
                 self._revoke()
             self._pause_file()
             # The process lock outlives every writer, including HTTP worker threads.
-            with self.command_lock:
+            with self.command_lock, self.control_lock:
                 self._retire("shutdown")
+                self._retire("shutdown", control=True)
                 fcntl.flock(self._lock_file, fcntl.LOCK_UN)
                 self._lock_file.close()
         else:
@@ -226,10 +523,11 @@ class Controller:
     def _pause_file(self) -> None:
         (self.bridge / "pause").touch(mode=0o600, exist_ok=True)
 
-    def _retire(self, reason: str) -> str:
-        destination = self.bridge / f"cancelled-{reason}-{uuid.uuid4().hex}.json"
+    def _retire(self, reason: str, *, control: bool = False) -> str:
+        prefix = "control-" if control else ""
+        destination = self.bridge / f"{prefix}cancelled-{reason}-{uuid.uuid4().hex}.json"
         try:
-            os.rename(self.bridge / "request.json", destination)
+            os.rename(self.bridge / ("control.json" if control else "request.json"), destination)
             return "retired_before_claim"
         except FileNotFoundError:
             return "absent_may_be_claimed_or_dispatched"
@@ -259,6 +557,8 @@ class Controller:
                     self._pause_file()
                     if self.pending is not None:
                         self._unknown(self.pending, "native session changed; old-world outcome remains unknown")
+                    if self.control_pending is not None:
+                        self._control_unknown(self.control_pending, "native session changed")
             self.state = response.copy()
             if response["paused"]:
                 self.pause_requested = True
@@ -266,7 +566,7 @@ class Controller:
     def _exchange(self, kind: str, timeout: float, *, generation: int | None = None, **payload: Any) -> dict[str, Any]:
         request_id = str(uuid.uuid4())
         started = time.monotonic()
-        request = {"protocol": 2, "id": request_id, "kind": kind,
+        request = {"protocol": 3, "id": request_id, "kind": kind,
                    "deadline_ms": int(time.time() * 1000 + timeout * 1000), **payload}
         if kind not in {"observe", "pause"}:
             if self.state is None:
@@ -283,6 +583,8 @@ class Controller:
                 raise ControlError("Unresolved bridge request; observe to reconcile")
             with self.data_lock:
                 if kind in {"key", "action", "resume"}:
+                    if self.control_lock.locked() or self.control_pending is not None:
+                        raise ControlError("Recovery is pending; ordinary input is blocked")
                     if generation is None or generation != self.pause_generation:
                         raise ControlError("Admission superseded by pause or takeover")
                     if self.closed or (kind != "resume" and self.pause_requested):
@@ -410,6 +712,8 @@ class Controller:
 
     def _command(self, kind: str, timeout: float, payload: dict[str, Any], generation: int) -> dict[str, Any]:
         with self.data_lock:
+            if kind in {"key", "action", "resume"} and (self.control_lock.locked() or self.control_pending is not None):
+                raise ControlError("Recovery is pending; ordinary input is blocked")
             if kind in {"key", "action", "resume"} and generation != self.pause_generation:
                 return {"status": "pause_requested", "error": "Queued resume superseded by a later pause"}
         if kind != "observe":
@@ -427,6 +731,7 @@ class Controller:
                 self._pause_file()
             result = self._exchange("observe", timeout)
             if result["status"] == "ready":
+                self._reconcile_expired_control(result)
                 with self.data_lock:
                     self.frozen = False
                     self.transport_error = ""
@@ -540,14 +845,20 @@ class Controller:
     def status(self) -> dict[str, Any]:
         # Reading state never clears a freeze or authorizes a subsequent command.
         try:
+            self._reconcile_control(retire=False)
             native = read_json(self.bridge / "state.json")
             if native is not None:
                 validate_state(native)
                 with self.data_lock:
                     if self.state is None or native["timestamp_ms"] >= self.state["timestamp_ms"]:
                         self._accept(native)
-        except ControlError as exc:
+        except (ControlError, OSError) as exc:
             with self.data_lock:
+                self._revoke()
+                self._pause_file()
+                self.pause_generation += 1
+                self.pause_requested = True
+                self.frozen = True
                 self.transport_error = str(exc)
         with self.data_lock:
             age = None if self.state is None else max(0, int(time.time() * 1000) - self.state["timestamp_ms"])
@@ -556,6 +867,9 @@ class Controller:
                     "goal": self.goal, "events": list(self.events), "last_result": self.last_result,
                     "latency_ms": self.latency_ms, "age_ms": age, "connection": connection,
                     "error": self.transport_error, "pending": self.pending,
-                    "unknown_outcomes": list(self.unknown_outcomes),
+                    "unknown_outcomes": copy.deepcopy(self.unknown_outcomes),
+                    "control_pending": copy.deepcopy(self.control_pending),
+                    "control_unknown_outcomes": copy.deepcopy(self.control_unknown_outcomes),
+                    "historical_unknowns": copy.deepcopy(list(self.historical_unknowns)),
                     "journal": str(self.journal.relative_to(self.root)),
                     "expect": None if self.state is None else f'{self.state["session"]}:{self.state["revision"]}'}

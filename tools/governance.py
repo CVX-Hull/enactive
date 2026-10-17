@@ -233,11 +233,14 @@ def dict_protocols(tree: ast.AST) -> list[object]:
 
 
 def check_protocol(root: Path) -> list[str]:
-    """Recognize today's nine source forms, fail closed on refactor; not a C++ parser."""
+    """Check bounded current wire forms across both channels; not a C++ parser."""
     native = (root / "native/cdda_harness.cpp").read_text()
     native = re.sub(r"//[^\n]*|/\*.*?\*/", "", native, flags=re.S)
     emitter = [int(v) for v in re.findall(r'out\.member\(\s*"protocol"\s*,\s*(\d+)\s*\)', native)]
     validator = [int(v) for v in re.findall(r'request\.get_int\(\s*"protocol"\s*\)\s*!=\s*(\d+)\s*\)', native)]
+    control_emitter = [int(v) for v in re.findall(r'\\"protocol\\":(\d+)', native)]
+    control_validator = [int(v) for v in re.findall(
+        r'integer_member\(\s*request\s*,\s*"protocol"\s*\)\s*!=\s*(\d+)\s*', native)]
     controller = ast.parse((root / "harness/controller.py").read_text())
     server = ast.parse((root / "harness/server.py").read_text())
     cli = ast.parse((root / "harness/__main__.py").read_text())
@@ -250,7 +253,7 @@ def check_protocol(root: Path) -> list[str]:
         and len(node.ops) == 1 and isinstance(node.ops[0], ast.NotEq)]
     response_versions = []
     for function in controller.body:
-        if isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)) and function.name == "validate_state":
+        if isinstance(function, (ast.FunctionDef, ast.AsyncFunctionDef)) and function.name in {"validate_state", "validate_control_response"}:
             for node in ast.walk(function):
                 if (isinstance(node, ast.Compare) and isinstance(node.left, ast.Subscript)
                         and isinstance(node.left.value, ast.Name) and node.left.value.id == "value"
@@ -268,19 +271,31 @@ def check_protocol(root: Path) -> list[str]:
     viewer = (root / "web/app.js").read_text()
     viewer_versions = [int(v) for v in re.findall(r"latest\.state\.protocol\s*!==\s*(\d+)\b", viewer)]
     docs = [int(v) for v in re.findall(r"\bProtocol version: (\d+)\.", (root / "docs/protocol.md").read_text())]
+    evidence = ast.parse((root / "harness/gameplay/evidence.py").read_text())
+    evidence_versions = []
+    for node in ast.walk(evidence):
+        if isinstance(node, ast.Dict):
+            for key, value in zip(node.keys, node.values):
+                if isinstance(key, ast.Constant) and key.value == "protocol" and isinstance(value, ast.Dict):
+                    evidence_versions.extend(v.value if isinstance(v, ast.Constant) else None
+                                             for k, v in zip(value.keys, value.values)
+                                             if isinstance(k, ast.Constant) and k.value == "const")
     forms = {"native emitter": emitter, "native validator": validator,
+             "native control emitter": control_emitter, "native control validator": control_validator,
              "controller send": dict_protocols(controller), "controller validator": response_versions,
              "server advertisement": dict_protocols(server), "CLI discovery validator": discovery_versions,
              "stored request validator": stored_versions, "viewer validator": viewer_versions,
-             "docs/protocol.md": docs}
+             "evidence validator": evidence_versions, "docs/protocol.md": docs}
+    expected_counts = {"controller send": 2, "controller validator": 2, "stored request validator": 2}
     errors = []
-    if native.count('"protocol"') != 2:
+    if native.count('"protocol"') != 3 or native.count(r'\"protocol\"') != 1:
         errors.append("native protocol representation changed; review and update the bounded checker")
     for label, versions in forms.items():
-        if len(versions) != 1:
-            errors.append(f"{label}: protocol representation changed; expected one recognized literal, found {versions!r}; review checker")
-        elif type(versions[0]) is not int or versions[0] != 2:
-            errors.append(f"{label}: protocol drift: expected supported v2, found {versions[0]!r}; review contract and checker")
+        expected = expected_counts.get(label, 1)
+        if len(versions) != expected:
+            errors.append(f"{label}: protocol representation changed; expected {expected} recognized literals, found {versions!r}; review checker")
+        elif any(type(version) is not int or version != 3 for version in versions):
+            errors.append(f"{label}: protocol drift: expected supported v3, found {versions!r}; review contract and checker")
     return errors
 
 
@@ -342,7 +357,7 @@ def main(argv: list[str] | None = None) -> int:
             (ROOT / "docs/controls.md").write_text(render_map(registry))
             print("Generated docs/controls.md; no gameplay or evidence-byte verification performed.")
         else:
-            print("Governance schemas, mappings, local references, protocol v2 source forms and map freshness: passed.")
+            print("Governance schemas, mappings, local references, protocol v3 source forms and map freshness: passed.")
         return 0
     except (OSError, ValueError, SyntaxError, SchemaError) as error:
         print(f"Governance failed: {error}", file=sys.stderr)

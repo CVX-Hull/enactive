@@ -14,6 +14,7 @@
     "src/sdltiles.cpp": "22a75ef59b4bf193aef823ce768021356780897e64ab32882d1fbec25e173d7b",
     "src/handle_action.cpp": "7029642a12de41a46ea646b1f8007b13c9bb92490bd48ac0bf46adb4ce62f15e",
     "src/do_turn.cpp": "34e7a85f5eda6ad0f7d63e25bfc23b71b68b01cd6cfc35b76398edcccc5fe2bc",
-    "src/debug.cpp": "d89793cf60fc496d0808988f1df16dd57264f14f9d1ab0406f7d798c20b1b7df"
+    "src/debug.cpp": "d89793cf60fc496d0808988f1df16dd57264f14f9d1ab0406f7d798c20b1b7df",
+    "src/game.cpp": "197398412f600802c611045b0e1b63551fadf3653f4bff13f57ecca9f80e5af3"
   }
 }

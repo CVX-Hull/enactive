@@ -1,16 +1,16 @@
 ---
-title: Proposed recovery — engine confirmation and retained uncertainty
+title: Current Python recovery — engine confirmation and retained uncertainty
 ---
 flowchart TB
-  accTitle: Proposed operator recovery for native CDDA
-  accDescr: The operator first pauses new gameplay. A request at a supported activity poll opens the engine confirmation, which the operator answers against its exact frame. A raw debug prompt can instead receive one explicitly requested Space. Unsupported or uncertain outcomes retain native fallback. Every path requires observation and reconciliation, and only a normal-play boundary permits explicit resume. No path automatically resumes gameplay or proves task success.
-  P["Operator pauses\nRevoke new gameplay"]
+  accTitle: Current Python operator recovery for native CDDA
+  accDescr: The Python operator interface first pauses new gameplay; public recovery buttons remain future work. A request at a supported activity poll opens the engine confirmation, which the operator answers against its exact frame. A raw debug prompt can instead receive one explicitly requested Space. Unsupported or uncertain outcomes retain native fallback. Every path requires observation and reconciliation, and only normal play or a supported menu permits explicit resume. No path automatically resumes gameplay or proves task success.
+  P["Python operator pauses\nRevoke new gameplay"]
   A["Request activity interruption\nAt supported engine poll"]
   Q["CDDA confirmation\nOperator answers exact prompt"]
   D["Visible debug prompt\nOperator requests one Space"]
   U["Unsupported or unknown\nKeep paused; native fallback"]
   O["Observe and reconcile\nPreserve original action outcome"]
-  R["Normal play verified\nOperator may explicitly resume"]
+  R["Normal play or supported menu\nOperator may explicitly resume"]
   P -->|Activity still running| A
   A -->|Engine asks| Q
   A -->|No eligible boundary or deadline| U

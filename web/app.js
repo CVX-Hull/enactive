@@ -19,7 +19,7 @@ function authority() {
       state.session !== latest.state.session || state.revision !== latest.state.revision) {
     throw new Error('Wait for the current game frame before choosing an input.');
   }
-  if (latest.state.protocol !== 2 || !['normal_play', 'menu'].includes(latest.state.boundary?.kind)) {
+  if (latest.state.protocol !== 3 || !['normal_play', 'menu'].includes(latest.state.boundary?.kind)) {
     throw new Error('This input boundary needs native control. Observe again after returning to supported play or a menu.');
   }
   return {expected_session: state.session, expected_revision: state.revision};

@@ -6,11 +6,11 @@ status: active
 
 # Current architecture
 
-Implemented native-v2 and passive gameplay-evidence architecture. The
+Native-v3 recovery and passive gameplay-memory architecture. The
 [foundation acceptance](acceptance/2026-10-17-foundation-implementation.md) records
 fresh windowed native-v2 probes and separately scoped portable evidence tests.
 [MVP acceptance](acceptance/2026-10-17-mvp.md) remains historical v1 evidence.
-Protocol version: 2.
+Protocol version: 3.
 
 ## Coordinated change
 
@@ -18,7 +18,7 @@ All project-controlled boundaries follow
 [S-MIGRATION](engineering.md#s-migration-one-current-contract-coordinated-migration):
 one current contract, with producers, consumers, persisted formats and guidance
 migrated together. There is no runtime compatibility layer or downgrade. Current
-native wire v2, gameplay records `gameplay/1`, evidence store version 1 and build
+native wire v3, gameplay records `gameplay/1`, evidence store version 2 and build
 manifest version 1 name separate contracts, not alternate versions of one interface.
 Historical artifacts are retained as evidence without being accepted as runtime input.
 
@@ -32,10 +32,10 @@ windowed operation and project isolation are [charter constraints](charter.md).
 | Boundary / owner | Input and output | Authority and failure behavior |
 | --- | --- | --- |
 | Planner / active Codex session | Actual observations → objective and bounded input requests | Chooses goals; cannot infer success from transport acknowledgment; uncertain state requires reconciliation |
-| Controller / harness maintainer | Observed-state-bound commands → validated bridge requests, results and journal | Single serialized client; process lock; deadlines; pause freezes dispatch; never mutates saves or game state |
+| Controller / harness maintainer | Observed-state-bound commands → validated bridge requests, results and journal | One process with separate serialized gameplay and recovery writers; process lock; deadlines; pause freezes dispatch; never mutates saves or game state |
 | Native bridge / integration maintainer | Bounded requests → actual input events, metadata and rendered frames | Game thread only; engine validates outcomes; session/revision/expiry checks; unsupported input boundaries cannot claim success |
 | Spectator / viewer maintainer | Frames and state → display and operator controls | Input authority only after matching current image decodes; stale state stays visible; browser controls require origin/token validation |
-| Gameplay evidence / harness maintainer | Native observations → immutable typed records and retained original frames | Passive only; validates provenance, freshness and bounded capacity; never dispatches or substitutes historical facts for current authority |
+| Gameplay evidence and memory / harness maintainer | Native observations → retained original frames and bounded typed task views | Passive only; validates provenance, freshness, source disputes and invalidation generations; never dispatches or promotes historical facts into current authority |
 | Setup / build maintainer | Pinned sources and existing toolchain → isolated app and manifest | Explicit stages, checksums and ownership; failures stop the stage; no global installation or automatic launch |
 
 These roles may be held by one maintainer. Ownership names describe accountability,
@@ -43,7 +43,7 @@ not extra services or a requirement for additional people. Implementation paths:
 [controller](../harness/controller.py), [server](../harness/server.py),
 [native bridge](../native/cdda_harness.cpp), [viewer](../web/app.js),
 [gameplay records](../harness/gameplay/contracts.py),
-[evidence store](../harness/gameplay/evidence.py), [setup](../tools/setup.py).
+[evidence store](../harness/gameplay/evidence.py), [task memory](../harness/gameplay/memory.py), [setup](../tools/setup.py).
 
 ## Runtime and state
 
@@ -54,9 +54,10 @@ completion. A timeout produces an unknown outcome and freezes further actions.
 Observe/reconcile then explicitly resume; never automatically replay the input.
 
 Native keyboard/button input latches takeover. Pause prevents subsequent remote
-dispatch; it cannot cancel an already-started engine activity. Raw upstream debug
-screens are observable at the instrumented raw prompt but still need native
-dismissal. A service restart revokes durable input tokens and retains unfinished
+dispatch; it cannot cancel an already-started engine activity. Explicit Python operator recovery can request the native activity query, answer
+its exact owned prompt, or deliver one Space at the current raw debug prompt.
+These operations stay paused and preserve the original gameplay outcome; public
+recovery UI/CLI remains follow-on work. A service restart revokes durable input tokens and retains unfinished
 admissions as unknown without replay. World entry/exit, including same-process
 save/reload, invalidates old session and relative-position authority. Full details:
 [protocol and guarded play](protocol.md).
@@ -97,7 +98,8 @@ native window; dismiss unsupported screens there if necessary. A world reload or
 game restart invalidates old session authority. No arrow replays an uncertain action.
 
 Pause/takeover stops **new remote dispatch**. An already-running game activity
-may continue and require native interruption. Follow the [recovery procedure](runbook.md#pause-timeout-and-recovery)
+may continue. Explicit recovery asks the engine to interrupt; cancellation is
+never inferred from an input-delivery result. Native controls remain available. Follow the [recovery procedure](runbook.md#pause-timeout-and-recovery)
 for operational steps. [Editable state view](diagrams/recovery.mmd).
 
 ## Observation and deployment boundaries
@@ -132,3 +134,23 @@ Architecture decisions: [native platform](decisions/001-native-platform.md),
 [serialized bridge and stack](decisions/002-local-contract.md). Re-evaluate their
 assumptions when scope changes. Current architecture is authoritative about what
 exists; superseded decisions and dated reports remain historical evidence.
+
+## Separate recovery and memory boundaries
+
+The [recovery contract](protocol.md#explicit-operator-recovery) keeps the control
+inbox, duplicate ledger, durable admissions, pending slot and unknown history
+separate from ordinary gameplay. The game thread consumes both. Recovery cannot
+bypass native interruptibility, own an unrelated confirmation, or resume gameplay.
+The [recovery flow diagram](design/native-control.md#user-visible-design) shows
+request, exact prompt, uncertain outcome and reconciliation paths.
+One controller process lock covers both host writers; revocation and admission
+share the data lock. Native validates its current prompt and the host token again
+at input commit. Delivery after that gate cannot be undone by a later Pause.
+
+Task memory composes the evidence store; it has no controller dependency or frame
+copy of its own. Explicit refresh retains facts, while snapshots revalidate
+bounded existing records. Source disputes preserve historical uncertainty; a
+process-local store generation prevents intervening invalidations from disappearing
+when an earlier frame returns. Candidate validity is advisory data, not dispatch
+authority. Retirement/restart never reconstructs an execution lease. See the
+[bounded memory contract](protocol.md#passive-task-memory) for ceilings and costs.

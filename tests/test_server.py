@@ -56,7 +56,7 @@ class ServerTests(unittest.TestCase):
         path = self.controller.bridge / "controller.json"
         self.assertEqual(path.stat().st_mode & 0o777, 0o600)
         self.assertEqual(json.loads(path.read_text())["token"], self.controller.token)
-        self.assertEqual(json.loads(path.read_text())["protocol"], 2)
+        self.assertEqual(json.loads(path.read_text())["protocol"], 3)
 
     def test_token_required_and_not_in_url(self):
         self.assertEqual(self.post({"kind": "pause"}, **{"X-CDDA-Token": "wrong"})[0], 403)
@@ -79,6 +79,15 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.post({"kind": "pause", "unexpected": 1})[0], 400)
         self.assertEqual(self.request(path="/../AGENTS.md")[0], 404)
         self.assertEqual(self.request(path="/frame.png")[0], 503)
+
+    def test_recovery_is_not_an_ordinary_http_command(self):
+        for kind in ("request_interrupt", "answer_interrupt", "continue_debug_once", "recover"):
+            code, data, _ = self.post({"kind": kind})
+            self.assertEqual(code, 409)
+            self.assertEqual(json.loads(data)["status"], "controller_error")
+        self.assertEqual(self.post({"kind": "request_interrupt", "expected_control_generation": 0})[0], 400)
+        self.assertFalse((self.controller.bridge / "request.json").exists())
+        self.assertFalse((self.controller.bridge / "control.json").exists())
 
     def test_token_injected_and_security_headers(self):
         code, data, headers = self.request(path="/")
