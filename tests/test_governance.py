@@ -199,13 +199,16 @@ class GovernanceTests(unittest.TestCase):
 
     def test_protocol_drift_at_each_representation_is_detected(self):
         changes = [
-            ("native/cdda_harness.cpp", 'out.member( "protocol", 1 )', 'out.member( "protocol", 2 )'),
-            ("native/cdda_harness.cpp", 'request.get_int( "protocol" ) != 1', 'request.get_int( "protocol" ) != 2'),
-            ("harness/controller.py", '"protocol": 1', '"protocol": 2'),
-            ("harness/controller.py", '"protocol": 1', '"protocol": "1"'),
-            ("harness/controller.py", 'value["protocol"] != 1', 'value["protocol"] != 2'),
-            ("harness/server.py", '"protocol": 1', '"protocol": 2'),
-            ("docs/protocol.md", 'Protocol version: 1.', 'Protocol version: 2.'),
+            ("native/cdda_harness.cpp", 'out.member( "protocol", 2 )', 'out.member( "protocol", 1 )'),
+            ("native/cdda_harness.cpp", 'request.get_int( "protocol" ) != 2', 'request.get_int( "protocol" ) != 1'),
+            ("harness/controller.py", '"protocol": 2', '"protocol": 1'),
+            ("harness/controller.py", '"protocol": 2', '"protocol": "1"'),
+            ("harness/controller.py", 'value["protocol"] != 2', 'value["protocol"] != 1'),
+            ("harness/server.py", '"protocol": 2', '"protocol": 1'),
+            ("harness/__main__.py", 'config["protocol"] != 2', 'config["protocol"] != 1'),
+            ("harness/controller.py", 'request["protocol"] != 2', 'request["protocol"] != 1'),
+            ("web/app.js", 'latest.state.protocol !== 2', 'latest.state.protocol !== 1'),
+            ("docs/protocol.md", 'Protocol version: 2.', 'Protocol version: 1.'),
         ]
         for name, before, after in changes:
             with self.subTest(name=name, before=before):
@@ -214,7 +217,7 @@ class GovernanceTests(unittest.TestCase):
                 self.replace(name, after, before)
 
     def test_protocol_refactor_requires_checker_review(self):
-        self.replace("native/cdda_harness.cpp", 'out.member( "protocol", 1 )',
+        self.replace("native/cdda_harness.cpp", 'out.member( "protocol", 2 )',
                      'out.member( "protocol", CURRENT_PROTOCOL )')
         self.assertIn("representation", "\n".join(governance.check_protocol(self.root)))
 
@@ -239,6 +242,18 @@ class GovernanceTests(unittest.TestCase):
         # The fixture deliberately has no .runtime tree; this is a fresh-clone contract.
         self.assertFalse((self.root / ".runtime").exists())
         self.assertEqual(governance.check_manifests(self.root), [])
+
+    def test_still_frame_acceptance_needs_no_fabricated_video(self):
+        path = self.root / "docs/acceptance/2026-10-17-mvp-manifest.json"
+        data = json.loads(path.read_text())
+        data["video"] = None
+        path.write_text(json.dumps(data))
+        self.assertEqual(governance.check_manifests(self.root), [])
+        for invalid in ({}, "none", {"capture_interval_ms": [0, 1]}):
+            with self.subTest(video=invalid):
+                data["video"] = invalid
+                path.write_text(json.dumps(data))
+                self.assertTrue(governance.check_manifests(self.root))
 
     def test_manifest_rejects_invalid_artifact_metadata(self):
         path = self.root / "docs/acceptance/2026-10-17-mvp-manifest.json"

@@ -19,6 +19,9 @@ function authority() {
       state.session !== latest.state.session || state.revision !== latest.state.revision) {
     throw new Error('Wait for the current game frame before choosing an input.');
   }
+  if (latest.state.protocol !== 2 || !['normal_play', 'menu'].includes(latest.state.boundary?.kind)) {
+    throw new Error('This input boundary needs native control. Observe again after returning to supported play or a menu.');
+  }
   return {expected_session: state.session, expected_revision: state.revision};
 }
 async function loadFrame(state) {
@@ -119,7 +122,8 @@ function render(data) {
   const paused = data.pause_requested || state?.paused;
   $('control-state').textContent = data.frozen ? 'PAUSED · UNRECONCILED' : paused ? 'PAUSED' : 'REMOTE CONTROL READY';
   $('control-state').classList.toggle('active', !paused && !data.frozen);
-  $('category').textContent = state?.category || 'NO INPUT CONTEXT';
+  const boundary = state?.boundary?.kind;
+  $('category').textContent = boundary ? `${boundary.replaceAll('_', ' ').toUpperCase()} · ${state.category}` : 'NO VERIFIED INPUT BOUNDARY';
   $('revision').textContent = state ? `REV ${state.revision}` : 'REV —';
   $('authority').textContent = data.expect ? `Observation authority: ${data.expect}` : 'Observe before choosing an input.';
   $('latency').textContent = `Last response ${data.latency_ms === null ? '—' : data.latency_ms + ' ms'}`;

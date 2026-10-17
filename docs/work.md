@@ -25,6 +25,10 @@ interruption/recovery remains in [its existing outcome](https://github.com/CVX-H
 The [foundation design brief](changes/004-gameplay-foundation.md) connects the native
 and gameplay investigation contracts to their bounded implementation handoffs.
 Live readiness and allocations remain in the Project, not in this navigation page.
+The [implementation brief](changes/005-foundation-implementation.md) fixes the
+native-v2 and gameplay-evidence interfaces for the accepted source increment. Its
+[acceptance](acceptance/2026-10-17-foundation-implementation.md) separates portable,
+build and real native evidence; live closure and remaining work are in GitHub.
 
 Use Direction for outcomes and sequencing, Execution for delivery stage, and
 Needs attention for issues labeled blocked, decision-needed or risk. At checkpoints,

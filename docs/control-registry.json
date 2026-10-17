@@ -127,6 +127,22 @@
       ]
     },
     {
+      "id": "S-MIGRATION",
+      "principles": [
+        "P-CHANGE",
+        "P-KNOWLEDGE",
+        "P-UNCERTAINTY"
+      ],
+      "controls": [
+        "C-PROTOCOL",
+        "C-PORTABLE",
+        "C-GOVERNANCE",
+        "C-REVIEW",
+        "C-RELEASE",
+        "C-MAINTENANCE"
+      ]
+    },
+    {
       "id": "S-EVIDENCE",
       "principles": [
         "P-TRUTH",
@@ -147,7 +163,7 @@
       "id": "C-PORTABLE",
       "name": "Portable regression lane",
       "mode": "automatic",
-      "scope": "Controller, HTTP adapter, setup and spectator regressions.",
+      "scope": "Controller, HTTP adapter, setup and spectator regressions. Includes gameplay record validation and bounded evidence retention using synthetic observations.",
       "mechanism": "Common command compiles Python, runs selected Ruff correctness diagnostics, Import Linter contracts, JavaScript syntax checks, Python tests and delayed-image viewer tests; markdown-it-py parses document links/images before contained file-target checks; diff whitespace is checked.",
       "owner": "maintainer",
       "trigger": "each integration checkpoint and configured CI event",
@@ -162,7 +178,10 @@
         "pyproject.toml",
         "requirements-dev.lock",
         "tests/test_devtools.py",
-        "docs/acceptance/2026-10-17-public-workflow.md"
+        "docs/acceptance/2026-10-17-public-workflow.md",
+        "tests/test_gameplay_contracts.py",
+        "tests/test_gameplay_evidence.py",
+        "tests/test_cli.py"
       ],
       "failure_response": "Preserve failure output, fix the cause and rerun before claiming portable acceptance.",
       "limitations": "Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing.",
@@ -172,21 +191,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within the dated scope after recorded repairs; limitations retained.",
-        "scope": "Full local and hosted Ubuntu lanes on the public workflow/CI repair; 84 Python tests, four viewer cases and real rendering, with failed runs preserved.",
+        "outcome": "Passed within recorded scope after preserved repairs; limitations retained.",
+        "scope": "Native-v2 and gameplay/1 contracts, durable crash admission, boundary/frame/version gates and retention regressions; synthetic lane only.",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-workflow.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-workflow.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ],
         "effectiveness": "effective",
-        "findings": "Full local and hosted Ubuntu lanes on the public workflow/CI repair; 84 Python tests, four viewer cases and real rendering, with failed runs preserved. Long-term effectiveness and forecast calibration remain unmeasured.",
-        "cost": "Local full lane plus hosted installation/rendering and independent review; initial failures required rework. No reliable long-term cost estimate.",
-        "follow_up": "Recheck on workflow/rules, runner, dependency or delegation changes and by 2027-01-15; issue #13 tracks the maintenance review. Preserve failures and adjust or retire controls from evidence."
+        "findings": "144-test implementation lane and focused 46-test evidence lane passed after fixture/conflict repairs. Later still-frame manifest regression extends this lane; final counts live in PR evidence.",
+        "cost": "One full local lane plus targeted regressions; count is not a quality metric.",
+        "follow_up": "Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates."
       },
       "next_review": "2027-01-15"
     },
@@ -195,7 +214,7 @@
       "name": "Live authority and input guards",
       "mode": "runtime",
       "scope": "Single-controller dispatch, HTTP trust boundary and spectator input freshness.",
-      "mechanism": "Controller validates authority, bounds inputs, serializes dispatch and freezes uncertain outcomes; server validates origin/token and frame paths; viewer waits for matching image decode.",
+      "mechanism": "Controller serializes dispatch, persists input admissions and revokes durable host tokens before retirement; native v2 checks boundary, matching frame and token at commit. Server validates origin/token/frame paths; viewer waits for matching decoded image and supported boundary.",
       "owner": "controller and viewer maintainer",
       "trigger": "every relevant request, observation and image decode",
       "evidence": [
@@ -205,7 +224,9 @@
         "tests/test_controller.py",
         "tests/test_server.py",
         "tests/test_viewer.cjs",
-        "docs/protocol.md"
+        "docs/protocol.md",
+        "native/cdda_harness.cpp",
+        "harness/gameplay/evidence.py"
       ],
       "failure_response": "Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.",
       "limitations": "Tests exercise fake-bridge and browser fixtures. Native takeover and engine input behavior need C-NATIVE. Pause cannot cancel an already-running activity; no structured damage/trap or combat guarantee.",
@@ -215,21 +236,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Observed in dated MVP probes; no broader runtime guarantee.",
-        "scope": "Native takeover, stale authority rejection, timeout freeze and spectator checks in the recorded host/scenarios.",
+        "outcome": "Passed within recorded scope after preserved repairs; limitations retained.",
+        "scope": "Live native input authority, menu/normal/activity/debug separation, stale world rejection and durable unknown outcome across service restart.",
         "evidence": [
-          "docs/acceptance/2026-10-17-mvp.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ],
-        "effectiveness": "unassessed",
-        "findings": "Definition and recovery diagrams checked against implementation and historical MVP evidence; native execution was not repeated and its exercise date is unchanged.",
-        "cost": "No runtime changes or new native validation cost in this increment.",
-        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+        "effectiveness": "partially_effective",
+        "findings": "Live revoked-token and v1 packets rejected; timed-out real load retained through reconciliation/restart. Pause cannot undo a committed input or interrupt a native activity.",
+        "cost": "Local single-writer runtime and persistent admission files; unresolved entries require retained incident evidence.",
+        "follow_up": "Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates."
       },
       "next_review": "2027-01-15"
     },
@@ -255,21 +276,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Fresh build and real-game probes passed in dated MVP acceptance.",
-        "scope": "Recorded Mac, pinned CDDA build, menu/input/rendering, movement, supplies, takeover, danger and save/reload probes.",
+        "outcome": "Passed within recorded scope after preserved repairs; limitations retained.",
+        "scope": "Exact pinned native-v2 build and real windowed menu/normal/activity/debug/reload probes on this Mac.",
         "evidence": [
-          "docs/acceptance/2026-10-17-mvp.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ],
-        "effectiveness": "unassessed",
-        "findings": "Historical real-game evidence remains explicit; no documentation or mock-test result is substituted for fresh native acceptance.",
-        "cost": "Native build and gameplay remain a separate costly lane, required on relevant changes.",
-        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+        "effectiveness": "partially_effective",
+        "findings": "Required #29 boundary probes passed with scoped limitations. Natural tutorial load failed and supplied debug evidence; regular saves supplied successful gameplay/reload. No full recovery or #33 pipeline claim.",
+        "cost": "Fresh full native build, one incremental build and manual windowed probes; substantial manual lane remains.",
+        "follow_up": "Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates."
       },
       "next_review": "2027-01-15"
     },
@@ -299,21 +320,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within the dated scope after recorded repairs; limitations retained.",
-        "scope": "Public Direction grouped by Horizon, Execution by stage, Needs attention labels and linked owner-facing docs; unauthenticated browser inspection.",
+        "outcome": "Passed within recorded scope after preserved repairs; limitations retained.",
+        "scope": "Updated overview/current-contract navigation, native boundary labels and rendered action sequence.",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-workflow.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-workflow.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ],
         "effectiveness": "partially_effective",
-        "findings": "Public Direction grouped by Horizon, Execution by stage, Needs attention labels and linked owner-facing docs; unauthenticated browser inspection. Long-term effectiveness and forecast calibration remain unmeasured.",
-        "cost": "Local full lane plus hosted installation/rendering and independent review; initial failures required rework. No reliable long-term cost estimate.",
-        "follow_up": "Recheck on workflow/rules, runner, dependency or delegation changes and by 2027-01-15; issue #13 tracks the maintenance review. Preserve failures and adjust or retire controls from evidence."
+        "findings": "Owner-facing capabilities distinguish implemented foundations from future recovery/planning. Actual spectator view inspected; no independent human usability study.",
+        "cost": "Current-doc update plus visual inspection; long-term comprehension cost unmeasured.",
+        "follow_up": "Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates."
       },
       "next_review": "2027-01-15"
     },
@@ -321,7 +342,7 @@
       "id": "C-BOUNDARY",
       "name": "Architectural dependency contracts",
       "mode": "automatic",
-      "scope": "Declared controller and server dependency boundaries, including indirect imports through harness modules.",
+      "scope": "Declared controller and server dependency boundaries, including indirect imports through harness modules. Passive gameplay records and evidence must not import controller, HTTP, CLI or process/build tooling.",
       "mechanism": "Import Linter uses the pyproject.toml forbidden contracts: controller cannot depend on server, CLI, declared network modules or build tooling; server cannot depend on CLI/tools; CLI may compose both.",
       "owner": "harness maintainer",
       "trigger": "common command; architecture changes require rule review",
@@ -340,21 +361,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within the dated acceptance scope; limitations retained.",
-        "scope": "Two Import Linter contracts and direct/indirect forbidden import fixtures; no runtime boundary changes.",
+        "outcome": "Passed within recorded scope after preserved repairs; limitations retained.",
+        "scope": "Three Import Linter contracts, adding passive gameplay and negative import fixtures.",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ],
         "effectiveness": "effective",
-        "findings": "Configured import contracts and their forbidden direct/indirect dependency fixtures passed; no runtime architecture changes.",
-        "cost": "Two static contracts; dynamic imports and broader architecture still need review.",
-        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+        "findings": "Passive records/evidence cannot import controller/server/CLI or process/network/tooling modules; an initial missing test-fixture package was repaired.",
+        "cost": "Existing mature tool reused; no new dependency.",
+        "follow_up": "Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates."
       },
       "next_review": "2027-01-15"
     },
@@ -383,21 +404,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within the dated scope after recorded repairs; limitations retained.",
-        "scope": "Two isolated disjoint worker checkouts, lead integration and clean-context independent reviews of publication and CI repairs.",
+        "outcome": "Passed within recorded scope after preserved repairs; limitations retained.",
+        "scope": "Two isolated implementation workers, separate native/evidence reviewers and clean-context final integration audit.",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-workflow.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-workflow.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ],
-        "effectiveness": "effective",
-        "findings": "Two isolated disjoint worker checkouts, lead integration and clean-context independent reviews of publication and CI repairs. Long-term effectiveness and forecast calibration remain unmeasured.",
-        "cost": "Local full lane plus hosted installation/rendering and independent review; initial failures required rework. No reliable long-term cost estimate.",
-        "follow_up": "Recheck on workflow/rules, runner, dependency or delegation changes and by 2027-01-15; issue #13 tracks the maintenance review. Preserve failures and adjust or retire controls from evidence."
+        "effectiveness": "partially_effective",
+        "findings": "Review found crash identity loss, menu exclusions and noncurrent evidence rearming; repairs and regressions independently verified. Integration audit found no additional defect. Not human approval or exhaustive proof.",
+        "cost": "Multiple reviewer/lead repair rounds; no measured agent efficiency claim.",
+        "follow_up": "Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates."
       },
       "next_review": "2027-01-15"
     },
@@ -429,30 +450,30 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within the dated acceptance scope; limitations retained.",
-        "scope": "Lifecycle/schema/mapping/reference/date/metadata/protocol/map checks and negative fixtures; standalone overdue forecast.",
+        "outcome": "Passed, including genuine still-frame acceptance and malformed video rejection.",
+        "scope": "Existing schema/path/provenance checks plus explicit video:null acceptance; 145-test common lane. No automatic verification of local media semantics.",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ],
         "effectiveness": "effective",
-        "findings": "Lifecycle, metadata, reference, due-date, protocol and generated-map checks passed with negative cases. Review caught live-date coupling in test fixtures; isolated dates now allow legitimate future renewal.",
-        "cost": "Project-specific relationship checks use existing parsers and JSON Schema; declarations still need semantic review.",
-        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+        "findings": "Removed mandatory-video assumption for original still-frame evidence using existing JSON Schema; malformed video values and invalid intervals still reject. Generated control map and protocol-v2 agreement checked.",
+        "cost": "Small existing-schema extension and one regression; no new validator.",
+        "follow_up": "Review evidence format changes and control drift under #13; schema validity never proves content truth."
       },
       "next_review": "2027-01-15"
     },
     {
       "id": "C-PROTOCOL",
-      "name": "Protocol v1 source agreement",
+      "name": "Protocol v2 source agreement",
       "mode": "automatic",
-      "scope": "Native emitter/validator, controller send/validator, server advertisement and protocol document version.",
-      "mechanism": "Recognize the current two C++ literal forms, Python AST dictionary/comparison literals and document version; require each to represent v1 exactly once.",
+      "scope": "Native emitter/validator, controller send/response/stored-request validators, server advertisement, CLI discovery validator, viewer guard and protocol document version.",
+      "mechanism": "Recognize the current two C++ literal forms, Python AST dictionary/comparison literals, JavaScript viewer guard and document version; require each of the nine forms to represent v2 exactly once.",
       "owner": "bridge and controller maintainer",
       "trigger": "common command; any protocol representation change requires checker review",
       "evidence": [
@@ -461,7 +482,10 @@
         "native/cdda_harness.cpp",
         "harness/controller.py",
         "harness/server.py",
-        "docs/protocol.md"
+        "docs/protocol.md",
+        "harness/__main__.py",
+        "tests/test_cli.py",
+        "web/app.js"
       ],
       "failure_response": "Resolve version drift; for a refactor/version change review and update checker plus contract, then run required native acceptance.",
       "limitations": "Narrow source drift detector, not a robust C++ parser or protocol conformance proof. Refactored representations fail for review; matching literals cannot prove runtime behavior.",
@@ -471,21 +495,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within the dated acceptance scope; limitations retained.",
-        "scope": "Six recognized protocol-v1 source forms and drift fixtures; no fresh native execution.",
+        "outcome": "Passed within recorded scope after preserved repairs; limitations retained.",
+        "scope": "Nine recognized native-v2 source forms, including stored-request and viewer guards, with drift rejection fixtures; broader absence of compatibility paths is reviewed.",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ],
         "effectiveness": "effective",
-        "findings": "Current source forms and intentional version-drift fixtures passed; matching source literals do not prove native runtime conformance.",
-        "cost": "Narrow source recognizer must change with an intentional protocol refactor.",
-        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+        "findings": "All source forms agree on v2; actual native v1 rejection and revoked-token rejection observed. Source literals alone still cannot prove conformance. Coordinated migration adds stored-request/viewer forms; narrow checks are not a whole-code compatibility proof.",
+        "cost": "Narrow recognizer updated with version/CLI integration and negative fixtures.",
+        "follow_up": "Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates."
       },
       "next_review": "2027-01-15"
     },
@@ -514,21 +538,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Fresh isolated build and launch recorded in dated MVP acceptance.",
-        "scope": "Project-owned download/extract/build stages and installation on the recorded Mac; no broader host claim.",
+        "outcome": "Passed within recorded scope after preserved repairs; limitations retained.",
+        "scope": "Fresh owned extraction/build, source hashes/anchors, final incremental rebuild, installation/signing and windowed launch.",
         "evidence": [
-          "docs/acceptance/2026-10-17-mvp.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ],
         "effectiveness": "partially_effective",
-        "findings": "Existing setup guards passed portable fixtures. New documentation dependencies and browser installed locally; ambient browser overrides and escaping output/cache symlinks now fail or are isolated. No fresh native build.",
-        "cost": "Two added Python packages, 195 npm packages and one pinned browser; native setup cost remains separate.",
-        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+        "findings": "Compiled source compared with checkpoint; no global installs or setup changes. Successful only on recorded Mac; other hosts remain unverified.",
+        "cost": "Existing cache/toolchain reused; full compile plus incremental menu repair.",
+        "follow_up": "Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates."
       },
       "next_review": "2027-01-15"
     },
@@ -596,21 +620,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within the dated acceptance scope; limitations retained.",
-        "scope": "Manual baseline review of 12 controls and active documentation; long-term effectiveness unmeasured.",
+        "outcome": "Passed within recorded scope after preserved repairs; limitations retained.",
+        "scope": "Changed documentation, control definitions/limits and evidence renewal for this behavior increment.",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ],
         "effectiveness": "unassessed",
-        "findings": "First explicit maintenance baseline reviewed definitions, evidence limits, guide drift, dependency burden and reviewer findings. Deliberate future-date forecast detects overdue records. Long-term effectiveness is not yet observable.",
-        "cost": "Review due within 90 days and earlier on events; no background scheduler or automatic date renewal.",
-        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+        "findings": "Reconciled native-v2 and passive evidence docs with code; retained prior reports and failures. Removed mandatory-video assumption via explicit null schema and regression. Long-term effectiveness unmeasured.",
+        "cost": "Event-triggered manual maintenance; review due unchanged, no automated date renewal.",
+        "follow_up": "Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates."
       },
       "next_review": "2027-01-15"
     },
@@ -642,21 +666,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within the dated scope after recorded repairs; limitations retained.",
-        "scope": "Real Mermaid rendering and malformed-input parser rejection on macOS and hosted Ubuntu24.04 after observed sandbox/API repairs.",
+        "outcome": "Passed within recorded scope after preserved repairs; limitations retained.",
+        "scope": "Updated action sequence rendered and inspected at ordinary width, independently compared with authority contract.",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-workflow.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-workflow.md"
+          "docs/acceptance/2026-10-17-foundation-implementation.md"
         ],
         "effectiveness": "effective",
-        "findings": "Real Mermaid rendering and malformed-input parser rejection on macOS and hosted Ubuntu24.04 after observed sandbox/API repairs. Long-term effectiveness and forecast calibration remain unmeasured.",
-        "cost": "Local full lane plus hosted installation/rendering and independent review; initial failures required rework. No reliable long-term cost estimate.",
-        "follow_up": "Recheck on workflow/rules, runner, dependency or delegation changes and by 2027-01-15; issue #13 tracks the maintenance review. Preserve failures and adjust or retire controls from evidence."
+        "findings": "Diagram includes final boundary/frame/token gate and limits later Pause. Existing renderer/parser/receipt checks passed; semantic truth remains reviewed.",
+        "cost": "Existing pinned renderer reused; no new tooling.",
+        "follow_up": "Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates."
       },
       "next_review": "2027-01-15"
     }

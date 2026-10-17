@@ -22,3 +22,12 @@ name = "Server does not depend on CLI or build tooling"
 type = "forbidden"
 source_modules = ["harness.server"]
 forbidden_modules = ["harness.__main__", "tools"]
+
+[[tool.importlinter.contracts]]
+name = "Gameplay records and evidence cannot dispatch or launch tools"
+type = "forbidden"
+source_modules = ["harness.gameplay"]
+forbidden_modules = [
+    "harness.controller", "harness.server", "harness.__main__",
+    "http", "urllib", "socket", "subprocess", "tools",
+]

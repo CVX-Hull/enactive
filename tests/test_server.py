@@ -56,6 +56,7 @@ class ServerTests(unittest.TestCase):
         path = self.controller.bridge / "controller.json"
         self.assertEqual(path.stat().st_mode & 0o777, 0o600)
         self.assertEqual(json.loads(path.read_text())["token"], self.controller.token)
+        self.assertEqual(json.loads(path.read_text())["protocol"], 2)
 
     def test_token_required_and_not_in_url(self):
         self.assertEqual(self.post({"kind": "pause"}, **{"X-CDDA-Token": "wrong"})[0], 403)
@@ -89,9 +90,9 @@ class ServerTests(unittest.TestCase):
 
     def test_immutable_frame_reference_and_path_validation(self):
         content = b"\x89PNG\r\n\x1a\nframe-one"
-        (self.controller.bridge / "frame-123-456-1.png").write_bytes(content)
+        (self.controller.bridge / "frame-123-456-2-1.png").write_bytes(content)
         (self.controller.bridge / "frame.png").write_bytes(b"\x89PNG\r\n\x1a\nframe-two")
-        code, data, _ = self.request(path="/frame.png?name=frame-123-456-1.png")
+        code, data, _ = self.request(path="/frame.png?name=frame-123-456-2-1.png")
         self.assertEqual((code, data), (200, content))
         self.assertEqual(self.request(path="/frame.png?name=../controller.json")[0], 400)
 

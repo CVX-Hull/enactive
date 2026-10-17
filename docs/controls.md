@@ -30,6 +30,7 @@ or probe. Implementation and evidence links do not assert a current execution or
 | S-AGENT | P-TRUTH, P-KNOWLEDGE, P-REVIEW | C-REVIEW, C-PORTABLE, C-NATIVE, C-MAINTENANCE |
 | S-DOCS | P-KNOWLEDGE, P-REVIEW, P-CHANGE | C-GOVERNANCE, C-USABILITY, C-REVIEW, C-MAINTENANCE, C-VISUAL |
 | S-WORK | P-REVIEW, P-CHANGE, P-KNOWLEDGE | C-REVIEW, C-RELEASE, C-USABILITY |
+| S-MIGRATION | P-CHANGE, P-KNOWLEDGE, P-UNCERTAINTY | C-PROTOCOL, C-PORTABLE, C-GOVERNANCE, C-REVIEW, C-RELEASE, C-MAINTENANCE |
 | S-EVIDENCE | P-TRUTH, P-KNOWLEDGE, P-UNCERTAINTY | C-GOVERNANCE, C-PORTABLE, C-NATIVE, C-RELEASE, C-MAINTENANCE |
 
 ## Maintenance
@@ -41,11 +42,11 @@ Active and deprecated controls fail after their due date. Event triggers can req
 | Control | Lifecycle | Last exercise | Maintenance review | Effectiveness | Next review |
 | --- | --- | --- | --- | --- | --- |
 | C-PORTABLE | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
-| C-RUNTIME | active | 2026-10-17 | 2026-10-17 | unassessed | 2027-01-15 |
-| C-NATIVE | active | 2026-10-17 | 2026-10-17 | unassessed | 2027-01-15 |
+| C-RUNTIME | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
+| C-NATIVE | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
 | C-USABILITY | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
 | C-BOUNDARY | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
-| C-REVIEW | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
+| C-REVIEW | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
 | C-GOVERNANCE | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-PROTOCOL | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-SETUP | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
@@ -57,53 +58,53 @@ Active and deprecated controls fail after their due date. Event triggers can req
 
 ### C-PORTABLE — Portable regression lane (automatic)
 
-Controller, HTTP adapter, setup and spectator regressions. Common command compiles Python, runs selected Ruff correctness diagnostics, Import Linter contracts, JavaScript syntax checks, Python tests and delayed-image viewer tests; markdown-it-py parses document links/images before contained file-target checks; diff whitespace is checked.
+Controller, HTTP adapter, setup and spectator regressions. Includes gameplay record validation and bounded evidence retention using synthetic observations. Common command compiles Python, runs selected Ruff correctness diagnostics, Import Linter contracts, JavaScript syntax checks, Python tests and delayed-image viewer tests; markdown-it-py parses document links/images before contained file-target checks; diff whitespace is checked.
 
 Owner: maintainer. Trigger: each integration checkpoint and configured CI event.
 Enforcement: Common command and opt-in local hook; main also requires the observed GitHub Actions controller check (app 15368) with strict freshness under active ruleset 25319489. Local hooks remain bypassable; dated hosted/probe evidence is in public-workflow acceptance.
 Failure response: Preserve failure output, fix the cause and rerun before claiming portable acceptance.
 
-Evidence / implementation: [tools/check.py](../tools/check.py), [tests/test_controller.py](../tests/test_controller.py), [tests/test_server.py](../tests/test_server.py), [tests/test_setup.py](../tests/test_setup.py), [tests/test_viewer.cjs](../tests/test_viewer.cjs), [.github/workflows/check.yml](../.github/workflows/check.yml), [.githooks/pre-commit](../.githooks/pre-commit), [pyproject.toml](../pyproject.toml), [requirements-dev.lock](../requirements-dev.lock), [tests/test_devtools.py](../tests/test_devtools.py), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md).
+Evidence / implementation: [tools/check.py](../tools/check.py), [tests/test_controller.py](../tests/test_controller.py), [tests/test_server.py](../tests/test_server.py), [tests/test_setup.py](../tests/test_setup.py), [tests/test_viewer.cjs](../tests/test_viewer.cjs), [.github/workflows/check.yml](../.github/workflows/check.yml), [.githooks/pre-commit](../.githooks/pre-commit), [pyproject.toml](../pyproject.toml), [requirements-dev.lock](../requirements-dev.lock), [tests/test_devtools.py](../tests/test_devtools.py), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [tests/test_gameplay_contracts.py](../tests/test_gameplay_contracts.py), [tests/test_gameplay_evidence.py](../tests/test_gameplay_evidence.py), [tests/test_cli.py](../tests/test_cli.py).
 
 Coverage gap: Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within the dated scope after recorded repairs; limitations retained.
-Scope: Full local and hosted Ubuntu lanes on the public workflow/CI repair; 84 Python tests, four viewer cases and real rendering, with failed runs preserved.
-Exercise evidence: [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md).
+Last exercise: 2026-10-17. Outcome: Passed within recorded scope after preserved repairs; limitations retained.
+Scope: Native-v2 and gameplay/1 contracts, durable crash admission, boundary/frame/version gates and retention regressions; synthetic lane only.
+Exercise evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Full local and hosted Ubuntu lanes on the public workflow/CI repair; 84 Python tests, four viewer cases and real rendering, with failed runs preserved. Long-term effectiveness and forecast calibration remain unmeasured.
-Cost: Local full lane plus hosted installation/rendering and independent review; initial failures required rework. No reliable long-term cost estimate.
-Follow-up: Recheck on workflow/rules, runner, dependency or delegation changes and by 2027-01-15; issue #13 tracks the maintenance review. Preserve failures and adjust or retire controls from evidence.
-Review evidence: [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md).
+Findings: 144-test implementation lane and focused 46-test evidence lane passed after fixture/conflict repairs. Later still-frame manifest regression extends this lane; final counts live in PR evidence.
+Cost: One full local lane plus targeted regressions; count is not a quality metric.
+Follow-up: Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates.
+Review evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Next review: 2027-01-15.
 
 ### C-RUNTIME — Live authority and input guards (runtime)
 
-Single-controller dispatch, HTTP trust boundary and spectator input freshness. Controller validates authority, bounds inputs, serializes dispatch and freezes uncertain outcomes; server validates origin/token and frame paths; viewer waits for matching image decode.
+Single-controller dispatch, HTTP trust boundary and spectator input freshness. Controller serializes dispatch, persists input admissions and revokes durable host tokens before retirement; native v2 checks boundary, matching frame and token at commit. Server validates origin/token/frame paths; viewer waits for matching decoded image and supported boundary.
 
 Owner: controller and viewer maintainer. Trigger: every relevant request, observation and image decode.
 Enforcement: Implemented at runtime; regression execution is C-PORTABLE. Source references alone establish no behavioral pass.
 Failure response: Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.
 
-Evidence / implementation: [harness/controller.py](../harness/controller.py), [harness/server.py](../harness/server.py), [web/app.js](../web/app.js), [tests/test_controller.py](../tests/test_controller.py), [tests/test_server.py](../tests/test_server.py), [tests/test_viewer.cjs](../tests/test_viewer.cjs), [docs/protocol.md](../docs/protocol.md).
+Evidence / implementation: [harness/controller.py](../harness/controller.py), [harness/server.py](../harness/server.py), [web/app.js](../web/app.js), [tests/test_controller.py](../tests/test_controller.py), [tests/test_server.py](../tests/test_server.py), [tests/test_viewer.cjs](../tests/test_viewer.cjs), [docs/protocol.md](../docs/protocol.md), [native/cdda_harness.cpp](../native/cdda_harness.cpp), [harness/gameplay/evidence.py](../harness/gameplay/evidence.py).
 
 Coverage gap: Tests exercise fake-bridge and browser fixtures. Native takeover and engine input behavior need C-NATIVE. Pause cannot cancel an already-running activity; no structured damage/trap or combat guarantee.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Observed in dated MVP probes; no broader runtime guarantee.
-Scope: Native takeover, stale authority rejection, timeout freeze and spectator checks in the recorded host/scenarios.
-Exercise evidence: [docs/acceptance/2026-10-17-mvp.md](../docs/acceptance/2026-10-17-mvp.md).
+Last exercise: 2026-10-17. Outcome: Passed within recorded scope after preserved repairs; limitations retained.
+Scope: Live native input authority, menu/normal/activity/debug separation, stale world rejection and durable unknown outcome across service restart.
+Exercise evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
-Maintenance review: 2026-10-17. Effectiveness: unassessed.
-Findings: Definition and recovery diagrams checked against implementation and historical MVP evidence; native execution was not repeated and its exercise date is unchanged.
-Cost: No runtime changes or new native validation cost in this increment.
-Follow-up: Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control.
-Review evidence: [docs/acceptance/2026-10-17-documentation-review.md](../docs/acceptance/2026-10-17-documentation-review.md).
+Maintenance review: 2026-10-17. Effectiveness: partially_effective.
+Findings: Live revoked-token and v1 packets rejected; timed-out real load retained through reconciliation/restart. Pause cannot undo a committed input or interrupt a native activity.
+Cost: Local single-writer runtime and persistent admission files; unresolved entries require retained incident evidence.
+Follow-up: Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates.
+Review evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Next review: 2027-01-15.
 
@@ -121,15 +122,15 @@ Coverage gap: Historical MVP evidence is host/scenario specific; no automated na
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Fresh build and real-game probes passed in dated MVP acceptance.
-Scope: Recorded Mac, pinned CDDA build, menu/input/rendering, movement, supplies, takeover, danger and save/reload probes.
-Exercise evidence: [docs/acceptance/2026-10-17-mvp.md](../docs/acceptance/2026-10-17-mvp.md).
+Last exercise: 2026-10-17. Outcome: Passed within recorded scope after preserved repairs; limitations retained.
+Scope: Exact pinned native-v2 build and real windowed menu/normal/activity/debug/reload probes on this Mac.
+Exercise evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
-Maintenance review: 2026-10-17. Effectiveness: unassessed.
-Findings: Historical real-game evidence remains explicit; no documentation or mock-test result is substituted for fresh native acceptance.
-Cost: Native build and gameplay remain a separate costly lane, required on relevant changes.
-Follow-up: Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control.
-Review evidence: [docs/acceptance/2026-10-17-documentation-review.md](../docs/acceptance/2026-10-17-documentation-review.md).
+Maintenance review: 2026-10-17. Effectiveness: partially_effective.
+Findings: Required #29 boundary probes passed with scoped limitations. Natural tutorial load failed and supplied debug evidence; regular saves supplied successful gameplay/reload. No full recovery or #33 pipeline claim.
+Cost: Fresh full native build, one incremental build and manual windowed probes; substantial manual lane remains.
+Follow-up: Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates.
+Review evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Next review: 2027-01-15.
 
@@ -147,21 +148,21 @@ Coverage gap: Human judgment; no automated usability score or user study is clai
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within the dated scope after recorded repairs; limitations retained.
-Scope: Public Direction grouped by Horizon, Execution by stage, Needs attention labels and linked owner-facing docs; unauthenticated browser inspection.
-Exercise evidence: [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md).
+Last exercise: 2026-10-17. Outcome: Passed within recorded scope after preserved repairs; limitations retained.
+Scope: Updated overview/current-contract navigation, native boundary labels and rendered action sequence.
+Exercise evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Maintenance review: 2026-10-17. Effectiveness: partially_effective.
-Findings: Public Direction grouped by Horizon, Execution by stage, Needs attention labels and linked owner-facing docs; unauthenticated browser inspection. Long-term effectiveness and forecast calibration remain unmeasured.
-Cost: Local full lane plus hosted installation/rendering and independent review; initial failures required rework. No reliable long-term cost estimate.
-Follow-up: Recheck on workflow/rules, runner, dependency or delegation changes and by 2027-01-15; issue #13 tracks the maintenance review. Preserve failures and adjust or retire controls from evidence.
-Review evidence: [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md).
+Findings: Owner-facing capabilities distinguish implemented foundations from future recovery/planning. Actual spectator view inspected; no independent human usability study.
+Cost: Current-doc update plus visual inspection; long-term comprehension cost unmeasured.
+Follow-up: Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates.
+Review evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Next review: 2027-01-15.
 
 ### C-BOUNDARY — Architectural dependency contracts (automatic)
 
-Declared controller and server dependency boundaries, including indirect imports through harness modules. Import Linter uses the pyproject.toml forbidden contracts: controller cannot depend on server, CLI, declared network modules or build tooling; server cannot depend on CLI/tools; CLI may compose both.
+Declared controller and server dependency boundaries, including indirect imports through harness modules. Passive gameplay records and evidence must not import controller, HTTP, CLI or process/build tooling. Import Linter uses the pyproject.toml forbidden contracts: controller cannot depend on server, CLI, declared network modules or build tooling; server cannot depend on CLI/tools; CLI may compose both.
 
 Owner: harness maintainer. Trigger: common command; architecture changes require rule review.
 Enforcement: Common command runs the real lint-imports executable and propagates failure; temporary source fixtures exercise allowed composition and direct/indirect forbidden imports.
@@ -173,15 +174,15 @@ Coverage gap: Static import graph with configured external roots. Dynamic import
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within the dated acceptance scope; limitations retained.
-Scope: Two Import Linter contracts and direct/indirect forbidden import fixtures; no runtime boundary changes.
-Exercise evidence: [docs/acceptance/2026-10-17-documentation-review.md](../docs/acceptance/2026-10-17-documentation-review.md).
+Last exercise: 2026-10-17. Outcome: Passed within recorded scope after preserved repairs; limitations retained.
+Scope: Three Import Linter contracts, adding passive gameplay and negative import fixtures.
+Exercise evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Configured import contracts and their forbidden direct/indirect dependency fixtures passed; no runtime architecture changes.
-Cost: Two static contracts; dynamic imports and broader architecture still need review.
-Follow-up: Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control.
-Review evidence: [docs/acceptance/2026-10-17-documentation-review.md](../docs/acceptance/2026-10-17-documentation-review.md).
+Findings: Passive records/evidence cannot import controller/server/CLI or process/network/tooling modules; an initial missing test-fixture package was repaired.
+Cost: Existing mature tool reused; no new dependency.
+Follow-up: Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates.
+Review evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Next review: 2027-01-15.
 
@@ -199,15 +200,15 @@ Coverage gap: No code checker proves reasoning quality, typing completeness, dec
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within the dated scope after recorded repairs; limitations retained.
-Scope: Two isolated disjoint worker checkouts, lead integration and clean-context independent reviews of publication and CI repairs.
-Exercise evidence: [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md).
+Last exercise: 2026-10-17. Outcome: Passed within recorded scope after preserved repairs; limitations retained.
+Scope: Two isolated implementation workers, separate native/evidence reviewers and clean-context final integration audit.
+Exercise evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
-Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Two isolated disjoint worker checkouts, lead integration and clean-context independent reviews of publication and CI repairs. Long-term effectiveness and forecast calibration remain unmeasured.
-Cost: Local full lane plus hosted installation/rendering and independent review; initial failures required rework. No reliable long-term cost estimate.
-Follow-up: Recheck on workflow/rules, runner, dependency or delegation changes and by 2027-01-15; issue #13 tracks the maintenance review. Preserve failures and adjust or retire controls from evidence.
-Review evidence: [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md).
+Maintenance review: 2026-10-17. Effectiveness: partially_effective.
+Findings: Review found crash identity loss, menu exclusions and noncurrent evidence rearming; repairs and regressions independently verified. Integration audit found no additional defect. Not human approval or exhaustive proof.
+Cost: Multiple reviewer/lead repair rounds; no measured agent efficiency claim.
+Follow-up: Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates.
+Review evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Next review: 2027-01-15.
 
@@ -225,41 +226,41 @@ Coverage gap: Structure, recorded dates and local file existence are checked, no
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within the dated acceptance scope; limitations retained.
-Scope: Lifecycle/schema/mapping/reference/date/metadata/protocol/map checks and negative fixtures; standalone overdue forecast.
-Exercise evidence: [docs/acceptance/2026-10-17-documentation-review.md](../docs/acceptance/2026-10-17-documentation-review.md).
+Last exercise: 2026-10-17. Outcome: Passed, including genuine still-frame acceptance and malformed video rejection.
+Scope: Existing schema/path/provenance checks plus explicit video:null acceptance; 145-test common lane. No automatic verification of local media semantics.
+Exercise evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Lifecycle, metadata, reference, due-date, protocol and generated-map checks passed with negative cases. Review caught live-date coupling in test fixtures; isolated dates now allow legitimate future renewal.
-Cost: Project-specific relationship checks use existing parsers and JSON Schema; declarations still need semantic review.
-Follow-up: Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control.
-Review evidence: [docs/acceptance/2026-10-17-documentation-review.md](../docs/acceptance/2026-10-17-documentation-review.md).
+Findings: Removed mandatory-video assumption for original still-frame evidence using existing JSON Schema; malformed video values and invalid intervals still reject. Generated control map and protocol-v2 agreement checked.
+Cost: Small existing-schema extension and one regression; no new validator.
+Follow-up: Review evidence format changes and control drift under #13; schema validity never proves content truth.
+Review evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Next review: 2027-01-15.
 
-### C-PROTOCOL — Protocol v1 source agreement (automatic)
+### C-PROTOCOL — Protocol v2 source agreement (automatic)
 
-Native emitter/validator, controller send/validator, server advertisement and protocol document version. Recognize the current two C++ literal forms, Python AST dictionary/comparison literals and document version; require each to represent v1 exactly once.
+Native emitter/validator, controller send/response/stored-request validators, server advertisement, CLI discovery validator, viewer guard and protocol document version. Recognize the current two C++ literal forms, Python AST dictionary/comparison literals, JavaScript viewer guard and document version; require each of the nine forms to represent v2 exactly once.
 
 Owner: bridge and controller maintainer. Trigger: common command; any protocol representation change requires checker review.
 Enforcement: Common command fails on version drift or unrecognized source form; each representation has a negative fixture.
 Failure response: Resolve version drift; for a refactor/version change review and update checker plus contract, then run required native acceptance.
 
-Evidence / implementation: [tools/governance.py](../tools/governance.py), [tests/test_governance.py](../tests/test_governance.py), [native/cdda_harness.cpp](../native/cdda_harness.cpp), [harness/controller.py](../harness/controller.py), [harness/server.py](../harness/server.py), [docs/protocol.md](../docs/protocol.md).
+Evidence / implementation: [tools/governance.py](../tools/governance.py), [tests/test_governance.py](../tests/test_governance.py), [native/cdda_harness.cpp](../native/cdda_harness.cpp), [harness/controller.py](../harness/controller.py), [harness/server.py](../harness/server.py), [docs/protocol.md](../docs/protocol.md), [harness/__main__.py](../harness/__main__.py), [tests/test_cli.py](../tests/test_cli.py), [web/app.js](../web/app.js).
 
 Coverage gap: Narrow source drift detector, not a robust C++ parser or protocol conformance proof. Refactored representations fail for review; matching literals cannot prove runtime behavior.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within the dated acceptance scope; limitations retained.
-Scope: Six recognized protocol-v1 source forms and drift fixtures; no fresh native execution.
-Exercise evidence: [docs/acceptance/2026-10-17-documentation-review.md](../docs/acceptance/2026-10-17-documentation-review.md).
+Last exercise: 2026-10-17. Outcome: Passed within recorded scope after preserved repairs; limitations retained.
+Scope: Nine recognized native-v2 source forms, including stored-request and viewer guards, with drift rejection fixtures; broader absence of compatibility paths is reviewed.
+Exercise evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Current source forms and intentional version-drift fixtures passed; matching source literals do not prove native runtime conformance.
-Cost: Narrow source recognizer must change with an intentional protocol refactor.
-Follow-up: Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control.
-Review evidence: [docs/acceptance/2026-10-17-documentation-review.md](../docs/acceptance/2026-10-17-documentation-review.md).
+Findings: All source forms agree on v2; actual native v1 rejection and revoked-token rejection observed. Source literals alone still cannot prove conformance. Coordinated migration adds stored-request/viewer forms; narrow checks are not a whole-code compatibility proof.
+Cost: Narrow recognizer updated with version/CLI integration and negative fixtures.
+Follow-up: Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates.
+Review evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Next review: 2027-01-15.
 
@@ -277,15 +278,15 @@ Coverage gap: Portable fixtures do not perform fresh downloads, native compilati
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Fresh isolated build and launch recorded in dated MVP acceptance.
-Scope: Project-owned download/extract/build stages and installation on the recorded Mac; no broader host claim.
-Exercise evidence: [docs/acceptance/2026-10-17-mvp.md](../docs/acceptance/2026-10-17-mvp.md).
+Last exercise: 2026-10-17. Outcome: Passed within recorded scope after preserved repairs; limitations retained.
+Scope: Fresh owned extraction/build, source hashes/anchors, final incremental rebuild, installation/signing and windowed launch.
+Exercise evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Maintenance review: 2026-10-17. Effectiveness: partially_effective.
-Findings: Existing setup guards passed portable fixtures. New documentation dependencies and browser installed locally; ambient browser overrides and escaping output/cache symlinks now fail or are isolated. No fresh native build.
-Cost: Two added Python packages, 195 npm packages and one pinned browser; native setup cost remains separate.
-Follow-up: Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control.
-Review evidence: [docs/acceptance/2026-10-17-documentation-review.md](../docs/acceptance/2026-10-17-documentation-review.md).
+Findings: Compiled source compared with checkpoint; no global installs or setup changes. Successful only on recorded Mac; other hosts remain unverified.
+Cost: Existing cache/toolchain reused; full compile plus incremental menu repair.
+Follow-up: Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates.
+Review evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Next review: 2027-01-15.
 
@@ -329,15 +330,15 @@ Coverage gap: Review quality and event-trigger detection remain manual. No backg
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within the dated acceptance scope; limitations retained.
-Scope: Manual baseline review of 12 controls and active documentation; long-term effectiveness unmeasured.
-Exercise evidence: [docs/acceptance/2026-10-17-documentation-review.md](../docs/acceptance/2026-10-17-documentation-review.md).
+Last exercise: 2026-10-17. Outcome: Passed within recorded scope after preserved repairs; limitations retained.
+Scope: Changed documentation, control definitions/limits and evidence renewal for this behavior increment.
+Exercise evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Maintenance review: 2026-10-17. Effectiveness: unassessed.
-Findings: First explicit maintenance baseline reviewed definitions, evidence limits, guide drift, dependency burden and reviewer findings. Deliberate future-date forecast detects overdue records. Long-term effectiveness is not yet observable.
-Cost: Review due within 90 days and earlier on events; no background scheduler or automatic date renewal.
-Follow-up: Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control.
-Review evidence: [docs/acceptance/2026-10-17-documentation-review.md](../docs/acceptance/2026-10-17-documentation-review.md).
+Findings: Reconciled native-v2 and passive evidence docs with code; retained prior reports and failures. Removed mandatory-video assumption via explicit null schema and regression. Long-term effectiveness unmeasured.
+Cost: Event-triggered manual maintenance; review due unchanged, no automated date renewal.
+Follow-up: Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates.
+Review evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Next review: 2027-01-15.
 
@@ -355,15 +356,15 @@ Coverage gap: Receipt freshness is not cross-host byte equality or proof against
 
 Lifecycle: active. Rationale: Required to keep user-facing visual explanations reviewable and synchronized.. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within the dated scope after recorded repairs; limitations retained.
-Scope: Real Mermaid rendering and malformed-input parser rejection on macOS and hosted Ubuntu24.04 after observed sandbox/API repairs.
-Exercise evidence: [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md).
+Last exercise: 2026-10-17. Outcome: Passed within recorded scope after preserved repairs; limitations retained.
+Scope: Updated action sequence rendered and inspected at ordinary width, independently compared with authority contract.
+Exercise evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Real Mermaid rendering and malformed-input parser rejection on macOS and hosted Ubuntu24.04 after observed sandbox/API repairs. Long-term effectiveness and forecast calibration remain unmeasured.
-Cost: Local full lane plus hosted installation/rendering and independent review; initial failures required rework. No reliable long-term cost estimate.
-Follow-up: Recheck on workflow/rules, runner, dependency or delegation changes and by 2027-01-15; issue #13 tracks the maintenance review. Preserve failures and adjust or retire controls from evidence.
-Review evidence: [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md).
+Findings: Diagram includes final boundary/frame/token gate and limits later Pause. Existing renderer/parser/receipt checks passed; semantic truth remains reviewed.
+Cost: Existing pinned renderer reused; no new tooling.
+Follow-up: Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates.
+Review evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
 
 Next review: 2027-01-15.
 

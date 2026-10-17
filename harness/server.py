@@ -21,7 +21,7 @@ class Server(ThreadingHTTPServer):
         super().__init__(("127.0.0.1", port), Handler)
         self.port = self.server_address[1]
         atomic_json(controller.bridge / "controller.json", {
-            "protocol": 1, "port": self.port, "token": controller.token})
+            "protocol": 2, "port": self.port, "token": controller.token})
 
     def server_close(self) -> None:
         super().server_close()
@@ -78,7 +78,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 names = parse_qs(urlsplit(self.path).query).get("name", [])
                 name = names[0] if len(names) == 1 else "frame.png"
-                if name != "frame.png" and not re.fullmatch(r"frame-\d+-\d+-\d+\.png", name):
+                if name != "frame.png" and not re.fullmatch(r"frame-[0-9]{1,20}-[0-9]{1,10}(?:-[0-9]{1,10})?-[1-9][0-9]{0,9}\.png", name):
                     self._json(400, {"error": "Invalid native frame reference"})
                     return
                 with (controller.bridge / name).open("rb") as stream:

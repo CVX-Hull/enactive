@@ -22,7 +22,9 @@
 #include "json.h"
 #include "map.h"
 #include "mapdata.h"
+#include "output.h"
 #include "sdltiles.h"
+#include "ui_manager.h"
 
 namespace cdda_harness
 {
@@ -53,17 +55,66 @@ const std::string directory = []() {
     }
     return std::string( value );
 }();
-const std::string session = std::to_string( now_ms() ) + "-" + std::to_string( getpid() );
+std::string session = std::to_string( now_ms() ) + "-" + std::to_string( getpid() );
 std::string category;
 std::vector<std::string> actions;
 std::string pending;
 std::set<std::string> seen_ids;
 int revision = 0;
 int last_turn = -1;
-bool scoped = false;
+bool dirty = true;
+struct input_scope {
+    boundary_kind kind;
+    std::string category;
+    std::vector<std::string> actions;
+    bool input;
+};
+std::vector<input_scope> scopes;
+boundary_kind current_kind = boundary_kind::unsupported;
+int boundary_counter = 0;
+int control_generation = 0;
+int world_counter = 0;
+std::string boundary_id;
+std::string presented_boundary;
+std::string presented_session;
+int presented_revision = -1;
+long long presented_ms = 0;
+
+std::string kind_name( boundary_kind kind )
+{
+    switch( kind ) {
+        case boundary_kind::normal_play: return "normal_play";
+        case boundary_kind::activity_poll: return "activity_poll";
+        case boundary_kind::debug_prompt: return "debug_prompt";
+        case boundary_kind::menu: return "menu";
+        default: return "unsupported";
+    }
+}
+bool scoped()
+{
+    return !scopes.empty() && ( scopes.back().input ||
+                               scopes.back().kind == boundary_kind::debug_prompt );
+}
+void new_boundary()
+{
+    boundary_id = session + "-b" + std::to_string( ++boundary_counter );
+    ++revision;
+    dirty = true;
+}
+void sync_scope()
+{
+    const input_scope empty = { boundary_kind::unsupported, "", {}, false };
+    const input_scope &top = scopes.empty() ? empty : scopes.back();
+    if( current_kind != top.kind || category != top.category || actions != top.actions ||
+        boundary_id.empty() ) {
+        current_kind = top.kind;
+        category = top.category;
+        actions = top.actions;
+        new_boundary();
+    }
+}
 bool in_game = false;
 bool paused = true;
-bool dirty = true;
 tripoint_abs_ms origin;
 long long last_poll = 0;
 long long last_publish = 0;
@@ -83,7 +134,7 @@ void pause_file()
 void scene( JsonOut &out )
 {
     out.member( "scene" );
-    if( !in_game || category != "DEFAULTMODE" ) {
+    if( !in_game || current_kind != boundary_kind::normal_play ) {
         out.write_null();
         return;
     }
@@ -135,13 +186,20 @@ void publish( const std::string &id, const std::string &status,
               const std::string &error = "", bool capture = true )
 {
     bool frame_ok = false;
+    std::string published_frame;
     if( capture ) {
-        frame_ok = write_frame( path( "frame.tmp.png" ) );
+        // Present and copy this boundary's current render buffer. A cached front
+        // buffer from an earlier prompt must never acquire a new timestamp.
+        ui_manager::redraw();
+        refresh_display();
+        frame_ok = presented_boundary == boundary_id && presented_session == session &&
+                   presented_revision == revision && write_frame( path( "frame.tmp.png" ) );
         if( frame_ok ) {
             frame_name = "frame-" + session + "-" + std::to_string( ++frame_counter ) + ".png";
             fs::rename( path( "frame.tmp.png" ), path( frame_name ) );
             fs::copy_file( path( frame_name ), path( "frame.latest.png" ), fs::copy_options::overwrite_existing );
             fs::rename( path( "frame.latest.png" ), path( "frame.png" ) );
+            published_frame = frame_name;
             retained_frames.push_back( frame_name );
             if( retained_frames.size() > 120 ) {
                 std::error_code ignored;
@@ -155,7 +213,7 @@ void publish( const std::string &id, const std::string &status,
     stream.exceptions( std::ios::badbit | std::ios::failbit );
     JsonOut out( stream );
     out.start_object();
-    out.member( "protocol", 1 );
+    out.member( "protocol", 2 );
     out.member( "id", id );
     out.member( "session", session );
     out.member( "revision", revision );
@@ -164,9 +222,18 @@ void publish( const std::string &id, const std::string &status,
     out.member( "status", status );
     out.member( "error", error );
     out.member( "paused", paused );
-    out.member( "timestamp_ms", now_ms() );
+    out.member( "timestamp_ms", frame_ok ? presented_ms : now_ms() );
     out.member( "frame_ok", frame_ok );
-    out.member( "frame", frame_name );
+    out.member( "frame", published_frame );
+    out.member( "boundary" );
+    out.start_object();
+    out.member( "kind", kind_name( current_kind ) );
+    out.member( "id", boundary_id );
+    out.member( "control_generation", control_generation );
+    out.member( "recovery_operations", std::vector<std::string>() );
+    out.member( "interrupt_request_id" );
+    out.write_null();
+    out.end_object();
     out.member( "in_game", in_game );
     scene( out );
     out.end_object();
@@ -219,6 +286,23 @@ input_event key_event( const std::string &key, keyboard_mode mode )
     }
     return result;
 }
+// Read again at commit, after binding resolution; claiming a request grants no authority.
+void authority_gate( const TextJsonObject &request )
+{
+    if( !fs::exists( path( "authority.json" ) ) || fs::file_size( path( "authority.json" ) ) > 4096 ) {
+        throw std::runtime_error( "missing or oversized host authority" );
+    }
+    const TextJsonObject admitted = request.get_object( "authority" );
+    std::ifstream stream( path( "authority.json" ) );
+    TextJsonIn input( stream );
+    const TextJsonObject live = input.get_object();
+    const std::string boot = admitted.get_string( "controller_boot_id" );
+    const int counter = admitted.get_int( "counter" );
+    if( admitted.size() != 2 || live.size() != 2 || boot.empty() || counter < 0 ||
+        live.get_string( "controller_boot_id" ) != boot || live.get_int( "counter" ) != counter ) {
+        throw std::runtime_error( "host authority revoked or malformed" );
+    }
+}
 } // namespace
 
 bool enabled()
@@ -226,31 +310,86 @@ bool enabled()
     return !directory.empty();
 }
 
-void context( const std::string &name, const std::vector<std::string> &registered )
+scope::scope( boundary_kind kind )
 {
-    if( directory.empty() ) {
-        return;
-    }
-    scoped = true;
-    if( category != name || actions != registered ) {
-        category = name;
-        actions = registered;
-        ++revision;
-        dirty = true;
+    scopes.push_back( { kind, kind == boundary_kind::debug_prompt ? "DEBUG_MSG" : "", {}, false } );
+    if( kind == boundary_kind::debug_prompt ) {
+        sync_scope();
     }
 }
-void clear_context()
+scope::scope( const std::string &name, const std::vector<std::string> &registered )
 {
-    scoped = false;
+    // Coverage is deliberately explicit. In particular DEFAULTMODE in keybinding
+    // settings, deathcam and unknown callers is never promoted by its name.
+    static const std::set<std::string> menus = {
+        "MAIN_MENU", "UILIST", "YESNO", "POPUP_WAIT", "STRING_INPUT",
+        "INVENTORY", "INVENTORY_SELECTOR", "SCROLLABLE_TEXT", "HELP_KEYBINDINGS",
+        "HELP", "LOOK", "LOOK_CLOSE", "OVERMAP", "CONFIRMATION",
+        "DISPLAY_HELP", "MESSAGE_LOG", "PLAYER_INFO", "PICK_WORLD_DIALOG",
+        "MODMANAGER_DIALOG", "WORLDGEN_CONFIRM_DIALOG", "MELEE_STYLE_PICKER",
+        "NEW_CHAR_POINTS", "NEW_CHAR_STATS", "NEW_CHAR_TRAITS", "NEW_CHAR_PROFESSIONS",
+        "NEW_CHAR_SKILLS", "NEW_CHAR_SCENARIOS", "NEW_CHAR_DESCRIPTION"
+    };
+    boundary_kind kind = menus.count( name ) ? boundary_kind::menu : boundary_kind::unsupported;
+    const bool nested = std::any_of( scopes.begin(), scopes.end(),
+    []( const input_scope & entry ) { return entry.input; } );
+    if( !scopes.empty() && scopes.back().kind == boundary_kind::debug_prompt ) {
+        kind = boundary_kind::debug_prompt;
+    } else if( !nested && !scopes.empty() && name == "DEFAULTMODE" ) {
+        if( scopes.back().kind == boundary_kind::activity_poll ) {
+            kind = boundary_kind::activity_poll;
+        } else if( scopes.back().kind == boundary_kind::normal_play && in_game ) {
+            kind = boundary_kind::normal_play;
+        }
+    }
+    scopes.push_back( { kind, name, registered, true } );
+    sync_scope();
+}
+scope::~scope()
+{
+    scopes.pop_back();
+    // Restoration is lazy until rendering/input: repeated timeout polls in the
+    // same context keep their identity, while a nested observed UI changes it.
 }
 void playing( bool value )
 {
-    in_game = value;
-    if( value && !directory.empty() ) {
-        origin = get_avatar().pos_abs();
+    if( in_game == value ) {
+        return;
     }
-    ++revision;
-    dirty = true;
+    in_game = value;
+    session = std::to_string( now_ms() ) + "-" + std::to_string( getpid() ) +
+              "-" + std::to_string( ++world_counter );
+    paused = true;
+    ++control_generation;
+    new_boundary();
+    last_turn = -1;
+    seen_ids.clear();
+    // Do not acknowledge an action from a world that no longer exists.
+    pending.clear();
+    if( !directory.empty() ) {
+        pause_file();
+        if( value ) {
+            origin = get_avatar().pos_abs();
+        }
+    }
+}
+void frame_presented( bool valid )
+{
+    if( !valid || !scoped() ) {
+        presented_boundary.clear();
+        return;
+    }
+    sync_scope();
+    const int turn = in_game ? to_turn<int>( calendar::turn ) : -1;
+    if( turn != last_turn ) {
+        last_turn = turn;
+        ++revision;
+        dirty = true;
+    }
+    presented_boundary = boundary_id;
+    presented_session = session;
+    presented_revision = revision;
+    presented_ms = now_ms();
 }
 void human_input()
 {
@@ -258,16 +397,17 @@ void human_input()
         return;
     }
     paused = true;
-    ++revision;
-    dirty = true;
+    ++control_generation;
+    new_boundary();
     pause_file();
 }
 void boundary()
 {
-    if( directory.empty() || !scoped ) {
+    if( directory.empty() || !scoped() ) {
         return;
     }
     try {
+        sync_scope();
         const int turn = in_game ? to_turn<int>( calendar::turn ) : -1;
         if( turn != last_turn ) {
             last_turn = turn;
@@ -287,7 +427,7 @@ void boundary()
 }
 bool poll( keyboard_mode mode, input_event &event )
 {
-    if( directory.empty() || !scoped || !pending.empty() || now_ms() - last_poll < 25 ) {
+    if( directory.empty() || !scoped() || !pending.empty() || now_ms() - last_poll < 25 ) {
         return false;
     }
     last_poll = now_ms();
@@ -320,7 +460,7 @@ bool poll( keyboard_mode mode, input_event &event )
         if( id.empty() || id.size() > 80 || !seen_ids.insert( id ).second ) {
             throw std::runtime_error( "invalid or duplicate request id" );
         }
-        if( request.get_int( "protocol" ) != 1 ) {
+        if( request.get_int( "protocol" ) != 2 ) {
             throw std::runtime_error( "unsupported protocol" );
         }
         const std::string kind = request.get_string( "kind" );
@@ -341,8 +481,17 @@ bool poll( keyboard_mode mode, input_event &event )
             throw std::runtime_error( "stale session or revision; observe again" );
         }
         if( kind == "resume" ) {
+            if( current_kind != boundary_kind::normal_play && current_kind != boundary_kind::menu ) {
+                throw std::runtime_error( "unsupported boundary for resume" );
+            }
+            if( presented_boundary != boundary_id || presented_session != session ||
+                presented_revision != revision || now_ms() - presented_ms > 3000 ) {
+                throw std::runtime_error( "fresh matching rendered boundary required" );
+            }
+            authority_gate( request );
             fs::remove( path( "pause" ) );
             paused = false;
+            ++control_generation;
             ++revision;
             publish( id, "ready" );
             fs::remove( path( "claimed.json" ) );
@@ -350,6 +499,9 @@ bool poll( keyboard_mode mode, input_event &event )
         }
         if( paused || fs::exists( path( "pause" ) ) ) {
             throw std::runtime_error( "paused; explicit resume required" );
+        }
+        if( current_kind != boundary_kind::normal_play && current_kind != boundary_kind::menu ) {
+            throw std::runtime_error( "boundary does not permit ordinary input" );
         }
         if( kind == "key" ) {
             event = key_event( request.get_string( "key" ), mode );
@@ -373,6 +525,11 @@ bool poll( keyboard_mode mode, input_event &event )
         if( fs::exists( path( "pause" ) ) ) {
             throw std::runtime_error( "pause interrupted dispatch" );
         }
+        if( presented_boundary != boundary_id || presented_session != session ||
+            presented_revision != revision || now_ms() - presented_ms > 3000 ) {
+            throw std::runtime_error( "fresh matching rendered boundary required" );
+        }
+        authority_gate( request );
         ++revision;
         pending = id;
         publish( id, "dispatched", "", false );

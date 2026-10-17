@@ -163,3 +163,23 @@ Gitleaks 8.30.1 was downloaded from its official GitHub release into
 Redacted scan results and GitHub setup/probe receipts stay in
 `.runtime/evidence/publication/`. No system package, shell profile, credential
 configuration, game process or save was changed by this setup.
+
+## 2026-10-17 native-v2 foundation increment
+
+Reused the pinned source/archive, existing project dependencies and compiler.
+Fresh owned extraction/build: `/private/tmp/cdda-player-build-8vgf_363`; the prior
+`/private/tmp/cdda-player-build-6jt343nd` manifest was preserved before replacement.
+No global package, profile, Git identity or application configuration changed.
+The existing GitHub no-reply identity was supplied per commit command.
+The passive gameplay module reuses already-installed/pinned jsonschema; there was
+no new dependency installation. Build and runtime provenance, local evidence
+retention and cleanup are in the [foundation acceptance](acceptance/2026-10-17-foundation-implementation.md).
+
+The final build binary SHA-256 was
+`87de9bcda9ee8751704b8dc5016e7db6d4b43b9657e0cd5a72e66bad4963dd0b`;
+installation/signing produced
+`73105d7dfcf6c7d5120d08136186b90dca4bb94412027ec3c138a6658713454b`.
+Only the prepared project app was launched, windowed with its explicit userdir.
+Normal UI saves were retained. A tutorial-load diagnostic was preserved and the
+failed load closed without saving; regular H/Day profiles supplied other probes.
+The game was saved and quit normally, and both controller sessions were stopped.

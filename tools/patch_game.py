@@ -23,7 +23,10 @@ for name, checksum in pin["source_files"].items():
 
 # Current Xcode no longer supports upstream's 10.15 libc++ deployment target.
 makefile = source / "Makefile"
-makefile.write_text(makefile.read_text().replace("-mmacosx-version-min=10.15", "-mmacosx-version-min=13.0"))
+make_text = makefile.read_text()
+if make_text.count("-mmacosx-version-min=10.15") != 2:
+    raise SystemExit("Pinned deployment target anchors changed")
+makefile.write_text(make_text.replace("-mmacosx-version-min=10.15", "-mmacosx-version-min=13.0"))
 
 def replace_once(path: Path, old: str, new: str) -> None:
     text = path.read_text()
@@ -35,17 +38,29 @@ def replace_once(path: Path, old: str, new: str) -> None:
 
 for name in ("cdda_harness.h", "cdda_harness.cpp"):
     shutil.copyfile(ROOT / "native" / name, source / "src" / name)
-for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp"):
+for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp"):
     path = source / "src" / name
     text = path.read_text()
     if '#include "cdda_harness.h"' not in text:
         path.write_text('#include "cdda_harness.h"\n' + text)
 
+# The guard spans handle_input, including retries and nested keybinding UI.
 replace_once(source / "src/input_context.cpp",
-    '        next_action = inp_mngr.get_input_event( preferred_keyboard_mode );',
-    '        cdda_harness::context( category, registered_actions );\n'
-    '        next_action = inp_mngr.get_input_event( preferred_keyboard_mode );\n'
-    '        cdda_harness::clear_context();')
+    'const std::string &input_context::handle_input( const int timeout )\n{',
+    'const std::string &input_context::handle_input( const int timeout )\n{\n'
+    '    cdda_harness::scope harness_input( category, registered_actions );')
+replace_once(source / "src/handle_action.cpp",
+    'input_context game::get_player_input( std::string &action )\n{',
+    'input_context game::get_player_input( std::string &action )\n{\n'
+    '    cdda_harness::scope harness_player( uquit == QUIT_WATCH ?\n'
+    '        cdda_harness::boundary_kind::unsupported : cdda_harness::boundary_kind::normal_play );')
+replace_once(source / "src/do_turn.cpp", 'void handle_key_blocking_activity()\n{',
+    'void handle_key_blocking_activity()\n{\n'
+    '    cdda_harness::scope harness_activity( cdda_harness::boundary_kind::activity_poll );')
+replace_once(source / "src/debug.cpp",
+    '    for( bool stop = false; !stop; ) {\n        ui_manager::redraw();',
+    '    cdda_harness::scope harness_debug( cdda_harness::boundary_kind::debug_prompt );\n'
+    '    for( bool stop = false; !stop; ) {\n        ui_manager::redraw();')
 replace_once(source / "src/main.cpp", '        while( !do_turn() ) {}',
     '        cdda_harness::playing( true );\n        while( !do_turn() ) {}\n'
     '        cdda_harness::playing( false );')
@@ -103,6 +118,7 @@ void cdda_harness::capture_frame()
             harness_presented_frame->pitch ) != 0 ) {
         harness_presented_frame.reset();
     }
+    cdda_harness::frame_presented( static_cast<bool>( harness_presented_frame ) );
 }
 
 bool cdda_harness::write_frame( const std::string &filename )

@@ -6,8 +6,21 @@ status: active
 
 # Current architecture
 
-Implemented MVP architecture.
-Protocol version: 1. Dated verification: [MVP acceptance](acceptance/2026-10-17-mvp.md).
+Implemented native-v2 and passive gameplay-evidence architecture. The
+[foundation acceptance](acceptance/2026-10-17-foundation-implementation.md) records
+fresh windowed native-v2 probes and separately scoped portable evidence tests.
+[MVP acceptance](acceptance/2026-10-17-mvp.md) remains historical v1 evidence.
+Protocol version: 2.
+
+## Coordinated change
+
+All project-controlled boundaries follow
+[S-MIGRATION](engineering.md#s-migration-one-current-contract-coordinated-migration):
+one current contract, with producers, consumers, persisted formats and guidance
+migrated together. There is no runtime compatibility layer or downgrade. Current
+native wire v2, gameplay records `gameplay/1`, evidence store version 1 and build
+manifest version 1 name separate contracts, not alternate versions of one interface.
+Historical artifacts are retained as evidence without being accepted as runtime input.
 
 ## Scope and responsibilities
 
@@ -22,13 +35,15 @@ windowed operation and project isolation are [charter constraints](charter.md).
 | Controller / harness maintainer | Observed-state-bound commands → validated bridge requests, results and journal | Single serialized client; process lock; deadlines; pause freezes dispatch; never mutates saves or game state |
 | Native bridge / integration maintainer | Bounded requests → actual input events, metadata and rendered frames | Game thread only; engine validates outcomes; session/revision/expiry checks; unsupported input boundaries cannot claim success |
 | Spectator / viewer maintainer | Frames and state → display and operator controls | Input authority only after matching current image decodes; stale state stays visible; browser controls require origin/token validation |
+| Gameplay evidence / harness maintainer | Native observations → immutable typed records and retained original frames | Passive only; validates provenance, freshness and bounded capacity; never dispatches or substitutes historical facts for current authority |
 | Setup / build maintainer | Pinned sources and existing toolchain → isolated app and manifest | Explicit stages, checksums and ownership; failures stop the stage; no global installation or automatic launch |
 
 These roles may be held by one maintainer. Ownership names describe accountability,
 not extra services or a requirement for additional people. Implementation paths:
 [controller](../harness/controller.py), [server](../harness/server.py),
 [native bridge](../native/cdda_harness.cpp), [viewer](../web/app.js),
-[setup](../tools/setup.py).
+[gameplay records](../harness/gameplay/contracts.py),
+[evidence store](../harness/gameplay/evidence.py), [setup](../tools/setup.py).
 
 ## Runtime and state
 
@@ -40,9 +55,11 @@ Observe/reconcile then explicitly resume; never automatically replay the input.
 
 Native keyboard/button input latches takeover. Pause prevents subsequent remote
 dispatch; it cannot cancel an already-started engine activity. Raw upstream debug
-screens outside supported input contexts may need native dismissal. A service
-restart retires undispatched work without replay; a game restart invalidates old
-session authority. Full details: [protocol and guarded play](protocol.md).
+screens are observable at the instrumented raw prompt but still need native
+dismissal. A service restart revokes durable input tokens and retains unfinished
+admissions as unknown without replay. World entry/exit, including same-process
+save/reload, invalidates old session and relative-position authority. Full details:
+[protocol and guarded play](protocol.md).
 
 ## Action and recovery views
 
@@ -62,6 +79,8 @@ it. The native bridge validates again before delivery. A rejection dispatches no
 input. The eligible next boundary can be a prompt: `ready` does not prove success.
 After timeout, observe to reconcile and explicitly resume; never replay blindly.
 The spectator shows the returned frame/state. [Editable sequence](diagrams/action.mmd).
+The native commit check includes the positive boundary, matching rendered frame
+and durable host token; a later Pause cannot reverse that committed input.
 
 ### How do I recover control?
 
@@ -74,8 +93,8 @@ flags. Paused dispatch can coexist with an unresolved input; its timeout still
 requires reconciliation. Successful observation restores current knowledge, not
 proof of the prior objective. Resume must succeed with current authority; concurrent
 pause/takeover can prevent it. If observation fails, remain frozen and inspect the
-native window; dismiss unsupported screens there if necessary. A game restart
-invalidates old session authority. No arrow replays an uncertain action.
+native window; dismiss unsupported screens there if necessary. A world reload or
+game restart invalidates old session authority. No arrow replays an uncertain action.
 
 Pause/takeover stops **new remote dispatch**. An already-running game activity
 may continue and require native interruption. Follow the [recovery procedure](runbook.md#pause-timeout-and-recovery)
@@ -97,7 +116,9 @@ or in the setup manifest's owned temporary build. [Setup](setup.md) and the
 ## Change boundaries and verification
 
 Keep the controller independent of HTTP/server and setup tooling; only the server
-and CLI assemble it. The viewer consumes the local service contract. Native game
+and CLI assemble it. The passive gameplay package cannot import controller/server/CLI, build tooling or
+network/process launch modules. Its retention reservation is capacity accounting,
+not an input lease. The viewer consumes the local service contract. Native game
 access stays in the integration patch. Configured Import Linter dependency contracts and narrow protocol checks catch
 specific source drift; review and real native probes establish broader behavior.
 The [control map](controls.md) identifies implemented checks and remaining gaps.

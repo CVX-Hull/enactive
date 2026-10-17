@@ -8,7 +8,9 @@ review_trigger: Pinned engine input, activity, debug prompt, bridge protocol or 
 
 Investigation for [#6](https://github.com/CVX-Hull/cdda-player/issues/6), based on
 CDDA 0.I-1 commit `7b2efa5cea38e4d4d97dd0e63b28b9148623da59` and harness base
-`806c0ba`. This is a future implementation contract. Today's
+`806c0ba`. Boundary/session authority and durable revocation are implemented in
+[#29](https://github.com/CVX-Hull/cdda-player/issues/29); the recovery operations and
+UI in this design remain future work under #30/#31/#8. The current
 [protocol](../protocol.md) still pauses new dispatch only. No new native behavior
 was built or demonstrated in this investigation.
 
@@ -25,7 +27,7 @@ patched-file hashes are in [upstream.json](../../native/upstream.json).
 | [`player_activity.cpp`](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/src/player_activity.cpp), `is_interruptible_with_kb`, `canceled`; [`character.cpp`](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/src/character.cpp), `cancel_activity` | Interruptibility is policy plus instance flags. Cancellation invokes actor cleanup and backlog/hauling/sound changes. Calling `cancel_activity` indiscriminately would skip the ordinary input policy and is rejected. |
 | [`output.cpp`](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/src/output.cpp), `query_yn`; [`keybindings.json`](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/data/raw/keybindings.json) | Confirmation uses `YESNO` with `YES`/`NO`. Bindings are resolved from the active engine context, not assumed from a fixed y/n layout. A generic YESNO prompt alone does not identify an interruption confirmation. |
 | [`debug.cpp`](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/src/debug.cpp), `debug_error_prompt` | Redraws the actual error and calls raw `get_input_event`, outside its own `input_context`. Space continues; I suppresses future instances; C copies in tiles. Some errors are buffered before UI initialization. No general crash recovery follows from this path. |
-| [patch_game.py](../../tools/patch_game.py), [bridge](../../native/cdda_harness.cpp) | Current scope is a boolean set/cleared around input waits. `poll` refuses unscoped calls and pending requests; a nested raw debug call might inherit an outer scope. The trace does not prove that such nesting occurs at runtime. Current metadata cannot distinguish ordinary play from activity polling. |
+| [patch_game.py](../../tools/patch_game.py), [bridge](../../native/cdda_harness.cpp) | At investigation base `806c0ba`, scope was a boolean set/cleared around input waits. `poll` refuses unscoped calls and pending requests; a nested raw debug call might inherit an outer scope. The trace does not prove that such nesting occurs at runtime. That baseline metadata could not distinguish ordinary play from activity polling. Native-v2 now uses the explicit RAII boundary model below; see the current protocol and fresh foundation acceptance. |
 
 The historical [raw vehicle error](../acceptance/2026-10-17-mvp.md#real-game-acceptance-2026-10-17)
 froze remote progress and needed native Space. It motivates this work but was not
@@ -58,14 +60,14 @@ a dismissal proves task completion. [Editable diagram](../diagrams/native-recove
 
 ## Boundary identity and scope
 
-Introduce native wire version 2 in the implementation, changing producer and all
-consumers together. Reject mixed versions; retain the v1 source/release in Git for
-rollback. No silent downgrade or compatibility claim with a v1 running process.
+Native wire version 2 is implemented across the producer and consumers. Reject mixed versions; retain the v1 source/release in Git for
+historical recovery only. A rollback must deploy the coherent earlier system and
+validate its data transition; no current runtime reader accepts v1 and no mixed-version
+operation is supported. Follow S-MIGRATION for every change.
 
 Rotate the native session on every `playing(true)` world entry and on world exit,
-not merely at process creation. Today the coordinate origin resets at entry while
-the process session persists; same-process save/reload therefore invalidates task
-coordinates even without a process restart. V2 gives each world lifetime its own
+not merely at process creation. At the investigation base, the coordinate origin
+reset at entry while the process session persisted. Native-v2 now gives each world lifetime its own
 session and origin. Pending old-session actions remain uncertain in host records;
 new-world observations must never acknowledge their gameplay success. Reject old
 session commands on either channel and require fresh reconciliation after transition.
@@ -73,13 +75,15 @@ session commands on either channel and require fresh reconciliation after transi
 Add a discriminated `boundary` record to observations: kind `normal_play`,
 `activity_poll`, `interrupt_confirmation`, `debug_prompt`, `menu` or `unsupported`;
 opaque boundary instance ID; allowed recovery operations; operator-control generation;
-and optional owning interrupt request ID. The activity poll advertises only the
-native keyboard-interruption eligibility and visible confirmation affordance, not
+and optional owning interrupt request ID. In the implemented foundation, recovery
+operations are empty and the interrupt request ID is null. The later recovery
+implementation will advertise only native keyboard-interruption eligibility and
+visible confirmation affordances, not
 hidden activity targets, remaining work, inventory, NPC state or absolute position.
 Scene export is restricted to normal play. Boundaries without rendered evidence
 cannot grant input authority. The gameplay design requires `normal_play` positively.
 
-Replace boolean scope with a game-thread-owned RAII stack that restores prior input
+The implemented game-thread-owned RAII stack replaces boolean scope and restores input
 scope on normal return and exceptions. Explicit scopes at the activity handler and
 raw debug prompt override inherited gameplay context; a debug prompt must never
 inherit ordinary movement authority. An unknown caller defaults to unsupported.

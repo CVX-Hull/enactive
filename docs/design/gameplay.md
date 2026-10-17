@@ -7,8 +7,12 @@ review_trigger: Gameplay interfaces, supported observations, model adapters, bud
 # First gameplay slice — waypoint and return
 
 Design for implementation under [#17](https://github.com/CVX-Hull/cdda-player/issues/17).
-This page specifies future behavior. [Architecture](../architecture.md) and
-[protocol](../protocol.md) remain authoritative about the running MVP. The
+Typed gameplay/1 records and the passive bounded evidence adapter are implemented
+under [#32](https://github.com/CVX-Hull/cdda-player/issues/32). Task execution, skills,
+supervisor, planner and end-to-end observation acceptance remain future work.
+[Architecture](../architecture.md) and [protocol](../protocol.md) are authoritative
+about implemented behavior; the [foundation acceptance](../acceptance/2026-10-17-foundation-implementation.md)
+separates portable evidence tests from native-v2 boundary probes. The
 [research proposal](../research-tiered-gameplay.md) supplies evidence and alternatives;
 its broader examples are not capabilities of this slice.
 
@@ -95,10 +99,10 @@ standard-library typed records for internal data. No generated executable schema
 | `StageResult` | Stage ID/version; disposition `completed`, `blocked`, `interrupted`, `budget_exhausted`, `failed` or `unknown`; verified steps/displacement, evidence references, and pending action ID if any. Progress and disposition are independent fields. |
 | `RunStatus` | Task/plan/stage IDs, execution epoch, state, active model/configuration and skill version, progress, remaining budgets, next check, last public reason, lease ownership/pause/freshness and evidence references. Model timing/cost is additional telemetry, not completion proof. |
 
-Proposed module ownership: `harness/gameplay/contracts.py`, `skills.py`,
-`supervisor.py`, `evidence.py`, `planner.py` and `status.py`. These are intended
-implementation paths, not files that already exist. The model/provider-specific
-adapter goes behind `planner.py`; imports must not reverse the controller boundary.
+Implemented module ownership: `harness/gameplay/contracts.py` and `evidence.py`.
+Proposed sibling modules `skills.py`, `supervisor.py`, `planner.py` and `status.py`
+do not exist yet. The model/provider-specific adapter goes behind `planner.py`;
+imports must not reverse the controller boundary.
 
 ## Admission, progress and completion
 
@@ -130,14 +134,14 @@ displacement with a blocked result; retain the evidence and do not claim success
 
 | Predicate | Evidence available today | Gap/disposition |
 | --- | --- | --- |
-| Position and unit displacement | Current v1 `scene.position` resets origin on each load, but its session lasts for the process | Native v2 must rotate session on gameplay entry/exit; same-process reload invalidates the task just as restart does |
+| Position and unit displacement | Native-v2 relative position and session rotate on world entry/exit, including same-process reload | Future task/supervisor consumers must invalidate task origins and candidates on session replacement |
 | Next tile and creature stop | CLEAR neighboring terrain/furniture; UI visible-creature list | No farther route knowledge; missing or stale values block |
-| Matching frame, turn and authority | Native frame/status/session/revision/turn | Validate frame retention and monotonic receipt time in evidence adapter |
-| Ordinary play rather than running activity or raw error | Current category and `in_game` are insufficient | Requires the native boundary discriminator specified in [native control](native-control.md), not a model guess |
+| Matching frame, turn and authority | Native frame/status/session/revision/turn; passive adapter validates retained originals and receipt age | Real end-to-end pipeline acceptance remains #33 |
+| Ordinary play rather than running activity or raw error | Native-v2 positive boundary discriminator; category and `in_game` alone remain insufficient | Future execution consumers must require normal_play; recovery controls remain separate |
 | Damage, trap absence, safe water or inventory | Not structured guarantees | Excluded from deterministic predicates; no new exports selected for this task |
 
-Thus #19 needs an observation adapter and negative-case validation, not a broad map
-or inventory exporter. Native boundary metadata is owned by #7 and shared explicitly.
+Thus #19 uses the implemented passive observation adapter and negative-case
+validation, with real pipeline acceptance still required; no broad map or inventory exporter. Native boundary metadata is owned by #7 and shared explicitly.
 
 ## Supervision and correction
 

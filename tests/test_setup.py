@@ -5,6 +5,8 @@ from io import BytesIO, StringIO
 import json
 from pathlib import Path
 import subprocess
+import shutil
+import sys
 import tarfile
 import tempfile
 import unittest
@@ -32,6 +34,81 @@ class SetupTests(unittest.TestCase):
                     member.size = len(data)
                     bundle.addfile(member, BytesIO(data))
         return path
+
+    def patch_fixture(self, *, extra_poll=False, duplicate_normal=False):
+        """Small pinned-source fixture tests patch mechanics, never native behavior."""
+        repository = self.root / "repository"
+        (repository / "native").mkdir(parents=True)
+        (repository / "tools").mkdir()
+        actual = Path(__file__).resolve().parents[1]
+        for name in ("cdda_harness.h", "cdda_harness.cpp"):
+            shutil.copyfile(actual / "native" / name, repository / "native" / name)
+        shutil.copyfile(actual / "tools/patch_game.py", repository / "tools/patch_game.py")
+        originals = {
+            "Makefile": "-mmacosx-version-min=10.15\n-mmacosx-version-min=10.15\n",
+            "src/input_context.cpp": "const std::string &input_context::handle_input( const int timeout )\n{\n        next_action = inp_mngr.get_input_event( preferred_keyboard_mode );\n}",
+            "src/handle_action.cpp": "input_context game::get_player_input( std::string &action )\n{\n}",
+            "src/do_turn.cpp": "void handle_key_blocking_activity()\n{\n}",
+            "src/debug.cpp": "    for( bool stop = false; !stop; ) {\n        ui_manager::redraw();\n}",
+            "src/main.cpp": "        while( !do_turn() ) {}",
+            "src/sdltiles.cpp": ("    while( SDL_PollEvent( &ev ) ) {\n        imclient->process_input( &ev );\n}\n"
+                "    SDL_RenderPresent( renderer.get() );\n"
+                "input_event input_manager::get_input_event( const keyboard_mode preferred_keyboard_mode )\n{\n"
+                "    if( inputdelay < 0 ) {\n        do {\n" + "CheckMessages();\n" * (4 if extra_poll else 3) +
+                "}\n}\nbool gamepad_available() {}"),
+        }
+        if duplicate_normal:
+            originals["src/handle_action.cpp"] *= 2
+        source = self.root / "source"
+        for name, data in originals.items():
+            target = source / name
+            target.parent.mkdir(parents=True, exist_ok=True)
+            target.write_text(data)
+        (repository / "native/upstream.json").write_text(json.dumps({"source_files": {
+            name: hashlib.sha256(data.encode()).hexdigest() for name, data in originals.items()}}))
+        return repository, source
+
+    def run_patch(self, repository, source):
+        return subprocess.run([sys.executable, str(repository / "tools/patch_game.py"), str(source)],
+                              text=True, capture_output=True, check=False)
+
+    def test_native_v2_patch_is_repeatable_and_scopes_exact_input_paths(self):
+        repository, source = self.patch_fixture()
+        first = self.run_patch(repository, source)
+        self.assertEqual(first.returncode, 0, first.stderr)
+        expected = {path.relative_to(source): path.read_bytes() for path in source.rglob("*.cpp")}
+        second = self.run_patch(repository, source)
+        self.assertEqual(second.returncode, 0, second.stderr)
+        self.assertEqual(expected, {path.relative_to(source): path.read_bytes() for path in source.rglob("*.cpp")})
+        self.assertIn("harness_input( category, registered_actions )", (source / "src/input_context.cpp").read_text())
+        self.assertIn("harness_player( uquit == QUIT_WATCH", (source / "src/handle_action.cpp").read_text())
+        self.assertIn("boundary_kind::activity_poll", (source / "src/do_turn.cpp").read_text())
+        self.assertIn("boundary_kind::debug_prompt", (source / "src/debug.cpp").read_text())
+        sdl = (source / "src/sdltiles.cpp").read_text()
+        self.assertEqual(sdl.count("cdda_harness::poll("), 3)
+        self.assertLess(sdl.index("cdda_harness::capture_frame();"), sdl.index("SDL_RenderPresent("))
+        self.assertIn("frame_presented( static_cast<bool>( harness_presented_frame ) )", sdl)
+
+    def test_patch_rejects_changed_upstream_hash(self):
+        repository, source = self.patch_fixture()
+        (source / "src/handle_action.cpp").write_text("changed")
+        result = self.run_patch(repository, source)
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("Upstream source differs", result.stderr)
+
+    def test_patch_rejects_ambiguous_normal_and_poll_anchors(self):
+        for flags, message in (({"duplicate_normal": True}, "Pinned source anchor changed"),
+                               ({"extra_poll": True}, "SDL poll anchors changed")):
+            with self.subTest(flags=flags), tempfile.TemporaryDirectory() as temporary:
+                previous = self.root
+                self.root = Path(temporary)
+                try:
+                    repository, source = self.patch_fixture(**flags)
+                    result = self.run_patch(repository, source)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(message, result.stderr)
+                finally:
+                    self.root = previous
 
     def test_default_status_is_read_only(self):
         (self.root / "native").mkdir()
@@ -101,9 +178,33 @@ class SetupTests(unittest.TestCase):
 
     def test_manifest_rejects_unowned_workspace(self):
         manifest = self.root / "manifest.json"
-        setup.write_manifest(manifest, {"workspace": "/tmp/cdda-player-build-unowned"})
+        setup.write_manifest(manifest, {"schema_version": 1, "workspace": "/tmp/cdda-player-build-unowned"})
         with self.assertRaisesRegex(ValueError, "ownership"):
             setup.load_manifest(manifest, {})
+
+    def test_manifest_requires_exact_current_version_without_rewriting(self):
+        manifest = self.root / "manifest.json"
+        for version in (None, 0, 2, True, 1.0):
+            with self.subTest(version=version):
+                value = {} if version is None else {"schema_version": version}
+                setup.write_manifest(manifest, value)
+                before = manifest.read_bytes()
+                with self.assertRaisesRegex(ValueError, "Unsupported build manifest format"):
+                    setup.load_manifest(manifest, {})
+                self.assertEqual(manifest.read_bytes(), before)
+
+    def test_current_manifest_retains_ownership_and_pin_checks(self):
+        workspace = self.root / "cdda-player-build-current"
+        workspace.mkdir()
+        (workspace / ".cdda-player-owner").write_text(str(setup.ROOT))
+        value = {"schema_version": 1, "workspace": str(workspace),
+                 "source": str(workspace / "source"), "freetype": str(workspace / "headers"),
+                 "source_sha256": "pin", "freetype_sha256": setup.FREETYPE_SHA256}
+        manifest = self.root / "manifest.json"
+        setup.write_manifest(manifest, value)
+        self.assertEqual(setup.load_manifest(manifest, {"source_sha256": "pin"}), value)
+        with self.assertRaisesRegex(ValueError, "pinned source"):
+            setup.load_manifest(manifest, {"source_sha256": "different"})
 
     def test_mount_is_detached_when_app_copy_fails(self):
         def run(command, **kwargs):

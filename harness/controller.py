@@ -17,6 +17,9 @@ NAMED_KEYS = frozenset({"ENTER", "ESC", "UP", "DOWN", "LEFT", "RIGHT", "TAB",
                         "BACKSPACE", "SPACE", "PAGEUP", "PAGEDOWN"})
 DIRECTIONS = {"north": (0, -1, "UP"), "south": (0, 1, "DOWN"),
               "west": (-1, 0, "LEFT"), "east": (1, 0, "RIGHT")}
+BOUNDARY_KINDS = frozenset({"normal_play", "activity_poll", "interrupt_confirmation",
+                            "debug_prompt", "menu", "unsupported"})
+INPUT_BOUNDARIES = frozenset({"normal_play", "menu"})
 SAFE_TERRAIN = frozenset({"t_floor", "t_grass", "t_dirt", "t_pavement", "t_pavement_y"})
 
 
@@ -34,6 +37,11 @@ def atomic_json(path: Path, value: dict[str, Any]) -> None:
             stream.flush()
             os.fsync(stream.fileno())
         os.replace(temporary, path)
+        directory_fd = os.open(path.parent, os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
     finally:
         temporary.unlink(missing_ok=True)
 
@@ -57,12 +65,13 @@ def read_json(path: Path) -> dict[str, Any] | None:
 def validate_state(value: dict[str, Any], request_id: str | None = None) -> None:
     required = {"id": str, "session": str, "revision": int, "category": str,
                 "actions": list, "status": str, "error": str, "paused": bool,
-                "timestamp_ms": int, "frame_ok": bool, "in_game": bool}
-    if type(value.get("protocol")) is not int or value["protocol"] != 1:
+                "timestamp_ms": int, "frame_ok": bool, "in_game": bool, "frame": str}
+    if type(value.get("protocol")) is not int or value["protocol"] != 2:
         raise ControlError("Unsupported response protocol; observe after fixing the bridge")
     if request_id is not None and value.get("id") != request_id:
         raise ControlError("Response id does not match request")
-    if any(type(value.get(key)) is not expected for key, expected in required.items()):
+    if (set(value) != set(required) | {"protocol", "boundary", "scene"}
+            or any(type(value.get(key)) is not expected for key, expected in required.items())):
         raise ControlError("Malformed native response fields")
     if (not value["session"] or value["revision"] < 0
             or value["status"] not in {"ready", "dispatched", "rejected"}
@@ -70,6 +79,16 @@ def validate_state(value: dict[str, Any], request_id: str | None = None) -> None
         raise ControlError("Invalid native response values")
     if value["status"] == "dispatched" and value["frame_ok"]:
         raise ControlError("Dispatched response cannot assert a fresh frame")
+    boundary = value.get("boundary")
+    if (not isinstance(boundary, dict)
+            or set(boundary) != {"kind", "id", "control_generation", "recovery_operations", "interrupt_request_id"}
+            or not isinstance(boundary["kind"], str) or boundary["kind"] not in BOUNDARY_KINDS
+            or not isinstance(boundary["id"], str) or not boundary["id"]
+            or type(boundary["control_generation"]) is not int or boundary["control_generation"] < 0
+            or boundary["recovery_operations"] != [] or boundary["interrupt_request_id"] is not None):
+        raise ControlError("Malformed or unsupported native boundary")
+    if boundary["kind"] != "normal_play" and value.get("scene") is not None:
+        raise ControlError("Scene outside normal play")
     if value.get("scene") is not None and not isinstance(value["scene"], dict):
         raise ControlError("Malformed native scene")
 
@@ -97,6 +116,8 @@ class Controller:
         self.closed = False
         self.pause_requested = True
         self.pause_generation = 0
+        self.authority = {"controller_boot_id": uuid.uuid4().hex, "counter": 0}
+        self.unknown_outcomes: list[dict[str, Any]] = []
         self.goal = ""
         self.events: list[dict[str, Any]] = []
         self.last_result: dict[str, Any] | None = None
@@ -107,10 +128,60 @@ class Controller:
         local_session = time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
         self.journal = self.root / ".runtime" / "sessions" / local_session / "events.jsonl"
         self.journal.parent.mkdir(parents=True, exist_ok=True)
+        self.admissions = self.bridge / "admissions"
+        self.admissions.mkdir(mode=0o700, exist_ok=True)
+        self._revoke()
         self._pause_file()
+        try:
+            restored_input_ids: set[str] = set()
+            for path in sorted(self.admissions.glob("*.json")):
+                admission = read_json(path)
+                if admission is not None:
+                    self._restore_request(admission, "startup found unresolved durable admission; never replay")
+                    if admission["kind"] in {"key", "action", "resume"}:
+                        restored_input_ids.add(admission["id"])
+            claimed = read_json(self.bridge / "claimed.json")
+            if claimed is not None:
+                self._restore_request(claimed, "startup found claimed request")
+                if claimed["kind"] in {"key", "action", "resume"}:
+                    restored_input_ids.add(claimed["id"])
+            response = read_json(self.bridge / "response.json")
+            if response is not None:
+                validate_state(response)
+                if (response["status"] == "dispatched"
+                        and response["id"] not in restored_input_ids):
+                    raise ControlError("Dispatched response lacks a current durable admission; preserve evidence and reconcile offline")
+        except (ControlError, OSError):
+            self.close()
+            raise
         retired = self._retire("startup")
         self._record({"kind": "startup"}, {"status": "paused", "retirement": retired,
                      "error": self.transport_error})
+
+    def _restore_request(self, request: dict[str, Any], reason: str) -> None:
+        """Restore only current-format uncertainty; never translate older records."""
+        fields = {"protocol", "id", "kind", "deadline_ms"}
+        kind = request.get("kind")
+        if not isinstance(kind, str) or kind not in {"observe", "pause", "resume", "key", "action"}:
+            raise ControlError("Unsupported stored request kind; migrate or archive offline")
+        if kind in {"resume", "key", "action"}:
+            fields |= {"session", "revision", "authority"}
+            authority = request.get("authority")
+            if (not isinstance(request.get("session"), str) or not request["session"]
+                    or type(request.get("revision")) is not int or request["revision"] < 0
+                    or not isinstance(authority, dict) or set(authority) != {"controller_boot_id", "counter"}
+                    or not isinstance(authority["controller_boot_id"], str) or not authority["controller_boot_id"]
+                    or type(authority["counter"]) is not int or authority["counter"] < 0):
+                raise ControlError("Malformed stored authority; migrate or archive offline")
+        if kind in {"key", "action"}:
+            fields.add(kind)
+            if not isinstance(request.get(kind), str) or not request[kind]:
+                raise ControlError("Malformed stored input; migrate or archive offline")
+        if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 2
+                or not isinstance(request.get("id"), str) or not request["id"]
+                or type(request.get("deadline_ms")) is not int):
+            raise ControlError("Unsupported stored request format; migrate or archive offline")
+        self._unknown(request, reason)
 
     def close(self) -> None:
         if not hasattr(self, "_lock_file") or self._lock_file.closed:
@@ -121,6 +192,7 @@ class Controller:
                 self.frozen = True
                 self.pause_requested = True
                 self.pause_generation += 1
+                self._revoke()
             self._pause_file()
             # The process lock outlives every writer, including HTTP worker threads.
             with self.command_lock:
@@ -131,6 +203,25 @@ class Controller:
             self._pause_file()
             fcntl.flock(self._lock_file, fcntl.LOCK_UN)
             self._lock_file.close()
+
+    def _revoke(self) -> None:
+        """Call under data_lock: token publication precedes retirement/admission."""
+        counter = self.authority["counter"] + 1
+        if counter > 2_147_483_647:
+            self.authority = {"controller_boot_id": uuid.uuid4().hex, "counter": 0}
+        else:
+            self.authority = {**self.authority, "counter": counter}
+        atomic_json(self.bridge / "authority.json", self.authority)
+
+    def _unknown(self, request: dict[str, Any], reason: str) -> None:
+        if request.get("kind") not in {"key", "action", "resume"}:
+            return
+        if any(item["request"].get("id") == request.get("id") for item in self.unknown_outcomes):
+            return
+        outcome = {"status": "unknown", "reason": reason, "request": request.copy()}
+        self.unknown_outcomes.append(outcome)
+        self.unknown_outcomes = self.unknown_outcomes[-60:]
+        self._record({"kind": "unresolved", "id": request.get("id")}, outcome)
 
     def _pause_file(self) -> None:
         (self.bridge / "pause").touch(mode=0o600, exist_ok=True)
@@ -151,23 +242,31 @@ class Controller:
             self.events = self.events[-60:]
             with self.journal.open("a", encoding="utf-8") as stream:
                 stream.write(json.dumps(event, ensure_ascii=True) + "\n")
+                stream.flush()
+                os.fsync(stream.fileno())
 
     def _accept(self, response: dict[str, Any]) -> None:
         with self.data_lock:
-            if response["paused"] and self.state is not None and (
-                    response["session"], response["revision"]) != (
-                    self.state["session"], self.state["revision"]):
-                # Native takeover can occur even while already paused. Its new
-                # authority invalidates a Resume admitted before that input.
+            changed_session = self.state is not None and response["session"] != self.state["session"]
+            takeover = self.state is not None and response["paused"] and (
+                response["boundary"]["control_generation"] != self.state["boundary"]["control_generation"])
+            if changed_session or takeover:
                 self.pause_generation += 1
+                self._revoke()
+                if changed_session:
+                    self.frozen = True
+                    self.pause_requested = True
+                    self._pause_file()
+                    if self.pending is not None:
+                        self._unknown(self.pending, "native session changed; old-world outcome remains unknown")
             self.state = response.copy()
             if response["paused"]:
                 self.pause_requested = True
 
-    def _exchange(self, kind: str, timeout: float, **payload: Any) -> dict[str, Any]:
+    def _exchange(self, kind: str, timeout: float, *, generation: int | None = None, **payload: Any) -> dict[str, Any]:
         request_id = str(uuid.uuid4())
         started = time.monotonic()
-        request = {"protocol": 1, "id": request_id, "kind": kind,
+        request = {"protocol": 2, "id": request_id, "kind": kind,
                    "deadline_ms": int(time.time() * 1000 + timeout * 1000), **payload}
         if kind not in {"observe", "pause"}:
             if self.state is None:
@@ -176,13 +275,27 @@ class Controller:
             request.setdefault("revision", self.state["revision"])
         if len(json.dumps(request).encode()) > MAX_REQUEST:
             raise ControlError("Request exceeds 4096 bytes")
+        terminal_received = False
         try:
             if self.closed:
                 raise ControlError("Controller is shutting down")
             if (self.bridge / "request.json").exists():
                 raise ControlError("Unresolved bridge request; observe to reconcile")
-            atomic_json(self.bridge / "request.json", request)
             with self.data_lock:
+                if kind in {"key", "action", "resume"}:
+                    if generation is None or generation != self.pause_generation:
+                        raise ControlError("Admission superseded by pause or takeover")
+                    if self.closed or (kind != "resume" and self.pause_requested):
+                        raise ControlError("Input authority revoked")
+                    request["authority"] = self.authority.copy()
+                    if len(json.dumps(request).encode()) > MAX_REQUEST:
+                        raise ControlError("Request exceeds 4096 bytes")
+                    # Survives a host crash after native dispatch removes claimed.json.
+                    # Uncertain admissions are retained across reconciliation and restart.
+                    atomic_json(self.admissions / f"{request_id}.json", request)
+                if self.pending is not None:
+                    self._unknown(self.pending, "reconciliation does not establish original outcome")
+                atomic_json(self.bridge / "request.json", request)
                 self.pending = request
             while time.monotonic() - started < timeout:
                 if self.closed:
@@ -191,6 +304,7 @@ class Controller:
                 # Prior responses are expected; only the exact UUID can finish this command.
                 if response is not None and response.get("id") == request_id:
                     validate_state(response, request_id)
+                    terminal_received = response["status"] != "dispatched"
                     if (response["status"] == "ready" and kind in {"key", "action", "resume"}
                             and (response["session"] != request["session"]
                                  or response["revision"] <= request["revision"])):
@@ -201,8 +315,12 @@ class Controller:
                             self.pending = None
                             self.latency_ms = round((time.monotonic() - started) * 1000)
                         self._record(request, response)
+                        (self.admissions / f"{request_id}.json").unlink(missing_ok=True)
                         return response
                 time.sleep(0.015)
+            with self.data_lock:
+                self._revoke()
+                self._unknown(request, "deadline reached")
             self._pause_file()
             retirement = self._retire("timeout")
             outcome = {"status": "timeout", "id": request_id, "retirement": retirement,
@@ -215,6 +333,11 @@ class Controller:
             self._record(request, outcome)
             return outcome
         except (ControlError, OSError) as exc:
+            with self.data_lock:
+                self._revoke()
+                self._unknown(request, str(exc))
+                if terminal_received:
+                    self.pending = None
             self._pause_file()
             retirement = self._retire("error")
             with self.data_lock:
@@ -231,6 +354,7 @@ class Controller:
         with self.data_lock:
             self.pause_generation += 1
             self.pause_requested = True
+            self._revoke()
             self._pause_file()
             result = {"status": "pause_requested", "error": "",
                       "detail": "Pause sentinel set; an already dispatched action cannot be undone"}
@@ -286,7 +410,7 @@ class Controller:
 
     def _command(self, kind: str, timeout: float, payload: dict[str, Any], generation: int) -> dict[str, Any]:
         with self.data_lock:
-            if kind == "resume" and generation != self.pause_generation:
+            if kind in {"key", "action", "resume"} and generation != self.pause_generation:
                 return {"status": "pause_requested", "error": "Queued resume superseded by a later pause"}
         if kind != "observe":
             with self.data_lock:
@@ -314,8 +438,11 @@ class Controller:
         if observed["status"] != "ready":
             return observed
         with self.data_lock:
-            if kind == "resume" and generation != self.pause_generation:
+            if kind in {"key", "action", "resume"} and generation != self.pause_generation:
                 return {"status": "pause_requested", "error": "Resume superseded by a later pause"}
+        if (observed["boundary"]["kind"] not in INPUT_BOUNDARIES or not observed["frame_ok"]
+                or int(time.time() * 1000) - observed["timestamp_ms"] > 3000):
+            raise ControlError("Input requires a fresh matching normal-play or supported menu frame")
         if kind != "resume" and (observed["paused"] or self.pause_requested):
             raise ControlError("Native input is paused; explicit resume required")
         if kind != "resume":
@@ -323,7 +450,7 @@ class Controller:
         if kind == "action" and payload["action"] not in observed["actions"]:
             raise ControlError("Action is not registered in the current input context")
         primitive = {kind: payload[kind]} if kind in {"key", "action"} else {}
-        result = self._exchange(kind, timeout, session=observed["session"],
+        result = self._exchange(kind, timeout, generation=generation, session=observed["session"],
                                 revision=observed["revision"], **primitive)
         if kind == "resume" and result["status"] == "ready":
             with self.data_lock:
@@ -346,7 +473,9 @@ class Controller:
         if self.pause_requested or state["paused"] or self.frozen:
             raise ControlError("Walk stopped: control is paused or frozen")
         scene = state.get("scene")
-        if state["category"] != "DEFAULTMODE" or not state["in_game"] or not isinstance(scene, dict):
+        if (state["boundary"]["kind"] != "normal_play" or not state["in_game"]
+                or not state["frame_ok"] or int(time.time() * 1000) - state["timestamp_ms"] > 3000
+                or not isinstance(scene, dict)):
             raise ControlError("Walk stopped: normal play scene is unavailable")
         creatures = scene.get("visible_creatures")
         if not isinstance(creatures, list) or creatures:
@@ -369,6 +498,8 @@ class Controller:
         if not isinstance(direction, str) or direction not in DIRECTIONS or type(steps) is not int or not 1 <= steps <= 8:
             raise ControlError("Walk requires north/south/east/west and 1–8 steps")
         dx, dy, action = DIRECTIONS[direction]
+        with self.data_lock:
+            generation = self.pause_generation
         completed = 0
         previous = None
         try:
@@ -386,7 +517,7 @@ class Controller:
                 position = self._walk_guard(before, dx, dy)
                 if action not in before["actions"]:
                     raise ControlError("Walk stopped: movement action is not registered")
-                after = self._exchange("action", timeout, action=action,
+                after = self._exchange("action", timeout, generation=generation, action=action,
                                        session=before["session"], revision=before["revision"])
                 if after["status"] != "ready":
                     raise ControlError(after.get("error") or "Walk stopped: action failed")
@@ -425,5 +556,6 @@ class Controller:
                     "goal": self.goal, "events": list(self.events), "last_result": self.last_result,
                     "latency_ms": self.latency_ms, "age_ms": age, "connection": connection,
                     "error": self.transport_error, "pending": self.pending,
+                    "unknown_outcomes": list(self.unknown_outcomes),
                     "journal": str(self.journal.relative_to(self.root)),
                     "expect": None if self.state is None else f'{self.state["session"]}:{self.state["revision"]}'}

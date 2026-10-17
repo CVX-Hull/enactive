@@ -58,7 +58,18 @@ Do not resend an uncertain action. New observations do not prove its old objecti
 For service restart: stop that service normally, start one controller, observe
 and reconcile, then resume. For a game crash/restart: preserve diagnostics, launch
 the prepared wrapper, use normal CDDA load UI, and acquire new session authority.
-Old-session commands must not be reused. No save-file repair/editing is prescribed.
+Old-session commands must not be reused, including after normal save/reload in the
+same process. Native-v2 deliberately rejects mixed v1/v2 components; restart a
+matching controller and native build, then observe. No save-file repair/editing is prescribed.
+
+Input admissions are durably retained in `.runtime/bridge/admissions/` before
+dispatch. An unresolved request remains unknown across reconciliation and service
+restart; the current scene is not proof of its old result. Do not delete admissions
+or rewrite journals to clear this condition. Preserve them with incident evidence.
+At `activity_poll`, `debug_prompt` or `unsupported`, observation is allowed but
+remote key/action/Resume is denied. Return to a supported boundary through normal
+native controls, then observe and explicitly resume. Pause only revokes input
+that has not crossed the final native commit check; it cannot undo a prior input.
 
 Use CDDA's normal Save menu before quitting. Stop the controller with Ctrl-C; it
 leaves remote control paused. Saves are in `.runtime/user/`. Never treat a stale
@@ -107,3 +118,27 @@ remove only the named corrupt cache entry after preserving diagnostics.
 
 Fresh source checkouts contain acceptance metadata but not local demo media.
 Maintainers must distinguish unavailable evidence from a newly failed probe.
+
+## Coordinated migration
+
+Follow [S-MIGRATION](engineering.md#s-migration-one-current-contract-coordinated-migration)
+for every contract change. Stop the controller and affected writers, save/quit CDDA
+normally if running, and confirm the owned processes stopped. Record the affected
+formats and exact code versions; preserve original files and hashes before conversion.
+Migrate the entire producer/consumer/tool/configuration set and its current docs.
+
+Validate converted data against the new contract before replacing active files.
+Unsupported bridge records block startup; do not delete admissions or infer a
+successful action to make startup pass. Reconcile incident evidence offline while
+keeping unknown outcomes unknown. If meaningful conversion is impossible, retain
+an incident archive and document the explicit transition to a fresh bridge with
+unresolved work still tracked. No replay or save editing is permitted. Historical
+reports and journals stay immutable; they need no runtime reader.
+
+Build manifests require `schema_version: 1`; evidence stores require store version 1.
+Never just relabel an unknown file. A reviewed one-time build-manifest migration
+must first verify workspace ownership, pinned source/headers and binary hashes,
+then record before/after hashes. Alternatively preserve the old manifest/workspace
+and use a fresh extraction. Permanent setup/startup paths only read current formats.
+Remove temporary converters after recording their operation. Roll back only as a
+coordinated system with a validated data transition, never by enabling a fallback.

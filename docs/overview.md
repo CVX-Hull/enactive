@@ -21,6 +21,12 @@ implemented outcomes, independent review and dated gameplay evidence.
 Direction and constraints live in the [charter](charter.md). This page summarizes
 current behavior; detailed promises live in [architecture](architecture.md).
 
+Changes migrate the system as a whole. We maintain one current version of each
+contract and remove old paths, including in tools and stored metadata. Unsupported
+state stops with evidence preserved until an explicit offline migration is complete.
+[S-MIGRATION](engineering.md#s-migration-one-current-contract-coordinated-migration)
+defines the rule and its enforcement.
+
 ## How it works
 
 Current system context: **who decides, what you see, and where you retain control**.
@@ -45,25 +51,27 @@ explain why native integration was selected and when we would reconsider it.
 | Observe, menus, individual inputs, supplies and save/reload | Demonstrated; results still require interpretation after each input | [Acceptance probes](acceptance/2026-10-17-mvp.md#real-game-acceptance-2026-10-17) |
 | Guarded short walks | Limited: cardinal directions, at most eight steps, conservative terrain and visible-creature stops | [Current contract](protocol.md#closed-loop-play-and-observations) |
 | Planner round trips | One real three-tile comparison used three individual decisions versus one guarded request, retaining per-step checks; not a general speed or safety result | [Timing trial](acceptance/2026-10-17-completion.md#fresh-real-game-timing-probe) |
-| Pause and takeover | Stops further remote dispatch; a CDDA activity already underway can continue and needs native interruption | [Recovery](runbook.md#pause-timeout-and-recovery) |
+| Input authority and takeover | Native-v2 distinguishes ordinary play, menus, activity polls and debug prompts; revoked tokens and old worlds are rejected. Already-committed actions and activities cannot be undone by Pause | [Fresh native acceptance](acceptance/2026-10-17-foundation-implementation.md) |
+| Retained gameplay evidence | Typed records and a passive bounded store are portable-tested; planner execution and real pipeline acceptance remain later work | [Current evidence contract](protocol.md#passive-gameplay-records-and-evidence) |
 | Autonomous survival | Not implemented; Codex remains the planner | [Current scope](architecture.md#scope-and-responsibilities) |
 | Reproducible installation | Fresh build demonstrated on this Mac; other hosts remain unverified | [Setup](setup.md), [historical provenance](acceptance/2026-10-17-mvp-manifest.json) |
 | Engineering assurance | Portable checks, source checks and review; native gameplay is a separate validation lane | [Control map](controls.md) |
 
 A dated demonstration supports the tested scenarios. It does not guarantee every
-future game state, host or version. Unsupported native error screens can freeze
-remote progress; recovery may require the native window. There is no structured
+future game state, host or version. Instrumented raw debug prompts are observable
+but remote recovery is not yet implemented; dismiss them in the native window. There is no structured
 trap or damage guarantee and no general combat policy.
 
 ## Current direction and decisions
 
-The consolidated goal is verified within its stated MVP boundaries. The latest
-[audit](acceptance/2026-10-17-completion.md) adds measured planner-loop timing and
-pinned reuse comparisons. The documentation [brief](changes/002-documentation-review.md)
+The original consolidated MVP goal is verified within its stated boundaries. Its
+[audit](acceptance/2026-10-17-completion.md) records planner-loop timing and reuse
+comparisons. The [foundation increment](acceptance/2026-10-17-foundation-implementation.md)
+adds native input authority and passive evidence; it does not add autonomous play. The documentation [brief](changes/002-documentation-review.md)
 explains the visual explanations, lifecycle records and maintenance checks.
 Next priorities and any open issues are in [work](work.md). Current priorities are control
 reliability and evidence quality before expanding unattended play. A future
-interrupt protocol needs a separate design and native acceptance.
+interrupt protocol has an accepted design but still needs implementation and native acceptance.
 
 The [tiered-gameplay proposal](research-tiered-gameplay.md) explores a capable
 planner, bounded skills and feedback, with additional model tiers conditional on
@@ -74,7 +82,10 @@ capability.
 The accepted foundation design specifies [native operator recovery](design/native-control.md)
 and [waypoint-and-return gameplay](design/gameplay.md). Its
 [brief](changes/004-gameplay-foundation.md) explains the source findings, ownership
-and verification gates. These designs do not yet expand running-game capabilities.
+and verification gates. Boundary/session authority and typed evidence are now
+implemented; activity interruption, debug dismissal, waypoint execution and model
+planning remain future capabilities. The [implementation brief](changes/005-foundation-implementation.md)
+explains the accepted slice and its limits.
 
 No platform migration or new hosted service is being proposed. We will reopen
 platform and transport choices when requirements or measured maintenance costs

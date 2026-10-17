@@ -66,6 +66,8 @@ contracts. Select tools by capability and total maintenance cost. Keep alternati
 and reversal conditions for consequential decisions. Evaluate mature tools and
 existing libraries before implementing generic infrastructure; record why custom
 code is needed when reuse cannot satisfy the requirement. Avoid speculative frameworks.
+Maintain one current contract per boundary. Migrate the whole system together;
+do not carry backward-compatibility paths or mixed-version operation.
 
 ## P-KNOWLEDGE Maintain trustworthy knowledge and evidence
 

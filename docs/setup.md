@@ -6,7 +6,9 @@ status: active
 
 # Local setup and checks
 
-The controller uses Python's standard library. Use Python 3.12 or newer and an
+The controller uses Python's standard library. The passive gameplay records/evidence
+module also uses the already-pinned `jsonschema` package from the project lock.
+Use Python 3.12 or newer and an
 existing Node.js 22.13+ runtime for JavaScript and diagram checks. Native builds require
 macOS, existing Xcode command-line tools (`clang++`, `make`, `hdiutil`, `ditto`,
 `otool`, `install_name_tool`, `codesign`), and enough disk space for roughly 1 GB
@@ -26,7 +28,7 @@ python3 tools/setup.py --venv
 The optional `.venv/` starts without pip or third-party packages and uses the
 interpreter that creates it; setup does not download Python. Existing environments
 are preserved. Running the game/controller still needs only the standard library.
-Development checks require the pinned tools below. See the [environment ledger](environment.md)
+Using `harness.gameplay` and running development checks require the pinned tools below. See the [environment ledger](environment.md)
 for this Mac's existing toolchain and installation history.
 
 ## Install development controls locally
@@ -223,6 +225,14 @@ committing, especially when partially staging changes. It is convenience
 enforcement, not a security boundary. Native and graphical acceptance remain
 separate, as specified in [engineering.md](engineering.md).
 
+## Build metadata migration
+
+The active `.runtime/build-manifest.json` requires exact integer `schema_version: 1`.
+Setup rejects unversioned, old or future manifests without rewriting them. Fresh
+`--extract` writes the current format; preserve an existing manifest/build before
+recreating it. A one-time verified offline conversion follows the
+[runbook](runbook.md#coordinated-migration). There is no automatic legacy reader.
+
 ## Evidence and releases
 
 Before a release/checkpoint, inspect the staged diff and candidate scope, run the
@@ -230,7 +240,10 @@ common lane against that candidate, and record exact commit/tree identity, tools
 results and unexecuted lanes in a dated acceptance report. If partially staging,
 check an isolated export of the staged candidate rather than treating a working-tree
 hook as proof. Native changes additionally follow the [native acceptance lane](runbook.md#native-acceptance-lane).
-Hosted required checks are unconfigured until a remote is explicitly authorized.
+The public repository requires a PR and the Actions-bound `controller` check on
+main, with resolved conversations and no configured bypass. These rules do not
+prove native gameplay; verify their current configuration at publication. See
+[project management](project-management.md) for the single-maintainer review limit.
 
 Current [standards](engineering.md) define release scope; [operations](runbook.md)
 own evidence retention and recovery. No release tag or publication is automatic.

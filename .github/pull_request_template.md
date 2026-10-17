@@ -17,10 +17,17 @@ Common command: .venv/bin/python tools/check.py
 Native bridge/input/renderer/compiler/source-pin/protocol changes need relevant native acceptance.
 Redact secrets, private paths and data; do not attach saves by default. -->
 
+## Migration and removal evidence
+
+<!-- S-MIGRATION: identify old/new contracts; migrated producers, consumers, fixtures,
+configuration and data; removed old paths; unsupported-version rejection tests;
+coordinated deployment order and rollback/retention decision. No runtime compatibility
+path, alias, fallback or downgrade. If unaffected, explain why migration is not needed. -->
+
 ## Documentation and limitations
 
 <!-- Link contracts/guidance updated in this change. Describe remaining uncertainty,
-scope exclusions, compatibility limits and follow-up issues. Say why no docs change is needed if applicable. -->
+scope exclusions, migration limits and follow-up issues. Say why no docs change is needed if applicable. -->
 
 ## Independent review evidence
 

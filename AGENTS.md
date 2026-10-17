@@ -15,6 +15,8 @@ named agent_type; clean-context workers/reviewers; bounded briefs.
 
 - User instructions take precedence. Global skills are optional references;
   do not import ceremony without a concrete project need.
+- Follow S-MIGRATION: one current contract; migrate every caller and persisted format
+  together, remove old paths, and reject unsupported versions. No compatibility shims.
 - New dependencies, saves, caches and outputs stay project-local or in explicitly
   recorded owned temporary builds. No global installs/profiles/application changes.
 - Never launch fullscreen. Use the prepared wrapper and explicit project userdir.

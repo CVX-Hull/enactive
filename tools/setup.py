@@ -99,6 +99,8 @@ def write_manifest(path: Path, value: dict) -> None:
 
 def load_manifest(path: Path, pin: dict) -> dict:
     value = json.loads(path.read_text())
+    if type(value) is not dict or type(value.get("schema_version")) is not int or value["schema_version"] != 1:
+        raise ValueError("Unsupported build manifest format; migrate offline or preserve it and use a fresh --extract")
     workspace = Path(value["workspace"])
     if (not workspace.is_absolute() or any(c.isspace() for c in str(workspace))
             or not workspace.name.startswith("cdda-player-build-")):
@@ -226,7 +228,7 @@ def main(argv: list[str] | None = None) -> int:
             verify(path, checksum)
         workspace = Path(tempfile.mkdtemp(prefix="cdda-player-build-", dir="/tmp")).resolve()
         (workspace / ".cdda-player-owner").write_text(str(ROOT))
-        value = {"workspace": str(workspace), "source_sha256": pin["source_sha256"],
+        value = {"schema_version": 1, "workspace": str(workspace), "source_sha256": pin["source_sha256"],
                  "freetype_sha256": FREETYPE_SHA256, "state": "extracting"}
         write_manifest(manifest, value)
         source = extract_archive(archives[0][1], workspace / "game")

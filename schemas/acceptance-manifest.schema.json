@@ -94,36 +94,44 @@
       }
     },
     "video": {
-      "type": "object",
-      "additionalProperties": false,
-      "required": [
-        "speed",
-        "duration_seconds",
-        "capture_interval_ms",
-        "note"
-      ],
-      "properties": {
-        "speed": {
-          "type": "number",
-          "exclusiveMinimum": 0
-        },
-        "duration_seconds": {
-          "type": "number",
-          "exclusiveMinimum": 0
-        },
-        "capture_interval_ms": {
-          "type": "array",
-          "minItems": 2,
-          "maxItems": 2,
-          "items": {
-            "type": "integer",
-            "minimum": 0
+      "description": "Null when this acceptance used original still frames without a video.",
+      "anyOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "speed",
+            "duration_seconds",
+            "capture_interval_ms",
+            "note"
+          ],
+          "properties": {
+            "speed": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "duration_seconds": {
+              "type": "number",
+              "exclusiveMinimum": 0
+            },
+            "capture_interval_ms": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "type": "integer",
+                "minimum": 0
+              }
+            },
+            "note": {
+              "$ref": "#/$defs/text"
+            }
           }
         },
-        "note": {
-          "$ref": "#/$defs/text"
+        {
+          "type": "null"
         }
-      }
+      ]
     },
     "verified_at": {
       "type": "string",

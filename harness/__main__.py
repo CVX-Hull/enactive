@@ -68,6 +68,8 @@ def main() -> int:
         return 0
     try:
         config = read_json(ROOT / ".runtime" / "bridge" / "controller.json")
+        if config is not None and (type(config.get("protocol")) is not int or config["protocol"] != 2):
+            raise ControlError("Unsupported service protocol; restart a matching native-v2 controller")
         if config is None or type(config.get("port")) is not int or not 1 <= config["port"] <= 65535 or not isinstance(config.get("token"), str):
             raise ControlError("Service configuration missing; run python3 -m harness serve")
         base = f'http://127.0.0.1:{config["port"]}'
