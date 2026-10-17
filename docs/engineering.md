@@ -103,8 +103,18 @@ Principles: P-TRUTH, P-KNOWLEDGE, P-REVIEW.
 The lead owns design, briefs, adjudication, escalation, integration and final
 verification. Explorers are read-only; workers own bounded named paths; reviewers
 read fresh context. Always specify agent_type; workers/reviewers use fork_turns=none.
-Parallelize reads; use one implementation writer at a time. Briefs state paths,
-fixed decisions and acceptance checks. Verify returned evidence against files or
+Parallelize reads. Up to two implementation workers may write concurrently in
+separate project-local worktrees with non-overlapping named ownership and agreed
+interfaces. Each checkout has one writer. The lead alone integrates into the main
+checkout and schedules access to shared mutable resources: game, saves, bridge,
+ports, build outputs, dependency environments and caches. Worktrees isolate source,
+not processes or runtime state. Do not launch another game or share writable test
+outputs merely because a separate checkout exists. Briefs state the issue, base
+revision, worktree, owned paths, fixed decisions, dependencies, acceptance checks
+and handoff evidence. Workers report commits/diffs, checks, risks and unresolved
+questions; they do not merge to main or change shared contracts independently.
+Reduce concurrency when review or integration queues grow; raise the initial
+limit only after recording evidence and updating this standard. Verify returned evidence against files or
 primary sources. After two unsuccessful repair attempts or ownership drift, the
 lead takes work back. Reports never substitute for inspecting a diff or result.
 

@@ -2,6 +2,7 @@
 .venv/
 .cache/
 node_modules/
+.worktrees/
 __pycache__/
 .pytest_cache/
 .ruff_cache/

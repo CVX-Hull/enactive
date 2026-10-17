@@ -9,8 +9,9 @@ status: active
 Start with [the overview](docs/overview.md), then [engineering standards](docs/engineering.md).
 Read [architecture](docs/architecture.md), [protocol](docs/protocol.md) and
 [current work](docs/work.md) before changing relevant boundaries. Follow S-AGENT
-for delegation: the lead owns design/integration/verification; one implementation
-writer at a time; named agent_type; clean-context workers/reviewers; bounded briefs.
+for delegation: the lead owns design/integration/verification; parallel workers use
+separate worktrees and disjoint ownership; one integrator and shared-runtime owner;
+named agent_type; clean-context workers/reviewers; bounded briefs.
 
 - User instructions take precedence. Global skills are optional references;
   do not import ceremony without a concrete project need.
