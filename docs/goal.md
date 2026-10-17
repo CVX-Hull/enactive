@@ -80,6 +80,7 @@ This document owns the consolidated requested outcome. The [charter](charter.md)
 owns principles; [standards](engineering.md) own requirements; [controls](controls.md)
 expose enforcement and gaps; [work](work.md) owns current progress and priorities.
 Start at the [overview](overview.md) to assess what currently exists. Dated
+[consolidated acceptance](acceptance/2026-10-17-completion.md) maps all outcomes;
 [MVP](acceptance/2026-10-17-mvp.md),
 [engineering](acceptance/2026-10-17-engineering-system.md) and
 [documentation](acceptance/2026-10-17-documentation-review.md) reports supply

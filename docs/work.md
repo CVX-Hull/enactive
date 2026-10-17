@@ -9,7 +9,16 @@ status: active
 Current product summary: [overview](overview.md). Historical MVP outcomes and
 failures: [2026-10-17 acceptance](acceptance/2026-10-17-mvp.md).
 
-## Latest completed increment
+## Consolidated goal verified
+
+The full [project goal](goal.md) is verified within its stated MVP boundaries.
+The [completion audit](acceptance/2026-10-17-completion.md) maps every outcome to
+evidence. Independent review's two gaps were resolved with a real-game planner-loop
+timing trial and pinned reuse-candidate sources; targeted re-review found no remaining
+material issue. The trial preserved existing guards, saved/reloaded normally and
+ended with remote control paused. No active implementation slice or blocker remains.
+
+## Completed documentation increment
 
 [Brief 002](changes/002-documentation-review.md) is verified: documentation metadata,
 control lifecycle and review records, local overdue checks, three rendered visual

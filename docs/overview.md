@@ -16,6 +16,8 @@ It currently needs Codex in an active chat to choose goals and interpret scenes.
 The service alone does not play autonomously.
 
 The consolidated implementation [goal](goal.md) records the full requested scope.
+The [completion audit](acceptance/2026-10-17-completion.md) maps that scope to
+implemented outcomes, independent review and dated gameplay evidence.
 Direction and constraints live in the [charter](charter.md). This page summarizes
 current behavior; detailed promises live in [architecture](architecture.md).
 
@@ -42,6 +44,7 @@ explain why native integration was selected and when we would reconsider it.
 | Graphical local play | Verified in the dated MVP session; normal native window and browser spectator | [MVP acceptance](acceptance/2026-10-17-mvp.md) |
 | Observe, menus, individual inputs, supplies and save/reload | Demonstrated; results still require interpretation after each input | [Acceptance probes](acceptance/2026-10-17-mvp.md#real-game-acceptance-2026-10-17) |
 | Guarded short walks | Limited: cardinal directions, at most eight steps, conservative terrain and visible-creature stops | [Current contract](protocol.md#closed-loop-play-and-observations) |
+| Planner round trips | One real three-tile comparison used three individual decisions versus one guarded request, retaining per-step checks; not a general speed or safety result | [Timing trial](acceptance/2026-10-17-completion.md#fresh-real-game-timing-probe) |
 | Pause and takeover | Stops further remote dispatch; a CDDA activity already underway can continue and needs native interruption | [Recovery](runbook.md#pause-timeout-and-recovery) |
 | Autonomous survival | Not implemented; Codex remains the planner | [Current scope](architecture.md#scope-and-responsibilities) |
 | Reproducible installation | Fresh build demonstrated on this Mac; other hosts remain unverified | [Setup](setup.md), [historical provenance](acceptance/2026-10-17-mvp-manifest.json) |
@@ -54,10 +57,10 @@ trap or damage guarantee and no general combat policy.
 
 ## Current direction and decisions
 
-The documentation increment adds visual explanations, lifecycle records and
-maintenance checks. Its [brief](changes/002-documentation-review.md) explains
-before/after behavior, alternatives and cost; [acceptance](acceptance/2026-10-17-documentation-review.md)
-records verification and limitations. [Work](work.md) owns current status.
+The consolidated goal is verified within its stated MVP boundaries. The latest
+[audit](acceptance/2026-10-17-completion.md) adds measured planner-loop timing and
+pinned reuse comparisons. The documentation [brief](changes/002-documentation-review.md)
+explains the visual explanations, lifecycle records and maintenance checks.
 Next priorities and any open issues are in [work](work.md). Current priorities are control
 reliability and evidence quality before expanding unattended play. A future
 interrupt protocol needs a separate design and native acceptance.

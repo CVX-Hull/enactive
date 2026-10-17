@@ -12,7 +12,11 @@ For fresh installation use [setup](setup.md); use [overview](overview.md) for li
 ## Start and observe
 
 First inspect existing terminals/processes to avoid starting a second game or
-controller. Do not kill an unrelated service to free a port. From this checkout,
+controller. A native app lookup by name may launch a second copy when the game
+was started directly by its wrapper; do not use lookup as a process-existence check.
+Use the existing spectator to inspect native frames when a tool cannot bind the
+already-running native window.
+Do not kill an unrelated service to free a port. From this checkout,
 use separate terminals, an available loopback port, and only the prepared wrapper:
 
 ```sh
@@ -81,7 +85,10 @@ A new automated native replay/probe runner remains a documented coverage gap.
 
 Track small reports/manifests, source pins and checks in Git. Keep user saves,
 large media, journals, credentials and downloads out of Git. A manifest records
-artifact relative path, byte count, hash, source/candidate and limitations. A hash
+artifact relative path, byte count, hash, source/candidate and limitations. Snapshot
+journals before indexing them: a live journal can append even during normal shutdown.
+Keep the full live journal, label the snapshot/cutoff, and verify its bytes/hash; do
+not truncate a journal or overwrite a historical hash to hide later events. A hash
 identifies bytes; it does not prove the depicted behavior without inspection.
 
 Retain curated acceptance artifacts and failure evidence until superseded by

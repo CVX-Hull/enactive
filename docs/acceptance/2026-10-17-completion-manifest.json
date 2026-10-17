@@ -1,0 +1,110 @@
+{
+  "schema_version": 1,
+  "kind": "historical-native-acceptance",
+  "date": "2026-10-17",
+  "source_commit": "88dd803681a6d464692b1176a4becc67e62af5a2",
+  "platform": "macOS 26.6.2 arm64; Apple Clang 21",
+  "upstream_pin": "native/upstream.json",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "freetype_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+  "initial_build_binary_sha256": "17672376d33ac468b2cbadd3a9fcc1d5030a51e95f094bb770a987a48bd2b2ae",
+  "installed_binary_sha256": "7f83a0661ae4970dea890edceb516386950f0e2951b5adae66acf5d4ca3c62b7",
+  "report": "docs/acceptance/2026-10-17-completion.md",
+  "identity_note": "Consolidated audit based on de695d3; runtime unchanged from source_commit. Installed binary reused without rebuilding. Initial build hash precedes the incremental SPACE fix and installation/signing. The checkpoint containing this report identifies final documentation changes.",
+  "artifacts": {
+    ".runtime/evidence/planner-timing/commands.jsonl": {
+      "bytes": 185197,
+      "sha256": "5dd82e618aed6f5ef7cbbfbc23a0f16e8af5255d00b2272c6a3ba82273f35223",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/planner-timing/events.snapshot.jsonl": {
+      "bytes": 157791,
+      "sha256": "ab0b8e924418296fc173583024d4ea523992b1b61ebdb566f19d3ae1712447ae",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/planner-timing/probe.py": {
+      "bytes": 1387,
+      "sha256": "5cb3c56e32ba35f24cbf85066b2e5450f423ac14f3713e768012810a42413c31",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/planner-timing/summarize.py": {
+      "bytes": 2897,
+      "sha256": "12e1ac4825b12263a73cad5986eae67d5e9b76c2debb90ec5ebe47788832a1ee",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/planner-timing/baseline-start.png": {
+      "bytes": 115078,
+      "sha256": "1024a4ebf63309bdeae950e99b5808e9b49be817a249ff0e2eff3b462ecabcff",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/planner-timing/baseline-1.png": {
+      "bytes": 116582,
+      "sha256": "c0f0dbe8e231fcae8750db3980af87d905539e7a71a111b7826d4afeab0caef6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/planner-timing/baseline-2.png": {
+      "bytes": 117707,
+      "sha256": "4b563c219fb6989071faa881c7498073c563aba482060ad3e7338420aa6777cf",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/planner-timing/baseline-3.png": {
+      "bytes": 118459,
+      "sha256": "d0ebf78b571a7e362c36d2f51ef9a6b17b62c2b12e77e84fa0972baf8e9da800",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/planner-timing/routine-start.png": {
+      "bytes": 119499,
+      "sha256": "ebf2da661b6ca2739b422b85a957718d9786c1bb8b68c304f796144d5ae4e209",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/planner-timing/routine-result.png": {
+      "bytes": 118344,
+      "sha256": "fb687ee2019119f57e8fb9c2209181bb46139a68489e08728cde032a6e085613",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/planner-timing/reload-kris.png": {
+      "bytes": 118353,
+      "sha256": "5121fb13f1afc67eb8ff8913cbcaae75107ec3c8f8dbbece9e26e63fa9d44d4f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/planner-timing/handover-observe.png": {
+      "bytes": 118353,
+      "sha256": "5121fb13f1afc67eb8ff8913cbcaae75107ec3c8f8dbbece9e26e63fa9d44d4f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/planner-timing/spectator.png": {
+      "bytes": 214035,
+      "sha256": "ed871ca691468766e12acae1837ba5a8dad7937f36244bad0bc69c72e85659fe",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/planner-timing/duplicate-window.png": {
+      "bytes": 92303,
+      "sha256": "54638cebe2221e343d0664fcb8e6a7a1ca11bf047eb01c90c3ac9e68d4ecf2a8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/gameplay-8x.mp4": {
+      "sha256": "759086dd49cff23b901bace2227a896fb4cbe661107e98b54fa93e5ba1b098a8",
+      "bytes": 3756193,
+      "availability": "local-only; not included in Git"
+    }
+  },
+  "video": {
+    "speed": 8,
+    "duration_seconds": 75.75,
+    "capture_interval_ms": [
+      1792264815823,
+      1792265420903
+    ],
+    "note": "Historical MVP video, sampled during this audit; not video of the fresh timing trial. Actual renderer frames at 8x, ending before the separately captured zombie encounter."
+  },
+  "verified_at": "2026-10-17",
+  "verification_scope": "Fresh raw receipts and native frames for the timing trial; results in docs/acceptance/2026-10-17-planner-timing.json. Local artifacts checked by size/hash. Prior MVP video sampled visually as historical evidence. Full scope and review results in the report.",
+  "limitations": [
+    "No new native build; demonstrated runtime sources unchanged from MVP checkpoint.",
+    "Timing is one sequential pair and includes planner/tool orchestration overhead, not isolated model compute.",
+    "Native app lookup launched a duplicate; duplicate-window.png depicts that rejected duplicate, not the trial game.",
+    "Original accepted journal bytes were preserved as a separate snapshot after normal shutdown appended one pause event.",
+    "Full live journals remain local; snapshots above are stable evidence and do not automatically track later gameplay.",
+    "The video is historical MVP evidence; the fresh timing trial is documented by receipts, journal and screenshots."
+  ]
+}

@@ -37,7 +37,7 @@
       "bytes": 109399,
       "availability": "local-only; not included in Git"
     },
-    ".runtime/sessions/20261017-152033-c13a3850/events.jsonl": {
+    ".runtime/evidence/mvp-journal-snapshot.jsonl": {
       "sha256": "0b81906f4693191c15a45a60b2d6ac8e1cac0f25dfc8c1fe4805973527da3dbe",
       "bytes": 510589,
       "availability": "local-only; not included in Git"
@@ -53,7 +53,7 @@
     "note": "Actual renderer frames. Ends before the separately captured zombie encounter."
   },
   "verified_at": "2026-10-17",
-  "verification_scope": "Local curated artifact and journal bytes hashed during governance implementation; original gameplay observations remain historical. No new gameplay probe was run.",
+  "verification_scope": "Local curated artifact and journal bytes hashed during governance implementation; original gameplay observations remain historical. No new gameplay probe was run. Completion audit preserved the original accepted journal prefix as a separate byte-identical snapshot after normal service shutdown appended a pause event; the full original journal is retained.",
   "limitations": [
     "Media/journals are ignored and available only in the originating checkout until deliberately retained elsewhere.",
     "Video ends before the separately recorded zombie encounter.",

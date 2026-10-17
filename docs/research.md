@@ -76,9 +76,26 @@ environment.md. Local source inspection is primary evidence for the following:
 - src/main.cpp / path_info.cpp: --userdir permits isolated config and saves.
 - Makefile and build-scripts contain native macOS and Emscripten support.
 
-Related projects inspected as reuse candidates: CDDAi uses terminal automation
-and fragile save assumptions; old cdda-web builds demonstrate browser feasibility
-but are not a maintained replacement for the current engine. Neither is adopted
-without validation. Reuse the official Tiles renderer and bundled SDL frameworks.
-The lack of a verified ready-made runtime API motivates a small pinned patch;
-it does not prove no such project exists anywhere.
+## Reuse candidates rechecked — 2026-10-17
+
+The earlier bare names did not preserve enough provenance to identify precisely
+what was inspected. This comparison replaces that claim with newly checked public
+repositories at exact revisions; it does not retroactively identify the earlier
+unnamed sources. Commit dates below come from GitHub commit metadata.
+
+| Candidate / inspected revision | Primary evidence read | Consequence and limit |
+| --- | --- | --- |
+| [rekon307/CDDAi, 8561510](https://github.com/rekon307/CDDAi/tree/85615103d7b43fec5d04a33ac01828c1bc97dba2), 2026-01-04 | [Terminal controller](https://github.com/rekon307/CDDAi/blob/85615103d7b43fec5d04a33ac01828c1bc97dba2/src/cddai/execution/terminal_controller.py) uses pexpect, a 24×80 terminal and key sequences. [JSON reader](https://github.com/rekon307/CDDAi/blob/85615103d7b43fec5d04a33ac01828c1bc97dba2/src/cddai/perception/json_reader.py) parses save JSON and chooses the newest matching save; missing fields receive defaults. | These are concrete terminal/save dependencies, not measured failure rates. Adopting this perception path would conflict with our rendered, player-visible observation contract. It is a design reference, not a ready replacement. |
+| [yellowgg2/cdda-web, 7c7444b](https://github.com/yellowgg2/cdda-web/tree/7c7444bb004b58f9078b13a818ad3221f4c0c3bd), 2022-12-13 | Pinned README describes an Emscripten/WebAssembly port based on 0.F-3 and its build commands. | Establishes historical browser feasibility; does not establish compatibility or maintenance for our pinned 0.I-1 engine. |
+| [nornagon/play-cdda, 706f481](https://github.com/nornagon/play-cdda/tree/706f481ffa81141766e1c039bf2085ead889d85d), 2026-10-09 | Pinned README describes stable/prerelease/experimental channels, immutable bundles, atomic channel updates, Emscripten 6.0.8, SDL2-era stable patches and SDL3 experimental builds. | A recently updated browser-delivery candidate; it must not be called abandoned. The README documents publishing, not our observation/command-authority API. No local browser build or comparative benchmark was executed. |
+
+Reassessment: native remains the implemented choice for a single visible local
+game with validated input/observation/recovery boundaries. Browser delivery is a
+credible alternative, not an obsolete curiosity. Revisit it for browser-first
+sharing, multi-host deployment or excessive native patch cost, and directly test
+input authority, persistence, setup, rendering and upgrade burden before choosing.
+This is a requirements and integration-cost inference, not measured native speed
+superiority. The [platform decision](decisions/001-native-platform.md) records the
+broader alternatives. Reusing official Tiles/SDL and established controls avoids
+building a new renderer or general policy engine; our bounded bridge fills the
+verified integration gap, without claiming no reusable API exists anywhere.

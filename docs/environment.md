@@ -133,3 +133,21 @@ Render previews are disposable under .cache/diagrams; curated acceptance logs
 stay in .runtime/evidence. Preserve source diagrams, receipt, font notices and
 acceptance before removing local caches. A fresh checkout uses setup to reinstall
 the pinned renderer; deleting a cache does not revoke historical acceptance.
+
+## Consolidated acceptance audit, 2026-10-17
+
+No packages, native build or global configuration changed. Reused the prepared
+game and local environment. New primary-source extracts and gameplay receipts,
+images and journal snapshots live under `.runtime/evidence/`; the normal game UI
+created retained Day and tutorial saves in the project userdir. Existing H saves
+were preserved. The old controller was stopped and one new local controller/game
+session was started for the trial, ending saved/reloaded and remotely paused.
+
+A native app lookup inadvertently launched a duplicate game at its main menu.
+The bridge refused duplicate ownership; only the identified duplicate was stopped.
+The runbook now warns against treating app lookup as a process check. One project
+game and controller remained at audit handover. The earlier live journal remains
+intact with its shutdown event; an exact snapshot of its accepted prefix preserves
+the historical manifest. See the [completion report](acceptance/2026-10-17-completion.md)
+for identities, failures and evidence limits. No save deletion or background
+scheduler was used.

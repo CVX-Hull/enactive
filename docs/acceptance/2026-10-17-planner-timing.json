@@ -1,0 +1,148 @@
+{
+  "baseline": {
+    "planner_play_decisions": 3,
+    "planner_loop_gap_ms": [
+      5442,
+      4422,
+      4498
+    ],
+    "planner_loop_gap_sum_ms": 14362,
+    "cli_command_elapsed_ms": 581.122,
+    "start_observation_to_command_return_ms": 14942,
+    "native_exchanges": [
+      {
+        "kind": "observe",
+        "id": "fff76680-375f-4994-8cfa-2e60d588e354",
+        "revision": 60,
+        "request_to_ready_ms": 36
+      },
+      {
+        "kind": "action",
+        "id": "d3498a5b-e86f-4aac-aa7b-3f85f78e79c9",
+        "revision": 62,
+        "request_to_ready_ms": 63
+      },
+      {
+        "kind": "observe",
+        "id": "8fd03002-1439-4378-8fbc-babff86c2195",
+        "revision": 62,
+        "request_to_ready_ms": 46
+      },
+      {
+        "kind": "action",
+        "id": "b8601316-d250-4202-8296-8b5c616d7732",
+        "revision": 64,
+        "request_to_ready_ms": 56
+      },
+      {
+        "kind": "observe",
+        "id": "634a480a-a935-40c7-a060-3154d1778f62",
+        "revision": 64,
+        "request_to_ready_ms": 33
+      },
+      {
+        "kind": "action",
+        "id": "27b59f63-dd06-4913-9e46-b830755d09ed",
+        "revision": 66,
+        "request_to_ready_ms": 76
+      }
+    ],
+    "native_exchange_sum_ms": 310,
+    "native_action_sum_ms": 195
+  },
+  "routine": {
+    "planner_play_decisions": 1,
+    "planner_loop_gap_ms": [
+      4946
+    ],
+    "planner_loop_gap_sum_ms": 4946,
+    "cli_command_elapsed_ms": 440.553,
+    "start_observation_to_command_return_ms": 5386,
+    "native_exchanges": [
+      {
+        "kind": "observe",
+        "id": "a64f18d7-b251-4a7d-b372-4bd33a20d0a5",
+        "revision": 72,
+        "request_to_ready_ms": 50
+      },
+      {
+        "kind": "action",
+        "id": "d5d5d155-bcf9-4ede-b3ae-3c027d1ce9c9",
+        "revision": 74,
+        "request_to_ready_ms": 58
+      },
+      {
+        "kind": "observe",
+        "id": "d6839ff0-da3b-42b9-bc53-44c4d5423aa2",
+        "revision": 74,
+        "request_to_ready_ms": 38
+      },
+      {
+        "kind": "action",
+        "id": "5067a940-fd90-4b20-b615-fca93cdc8560",
+        "revision": 76,
+        "request_to_ready_ms": 48
+      },
+      {
+        "kind": "observe",
+        "id": "57646c5b-1d12-481c-a152-e125071d35a6",
+        "revision": 76,
+        "request_to_ready_ms": 50
+      },
+      {
+        "kind": "action",
+        "id": "d2026e39-cbe5-42af-bcc9-1264c949b5c0",
+        "revision": 78,
+        "request_to_ready_ms": 69
+      }
+    ],
+    "native_exchange_sum_ms": 313,
+    "native_action_sum_ms": 175
+  },
+  "scenario": {
+    "world": "Day",
+    "survivor": "Kris Fink",
+    "session": "1792269913768-30294",
+    "start_position": [
+      3,
+      0,
+      0
+    ],
+    "end_position": [
+      3,
+      -3,
+      0
+    ],
+    "baseline_turns": [
+      5212803,
+      5212806
+    ],
+    "routine_turns": [
+      5212809,
+      5212812
+    ],
+    "steps_completed_each": 3,
+    "baseline_revisions": [
+      60,
+      62,
+      64,
+      66
+    ],
+    "routine_revisions": [
+      72,
+      74,
+      76,
+      78
+    ],
+    "reload_turn": 5212812,
+    "handover_paused_revision": 91
+  },
+  "limitations": [
+    "One sequential pair, same route/direction but advancing game time; no randomization or uncertainty estimate.",
+    "Planner-loop gaps include observation/image inspection, model reasoning, tool scheduling and approval/execution overhead; pure model deliberation is not identifiable.",
+    "End-to-end metric ends at command return, excluding final interpretation; routine final state was read separately with status.",
+    "CLI monotonic durations include Python/HTTP/native work; native exchange estimates use same-host wall timestamps and the recorded 5000 ms deadline.",
+    "No parallel research or user-facing commentary was performed between either trial start receipt and its final play-command return.",
+    "No survival, statistical speed, or safety superiority claim. Native exchanges remain three observations plus three actions in both cases."
+  ]
+}
