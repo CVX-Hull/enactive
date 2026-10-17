@@ -56,7 +56,8 @@ independent review and a real graphical gameplay demonstration.
 - Use Git for source, configuration, documentation, pins and reviewable checkpoints.
 - Follow the repository's delegation policy: lead owns design, briefs, adjudication,
   integration and verification; explorers read, workers have bounded disjoint paths,
-  reviewers use fresh context, and only one implementation writer operates at once.
+  reviewers use fresh context, parallel implementation uses isolated worktrees and
+  bounded ownership under S-AGENT, and one lead integrates and owns shared runtime.
 - Evaluate global skills for relevance; do not import a generic lifecycle or
   framework merely because it is available.
 - Preserve authentic gameplay: no hidden-state advantage, save editing to win,
@@ -78,7 +79,7 @@ owners and triggers, not a reason to claim the project is permanently finished.
 
 This document owns the consolidated requested outcome. The [charter](charter.md)
 owns principles; [standards](engineering.md) own requirements; [controls](controls.md)
-expose enforcement and gaps; [work](work.md) owns current progress and priorities.
+expose enforcement and gaps; [work](work.md) links GitHub's current progress and priorities.
 Start at the [overview](overview.md) to assess what currently exists. Dated
 [consolidated acceptance](acceptance/2026-10-17-completion.md) maps all outcomes;
 [MVP](acceptance/2026-10-17-mvp.md),

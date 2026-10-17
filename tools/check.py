@@ -14,7 +14,7 @@ except ImportError as error:
     raise SystemExit("Development dependencies are missing; use .venv/bin/python after installing requirements-dev.lock (see docs/setup.md).") from error
 
 ROOT = Path(__file__).resolve().parents[1]
-REQUIRED_DOCS = ("README.md", "AGENTS.md", "docs/overview.md", "docs/charter.md",
+REQUIRED_DOCS = ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECURITY.md", "docs/project-management.md", "docs/overview.md", "docs/charter.md",
                  "docs/engineering.md", "docs/architecture.md", "docs/protocol.md",
                  "docs/controls.md", "docs/runbook.md", "docs/work.md",
                  "docs/environment.md", "docs/research.md", "docs/setup.md")
@@ -23,7 +23,7 @@ REQUIRED_DOCS = ("README.md", "AGENTS.md", "docs/overview.md", "docs/charter.md"
 def check_documents(root: Path) -> list[str]:
     errors = [f"Missing required document: {name}" for name in REQUIRED_DOCS
               if not (root / name).is_file()]
-    markdown = [root / "README.md", root / "AGENTS.md", *sorted((root / "docs").rglob("*.md"))]
+    markdown = [*(root / name for name in ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECURITY.md")), *sorted((root / "docs").rglob("*.md"))]
     parser = MarkdownIt("commonmark").enable("table")
     for document in markdown:
         if not document.is_file():

@@ -141,7 +141,7 @@ Owner: lead with operator feedback. Trigger: user-facing behavior/guidance chang
 Enforcement: Required review under S-UX/S-DOCS/S-WORK; no automatic usability gate.
 Failure response: Correct misleading flows or guidance and retain consequential limits before milestone acceptance.
 
-Evidence / implementation: [docs/overview.md](../docs/overview.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/runbook.md](../docs/runbook.md), [web/app.js](../web/app.js), [docs/walkthrough.md](../docs/walkthrough.md), [docs/architecture.md](../docs/architecture.md).
+Evidence / implementation: [docs/overview.md](../docs/overview.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/runbook.md](../docs/runbook.md), [web/app.js](../web/app.js), [docs/walkthrough.md](../docs/walkthrough.md), [docs/architecture.md](../docs/architecture.md), [docs/project-management.md](../docs/project-management.md).
 
 Coverage gap: Human judgment; no automated usability score or user study is claimed. Document links alone do not demonstrate comprehension.
 
@@ -187,13 +187,13 @@ Next review: 2027-01-15.
 
 ### C-REVIEW — Design and independent change review (manual)
 
-Consequential designs, implementation, tests, delegation and exceptions. Lead owns design/integration and verifies returned evidence; bounded workers have named paths; fresh-context review assesses contracts, risk and maintainability before checkpoint.
+Consequential designs, implementation, tests, delegation and exceptions. Lead owns design/integration and verifies returned evidence; at most two workers use separate project-local worktrees and named disjoint paths, with shared runtime serialized; fresh-context review assesses contracts, risk and maintainability before acceptance.
 
 Owner: lead; reviewer supplies independent findings. Trigger: significant change, new boundary/guarantee/dependency or integration checkpoint.
-Enforcement: Required under S-AGENT and change workflow; no automated approval or remote branch protection configured.
+Enforcement: Required by S-AGENT and the GitHub work/PR workflow; independent agent review is manually recorded, not an independent GitHub human approval. Hosted enforcement is recorded separately in acceptance.
 Failure response: Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.
 
-Evidence / implementation: [AGENTS.md](../AGENTS.md), [docs/engineering.md](../docs/engineering.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/work.md](../docs/work.md).
+Evidence / implementation: [AGENTS.md](../AGENTS.md), [docs/engineering.md](../docs/engineering.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/work.md](../docs/work.md), [docs/project-management.md](../docs/project-management.md), [docs/changes/003-public-workflow.md](../docs/changes/003-public-workflow.md).
 
 Coverage gap: No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process.
 

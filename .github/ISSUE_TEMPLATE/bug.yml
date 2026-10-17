@@ -1,0 +1,52 @@
+name: Bug report
+description: Report an observable failure with reproduction and evidence.
+title: "Bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues first. For suspected vulnerabilities, follow the
+        [security policy](https://github.com/CVX-Hull/cdda-player/blob/main/SECURITY.md).
+        Redact tokens, credentials, personal paths and private data. Do not upload saves by default.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Intended outcome and impact
+      description: What were you trying to do, and how does this failure affect you?
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+      description: Describe the expected observation or result; link the relevant contract if known.
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Describe what you observed, including uncertainty, prompts or errors.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Reproduction steps
+      description: Give minimal steps and frequency. If not reproducible, state what is known.
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Candidate and environment
+      description: Include commit, OS, relevant tool versions, setup method and upstream pin when known.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence and checks
+      description: Include redacted logs, screenshots or exact checks and results. State if none were captured; distinguish native observations from portable tests.
+    validations:
+      required: true

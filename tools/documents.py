@@ -18,7 +18,7 @@ except ImportError as error:
 
 from tools.governance import local_reference, schema_errors
 
-ROOT_DOCUMENTS = ("README.md", "AGENTS.md", "NOTICE.md")
+ROOT_DOCUMENTS = ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECURITY.md")
 
 
 def check_metadata(root: Path) -> list[str]:

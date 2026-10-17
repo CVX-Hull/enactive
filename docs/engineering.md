@@ -9,7 +9,8 @@ status: active
 The lead adjudicates design and verification.
 Principles are in the [charter](charter.md); implemented controls and gaps are in
 [controls](controls.md). Each numbered standard below is mandatory in its scope.
-An exception needs scope, reason, owner and revisit/expiry in [work](work.md).
+An exception needs scope, reason, owner and revisit/expiry in a GitHub issue linked
+to the affected standard; [work](work.md) links the work tracker.
 Exceptions cannot override user instructions or hide failed acceptance.
 
 ## Authority and reading order
@@ -17,7 +18,8 @@ Exceptions cannot override user instructions or hide failed acceptance.
 The [overview](overview.md) is the user's starting point; the charter owns purpose,
 constraints and principles. This document owns engineering requirements. Current
 architecture and protocol own system behavior. Setup and runbook own procedures.
-Work owns active priorities, blockers and exceptions. Dated acceptance reports
+GitHub Issues and the linked Project own active priorities, status, blockers and
+exceptions; work.md is their navigation entry point. Dated acceptance reports
 own historical observations; ADRs own decision rationale; research owns external
 evidence and its limits. AGENTS.md routes agents to the relevant current material.
 A discrepancy is a defect to resolve, not permission to silently pick a convenient
@@ -179,9 +181,12 @@ Controls: C-GOVERNANCE, C-USABILITY, C-REVIEW, C-MAINTENANCE, C-VISUAL.
 ## S-WORK Reviewable and proportionate changes
 
 Principles: P-REVIEW, P-CHANGE, P-KNOWLEDGE.
-Keep one active integration slice, with outcome, scope, acceptance, owner and
-blockers in work.md. States: pending, active, verified, blocked; blocked means a
-specific condition and next action. Deferred work needs reason and revisit trigger.
+Keep one integration queue and a bounded number of active outcomes in GitHub.
+Issues own scope, acceptance, accountable owner, blockers and exceptions; Project
+Status owns execution stage: Backlog, Ready, In progress, Review, Validation, Done.
+Blocked work retains its stage and records the condition, owner and next action.
+Deferred work needs a reason and revisit trigger. Cancelled or duplicate issues
+are closed as not planned and excluded from accepted delivery counts.
 Before a significant change, write a short [review brief](changes/001-engineering-system.md)
 covering problem, visible behavior, alternatives, maintenance/reversibility,
 evidence/uncertainty and decision needed. Routine fixes need only a cohesive diff
@@ -239,7 +244,7 @@ it never renews records and cannot substitute for the common command's current-d
 check. No check or background job edits dates automatically. At an overdue failure,
 the owner reviews the control, records evidence/findings/actions, then chooses a
 justified new date or retires/replaces it. Do not advance dates just to pass a check.
-An exception in work identifies scope, owner, expiry, reason and mitigation; it
+An exception issue identifies scope, owner, expiry, reason and mitigation; it
 does not silently suppress a failed mechanical gate or override user constraints.
 
 ### Change and review cadence

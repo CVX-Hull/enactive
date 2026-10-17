@@ -151,3 +151,15 @@ intact with its shutdown event; an exact snapshot of its accepted prefix preserv
 the historical manifest. See the [completion report](acceptance/2026-10-17-completion.md)
 for identities, failures and evidence limits. No save deletion or background
 scheduler was used.
+
+## Public workflow setup, 2026-10-17
+
+Reused the existing GitHub CLI and authentication without changing global settings.
+Two implementation worktrees were created under ignored `.worktrees/`; each had
+disjoint file ownership and no game access or shared writable test environment.
+Gitleaks 8.30.1 was downloaded from its official GitHub release into
+`.runtime/toolchain/gitleaks/`; the Darwin arm64 archive SHA-256 was verified as
+`b40ab0ae55c505963e365f271a8d3846efbc170aa17f2607f13df610a9aeb6a5`.
+Redacted scan results and GitHub setup/probe receipts stay in
+`.runtime/evidence/publication/`. No system package, shell profile, credential
+configuration, game process or save was changed by this setup.

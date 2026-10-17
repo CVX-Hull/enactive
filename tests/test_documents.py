@@ -18,7 +18,7 @@ class DocumentTests(unittest.TestCase):
         shutil.copyfile(ROOT / "schemas/document.schema.json", self.root / "schemas/document.schema.json")
         (self.root / "docs/nested").mkdir(parents=True)
         self.active = "---\nowner: maintainer\nstatus: active\nreview_trigger: boundary change\n---\n# Page\n"
-        for name in ("README.md", "AGENTS.md", "NOTICE.md", "docs/nested/page.md"):
+        for name in (*documents.ROOT_DOCUMENTS, "docs/nested/page.md"):
             (self.root / name).write_text(self.active)
 
     def test_valid_metadata_and_normal_checks_never_rewrite(self):
@@ -28,7 +28,7 @@ class DocumentTests(unittest.TestCase):
         self.assertEqual(path.read_bytes(), original)
 
     def test_missing_frontmatter_on_every_covered_surface_fails(self):
-        for name in ("README.md", "AGENTS.md", "NOTICE.md", "docs/nested/page.md"):
+        for name in (*documents.ROOT_DOCUMENTS, "docs/nested/page.md"):
             with self.subTest(name=name):
                 path = self.root / name
                 path.write_text("# No metadata\n")

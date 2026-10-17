@@ -286,7 +286,8 @@
         "docs/runbook.md",
         "web/app.js",
         "docs/walkthrough.md",
-        "docs/architecture.md"
+        "docs/architecture.md",
+        "docs/project-management.md"
       ],
       "failure_response": "Correct misleading flows or guidance and retain consequential limits before milestone acceptance.",
       "limitations": "Human judgment; no automated usability score or user study is claimed. Document links alone do not demonstrate comprehension.",
@@ -360,18 +361,20 @@
       "name": "Design and independent change review",
       "mode": "manual",
       "scope": "Consequential designs, implementation, tests, delegation and exceptions.",
-      "mechanism": "Lead owns design/integration and verifies returned evidence; bounded workers have named paths; fresh-context review assesses contracts, risk and maintainability before checkpoint.",
+      "mechanism": "Lead owns design/integration and verifies returned evidence; at most two workers use separate project-local worktrees and named disjoint paths, with shared runtime serialized; fresh-context review assesses contracts, risk and maintainability before acceptance.",
       "owner": "lead; reviewer supplies independent findings",
       "trigger": "significant change, new boundary/guarantee/dependency or integration checkpoint",
       "evidence": [
         "AGENTS.md",
         "docs/engineering.md",
         "docs/changes/001-engineering-system.md",
-        "docs/work.md"
+        "docs/work.md",
+        "docs/project-management.md",
+        "docs/changes/003-public-workflow.md"
       ],
       "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process.",
-      "enforcement": "Required under S-AGENT and change workflow; no automated approval or remote branch protection configured.",
+      "enforcement": "Required by S-AGENT and the GitHub work/PR workflow; independent agent review is manually recorded, not an independent GitHub human approval. Hosted enforcement is recorded separately in acceptance.",
       "status": "active",
       "rationale": null,
       "replacement": null,

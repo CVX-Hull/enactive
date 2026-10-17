@@ -6,6 +6,16 @@ status: active
 
 # Third-party provenance
 
+## License scope
+
+Original standalone harness/viewer code, tooling, tests and documentation are
+provided under the [MIT license](LICENSE), selected by the project owner on
+2026-10-17. This does not relicense upstream material. The CDDA integration
+`native/cdda_harness.cpp`, `native/cdda_harness.h` and upstream modifications in
+`tools/patch_game.py` are distributed under CDDA's CC BY-SA 3.0 terms; third-party
+artwork, embedded fonts and notices retain their own terms below. Source release
+does not distribute the downloaded application or its bundled libraries.
+
 This project modifies and runs Cataclysm: Dark Days Ahead by the Cataclysm and
 CleverRaven contributors. The separately downloaded official release is 0.I-1,
 source commit `7b2efa5cea38e4d4d97dd0e63b28b9148623da59`. Exact URLs, archive
@@ -57,3 +67,11 @@ Recursive is supplied by the renderer although these diagrams select Open Sans.
 The tracked spectator example is an unchanged historical CDDA/UltiCa screenshot;
 it retains the upstream game/art attribution described above and is not original
 project artwork. Its source identity and date are in the walkthrough and MVP manifest.
+UltiCa attribution: the I-am-Erk/CDDA-Tilesets contributors; the bundled tileset
+credits filler trees to Yar (original) and I-am-Erk (edits), with per-tile credits
+in the [upstream tileset](https://github.com/I-am-Erk/CDDA-Tilesets/tree/dfd8d69f388e6b9c2719b250845e51d8d30eb2cb/gfx/UltimateCataclysm).
+The [upstream license notice](https://github.com/I-am-Erk/CDDA-Tilesets/blob/dfd8d69f388e6b9c2719b250845e51d8d30eb2cb/LICENSE.txt)
+identifies CC BY-SA 3.0. Game imagery in the screenshot retains
+[CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/); it is not covered
+by the project's MIT grant. The screenshot captures the historical renderer and
+spectator, without alteration of the depicted game artwork.

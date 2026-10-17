@@ -93,3 +93,21 @@ Maintenance findings must distinguish a successful negative fixture, a reviewer
 walkthrough and long-term operational effectiveness. The latter remains unmeasured.
 [ADR 004](decisions/004-documentation-controls.md) records tooling costs, alternatives,
 the cross-platform freshness contract and reconsideration triggers.
+
+## Project management basis — 2026-10-17
+
+Primary pages below were reviewed for the [PM contract](project-management.md).
+These sources inform our choices; they do not validate this project's forecasts.
+
+| Source / scope | Supported guidance | Project consequence and limit |
+| --- | --- | --- |
+| [Kanban Guide, May 2025](https://kanbanguides.org/the-kanban-guide/2025.5/), workflow and flow metrics sections | Explicit start/finish policies, WIP control, item age, throughput and cycle time support managing flow | Count work through validation and inspect queues; forecast from local history when available. Our provisional ranges are not a claim to a calibrated probabilistic service expectation or full Kanban conformance |
+| [DORA small batches](https://dora.dev/capabilities/working-in-small-batches/), capability guidance updated December 2025 | Small independently testable changes shorten feedback; regrouping them downstream delays learning | Slice useful outcomes and include review/validation capacity; organizational findings supply no numerical productivity prediction for this team |
+| [GitHub Projects best practices](https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/best-practices-for-projects), full page | Linked issues, dependencies, milestones, custom fields, views and workflows organize work with one source of truth | Use native GitHub controls and three reader-focused views; disable closure/merge-to-Done shortcuts that bypass our acceptance policy. Documented features are not evidence our account has configured them |
+| [Anthropic compiler team](https://www.anthropic.com/engineering/building-c-compiler), February 2026 experience report | Independent failures parallelized; a shared kernel failure caused duplicated work and collisions | Require disjoint ownership and inspect the critical path; its 16-agent compiler experiment does not establish our worker count or model performance |
+| [Anthropic long-running harness design](https://www.anthropic.com/engineering/harness-design-long-running-apps), March 2026 experience report | Separate evaluation addressed lenient self-assessment; evaluation and handoffs added time and overhead, and model changes altered useful scaffolding | Keep independent review and measure its cost; recalibrate after model/tool changes. This vendor's application experiments do not prove evaluator independence or throughput here |
+
+One integration slice, two initial implementation workers, field values and the
+three views are proportional project policies, not universal optima. Compare
+accepted outcomes, elapsed time, queues, defects and review cost after milestones;
+change the process from observed results rather than agent-count or token targets.

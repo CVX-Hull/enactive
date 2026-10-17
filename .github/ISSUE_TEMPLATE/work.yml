@@ -1,0 +1,72 @@
+name: Work proposal
+description: Propose a bounded improvement, investigation or documentation change.
+title: "Work: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Search existing issues and describe one reviewable outcome. Proposals are not commitments.
+        Redact secrets and private data; use the security policy for suspected vulnerabilities.
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Problem and intended outcome
+      description: Who benefits, what should change, and why does it matter?
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: Identify the behavior, documents or boundaries affected.
+    validations:
+      required: true
+  - type: textarea
+    id: exclusions
+    attributes:
+      label: Exclusions
+      description: State what this proposal will leave out so it stays bounded.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance and evidence
+      description: Give observable success and failure conditions and the checks or review needed. Identify native acceptance when affected.
+    validations:
+      required: true
+  - type: textarea
+    id: dependencies
+    attributes:
+      label: Dependencies and blockers
+      description: Link related issues or decisions; identify prerequisites. Write none known if appropriate.
+    validations:
+      required: true
+  - type: dropdown
+    id: size
+    attributes:
+      label: Estimated size
+      options:
+        - S; one bounded slice
+        - M; several cohesive steps
+        - L; split before Ready
+        - Unknown; investigation needed
+    validations:
+      required: true
+  - type: dropdown
+    id: confidence
+    attributes:
+      label: Confidence in estimate
+      options:
+        - High; comparable local evidence
+        - Medium; understood with material assumptions
+        - Low; major unknowns
+    validations:
+      required: true
+  - type: textarea
+    id: uncertainty
+    attributes:
+      label: Alternatives, risks and unknowns
+      description: Note consequential tradeoffs, maintenance cost and assumptions to verify. Write none known if appropriate.
+    validations:
+      required: true

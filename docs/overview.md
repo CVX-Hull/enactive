@@ -81,7 +81,9 @@ For a first session, use the [spectator walkthrough](walkthrough.md). To review
 behavior, follow the [action and recovery views](architecture.md#action-and-recovery-views).
 For governance, the [maintenance table](controls.md#maintenance) separates last
 exercise, maintenance review, effectiveness and next review. These are recorded
-observations, not live badges. [Work](work.md) owns open decisions and exceptions.
+observations, not live badges. [Work](work.md) links open decisions and exceptions
+in the public GitHub Project. The [project workflow](project-management.md) explains
+ownership, planning, parallel implementation and acceptance.
 
 [Run and recover](runbook.md) · [Standards and workflow](engineering.md) ·
 [Research basis](research.md) · [Environment history](environment.md)
