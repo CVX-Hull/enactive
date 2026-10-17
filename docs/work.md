@@ -31,6 +31,9 @@ No scheduler automatically renews dates or performs maintenance.
 
 ## Historical acceptance
 
+[Public workflow acceptance](acceptance/2026-10-17-public-workflow.md) records source publication,
+GitHub views, hosted failures/repairs and branch-rule probes.
+
 The [consolidated MVP audit](acceptance/2026-10-17-completion.md) maps the original
 requested outcomes to evidence, including real graphical play and its limits.
 The [documentation increment](acceptance/2026-10-17-documentation-review.md) records

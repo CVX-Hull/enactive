@@ -61,7 +61,8 @@ UV_CACHE_DIR="$PWD/.cache/uv" UV_PYTHON_DOWNLOADS=never uv pip compile --upgrade
 
 The current resolution/install was verified on Python 3.14/macOS. Hosted CI uses
 Python 3.14 and Node 22 on Ubuntu 24.04; its first run exposed a Chrome sandbox
-startup failure. Required checks must pass before integration. Other interpreter/host combinations
+startup failure, repaired and verified in [public workflow acceptance](acceptance/2026-10-17-public-workflow.md).
+Required checks must pass before integration. Other interpreter/host combinations
 require their own validation before a support claim.
 
 ## Install and maintain visual documentation tools

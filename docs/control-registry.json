@@ -161,31 +161,32 @@
         ".githooks/pre-commit",
         "pyproject.toml",
         "requirements-dev.lock",
-        "tests/test_devtools.py"
+        "tests/test_devtools.py",
+        "docs/acceptance/2026-10-17-public-workflow.md"
       ],
       "failure_response": "Preserve failure output, fix the cause and rerun before claiming portable acceptance.",
       "limitations": "Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing.",
-      "enforcement": "Invoked by common command, opt-in local hook and CI recipe; hook can be bypassed and no hosted required check is configured.",
+      "enforcement": "Common command and opt-in local hook; main also requires the observed GitHub Actions controller check (app 15368) with strict freshness under active ruleset 25319489. Local hooks remain bypassable; dated hosted/probe evidence is in public-workflow acceptance.",
       "status": "active",
       "rationale": null,
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within the dated acceptance scope; limitations retained.",
-        "scope": "Common lane on the documentation increment: 84 Python tests, four production-viewer scenarios, Ruff, imports, links, metadata, lifecycle and real rendering.",
+        "outcome": "Passed within the dated scope after recorded repairs; limitations retained.",
+        "scope": "Full local and hosted Ubuntu lanes on the public workflow/CI repair; 84 Python tests, four viewer cases and real rendering, with failed runs preserved.",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-public-workflow.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-public-workflow.md"
         ],
         "effectiveness": "effective",
-        "findings": "Common lane passed 84 Python tests and four viewer scenarios, including new lifecycle, metadata and real-renderer regressions; this is scoped detection evidence, not long-term defect-rate evidence.",
-        "cost": "Full local lane took under a minute; long-term false-alarm and review cost unmeasured.",
-        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+        "findings": "Full local and hosted Ubuntu lanes on the public workflow/CI repair; 84 Python tests, four viewer cases and real rendering, with failed runs preserved. Long-term effectiveness and forecast calibration remain unmeasured.",
+        "cost": "Local full lane plus hosted installation/rendering and independent review; initial failures required rework. No reliable long-term cost estimate.",
+        "follow_up": "Recheck on workflow/rules, runner, dependency or delegation changes and by 2027-01-15; issue #13 tracks the maintenance review. Preserve failures and adjust or retire controls from evidence."
       },
       "next_review": "2027-01-15"
     },
@@ -287,7 +288,8 @@
         "web/app.js",
         "docs/walkthrough.md",
         "docs/architecture.md",
-        "docs/project-management.md"
+        "docs/project-management.md",
+        "docs/acceptance/2026-10-17-public-workflow.md"
       ],
       "failure_response": "Correct misleading flows or guidance and retain consequential limits before milestone acceptance.",
       "limitations": "Human judgment; no automated usability score or user study is claimed. Document links alone do not demonstrate comprehension.",
@@ -297,21 +299,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within the dated acceptance scope; limitations retained.",
-        "scope": "Overview/immediate-link user questions, context/action/recovery visuals and walkthrough; ordinary-width heuristic review, not a user study.",
+        "outcome": "Passed within the dated scope after recorded repairs; limitations retained.",
+        "scope": "Public Direction grouped by Horizon, Execution by stage, Needs attention labels and linked owner-facing docs; unauthenticated browser inspection.",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-public-workflow.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-public-workflow.md"
         ],
         "effectiveness": "partially_effective",
-        "findings": "Lead and independent reader review found the overview, immediate links and three 900-pixel visual previews answer the intended questions; optional recovery wording clarified. No user study or assistive-technology test.",
-        "cost": "Three visuals and one walkthrough; reviewer inspection required after changed flows.",
-        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+        "findings": "Public Direction grouped by Horizon, Execution by stage, Needs attention labels and linked owner-facing docs; unauthenticated browser inspection. Long-term effectiveness and forecast calibration remain unmeasured.",
+        "cost": "Local full lane plus hosted installation/rendering and independent review; initial failures required rework. No reliable long-term cost estimate.",
+        "follow_up": "Recheck on workflow/rules, runner, dependency or delegation changes and by 2027-01-15; issue #13 tracks the maintenance review. Preserve failures and adjust or retire controls from evidence."
       },
       "next_review": "2027-01-15"
     },
@@ -370,7 +372,8 @@
         "docs/changes/001-engineering-system.md",
         "docs/work.md",
         "docs/project-management.md",
-        "docs/changes/003-public-workflow.md"
+        "docs/changes/003-public-workflow.md",
+        "docs/acceptance/2026-10-17-public-workflow.md"
       ],
       "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process.",
@@ -380,21 +383,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within the dated acceptance scope; limitations retained.",
-        "scope": "Independent design, controls and reader reviews; three material findings repaired and re-reviewed.",
+        "outcome": "Passed within the dated scope after recorded repairs; limitations retained.",
+        "scope": "Two isolated disjoint worker checkouts, lead integration and clean-context independent reviews of publication and CI repairs.",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-public-workflow.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-public-workflow.md"
         ],
         "effectiveness": "effective",
-        "findings": "Independent controls review found three material issues in new checks; lead repaired them and reviewer confirmed resolution. Reader review found no required correction.",
-        "cost": "Separate design, controls and reader review; measured productivity benefit unknown.",
-        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+        "findings": "Two isolated disjoint worker checkouts, lead integration and clean-context independent reviews of publication and CI repairs. Long-term effectiveness and forecast calibration remain unmeasured.",
+        "cost": "Local full lane plus hosted installation/rendering and independent review; initial failures required rework. No reliable long-term cost estimate.",
+        "follow_up": "Recheck on workflow/rules, runner, dependency or delegation changes and by 2027-01-15; issue #13 tracks the maintenance review. Preserve failures and adjust or retire controls from evidence."
       },
       "next_review": "2027-01-15"
     },
@@ -541,31 +544,32 @@
         "docs/setup.md#evidence-and-releases",
         "docs/engineering.md",
         "docs/runbook.md#native-acceptance-lane",
-        "native/upstream.json"
+        "native/upstream.json",
+        "docs/acceptance/2026-10-17-public-workflow.md"
       ],
       "failure_response": "Hold the affected acceptance/release claim until failed or unexecuted required lanes are resolved or scope is explicitly reduced.",
-      "limitations": "Working-tree hook does not prove a partially staged candidate; no tag, publication, remote required check or release automation is installed.",
-      "enforcement": "Manual requirement; local hook and portable CI recipe support review but do not enforce release authority.",
+      "limitations": "Working-tree hooks do not prove a partially staged candidate. Hosted source/check enforcement does not establish native gameplay, semantic review or release authority. No tag or release automation is installed; administrators can later change rules.",
+      "enforcement": "Main requires a PR, the Actions-bound controller check and resolved conversations; no force-push/deletion or configured bypass. Lead still owns native/release acceptance. Zero required human approvals is an explicit single-account limit; agent review is not human approval.",
       "status": "active",
       "rationale": null,
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Staged source export common lane passed in dated acceptance.",
-        "scope": "Recorded tree ef964cecc2133caf59b61c86556c9d3aaa455510; no remote release/branch protection claim.",
+        "outcome": "Passed within the dated scope after recorded repairs; limitations retained.",
+        "scope": "Public source audit, Actions-bound active rules, rejected pending/failing-check merges, a rejected CI-passing direct fast-forward push with unchanged main, and successful protected PR14 merge.",
         "evidence": [
-          "docs/acceptance/2026-10-17-engineering-system.md"
+          "docs/acceptance/2026-10-17-public-workflow.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-public-workflow.md"
         ],
         "effectiveness": "partially_effective",
-        "findings": "Candidate scope and validation lanes inspected; current scripts/docs are verified by the common lane while native evidence remains historical. The final checkpoint identifies delivered source.",
-        "cost": "Local hook supports verification but is bypassable; no remote enforcement or publication.",
-        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+        "findings": "Public source audit, Actions-bound active rules, rejected pending/failing-check merges, a rejected CI-passing direct fast-forward push with unchanged main, and successful protected PR14 merge. Native/release authority remains manual; no independent human approval is claimed.",
+        "cost": "Local full lane plus hosted installation/rendering and independent review; initial failures required rework. No reliable long-term cost estimate.",
+        "follow_up": "Recheck on workflow/rules, runner, dependency or delegation changes and by 2027-01-15; issue #13 tracks the maintenance review. Preserve failures and adjust or retire controls from evidence."
       },
       "next_review": "2027-01-15"
     },
@@ -627,31 +631,32 @@
         "package.json",
         "package-lock.json",
         ".puppeteerrc.cjs",
-        "docs/decisions/004-documentation-controls.md"
+        "docs/decisions/004-documentation-controls.md",
+        "docs/acceptance/2026-10-17-public-workflow.md"
       ],
       "failure_response": "Fix syntax or missing setup; regenerate stale output and inspect the rendered result. Never call a denied browser launch a passed check. Resolve semantic/readability findings through C-USABILITY/C-REVIEW.",
-      "limitations": "Receipt freshness is not cross-host byte equality or proof against deliberate falsification. Rendering and SVG metadata do not prove meaning, accessibility for every reader or readable layout. Human rendered inspection is required; Linux CI remains unverified.",
+      "limitations": "Receipt freshness is not cross-host byte equality or proof against deliberate falsification. Rendering and SVG metadata do not prove meaning, accessibility for every reader or readable layout. Human rendered inspection is required. Ubuntu 24.04 CI was exercised with a scoped runner Chrome sandbox profile; other Linux hosts remain unverified.",
       "enforcement": "Common command fails on renderer errors, missing title/description/ID or changed input/output receipts; negative fixtures include a real parse failure. No global installation or automatic fetch.",
       "status": "active",
       "rationale": "Required to keep user-facing visual explanations reviewable and synchronized.",
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within the dated acceptance scope; limitations retained.",
-        "scope": "Three Mermaid renders, receipt and accessibility/ID checks, real syntax rejection, environment isolation and pre-write containment regressions.",
+        "outcome": "Passed within the dated scope after recorded repairs; limitations retained.",
+        "scope": "Real Mermaid rendering and malformed-input parser rejection on macOS and hosted Ubuntu24.04 after observed sandbox/API repairs.",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-public-workflow.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-documentation-review.md"
+          "docs/acceptance/2026-10-17-public-workflow.md"
         ],
         "effectiveness": "effective",
-        "findings": "All three real renders passed and were inspected at ordinary width. Negative cases detect drift, malformed Mermaid, missing accessibility/style metadata and escaping destinations. Real Puppeteer probe rejects ambient browser drift.",
-        "cost": "195 local npm packages, one pinned browser and approximately 1.1 MB of SVGs; ongoing upgrade/readability cost unmeasured.",
-        "follow_up": "Reassess on the recorded event trigger or by next_review; record observed drift, false alarms, escaped defects and review burden before renewing or retiring this control."
+        "findings": "Real Mermaid rendering and malformed-input parser rejection on macOS and hosted Ubuntu24.04 after observed sandbox/API repairs. Long-term effectiveness and forecast calibration remain unmeasured.",
+        "cost": "Local full lane plus hosted installation/rendering and independent review; initial failures required rework. No reliable long-term cost estimate.",
+        "follow_up": "Recheck on workflow/rules, runner, dependency or delegation changes and by 2027-01-15; issue #13 tracks the maintenance review. Preserve failures and adjust or retire controls from evidence."
       },
       "next_review": "2027-01-15"
     }

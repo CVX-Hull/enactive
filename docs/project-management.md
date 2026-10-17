@@ -19,8 +19,8 @@ GitHub Issues and the [public Project](https://github.com/users/CVX-Hull/project
 dependencies, estimates and blockers. Repository docs own durable purpose,
 contracts, procedures, decisions and dated evidence. [Work](work.md) is the
 navigation entry point; exceptions are issues linked to their affected standard.
-Repository/Project creation and configuration require separate verification;
-this document alone does not establish that they exist or are enforced.
+[Dated acceptance](acceptance/2026-10-17-public-workflow.md) records live configuration
+and enforcement probes; this contract alone does not prove current settings.
 
 Use GitHub's issues, sub-issues, dependencies, milestones, pull requests, fields,
 saved views and built-in workflows. No custom tracker or background scheduler.
@@ -38,6 +38,10 @@ in plain language; implementation detail belongs behind links. Routine authorize
 work continues; changed user constraints or substantial commitments need user input.
 
 ## Work items and flow
+
+During triage, the lead adds selected issues to the linked Project and assigns
+Backlog, owner, Horizon, Priority, Size and Confidence. A newly opened issue is
+not automatically Ready; unset planning fields are resolved before commitment.
 
 An issue represents one independently reviewable outcome. A milestone groups
 issues into a useful capability or learning result with explicit acceptance and
@@ -140,6 +144,8 @@ Record concrete findings and follow-up owners, not automatic date renewal.
 | P-TRUTH/P-UNCERTAINTY → S-EVIDENCE/S-DELIVERY | C-PORTABLE/C-NATIVE/C-RELEASE: exact-candidate checks and separate evidence lanes; merge/CI success alone cannot establish Done |
 
 GitHub fields and views aid visibility; they do not enforce semantic readiness,
-WIP or acceptance. Branch/ruleset checks are enforced only once configured and
-verified; unavailable independent human review remains an explicit gap. Agent
+WIP or acceptance. Main currently requires a PR and the observed Actions `controller` check with
+strict freshness; force-push/deletion and actor bypass are disabled. Required
+human approvals are zero; unavailable independent human review remains an explicit gap.
+Inspect the active rules and rerun relevant probes after configuration changes. Agent
 review is evidence for lead adjudication, never a fabricated human approval.

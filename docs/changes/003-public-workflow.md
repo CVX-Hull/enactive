@@ -1,10 +1,14 @@
 ---
 owner: lead
-status: proposed
-review_trigger: GitHub workflow, publication scope or verification changes
+status: historical
+date: '2026-10-17'
+scope: Implemented public workflow and verification increment
 ---
 
 # Public project workflow
+
+Implemented design intent; [dated acceptance](../acceptance/2026-10-17-public-workflow.md)
+records observed results and limits. Current contracts own behavior.
 
 ## Outcome and scope
 
