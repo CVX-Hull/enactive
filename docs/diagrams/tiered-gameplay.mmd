@@ -1,0 +1,22 @@
+---
+title: Proposed gameplay — bounded delegation and feedback
+---
+flowchart TB
+  accTitle: Proposed tiered CDDA gameplay with feedback
+  accDescr: The operator directs the strategist and can stop new dispatch. The strategist gives a staged objective to a deterministic supervisor. The supervisor supplies scoped work and fresh evidence to bounded skills, optionally assisted by a tactical model. Skills submit one primitive through the existing authority gate. CDDA returns visible observations to the supervisor. Verified progress, ambiguity and failures return to the strategist. Boxes are responsibilities rather than mandatory separate models or processes. Pause cannot cancel every running native activity.
+  U["You\nGoals and control"]
+  P["Capable strategist\nPlan and repair stages"]
+  S["Deterministic supervisor\nTrack evidence, progress and budgets"]
+  E["Bounded skills\nOptional tactical model"]
+  C["Existing authority gate\nOne writer; fresh session and revision"]
+  G["Windowed CDDA\nEngine decides outcomes"]
+  U -->|Goal and constraints| P
+  P -->|Next-stage contract| S
+  S -->|Progress, uncertainty or failure| P
+  S -->|Scoped work and fresh evidence| E
+  E -->|Partial result or stop reason| S
+  E -->|One primitive candidate| C
+  C -->|Validated input| G
+  G -->|Actual frame and visible state| S
+  C -->|Rejection or unknown outcome| S
+  U -->|Pause new dispatch| C

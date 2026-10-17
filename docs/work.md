@@ -17,6 +17,11 @@ owns Now/Next/Later sequencing. This page is navigation, not a second backlog.
 [Project management](project-management.md) defines the workflow and
 [engineering](engineering.md) owns mandatory standards.
 
+The [closed-loop gameplay outcome](https://github.com/CVX-Hull/cdda-player/issues/16)
+tracks the [tiered-gameplay proposal](research-tiered-gameplay.md), its bounded
+implementation slices, evaluation gates and maintenance follow-ups. Native
+interruption/recovery remains in [its existing outcome](https://github.com/CVX-Hull/cdda-player/issues/5).
+
 Use Direction for outcomes and sequencing, Execution for delivery stage, and
 Needs attention for issues labeled blocked, decision-needed or risk. At checkpoints,
 the lead marks aging review/validation work with a risk label and records the cause;

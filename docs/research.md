@@ -41,6 +41,10 @@ maintenance question rather than expanding bibliography for its own sake.
 
 ## Embodied control / VLA
 
+The [tiered-gameplay research proposal](research-tiered-gameplay.md) reviews
+hierarchical execution, routing, memory and recovery through 2026-10-17, including
+October revisions. It is a discussion proposal, not current runtime behavior.
+
 | Primary source / date | Evidence and transfer limit | Consequence |
 | --- | --- | --- |
 | [Leave No Observation Behind (A2C2)](https://arxiv.org/html/2509.23224v1), Sept 2025 | Full text; robot action-chunk correction. Results are task/hardware dependent. | Fresh observations within bounded routines; interrupts override stale plans |

@@ -65,6 +65,12 @@ Next priorities and any open issues are in [work](work.md). Current priorities a
 reliability and evidence quality before expanding unattended play. A future
 interrupt protocol needs a separate design and native acceptance.
 
+The [tiered-gameplay proposal](research-tiered-gameplay.md) explores a capable
+planner, bounded skills and feedback, with additional model tiers conditional on
+measured benefit. Its [tracked outcome](https://github.com/CVX-Hull/cdda-player/issues/16)
+links the design, implementation and evaluation work; it is not current gameplay
+capability.
+
 No platform migration or new hosted service is being proposed. We will reopen
 platform and transport choices when requirements or measured maintenance costs
 justify it, using the [decision records](decisions/002-local-contract.md).
