@@ -41,6 +41,12 @@ maintenance question rather than expanding bibliography for its own sake.
 
 ## Embodied control / VLA
 
+The [memory and continuous-learning review](research-memory-learning.md) covers
+episode memory, revisable beliefs, retrieval, forgetting, evaluated improvement
+and mathematical foundations through 2026-10-18, including October 14–15
+preprints. It is a discussion proposal; current task memory and action authority
+remain defined by the protocol.
+
 The [tiered-gameplay research proposal](research-tiered-gameplay.md) reviews
 hierarchical execution, routing, memory and recovery through 2026-10-17, including
 October revisions. It is a discussion proposal, not current runtime behavior.
