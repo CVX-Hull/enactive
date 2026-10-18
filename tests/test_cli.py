@@ -2,6 +2,8 @@
 from contextlib import redirect_stderr, redirect_stdout
 from io import BytesIO, StringIO
 import json
+from pathlib import Path
+import tempfile
 import unittest
 from urllib.error import HTTPError
 from unittest.mock import Mock, patch
@@ -85,3 +87,65 @@ class RecoveryCliTests(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertEqual(json.loads(output), result)
         self.assertEqual(opener.open.call_count, 1)
+
+
+class GameplayCliTests(unittest.TestCase):
+    invoke = RecoveryCliTests.invoke
+
+    def test_gameplay_commands_use_exact_payload_and_authenticated_endpoint(self):
+        cases = [(["gameplay-start", "east", "--distance", "2", "--expect", "seen:7"],
+                  {"kind": "start", "direction": "east", "distance": 2, "expected_session": "seen", "expected_revision": 7}),
+                 (["gameplay-continue", "run", "--epoch", "3", "--expect", "seen:8"],
+                  {"kind": "continue", "run_id": "run", "execution_epoch": 3, "expected_session": "seen", "expected_revision": 8}),
+                 (["gameplay-abandon", "run", "--epoch", "3"],
+                  {"kind": "abandon", "run_id": "run", "execution_epoch": 3}),
+                 (["gameplay-request"], {"kind": "planning_request"})]
+        for arguments, expected in cases:
+            code, _, opener = self.invoke(arguments, b'{"status":"accepted","gameplay":null}')
+            self.assertEqual(code, 0)
+            request = opener.open.call_args.args[0]
+            self.assertEqual(request.full_url, "http://127.0.0.1:8766/api/gameplay")
+            self.assertEqual(json.loads(request.data), expected)
+            self.assertEqual(request.get_header("X-cdda-token"), "local")
+
+    def test_candidate_file_is_bounded_json_with_exact_current_schema(self):
+        candidate = {"schema": "gameplay/1", "record_type": "PlanCandidate", "candidate_id": "candidate", "task_id": "task", "task_version": 1,
+                     "plan_id": "plan", "plan_version": 1, "execution_epoch": 0, "evidence_session": "seen",
+                     "evidence_revision": 7, "stage": "outbound", "direction": "east", "distance_remaining": 2,
+                     "skill_id": "cardinal_movement", "skill_version": 2, "reason": "Visible route is clear"}
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "candidate.json"
+            path.write_text(json.dumps(candidate))
+            arguments = ["gameplay-plan", "request", "--candidate", str(path)]
+            code, _, opener = self.invoke(arguments)
+            self.assertEqual(code, 0)
+            self.assertEqual(json.loads(opener.open.call_args.args[0].data),
+                             {"kind": "plan", "request_id": "request", "candidate": candidate})
+            for text in [json.dumps({**candidate, "schema": "gameplay/2"}), json.dumps({**candidate, "extra": 1}),
+                         '{"schema":"gameplay/1","schema":"gameplay/1"}', '[]', 'NaN', 'x' * 4097,
+                         'import os; os.system("false")']:
+                path.write_text(text)
+                code, _, opener = self.invoke(arguments)
+                self.assertEqual(code, 1, text[:80])
+                opener.open.assert_not_called()
+            path.unlink()
+            code, _, opener = self.invoke(arguments)
+            self.assertEqual(code, 1)
+            opener.open.assert_not_called()
+
+    def test_gameplay_invalid_cli_authority_never_contacts_service(self):
+        for arguments in (["gameplay-start", "north", "--distance", "5", "--expect", "s:1"],
+                          ["gameplay-start", "north", "--distance", "1"],
+                          ["gameplay-continue", "run", "--epoch", "-1", "--expect", "s:1"],
+                          ["gameplay-abandon", "run"], ["gameplay-request", "--extra", "1"]):
+            with self.subTest(arguments=arguments), self.assertRaises(SystemExit) as error:
+                self.invoke(arguments)
+            self.assertEqual(error.exception.code, 2)
+
+    def test_gameplay_http_ingress_and_runtime_rejections_preserve_json_without_retry(self):
+        for result in ({"error": "Invalid command fields"},
+                       {"status": "rejected", "error": "Stale request", "gameplay": {"run_id": "retained"}}):
+            code, output, opener = self.invoke(["gameplay-request"], json.dumps(result).encode(), error=True)
+            self.assertEqual(code, 1)
+            self.assertEqual(json.loads(output), result)
+            self.assertEqual(opener.open.call_count, 1)

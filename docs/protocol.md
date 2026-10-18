@@ -23,7 +23,8 @@ See [coordinated migration](runbook.md#coordinated-migration).
 
 The in-process controller API exposes `acquire_run(task_id, execution_epoch,
 owner, *, expected_session, expected_revision)`, `execute_run(lease, *, action,
-expected_session, expected_revision, timeout=None)` and `release_run(lease)`.
+expected_session, expected_revision, logical_action_id, deadline_monotonic,
+timeout=None)` and `release_run(lease)`.
 A frozen RunLease belongs to exactly one controller and native session; only the
 exact returned Python object authorizes input. Descriptive fields or a JSON copy
 cannot reconstruct it. The public status `run_lease` is null or descriptive
@@ -40,8 +41,8 @@ Ordinary external key/action/walk/resume reject while leased. Existing HTTP/CLI
 input reaches this same controller gate; it cannot supply or obtain a capability.
 Observe/status, record-only goal and Pause remain available. The viewer displays
 run ownership and disables ordinary input/Resume until takeover. A model call
-never holds controller locks. The service does not yet instantiate the supervisor
-or acquire these leases automatically.
+never holds controller locks. An explicit gameplay start/continue connects the
+service supervisor to a lease; service startup and transport Resume never do.
 
 A leased call submits one semantic action, using existing native-v3 observation
 and input checks. The original command admission generation and exact live lease
@@ -55,7 +56,86 @@ and also pauses. Recovery, native takeover/session change, a paused native
 observation, transport failure and shutdown invalidate ownership. Resume does not
 restore a lease. Startup restores no task or capability. Native token validation
 remains the final input commit gate; an already committed action cannot be undone.
-Exact logical-intent/native-receipt assembly and service lifecycle remain #36 work.
+`execute_run` returns an envelope containing the logical action ID, exact native
+`request` or null, `result`, `published`, and original terminal
+`received_monotonic` or null. Preflight Observe is not an action receipt. The
+absolute monotonic intent/task deadline is checked after queueing/preflight and
+under the publication lock; it bounds both exchanges and the native deadline.
+`observation_snapshot()` returns a copied current observation and original first
+receipt clock. Reading a snapshot does not renew its freshness.
+
+## Integrated gameplay lifecycle
+
+`harness/runtime.py` connects the passive gameplay package to the controller. The
+service constructs one GameplayRuntime but starts no task until an authenticated
+explicit request. One run worker owns the supervisor, evidence store, external
+planner inbox and exact lease. Evidence is retained under the project session
+journal directory. Restart restores neither task execution nor authority.
+
+Authenticated `POST /api/gameplay` uses the same loopback host/origin/token and
+4096-byte request limits as operator commands. Fields must match exactly:
+
+| kind | Fields besides kind |
+| --- | --- |
+| start | direction, distance (1–4), expected_session, expected_revision |
+| continue | run_id, execution_epoch, expected_session, expected_revision |
+| abandon | run_id, execution_epoch |
+| planning_request | none |
+| plan | request_id, candidate (gameplay/1 PlanCandidate object) |
+
+Start constructs the waypoint task from the observed origin with existing bounded
+budgets. Continue preserves task/history/original budgets, requires a fresh same-world
+checkpoint and no unresolved effect, and creates a new epoch/lease. Neither resumes
+transport. Completed/stopped tasks remain inspectable until explicit abandon;
+starting another task requires abandonment and worker exit. Recording goal text
+still does not start or replace a task. Ordinary Pause immediately revokes controller
+authority without waiting for a model/native exchange; serialized supervisor
+invalidation follows. Completion releases the lease and leaves transport paused.
+Recovery keeps its existing exact-generation contract; no extra preceding Pause
+changes the caller's supplied generation.
+
+Runtime responses contain status `accepted` or `rejected`, a gameplay snapshot and
+an error when applicable; planning_request additionally returns its pending request
+or null. HTTP ingress errors retain ordinary error-only responses and status codes.
+An accepted asynchronous lifecycle request is not a completed task; inspect status.
+The CLI exposes gameplay-start, gameplay-continue, gameplay-abandon, gameplay-request
+and gameplay-plan; see the [operator procedure](runbook.md).
+
+The selected player is a dedicated sub-agent in this active Codex chat. The lead
+admits tasks and owns runtime/verification. The player reads bounded visible evidence
+and returns candidate data only; it does not send raw game inputs or manage the game.
+Role instructions are not an OS sandbox. The same external planning interface can
+be answered by the lead, with no automatic fallback. Missing player, deadline,
+invalid plan or changed evidence stops visibly. No separate paid API is connected.
+
+Each external request contains request_id, deadline_ms and decoded ProviderInput
+`input` (task, packet, skills, binding, public_context, admission_monotonic). One
+request accepts at most one candidate; duplicates, wrong IDs, cancelled and late
+answers reject. A pending observation may age while reasoning. Before admitting
+that answer, runtime obtains fresh Observe and explicitly revalidates equivalence:
+same session/revision/turn/position, complete visible scene, actions, boundary/control
+identity and retained frame hash, with no intervening invalidation. It records the
+old/new evidence, preserves the original candidate binding, and reruns fresh guards.
+Changed evidence stops and requires explicit continuation/replanning; no timestamp,
+revision or deadline is silently rewritten. Input evidence still expires at three
+seconds. Status reports an aged planning source as stale without invalidating it
+merely for age; disputes still revoke evidence authority.
+
+Every intent reserves evidence capacity before dispatch, validates its original
+absolute deadline and real lease, and maps to exactly one native action admission.
+Only attributable successful retained after-evidence can earn progress. Known
+nonpublication is not_dispatched; exact rejection is rejected; uncertain publication,
+missing/malformed frame, timeout or changed-world result remains unknown. Observe
+reconciliation cannot retrospectively turn an unknown action into success. Preserve
+raw failure receipts and reservations for unresolved effects; never replay.
+
+`/api/status.gameplay` is null or contains run_id, TaskSpec `task`, RunStatus `run`,
+`planner`, and last_receipt. Runtime supplies actual descriptive ownership, pause,
+next check and historical progress; status never authorizes an input. Planner shows
+external_chat, pending_request_id, deadline_ms and usage_known=false. Receipt summary
+shows logical_action_id, native_request_id, disposition and reason. The spectator
+shows task, stage, progress, next check and stop reason, with evidence and unknown
+cost details behind disclosure; no private reasoning transcript is exposed.
 
 ## Transport and state
 
@@ -280,8 +360,8 @@ PrimitiveResult, StageResult and RunStatus. Serialized records carry
 `schema: "gameplay/1"` and `record_type`; `to_dict`/`from_dict` reject unknown fields,
 wrong types, unsupported enums, nonfinite numbers and contradictory completion
 claims. JSON is bounded to 1 MiB. The injected planner below consumes these records;
-a concrete model adapter, supervisor and task executor remain later work under
-the [larger design](design/gameplay.md).
+the runtime above connects the passive planner, supervisor and bounded skill.
+Broader task formation remains outside this [first slice](design/gameplay.md).
 
 [EvidenceStore](../harness/gameplay/evidence.py) accepts only native-v3 positively
 marked normal-play observations with a successful frame and the existing visible
@@ -377,13 +457,14 @@ applicability. Candidate JSON must satisfy the existing PlanCandidate schema,
 binding, supplied skill/version and exact route semantics. Success returns data,
 never permission to dispatch. `cancel` and `close` invalidate pending/completed
 candidates; close returns without waiting for a stuck provider. No automatic retry,
-restoration, model selection or live provider is implemented.
+restoration or model selection occurs. The runtime supplies the external-chat
+provider; deterministic fixtures remain test-only.
 
 | Limit | Contract |
 | --- | --- |
 | Concurrent/lifetime calls | One physical call; at most ten lifetime calls per port |
 | Context/reply | At most 1 MiB each; defaults 1 MiB / 16 KiB |
-| Input/output tokens | At most 1,048,576 each; defaults 32,768 / 2,048; adapter must honor them, bytes are not token estimates |
+| Input/output tokens | Network/fixture declared bounds at most 1,048,576 each; defaults 32,768 / 2,048. External chat usage is unmeasured and not enforced by this adapter; bytes are not token estimates |
 | Supplied capabilities/context | At most 32 descriptors and 4096 public-context characters |
 | Uninvoked rejections | Last 64 audit entries plus total/dropped counters |
 | Deadline | At most 30 seconds per call, further limited by task and remaining budgets |
@@ -397,7 +478,11 @@ measured duration running.
 Network mode requires declared credential availability, bounded pricing and a
 positive operator-approved spend ceiling/reservation. Missing prerequisites reject
 before invocation. These are adapter declarations, not credential discovery or a
-billing-system guarantee. This increment uses fixture providers only. Missing cost
+billing-system guarantee. External mode requires zero API reservation/spend; it
+enforces byte/call/deadline/gameplay bounds but cannot measure or cap the surrounding
+Codex chat usage. `external-unreported` explicitly marks unavailable model provenance;
+`external-chat-v1` identifies the adapter configuration. Usage fields remain null,
+not fabricated zero tokens or subscription cost. Missing cost
 or malformed/contradictory usage retains the reservation; valid actual cost can
 settle even when token metrics are absent. Over-bound raw usage freezes future
 calls before evaluation sanitization. Representable overshoot remains visible;
@@ -473,7 +558,7 @@ undoing observed progress. `EvidenceStore.observation(ref)` supplies an integrit
 checked deep copy of retained history; it never refreshes authority or freshness.
 
 The passive supervisor below owns task completion, handoff, epochs and nonprogress
-readmission. Controller leases now exist; connecting this passive caller to them remains a #36 duty. The [native acceptance](acceptance/2026-10-17-bounded-skills.md)
+readmission. The runtime above connects this passive caller to controller leases. The [native acceptance](acceptance/2026-10-17-bounded-skills.md)
 proves a short manually driven example, not autonomy, trap safety or general survival.
 
 ## Passive waypoint supervision
@@ -491,9 +576,9 @@ accounting throughout continuations.
 stage, skill version and StepProposal. `grants_dispatch_authority` is false.
 `settle` requires that complete intent and its exact logical ID/before reference.
 Only skill-verified movement earns progress; duplicate results cannot earn credit
-twice and conflicting results cannot release pending state. The future #36 caller
-must reserve evidence, acquire/recheck the real controller lease, map native
-receipts and serialize dispatch. Merely obtaining an intent proves none of these.
+twice and conflicting results cannot release pending state. Runtime reserves
+evidence, acquires/rechecks the real lease, maps native receipts and serializes
+dispatch. Merely obtaining an intent proves none of these.
 
 An unresolved intent expires at publication time plus its bounded wait ceiling.
 Every mutating API checks expiry before its own operation; polling and settlement
@@ -539,4 +624,6 @@ and evaluation event snapshots compose with the existing RunRecorder; the caller
 and independent assessor supply manifest/outcome and missing measurements remain
 unknown. Synthetic tests are not native efficacy evidence. See the
 [reviewed design](changes/010-passive-supervisor.md) for ownership, migration and
-acceptance; #36 remains the required production integration gate.
+acceptance. The runtime adds production integration without making this package
+a dispatcher. Planning revalidation and non-authorizing status inspection support
+slow external decisions while preserving fresh-input guards.

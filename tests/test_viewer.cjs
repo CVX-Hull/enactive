@@ -260,5 +260,120 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.match(element('recovery-evidence').textContent, /restored-control/);
   assert.match(element('recovery-result').textContent, /Delivery unknown/);
   assert.equal(element('recovery-debug').disabled, true);
-  console.log('Viewer regressions passed: exact decoded authority, takeover/owner/stale/capture guards, independent requests and Pause, explicit reconciliation and retained uncertainty.');
+  // The task interface retains observed authority and exact run/epoch bindings.
+  function taskSnapshot(state = 'planning', changes = {}) {
+    return {run_id: 'run-exact', task: {task_id: 'task-exact', distance: 2, direction: 'east',
+      origin: [0, 0, 0], target: [2, 0, 0], budgets: {primitives: 8}},
+      run: {state, stage_id: 'outbound-stage', execution_epoch: 4, model_id: 'external-unreported',
+        configuration_id: 'external-chat-v1', lease_owner: 'waypoint player', paused: false, fresh: true,
+        progress: {verified_steps: 1, displacement: [1, 0, 0]}, next_check: 'Wait for a candidate, then revalidate',
+        last_public_reason: 'Planning from retained public evidence', remaining_budgets: {primitives: 7},
+        evidence: [{observation_id: 'observed-1', frame_path: 'retained/frame.png', frame_sha256: 'abc123'}], ...changes},
+      planner: {kind: 'external_chat', pending_request_id: 'planning-exact', deadline_ms: Date.now() + 20000, usage_known: false},
+      last_receipt: {logical_action_id: 'logical-1', native_request_id: 'native-1', disposition: 'returned', reason: 'Exact receipt'}};
+  }
+  run('recoveryNeedsObserve = false');
+  render(30, 'task-start.png');
+  element('task-direction').value = 'east';
+  element('task-distance').value = '2';
+  assert.equal(element('task-start').disabled, true, 'task start must await matching decoded frame');
+  await decode();
+  assert.equal(element('task-start').disabled, false);
+  run('void gameplayCommand("start")');
+  const startTask = request('/api/gameplay', 'start');
+  assert.deepEqual(JSON.parse(startTask.options.body), {kind: 'start', direction: 'east', distance: 2,
+    expected_session: 'test', expected_revision: 30});
+  assert.equal(startTask.options.headers['X-CDDA-Token'], 'test-token');
+  assert.equal(run('taskBusy'), true);
+  assert.equal(element('task-start').disabled, true);
+  assert.equal(element('pause').disabled, false);
+  run('void command("pause")');
+  await reply(request('/api/command', 'pause'), {status: 'pause_requested'});
+  await statusReply();
+  assert.equal(run('taskBusy'), true, 'Pause must not wait for the task request');
+  context.input.gameplay = taskSnapshot();
+  context.input.run_lease = {owner: 'waypoint player'};
+  await reply(startTask, {status: 'accepted', gameplay: context.input.gameplay});
+  await statusReply();
+  assert.equal(element('task-state').textContent, 'PLANNING');
+  assert.match(element('task-summary').textContent, /2 tile.*east.*return/);
+  assert.match(element('task-player').textContent, /external-unreported.*waiting for candidate/);
+  assert.match(element('task-executor').textContent, /waypoint player/);
+  assert.match(element('task-progress').textContent, /1 \/ 4 verified/);
+  assert.match(element('task-evidence').textContent, /retained\/frame.png/);
+  assert.match(element('task-evidence').textContent, /native-1/);
+  assert.match(element('task-budgets').textContent, /original.*primitives/s);
+  // A slow player stays visible while the input frame ages; status never submits work.
+  context.input.state.timestamp_ms = Date.now() - 5000;
+  context.input.gameplay.run.fresh = false;
+  for (let index = 0; index < 4; index++) run('render(input)');
+  assert.equal(element('task-state').textContent, 'PLANNING');
+  assert.match(element('task-freshness').textContent, /stale/);
+  assert.match(element('task-next').textContent, /revalidate/);
+  assert.equal(element('task-continue').disabled, true);
+  assert.equal(element('pause').disabled, false);
+  assert.equal(requests.length, 0, 'slow planning status cannot start, continue, plan or retry');
+
+  render(31, 'task-paused.png', {paused: true});
+  context.input.pause_requested = true;
+  context.input.gameplay = taskSnapshot('paused', {paused: true, lease_owner: null,
+    last_public_reason: 'Operator paused during planning'});
+  run('render(input)');
+  await decode();
+  assert.equal(element('task-state').textContent, 'PAUSED');
+  assert.match(element('task-reason').textContent, /Operator paused/);
+  assert.equal(element('task-continue').disabled, true, 'Continue must not implicitly resume native transport');
+  render(32, 'task-resumed.png');
+  context.input.gameplay = taskSnapshot('paused', {paused: true, lease_owner: null});
+  run('render(input)');
+  assert.equal(element('task-continue').disabled, true);
+  await decode();
+  assert.equal(element('task-continue').disabled, false);
+  run('void gameplayCommand("continue")');
+  const continueTask = request('/api/gameplay', 'continue');
+  assert.deepEqual(JSON.parse(continueTask.options.body), {kind: 'continue', run_id: 'run-exact', execution_epoch: 4,
+    expected_session: 'test', expected_revision: 32});
+  await reply(continueTask, {status: 'rejected', error: 'Continuation authority is stale', gameplay: context.input.gameplay}, false);
+  await statusReply();
+  assert.match(element('error').textContent, /Continuation authority is stale/);
+  assert.match(element('task-result').textContent, /rejected/);
+  assert.equal(element('pause').disabled, false);
+  assert.equal(requests.length, 0, 'rejected continuation is never retried');
+
+  render(33, 'task-unknown.png');
+  context.input.gameplay = taskSnapshot('unknown', {lease_owner: null,
+    last_public_reason: 'Published action receipt unavailable; effects unknown'});
+  context.input.gameplay.last_receipt.disposition = 'unknown';
+  run('render(input)');
+  await decode();
+  assert.equal(element('task-state').textContent, 'UNKNOWN');
+  assert.equal(element('task-continue').disabled, true);
+  assert.match(element('task-progress').textContent, /1 \/ 4 verified/);
+  assert.match(element('task-reason').textContent, /effects unknown/);
+  assert.match(element('task-evidence').textContent, /unknown/);
+  assert.equal(element('task-abandon').disabled, false);
+  run('void gameplayCommand("abandon")');
+  const abandonTask = request('/api/gameplay', 'abandon');
+  assert.deepEqual(JSON.parse(abandonTask.options.body), {kind: 'abandon', run_id: 'run-exact', execution_epoch: 4});
+  abandonTask.reject(new Error('Service unavailable'));
+  await tick();
+  await statusReply();
+  assert.match(element('error').textContent, /Task response unavailable/);
+  assert.equal(element('pause').disabled, false);
+  assert.equal(requests.length, 0);
+  render(34, 'task-completed.png');
+  context.input.gameplay = taskSnapshot('completed', {lease_owner: null, paused: true,
+    progress: {verified_steps: 4, displacement: [0, 0, 0]}});
+  run('render(input)');
+  await decode();
+  assert.equal(element('task-state').textContent, 'COMPLETED');
+  assert.match(element('task-progress').textContent, /4 \/ 4 verified/);
+  assert.equal(element('task-start').disabled, true, 'a completed retained task must be explicitly abandoned');
+  assert.equal(element('task-continue').disabled, true);
+  assert.equal(element('task-abandon').disabled, false);
+  assert.match(element('task-control-note').textContent, /Abandon this task before starting another/);
+  const html = fs.readFileSync(path.join(__dirname, '../web/index.html'), 'utf8');
+  assert.match(html, /Codex usage, token consumption and subscription cost are unmeasured/);
+  assert.match(html, /Unknown effects prohibit continuation/);
+  console.log('Viewer regressions passed: exact decoded authority; task start/continue/abandon identity; slow planning, stale/paused/unknown/error evidence; independent Pause and recovery; no implicit resume or retry.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

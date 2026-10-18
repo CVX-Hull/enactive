@@ -41,18 +41,18 @@ Active and deprecated controls fail after their due date. Event triggers can req
 
 | Control | Lifecycle | Last exercise | Maintenance review | Effectiveness | Next review |
 | --- | --- | --- | --- | --- | --- |
-| C-PORTABLE | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
-| C-RUNTIME | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
-| C-NATIVE | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
-| C-USABILITY | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
+| C-PORTABLE | active | 2026-10-18 | 2026-10-18 | effective | 2027-01-15 |
+| C-RUNTIME | active | 2026-10-18 | 2026-10-18 | effective | 2027-01-15 |
+| C-NATIVE | active | 2026-10-18 | 2026-10-18 | effective | 2027-01-15 |
+| C-USABILITY | active | 2026-10-18 | 2026-10-18 | effective | 2027-01-15 |
 | C-BOUNDARY | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
-| C-REVIEW | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
+| C-REVIEW | active | 2026-10-18 | 2026-10-18 | effective | 2027-01-15 |
 | C-GOVERNANCE | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-PROTOCOL | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-SETUP | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
 | C-RELEASE | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
 | C-MAINTENANCE | active | 2026-10-17 | 2026-10-17 | unassessed | 2027-01-15 |
-| C-VISUAL | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
+| C-VISUAL | active | 2026-10-18 | 2026-10-18 | effective | 2027-01-15 |
 
 ## Mechanisms and coverage
 
@@ -64,47 +64,47 @@ Owner: maintainer. Trigger: each integration checkpoint and configured CI event.
 Enforcement: Common command and opt-in local hook; main also requires the observed GitHub Actions controller check (app 15368) with strict freshness under active ruleset 25319489. Local hooks remain bypassable; dated hosted/probe evidence is in public-workflow acceptance.
 Failure response: Preserve failure output, fix the cause and rerun before claiming portable acceptance.
 
-Evidence / implementation: [tools/check.py](../tools/check.py), [tests/test_controller.py](../tests/test_controller.py), [tests/test_server.py](../tests/test_server.py), [tests/test_setup.py](../tests/test_setup.py), [tests/test_viewer.cjs](../tests/test_viewer.cjs), [.github/workflows/check.yml](../.github/workflows/check.yml), [.githooks/pre-commit](../.githooks/pre-commit), [pyproject.toml](../pyproject.toml), [requirements-dev.lock](../requirements-dev.lock), [tests/test_devtools.py](../tests/test_devtools.py), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [tests/test_gameplay_contracts.py](../tests/test_gameplay_contracts.py), [tests/test_gameplay_evidence.py](../tests/test_gameplay_evidence.py), [tests/test_cli.py](../tests/test_cli.py), [tests/test_gameplay_memory.py](../tests/test_gameplay_memory.py), [tests/test_evaluation.py](../tests/test_evaluation.py), [tools/evaluate.py](../tools/evaluate.py), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [tests/test_gameplay_planner.py](../tests/test_gameplay_planner.py), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md), [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md), [tests/test_gameplay_supervisor.py](../tests/test_gameplay_supervisor.py), [tests/test_gameplay_skills.py](../tests/test_gameplay_skills.py).
+Evidence / implementation: [tools/check.py](../tools/check.py), [tests/test_controller.py](../tests/test_controller.py), [tests/test_server.py](../tests/test_server.py), [tests/test_setup.py](../tests/test_setup.py), [tests/test_viewer.cjs](../tests/test_viewer.cjs), [.github/workflows/check.yml](../.github/workflows/check.yml), [.githooks/pre-commit](../.githooks/pre-commit), [pyproject.toml](../pyproject.toml), [requirements-dev.lock](../requirements-dev.lock), [tests/test_devtools.py](../tests/test_devtools.py), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [tests/test_gameplay_contracts.py](../tests/test_gameplay_contracts.py), [tests/test_gameplay_evidence.py](../tests/test_gameplay_evidence.py), [tests/test_cli.py](../tests/test_cli.py), [tests/test_gameplay_memory.py](../tests/test_gameplay_memory.py), [tests/test_evaluation.py](../tests/test_evaluation.py), [tools/evaluate.py](../tools/evaluate.py), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [tests/test_gameplay_planner.py](../tests/test_gameplay_planner.py), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md), [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md), [tests/test_gameplay_supervisor.py](../tests/test_gameplay_supervisor.py), [tests/test_gameplay_skills.py](../tests/test_gameplay_skills.py), [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
 Coverage gap: Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within round011 scope; startup/transition uncertainty and development failures retained.
-Scope: 332 Python tests plus viewer/import/docs/diagram/governance checks; 82 controller/HTTP cases use isolated bridges and ports.
-Exercise evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
+Last exercise: 2026-10-18. Outcome: Passed within stated round012 scope; unsuccessful first route, transition uncertainty and development failures retained.
+Scope: 379 Python tests, viewer regressions, import/docs/diagram/governance checks; journal exceptions, Pause epoch race, slow planning and real HTTP composition over synthetic transport.
+Exercise evidence: [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
-Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.
-Cost: Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.
-Follow-up: Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open.
-Review evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
+Maintenance review: 2026-10-18. Effectiveness: effective.
+Findings: Integration review exposed post-publication journal classification, persistent-error recovery and duplicate Pause epoch defects; repaired with meaningful regressions. Native guard policy stopped the first route conservatively; #53 tracks policy review.
+Cost: Existing project-local tooling; two disjoint workers, independent review, one player sub-agent, one serialized native runtime. No global setup or separate API spending; Codex usage unmeasured.
+Follow-up: Revisit on lifecycle/receipt/guard changes or failures; #53 guard semantics, #24 comparative evaluation, #40 semantic monitoring, #10 broader tasks and #13 maintenance remain.
+Review evidence: [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
 Next review: 2027-01-15.
 
 ### C-RUNTIME — Live authority and input guards (runtime)
 
-Single-controller dispatch, HTTP trust boundary and spectator input freshness. Controller serializes each channel, persists separate gameplay/control admissions and revokes durable host tokens before retirement; native v3 checks boundary, matching frame, expiry and token at input commit. Recovery is limited to owned native interruption queries and one raw debug Space. Server validates origin/token/frame paths and separates operator recovery ingress from ordinary commands; viewer waits for matching decoded image and supported ordinary boundary or exact eligible recovery evidence.
+Single-controller and gameplay-runtime dispatch, exact external planning lifecycle, HTTP trust boundary and spectator input freshness. Controller serializes each channel, persists separate gameplay/control admissions and revokes durable host tokens before retirement; native v3 checks boundary, matching frame, expiry and token at input commit. Recovery is limited to owned native interruption queries and one raw debug Space. Server validates origin/token/frame paths and separates operator recovery ingress from ordinary commands; viewer waits for matching decoded image and supported ordinary boundary or exact eligible recovery evidence. GameplayRuntime owns one exact lease, single-use external plan requests, fresh equivalent revalidation and original task/intent deadlines; receipt exceptions remain unknown. Pause cancels applicability independently of planning/native waits.
 
 Owner: controller and viewer maintainer. Trigger: every relevant request, observation and image decode.
 Enforcement: Implemented at runtime; regression execution is C-PORTABLE. Source references alone establish no behavioral pass.
 Failure response: Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.
 
-Evidence / implementation: [harness/controller.py](../harness/controller.py), [harness/server.py](../harness/server.py), [web/app.js](../web/app.js), [tests/test_controller.py](../tests/test_controller.py), [tests/test_server.py](../tests/test_server.py), [tests/test_viewer.cjs](../tests/test_viewer.cjs), [docs/protocol.md](../docs/protocol.md), [native/cdda_harness.cpp](../native/cdda_harness.cpp), [harness/gameplay/evidence.py](../harness/gameplay/evidence.py), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
+Evidence / implementation: [harness/controller.py](../harness/controller.py), [harness/server.py](../harness/server.py), [web/app.js](../web/app.js), [tests/test_controller.py](../tests/test_controller.py), [tests/test_server.py](../tests/test_server.py), [tests/test_viewer.cjs](../tests/test_viewer.cjs), [docs/protocol.md](../docs/protocol.md), [native/cdda_harness.cpp](../native/cdda_harness.cpp), [harness/gameplay/evidence.py](../harness/gameplay/evidence.py), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md), [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md), [harness/runtime.py](../harness/runtime.py), [tests/test_gameplay_runtime.py](../tests/test_gameplay_runtime.py), [tests/test_gameplay_http.py](../tests/test_gameplay_http.py).
 
 Coverage gap: Tests exercise fake-bridge and browser fixtures. Native takeover and engine input behavior need C-NATIVE. Pause cannot cancel an already-running activity; no structured damage/trap or combat guarantee.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within round011 scope; startup/transition uncertainty and development failures retained.
-Scope: Real leased step and return, competing input exclusion, browser Pause/stale capability, explicit resume without lease, menu rejection and release; portable concurrency races separate.
-Exercise evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
+Last exercise: 2026-10-18. Outcome: Passed within stated round012 scope; unsuccessful first route, transition uncertainty and development failures retained.
+Scope: Real external-chat planning handoff, exact native receipts, explicit task lifecycle, browser Pause and preserved-budget continuation; conservative blocked first route retained.
+Exercise evidence: [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
-Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.
-Cost: Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.
-Follow-up: Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open.
-Review evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
+Maintenance review: 2026-10-18. Effectiveness: effective.
+Findings: Integration review exposed post-publication journal classification, persistent-error recovery and duplicate Pause epoch defects; repaired with meaningful regressions. Native guard policy stopped the first route conservatively; #53 tracks policy review.
+Cost: Existing project-local tooling; two disjoint workers, independent review, one player sub-agent, one serialized native runtime. No global setup or separate API spending; Codex usage unmeasured.
+Follow-up: Revisit on lifecycle/receipt/guard changes or failures; #53 guard semantics, #24 comparative evaluation, #40 semantic monitoring, #10 broader tasks and #13 maintenance remain.
+Review evidence: [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
 Next review: 2027-01-15.
 
@@ -116,21 +116,21 @@ Owner: integration maintainer; lead verifies evidence. Trigger: relevant native 
 Enforcement: Required by S-PROTOCOL/S-DELIVERY and release review; manual, outside the portable gate.
 Failure response: Retain failed/unknown probes, block the affected claim and repair or document the supported limit.
 
-Evidence / implementation: [docs/runbook.md#native-acceptance-lane](../docs/runbook.md#native-acceptance-lane), [docs/setup.md](../docs/setup.md), [docs/acceptance/2026-10-17-mvp.md](../docs/acceptance/2026-10-17-mvp.md), [docs/acceptance/2026-10-17-mvp-manifest.json](../docs/acceptance/2026-10-17-mvp-manifest.json), [docs/acceptance/2026-10-17-recovery-memory.md](../docs/acceptance/2026-10-17-recovery-memory.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
+Evidence / implementation: [docs/runbook.md#native-acceptance-lane](../docs/runbook.md#native-acceptance-lane), [docs/setup.md](../docs/setup.md), [docs/acceptance/2026-10-17-mvp.md](../docs/acceptance/2026-10-17-mvp.md), [docs/acceptance/2026-10-17-mvp-manifest.json](../docs/acceptance/2026-10-17-mvp-manifest.json), [docs/acceptance/2026-10-17-recovery-memory.md](../docs/acceptance/2026-10-17-recovery-memory.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md), [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
 Coverage gap: Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within round011 scope; startup/transition uncertainty and development failures retained.
-Scope: Unchanged native source/build identity verified; real windowed lease input and takeover probes, retained receipts/frames and world-transition timeouts; no new native timing injection.
-Exercise evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
+Last exercise: 2026-10-18. Outcome: Passed within stated round012 scope; unsuccessful first route, transition uncertainty and development failures retained.
+Scope: Unchanged accepted native binary; five runtime movement receipts across one blocked and two completed tasks, normal save/quit, no new native fault injection.
+Exercise evidence: [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
-Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.
-Cost: Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.
-Follow-up: Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open.
-Review evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
+Maintenance review: 2026-10-18. Effectiveness: effective.
+Findings: Integration review exposed post-publication journal classification, persistent-error recovery and duplicate Pause epoch defects; repaired with meaningful regressions. Native guard policy stopped the first route conservatively; #53 tracks policy review.
+Cost: Existing project-local tooling; two disjoint workers, independent review, one player sub-agent, one serialized native runtime. No global setup or separate API spending; Codex usage unmeasured.
+Follow-up: Revisit on lifecycle/receipt/guard changes or failures; #53 guard semantics, #24 comparative evaluation, #40 semantic monitoring, #10 broader tasks and #13 maintenance remain.
+Review evidence: [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
 Next review: 2027-01-15.
 
@@ -142,21 +142,21 @@ Owner: lead with operator feedback. Trigger: user-facing behavior/guidance chang
 Enforcement: Required review under S-UX/S-DOCS/S-WORK; no automatic usability gate.
 Failure response: Correct misleading flows or guidance and retain consequential limits before milestone acceptance.
 
-Evidence / implementation: [docs/overview.md](../docs/overview.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/runbook.md](../docs/runbook.md), [web/app.js](../web/app.js), [docs/walkthrough.md](../docs/walkthrough.md), [docs/architecture.md](../docs/architecture.md), [docs/project-management.md](../docs/project-management.md), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
+Evidence / implementation: [docs/overview.md](../docs/overview.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/runbook.md](../docs/runbook.md), [web/app.js](../web/app.js), [docs/walkthrough.md](../docs/walkthrough.md), [docs/architecture.md](../docs/architecture.md), [docs/project-management.md](../docs/project-management.md), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md), [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
 Coverage gap: Human judgment; no automated usability score or user study is claimed. Document links alone do not demonstrate comprehension.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within round011 scope; startup/transition uncertainty and development failures retained.
-Scope: Real browser spectator shows active run owner and disabled Resume, then Pause takeover; portable controls regression; no broader task dashboard claimed.
-Exercise evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
+Last exercise: 2026-10-18. Outcome: Passed within stated round012 scope; unsuccessful first route, transition uncertainty and development failures retained.
+Scope: Ordinary-window planning, blocked, completed and paused spectator; progress/ownership/reasons and unmeasured usage inspected; timeline labels repaired.
+Exercise evidence: [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
-Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.
-Cost: Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.
-Follow-up: Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open.
-Review evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
+Maintenance review: 2026-10-18. Effectiveness: effective.
+Findings: Integration review exposed post-publication journal classification, persistent-error recovery and duplicate Pause epoch defects; repaired with meaningful regressions. Native guard policy stopped the first route conservatively; #53 tracks policy review.
+Cost: Existing project-local tooling; two disjoint workers, independent review, one player sub-agent, one serialized native runtime. No global setup or separate API spending; Codex usage unmeasured.
+Follow-up: Revisit on lifecycle/receipt/guard changes or failures; #53 guard semantics, #24 comparative evaluation, #40 semantic monitoring, #10 broader tasks and #13 maintenance remain.
+Review evidence: [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
 Next review: 2027-01-15.
 
@@ -194,21 +194,21 @@ Owner: lead; reviewer supplies independent findings. Trigger: significant change
 Enforcement: Required by S-AGENT and the GitHub work/PR workflow; independent agent review is manually recorded, not an independent GitHub human approval. Hosted enforcement is recorded separately in acceptance.
 Failure response: Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.
 
-Evidence / implementation: [AGENTS.md](../AGENTS.md), [docs/engineering.md](../docs/engineering.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/work.md](../docs/work.md), [docs/project-management.md](../docs/project-management.md), [docs/changes/003-public-workflow.md](../docs/changes/003-public-workflow.md), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md), [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md).
+Evidence / implementation: [AGENTS.md](../AGENTS.md), [docs/engineering.md](../docs/engineering.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/work.md](../docs/work.md), [docs/project-management.md](../docs/project-management.md), [docs/changes/003-public-workflow.md](../docs/changes/003-public-workflow.md), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md), [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md), [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
 Coverage gap: No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within round011 scope; startup/transition uncertainty and development failures retained.
-Scope: Independent clean-context brief and integrated code review; separate visual review corrected recovery/revocation wording; lead verified native evidence.
-Exercise evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
+Last exercise: 2026-10-18. Outcome: Passed within stated round012 scope; unsuccessful first route, transition uncertainty and development failures retained.
+Scope: Two isolated implementation worktrees, independent boundary/core review, three reproduced integration defects repaired and independently rechecked.
+Exercise evidence: [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
-Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.
-Cost: Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.
-Follow-up: Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open.
-Review evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
+Maintenance review: 2026-10-18. Effectiveness: effective.
+Findings: Integration review exposed post-publication journal classification, persistent-error recovery and duplicate Pause epoch defects; repaired with meaningful regressions. Native guard policy stopped the first route conservatively; #53 tracks policy review.
+Cost: Existing project-local tooling; two disjoint workers, independent review, one player sub-agent, one serialized native runtime. No global setup or separate API spending; Codex usage unmeasured.
+Follow-up: Revisit on lifecycle/receipt/guard changes or failures; #53 guard semantics, #24 comparative evaluation, #40 semantic monitoring, #10 broader tasks and #13 maintenance remain.
+Review evidence: [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
 Next review: 2027-01-15.
 
@@ -350,21 +350,21 @@ Owner: documentation maintainer. Trigger: common command; source, renderer confi
 Enforcement: Common command fails on renderer errors, missing title/description/ID or changed input/output receipts; negative fixtures include a real parse failure. No global installation or automatic fetch.
 Failure response: Fix syntax or missing setup; regenerate stale output and inspect the rendered result. Never call a denied browser launch a passed check. Resolve semantic/readability findings through C-USABILITY/C-REVIEW.
 
-Evidence / implementation: [tools/diagrams.py](../tools/diagrams.py), [tests/test_diagrams.py](../tests/test_diagrams.py), [docs/diagrams/rendered.json](../docs/diagrams/rendered.json), [docs/architecture.md](../docs/architecture.md), [docs/overview.md](../docs/overview.md), [package.json](../package.json), [package-lock.json](../package-lock.json), [.puppeteerrc.cjs](../.puppeteerrc.cjs), [docs/decisions/004-documentation-controls.md](../docs/decisions/004-documentation-controls.md), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md).
+Evidence / implementation: [tools/diagrams.py](../tools/diagrams.py), [tests/test_diagrams.py](../tests/test_diagrams.py), [docs/diagrams/rendered.json](../docs/diagrams/rendered.json), [docs/architecture.md](../docs/architecture.md), [docs/overview.md](../docs/overview.md), [package.json](../package.json), [package-lock.json](../package-lock.json), [.puppeteerrc.cjs](../.puppeteerrc.cjs), [docs/decisions/004-documentation-controls.md](../docs/decisions/004-documentation-controls.md), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md), [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
 Coverage gap: Receipt freshness is not cross-host byte equality or proof against deliberate falsification. Rendering and SVG metadata do not prove meaning, accessibility for every reader or readable layout. Human rendered inspection is required. Ubuntu 24.04 CI was exercised with a scoped runner Chrome sandbox profile; other Linux hosts remain unverified.
 
 Lifecycle: active. Rationale: Required to keep user-facing visual explanations reviewable and synchronized.. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within round011 scope; startup/transition uncertainty and development failures retained.
-Scope: Current ownership diagram rendered with pinned local tools and inspected at 1050 pixels; real spectator owner and Pause states inspected.
-Exercise evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
+Last exercise: 2026-10-18. Outcome: Passed within stated round012 scope; unsuccessful first route, transition uncertainty and development failures retained.
+Scope: Current player responsibility diagram plus updated supervisor/ownership visuals; pinned rendering/receipts, independent semantic review and lead ordinary-width inspection.
+Exercise evidence: [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
-Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.
-Cost: Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.
-Follow-up: Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open.
-Review evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
+Maintenance review: 2026-10-18. Effectiveness: effective.
+Findings: Integration review exposed post-publication journal classification, persistent-error recovery and duplicate Pause epoch defects; repaired with meaningful regressions. Native guard policy stopped the first route conservatively; #53 tracks policy review.
+Cost: Existing project-local tooling; two disjoint workers, independent review, one player sub-agent, one serialized native runtime. No global setup or separate API spending; Codex usage unmeasured.
+Follow-up: Revisit on lifecycle/receipt/guard changes or failures; #53 guard semantics, #24 comparative evaluation, #40 semantic monitoring, #10 broader tasks and #13 maintenance remain.
+Review evidence: [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
 
 Next review: 2027-01-15.
 

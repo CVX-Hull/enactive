@@ -1028,6 +1028,13 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             finally:
                 self.controller.command_lock = original
 
+    def run_action(self, lease, **payload):
+        envelope = self.controller.execute_run(lease, logical_action_id="test-logical-action",
+            deadline_monotonic=time.monotonic() + payload.get("timeout", 2), **payload)
+        self.assertEqual(envelope["logical_action_id"], "test-logical-action")
+        self.assertEqual(set(envelope), {"logical_action_id", "request", "result", "published", "received_monotonic"})
+        return envelope["result"]
+
     def acquire(self, **changes):
         values = {"task_id": "task-test", "execution_epoch": 0, "owner": "supervisor", **self.expect(), **changes}
         return self.controller.acquire_run(**values)
@@ -1044,18 +1051,18 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             with self.assertRaises(FrozenInstanceError):
                 lease.owner = "other"
             impostor = replace(lease)
-            result = self.controller.execute_run(impostor, action="UP", **self.expect())
+            result = self.run_action(impostor, action="UP", **self.expect())
             self.assertEqual(result["status"], "controller_error")
             with self.assertRaises(ControlError):
                 self.controller.release_run(impostor)
             self.assertIsNotNone(self.controller.status()["run_lease"])
-            moved = self.controller.execute_run(lease, action="UP", **self.expect())
+            moved = self.run_action(lease, action="UP", **self.expect())
             self.assertEqual(moved["status"], "ready")
             self.assertEqual([r["kind"] for r in fake.delivered], ["resume", "action"])
             self.assertEqual(self.controller.release_run(lease)["status"], "pause_requested")
             self.assertIsNone(self.controller.status()["run_lease"])
             self.assertTrue((fake.bridge / "pause").exists())
-            self.assertEqual(self.controller.execute_run(lease, action="DOWN", **self.expect())["status"], "controller_error")
+            self.assertEqual(self.run_action(lease, action="DOWN", **self.expect())["status"], "controller_error")
             self.assertEqual(self.controller.execute("resume")["status"], "ready")
             replacement = self.acquire()
             self.assertIsNot(lease, replacement)
@@ -1207,7 +1214,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(self.controller.execute("observe")["status"], "ready")
             self.assertEqual(self.controller.state["boundary"]["control_generation"], generation)
             self.assertIsNone(self.controller.status()["run_lease"])
-            self.assertEqual(self.controller.execute_run(lease, action="UP", **self.expect())["status"], "controller_error")
+            self.assertEqual(self.run_action(lease, action="UP", **self.expect())["status"], "controller_error")
 
     def test_leased_preflight_rejects_changed_session_revision_or_boundary(self):
         for change in ("session", "revision", "menu", "future"):
@@ -1227,7 +1234,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                         bridge.value["timestamp_ms"] = int(time.time() * 1000) + 2000
                         return True
                     fake.behavior = future
-                result = self.controller.execute_run(lease, action="UP", **expected)
+                result = self.run_action(lease, action="UP", **expected)
                 self.assertEqual(result["status"], "controller_error")
                 self.assertFalse(any(r["kind"] == "action" for r in fake.delivered))
                 self.controller.pause()
@@ -1244,7 +1251,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     self.controller.pause()
                 return original(kind, *args, **kwargs)
             with patch.object(self.controller, "_exchange", side_effect=exchange):
-                result = self.controller.execute_run(lease, action="UP", **self.expect())
+                result = self.run_action(lease, action="UP", **self.expect())
             self.assertEqual(result["status"], "controller_error")
             self.assertFalse(any(r["kind"] == "action" for r in fake.requests))
             self.assertEqual(self.controller.unknown_outcomes, [])
@@ -1262,7 +1269,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.ready()
             lease = self.acquire()
             with ThreadPoolExecutor(1) as pool:
-                future = pool.submit(self.controller.execute_run, lease, action="UP", **self.expect())
+                future = pool.submit(self.run_action, lease, action="UP", **self.expect())
                 self.assertTrue(claimed.wait(1))
                 self.controller.pause()
                 release.set()
@@ -1284,7 +1291,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                         return False
                     return True
                 fake.behavior = fail
-                result = self.controller.execute_run(lease, action="UP", timeout=0.08, **self.expect())
+                result = self.run_action(lease, action="UP", timeout=0.08, **self.expect())
                 self.assertEqual(result["status"], "controller_error" if malformed else "timeout")
                 self.assertIsNone(self.controller.status()["run_lease"])
                 self.assertTrue(self.controller.frozen)
@@ -1304,7 +1311,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             result = self.controller.recover("request_interrupt", **self.recovery_expect())
             self.assertEqual(result["status"], "prompt_opened")
         self.assertIsNone(self.controller.status()["run_lease"])
-        self.assertEqual(self.controller.execute_run(lease, action="UP", **self.expect())["status"], "controller_error")
+        self.assertEqual(self.run_action(lease, action="UP", **self.expect())["status"], "controller_error")
         self.controller.close()
         self.controller = Controller(self.root, timeout=2)
         self.addCleanup(self.controller.close)
@@ -1319,9 +1326,9 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             lease = self.acquire()
             for action in ("walk", "not-registered", "", 1):
                 with self.subTest(action=action):
-                    self.assertEqual(self.controller.execute_run(lease, action=action, **self.expect())["status"], "controller_error")
+                    self.assertEqual(self.run_action(lease, action=action, **self.expect())["status"], "controller_error")
             with self.assertRaises(TypeError):
-                self.controller.execute_run(lease, action="UP", key="x", **self.expect())
+                self.run_action(lease, action="UP", key="x", **self.expect())
             self.assertFalse(any(r["kind"] == "action" for r in fake.requests))
 
     def test_acquisition_after_explicit_timeout_reconciliation_preserves_unknown(self):
@@ -1373,7 +1380,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             expected = self.expect()
             self.controller.close()
             self.assertIsNone(self.controller.status()["run_lease"])
-            self.assertEqual(self.controller.execute_run(lease, action="UP", **expected)["status"], "controller_error")
+            self.assertEqual(self.run_action(lease, action="UP", **expected)["status"], "controller_error")
         self.controller = Controller(self.root, timeout=2)
         self.addCleanup(self.controller.close)
         self.assertIsNone(self.controller.status()["run_lease"])
@@ -1382,7 +1389,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.ready()
             replacement = self.acquire()
             self.assertIsNot(replacement, lease)
-            self.assertEqual(self.controller.execute_run(lease, action="UP", **self.expect())["status"], "controller_error")
+            self.assertEqual(self.run_action(lease, action="UP", **self.expect())["status"], "controller_error")
             self.assertEqual(self.controller.status()["run_lease"]["task_id"], "task-test")
 
     def test_walk_does_not_renew_generation_between_steps(self):
@@ -1407,3 +1414,190 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(result["steps"], 1)
             self.assertEqual(sum(request["kind"] == "action" for request in fake.delivered), 1)
             self.assertEqual(self.controller.unknown_outcomes, [])
+
+    def test_observation_snapshot_retains_original_receipt_and_copies_atomically(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            observed, received = self.controller.observation_snapshot()
+            self.assertIsInstance(received, float)
+            observed["scene"]["position"][0] = 999
+            for _ in range(3):
+                self.controller.status()
+                current, original_receipt = self.controller.observation_snapshot()
+                self.assertEqual(original_receipt, received)
+                self.assertEqual(current["scene"]["position"], [0, 0, 0])
+            fake.value["frame"] = "frame-game-test-2.png"
+            self.controller.execute("observe")
+            self.assertGreater(self.controller.observation_snapshot()[1], received)
+
+    def test_run_envelope_maps_exact_action_not_preflight_observe(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            lease = self.acquire()
+            envelope = self.controller.execute_run(lease, action="UP", logical_action_id="logical-1",
+                deadline_monotonic=time.monotonic() + 2, **self.expect())
+            self.assertEqual(envelope["logical_action_id"], "logical-1")
+            self.assertTrue(envelope["published"])
+            self.assertEqual(envelope["request"]["kind"], "action")
+            self.assertEqual(envelope["request"]["id"], envelope["result"]["id"])
+            self.assertNotEqual(envelope["request"]["id"], fake.requests[-2]["id"])
+            self.assertEqual(fake.requests[-2]["kind"], "observe")
+            self.assertLessEqual(envelope["received_monotonic"], time.monotonic())
+            entries = [json.loads(line) for line in self.controller.journal.read_text().splitlines()]
+            self.assertEqual(entries[-1]["request"]["kind"], "run_receipt")
+            self.assertEqual(entries[-1]["outcome"], envelope)
+
+    def test_run_preflight_rejection_is_never_an_action_receipt(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            lease = self.acquire()
+            def reject(bridge, request):
+                bridge.value.update(status="rejected", error="Observe rejected")
+                return True
+            fake.behavior = reject
+            envelope = self.controller.execute_run(lease, action="UP", logical_action_id="logical",
+                deadline_monotonic=time.monotonic() + 2, **self.expect())
+            self.assertFalse(envelope["published"])
+            self.assertIsNone(envelope["request"])
+            self.assertIsNone(envelope["received_monotonic"])
+            self.assertEqual(envelope["result"]["status"], "rejected")
+            self.assertFalse(any(request["kind"] == "action" for request in fake.requests))
+
+    def test_original_absolute_deadline_expires_in_queue_and_after_preflight(self):
+        for queued in (True, False):
+            with self.subTest(queued=queued), FakeBridge(self.controller) as fake:
+                self.ready()
+                lease = self.acquire()
+                expected = self.expect()
+                real_time = time
+                clock = SimpleNamespace(value=real_time.monotonic())
+                proxy = SimpleNamespace(monotonic=lambda: clock.value, time=real_time.time, sleep=real_time.sleep)
+                deadline = clock.value + 1
+                original = self.controller._exchange
+                entered, release = threading.Event(), threading.Event()
+                def exchange(kind, *args, **kwargs):
+                    result = original(kind, *args, **kwargs)
+                    if kind == "observe":
+                        entered.set()
+                        release.wait(2)
+                    return result
+                if queued:
+                    self.controller.command_lock.acquire()
+                with patch("harness.controller.time", proxy), patch.object(self.controller, "_exchange", side_effect=exchange):
+                    with ThreadPoolExecutor(1) as pool:
+                        future = pool.submit(self.controller.execute_run, lease, action="UP",
+                            logical_action_id="deadline-test", deadline_monotonic=deadline, **expected)
+                        if queued:
+                            end = real_time.monotonic() + 1
+                            while not self.controller._command_work and real_time.monotonic() < end:
+                                real_time.sleep(0.001)
+                            self.assertEqual(self.controller._command_work, 1)
+                        else:
+                            self.assertTrue(entered.wait(1))
+                        clock.value = deadline
+                        if queued:
+                            self.controller.command_lock.release()
+                        release.set()
+                        envelope = future.result(2)
+                self.assertFalse(envelope["published"])
+                self.assertIsNone(envelope["request"])
+                self.assertIsNone(envelope["received_monotonic"])
+                self.assertFalse(any(request["kind"] == "action" for request in fake.requests))
+                self.assertEqual(self.controller.unknown_outcomes, [])
+                self.controller.pause()
+
+    def test_original_deadline_checked_under_publication_lock_after_admission(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            lease = self.acquire()
+            expected = self.expect()
+            real_time = time
+            clock = SimpleNamespace(value=real_time.monotonic())
+            deadline = clock.value + 1
+            proxy = SimpleNamespace(monotonic=lambda: clock.value, time=real_time.time, sleep=real_time.sleep)
+            original = atomic_json
+            def publish(path, value, **callbacks):
+                original(path, value, **callbacks)
+                if path.parent == self.controller.admissions:
+                    clock.value = deadline
+            with patch("harness.controller.time", proxy), patch("harness.controller.atomic_json", side_effect=publish):
+                envelope = self.controller.execute_run(lease, action="UP", logical_action_id="publication-deadline",
+                    deadline_monotonic=deadline, **expected)
+            self.assertFalse(envelope["published"])
+            self.assertEqual(envelope["request"]["kind"], "action")
+            self.assertIsNone(envelope["received_monotonic"])
+            self.assertFalse(any(request["kind"] == "action" for request in fake.requests))
+            self.assertEqual(self.controller.unknown_outcomes, [])
+            self.assertEqual(list(self.controller.admissions.glob("*.json")), [])
+
+    def test_original_deadline_is_rechecked_after_request_file_staging(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            lease = self.acquire()
+            expected = self.expect()
+            real_time = time
+            clock = SimpleNamespace(value=real_time.monotonic())
+            deadline = clock.value + 1
+            proxy = SimpleNamespace(monotonic=lambda: clock.value, time=real_time.time, sleep=real_time.sleep)
+            original = atomic_json
+            def stage(path, value, **callbacks):
+                if path.name == "request.json" and value["kind"] == "action":
+                    gate = callbacks["before_publish"]
+                    def delayed():
+                        clock.value = deadline
+                        gate()
+                    callbacks["before_publish"] = delayed
+                original(path, value, **callbacks)
+            with patch("harness.controller.time", proxy), patch("harness.controller.atomic_json", side_effect=stage):
+                envelope = self.controller.execute_run(lease, action="UP", logical_action_id="staging-deadline",
+                    deadline_monotonic=deadline, **expected)
+            self.assertFalse(envelope["published"])
+            self.assertEqual(envelope["request"]["kind"], "action")
+            self.assertEqual(self.controller.unknown_outcomes, [])
+            self.assertFalse(any(request["kind"] == "action" for request in fake.requests))
+
+    def test_publication_followed_by_filesystem_error_remains_unknown(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            lease = self.acquire()
+            expected = self.expect()
+            original = atomic_json
+            def fail_after_publication(path, value, **callbacks):
+                original(path, value, **callbacks)
+                if path.name == "request.json" and value["kind"] == "action":
+                    raise OSError("Synthetic directory flush failure after atomic publication")
+            with patch("harness.controller.atomic_json", side_effect=fail_after_publication):
+                envelope = self.controller.execute_run(lease, action="UP", logical_action_id="published-failure",
+                    deadline_monotonic=time.monotonic() + 2, **expected)
+            self.assertTrue(envelope["published"])
+            self.assertEqual(envelope["result"]["status"], "controller_error")
+            self.assertIsNotNone(envelope["request"])
+            self.assertTrue(self.controller.unknown_outcomes)
+
+    def test_expiry_during_blocked_native_preflight_never_publishes_action(self):
+        entered, release = threading.Event(), threading.Event()
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            lease = self.acquire()
+            expected = self.expect()
+            real_time = time
+            clock = SimpleNamespace(value=real_time.monotonic())
+            deadline = clock.value + 1
+            proxy = SimpleNamespace(monotonic=lambda: clock.value, time=real_time.time, sleep=real_time.sleep)
+            def gate(bridge, request):
+                if request["kind"] == "observe":
+                    entered.set()
+                    release.wait(2)
+            fake.before_gate = gate
+            with patch("harness.controller.time", proxy):
+                with ThreadPoolExecutor(1) as pool:
+                    future = pool.submit(self.controller.execute_run, lease, action="UP", logical_action_id="blocked-preflight",
+                        deadline_monotonic=deadline, **expected)
+                    self.assertTrue(entered.wait(1))
+                    clock.value = deadline
+                    release.set()
+                    envelope = future.result(2)
+            self.assertFalse(envelope["published"])
+            self.assertIsNone(envelope["request"])
+            self.assertIsNone(envelope["received_monotonic"])
+            self.assertFalse(any(request["kind"] == "action" for request in fake.requests))

@@ -5,6 +5,8 @@ let latest = null;
 let displayed = null;
 let requestedFrame = '';
 let gameplayBusy = false;
+let taskBusy = false;
+let taskError = '';
 let recoveryBusy = false;
 let observeBusy = false;
 let recoveryError = '';
@@ -23,7 +25,7 @@ function showError(message) {
   $('error').hidden = !message;
 }
 function showErrors(extra = '') {
-  showError([...new Set([localError, recoveryError, frameError, latest?.error,
+  showError([...new Set([localError, taskError, recoveryError, frameError, latest?.error,
     latest?.last_result?.error, latest?.state?.error, extra].filter(Boolean))].join('\n'));
 }
 function frameIdentity(state) {
@@ -78,10 +80,20 @@ function recoveryAuthority(kind, choice) {
 function updateControls() {
   const recoveryPending = recoveryBusy || recoveryNeedsObserve || !!latest?.control_pending;
   document.querySelectorAll('.send').forEach((button) => {
-    button.disabled = !!latest?.run_lease || gameplayBusy || recoveryPending || !currentFrame() || !!latest?.frozen || !!latest?.pause_requested;
+    button.disabled = !!latest?.run_lease || gameplayBusy || taskBusy || recoveryPending || !currentFrame() || !!latest?.frozen || !!latest?.pause_requested;
   });
-  $('resume').disabled = !!latest?.run_lease || gameplayBusy || recoveryPending || !currentFrame() || !!latest?.frozen ||
+  $('resume').disabled = !!latest?.run_lease || gameplayBusy || taskBusy || recoveryPending || !currentFrame() || !!latest?.frozen ||
     !['normal_play', 'menu'].includes(displayed?.boundary?.kind);
+  const task = latest?.gameplay;
+  const run = task?.run;
+  const ready = !taskBusy && !gameplayBusy && !recoveryPending && !latest?.pending &&
+    !latest?.run_lease && currentFrame() && displayed?.protocol === 3 && displayed?.boundary?.kind === 'normal_play' &&
+    !latest?.frozen && !latest?.pause_requested && !displayed?.paused;
+  $('task-start').disabled = !ready || !!task && run?.state !== 'abandoned';
+  $('task-continue').disabled = !ready || !task ||
+    !['blocked', 'interrupted', 'paused', 'failed', 'budget_exhausted'].includes(run?.state) ||
+    task.last_receipt?.disposition === 'unknown';
+  $('task-abandon').disabled = taskBusy || !task || run?.state === 'abandoned';
   $('observe').disabled = observeBusy;
   $('pause').disabled = false;
   for (const [id, kind] of [['recovery-interrupt', 'request_interrupt'], ['recovery-yes', 'answer_interrupt'],
@@ -127,6 +139,7 @@ async function loadFrame(state) {
     $('frame-note').textContent = current ? 'FRESH · NATIVE CAPTURE' :
       latest?.state?.status === 'dispatched' ? 'INPUT DISPATCHED · WAITING FOR ENGINE' :
       'LAST FRAME · WAITING FOR CURRENT OBSERVATION';
+    renderGameplay(latest?.gameplay);
     updateControls();
   } catch (error) {
     if (requestedFrame === state.frame) {
@@ -150,7 +163,7 @@ async function command(kind, payload = {}) {
     showError('A gameplay run owns input. Pause to take over, then observe and resume.');
     return;
   }
-  if (ordinary && (gameplayBusy || recoveryBusy || recoveryNeedsObserve || latest?.control_pending)) return;
+  if (ordinary && (gameplayBusy || taskBusy || recoveryBusy || recoveryNeedsObserve || latest?.control_pending)) return;
   if (kind === 'observe' && observeBusy) return;
   if (ordinary) gameplayBusy = true;
   if (kind === 'observe') observeBusy = true;
@@ -180,6 +193,84 @@ async function command(kind, payload = {}) {
     updateControls();
     await refresh();
   }
+}
+function taskAuthority() {
+  const expected = authority();
+  if (displayed.boundary?.kind !== 'normal_play' || latest.frozen || latest.pause_requested || displayed.paused) {
+    throw new Error('Observe normal play and explicitly Resume remote control before starting or continuing a task.');
+  }
+  return expected;
+}
+async function gameplayCommand(kind) {
+  if (taskBusy) return;
+  let payload;
+  try {
+    updateControls();
+    if (!['start', 'continue', 'abandon'].includes(kind) || $(`task-${kind}`).disabled) {
+      throw new Error('This task operation is unavailable. Check the task state, resume control and observe a fresh frame.');
+    }
+    if (kind === 'start') {
+      const direction = $('task-direction').value;
+      const distance = Number($('task-distance').value);
+      if (!['north', 'east', 'south', 'west'].includes(direction) || !Number.isInteger(distance) || distance < 1 || distance > 4) {
+        throw new Error('Choose a cardinal direction and an outbound distance from 1 to 4 tiles.');
+      }
+      payload = {direction, distance, ...taskAuthority()};
+    } else {
+      const task = latest.gameplay;
+      if (typeof task.run_id !== 'string' || !Number.isInteger(task.run.execution_epoch)) {
+        throw new Error('The service has not supplied an exact run identity and execution epoch.');
+      }
+      payload = {run_id: task.run_id, execution_epoch: task.run.execution_epoch};
+      if (kind === 'continue') Object.assign(payload, taskAuthority());
+    }
+  } catch (error) { taskError = error.message; showErrors(); return; }
+  taskBusy = true;
+  taskError = '';
+  invalidateAuthority();
+  try {
+    const response = await fetch('/api/gameplay', {
+      method: 'POST', headers: {'Content-Type': 'application/json', 'X-CDDA-Token': token},
+      body: JSON.stringify({kind, ...payload}), credentials: 'same-origin'
+    });
+    const result = await response.json();
+    $('task-result').textContent = JSON.stringify(result, null, 2);
+    taskError = result.error || (response.ok ? '' : `Task request failed (${response.status})`);
+  } catch (error) {
+    taskError = `Task response unavailable: ${error.message}. Inspect status before choosing another operation.`;
+    $('task-result').textContent = taskError;
+  } finally {
+    taskBusy = false;
+    showErrors();
+    updateControls();
+    await refresh();
+  }
+}
+function renderGameplay(gameplay) {
+  const task = gameplay?.task;
+  const run = gameplay?.run;
+  const planner = gameplay?.planner;
+  $('task-state').textContent = run?.state?.replaceAll('_', ' ').toUpperCase() || 'NOT STARTED';
+  $('task-summary').textContent = task ? `${task.distance} tile(s) ${task.direction}, then return to ${task.origin.join(', ')}. Target ${task.target.join(', ')}.` :
+    'Choose a short route from the current observed position.';
+  const steps = run?.progress?.verified_steps;
+  const leg = Number.isInteger(steps) && task ? steps >= task.distance ? 'Return' : 'Outbound' : '';
+  $('task-stage').textContent = run ? `${leg} · ${run.stage_id || 'No stage admitted'} · epoch ${run.execution_epoch}` : 'No task admitted';
+  $('task-player').textContent = run ? `${run.model_id || 'Identity unreported'} · ${run.configuration_id || 'Configuration unreported'}${planner?.pending_request_id ? ' · waiting for candidate' : ''}` :
+    'External chat · waiting for explicit start';
+  $('task-executor').textContent = run?.lease_owner ? `${run.lease_owner}${run.paused ? ' · paused' : ' · run owns input'}` :
+    run?.paused ? 'Paused · no run owns input' : 'No run owns input';
+  $('task-progress').textContent = run ? `${steps} / ${2 * task.distance} verified step(s) · displacement ${run.progress.displacement.join(', ')}` : 'No verified movement';
+  $('task-next').textContent = run?.next_check || 'Observe, then resume remote control to start.';
+  $('task-reason').textContent = run?.last_public_reason || 'No task admitted';
+  $('task-control-note').textContent = run?.state === 'completed' ?
+    'Completed task and progress retained. Abandon this task before starting another.' :
+    'Start and Continue use the current decoded frame. Continue keeps the original task and budgets; resume remote control explicitly first. Unknown effects prohibit continuation.';
+  $('task-freshness').textContent = run ? `${run.fresh ? 'Task evidence fresh' : 'Task evidence stale or unavailable'} · ${currentFrame() ? 'displayed frame fresh' : 'displayed frame unavailable or stale'}` : 'No task evidence';
+  $('task-evidence').textContent = gameplay ? JSON.stringify({run_id: gameplay.run_id, task_id: task.task_id,
+    evidence: run.evidence, last_receipt: gameplay.last_receipt,
+    pending_request_id: planner?.pending_request_id, planner_deadline_ms: planner?.deadline_ms}, null, 2) : 'No retained task evidence.';
+  $('task-budgets').textContent = task ? JSON.stringify({original: task.budgets, remaining: run.remaining_budgets}, null, 2) : 'Original budgets appear after admission.';
 }
 async function recover(kind, choice) {
   let payload;
@@ -217,7 +308,8 @@ function timeline(events) {
   $('timeline').replaceChildren();
   [...events].reverse().slice(0, 30).forEach((event) => {
     const item = document.createElement('li');
-    const outcome = event.outcome;
+    const envelope = event.outcome;
+    const outcome = ['run_receipt', 'gameplay_receipt'].includes(event.request.kind) ? envelope.result : envelope;
     if (outcome.error) item.className = 'event-error';
     const title = document.createElement('div');
     title.className = 'event-title';
@@ -225,7 +317,9 @@ function timeline(events) {
     const names = {startup: 'Session started paused', observe: 'Observed the game', reconcile: 'Observation reconciled',
       resume: 'Remote control resumed', pause: 'Pause requested', key: 'Sent key', action: 'Sent action',
       walk: 'Guarded walk', goal: 'Objective updated', request_interrupt: 'Interrupt requested',
-      answer_interrupt: 'Interrupt answer', continue_debug_once: 'Debug continuation', control_unresolved: 'Recovery unresolved'};
+      answer_interrupt: 'Interrupt answer', continue_debug_once: 'Debug continuation', control_unresolved: 'Recovery unresolved', run_admission: 'Run action admitted',
+      run_receipt: 'Native action receipt', gameplay_receipt: 'Task action receipt',
+      malformed_gameplay_receipt: 'Invalid task receipt'};
     text.textContent = `${names[event.request.kind] || event.request.kind} ${event.request.key || event.request.action || ''}`;
     const time = document.createElement('span');
     time.className = 'event-time';
@@ -233,7 +327,7 @@ function timeline(events) {
     title.append(text, time);
     const detail = document.createElement('div');
     detail.className = 'event-detail';
-    detail.textContent = `${outcome.status}${outcome.error ? ' · ' + outcome.error : ''}${outcome.retirement ? ' · ' + outcome.retirement : ''}`;
+    detail.textContent = `${outcome.status || (event.request.kind === 'run_admission' ? 'Admission recorded; delivery not yet established' : 'Evidence recorded')}${outcome.error ? ' · ' + outcome.error : ''}${outcome.retirement ? ' · ' + outcome.retirement : ''}`;
     item.append(title, detail);
     $('timeline').append(item);
   });
@@ -296,6 +390,7 @@ function render(data) {
   $('recovery-evidence').textContent = JSON.stringify({pending: data.control_pending || null, unknown_outcomes: recoveryUnknowns,
     historical_incidents: (data.historical_unknowns || []).filter(item => item.channel === 'control')}, null, 2);
   $('journal').textContent = data.journal;
+  renderGameplay(data.gameplay);
   showErrors();
   updateControls();
   timeline(data.events);
@@ -310,6 +405,7 @@ async function refresh() {
   } catch (error) {
     if (sequence !== refreshSequence) return;
     if (latest) latest = {...latest, connection: 'disconnected'};
+    renderGameplay(latest?.gameplay);
     updateControls();
     $('connection').textContent = 'Service disconnected';
     $('connection-dot').className = 'dot disconnected';
@@ -322,6 +418,9 @@ $('recovery-interrupt').addEventListener('click', () => recover('request_interru
 $('recovery-yes').addEventListener('click', () => recover('answer_interrupt', 'YES'));
 $('recovery-no').addEventListener('click', () => recover('answer_interrupt', 'NO'));
 $('recovery-debug').addEventListener('click', () => recover('continue_debug_once'));
+$('task-form').addEventListener('submit', (event) => { event.preventDefault(); gameplayCommand('start'); });
+$('task-continue').addEventListener('click', () => gameplayCommand('continue'));
+$('task-abandon').addEventListener('click', () => gameplayCommand('abandon'));
 $('pause').addEventListener('click', () => command('pause'));
 $('resume').addEventListener('click', () => command('resume'));
 $('observe').addEventListener('click', () => command('observe'));
@@ -342,6 +441,7 @@ $('walk-form').addEventListener('submit', (event) => {
 
 (function checkFreshness() {
   updateControls();
+  renderGameplay(latest?.gameplay);
   if (latest?.state && Date.now() - latest.state.timestamp_ms > 3000) {
     $('frame-shell').classList.add('stale');
     $('frame-note').textContent = 'STALE · OBSERVE BEFORE CHOOSING INPUT';

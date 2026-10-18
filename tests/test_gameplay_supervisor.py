@@ -796,6 +796,74 @@ class SupervisorTests(unittest.TestCase):
         self.assertEqual(sum(e["kind"] == "model_call" for e in events), 2)
         self.assertIsNone(self.super.pending_intent)
 
+    def test_slow_planning_status_and_pending_poll_do_not_invalidate_by_age(self):
+        provider = Provider(gated=True)
+        supervisor = self.supervisor(provider=provider)
+        supervisor.start(**self.clocks())
+        self.assertTrue(provider.entered.wait(1))
+        generation = self.store.authority_generation()
+        self.clock.value += 4
+        for _ in range(5):
+            self.assertFalse(self.status().fresh)
+            self.assertEqual(supervisor.poll(**self.clocks()).state, "planning")
+        self.assertEqual(self.store.authority_generation(), generation)
+        provider.release.set()
+        while supervisor.accounting_snapshot().physical_call_active:
+            threading.Event().wait(0.001)
+        refreshed = self.frame(revision=self.start_ref.revision)
+        admitted = supervisor.revalidate_planning(refreshed, **self.clocks())
+        self.assertEqual(admitted.state, "admitted")
+        self.assertEqual(supervisor.task_start, self.start_ref)
+        self.assertEqual(self.intent().proposal.before, refreshed)
+        events = supervisor.evaluation_events(supervisor.accounting_snapshot())
+        self.assertTrue(any(len(e["evidence"]) == 2 and e["payload"].get("reason") == "equivalent"
+                            for e in events))
+
+    def test_planning_refresh_rejects_changed_pixels_and_intervening_generation(self):
+        for changed_pixels in (True, False):
+            with self.subTest(changed_pixels=changed_pixels):
+                # Use a separate component instance for each integrity history.
+                supervisor = self.supervisor()
+                supervisor.start(**self.clocks())
+                while supervisor.accounting_snapshot().physical_call_active:
+                    threading.Event().wait(0.001)
+                self.clock.value += 0.1
+                original = deepcopy(self.values[self.start_ref.observation_id])
+                original["frame"] = f"frame-world-{self.number + 1}.png"
+                original["timestamp_ms"] = self.clocks()["now_timestamp_ms"]
+                (self.bridge / original["frame"]).write_bytes(b"\x89PNG\r\n\x1a\n" +
+                    (b"different pixels" if changed_pixels else b"synthetic-supervisor-fixture"))
+                ref = self.store.ingest(original, received_monotonic=self.clock.value, **self.clocks())
+                self.number += 1
+                if not changed_pixels:
+                    self.clock.value += 0.1
+                    ref = self.frame(revision=self.start_ref.revision)
+                self.assertEqual(supervisor.revalidate_planning(ref, **self.clocks()).state, "interrupted")
+                supervisor.abandon("Subcase complete", **self.clocks())
+                # Restore a new base checkpoint without hiding the prior generation.
+                self.start_ref = self.frame()
+
+    def test_revalidation_cannot_renew_original_planning_deadline(self):
+        supervisor = self.supervisor()
+        supervisor.start(**self.clocks())
+        while supervisor.accounting_snapshot().physical_call_active:
+            threading.Event().wait(0.001)
+        self.clock.value = 130
+        refreshed = self.frame(revision=self.start_ref.revision)
+        status = supervisor.revalidate_planning(refreshed, **self.clocks())
+        self.assertEqual(status.state, "interrupted")
+        self.assertIn("deadline", status.last_public_reason)
+        self.assertEqual(status.remaining_budgets.planner_calls, 9)
+
+    def test_explicit_revalidation_requires_a_distinct_refresh_generation(self):
+        supervisor = self.supervisor()
+        supervisor.start(**self.clocks())
+        while supervisor.accounting_snapshot().physical_call_active:
+            threading.Event().wait(0.001)
+        status = supervisor.revalidate_planning(self.start_ref, **self.clocks())
+        self.assertEqual(status.state, "interrupted")
+        self.assertIn("invalidation", status.last_public_reason)
+
 
 if __name__ == "__main__":
     unittest.main()

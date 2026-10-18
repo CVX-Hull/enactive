@@ -1,0 +1,640 @@
+{
+  "schema_version": 1,
+  "kind": "historical-native-acceptance",
+  "platform": "macOS arm64; project-local pinned CDDA 0.I-1 and environment",
+  "upstream_pin": "native/upstream.json",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "freetype_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+  "initial_build_binary_sha256": "0405e34af99e7b60f9da67fd37e9cca8769b1d1c294eb622af80999be4854b37",
+  "installed_binary_sha256": "e3c022b5da440d2e4a31fc537ea07c988c2a767bf96197b83de4c7224d47bf87",
+  "date": "2026-10-18",
+  "report": "docs/acceptance/2026-10-18-integrated-player.md",
+  "source_commit": "def9293a94def6f4f41d02715c78a386036cb107",
+  "identity_note": "Integrated worker checkpoint plus lead working-tree repairs/docs; runtime-candidate.json records exact accepted backend and final viewer hashes. Final source must retain them.",
+  "video": null,
+  "verified_at": "2026-10-18",
+  "verification_scope": "379 portable tests plus viewer/import/docs/diagram/governance checks; independent review; actual external-chat player proposals, two windowed completed tasks and Pause/continuation; first blocked route and transition uncertainty retained.",
+  "limitations": [
+    "Two completed one-tile tasks and one blocked route; no survival or comparative model efficacy claim.",
+    "External chat usage/model identity unmeasured; no separate API spending.",
+    "New race/journal faults tested only with synthetic transport; no new native timing fault injection.",
+    "Original media and run stores local-only; save/load/quit transport uncertainty retained; saves preserved."
+  ],
+  "artifacts": {
+    ".runtime/evidence/round012/20261018-000901-3ef19cc7-events.jsonl": {
+      "sha256": "21f0c4bbd9e2f4c7b3f6bd1dd2848b565cd95eefcf88eb1b4fb0dad965e44182",
+      "bytes": 41709,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/20261018-001045-69b6aa60-events.jsonl": {
+      "sha256": "5c2e9bc13018f39b7bbcdb08455745b32acfa1f308442817a5ec89c4bdc14f91",
+      "bytes": 154453,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/brief-checks.log": {
+      "sha256": "0b18d25f86cf74261b493f7f8b858dafaec6abaf46be05fece0ee470f5b8cfe6",
+      "bytes": 55042,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/brief-commit.log": {
+      "sha256": "7c582d78fb6ea9e4c2da4590c01b5930e5955b92596df632bc1d2ba75becbccd",
+      "bytes": 55699,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/cleanup.json": {
+      "sha256": "8bcf47bef394d4c49c2f119a3df9626fc6cbc9c248b50032f595d6eb8c2b7a05",
+      "bytes": 281,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/completed-spectator.png": {
+      "sha256": "a27149b11f6fcd3f99d34ce6f7b7124b7aeffb751b75f2a287d108d85c596681",
+      "bytes": 237526,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/continued-completed-spectator.png": {
+      "sha256": "995a84c78d5db1808bf4da7aea710bfea8c41d4cb21d63215de43143e89dc143",
+      "bytes": 240979,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/diagrams-current.log": {
+      "sha256": "964e2aad385f415134958a3e3e33b461bfa9c332743a0bc645773b7ee58407d1",
+      "bytes": 97,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/diagrams.log": {
+      "sha256": "964e2aad385f415134958a3e3e33b461bfa9c332743a0bc645773b7ee58407d1",
+      "bytes": 97,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/final-checks.log": {
+      "sha256": "aadb5b3c999cfe1c57d260102ad3bb358f951b3ac5e7c755858c3d8c71a01488",
+      "bytes": 62975,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/http-repair-checks.log": {
+      "sha256": "5c80812005693703c3885df790fc4013d80d4d166c385278d8013dffca8439a1",
+      "bytes": 468,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/integrated-checks.log": {
+      "sha256": "ef34f1269720f2f252a99ad64b5d493d97da19146013f0ac28ec9fc460ba28ae",
+      "bytes": 62439,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/001-observe.json": {
+      "sha256": "f55abca4586ae236f255dca1eced5f63bbdfd2b6018e3e02e241e7c026ff5c3a",
+      "bytes": 916,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/001-observe.png": {
+      "sha256": "d4b81e3c51cc252a72fcd5336c761d2e67e19b1e348053e29c1edbe12cdfc4c4",
+      "bytes": 12499,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/002-resume.json": {
+      "sha256": "5b0c4602ae3f542b3d9b8df7f6556f7d674f3f3acf464387530a26cafd44a6ee",
+      "bytes": 916,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/002-resume.png": {
+      "sha256": "d4b81e3c51cc252a72fcd5336c761d2e67e19b1e348053e29c1edbe12cdfc4c4",
+      "bytes": 12499,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/003-key.json": {
+      "sha256": "d1b47bd06c444ea41decf4613cfe57cfce0cf1aec58e9f5a1cf44cbd7907d604",
+      "bytes": 906,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/003-key.png": {
+      "sha256": "38a3b2de7c6f88da5616542b1d55393c705d6d2445d202d2968642a7b914af31",
+      "bytes": 13329,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/004-key.json": {
+      "sha256": "a4ce758f6f0411a42e5e3a429358506d696f91f060c3680d60c10390bc76576a",
+      "bytes": 281,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/005-observe.json": {
+      "sha256": "7d0fb3742b45a45f24ef972dee734ee6294f97d1f9131ba64e6b6b0ab028f976",
+      "bytes": 5169,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/005-observe.png": {
+      "sha256": "50005ea8e3da10bf03d97dc88e37de14285383a89284e84aeeb5fba22af20ac3",
+      "bytes": 113054,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/006-pause.json": {
+      "sha256": "a2a52abd9ba0fea3b68fc61d9955a5102872a21b866b8de9a91b0ddb734bb5d2",
+      "bytes": 195,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/007-observe.json": {
+      "sha256": "f7b0761fa1129525fe248e68817acfe82f8e0e00ed21f86475cac0d0d7a9e13d",
+      "bytes": 5169,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/007-observe.png": {
+      "sha256": "50005ea8e3da10bf03d97dc88e37de14285383a89284e84aeeb5fba22af20ac3",
+      "bytes": 113054,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/008-resume.json": {
+      "sha256": "fb11a71ad26bcd7f5936e9261b988b33ddab6d20512e4cb45a288fb5d5f74c3c",
+      "bytes": 5171,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/008-resume.png": {
+      "sha256": "50005ea8e3da10bf03d97dc88e37de14285383a89284e84aeeb5fba22af20ac3",
+      "bytes": 113054,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/009-gameplay-start.json": {
+      "sha256": "89b4f94f1e35caf9d933b77e37c175a4e81f0b07435604afd2f4fe939a239809",
+      "bytes": 3214,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/010-status.json": {
+      "sha256": "6b2be20c8359e3bf8c9b6bac89bd6ebcde60720fc5741be1c2b63c7a539a6c9c",
+      "bytes": 96251,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/010-status.png": {
+      "sha256": "58b1daa3eb1d0254bb6546a226fe5390df680d7cbd8c11353d1b5f068a4d1ebd",
+      "bytes": 112841,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/011-gameplay-abandon.json": {
+      "sha256": "54af3aa8b2eae9a50d1f8241af3a2f8dea0d040560f5dcb66242c6eb22eee77b",
+      "bytes": 4996,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/012-observe.json": {
+      "sha256": "33079fc4d9a32d818a0476a68f09b62311bfda2d6d135216f672f85350237fcd",
+      "bytes": 5179,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/012-observe.png": {
+      "sha256": "58b1daa3eb1d0254bb6546a226fe5390df680d7cbd8c11353d1b5f068a4d1ebd",
+      "bytes": 112841,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/013-resume.json": {
+      "sha256": "0bcc30d09a145d2111aa09b31e26dbbb87d868f724e54770e22b13c75942d81d",
+      "bytes": 5180,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/013-resume.png": {
+      "sha256": "58b1daa3eb1d0254bb6546a226fe5390df680d7cbd8c11353d1b5f068a4d1ebd",
+      "bytes": 112841,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/014-gameplay-start.json": {
+      "sha256": "6de8f0333560909618b38045ead63d8ffe1ad5622431c57e52185c49c92ef19a",
+      "bytes": 3219,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/015-status.json": {
+      "sha256": "eadd48c748251f9b8e810cc0b18bb6e3a6e9f34f17a64764be52b328b2abb023",
+      "bytes": 62323,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/015-status.png": {
+      "sha256": "58b1daa3eb1d0254bb6546a226fe5390df680d7cbd8c11353d1b5f068a4d1ebd",
+      "bytes": 112841,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/016-status.json": {
+      "sha256": "3cbc0dee3e144b207b1c4092368e88155f18462802d0998ab3f03e314d167451",
+      "bytes": 135502,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/016-status.png": {
+      "sha256": "b9416e0c64269ea42f3998ebd9f4206ee57301d89590a4d7a37af5b6985a18a3",
+      "bytes": 113965,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/017-gameplay-abandon.json": {
+      "sha256": "85833d295d07a4bfcc0ae5951ee1a26e8cc7d91060282af19d4d868b5ca595b1",
+      "bytes": 6654,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/018-observe.json": {
+      "sha256": "6a4576b45dc4c4a77b8592d7b7d82c6424f43326dd53c47a80b6a9d4a9118443",
+      "bytes": 5179,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/018-observe.png": {
+      "sha256": "b9416e0c64269ea42f3998ebd9f4206ee57301d89590a4d7a37af5b6985a18a3",
+      "bytes": 113965,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/019-resume.json": {
+      "sha256": "4951613d171c20f28cbd6b61107abf0d45886eaafe8bb59bf59a94293c05d071",
+      "bytes": 5180,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/019-resume.png": {
+      "sha256": "b9416e0c64269ea42f3998ebd9f4206ee57301d89590a4d7a37af5b6985a18a3",
+      "bytes": 113965,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/020-gameplay-start.json": {
+      "sha256": "e6a87a66c722d159b0e1c38c8f250e393c71fff8ab3ada12d2dc85e87adde596",
+      "bytes": 3219,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/021-status.json": {
+      "sha256": "a3ca509f03f548ca370816c93206c41995ec660258df73a0ec34a77b87067e37",
+      "bytes": 159074,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/021-status.png": {
+      "sha256": "b9416e0c64269ea42f3998ebd9f4206ee57301d89590a4d7a37af5b6985a18a3",
+      "bytes": 113965,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/022-status.json": {
+      "sha256": "9c8e9d5a1c233182b0be158133235c43bdc21ee76fcb1100ee8df47cdc5767c6",
+      "bytes": 193011,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/022-status.png": {
+      "sha256": "d40676e622311b35974e31a6fc4d815db85021d59abf6a8f9f74b58d54c15042",
+      "bytes": 113724,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/023-gameplay-plan.json": {
+      "sha256": "1dadd7bb0b559bcb5d5ecb9d3c7616c89fbd6893f860aae49a893d6b7a23c900",
+      "bytes": 5021,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/024-observe.json": {
+      "sha256": "0b8b6b5d037430c186c20690c291d418f5660ec9649522146ec4bc0da91e14ba",
+      "bytes": 5183,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/024-observe.png": {
+      "sha256": "d40676e622311b35974e31a6fc4d815db85021d59abf6a8f9f74b58d54c15042",
+      "bytes": 113724,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/025-resume.json": {
+      "sha256": "bbb7ba6dee96a3c8ce3261951444ddbd58b61a08af1d15c7ca384c5a7612181d",
+      "bytes": 5185,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/025-resume.png": {
+      "sha256": "d40676e622311b35974e31a6fc4d815db85021d59abf6a8f9f74b58d54c15042",
+      "bytes": 113724,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/026-gameplay-continue.json": {
+      "sha256": "ff41c3b643fa1767fa32ee4c1d13ec7c6306c795ab87c2774ba87de01ff51f3c",
+      "bytes": 4949,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/027-status.json": {
+      "sha256": "e5ceacba7e1e6c73a302bce00ea675befcb37ecaaa244ffbc0457e258577c4bb",
+      "bytes": 250634,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/027-status.png": {
+      "sha256": "fc97433a802aca79b6eff2cf0c843183f379820d211251b2c8b4fc743cef36e1",
+      "bytes": 113901,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/028-observe.json": {
+      "sha256": "bd4f9f76f363d31f781953dc6a98ce9dc8643aca9b03213c464c387ad05825a0",
+      "bytes": 5179,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/028-observe.png": {
+      "sha256": "fc97433a802aca79b6eff2cf0c843183f379820d211251b2c8b4fc743cef36e1",
+      "bytes": 113901,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/029-resume.json": {
+      "sha256": "440935ff271836f7f9fc9603e771801d776a2e597613bff2377dd33086b8aa58",
+      "bytes": 5180,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/029-resume.png": {
+      "sha256": "fc97433a802aca79b6eff2cf0c843183f379820d211251b2c8b4fc743cef36e1",
+      "bytes": 113901,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/030-action.json": {
+      "sha256": "2c27ca66d2cfbc5c1140db4f7dcc195a9baa13a199924188d72e9c5cea88c5c2",
+      "bytes": 5172,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/030-action.png": {
+      "sha256": "c1b0646f3c3e54efae475dca745199a889624dc4b6ce686ece1a602b0f2186b8",
+      "bytes": 114148,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/031-action.json": {
+      "sha256": "3c45c11526546650502198be5dcaea6a5cbd7ab8290f3b148ea693db5b9a7366",
+      "bytes": 800,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/031-action.png": {
+      "sha256": "a0d7fd4e853e846c2aeeee3ae9c8ea625edda6bfef3f383cd2f3d0704741d388",
+      "bytes": 111447,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/032-key.json": {
+      "sha256": "23a9d8ac16e0e458e82c01ffcd8c6b18c486e52767b67e04ac5417d679bd5cde",
+      "bytes": 281,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/033-observe.json": {
+      "sha256": "6c2778e6a103917f913e885d88930fd285a2f82b55de61023f5605384f491fe3",
+      "bytes": 924,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/033-observe.png": {
+      "sha256": "bd17620286a404dfa263515944f3e6c17aa68d7fb81c9942449641eba5904f23",
+      "bytes": 12530,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/034-resume.json": {
+      "sha256": "bc926dc6080539c3108eeeb2aa79a7bc9d139b9c7fad993d00a644460b29c0f2",
+      "bytes": 925,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/034-resume.png": {
+      "sha256": "bd17620286a404dfa263515944f3e6c17aa68d7fb81c9942449641eba5904f23",
+      "bytes": 12530,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/035-key.json": {
+      "sha256": "cb4b4a711ec13617c613bd1b194b738e7076249e53ccd9e56f4d5e2d09b2960b",
+      "bytes": 801,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/035-key.png": {
+      "sha256": "b21780f4e01754f2d3ecc7b28045c217e86d9a9263c10cfd808055d76bc384bf",
+      "bytes": 12966,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native/036-key.json": {
+      "sha256": "3bf5e87d04f4e5aa17da23e433729ad57ab6e61366a909c4f63757af94fe8bf3",
+      "bytes": 281,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native-provenance.json": {
+      "sha256": "ddc55f8fa025426c078ee606aea0d39c94c348393db91a819dc2042091725af4",
+      "bytes": 802,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/native-summary.json": {
+      "sha256": "960c7f286afa515bf78b269de49091fcab5752bce77bde844ecb8a3f9251dbf9",
+      "bytes": 2925,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/operator.py": {
+      "sha256": "f41958d6efb747a3b22bdbd2296f64049a20e031462ece02a436c22aae141507",
+      "bytes": 1920,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/paused-waypoint-spectator.png": {
+      "sha256": "acc1ee2c4b7faf315c427c34002b434974e3c4976d51b63a38f587b7d13f57e0",
+      "bytes": 236958,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/planning-spectator.png": {
+      "sha256": "be1928bc9c7e5bcbc8fdae32e8170120735a175117de453852130517000bc86b",
+      "bytes": 242121,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/1792296570199365000-request.json": {
+      "sha256": "caba3f93ae9baac505715b9c410d23d1bbe9ddc9a0315d8fda94a7395b28e89d",
+      "bytes": 12780,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/1792296584051874000-submit.json": {
+      "sha256": "6939c86e10dcb7c7c6254414dc6bbb97e12d20e61922b227f43394963a028186",
+      "bytes": 3939,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/1792296657981044000-request.json": {
+      "sha256": "d36a48a3a47de11432269e19d27d5c0a58e174ef87484b32772d8e0dc3230345",
+      "bytes": 12789,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/1792296676973183000-submit.json": {
+      "sha256": "b16aad16512e896fb332e6dce976d7b64764c5ed03d581c61fc343a8ab7e2bff",
+      "bytes": 3942,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/1792296681321449000-request.json": {
+      "sha256": "0e8b6b63dc567f43220828f4dcbf1149d29712497b84fec206c32121678141f0",
+      "bytes": 15612,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/1792296691840838000-submit.json": {
+      "sha256": "ff89f642fbd7ee10dbac3ba41ddae094054d4d46a2b413d4b1d55a995bf4d4af",
+      "bytes": 5809,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/1792296696208169000-request.json": {
+      "sha256": "9feefb97644f17c4b480060c0f34d5b2ea926c8aea03aec6f114509b4d34128c",
+      "bytes": 6675,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/1792296762835331000-request.json": {
+      "sha256": "5a0385706f125ac7fbad7647370717b6afc8e33b52f2624d1ee324ad69fb9bcd",
+      "bytes": 6645,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/1792296769797268000-request.json": {
+      "sha256": "89c90fba6501bfa160706247f38fa94ea40bc0eafc85efa27121ae1f47aad32a",
+      "bytes": 12791,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/1792296784129090000-submit.json": {
+      "sha256": "fe3fbea45e744e2488f0636dfc5032afcf046c60432bded8c00f4d5ab0a42e85",
+      "bytes": 3939,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/1792296787757549000-request.json": {
+      "sha256": "9cab0349ace80bece5bfbc81c3ee18e217e6ae6c418f0fbd7e4ae08f31146246",
+      "bytes": 15612,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/1792296823077048000-request.json": {
+      "sha256": "6af39c02b318fa7dd571af4a8c9469da6d446a29cd23437b0ead117fc2a0ce2e",
+      "bytes": 16364,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/1792296833301621000-submit.json": {
+      "sha256": "fb32bb5952a052dedc2fe7325ed37f83e166af0f4ad836725ad7b77f1ee4bc6f",
+      "bytes": 6659,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/1792296837622382000-request.json": {
+      "sha256": "6eb902aec8f87a8909275b4194d4b60ee9fede5d47365cf3cdde4297b171d3b1",
+      "bytes": 6683,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/north-outbound.json": {
+      "sha256": "95d48f17b2f1e1ca3bd2b88b7113c60eb32e3583ef324aa6e004e18ba1e63070",
+      "bytes": 562,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/north-return.json": {
+      "sha256": "27a14e538991cac681ce22da5f4ee958c4ba71ac3d853f57e7122d1f7b6d9f47",
+      "bytes": 586,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/outbound-first.json": {
+      "sha256": "c6b970701ee1776d9aecf1e3f0781f390feb4a18472d9798e2708ce2d859e95b",
+      "bytes": 562,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/pause-continued-return.json": {
+      "sha256": "fe2fc761bb67ffb70f0bcd25132d99b73f39f3985262a19d41742d01d2b17158",
+      "bytes": 617,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/pause-old-return.json": {
+      "sha256": "f572428fd59e6cd816c0d3186228d792183f4a379f4e996315ebb2d34cc73d98",
+      "bytes": 588,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/pause-outbound.json": {
+      "sha256": "9f942d8bf8532948e6604c8f6ea517b75a29e59f30f3b45941cb81fd76367c0d",
+      "bytes": 559,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player/pause-return-request-full.json": {
+      "sha256": "7a11eb089a4e54dc36d07383e1084f29d96f9115e05d8c51b5ec98b163387e91",
+      "bytes": 14802,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player-diagram.png": {
+      "sha256": "06e1d6d1ebb5764b4a049970ccfb9e402f2ad855a8437642d01765217748c7dd",
+      "bytes": 92308,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/player_client.py": {
+      "sha256": "9621b8de3e5dc3990413bf854dab8e0288fcb5b07acb8ee079d663ee88f47e69",
+      "bytes": 1129,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/runtime-candidate.json": {
+      "sha256": "cd5d4e03ac287bd3de95dd2f14e7ada386c904795e16e6cd488424475f5c739d",
+      "bytes": 1973,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round012/runtime-repair-checks.log": {
+      "sha256": "7cd2fcdb4f5a7cf595ca43991822cbb29cd11c627ec773144a93ed8e4fd76f97",
+      "bytes": 3477,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-000901-3ef19cc7/run-8e6086fd717842feb44fcb815287261e/evidence.json": {
+      "sha256": "0ed084d7333b6a5fe3bd505b5935bfe48e0675e26bc4944943a899ca03126252",
+      "bytes": 11599,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-000901-3ef19cc7/run-8e6086fd717842feb44fcb815287261e/evidence.lock": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-000901-3ef19cc7/run-8e6086fd717842feb44fcb815287261e/frames/22958a12b9eaadadd214358a6ce01c573d017906ab8dca2274364e9c6d3790b6.png": {
+      "sha256": "58b1daa3eb1d0254bb6546a226fe5390df680d7cbd8c11353d1b5f068a4d1ebd",
+      "bytes": 112841,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-000901-3ef19cc7/run-8e6086fd717842feb44fcb815287261e/frames/7817fb8446e04e7381fbdbb79ad8d5ce4f96057ff6d1e638a3315422b392fb2a.png": {
+      "sha256": "50005ea8e3da10bf03d97dc88e37de14285383a89284e84aeeb5fba22af20ac3",
+      "bytes": 113054,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-000901-3ef19cc7/run-8e6086fd717842feb44fcb815287261e/frames/a6491907d6063060e60461f0f64e4adaca368f9ec8a92d96f9b864810c68f3b2.png": {
+      "sha256": "50005ea8e3da10bf03d97dc88e37de14285383a89284e84aeeb5fba22af20ac3",
+      "bytes": 113054,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-001045-69b6aa60/run-9c3a0e3c88dc4c44a0d8b0d3e6964da1/evidence.json": {
+      "sha256": "78b54af1eb23ba73261ca254496984579e6c2daea68f5ce72efe70b8b80cd201",
+      "bytes": 19295,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-001045-69b6aa60/run-9c3a0e3c88dc4c44a0d8b0d3e6964da1/evidence.lock": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-001045-69b6aa60/run-9c3a0e3c88dc4c44a0d8b0d3e6964da1/frames/73e9be7e658c3e3806c23d6ff2e88d1e7af8e155204556bfdafb49374d100b8a.png": {
+      "sha256": "58b1daa3eb1d0254bb6546a226fe5390df680d7cbd8c11353d1b5f068a4d1ebd",
+      "bytes": 112841,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-001045-69b6aa60/run-9c3a0e3c88dc4c44a0d8b0d3e6964da1/frames/a0480bf85606e8911e517dfd113d914fe5b351f00bffb315c1234b0402a5251f.png": {
+      "sha256": "58b1daa3eb1d0254bb6546a226fe5390df680d7cbd8c11353d1b5f068a4d1ebd",
+      "bytes": 112841,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-001045-69b6aa60/run-9c3a0e3c88dc4c44a0d8b0d3e6964da1/frames/ab8bf49a6430503432a04c2cbb60226ea2525963ac847cdb99d552873360518f.png": {
+      "sha256": "b9416e0c64269ea42f3998ebd9f4206ee57301d89590a4d7a37af5b6985a18a3",
+      "bytes": 113965,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-001045-69b6aa60/run-9c3a0e3c88dc4c44a0d8b0d3e6964da1/frames/db1adaa2d424edd7a0dcadc8bb447642cc7a30228f970ab4a82d3bd1b36651ba.png": {
+      "sha256": "4de5ab8d27eb3f2ce8a0688febc00e61e2c347e47ba075f66c0c44339b6f0121",
+      "bytes": 113716,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-001045-69b6aa60/run-9c3a0e3c88dc4c44a0d8b0d3e6964da1/frames/ec04baee632b44a8054ee630c0dbeac0cc7fb1f0dd8bd343a9fd1a823d437ed1.png": {
+      "sha256": "4de5ab8d27eb3f2ce8a0688febc00e61e2c347e47ba075f66c0c44339b6f0121",
+      "bytes": 113716,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-001045-69b6aa60/run-9edca8d8134c41dba44f5580af9b3d96/evidence.json": {
+      "sha256": "b06fea3e9cbf1896a7ef555d544c995dd1b5c22fe2c4443e1b22db308bb497d8",
+      "bytes": 23144,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-001045-69b6aa60/run-9edca8d8134c41dba44f5580af9b3d96/evidence.lock": {
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "bytes": 0,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-001045-69b6aa60/run-9edca8d8134c41dba44f5580af9b3d96/frames/5b89523020894c385b498ebf6839be4423921334917e7d20d0201463e5934e25.png": {
+      "sha256": "d40676e622311b35974e31a6fc4d815db85021d59abf6a8f9f74b58d54c15042",
+      "bytes": 113724,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-001045-69b6aa60/run-9edca8d8134c41dba44f5580af9b3d96/frames/809d499d91dcfb5493a267721e86cbaa0694ab86247f1e5b5bee9c09b8b84e08.png": {
+      "sha256": "d40676e622311b35974e31a6fc4d815db85021d59abf6a8f9f74b58d54c15042",
+      "bytes": 113724,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-001045-69b6aa60/run-9edca8d8134c41dba44f5580af9b3d96/frames/94b9e69485ffda69ea964187565c73e4d1ad894515546d1b8dd113ce0fb5f90d.png": {
+      "sha256": "b9416e0c64269ea42f3998ebd9f4206ee57301d89590a4d7a37af5b6985a18a3",
+      "bytes": 113965,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-001045-69b6aa60/run-9edca8d8134c41dba44f5580af9b3d96/frames/a2b210bbd6bdbae5f47b70d568d0228992c96573de092fe2c650170697dd1008.png": {
+      "sha256": "b9416e0c64269ea42f3998ebd9f4206ee57301d89590a4d7a37af5b6985a18a3",
+      "bytes": 113965,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-001045-69b6aa60/run-9edca8d8134c41dba44f5580af9b3d96/frames/a971173f9bd5030b8efbe63f627cfd277a3c1952f25585654e9ff8a260881156.png": {
+      "sha256": "fc97433a802aca79b6eff2cf0c843183f379820d211251b2c8b4fc743cef36e1",
+      "bytes": 113901,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/sessions/20261018-001045-69b6aa60/run-9edca8d8134c41dba44f5580af9b3d96/frames/bb5c699e61f7b08acb8cc9abcd5f9b337224c5de83453ed1b61d1507c74714f3.png": {
+      "sha256": "d40676e622311b35974e31a6fc4d815db85021d59abf6a8f9f74b58d54c15042",
+      "bytes": 113724,
+      "availability": "local-only; not included in Git"
+    }
+  }
+}

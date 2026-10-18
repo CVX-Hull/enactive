@@ -6,7 +6,7 @@ status: active
 
 # Current architecture
 
-Native-v3 recovery and passive gameplay-memory architecture. The
+Native-v3 recovery and integrated bounded gameplay architecture. The
 [foundation acceptance](acceptance/2026-10-17-foundation-implementation.md) records
 fresh windowed native-v2 probes and separately scoped portable evidence tests.
 [MVP acceptance](acceptance/2026-10-17-mvp.md) remains historical v1 evidence.
@@ -26,12 +26,16 @@ Historical artifacts are retained as evidence without being accepted as runtime 
 
 The [overview](overview.md) provides the user-facing system picture. One local
 macOS game and one controller are supported. Codex in an active chat is the
-planner; general autonomous survival and other hosts are unverified. Normal
+planner, normally through a dedicated player sub-agent. The service executes
+explicitly admitted waypoint tasks with feedback; general autonomous survival and
+other hosts remain unverified. Normal
 windowed operation and project isolation are [charter constraints](charter.md).
 
 | Boundary / owner | Input and output | Authority and failure behavior |
 | --- | --- | --- |
-| Planner / active Codex session | Actual observations → objective and bounded input requests | Chooses goals; cannot infer success from transport acknowledgment; uncertain state requires reconciliation |
+| Lead / active Codex chat | User objective → bounded task admission and supervision | Owns shared runtime and verification; explicit start/continue; no automatic restart |
+| Player / dedicated sub-agent | Bounded retained visible evidence → stage candidate | Proposes data only through external handoff; same model roles need not be different tiers; missing/late player stops; role instructions do not create OS isolation |
+| Gameplay runtime / harness maintainer | Task and candidate → verified skill progress and public status | Sole run worker; exact controller lease and native receipt mapping; fresh revalidation after planning; original budgets and unknown effects preserved |
 | Controller / harness maintainer | Observed-state-bound commands → validated bridge requests, results and journal | One process with separate serialized gameplay and recovery writers; explicit run lease; process lock; deadlines; pause revokes ownership and freezes dispatch; never mutates saves or game state |
 | Native bridge / integration maintainer | Bounded requests → actual input events, metadata and rendered frames | Game thread only; engine validates outcomes; session/revision/expiry checks; unsupported input boundaries cannot claim success |
 | Spectator / viewer maintainer | Frames and state → display and operator controls | Input authority only after matching current image decodes; stale state stays visible; browser controls require origin/token validation |
@@ -200,18 +204,19 @@ fresh final guard are required for task completion.
 
 This current logical diagram answers “Where do feedback and correction happen?”
 Boxes are responsibilities/states in one serialized caller, not processes. Solid
-arrows show decisions and evidence flow; the dotted edge identifies future #36
-integration. The [editable diagram](diagrams/supervisor.mmd) and
+arrows show decisions and evidence flow; the dotted edge identifies the runtime
+adapter that owns the real controller lease and native receipt mapping. The [editable diagram](diagrams/supervisor.mmd) and
 [exact contract](protocol.md#passive-waypoint-supervision) distinguish eligible
 intents from real authority. Explicit continuation verifies the remaining route;
 unknown effects stay unresolved, and complete legs need verification without
 another move. A new timestamp or model assertion cannot clear a nonprogress stop.
 
-The controller now enforces a process-local lease across ordinary ingress.
-The passive supervisor still grants no lease. Service lifecycle, native receipt
-assembly and live provider remain [#36](https://github.com/CVX-Hull/cdda-player/issues/36).
-The current service does not instantiate this supervisor. Portable composition
-tests therefore establish no autonomous/native/model performance claim.
+The runtime instantiates this passive supervisor on explicit task admission,
+connects it to a controller lease and exact native receipts, and supplies the
+external-chat planning handoff. Fresh revalidation permits slow planning without
+weakening input freshness. The supervisor package itself still grants no lease.
+Portable composition tests establish no native or model-performance claim; real
+acceptance remains a separate lane.
 
 ## Run ownership and operator takeover
 
@@ -231,5 +236,6 @@ Resume restores transport only. Queued requests retain their original admission
 generation and cannot cross takeover or acquisition. No process restores a lease.
 
 [Protocol](protocol.md#controller-run-ownership) owns the precise contract. This
-controller capability is implemented independently of supervisor/service wiring;
-#36 still owns that integration and exact logical/native receipt mapping.
+controller capability is consumed by the run service. The
+[integration contract](protocol.md#integrated-gameplay-lifecycle) explains task
+lifecycle, planning, exact logical/native receipts and the spectator.

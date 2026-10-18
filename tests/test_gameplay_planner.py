@@ -589,6 +589,28 @@ class PlannerTests(unittest.TestCase):
                 gate.release.set()
                 self.done(port)
 
+    def test_external_mode_reports_unknown_usage_and_requires_zero_api_spend(self):
+        for changes in ({"reservation_usd_per_call": 0.1}, {"spend_ceiling_usd": 1}):
+            with self.assertRaises(ContractError):
+                PlannerConfig("external-unreported", "external-chat-v1", mode="external", **changes)
+        config = PlannerConfig("external-unreported", "external-chat-v1", mode="external")
+        port, gate = self.gated(ProviderReply(json.dumps(candidate().to_dict()), ProviderUsage()), config=config)
+        call = port.submit(request())
+        self.assertTrue(gate.entered.wait(1))
+        self.assertEqual(gate.snapshot.mode, "external")
+        deadline = port.deadline(call)
+        self.assertEqual(deadline, 130)
+        gate.release.set()
+        snapshot = self.done(port)
+        self.assertEqual(port.poll(call, request().binding).status, "completed")
+        self.assertEqual(snapshot.committed_usd, 0)
+        self.assertEqual(snapshot.unresolved_reservation_usd, 0)
+        self.assertEqual(snapshot.calls[0].observed_usage, ProviderUsage())
+        for name in ("input_tokens", "output_tokens", "cached_input_tokens", "cost_usd"):
+            payload = snapshot.evaluation_events()[0]["payload"]
+            self.assertIsNone(payload[name])
+            self.assertIn("unmeasured", payload[name + "_missing_reason"])
+
 
 if __name__ == "__main__":
     unittest.main()

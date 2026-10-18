@@ -3,7 +3,7 @@ title: Current controller ownership and takeover
 ---
 flowchart TD
   accTitle: One run owns input until revoked
-  accDescr: A trusted caller acquires a process-local capability only with fresh normal-play evidence and empty queues. Its semantic action rechecks lease, admission generation and observed native authority. Competing external input is rejected. Observe, status and goal recording remain available. Pause and recovery revoke ownership, and native takeover, transport failures and shutdown invalidate it. Resume does not reacquire. Native commit cannot be undone. Supervisor integration remains future work.
+  accDescr: A trusted caller acquires a process-local capability only with fresh normal-play evidence and empty queues. Its semantic action rechecks lease, admission generation and observed native authority. Competing external input is rejected. Observe, status and goal recording remain available. Pause and recovery revoke ownership, and native takeover, transport failures and shutdown invalidate it. Resume does not reacquire. Native commit cannot be undone. The run service is the trusted caller for explicitly admitted gameplay tasks.
   Caller[Trusted in-process caller] -->|Explicit acquire| Gate{Fresh normal play<br/>Empty writers and queues}
   Gate -->|Pass| Lease[Exact RunLease object]
   Gate -->|Fail| Reject[Reject without input]

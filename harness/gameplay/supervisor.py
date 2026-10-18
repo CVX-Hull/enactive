@@ -16,11 +16,11 @@ from typing import Callable, Literal
 from harness.movement import DIRECTIONS, MovementBlocked, guard
 from .contracts import (
     Budgets, ContractError, EvidencePacket, EvidenceRef, PrimitiveResult, Progress,
-    RunStatus, Stage, TaskSpec,
+    RunStatus, Stage, TaskSpec, PlanCandidate,
 )
 from .evidence import EvidenceError, EvidenceStore
 from .memory import TaskMemory
-from .planner import AccountingSnapshot, PlannerConfig, PlannerPort, PlanningRequest, Provider
+from .planner import AccountingSnapshot, CallResult, PlannerConfig, PlannerPort, PlanningRequest, Provider
 from .skills import (
     ACCEPTED_SKILLS, CARDINAL_MOVEMENT, MovementStage, RouteAttempt, RouteHistory,
     SkillEvaluation, StepProposal, summarize_route,
@@ -316,37 +316,93 @@ class WaypointSupervisor:
             self._stop("blocked", str(exc))
         return self.status(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
 
+    def planning_result(self) -> CallResult:
+        """Inspect the original request lifecycle without refreshing aged evidence."""
+        if self._state != "planning" or self._call is None:
+            raise ContractError("No planning request is pending")
+        return self._planner.poll(self._call, self._request.binding)
+
+    def _admit_candidate(self, candidate: PlanCandidate, current: EvidenceRef, now: float, timestamp: int) -> None:
+        candidate.check_binding(self._task, current, plan_id=self._request.packet.plan_id,
+            plan_version=self._version, execution_epoch=self._epoch, skill=CARDINAL_MOVEMENT)
+        self._checkpoint, self._generation = current, self._store.authority_generation()
+        self._memory.refresh(now_monotonic=now, now_timestamp_ms=timestamp)
+        sources = (self._start,) + ((self._summary.waypoint,) if self._summary.waypoint else ())
+        self._memory.retain_plan(candidate, CARDINAL_MOVEMENT, sources=sources,
+            now_monotonic=now, now_timestamp_ms=timestamp)
+        self._stage = self._new_stage(current)
+        self._call = None
+        self._state, self._reason = "admitted", "Bound candidate retained; eligible intent may be proposed"
+        self._decision("continue", now)
+
+    def revalidate_planning(self, refreshed: EvidenceRef, *, now_monotonic: float,
+                            now_timestamp_ms: int) -> RunStatus:
+        """Admit the original candidate only after one equivalent fresh Observe.
+
+        Only the refresh's single generation advance is accepted. The candidate
+        and original task/history/budgets are never rewritten or renewed.
+        """
+        self._clocks(now_monotonic, now_timestamp_ms)
+        old = self._checkpoint
+        try:
+            result = self.planning_result()
+            if now_monotonic >= self._planner.deadline(self._call):
+                raise ContractError("Original planning revalidation deadline expired")
+            if result.status != "completed":
+                raise ContractError("Original planner request is not a live completed candidate")
+            if self._request.execution_epoch != self._epoch:
+                raise ContractError("Original planning epoch changed")
+            self._store.observation(old)
+            current = self._store.current(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
+            if (current != refreshed or current == old
+                    or self._store.authority_generation() != self._generation + 1):
+                raise EvidenceError("Planning refresh has intervening evidence invalidation")
+            before, after = self._store.observation(old), self._store.observation(current)
+            keys = ("session", "revision", "scene", "boundary", "category", "actions", "paused", "in_game")
+            if (any(before[key] != after[key] for key in keys)
+                    or current.frame_sha256 != old.frame_sha256):
+                raise EvidenceError("Planning refresh differs from original visible state or pixels")
+            self._current(now_monotonic, now_timestamp_ms, exact=False)
+            self._admit_candidate(result.candidate, current, now_monotonic, now_timestamp_ms)
+            self._reason = "Original candidate explicitly revalidated against equivalent fresh evidence"
+            decision = "equivalent"
+        except (EvidenceError, MovementBlocked, ContractError) as exc:
+            self._revoke("interrupted", str(exc))
+            decision = "not equivalent: " + str(exc)
+        self._decision_count += 1
+        self._decisions.append(json.dumps(self._event(f"decision-{self._decision_count}", "decision",
+            now_monotonic, tuple(dict.fromkeys((old, refreshed))), {
+                "decision": "replan", "reason": decision[:1024], "actor": "autonomous",
+                "model_id": None, "model_id_missing_reason": "Deterministic revalidation",
+                "expected": [], "observed": [], "unknowns": []})))
+        return self.status(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
+
     def poll(self, *, now_monotonic: float, now_timestamp_ms: int) -> RunStatus:
         self._clocks(now_monotonic, now_timestamp_ms)
         if self._state == "executing":
             try:
                 summarize_route(self._task, self._store, self._start, self._history)
                 self._store.observation(self._pending.proposal.before)
-                current = self._store.current(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
-                if current.session != self._task.session:
+                current, _ = self._store.inspect_current(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
+                if current is None or current.session != self._task.session:
                     raise EvidenceError("Pending intent evidence changed native session")
             except (EvidenceError, ContractError) as exc:
                 self._revoke("unknown", str(exc))
         if self._state in ("planning", "admitted"):
             try:
-                current = self._current(now_monotonic, now_timestamp_ms, exact=True)
                 if self._state == "planning":
-                    result = self._planner.poll(self._call, self._request.binding)
+                    current, _ = self._store.inspect_current(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
+                    if current != self._checkpoint or self._store.authority_generation() != self._generation:
+                        raise EvidenceError("Observation or evidence authority changed; explicit continuation required")
+                    result = self.planning_result()
                     if result.status == "completed":
-                        candidate = result.candidate
-                        candidate.check_binding(self._task, current, plan_id=self._request.packet.plan_id,
-                            plan_version=self._version, execution_epoch=self._epoch, skill=CARDINAL_MOVEMENT)
-                        self._memory.refresh(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
-                        sources = (self._start,) + ((self._summary.waypoint,) if self._summary.waypoint else ())
-                        self._memory.retain_plan(candidate, CARDINAL_MOVEMENT, sources=sources,
-                            now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
-                        self._stage = self._new_stage(current)
-                        self._call = None
-                        self._state, self._reason = "admitted", "Bound candidate retained; eligible intent may be proposed"
-                        self._decision("continue", now_monotonic)
+                        current = self._current(now_monotonic, now_timestamp_ms, exact=True)
+                        self._admit_candidate(result.candidate, current, now_monotonic, now_timestamp_ms)
                     elif result.status != "pending":
                         self._call = None
                         self._stop("budget_exhausted" if result.status == "timed_out" else "failed", result.reason)
+                else:
+                    self._current(now_monotonic, now_timestamp_ms, exact=True)
             except (EvidenceError, MovementBlocked, ContractError) as exc:
                 self._revoke("interrupted", str(exc))
         return self.status(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
@@ -379,6 +435,20 @@ class WaypointSupervisor:
         self._revoked, self._operator_revoked = False, False
         self._state, self._reason = "executing", "One passive intent awaits an exact correlated result"
         return self._pending
+
+    def validate_dispatch(self, intent: DispatchIntent, *, now_monotonic: float,
+                          now_timestamp_ms: int) -> float:
+        """Recheck live intent/evidence and return its original absolute deadline."""
+        self._clocks(now_monotonic, now_timestamp_ms)
+        if (intent != self._pending or self._revoked or self._retired
+                or self._state != "executing" or intent.execution_epoch != self._epoch):
+            raise ContractError("Dispatch intent is no longer live")
+        self._current(now_monotonic, now_timestamp_ms, exact=True)
+        deadline = min(self._admission + self._task.budgets.wall_seconds,
+                       self._intent_time + intent.proposal.wait_seconds)
+        if now_monotonic >= deadline or self._remaining(now_monotonic).turns <= 0:
+            raise ContractError("Original dispatch budget exhausted")
+        return deadline
 
     def _non_delivery(self, result: PrimitiveResult) -> None:
         if result.transport_disposition not in ("not_dispatched", "rejected"):
@@ -534,8 +604,8 @@ class WaypointSupervisor:
         self._clocks(now_monotonic, now_timestamp_ms, mutate=False)
         fresh = False
         try:
-            current = self._store.current(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
-            fresh = current.session == self._task.session
+            current, fresh = self._store.inspect_current(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
+            fresh = fresh and current is not None and current.session == self._task.session
         except EvidenceError:
             current = None
         summary = self._summary

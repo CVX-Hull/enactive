@@ -5,6 +5,8 @@ from io import StringIO
 from unittest.mock import patch
 from http.client import HTTPConnection
 import json
+import sys
+from types import ModuleType
 from pathlib import Path
 import tempfile
 import threading
@@ -12,8 +14,35 @@ import time
 import unittest
 
 from harness.controller import Controller
+from harness.gameplay.contracts import PlanCandidate
 from harness.server import Server
 from tests.test_controller import ControlBridge, FakeBridge, recovery_state
+
+
+class StubRuntime:
+    """Boundary fixture only; production must construct the real runtime."""
+    def __init__(self, controller):
+        self.controller = controller
+        self.snapshot = None
+        self.calls = []
+        self.closed = False
+
+    def command(self, kind, **payload):
+        self.calls.append((kind, payload))
+        result = {"status": "accepted", "gameplay": self.snapshot}
+        if kind == "planning_request":
+            result["planning_request"] = None
+        return result
+
+    def status(self):
+        return self.snapshot
+
+    def pause(self, reason):
+        self.calls.append(("pause", {"reason": reason}))
+        return self.controller.pause()
+
+    def close(self):
+        self.closed = True
 
 
 class ServerTests(unittest.TestCase):
@@ -25,7 +54,10 @@ class ServerTests(unittest.TestCase):
         (self.root / "web" / "app.js").write_text('"use strict";')
         (self.root / "web" / "style.css").write_text('body {}')
         self.controller = Controller(self.root, timeout=0.15)
-        self.server = Server(self.controller, 0)
+        runtime_module = ModuleType("harness.runtime")
+        runtime_module.GameplayRuntime = StubRuntime
+        with patch.dict(sys.modules, {"harness.runtime": runtime_module}):
+            self.server = Server(self.controller, 0)
         self.thread = threading.Thread(target=self.server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
         self.thread.start()
         self.addCleanup(self.cleanup)
@@ -56,6 +88,130 @@ class ServerTests(unittest.TestCase):
         defaults = {"Content-Type": "application/json", "X-CDDA-Token": self.controller.token}
         defaults.update(headers)
         return self.request("POST", "/api/recovery", json.dumps(value), **defaults)
+
+    def gameplay(self, value, **headers):
+        defaults = {"Content-Type": "application/json", "X-CDDA-Token": self.controller.token}
+        defaults.update(headers)
+        return self.request("POST", "/api/gameplay", json.dumps(value), **defaults)
+
+    def test_gameplay_lifecycle_status_and_exact_dispatch(self):
+        runtime = self.server.gameplay
+        self.assertEqual(runtime.calls, [])
+        self.assertIsNone(json.loads(self.request()[1])["gameplay"])
+        runtime.snapshot = {"run_id": "run", "task": {}, "run": {"state": "planning"},
+                            "planner": {"usage_known": False}, "last_receipt": None}
+        payloads = [{"kind": "start", "direction": "east", "distance": 2,
+                     "expected_session": "shown", "expected_revision": 7},
+                    {"kind": "continue", "run_id": "run", "execution_epoch": 0,
+                     "expected_session": "shown", "expected_revision": 7},
+                    {"kind": "abandon", "run_id": "run", "execution_epoch": 0},
+                    {"kind": "planning_request"}]
+        for payload in payloads:
+            code, body, _ = self.gameplay(payload)
+            self.assertEqual(code, 200, body)
+            self.assertEqual(json.loads(body)["gameplay"], runtime.snapshot)
+            self.assertEqual(runtime.calls[-1], (payload["kind"], {k: v for k, v in payload.items() if k != "kind"}))
+        for _ in range(5):
+            self.assertEqual(json.loads(self.request()[1])["gameplay"], runtime.snapshot)
+        self.assertEqual(len(runtime.calls), len(payloads), "status reads cannot execute gameplay")
+        self.assertEqual(self.post({"kind": "pause"})[0], 200)
+        self.assertEqual(runtime.calls[-1][0], "pause")
+        self.assertTrue(self.controller.pause_requested)
+
+    def test_gameplay_validates_exact_fields_types_and_candidate_version(self):
+        start = {"kind": "start", "direction": "east", "distance": 2,
+                 "expected_session": "shown", "expected_revision": 7}
+        invalid = [{"kind": "resume"}, {**start, "extra": 1}, {"kind": "planning_request", "timeout": 1}]
+        invalid.extend({k: v for k, v in start.items() if k != field} for field in start)
+        for key, values in {"direction": ["up", None, 1], "distance": [0, 5, True, 1.0, "1"],
+                            "expected_session": [None, "", True], "expected_revision": [-1, True, 1.0]}.items():
+            invalid.extend({**start, key: value} for value in values)
+        invalid += [{"kind": "abandon", "run_id": "run", "execution_epoch": True},
+                    {"kind": "plan", "request_id": "request", "candidate": {"schema": "gameplay/2"}},
+                    {"kind": "plan", "request_id": "request", "candidate": "{}"}]
+        for payload in invalid:
+            with self.subTest(payload=payload):
+                code, body, _ = self.gameplay(payload)
+                self.assertEqual(code, 400)
+                result = json.loads(body)
+                self.assertEqual(set(result), {"error"}, "ingress errors retain the existing HTTP envelope")
+        self.assertEqual(self.server.gameplay.calls, [])
+
+    def test_gameplay_plan_and_planning_request_preserve_runtime_data(self):
+        candidate = PlanCandidate("candidate", "task", 1, "plan", 1, 0, "seen", 7,
+                                  "outbound", "east", 2, "cardinal", 2, "Visible route is clear").to_dict()
+        payload = {"kind": "plan", "request_id": "request-exact", "candidate": candidate}
+        self.assertEqual(self.gameplay(payload)[0], 200)
+        self.assertEqual(self.server.gameplay.calls[-1], ("plan", {"request_id": "request-exact", "candidate": candidate}))
+        for bad_candidate in ({**candidate, "schema": "gameplay/2"}, {**candidate, "extra": 1},
+                              {**candidate, "execution_epoch": True}):
+            self.assertEqual(self.gameplay({**payload, "candidate": bad_candidate})[0], 400)
+        request = {"request_id": "pending-exact", "deadline_ms": 12345,
+                   "input": {"task": {}, "packet": {}, "skills": [], "binding": {},
+                             "public_context": "bounded public context", "admission_monotonic": 1}}
+        result = {"status": "accepted", "gameplay": None, "planning_request": request}
+        with patch.object(self.server.gameplay, "command", return_value=result):
+            code, body, _ = self.gameplay({"kind": "planning_request"})
+            self.assertEqual((code, json.loads(body)), (200, result))
+        for reason in ("duplicate candidate", "late candidate", "stale binding"):
+            rejected = {"status": "rejected", "error": reason, "gameplay": {"run_id": "retained"}}
+            with patch.object(self.server.gameplay, "command", return_value=rejected):
+                code, body, _ = self.gameplay(payload)
+                self.assertEqual((code, json.loads(body)), (409, rejected))
+
+    def test_gameplay_malformed_json_and_runtime_errors_retain_diagnostics(self):
+        headers = {"Content-Type": "application/json", "X-CDDA-Token": self.controller.token}
+        for body in ('{"kind":"planning_request","kind":"planning_request"}',
+                     '{"kind":"start","distance":NaN}', '[]', '{"kind":'):
+            self.assertEqual(self.request("POST", "/api/gameplay", body, **headers)[0], 400)
+        self.assertEqual(self.server.gameplay.calls, [])
+        with patch.object(self.server.gameplay, "command", side_effect=ValueError("retained diagnostic")):
+            code, body, _ = self.gameplay({"kind": "planning_request"})
+            self.assertEqual(code, 409)
+            result = json.loads(body)
+            self.assertEqual(result["status"], "rejected")
+            self.assertIn("retained diagnostic", result["error"])
+            self.assertIn("gameplay", result)
+
+    def test_gameplay_pause_and_status_do_not_wait_for_task_command(self):
+        entered = threading.Event()
+        release = threading.Event()
+
+        def blocked(kind, **payload):
+            entered.set()
+            self.assertTrue(release.wait(2))
+            return {"status": "rejected", "error": "Paused", "gameplay": None}
+
+        with patch.object(self.server.gameplay, "command", side_effect=blocked), ThreadPoolExecutor() as pool:
+            waiting = pool.submit(self.gameplay, {"kind": "planning_request"})
+            try:
+                self.assertTrue(entered.wait(1))
+                started = time.monotonic()
+                self.assertEqual(self.post({"kind": "pause"})[0], 200)
+                self.assertEqual(self.request()[0], 200)
+                self.assertLess(time.monotonic() - started, 0.2)
+                self.assertFalse(waiting.done())
+            finally:
+                release.set()
+            self.assertEqual(waiting.result()[0], 409)
+
+    def test_gameplay_security_and_runtime_rejection(self):
+        payload = {"kind": "planning_request"}
+        for headers, code in [({"Origin": "null"}, 403), ({"Host": "evil.example"}, 403),
+                              ({"Sec-Fetch-Site": "cross-site"}, 403),
+                              ({"X-CDDA-Token": "wrong"}, 403), ({"Content-Type": "text/plain"}, 415)]:
+            self.assertEqual(self.gameplay(payload, **headers)[0], code)
+        self.assertEqual(self.gameplay({**payload, "padding": "x" * 4096})[0], 413)
+        self.assertEqual(self.server.gameplay.calls, [])
+        result = {"status": "rejected", "error": "stale request", "gameplay": None}
+        with patch.object(self.server.gameplay, "command", return_value=result):
+            code, body, _ = self.gameplay(payload)
+            self.assertEqual((code, json.loads(body)), (409, result))
+
+    def test_shutdown_pauses_and_closes_runtime(self):
+        self.server.server_close()
+        self.assertEqual(self.server.gameplay.calls[-1][0], "pause")
+        self.assertTrue(self.server.gameplay.closed)
 
     def recovery_payload(self, kind="request_interrupt"):
         state = self.controller.state
@@ -95,8 +251,10 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(self.post({"kind": "pause"})[0], 200)
             self.assertIsNone(self.controller.status()["run_lease"])
             rejected = self.controller.execute_run(lease, action="RIGHT",
-                expected_session=current["session"], expected_revision=current["revision"])
-            self.assertNotEqual(rejected["status"], "ready")
+                expected_session=current["session"], expected_revision=current["revision"],
+                logical_action_id="revoked-http-lease", deadline_monotonic=time.monotonic() + 1)
+            self.assertFalse(rejected["published"])
+            self.assertNotEqual(rejected["result"]["status"], "ready")
             self.assertEqual(len(bridge.delivered), delivered)
             self.assertEqual(self.post({"kind": "observe"})[0], 200)
             self.assertEqual(self.post({"kind": "resume"})[0], 200)

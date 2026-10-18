@@ -12,8 +12,10 @@ This is a versioned overview, not a live process-status page.
 
 An agent plays real Cataclysm: Dark Days Ahead while you watch the graphical game
 and retain control. The harness makes observations, actions and uncertainty visible.
-It currently needs Codex in an active chat to choose goals and interpret scenes.
-The service alone does not play autonomously.
+It needs an active Codex player to choose plans and interpret scenes. A dedicated
+player sub-agent can answer bounded planning requests while the lead supervises.
+The service executes an explicitly started waypoint task with per-step feedback;
+without a player response it stops on a deadline. General survival is not implemented.
 
 The consolidated implementation [goal](goal.md) records the full requested scope.
 The [completion audit](acceptance/2026-10-17-completion.md) maps that scope to
@@ -31,12 +33,12 @@ defines the rule and its enforcement.
 
 Current system context: **who decides, what you see, and where you retain control**.
 
-![Current CDDA Player context: you direct Codex, the local harness validates inputs and shows real frames, and CDDA decides outcomes.](diagrams/context.svg)
+![Player responsibilities: you direct the lead, a player proposes a plan, and the service verifies and executes while you retain Pause.](diagrams/player.svg)
 
-Boxes show responsibilities, not four independent local processes. Arrows name
-information/control flow. The harness contains the Python controller and browser
-spectator; the native bridge runs inside CDDA. Codex planning needs this active
-chat. [Editable diagram](diagrams/context.mmd).
+Boxes show responsibilities, not separate model tiers. The harness contains the
+run service, controller and spectator; the native bridge runs inside CDDA. A player
+sub-agent keeps gameplay context separate from engineering work. It proposes plans;
+the service validates and executes. [Editable diagram](diagrams/player.mmd).
 
 CDDA decides game outcomes. The controller checks whether a requested input is
 allowed in the observed state. The viewer shows actual game frames and control
@@ -53,10 +55,10 @@ explain why native integration was selected and when we would reconsider it.
 | Planner round trips | One real three-tile comparison used three individual decisions versus one guarded request, retaining per-step checks; not a general speed or safety result | [Timing trial](acceptance/2026-10-17-completion.md#fresh-real-game-timing-probe) |
 | Input authority and takeover | Native-v3 distinguishes ordinary play, menus, activity polls and debug prompts; revoked tokens and old worlds are rejected. Already-committed actions and activities cannot be undone by Pause | [Recovery acceptance](acceptance/2026-10-17-recovery-memory.md) |
 | Retained gameplay evidence and memory | Typed records and bounded retention now have native normal/menu/activity, movement and reload evidence; missing/conflicting copies are tested in a separate fault lane | [Current evidence contract](protocol.md#passive-gameplay-records-and-evidence) |
-| Passive movement skills | One proposed step at a time with cumulative route history; version 1 had native acceptance, version 2 continuation has portable tests | [Skill contract](protocol.md#passive-bounded-movement-skills) |
-| Run input ownership | Explicit in-process lease excludes competing remote input; Pause returns control; supervisor/service wiring remains separate | [Ownership contract](protocol.md#controller-run-ownership) |
-| Passive waypoint supervisor | Coordinates planning, progress, stops and explicit continuation in component tests; service/game/provider integration remains separate | [Supervisor contract](protocol.md#passive-waypoint-supervision) |
-| Bounded planner interface | Injected providers return validated data with cancellation, deadlines and cost accounting; fixtures pass, but no concrete model provider or autonomous supervisor is connected | [Planner contract](protocol.md#bounded-injected-planner) |
+| Passive movement skills | One proposed step at a time with cumulative route history; version 2 has portable tests and a real player-assisted continuation probe | [Skill contract](protocol.md#passive-bounded-movement-skills) |
+| Run input ownership | Explicit task owns input; competing remote inputs reject; Pause immediately revokes further dispatch | [Ownership contract](protocol.md#controller-run-ownership) |
+| Waypoint task supervision | Explicit start, fresh stage planning, verified steps, visible stops and continuation with original history/budgets | [Supervisor contract](protocol.md#passive-waypoint-supervision) |
+| Player planning handoff | Active-chat player returns bounded candidates; slow decisions require fresh evidence revalidation. Missing/stale replies stop; chat usage remains unmeasured | [Planner contract](protocol.md#bounded-injected-planner) |
 | Evaluation records | Passive versioned outcome/cost recorder and offline summaries; external planning and future adapters are not automatically measured | [Evaluation guide](evaluation.md) |
 | Autonomous survival | Not implemented; Codex remains the planner | [Current scope](architecture.md#scope-and-responsibilities) |
 | Reproducible installation | Fresh build demonstrated on this Mac; other hosts remain unverified | [Setup](setup.md), [historical provenance](acceptance/2026-10-17-mvp-manifest.json) |
@@ -71,7 +73,10 @@ results, revocation ordering, save/reload and raw-debug recovery have been exerc
 production gameplay from controlled fault probes and preserves unsuccessful attempts.
 Native keyboard control remains available. Tutorial save loading still has a
 [tracked content defect](https://github.com/CVX-Hull/cdda-player/issues/47).
-There is no structured trap/damage guarantee or general combat policy.
+There is no structured trap/damage guarantee or general combat policy. The movement
+guard also checks the next tile after the final requested step, so a cupboard beyond
+a reached waypoint can stop completion; [#53](https://github.com/CVX-Hull/cdda-player/issues/53)
+tracks review of that conservative policy.
 
 ## Current direction and decisions
 
@@ -80,15 +85,14 @@ The original consolidated MVP goal is verified within its stated boundaries. Its
 comparisons. The [foundation increment](acceptance/2026-10-17-foundation-implementation.md)
 adds native input authority and passive evidence; it does not add autonomous play. The documentation [brief](changes/002-documentation-review.md)
 explains the visual explanations, lifecycle records and maintenance checks.
-Next priorities and any open issues are in [work](work.md). Current priorities are control
-reliability and evidence quality before expanding unattended play. The [recovery and memory increment](acceptance/2026-10-17-recovery-memory.md)
-adds Python recovery transport and passive task memory. Public recovery controls and passive evaluation records are implemented. Round 008
-adds the Pause timing repair, integrated native recovery evidence and a bounded
-planner port. Round 009 adds passive movement skills and native predicate acceptance.
-Round 010 adds passive waypoint supervision and remaining-route continuation;
-the service still requires Codex to choose gameplay actions. Round 011 adds
-controller run ownership and immediate operator takeover; it does not connect the
-passive supervisor to the game.
+Current priorities are in [work](work.md). The integrated player uses the accepted
+native authority, evidence, skills, planner and supervisor components in one
+explicit task lifecycle. The spectator shows the current leg, verified progress,
+next check and stop reason; deeper evidence and unknown usage remain inspectable.
+The [integration brief](changes/012-integrated-player.md) explains the player
+arrangement; [round 012 acceptance](acceptance/2026-10-18-integrated-player.md) records
+two completed native tasks, Pause/continuation and the unsuccessful first route. Comparative model efficiency, generic semantic
+monitoring and broader survival remain separately tracked follow-ups.
 
 The [tiered-gameplay proposal](research-tiered-gameplay.md) explores a capable
 planner, bounded skills and feedback, with additional model tiers conditional on
@@ -108,7 +112,8 @@ and [waypoint-and-return gameplay](design/gameplay.md). Its
 [brief](changes/004-gameplay-foundation.md) explains the source findings, ownership
 and verification gates. Boundary/session authority and typed evidence are now
 implemented, along with scoped operator activity interruption and debug continuation.
-Automatic waypoint execution and a connected model provider remain future capabilities. The [implementation brief](changes/005-foundation-implementation.md)
+The integrated runtime connects waypoint execution to the active-chat player;
+a separately paid model API is not configured. The [implementation brief](changes/005-foundation-implementation.md)
 explains the accepted slice and its limits.
 
 No platform migration or new hosted service is being proposed. We will reopen

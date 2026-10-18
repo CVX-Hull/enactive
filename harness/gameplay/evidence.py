@@ -467,6 +467,23 @@ class EvidenceStore:
             self._save()
             raise
 
+    @_serialized
+    def inspect_current(self, *, now_monotonic: float, now_timestamp_ms: int) -> tuple[EvidenceRef | None, bool]:
+        """Report age without granting authority or invalidating merely old evidence.
+
+        Integrity failures still invalidate through verify; dispatch uses current().
+        """
+        self._open()
+        reference = self._current
+        if reference is None:
+            return None, False
+        self.verify(reference)
+        try:
+            self._fresh(self._entries[reference.observation_id], now_monotonic, now_timestamp_ms)
+        except EvidenceError:
+            return reference, False
+        return reference, True
+
     def _check_reservation(self, reservation: CapacityReservation) -> None:
         if self._reservation is None or reservation != self._reservation:
             raise CapacityError("Reservation is unknown, released or already consumed")

@@ -6,6 +6,13 @@ status: active
 
 # Work and decisions
 
+The [integrated player brief](changes/012-integrated-player.md) joins
+[#52 runtime](https://github.com/CVX-Hull/cdda-player/issues/52) and
+[#23 spectator](https://github.com/CVX-Hull/cdda-player/issues/23) into one
+end-to-end delivery under #36. It records the selected dedicated player sub-agent,
+two disjoint implementation allocations and real gameplay acceptance. The Project
+owns readiness and live status; the brief does not establish shipped capability.
+
 [Public Project](https://github.com/users/CVX-Hull/projects/2) ·
 [Issues](https://github.com/CVX-Hull/cdda-player/issues) ·
 [Pull requests](https://github.com/CVX-Hull/cdda-player/pulls) ·
@@ -92,3 +99,7 @@ requested outcomes to evidence, including real graphical play and its limits.
 The [documentation increment](acceptance/2026-10-17-documentation-review.md) records
 metadata, lifecycle and visual-review checks. Historical reports do not override
 current workflow or establish current process health.
+
+[Integrated player acceptance](acceptance/2026-10-18-integrated-player.md) records
+round012 runtime, active-chat player, spectator and native Pause/continuation.
+Live closure, subsequent evaluation and guard-policy follow-up remain in GitHub.

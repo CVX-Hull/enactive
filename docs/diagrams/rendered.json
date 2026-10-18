@@ -11,10 +11,11 @@
     "docs/diagrams/context.mmd": "ab7a504ffd6c627b29226cef6000a3f4b58b0f7697e5337d473a2a48c1920d63",
     "docs/diagrams/native-recovery.mmd": "ab5710e53e064c78ec415a6a3623ccb918972979843d1b0bb384940871ac4170",
     "docs/diagrams/outcome-monitoring.mmd": "7d294be1628682dba90ee57a663e18dc73d5c11eb4ff3b6db8e9abc3e891606f",
+    "docs/diagrams/player.mmd": "ff24660a99063110afd1115ac62f0ce8276d364a1103cf01cfaf8ef72afa8255",
     "docs/diagrams/recovery.mmd": "3a29b59da36d5eb58d9eddf592a57dbdbc17dcfcc9c082ff8374d26f50f1301d",
-    "docs/diagrams/run-ownership.mmd": "3c3a92d1c76ab82eb91b93c9a96cd82993e9a938847670ed282b6347ff4c521d",
+    "docs/diagrams/run-ownership.mmd": "eeed456c92b2d1afc903f14d3cf048326f2e4c2100ffe218457e965c3627ccb0",
     "docs/diagrams/skill.mmd": "77d3c2ef3b18691c1a1f09fd329fb4e6db074d00f1fdf7219ccae04df393bde5",
-    "docs/diagrams/supervisor.mmd": "5ed578c49dabe5e6b7f0e5d8cfb9f6ebe1557afbca05cf99185a62c8e8125e3f",
+    "docs/diagrams/supervisor.mmd": "24a1d754668ee63003dff86edac14027c57c7b4c541d11a2a8a246a0ad98719c",
     "docs/diagrams/tiered-gameplay.mmd": "763b5a8c2b882a84d61d4e1a48275b06d5b5cb52f540587c204bf7c96d5639f0"
   },
   "outputs": {
@@ -22,10 +23,11 @@
     "docs/diagrams/context.svg": "cbdd849c9ce9d285c32159ce9e1efbcdab8ec6b25aaaf514cbc1e623d706421e",
     "docs/diagrams/native-recovery.svg": "28aef44c10db37589d6f1f49c63748c546b4896f7556bf72d16fc6114795eaf6",
     "docs/diagrams/outcome-monitoring.svg": "502281089fee845913ce7f212cef4a6eee6f946a0f9b63a0ee63e97e469c3c88",
+    "docs/diagrams/player.svg": "bd8e37f90aa59ff1bb0b27f2ca4dfe7057131f7c639e018f96ca5fcddc25b4db",
     "docs/diagrams/recovery.svg": "963d312dc4b37a7f38e99fcecb6800569680360786935803147f9fd6c7ed37a4",
-    "docs/diagrams/run-ownership.svg": "554097c70652092a0d3b8c71459316f40c6861d73145dd2c80319e34f725b4de",
+    "docs/diagrams/run-ownership.svg": "7f351b1020ff29c46ed7c04e375251a4cc94453b3f6dacfde5b3a5c98334bf53",
     "docs/diagrams/skill.svg": "d801e5717ecb4675f193485a5269bdce16908e20aff59888854a8f6d06036022",
-    "docs/diagrams/supervisor.svg": "86811d626ee6e603ffb8aa0db9ab0c3baa7e8f046590de7262d4496552ccff1e",
+    "docs/diagrams/supervisor.svg": "3d5652698264774ea630ee3b9ac0683ef927193f135e277112e9f87313cb979b",
     "docs/diagrams/tiered-gameplay.svg": "d042979b06d5df84ed7e6fb9c1de61763c69f2ee5ecfcb75022129b7f58f4239"
   }
 }

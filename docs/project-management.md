@@ -47,6 +47,16 @@ An issue represents one independently reviewable outcome. A milestone groups
 issues into a useful capability or learning result with explicit acceptance and
 limitations; a batch of files or number of agent sessions is not a milestone.
 
+Choose delivery rounds around a complete user-visible behavior when the interfaces
+and acceptance are understood. Related bounded issues can share one integrated PR
+and native acceptance session; an internal adapter or handoff need not become a
+separate delivery round. Split implementation ownership for safe parallel work,
+while retaining the shared end-to-end acceptance. Keep a smaller round when an
+unresolved experiment or interface decision would otherwise create speculative
+work. The lead checks this tradeoff at Ready review under C-REVIEW; file counts or
+agent count do not enforce it. Large aggregate issues still require bounded children
+before execution, and the two-writer/shared-runtime limits below remain unchanged.
+
 | Status | Entry/exit policy |
 | --- | --- |
 | Backlog | Candidate with a problem and intended outcome; no execution commitment |

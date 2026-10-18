@@ -8,8 +8,9 @@ import sys
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, build_opener, ProxyHandler
 
-from .controller import Controller, ControlError, MAX_WAIT, RECOVERY_KINDS, read_json
-from .server import Server
+from .controller import Controller, ControlError, MAX_REQUEST, MAX_WAIT, RECOVERY_KINDS, read_json
+from .gameplay.contracts import PlanCandidate
+from .server import Server, validate_gameplay
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -75,6 +76,20 @@ def main() -> int:
         if name == "answer_interrupt":
             recovery.add_argument("--interrupt-request-id", type=nonempty, required=True)
             recovery.add_argument("--choice", choices=("YES", "NO"), required=True)
+    for name in ("start", "continue", "abandon", "request", "plan"):
+        gameplay = commands.add_parser(f"gameplay-{name}", help="Explicit bounded waypoint-and-return gameplay")
+        if name == "start":
+            gameplay.add_argument("direction", choices=("north", "east", "south", "west"))
+            gameplay.add_argument("--distance", type=int, choices=range(1, 5), required=True)
+        if name in {"continue", "abandon"}:
+            gameplay.add_argument("run_id", type=nonempty)
+            gameplay.add_argument("--epoch", dest="execution_epoch", type=nonnegative, required=True)
+        if name in {"start", "continue"}:
+            gameplay.add_argument("--expect", type=expectation, required=True)
+        if name == "plan":
+            gameplay.add_argument("request_id", type=nonempty)
+            gameplay.add_argument("--candidate", type=Path, required=True,
+                                  help="One bounded gameplay/1 PlanCandidate JSON file")
     args = vars(parser.parse_args())
     command = args.pop("command")
     if command == "serve":
@@ -111,8 +126,25 @@ def main() -> int:
                 args["expected_session"], args["expected_revision"] = args.pop("expect")
             if "timeout" in args and not 0 < args["timeout"] <= MAX_WAIT:
                 raise ControlError("Timeout must be greater than 0 and at most 15 seconds")
+            is_gameplay = command.startswith("gameplay-")
+            if is_gameplay:
+                command = command.removeprefix("gameplay-")
+                if command == "request":
+                    command = "planning_request"
+                if command == "plan":
+                    path = args["candidate"]
+                    if not path.is_file():
+                        raise ControlError("Candidate must be a regular JSON file")
+                    with path.open("rb") as stream:
+                        candidate = stream.read(MAX_REQUEST + 1)
+                    if len(candidate) > MAX_REQUEST:
+                        raise ControlError("Candidate file exceeds the 4096-byte HTTP body limit")
+                    args["candidate"] = PlanCandidate.from_dict(candidate).to_dict()
+                validate_gameplay({"kind": command, **args})
             data = json.dumps({"kind": command, **args}).encode()
-            endpoint = "/api/recovery" if command in RECOVERY_KINDS else "/api/command"
+            if is_gameplay and len(data) > MAX_REQUEST:
+                raise ControlError("Gameplay command exceeds the 4096-byte HTTP body limit")
+            endpoint = "/api/gameplay" if is_gameplay else "/api/recovery" if command in RECOVERY_KINDS else "/api/command"
             request = Request(base + endpoint, data=data, headers=headers, method="POST")
         # A walk may consume two bounded native exchanges per step; pause remains independent.
         network_timeout = 2 * args.get("timeout", 5) * args.get("steps", 1) + 5
@@ -121,7 +153,8 @@ def main() -> int:
             with opener.open(request, timeout=network_timeout) as response:
                 result = json.load(response)
         except HTTPError as exc:
-            result = json.load(exc)
+            with exc:
+                result = json.load(exc)
             print(json.dumps(result, indent=2))
             return 1
         print(json.dumps(result, indent=2))

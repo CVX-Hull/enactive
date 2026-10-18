@@ -15,8 +15,8 @@ The viewer identifies an active run owner and disables ordinary inputs and Resum
 Observe and Pause stay available. Use Pause to take over, inspect a current frame,
 and explicitly Resume before manual input. A released or revoked run is not
 restored by Resume. Recording goal text never starts or replaces a task.
-Only trusted in-process callers can currently acquire a run lease; the service
-has no start/continue task endpoint yet. Restart begins paused without ownership.
+The explicit waypoint task controls acquire a run lease through the runtime;
+the planning-only player never receives it. Restart begins paused without ownership.
 If a result is unknown, preserve it and reconcile under the procedures below;
 acquiring new ownership does not prove the old task succeeded.
 
@@ -225,3 +225,51 @@ The [round 009 report](acceptance/2026-10-17-bounded-skills.md) separates actual
 frames from injected evidence faults. Preserve raw unsupported receipts outside
 the task store. A rendering failure cannot be repaired by substituting a later
 frame. Save normally and stop only owned processes after acceptance.
+
+## Explicit waypoint tasks and the player
+
+The service supports one bounded waypoint-and-return task. Start from a fresh
+normal-play observation after explicit transport Resume. Native input and saved
+goal text do not start a task. In the spectator, choose a cardinal direction and
+1–4 tiles, then Start task. The origin/target are constructed from current visible
+state. A direction is a bounded request, not a guarantee that every route tile is
+safe or known. Each step must pass the current guard.
+
+The equivalent project-local CLI is `.venv/bin/python -m harness gameplay-start
+east --distance 1 --expect SESSION:REV`, using the actual observation that informed
+the decision. `gameplay-request` reads the pending task/evidence/skill/binding packet.
+The dedicated player sub-agent reads that packet and retained frame, then submits
+one validated candidate file with `gameplay-plan REQUEST_ID --candidate PATH`.
+Only the player proposes the candidate; an acceptance script must not manufacture
+plans and label them model decisions. Candidate reasons are concise public
+justifications, not a private reasoning transcript. Start the player before task
+admission so the 30-second call ceiling is usable; task wall time remains 120 seconds
+including planning and Pause. No response means stop, not automatic replanning.
+
+The lead supervises and owns the game/service; the player must not start/continue
+runs, resume, send raw inputs, edit source/saves, or launch another process. Both
+use one external planning contract. Sub-agent role instructions do not remove its
+inherited tool permissions. Keep the planning brief narrow and retain requests,
+responses, real receipts and frames. Codex usage and model identity are unmeasured
+unless independently recorded; the harness makes no paid model API calls.
+
+After a slow response, the service reobserves and explicitly proves the unchanged
+visible scene before admitting input. Changed evidence stops; it never rewrites the
+candidate binding. The spectator shows planning, current stage, verified progress,
+next check and failure/unknown reasons. Read evidence details when judging progress;
+transport delivery alone is not task completion. Status polling does not renew
+freshness or a planner deadline.
+
+Pause always takes control immediately, even while planning or waiting for native
+input. It cannot undo an already committed action. Reconcile with Observe and
+explicitly Resume transport, then use Continue task (or `gameplay-continue RUN_ID
+--epoch N --expect SESSION:REV`) only if current evidence matches the retained
+checkpoint and no effect is unresolved. Original history and all budgets remain;
+already verified legs are not replayed. Unknown effects prohibit continuation.
+
+Completion releases ownership and pauses transport. A stopped/completed task stays
+visible until Abandon task (`gameplay-abandon RUN_ID --epoch N`); await worker exit
+before starting another. Abandonment preserves evidence and does not erase unknown
+native effects. Service restart does not restore an active task. Stop the dedicated
+player at the end of the session, then save/quit normally and close only owned
+processes under the existing cleanup procedure.

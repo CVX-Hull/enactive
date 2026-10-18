@@ -11,8 +11,8 @@ Typed gameplay/1 records and the passive bounded evidence adapter are implemente
 under [#32](https://github.com/CVX-Hull/cdda-player/issues/32). The bounded injected
 planner port is implemented under #34, skills/native predicate acceptance under
 round009, and passive supervision/remaining-route continuation under round010.
-Service/controller/provider integration and end-to-end autonomous acceptance
-remain future work.
+Round012 connects service/controller execution to an external active-chat player.
+Comparative model evaluation and general autonomous survival remain separate work.
 [Architecture](../architecture.md) and [protocol](../protocol.md) are authoritative
 about implemented behavior; the [foundation acceptance](../acceptance/2026-10-17-foundation-implementation.md)
 separates portable evidence tests from native-v2 boundary probes. The
@@ -54,6 +54,37 @@ Previously verified waypoint history is retained and must not be replayed merely
 because an epoch changed. Service/game restart does not resume tasks from a journal.
 
 ## Responsibilities and handoffs
+
+### Dedicated player sub-agent
+
+![Selected round012 design: the dedicated player proposes plans, the service validates and executes, and you retain Pause.](../diagrams/player.svg)
+
+Solid arrows show responsibility and feedback, not independent model tiers.
+[Editable diagram](../diagrams/player.mmd). Current behavior is specified in the
+[protocol](../protocol.md#integrated-gameplay-lifecycle).
+
+The selected next integration uses one dedicated player sub-agent within the active
+Codex chat. The lead owns task admission, shared runtime, supervision and final
+verification; the player reads bounded retained observations and proposes the next
+stage. The service validates candidates, checks fresh evidence and executes through
+its controller lease. Planning is a data interface, not permission to send raw game
+inputs. The player does not edit code/saves, operate native UI, resume transport or
+launch another game. Its working context contains gameplay evidence rather than
+engineering history. The lead can answer the same planning interface when needed;
+there is no automatic player fallback.
+
+The
+[integration brief](../changes/012-integrated-player.md#player-arrangement) owns
+its implementation, deadlines, accounting limits and acceptance. The user chose
+active-chat planning without a separately billed model API. A dedicated role does
+not imply a cheaper model, OS isolation, independent persistence or measured token
+cost. Losing the player must stop on a bounded deadline. A separate Codex session
+is deferred until an independently managed conversation/lifecycle is needed.
+Revisit this choice when native acceptance, latency, context retention or permission
+needs provide contrary evidence. Ordinary controller/native guards remain enforced
+even though sub-agents inherit the session's tool permissions.
+
+### Execution boundaries
 
 Use the [logical feedback diagram](../research-tiered-gameplay.md#proposed-system-who-decides-and-how-feedback-returns).
 One process owns dispatch. A model call can run outside the controller lock so pause
@@ -113,10 +144,9 @@ The bounded injected `planner.py` and passive remaining-route `skills.py` are im
 The skill proposes/evaluates one step; a new instance derives the remaining route
 from retained settled history. It cannot dispatch or automatically resume.
 See the [current skill contract](../protocol.md#passive-bounded-movement-skills).
-The passive `supervisor.py` composes these components; service lifecycle and
-production controller ownership remain #36. Proposed `status.py` and a model/provider-specific
-adapter goes behind the injected planner interface;
-imports must not reverse the controller boundary.
+The passive `supervisor.py` composes these components. `harness/runtime.py` owns
+service lifecycle, external-chat handoff and production controller integration;
+it sits outside the passive gameplay package. Imports must not reverse that boundary.
 
 ## Admission, progress and completion
 
@@ -148,7 +178,7 @@ displacement with a blocked result; retain the evidence and do not claim success
 
 | Predicate | Evidence available today | Gap/disposition |
 | --- | --- | --- |
-| Position and unit displacement | Native-v3 relative position and session rotate on world entry/exit, including same-process reload | Passive supervision rejects session replacement; future controller integration must propagate replacement promptly |
+| Position and unit displacement | Native-v3 relative position and session rotate on world entry/exit, including same-process reload | Supervisor rejects session replacement; runtime checks controller lease/session before dispatch |
 | Next tile and creature stop | CLEAR neighboring terrain/furniture; UI visible-creature list | No farther route knowledge; missing or stale values block |
 | Matching frame, turn and authority | Native frame/status/session/revision/turn; passive adapter validates retained originals and receipt age | [Round 009](../acceptance/2026-10-17-bounded-skills.md) exercises actual retained native frames; fault lanes are separate |
 | Ordinary play rather than running activity or raw error | Native-v3 positive boundary discriminator; category and `in_game` alone remain insufficient | The passive skill requires normal_play; recovery controls remain separate |
@@ -165,7 +195,7 @@ cannot directly enter `executing`. There is at most one unresolved primitive and
 one admitted stage. No gameplay is dispatched while a model call is pending.
 
 Each task execution has a monotonic control epoch. Pause, takeover and goal replacement
-revoke it; future service restart must restore no authority. A terminal stop ends
+revoke it; service restart restores no authority. A terminal stop ends
 the current admission, and explicit continuation requires a new epoch. Native
 session changes invalidate task applicability while historical evidence remains
 retained. A candidate must exactly match the task/plan/epoch and original observed
@@ -201,7 +231,7 @@ Use monotonic host time and native turn deltas; record
 overshoot from an already-dispatched engine action rather than promise instant stop.
 No per-primitive wait may exceed the controller's existing 15-second ceiling.
 
-Each configured provider additionally requires explicit model identifier/version,
+Each separately billed network provider additionally requires explicit model identifier/version,
 context/output limits, known pricing or a conservative reservation mechanism, and a
 positive operator-approved per-run spend ceiling. Reserve the worst permitted cost
 before each call; stop if cost cannot be bounded, credentials are absent or provider
@@ -209,6 +239,9 @@ configuration is incomplete. Zero/absent spend configuration disables API calls.
 This round selects no paid provider and authorizes no spending. The adapter contract
 must support deterministic fixtures for tests and a real capable model for later
 native acceptance; fixture success is not model-performance evidence.
+The selected external-chat arrangement instead makes no API calls: its enforced
+request/deadline/gameplay bounds and explicitly unmeasured model usage follow the
+[player integration contract](../changes/012-integrated-player.md#player-arrangement).
 
 Role separation is independent of model separation. Task complexity may justify the
 same capable model at any decision point. Smaller models, streaming execution during

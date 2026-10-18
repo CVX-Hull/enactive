@@ -13,7 +13,7 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass, asdict
-from typing import Any
+from typing import Any, Callable
 
 from harness.movement import DIRECTIONS, MovementBlocked, guard, observed_step
 
@@ -42,7 +42,9 @@ class RunLease:
     session: str
 
 
-def atomic_json(path: Path, value: dict[str, Any]) -> None:
+def atomic_json(path: Path, value: dict[str, Any], *,
+                before_publish: Callable[[], None] | None = None,
+                on_publish: Callable[[], None] | None = None) -> None:
     data = json.dumps(value, separators=(",", ":"), ensure_ascii=True).encode()
     temporary = path.with_name(path.name + "." + uuid.uuid4().hex + ".tmp")
     try:
@@ -51,7 +53,11 @@ def atomic_json(path: Path, value: dict[str, Any]) -> None:
             stream.write(data)
             stream.flush()
             os.fsync(stream.fileno())
+        if before_publish is not None:
+            before_publish()
         os.replace(temporary, path)
+        if on_publish is not None:
+            on_publish()
         directory_fd = os.open(path.parent, os.O_RDONLY)
         try:
             os.fsync(directory_fd)
@@ -187,6 +193,7 @@ class Controller:
         self.control_lock = threading.Lock()
         self.data_lock = threading.RLock()
         self.state: dict[str, Any] | None = None
+        self._state_received_monotonic: float | None = None
         self.frozen = True
         self.closed = False
         self.pause_requested = True
@@ -571,14 +578,27 @@ class Controller:
                         self._unknown(self.pending, "native session changed; old-world outcome remains unknown")
                     if self.control_pending is not None:
                         self._control_unknown(self.control_pending, "native session changed")
-            self.state = response.copy()
+            if (self.state is None or (self.state["session"], self.state["frame"]) !=
+                    (response["session"], response["frame"])):
+                self._state_received_monotonic = time.monotonic()
+            self.state = copy.deepcopy(response)
             if response["paused"]:
                 self.pause_requested = True
 
+    def observation_snapshot(self) -> tuple[dict[str, Any] | None, float | None]:
+        """Atomic observation and original receipt clock; reads never renew age."""
+        with self.data_lock:
+            return copy.deepcopy(self.state), self._state_received_monotonic
+
     def _exchange(self, kind: str, timeout: float, *, generation: int | None = None,
-                  lease: RunLease | None = None, **payload: Any) -> dict[str, Any]:
+                  lease: RunLease | None = None, deadline_monotonic: float | None = None,
+                  receipt: dict[str, Any] | None = None, **payload: Any) -> dict[str, Any]:
         request_id = str(uuid.uuid4())
         started = time.monotonic()
+        if deadline_monotonic is not None:
+            timeout = min(timeout, deadline_monotonic - started)
+            if timeout <= 0:
+                return {"status": "controller_error", "error": "Original dispatch deadline expired before publication"}
         request = {"protocol": 3, "id": request_id, "kind": kind,
                    "deadline_ms": int(time.time() * 1000 + timeout * 1000), **payload}
         if kind not in {"observe", "pause"}:
@@ -590,6 +610,7 @@ class Controller:
             raise ControlError("Request exceeds 4096 bytes")
         terminal_received = False
         admitted_input = False
+        published = False
         try:
             if self.closed:
                 raise ControlError("Controller is shutting down")
@@ -611,9 +632,26 @@ class Controller:
                     # Uncertain admissions are retained across reconciliation and restart.
                     atomic_json(self.admissions / f"{request_id}.json", request)
                     admitted_input = True
+                    if receipt is not None:
+                        receipt["request"] = copy.deepcopy(request)
+                        self._record({"kind": "run_admission", "logical_action_id": receipt["logical_action_id"]},
+                                     {"request": copy.deepcopy(request)})
+                if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:
+                    raise ControlError("Original dispatch deadline expired before publication")
                 if self.pending is not None:
                     self._unknown(self.pending, "reconciliation does not establish original outcome")
-                atomic_json(self.bridge / "request.json", request)
+                def before_publish() -> None:
+                    if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:
+                        raise ControlError("Original dispatch deadline expired at publication")
+
+                def on_publish() -> None:
+                    nonlocal published
+                    published = True
+                    if receipt is not None:
+                        receipt["published"] = True
+
+                atomic_json(self.bridge / "request.json", request,
+                            before_publish=before_publish, on_publish=on_publish)
                 self.pending = request
             while time.monotonic() - started < timeout:
                 if self.closed:
@@ -621,6 +659,8 @@ class Controller:
                 response = read_json(self.bridge / "response.json")
                 # Prior responses are expected; only the exact UUID can finish this command.
                 if response is not None and response.get("id") == request_id:
+                    if receipt is not None and response.get("status") != "dispatched" and receipt["received_monotonic"] is None:
+                        receipt["received_monotonic"] = time.monotonic()
                     validate_state(response, request_id)
                     terminal_received = response["status"] != "dispatched"
                     if (response["status"] == "ready" and kind in {"key", "action", "resume"}
@@ -653,8 +693,10 @@ class Controller:
         except (ControlError, OSError) as exc:
             with self.data_lock:
                 self._revoke()
-                if admitted_input:
+                if admitted_input and published:
                     self._unknown(request, str(exc))
+                elif admitted_input:
+                    (self.admissions / f"{request_id}.json").unlink(missing_ok=True)
                 if terminal_received:
                     self.pending = None
             self._pause_file()
@@ -739,13 +781,23 @@ class Controller:
             raise ControlError("Run lease is stale or input authority was revoked")
 
     def execute_run(self, lease: RunLease, *, action: str, expected_session: str,
-                    expected_revision: int, timeout: float | None = None) -> dict[str, Any]:
-        """The only leased ingress: one semantic action, with no arbitrary payload."""
-        # None is the external-path marker internally, never a valid capability.
-        if lease is None:
-            return {"status": "controller_error", "error": "Run lease is stale or input authority was revoked"}
-        return self._execute("action", timeout, {"action": action, "expected_session": expected_session,
-                                               "expected_revision": expected_revision}, lease)
+                    expected_revision: int, logical_action_id: str,
+                    deadline_monotonic: float, timeout: float | None = None) -> dict[str, Any]:
+        """One leased action and its exact admission/terminal receipt envelope."""
+        receipt = {"logical_action_id": logical_action_id, "request": None, "result": None,
+                   "published": False, "received_monotonic": None}
+        if (type(logical_action_id) is not str or not 1 <= len(logical_action_id) <= 128
+                or type(deadline_monotonic) not in (int, float)
+                or not 0 <= deadline_monotonic <= 1e12 or lease is None):
+            receipt["result"] = {"status": "controller_error", "error": "Invalid run identity, deadline or lease"}
+        else:
+            receipt["result"] = self._execute("action", timeout,
+                {"action": action, "expected_session": expected_session,
+                 "expected_revision": expected_revision}, lease,
+                deadline_monotonic=deadline_monotonic, receipt=receipt)
+        if type(logical_action_id) is str:
+            self._record({"kind": "run_receipt", "logical_action_id": logical_action_id}, receipt)
+        return receipt
 
     def release_run(self, lease: RunLease) -> dict[str, Any]:
         with self.data_lock:
@@ -757,7 +809,8 @@ class Controller:
         return self._execute(kind, timeout, payload, None)
 
     def _execute(self, kind: str, timeout: float | None, payload: dict[str, Any],
-                 lease: RunLease | None) -> dict[str, Any]:
+                 lease: RunLease | None, *, deadline_monotonic: float | None = None,
+                 receipt: dict[str, Any] | None = None) -> dict[str, Any]:
         wait = self.timeout if timeout is None else timeout
         admitted = False
         with self.data_lock:
@@ -801,12 +854,15 @@ class Controller:
                         self._check_owner(lease, admitted_generation)
                         if kind == "walk" and admitted_generation != self.pause_generation:
                             raise ControlError("Admission superseded by pause or takeover")
+                if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:
+                    raise ControlError("Original dispatch deadline expired in command queue")
                 if kind == "walk":
                     result = self._walk(payload.get("direction"), payload.get("steps"), wait,
                                         payload.get("expected_session"), payload.get("expected_revision"),
                                         admitted_generation)
                 else:
-                    result = self._command(kind, wait, payload, admitted_generation, lease)
+                    result = self._command(kind, wait, payload, admitted_generation, lease,
+                                           deadline_monotonic=deadline_monotonic, receipt=receipt)
                 with self.data_lock:
                     self.last_result = result
                 return result
@@ -824,7 +880,8 @@ class Controller:
                     self._command_work -= 1
 
     def _command(self, kind: str, timeout: float, payload: dict[str, Any], generation: int,
-                 lease: RunLease | None = None) -> dict[str, Any]:
+                 lease: RunLease | None = None, *, deadline_monotonic: float | None = None,
+                 receipt: dict[str, Any] | None = None) -> dict[str, Any]:
         with self.data_lock:
             if kind != "observe":
                 self._check_owner(lease, generation)
@@ -855,7 +912,7 @@ class Controller:
                              "detail": "Fresh observe returned at an eligible native input boundary"})
             return result
         # Observe verifies authority; it must never silently refresh a planner decision.
-        observed = self._exchange("observe", timeout)
+        observed = self._exchange("observe", timeout, deadline_monotonic=deadline_monotonic)
         if observed["status"] != "ready":
             return observed
         with self.data_lock:
@@ -875,7 +932,8 @@ class Controller:
             raise ControlError("Action is not registered in the current input context")
         primitive = {kind: payload[kind]} if kind in {"key", "action"} else {}
         result = self._exchange(kind, timeout, generation=generation, lease=lease, session=observed["session"],
-                                revision=observed["revision"], **primitive)
+                                revision=observed["revision"], deadline_monotonic=deadline_monotonic,
+                                receipt=receipt, **primitive)
         if kind == "resume" and result["status"] == "ready":
             with self.data_lock:
                 if generation != self.pause_generation:

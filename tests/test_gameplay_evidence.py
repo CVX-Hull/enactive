@@ -662,6 +662,21 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(self.store.source_status(first), "disputed")
         self.assertEqual(self.store.source_status(second), "retained")
 
+    def test_inspect_current_reports_age_without_authority_but_detects_corruption(self):
+        first = self.ingest()
+        generation = self.store.authority_generation()
+        for _ in range(5):
+            reference, fresh = self.store.inspect_current(now_monotonic=104, now_timestamp_ms=1_004_000)
+            self.assertEqual(reference, first)
+            self.assertFalse(fresh)
+        self.assertEqual(self.store.authority_generation(), generation)
+        retained = Path(first.frame_path)
+        retained.chmod(0o600)
+        retained.write_bytes(png(b"changed"))
+        with self.assertRaises(EvidenceError):
+            self.store.inspect_current(now_monotonic=104, now_timestamp_ms=1_004_000)
+        self.assertGreater(self.store.authority_generation(), generation)
+
 
 if __name__ == "__main__":
     unittest.main()

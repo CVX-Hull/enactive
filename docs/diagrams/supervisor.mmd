@@ -3,7 +3,7 @@ title: Passive supervision — decisions, feedback and stops
 ---
 flowchart TD
   accTitle: How a waypoint task plans, verifies and stops
-  accDescr: One explicit task retains its original route and budgets. An injected planner supplies a bound candidate. The supervisor offers one passive intent and waits for a correlated result. Verified outbound completion requires fresh return planning. Pause invalidates the epoch; unknown effects remain unresolved. Actual controller lease and native dispatch integration are future work under issue 36.
+  accDescr: One explicit task retains its original route and budgets. An injected planner supplies a bound candidate. The supervisor offers one passive intent and waits for a correlated result. Verified outbound completion requires fresh return planning. Pause invalidates the epoch; unknown effects remain unresolved. The runtime adapter owns the actual controller lease and native receipt mapping.
   T[Explicit task and retained original evidence] --> P[Plan remaining leg]
   P -->|Exact current candidate| S[Check route, evidence and budgets]
   S -->|One passive intent| I[Wait for correlated result]
@@ -18,4 +18,4 @@ flowchart TD
   R -->|Remaining steps| P
   R -->|Already complete leg| V
   X[Pause or takeover] -->|Revoke epoch and cancel planner| B
-  I -.->|Future integration, issue 36| C[Controller lease and native receipt adapter]
+  I -.->|Runtime dispatch and settlement| C[Controller lease and native receipt adapter]

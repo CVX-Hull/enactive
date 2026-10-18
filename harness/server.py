@@ -10,6 +10,40 @@ from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from .controller import Controller, MAX_REQUEST, MAX_WAIT, RECOVERY_KINDS, atomic_json
+from .gameplay.contracts import PlanCandidate, json_object
+
+
+GAMEPLAY_FIELDS = {
+    "start": {"direction", "distance", "expected_session", "expected_revision"},
+    "continue": {"run_id", "execution_epoch", "expected_session", "expected_revision"},
+    "abandon": {"run_id", "execution_epoch"},
+    "planning_request": set(),
+    "plan": {"request_id", "candidate"},
+}
+
+
+def validate_gameplay(body: dict[str, Any]) -> None:
+    """Check data at ingress; only the runtime can admit gameplay authority."""
+    kind = body.get("kind")
+    if not isinstance(kind, str) or kind not in GAMEPLAY_FIELDS:
+        raise ValueError("Unknown gameplay operation")
+    if body.keys() != GAMEPLAY_FIELDS[kind] | {"kind"}:
+        raise ValueError("Gameplay fields must match the operation exactly")
+    for field in {"run_id", "request_id", "expected_session"} & body.keys():
+        if not isinstance(body[field], str) or not body[field].strip() or len(body[field]) > 160:
+            raise ValueError(f"{field} must be nonempty text of at most 160 characters")
+    for field in {"execution_epoch", "expected_revision"} & body.keys():
+        if type(body[field]) is not int or body[field] < 0:
+            raise ValueError(f"{field} must be a nonnegative integer")
+    if kind == "start":
+        if body["direction"] not in ("north", "east", "south", "west"):
+            raise ValueError("Direction must be north, east, south or west")
+        if type(body["distance"]) is not int or not 1 <= body["distance"] <= 4:
+            raise ValueError("Distance must be an integer from 1 to 4")
+    if kind == "plan":
+        if type(body["candidate"]) is not dict:
+            raise ValueError("Candidate must be a gameplay/1 PlanCandidate object")
+        PlanCandidate.from_dict(body["candidate"])
 
 
 def validate_recovery(body: dict[str, Any]) -> None:
@@ -44,7 +78,11 @@ class Server(ThreadingHTTPServer):
     block_on_close = False
 
     def __init__(self, controller: Controller, port: int = 8765):
+        from .runtime import GameplayRuntime
+
         self.controller = controller
+        self.gameplay = GameplayRuntime(controller)
+        self._gameplay_closed = False
         super().__init__(("127.0.0.1", port), Handler)
         self.port = self.server_address[1]
         atomic_json(controller.bridge / "controller.json", {
@@ -52,8 +90,13 @@ class Server(ThreadingHTTPServer):
 
     def server_close(self) -> None:
         super().server_close()
-        # A shutdown leaves the game paused; workers cannot silently resume later.
-        self.controller.pause()
+        if not self._gameplay_closed:
+            self._gameplay_closed = True
+            # The immediate path revokes authority before waiting for worker cleanup.
+            try:
+                self.gameplay.pause("Service shutdown")
+            finally:
+                self.gameplay.close()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -99,7 +142,7 @@ class Handler(BaseHTTPRequestHandler):
         path = urlsplit(self.path).path
         controller = self.server.controller
         if path == "/api/status":
-            self._json(200, controller.status())
+            self._json(200, {**controller.status(), "gameplay": self.server.gameplay.status()})
             return
         if path == "/frame.png":
             try:
@@ -134,7 +177,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         if not self._trusted():
             return
-        if self.path not in {"/api/command", "/api/recovery"}:
+        if self.path not in {"/api/command", "/api/recovery", "/api/gameplay"}:
             self._json(404, {"error": "Unknown endpoint"})
             return
         supplied = self.headers.get("X-CDDA-Token", "")
@@ -151,25 +194,37 @@ class Handler(BaseHTTPRequestHandler):
                 return
             self.connection.settimeout(3)
             data = self.rfile.read(length)
-            body = json.loads(data, parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
+            body = json_object(data)
             if not isinstance(body, dict) or not isinstance(body.get("kind"), str):
                 raise ValueError("Command must be a JSON object with a string kind")
             if self.path == "/api/recovery":
                 validate_recovery(body)
+            elif self.path == "/api/gameplay":
+                validate_gameplay(body)
             else:
                 allowed = {"kind", "timeout", "key", "action", "direction", "steps", "text",
                            "expected_session", "expected_revision"}
                 if body.keys() - allowed:
                     raise ValueError("Unknown command fields")
-        except (ValueError, OSError) as exc:
+        except (ValueError, OSError, RecursionError) as exc:
             self._json(400, {"error": f"Invalid command: {exc}"})
             return
         kind = body.pop("kind")
         try:
-            dispatch = self.server.controller.recover if self.path == "/api/recovery" else self.server.controller.execute
-            result = dispatch(kind, **body)
+            if self.path == "/api/gameplay":
+                result = self.server.gameplay.command(kind, **body)
+            elif self.path == "/api/command" and kind == "pause":
+                result = self.server.gameplay.pause("Operator Pause")
+            else:
+                dispatch = self.server.controller.recover if self.path == "/api/recovery" else self.server.controller.execute
+                result = dispatch(kind, **body)
         except (OSError, ValueError, TypeError) as exc:
-            result = {"status": "controller_error", "error": f"Controller could not complete the request: {exc}"}
-        success = {"prompt_opened", "answer_delivered", "dismissal_delivered", "not_applicable"} if self.path == "/api/recovery" else {"ready", "recorded", "pause_requested", "complete"}
+            result = {"status": "rejected" if self.path == "/api/gameplay" else "controller_error",
+                      "error": f"Controller could not complete the request: {exc}"}
+            if self.path == "/api/gameplay":
+                result["gameplay"] = self.server.gameplay.status()
+        success = ({"accepted"} if self.path == "/api/gameplay" else
+                   {"prompt_opened", "answer_delivered", "dismissal_delivered", "not_applicable"}
+                   if self.path == "/api/recovery" else {"ready", "recorded", "pause_requested", "complete"})
         code = 200 if result["status"] in success else 409
         self._json(code, result)

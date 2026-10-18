@@ -47,7 +47,7 @@ def _text(value: object, name: str, maximum: int = 128) -> None:
 class PlannerConfig:
     model_id: str
     configuration_id: str
-    mode: Literal["fixture", "network"] = "fixture"
+    mode: Literal["fixture", "network", "external"] = "fixture"
     max_context_bytes: int = 1_048_576
     max_reply_bytes: int = 16_384
     max_input_tokens: int = 32_768
@@ -63,7 +63,7 @@ class PlannerConfig:
     def __post_init__(self) -> None:
         _text(self.model_id, "model_id")
         _text(self.configuration_id, "configuration_id")
-        if self.mode not in ("fixture", "network"):
+        if self.mode not in ("fixture", "network", "external"):
             raise ContractError("Unknown planner mode")
         for name in ("max_context_bytes", "max_reply_bytes"):
             _integer(getattr(self, name), name, 1_048_576, 1)
@@ -73,6 +73,8 @@ class PlannerConfig:
         _number(self.call_timeout_seconds, "call_timeout_seconds", 30, positive=True)
         for name in ("reservation_usd_per_call", "spend_ceiling_usd"):
             _number(getattr(self, name), name, 1_000_000)
+        if self.mode == "external" and (self.reservation_usd_per_call != 0 or self.spend_ceiling_usd != 0):
+            raise ContractError("External chat accepts only zero API reservation and spend")
         for name in ("credentials_available", "bounded_pricing", "operator_approved_spend"):
             if type(getattr(self, name)) is not bool:
                 raise ContractError(f"{name} must be boolean")
@@ -157,7 +159,7 @@ class ProviderInput:
     request_json: str
     model_id: str
     configuration_id: str
-    mode: Literal["fixture", "network"]
+    mode: Literal["fixture", "network", "external"]
     max_context_bytes: int
     max_reply_bytes: int
     max_input_tokens: int
@@ -299,7 +301,7 @@ class PlannerPort:
         raise ContractError(reason)
 
     def _committed(self) -> float:
-        return math.fsum(call.usage.cost_usd if call.settled is not None else call.reservation
+        return math.fsum(call.usage.cost_usd if call.settled is not None and call.usage.cost_usd is not None else call.reservation
                          for call in self._calls.values())
 
     def _stop(self, call: _Call, status: str, reason: str, now: float) -> None:
@@ -386,6 +388,12 @@ class PlannerPort:
             return call_id
 
     def _usage(self, call: _Call, usage: object, now: float) -> bool:
+        if self._config.mode == "external":
+            call.usage = ProviderUsage()
+            call.usage_reason = "External chat usage is unmeasured"
+            call.overshoot, call.overshoot_reason = None, "External chat cost is unmeasured"
+            call.settled = now  # The zero API reservation is resolved, not a token/cost measurement.
+            return False
         if type(usage) is not ProviderUsage:
             call.usage_reason = "Provider usage missing or malformed"
             return False
@@ -498,6 +506,15 @@ class PlannerPort:
             if call.status in ("pending", "completed") and binding != call.request.binding:
                 self._stop(call, "stale", "Caller binding changed; candidate permanently invalidated", now)
             return CallResult(call.call_id, call.status, call.reason, call.candidate)
+
+    def deadline(self, call_id: str) -> float:
+        with self._lock:
+            return self._lookup(call_id).deadline
+
+    def active_deadline(self) -> float | None:
+        """Original absolute deadline for the physical call; reads never renew it."""
+        with self._lock:
+            return None if self._active is None else self._calls[self._active].deadline
 
     def _lookup(self, call_id: str) -> _Call:
         if type(call_id) is not str or call_id not in self._calls:
