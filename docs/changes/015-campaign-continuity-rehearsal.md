@@ -1,10 +1,17 @@
 ---
 owner: lead
 review_trigger: Pilot findings, campaign handoff, first-day scope or resource limits change
-status: proposed
+status: historical
+date: 2026-10-18
+scope: Original first-day rehearsal001 proposal, admitted and stopped with required human Escape
 ---
 
 # Continuity and a first-day survival rehearsal
+
+This records the original proposal. The [failed rehearsal](../acceptance/2026-10-18-first-day-rehearsal.md)
+and subsequent [direction fix](../acceptance/2026-10-18-native-direction-menu.md)
+are retained outcomes. [Brief018](018-first-day-rehearsal.md) proposes the next
+finite attempt; this historical text grants no new input or renewed allowance.
 
 The [first pilot](../acceptance/2026-10-18-survival-pilot.md) stopped before a
 character spawned. The next work combines [#79 continuity](https://github.com/CVX-Hull/enactive/issues/79)

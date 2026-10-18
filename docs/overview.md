@@ -121,6 +121,8 @@ cancellation/adjacent selection and current-tile behavior without user keys.
 It used18inputs/218.939seconds with no game-time advance; lifecycle receipts remain
 unknown. The recorded objective now appears above the native frame. Broader
 continuity, usable supplies/rest and autonomous first-day survival remain open.
+The [next first-day brief](changes/018-first-day-rehearsal.md) combines those
+requirements in one finite fresh-character attempt, including handoff/restart.
 Campaigns also expose concrete memory, planning,
 monitoring and viewer needs. The [review workflow](project-management.md#campaign-driven-improvement)
 routes observed problems into bounded improvements and checks their effect in later

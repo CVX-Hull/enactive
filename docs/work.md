@@ -45,8 +45,8 @@ routes the concrete gaps without creating a new framework.
 The [#79/#80 rehearsal](changes/015-campaign-continuity-rehearsal.md) has now stopped
 after **57 charged inputs** (48 play/nine cleanup, including one requested native
 Escape supplied by the user), 727.918 seconds through closeout and only 32 elapsed
-game seconds. Ramiro Winston/Sneedville is normally saved, but reload remains
-unverified. A real advisory player handoff retained its facts and original budget;
+game seconds. Ramiro Winston/Sneedville was normally saved; the later direction
+probe verified its reload. A real advisory player handoff retained facts/budget;
 it did not establish full continuity or first-day success.
 
 The [reuse-first recovery preflight](changes/016-autonomous-native-recovery.md)
@@ -59,7 +59,10 @@ inputs/218.939seconds, with zero game-time advance and no user keys. Same-charac
 reload, actual Escape, adjacent and current-tile selection worked; load/save/final
 Quit receipts stay unknown. This is no first-day success or renewed survival
 allowance. Keep failed attempts, the separate menu operation and unadmitted
-preflight visible. The next survival increment needs a finite prospective brief.
+preflight visible. The [next first-day brief](changes/018-first-day-rehearsal.md)
+proposes one fresh ordinary 24-hour attempt with actual consumption, rest,
+excursion/return, handoff and restart. It preserves the assisted attempt and its
+character. Admission still requires exact source/native and current control checks.
 Original #79 M/Low, 2–4 and #80 M/Low, 3–5 focused-session estimates remain in Issues;
 32 game seconds cannot calibrate survival throughput or a calendar forecast.
 
