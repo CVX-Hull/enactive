@@ -20,6 +20,8 @@ player sub-agent can act as a bounded campaign operator while the lead supervise
 the waypoint planner has a separate candidate-only role.
 The service executes an explicitly started waypoint task with per-step feedback;
 without a player response it stops on a deadline. General survival is not implemented.
+The seven-day campaign is currently blocked by [#108](https://github.com/CVX-Hull/enactive/issues/108),
+a walk-outcome observation/caller gap found in the [stopped deciding attempt](acceptance/2026-10-18-seven-day-stop.md).
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign
 continuation. The [MVP completion audit](acceptance/2026-10-17-completion.md) maps
@@ -108,51 +110,38 @@ arrangement; [round 012 acceptance](acceptance/2026-10-18-integrated-player.md) 
 two completed native tasks, Pause/continuation and the unsuccessful first route. Comparative model efficiency, generic semantic
 monitoring and broader survival remain separately tracked follow-ups.
 
-The [seven-day campaign outcome](https://github.com/CVX-Hull/enactive/issues/10)
-sets the next product target. The [delivery path](work.md#path-to-seven-day-survival)
-starts with a bounded survival pilot and its first finding review, then campaign
-continuity and an actual first-day rehearsal, an executable readiness decision,
-and the seven-day run. The [first survival pilot](acceptance/2026-10-18-survival-pilot.md)
-created a world but stopped on an unknown transition before a character spawned.
-The [first-day rehearsal](acceptance/2026-10-18-first-day-rehearsal.md) then reached
-Ramiro Winston, real ration pickup, a threat-driven retreat and an advisory player
-handoff, but required user Escape at an unsupported pickup prompt after only
-32 game seconds. It supplies no autonomous first-day success. Required human
-rescue blocks campaign readiness. A desktop-tool access preflight failed before
-load or input. The [direction-menu increment](changes/017-native-direction-menu.md)
-then rebuilt the engine with its original bindings and
-[verified](acceptance/2026-10-18-native-direction-menu.md) actual reload, pickup
-cancellation/adjacent selection and current-tile behavior without user keys.
-It used18inputs/218.939seconds with no game-time advance; lifecycle receipts remain
-unknown. The recorded objective now appears above the native frame. Broader
-continuity, usable supplies/rest and autonomous first-day survival remain open.
-The [second rehearsal](acceptance/2026-10-18-first-day-rehearsal-002.md) then reached
-Rosendo/Hotevilla at22h14m25s: real meals/water, medical-supply excursion/return,
-overnight wake and matching save/application-restart reload, without human rescue.
-It stopped at an unsupported sound-distraction prompt; an existing native UI
-binding canceled it for normal cleanup.208charges included one agent-operated
-desktop key; six lifecycle receipts stay unknown. It is still short of a full
-day. The [same-character continuation](acceptance/2026-10-18-first-day-completion.md)
-then reached **24h14m29s alive with zero human rescue**, using227charged inputs
-including9cleanup and two autonomous native-window responses. Endpoint thirst,
-unknown exact sleep duration, nine lifecycle acknowledgments and two cleanup
-requests outside the deadline policy qualify this functional result. The first
-partial report remains history; no seven-day success follows. The next gate is
-#81's independent readiness protocol. [Operator permissions](operator-permissions.md)
-separates tested command rules from activation and the candidate-only waypoint
-planner from a designated campaign operator. The [operator probe](changes/020-campaign-operator.md)
-stopped before delegated input when the actor omitted the available escalation
-setting. [Actual failure and cleanup](acceptance/2026-10-18-operator-access-stop.md)
-remain evidence. [The replacement result](acceptance/2026-10-18-campaign-operator.md)
-then verified an actor access preflight,13delegated inputs across two phases,
-carried clean-water consumption, ration conservation and paused lead inspection,
-using21total charges/16game seconds with no human rescue. Water resupply remains
-unverified. #81 still owns the fresh deciding campaign's finite readiness decision.
-Campaigns also expose concrete memory, planning,
-monitoring and viewer needs. The [review workflow](project-management.md#campaign-driven-improvement)
-routes observed problems into bounded improvements and checks their effect in later
-play. This is a manual engineering process; continuous policy learning remains
-unimplemented, and a successful campaign alone does not prove an improvement helped.
+The [seven-day target](https://github.com/CVX-Hull/enactive/issues/10) remains open:
+a normally created fresh character, essential needs/shelter/rest and meaningful
+supply/travel choices, normal save/restart and actual player-context replacement,
+with watchable graphics and user Pause. The user must not supply routine keys or
+rescue. [Work](work.md#path-to-seven-day-survival) links the full retained lineage,
+including failed, assisted and partial attempts.
+
+The [qualified development first day](acceptance/2026-10-18-first-day-completion.md)
+reached24h14m29s alive without human rescue. Endpoint Thirsty, unknown exact sleep
+duration, nine lifecycle ACKs and two cleanup deadline deviations remain explicit.
+The [two-phase operator result](acceptance/2026-10-18-campaign-operator.md) verified
+carried-water consumption, ration conservation and paused lead inspection with
+13delegated inputs; it did not establish water resupply or seven-day feasibility.
+[Operator permissions](operator-permissions.md) separates tested rules from live
+activation and actor instructions from actual security isolation.
+
+[Readiness #81](acceptance/2026-10-18-seven-day-readiness.md) then accepted a frozen
+finite protocol, actual actor/native preflight and seven owned daily outcomes.
+The [first deciding campaign](acceptance/2026-10-18-seven-day-stop.md) normally
+created Ned Meyers/Belgium and collected supplies, but stopped after13game seconds
+on an approval rejection after a guarded-walk stop lacked a fresh verified player
+observation. The rejection was honored and normal Save/Quit preserved the partial;
+48charges include the denied request and cleanup. No first-day/seven-day success.
+[#108](https://github.com/CVX-Hull/enactive/issues/108) owns the narrow observation/
+caller correction before another prospective admission; broader permissions are
+not its remedy. Unused allowance cannot silently resume the stopped investigation.
+
+Campaigns expose concrete memory, planning, monitoring and UI needs. The
+[review workflow](project-management.md#campaign-driven-improvement) routes observed
+problems into owned bounded improvements and checks their effect in later play.
+This is manual engineering; continuous policy learning remains unimplemented,
+and one successful campaign cannot establish causal improvement or reliability.
 
 The [memory study](research-memory-representations.md) compares six mathematical
 and engineering views, with reproducible simulations and negative results. It

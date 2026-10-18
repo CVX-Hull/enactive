@@ -292,7 +292,8 @@
         "docs/acceptance/2026-10-17-bounded-skills.md",
         "docs/acceptance/2026-10-18-integrated-player.md",
         "docs/acceptance/2026-10-18-operator-access-stop.md",
-        "docs/acceptance/2026-10-18-campaign-operator.md"
+        "docs/acceptance/2026-10-18-campaign-operator.md",
+        "docs/acceptance/2026-10-18-seven-day-stop.md"
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
       "limitations": "Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.",
@@ -302,23 +303,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-18",
-        "outcome": "Qualified two-phase operator acceptance; earlier default-sandbox failure, three lifecycle ACK unknowns and summary-count correction retained. Protected publication is separately verified.",
-        "scope": "Frozen d57f821 / unchanged native9cf1f76;13delegated inputs, paused/quiescent lead inspection and reassignment,46rows21charges/16game seconds, normal cleanup; no water source or seven-day result.",
+        "outcome": "First deciding campaign stopped partial after13game seconds on actual approval rejection; no day1/seven-day success. Denial honored, normal cleanup/unknown ACKs retained.",
+        "scope": "Frozen ace2ab2/native9cf1f76;72rows48charges=25creation19day1(14ready+4walkstopped0+1deniedbeforeexecution)4cleanup, meaningful pickup/jacket, no consumption/rest. Independent198origin/409final artifact verification and actual images.",
         "evidence": [
-          "docs/acceptance/2026-10-18-operator-access-stop.md",
-          "docs/acceptance/2026-10-18-campaign-operator.md"
+          "docs/acceptance/2026-10-18-seven-day-stop.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
-          "docs/acceptance/2026-10-18-operator-access-stop.md",
-          "docs/acceptance/2026-10-18-campaign-operator.md"
+          "docs/acceptance/2026-10-18-seven-day-stop.md"
         ],
-        "effectiveness": "effective",
-        "findings": "Design review caught effective-timeout parsing and misplaced contract scope before native use. Actual actor failed by omitting available escalation despite lead access; preserved failure led to actor-specific passive preflight and explicit tool mode. Replacement verified both paused/quiescent handoffs. Separate count correction preserves originals. Portable checks/rule matching do not prove live permission activation, actor isolation or graphical outcome.",
-        "cost": "Existing CLI/controller/parser, pinned native, one-off bounded capture and original journals; one designated general-purpose player, lead-only source/runtime lifecycle and independent read-only reviews. No dependency/global setting/paid API. Approval/model usage and sustained maintenance cost unmeasured.",
-        "follow_up": "#81 freezes fresh deciding scenario, activity/overshoot/storage and finite split campaign limits with independent readiness; #82 stays gated. #97 closes after exact protected publication/main CI. #75 retains control failure/release/resumption trigger and existing2027-01-15 date; #26 retainsOctober24 research trigger. No generic memory/monitor framework or rule expansion justified."
+        "effectiveness": "unassessed",
+        "findings": "Shared parser caught invalid Resume flag before controller contact; corrected caller assignment preserved original clock. Public walk dropped actual stop observation; player proposed movement from earlier frame and actual approval review denied it. No bypass/rule expansion; cleanup preserved partial and lifecycle unknowns. Independent review clarified current-v3 versus separately archived-v2 count scope without rewriting originals. Earlier readiness did not prove long-survival or every aggregate-outcome path.",
+        "cost": "Existing controller/CLI/parser/one-off capture, one ordinary player, lead-owned lifecycle/source and independent read-only reviews. Native closeout974.996original wall seconds includes reasoning/tools/approvals/pauses; publication continues original finite envelope. Model/approval cost and sustained benefit unknown; no global setup or paid API.",
+        "follow_up": "#108 owns bounded walk-observation/fresh-reassessment control/caller migration and separate native probe/readiness before later admission; #100/#82 remain blocked. #75 retains failure/release/resumption and January15maintenance triggers; #26 retainsOctober24research trigger. No unused001allowance, compatibility alias, broad permission rule, hidden retry or automatic learning."
       },
       "next_review": "2027-01-15"
     },
@@ -437,7 +436,8 @@
         "docs/changes/015-enactive-migration.md",
         "docs/acceptance/2026-10-18-enactive-migration.md",
         "docs/acceptance/2026-10-18-operator-access-stop.md",
-        "docs/acceptance/2026-10-18-campaign-operator.md"
+        "docs/acceptance/2026-10-18-campaign-operator.md",
+        "docs/acceptance/2026-10-18-seven-day-stop.md"
       ],
       "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process. Reuse fit and the adequacy of its rationale are semantic judgments; CI does not prove them. Identity configuration prevents inferred defaults but does not inspect file contents or prove a message, branch or remote ref contains no personal information; full-message inspection remains manual.",
@@ -447,23 +447,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-18",
-        "outcome": "Qualified two-phase operator acceptance; earlier default-sandbox failure, three lifecycle ACK unknowns and summary-count correction retained. Protected publication is separately verified.",
-        "scope": "Frozen d57f821 / unchanged native9cf1f76;13delegated inputs, paused/quiescent lead inspection and reassignment,46rows21charges/16game seconds, normal cleanup; no water source or seven-day result.",
+        "outcome": "First deciding campaign stopped partial after13game seconds on actual approval rejection; no day1/seven-day success. Denial honored, normal cleanup/unknown ACKs retained.",
+        "scope": "Frozen ace2ab2/native9cf1f76;72rows48charges=25creation19day1(14ready+4walkstopped0+1deniedbeforeexecution)4cleanup, meaningful pickup/jacket, no consumption/rest. Independent198origin/409final artifact verification and actual images.",
         "evidence": [
-          "docs/acceptance/2026-10-18-operator-access-stop.md",
-          "docs/acceptance/2026-10-18-campaign-operator.md"
+          "docs/acceptance/2026-10-18-seven-day-stop.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
-          "docs/acceptance/2026-10-18-operator-access-stop.md",
-          "docs/acceptance/2026-10-18-campaign-operator.md"
+          "docs/acceptance/2026-10-18-seven-day-stop.md"
         ],
-        "effectiveness": "effective",
-        "findings": "Design review caught effective-timeout parsing and misplaced contract scope before native use. Actual actor failed by omitting available escalation despite lead access; preserved failure led to actor-specific passive preflight and explicit tool mode. Replacement verified both paused/quiescent handoffs. Separate count correction preserves originals. Portable checks/rule matching do not prove live permission activation, actor isolation or graphical outcome.",
-        "cost": "Existing CLI/controller/parser, pinned native, one-off bounded capture and original journals; one designated general-purpose player, lead-only source/runtime lifecycle and independent read-only reviews. No dependency/global setting/paid API. Approval/model usage and sustained maintenance cost unmeasured.",
-        "follow_up": "#81 freezes fresh deciding scenario, activity/overshoot/storage and finite split campaign limits with independent readiness; #82 stays gated. #97 closes after exact protected publication/main CI. #75 retains control failure/release/resumption trigger and existing2027-01-15 date; #26 retainsOctober24 research trigger. No generic memory/monitor framework or rule expansion justified."
+        "effectiveness": "unassessed",
+        "findings": "Shared parser caught invalid Resume flag before controller contact; corrected caller assignment preserved original clock. Public walk dropped actual stop observation; player proposed movement from earlier frame and actual approval review denied it. No bypass/rule expansion; cleanup preserved partial and lifecycle unknowns. Independent review clarified current-v3 versus separately archived-v2 count scope without rewriting originals. Earlier readiness did not prove long-survival or every aggregate-outcome path.",
+        "cost": "Existing controller/CLI/parser/one-off capture, one ordinary player, lead-owned lifecycle/source and independent read-only reviews. Native closeout974.996original wall seconds includes reasoning/tools/approvals/pauses; publication continues original finite envelope. Model/approval cost and sustained benefit unknown; no global setup or paid API.",
+        "follow_up": "#108 owns bounded walk-observation/fresh-reassessment control/caller migration and separate native probe/readiness before later admission; #100/#82 remain blocked. #75 retains failure/release/resumption and January15maintenance triggers; #26 retainsOctober24research trigger. No unused001allowance, compatibility alias, broad permission rule, hidden retry or automatic learning."
       },
       "next_review": "2027-01-15"
     },
@@ -663,7 +661,8 @@
         "docs/acceptance/2026-10-18-waypoint-readiness.md",
         "docs/acceptance/2026-10-18-operator-access-stop.md",
         "docs/acceptance/2026-10-18-campaign-operator.md",
-        "docs/acceptance/2026-10-18-seven-day-readiness.md"
+        "docs/acceptance/2026-10-18-seven-day-readiness.md",
+        "docs/acceptance/2026-10-18-seven-day-stop.md"
       ],
       "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",
@@ -673,21 +672,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-18",
-        "outcome": "Required push CI failed on first readiness candidate while local/PR checks passed; publication stayed blocked. Controlled fault-fixture correction passed four targeted tests; corrected full/source CI remains a separate gate. No deciding campaign admitted.",
-        "scope": "Existing leased timeout/malformed-response fixture used an 80ms end-to-end budget across preflight/action; correction injects expiry after fake action claim and preserves publication/revocation/exact-request uncertainty. Actual actor/native preflight was passive only.",
+        "outcome": "First deciding campaign stopped partial after13game seconds on actual approval rejection; no day1/seven-day success. Denial honored, normal cleanup/unknown ACKs retained.",
+        "scope": "Frozen ace2ab2/native9cf1f76;72rows48charges=25creation19day1(14ready+4walkstopped0+1deniedbeforeexecution)4cleanup, meaningful pickup/jacket, no consumption/rest. Independent198origin/409final artifact verification and actual images.",
         "evidence": [
-          "docs/acceptance/2026-10-18-seven-day-readiness.md"
+          "docs/acceptance/2026-10-18-seven-day-stop.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
-          "docs/acceptance/2026-10-18-seven-day-readiness.md"
+          "docs/acceptance/2026-10-18-seven-day-stop.md"
         ],
         "effectiveness": "unassessed",
-        "findings": "Required CI caught an unsuitable timing-dependent fixture assertion. Exact original scheduling/storage path remains unknown because the failed runner journal was absent; local reproduction passed. Controlled-clock correction reuses existing test machinery, preserves production deadlines/guards and separate original-deadline tests, and adds correlated failure diagnostics. Actual native/actor preflight and offline capture tests are distinct from deciding survival.",
-        "cost": "One targeted fixture correction, four focused tests, clean-context sweep/review and required common/hosted checks; existing Git/GitHub/CLI/parser/controller and bounded one-off capture. No framework, dependency, global setting or paid API; model/approval and sustained maintenance costs unknown.",
-        "follow_up": "#75 owns finite scoped failure/control disposition; verify corrected exact-candidate and merged-main CI before #81 admission. #82/#100\u2013106 remain gated by actual prerequisites; no seven-day result. Preserve failed CI and qualifications; revisit fixture failures/capture drift or authority changes. Existing January15/October24 dates and unrelated controls are not renewed."
+        "findings": "Shared parser caught invalid Resume flag before controller contact; corrected caller assignment preserved original clock. Public walk dropped actual stop observation; player proposed movement from earlier frame and actual approval review denied it. No bypass/rule expansion; cleanup preserved partial and lifecycle unknowns. Independent review clarified current-v3 versus separately archived-v2 count scope without rewriting originals. Earlier readiness did not prove long-survival or every aggregate-outcome path.",
+        "cost": "Existing controller/CLI/parser/one-off capture, one ordinary player, lead-owned lifecycle/source and independent read-only reviews. Native closeout974.996original wall seconds includes reasoning/tools/approvals/pauses; publication continues original finite envelope. Model/approval cost and sustained benefit unknown; no global setup or paid API.",
+        "follow_up": "#108 owns bounded walk-observation/fresh-reassessment control/caller migration and separate native probe/readiness before later admission; #100/#82 remain blocked. #75 retains failure/release/resumption and January15maintenance triggers; #26 retainsOctober24research trigger. No unused001allowance, compatibility alias, broad permission rule, hidden retry or automatic learning."
       },
       "next_review": "2027-01-15"
     },

@@ -381,6 +381,16 @@ records actual delegated input, paused inspection and fresh reassignment, follow
 a retained access failure. No broader survival reliability or unattended service
 is implied by this procedure.
 
+The [first fresh deciding attempt](acceptance/2026-10-18-seven-day-stop.md) stopped
+on actual approval denial after a guarded-walk stop. Public `walk` currently emits
+an aggregate without its stop observation; ordinary native preflight does not
+replace the player's semantic reassessment. Obtain and interpret a separate fresh
+Observe after a stopped walk before another decision, rather than substituting an
+ordinary movement from the earlier image. This is currently a procedural player
+requirement; #108 owns the missing observation/control contract. Honor the actual
+denial and the frozen campaign's stop rules; no implicit continuation or rule/actor/
+transport change restores that stopped admission.
+
 
 
 ## Closed-loop play and observations
