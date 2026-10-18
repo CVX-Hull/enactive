@@ -1,10 +1,17 @@
 ---
 owner: lead
-status: proposed
-review_trigger: Deciding scenario, source, limits, evidence, actor authority or readiness decision changes
+status: historical
+date: 2026-10-18
+scope: Frozen deciding001 protocol; investigation ended on actual approval denial after 13 game seconds
 ---
 
 # One bounded fresh-character seven-day attempt
+
+Historical protocol for deciding001 at source `ace2ab2976e40415c1f7f4f6b644b752f9d765f0`.
+The [actual stopped outcome](../acceptance/2026-10-18-seven-day-stop.md) is not
+seven-day success or permission to resume. [#108](https://github.com/CVX-Hull/enactive/issues/108)
+owns the observed correction before a prospective later admission. The original
+frozen text below remains evidence; it does not override current authority.
 
 For [#81](https://github.com/CVX-Hull/enactive/issues/81) and
 [#82](https://github.com/CVX-Hull/enactive/issues/82), turn the accepted

@@ -31,8 +31,8 @@ The campaign milestone has no committed delivery date.
 | --- | --- | --- |
 | Useful survival pilot and its first review | [Pilot001](acceptance/2026-10-18-survival-pilot.md) stopped on an unknown world-selection acknowledgment before spawning; retained findings and cleanup are gap evidence, not survival success | [#78 pilot](https://github.com/CVX-Hull/enactive/issues/78), then [#83 first review](https://github.com/CVX-Hull/enactive/issues/83) |
 | Continuity and first-day rehearsal | [Rehearsal001](acceptance/2026-10-18-first-day-rehearsal.md) failed autonomy. The [direction probe](acceptance/2026-10-18-native-direction-menu.md) verified same-character reload and actual pickup selection/cancel without user keys; the [later same-character run](acceptance/2026-10-18-first-day-completion.md) reached24h14m29s without user rescue, with qualified needs/rest evidence and a retained cleanup deadline deviation | [#91 recovery](https://github.com/CVX-Hull/enactive/issues/91), [#79 continuity](https://github.com/CVX-Hull/enactive/issues/79) and [#80 first day](https://github.com/CVX-Hull/enactive/issues/80); shared execution is serialized |
-| Executable seven-day readiness | Adjudicated #79/#80/#83 evidence and exceptions, actual capability gaps resolved, measured throughput, finite total/segment/attempt limits, frozen scenario/candidate and independent outcome review | [#81 readiness](https://github.com/CVX-Hull/enactive/issues/81) |
-| Seven-day campaign | Bounded owned segments of the same fresh character, real visible calendar/needs/identity evidence, save/restart/handoff and reviewed endpoint | [#82 execution](https://github.com/CVX-Hull/enactive/issues/82), split and estimated before Ready |
+| Executable seven-day readiness | [Accepted preparation](acceptance/2026-10-18-seven-day-readiness.md) for frozen001; actual later failure/gaps remain separate | [#81 readiness](https://github.com/CVX-Hull/enactive/issues/81) |
+| Seven-day campaign | Bounded owned segments of the same fresh character, real visible calendar/needs/identity evidence, save/restart/handoff and reviewed endpoint; first001 stopped partial, #108 gates further play | [#82 execution](https://github.com/CVX-Hull/enactive/issues/82), split and estimated before Ready |
 
 The first integrated pilot/review round used **18 charged inputs**, including four
 cleanup inputs, and 229.232 seconds through the final receipt capture. It stopped
@@ -77,32 +77,36 @@ artifact hashes and ledger were independently checked. The lead owns functional
 acceptance with these qualifications. Original estimates remain historical;
 measured elapsed time includes reasoning/review/publication, not just game runtime.
 
-Next #81 freezes the fresh deciding scenario, candidate, practical supply/rest
-capabilities, finite whole-run/segment/attempt limits and independent outcome
-review. It must consume the deadline-control finding, actual throughput and the
-[permission/player audit](operator-permissions.md): narrowly matched CLI rules are
-prepared and policy-tested, activation is unverified; dedicated direct player
-execution is defined by [the bounded operator brief](changes/020-campaign-operator.md)
-and [#97](https://github.com/CVX-Hull/enactive/issues/97). Its
-[first probe](acceptance/2026-10-18-operator-access-stop.md) stopped before player
-input on an omitted tool escalation setting; the probe including cleanup used9charges with
-zero observed game-time advance. [Brief021](changes/021-operator-access-preflight.md)
-required actor access before a separate bounded replacement. Its
-[actual two-phase result](acceptance/2026-10-18-campaign-operator.md) used21charges,
-13delegated inputs and16game seconds: carried water consumed/thirst cleared,
-rations conserved, paused lead inspection and fresh reassignment. Three lifecycle
-ACKs and unknown water resupply remain; no human rescue. #81 consumes the qualified
-operator evidence and still freezes the fresh deciding protocol, activity/overshoot/
-evidence limits and split execution before independent readiness. #82 stays gated
-until that decision. The [proposed deciding protocol](changes/022-seven-day-campaign.md)
-splits #82 into seven named daily children [#100–106](https://github.com/CVX-Hull/enactive/issues/82),
-with native dependencies, M/Low estimates and fixed original budgets; all remain
-blocked until their prerequisites. The [preparation review](acceptance/2026-10-18-seven-day-readiness.md)
-records clean design review, ten offline boundary tests, both actual actor access
-checks and passive native preflight; protected publication and fresh admission
-remain separate gates. A drafted protocol or tracker split is not
-readiness or a gameplay admission. No new generic
-monitor, memory database or paid API is required by the rehearsal evidence.
+Readiness [#81](https://github.com/CVX-Hull/enactive/issues/81) was accepted through
+protected PR107, with finite whole/daily/shared/activity/overshoot/storage limits,
+seven owned M/Low children, both actual player access checks, fresh normal-window
+native preflight and exact/main CI. Its [preparation record](acceptance/2026-10-18-seven-day-readiness.md)
+retains the failed initial CI candidate and reviewed controlled-clock fixture
+correction; production/native code and deadlines were unchanged. Rule matching
+remains distinct from activation; explicit approved calls worked without broader
+or global permission changes. Earlier [operator001](acceptance/2026-10-18-operator-access-stop.md)
+and the [qualified two-phase operator result](acceptance/2026-10-18-campaign-operator.md)
+remain separate history, not seven-day progress.
+
+The [first deciding attempt](acceptance/2026-10-18-seven-day-stop.md), under
+[protocol022](changes/022-seven-day-campaign.md), normally created Ned Meyers in
+Belgium and collected food/water/clothing, but stopped after **13 game seconds**.
+After a guarded walk stopped with no stop frame in its aggregate, automatic
+approval review rejected the player's next movement from an earlier frame.
+The player honored the denial and handed off; normal Save/Quit retained the
+partial.72rows/48charges include the one denied request and four cleanup inputs;
+three native ACKs remain unknown. No human rescue and no day1/seven-day success.
+Independent review verified all409final artifact hashes and actual images.
+
+[#108](https://github.com/CVX-Hull/enactive/issues/108) is the actual bounded
+observation/caller blocker: retain the real walk outcome observation, require
+fresh reassessment, migrate callers/tests/docs and validate a separately bounded
+native probe. Further #100/#82 execution is blocked until correction and a new
+prospective admission decision; unused001 allowance cannot resume it. The seven
+named daily children [#100–106](https://github.com/CVX-Hull/enactive/issues/82)
+remain uncompleted with actual dependencies/estimates in GitHub. Source changes
+only follow normal native/controller shutdown. No generic memory/monitor/VLA
+framework, paid API or permission expansion is justified by this failure.
 
 Pilot001's 150-input/45-minute/six-game-hour ceilings remain historical fixed limits,
 not a renewable allowance. Every later attempt needs a prospective finite brief

@@ -99,3 +99,12 @@ route it through another actor. A sandbox connection failure before any elevated
 request is a different event and must not be reported as automatic-review denial.
 Retain the actual passive preflight and terminal tool result. Project allow-rule
 matching still does not prove live activation.
+
+The [first deciding campaign](acceptance/2026-10-18-seven-day-stop.md) later passed
+actor access and sent ordinary inputs, then received an actual approval rejection
+for movement without fresh verified observation after a stopped walk. The player
+honored it; the admission ended and normal cleanup preserved the partial. This
+was a decision/freshness requirement, not missing loopback access. #108 tracks
+the bounded observation/caller correction; do not broaden rules, change actors
+or switch transports to bypass that rejection. A later assessment needs an explicit
+prospective decision; the stopped admission supplies no remaining input authority.

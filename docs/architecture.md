@@ -62,6 +62,13 @@ on one saved development character. The earlier failed access attempt remains
 evidence. No broader survival reliability, water resupply or unattended service
 is established by this operating procedure.
 
+The [first fresh deciding attempt](acceptance/2026-10-18-seven-day-stop.md) later
+stopped at13game seconds after an approval rejection following a guarded-walk stop.
+Its aggregate omitted the observation needed for the player's next decision;
+native preflight alone does not supply that semantic reassessment. #108 owns the
+bounded observation/caller correction. The original partial and normal cleanup
+remain evidence; neither operator mode nor readiness proves seven-day autonomy.
+
 ## Runtime and state
 
 Observe → choose a bounded action → validate current session/revision → dispatch

@@ -78,6 +78,23 @@ A registered action can be rejected if it has no usable single-key binding. A
 walk may report `stopped` after all requested steps completed; inspect `steps`
 and the frame before deciding again. See the [protocol](protocol.md).
 
+Public `walk` currently returns an aggregate, not a native observation packet; a
+stop result omits its actual stop frame/session/revision. After any stopped walk,
+obtain a separate fresh Observe, inspect the actual image and reason, and explicitly
+reassess before another decision. Do not substitute a movement action using the
+earlier frame. Native command preflight does not replace that player assessment.
+[#108](https://github.com/CVX-Hull/enactive/issues/108) tracks the observation gap;
+no mechanical post-stop player-assessment gate is claimed today. Actual approval
+denial ends the admitted investigation under its stop rules; no retry, permission
+expansion or actor/transport switch is a recovery path around it.
+
+Use each command's actual CLI grammar: Observe, Resume, Pause, status and goal do
+not accept `--expect`; ordinary key/action/walk require it. Observe and Resume
+do accept `--timeout`, subject to the admission's ordinary deadline. Consult
+generated `--help` or the shared parser rather than copying
+flags between commands. Keep large capture envelopes redirected and read original
+numbered receipt JSON; a truncated tool display is not an original receipt.
+
 ## Pause, timeout and recovery
 
 Pause prevents subsequent remote dispatch. Native keyboard/button input also
