@@ -376,9 +376,10 @@ handoff using the established recovery procedure; user rescue is not the fallbac
 Actor assignment/quiescence and campaign semantic limits are workflow controls.
 They are not an exclusive external capability or a sandbox against a malicious
 cooperating agent. The native/controller authority, Pause and in-process waypoint
-lease retain their implemented guarantees. The [operator probe](changes/020-campaign-operator.md)
-defines the initial development acceptance; no broader survival reliability or
-unattended service is implied by this procedure.
+lease retain their implemented guarantees. The [two-phase operator acceptance](acceptance/2026-10-18-campaign-operator.md)
+records actual delegated input, paused inspection and fresh reassignment, following
+a retained access failure. No broader survival reliability or unattended service
+is implied by this procedure.
 
 
 

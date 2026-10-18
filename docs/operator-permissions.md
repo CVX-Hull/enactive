@@ -81,9 +81,12 @@ historical unknowns and accounting do not reset. Actor names and instructions
 are workflow controls, not exclusive external capabilities or a sandbox. Do not
 use explorer/reviewer roles to send input. See the [runbook](runbook.md#designated-campaign-operator).
 
-[#97](https://github.com/CVX-Hull/enactive/issues/97) and its
-[finite probe](changes/020-campaign-operator.md) own initial graphical proof.
-Until that evidence is accepted, no successful direct-player handoff is claimed.
+[#97](https://github.com/CVX-Hull/enactive/issues/97)'s
+[two-phase result](acceptance/2026-10-18-campaign-operator.md) records actual
+delegated consumption/conservation and paused lead takeover, following a retained
+default-sandbox invocation failure. Its approved actor preflight and explicit
+tool mode worked in this session; allow-rule activation remains unverified.
+This is one qualified operating result, not general survival or a reliability claim.
 Missing/unquiesced player, denied approval or failed readable access stops; user
 rescue is not the fallback. Do not expand an active frozen campaign mid-run.
 

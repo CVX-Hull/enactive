@@ -56,9 +56,11 @@ uses ordinary CLI inputs, or the leased waypoint service executes plans. They ar
 different responsibilities in the current system, not old/new wire contracts or
 compatibility paths. A dedicated operator keeps game observations out of the lead's
 engineering context. Its identity and stop handshake are procedural; the controller
-does not authenticate individual sub-agents. The first bounded proof is defined
-in [the operating brief](changes/020-campaign-operator.md); until real evidence is
-published, delegation itself is not a demonstrated survival capability.
+does not authenticate individual sub-agents. The [two-phase operating result](acceptance/2026-10-18-campaign-operator.md)
+shows carried-water consumption, ration conservation and paused lead inspection
+on one saved development character. The earlier failed access attempt remains
+evidence. No broader survival reliability, water resupply or unattended service
+is established by this operating procedure.
 
 ## Runtime and state
 

@@ -68,6 +68,7 @@ explain why native integration was selected and when we would reconsider it.
 | Run input ownership | Explicit task owns input; competing remote inputs reject; Pause immediately revokes further dispatch | [Ownership contract](protocol.md#controller-run-ownership) |
 | Waypoint task supervision | Explicit start, fresh stage planning, verified steps, visible stops and continuation with original history/budgets | [Supervisor contract](protocol.md#passive-waypoint-supervision) |
 | Player planning handoff | Active-chat player returns bounded candidates; slow decisions require fresh evidence revalidation. Missing/stale replies stop; chat usage remains unmeasured | [Planner contract](protocol.md#bounded-injected-planner) |
+| Dedicated gameplay operator | Two real input phases consumed carried water, conserved rations and handed off paused for lead inspection; one saved-character result, no resupply or survival guarantee | [Operator acceptance](acceptance/2026-10-18-campaign-operator.md) |
 | Evaluation records | Passive versioned outcome/cost recorder and offline summaries; external planning and future adapters are not automatically measured | [Evaluation guide](evaluation.md) |
 | Autonomous survival | Not implemented; Codex remains the planner | [Current scope](architecture.md#scope-and-responsibilities) |
 | Reproducible installation | Fresh build demonstrated on this Mac; other hosts remain unverified | [Setup](setup.md), [historical provenance](acceptance/2026-10-17-mvp-manifest.json) |
@@ -142,9 +143,11 @@ separates tested command rules from activation and the candidate-only waypoint
 planner from a designated campaign operator. The [operator probe](changes/020-campaign-operator.md)
 stopped before delegated input when the actor omitted the available escalation
 setting. [Actual failure and cleanup](acceptance/2026-10-18-operator-access-stop.md)
-remain evidence; [the replacement](changes/021-operator-access-preflight.md) first
-requires a harmless approved access check by that actor. Actual delegated input
-and takeover must still be verified before campaign adoption.
+remain evidence. [The replacement result](acceptance/2026-10-18-campaign-operator.md)
+then verified an actor access preflight,13delegated inputs across two phases,
+carried clean-water consumption, ration conservation and paused lead inspection,
+using21total charges/16game seconds with no human rescue. Water resupply remains
+unverified. #81 still owns the fresh deciding campaign's finite readiness decision.
 Campaigns also expose concrete memory, planning,
 monitoring and viewer needs. The [review workflow](project-management.md#campaign-driven-improvement)
 routes observed problems into bounded improvements and checks their effect in later

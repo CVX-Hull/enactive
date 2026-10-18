@@ -87,8 +87,14 @@ and [#97](https://github.com/CVX-Hull/enactive/issues/97). Its
 [first probe](acceptance/2026-10-18-operator-access-stop.md) stopped before player
 input on an omitted tool escalation setting; the probe including cleanup used9charges with
 zero observed game-time advance. [Brief021](changes/021-operator-access-preflight.md)
-requires actor access before a separate bounded replacement. Real handoff
-acceptance remains pending. #82 stays gated until that decision. No new generic
+required actor access before a separate bounded replacement. Its
+[actual two-phase result](acceptance/2026-10-18-campaign-operator.md) used21charges,
+13delegated inputs and16game seconds: carried water consumed/thirst cleared,
+rations conserved, paused lead inspection and fresh reassignment. Three lifecycle
+ACKs and unknown water resupply remain; no human rescue. #81 consumes the qualified
+operator evidence and still freezes the fresh deciding protocol, activity/overshoot/
+evidence limits and split execution before independent readiness. #82 stays gated
+until that decision. No new generic
 monitor, memory database or paid API is required by the rehearsal evidence.
 
 Pilot001's 150-input/45-minute/six-game-hour ceilings remain historical fixed limits,
