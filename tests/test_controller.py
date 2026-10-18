@@ -1304,20 +1304,50 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             with self.subTest(malformed=malformed), FakeBridge(self.controller) as fake:
                 self.ready()
                 lease = self.acquire()
+                expected = self.expect()
+                # This case tests post-publication faults, not whether shared
+                # runner storage/scheduling fits preflight into 80 milliseconds.
+                # Advance the controller clock only after the action is claimed;
+                # the separate original-deadline tests cover pre-publication expiry.
+                clock = SimpleNamespace(value=time.monotonic())
+                deadline = clock.value + 2
+                proxy = SimpleNamespace(monotonic=lambda: clock.value, time=time.time, sleep=time.sleep)
+                action_claimed = threading.Event()
                 def fail(bridge, request):
                     if request["kind"] == "action":
+                        action_claimed.set()
                         if malformed:
                             bridge.value["protocol"] = 2
                             return True
+                        clock.value = deadline
                         return False
                     return True
                 fake.behavior = fail
-                result = self.run_action(lease, action="UP", timeout=0.08, **self.expect())
-                self.assertEqual(result["status"], "controller_error" if malformed else "timeout")
-                self.assertIsNone(self.controller.status()["run_lease"])
-                self.assertTrue(self.controller.frozen)
-                self.assertEqual(sum(r["kind"] == "action" for r in fake.requests), 1)
-                self.assertTrue(self.controller.unknown_outcomes)
+                with patch("harness.controller.time", proxy), ThreadPoolExecutor(1) as pool:
+                    future = pool.submit(self.controller.execute_run, lease, action="UP",
+                        logical_action_id="fault-after-publication", deadline_monotonic=deadline,
+                        timeout=2, **expected)
+                    try:
+                        envelope = future.result(5)  # Real watchdog; never renews the controller deadline.
+                    except TimeoutError:
+                        self.fail(json.dumps({"watchdog": "leased fault did not finish",
+                            "requests": fake.requests, "journal": self.controller.journal.read_text()}))
+                    finally:
+                        clock.value = deadline  # Release the loop even if the fake failed to publish.
+                diagnostics = json.dumps({"receipt": envelope, "requests": fake.requests,
+                    "journal": self.controller.journal.read_text()}, sort_keys=True)
+                self.assertTrue(action_claimed.is_set(), diagnostics)
+                self.assertTrue(envelope["published"], diagnostics)
+                self.assertEqual(envelope["request"]["kind"], "action", diagnostics)
+                self.assertEqual(envelope["result"]["status"],
+                                 "controller_error" if malformed else "timeout", diagnostics)
+                if malformed:
+                    self.assertIn("Unsupported response protocol", envelope["result"]["error"], diagnostics)
+                self.assertIsNone(self.controller.status()["run_lease"], diagnostics)
+                self.assertTrue(self.controller.frozen, diagnostics)
+                self.assertEqual(sum(r["kind"] == "action" for r in fake.requests), 1, diagnostics)
+                self.assertTrue(any(item["request"]["id"] == envelope["request"]["id"]
+                                    for item in self.controller.unknown_outcomes), diagnostics)
             # Reset only the live fixture slot before the next isolated fault;
             # the durable admission and recorded uncertainty remain intact.
             self.controller.pending = None

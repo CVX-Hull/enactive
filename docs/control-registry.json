@@ -193,7 +193,8 @@
         "tests/test_gameplay_supervisor.py",
         "tests/test_gameplay_skills.py",
         "docs/acceptance/2026-10-18-integrated-player.md",
-        "docs/acceptance/2026-10-18-enactive-migration.md"
+        "docs/acceptance/2026-10-18-enactive-migration.md",
+        "docs/acceptance/2026-10-18-seven-day-readiness.md"
       ],
       "failure_response": "Preserve failure output, fix the cause and rerun before claiming portable acceptance.",
       "limitations": "Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing.",
@@ -203,21 +204,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-18",
-        "outcome": "Passed within stated round012 scope; unsuccessful first route, transition uncertainty and development failures retained.",
-        "scope": "379 Python tests, viewer regressions, import/docs/diagram/governance checks; journal exceptions, Pause epoch race, slow planning and real HTTP composition over synthetic transport.",
+        "outcome": "Required push CI failed on first readiness candidate while local/PR checks passed; publication stayed blocked. Controlled fault-fixture correction passed four targeted tests; corrected full/source CI remains a separate gate. No deciding campaign admitted.",
+        "scope": "Existing leased timeout/malformed-response fixture used an 80ms end-to-end budget across preflight/action; correction injects expiry after fake action claim and preserves publication/revocation/exact-request uncertainty. Actual actor/native preflight was passive only.",
         "evidence": [
-          "docs/acceptance/2026-10-18-integrated-player.md"
+          "docs/acceptance/2026-10-18-seven-day-readiness.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
-          "docs/acceptance/2026-10-18-integrated-player.md"
+          "docs/acceptance/2026-10-18-seven-day-readiness.md"
         ],
-        "effectiveness": "effective",
-        "findings": "Integration review exposed post-publication journal classification, persistent-error recovery and duplicate Pause epoch defects; repaired with meaningful regressions. Native guard policy stopped the first route conservatively; #53 tracks policy review.",
-        "cost": "Existing project-local tooling; two disjoint workers, independent review, one player sub-agent, one serialized native runtime. No global setup or separate API spending; Codex usage unmeasured.",
-        "follow_up": "Revisit on lifecycle/receipt/guard changes or failures; #53 guard semantics, #24 comparative evaluation, #40 semantic monitoring, #10 broader tasks and #13 maintenance remain."
+        "effectiveness": "unassessed",
+        "findings": "Required CI caught an unsuitable timing-dependent fixture assertion. Exact original scheduling/storage path remains unknown because the failed runner journal was absent; local reproduction passed. Controlled-clock correction reuses existing test machinery, preserves production deadlines/guards and separate original-deadline tests, and adds correlated failure diagnostics. Actual native/actor preflight and offline capture tests are distinct from deciding survival.",
+        "cost": "One targeted fixture correction, four focused tests, clean-context sweep/review and required common/hosted checks; existing Git/GitHub/CLI/parser/controller and bounded one-off capture. No framework, dependency, global setting or paid API; model/approval and sustained maintenance costs unknown.",
+        "follow_up": "#75 owns finite scoped failure/control disposition; verify corrected exact-candidate and merged-main CI before #81 admission. #82/#100\u2013106 remain gated by actual prerequisites; no seven-day result. Preserve failed CI and qualifications; revisit fixture failures/capture drift or authority changes. Existing January15/October24 dates and unrelated controls are not renewed."
       },
       "next_review": "2027-01-15"
     },
@@ -661,7 +662,8 @@
         "docs/environment.md",
         "docs/acceptance/2026-10-18-waypoint-readiness.md",
         "docs/acceptance/2026-10-18-operator-access-stop.md",
-        "docs/acceptance/2026-10-18-campaign-operator.md"
+        "docs/acceptance/2026-10-18-campaign-operator.md",
+        "docs/acceptance/2026-10-18-seven-day-readiness.md"
       ],
       "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",
@@ -671,23 +673,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-18",
-        "outcome": "Qualified two-phase operator acceptance; earlier default-sandbox failure, three lifecycle ACK unknowns and summary-count correction retained. Protected publication is separately verified.",
-        "scope": "Frozen d57f821 / unchanged native9cf1f76;13delegated inputs, paused/quiescent lead inspection and reassignment,46rows21charges/16game seconds, normal cleanup; no water source or seven-day result.",
+        "outcome": "Required push CI failed on first readiness candidate while local/PR checks passed; publication stayed blocked. Controlled fault-fixture correction passed four targeted tests; corrected full/source CI remains a separate gate. No deciding campaign admitted.",
+        "scope": "Existing leased timeout/malformed-response fixture used an 80ms end-to-end budget across preflight/action; correction injects expiry after fake action claim and preserves publication/revocation/exact-request uncertainty. Actual actor/native preflight was passive only.",
         "evidence": [
-          "docs/acceptance/2026-10-18-operator-access-stop.md",
-          "docs/acceptance/2026-10-18-campaign-operator.md"
+          "docs/acceptance/2026-10-18-seven-day-readiness.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
-          "docs/acceptance/2026-10-18-operator-access-stop.md",
-          "docs/acceptance/2026-10-18-campaign-operator.md"
+          "docs/acceptance/2026-10-18-seven-day-readiness.md"
         ],
         "effectiveness": "unassessed",
-        "findings": "Design review caught effective-timeout parsing and misplaced contract scope before native use. Actual actor failed by omitting available escalation despite lead access; preserved failure led to actor-specific passive preflight and explicit tool mode. Replacement verified both paused/quiescent handoffs. Separate count correction preserves originals. Portable checks/rule matching do not prove live permission activation, actor isolation or graphical outcome.",
-        "cost": "Existing CLI/controller/parser, pinned native, one-off bounded capture and original journals; one designated general-purpose player, lead-only source/runtime lifecycle and independent read-only reviews. No dependency/global setting/paid API. Approval/model usage and sustained maintenance cost unmeasured.",
-        "follow_up": "#81 freezes fresh deciding scenario, activity/overshoot/storage and finite split campaign limits with independent readiness; #82 stays gated. #97 closes after exact protected publication/main CI. #75 retains control failure/release/resumption trigger and existing2027-01-15 date; #26 retainsOctober24 research trigger. No generic memory/monitor framework or rule expansion justified."
+        "findings": "Required CI caught an unsuitable timing-dependent fixture assertion. Exact original scheduling/storage path remains unknown because the failed runner journal was absent; local reproduction passed. Controlled-clock correction reuses existing test machinery, preserves production deadlines/guards and separate original-deadline tests, and adds correlated failure diagnostics. Actual native/actor preflight and offline capture tests are distinct from deciding survival.",
+        "cost": "One targeted fixture correction, four focused tests, clean-context sweep/review and required common/hosted checks; existing Git/GitHub/CLI/parser/controller and bounded one-off capture. No framework, dependency, global setting or paid API; model/approval and sustained maintenance costs unknown.",
+        "follow_up": "#75 owns finite scoped failure/control disposition; verify corrected exact-candidate and merged-main CI before #81 admission. #82/#100\u2013106 remain gated by actual prerequisites; no seven-day result. Preserve failed CI and qualifications; revisit fixture failures/capture drift or authority changes. Existing January15/October24 dates and unrelated controls are not renewed."
       },
       "next_review": "2027-01-15"
     },
