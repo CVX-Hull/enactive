@@ -177,7 +177,8 @@ marker at ordinary avatar input distinguishes normal play; deathcam, unknown
 DEFAULTMODE callers, activity polling and raw debug prompts cannot inherit it.
 The pinned common direction helper marks only its own `handle_input()` wait as a
 menu, preserving DEFAULTMODE for native binding lookup. The same `menu_query(category)`
-RAII mechanism marks only the pinned item-detail and comparison input waits with
+RAII mechanism marks only the pinned item-detail waits in `iteminfo_window::execute`
+and `draw_item_info`, plus the comparison wait in `compare_item_menu::show`, with
 their original lowercase `default` category. Neither generic name is globally
 admitted. The marker activates only in-game with no enclosing scope or active query;
 classification requires an exact category match and the stack still empty when

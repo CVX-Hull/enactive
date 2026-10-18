@@ -18,6 +18,7 @@
     "src/debug.cpp": "d89793cf60fc496d0808988f1df16dd57264f14f9d1ab0406f7d798c20b1b7df",
     "src/game.cpp": "197398412f600802c611045b0e1b63551fadf3653f4bff13f57ecca9f80e5af3",
     "src/ui_iteminfo.cpp": "ad600afd51d337878a4616a0a44b95a39bccb07c6f260b5972c96f0777a4aef7",
-    "src/game_inventory.cpp": "511b49bcba6ce17fc17a8cb8709683d940f9b7c9bef796aca3da02db0adf810f"
+    "src/game_inventory.cpp": "511b49bcba6ce17fc17a8cb8709683d940f9b7c9bef796aca3da02db0adf810f",
+    "src/output.cpp": "3ca681eeda796f33a518ecf8a9ec8ea1de0d1d49130e52b84d02237a4637fa82"
   }
 }

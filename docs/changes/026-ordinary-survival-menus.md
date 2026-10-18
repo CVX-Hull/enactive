@@ -1,10 +1,17 @@
 ---
 owner: lead
-review_trigger: Native menu classification, pinned callers, probe scope or input authority changes
-status: proposed
+date: 2026-10-18
+scope: Initial menu implementation and failed first native proof on6484151
+status: historical
 ---
 
 # Ordinary survival menu coverage
+
+The original proposal below produced candidate6484151. Its first actual proof
+verified nearby lists/filter, then failed on an unmarked alternate current item-detail
+owner. [The prospective correction](027-item-detail-owner.md) preserves that failure,
+12spent proof inputs and the original combined40/45minute envelope. This historical
+scope grants no further input authority.
 
 [#112](https://github.com/CVX-Hull/enactive/issues/112) addresses the actual failed
 [functional continuation](../acceptance/2026-10-18-seven-day-continuation-stop.md).

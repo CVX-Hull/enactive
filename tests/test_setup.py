@@ -62,6 +62,13 @@ class SetupTests(unittest.TestCase):
                 '        std::string action = has_button_action() ? get_button_action() : ctxt.handle_input();\n\n'
                 '        if( action == "UP" ) {\n}\n}\n}\n'
                 'void unrelated() { std::string action = ctxt.handle_input(); }\n'),
+            "src/output.cpp": ('input_event draw_item_info( const std::function<catacurses::window()> &init_window,\n'
+                '                            item_info_data &data )\n{\n'
+                '    input_context ctxt( "default", keyboard_mode::keychar );\n'
+                '    while( true ) {\n        ui_manager::redraw();\n'
+                '        action = ctxt.handle_input();\n'
+                '        std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );\n}\n}\n'
+                'void unrelated() { action = ctxt.handle_input(); }\n'),
             "src/do_turn.cpp": 'void handle_key_blocking_activity()\n{\n    if( has_unfinished_activity || u.has_destination() ) {\n                g->cancel_activity_query( _( "Confirm:" ) );\n}\n}',
             "src/game.cpp": '    if( query_yn( _( "%s Cancel auto move?" ), text ) )  {\n}\n    if( query_yn( "%s %s", text, u.activity.get_stop_phrase() ) ) {\n}',
             "src/debug.cpp": "    for( bool stop = false; !stop; ) {\n        ui_manager::redraw();\n}",
@@ -95,7 +102,7 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(first.returncode, 0, first.stderr)
         expected = {path.relative_to(source): path.read_bytes()
                     for path in source.rglob("*") if path.is_file()}
-        for name in ("ui_iteminfo.cpp", "game_inventory.cpp"):
+        for name in ("ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp"):
             (source / "src" / name).write_text("stale patched contents")
         second = self.run_patch(repository, source)
         self.assertEqual(second.returncode, 0, second.stderr)
@@ -119,6 +126,12 @@ class SetupTests(unittest.TestCase):
                 self.assertIn('void unrelated() { std::string action = ctxt.handle_input(); }', text)
         self.assertIn('has_button_action() ? get_button_action() : [&]() {',
                       (source / "src/game_inventory.cpp").read_text())
+        item_info = (source / "src/output.cpp").read_text()
+        self.assertIn('input_context ctxt( "default", keyboard_mode::keychar );', item_info)
+        self.assertEqual(item_info.count('menu_query harness_menu( "default" )'), 1)
+        self.assertIn('return ctxt.handle_input();\n        }();\n'
+                      '        std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );', item_info)
+        self.assertIn('void unrelated() { action = ctxt.handle_input(); }', item_info)
         self.assertIn("boundary_kind::activity_poll", (source / "src/do_turn.cpp").read_text())
         self.assertIn("boundary_kind::debug_prompt", (source / "src/debug.cpp").read_text())
         activity = (source / "src/do_turn.cpp").read_text()
@@ -138,7 +151,7 @@ class SetupTests(unittest.TestCase):
         self.assertIn("Upstream source differs", result.stderr)
 
     def test_patch_rejects_changed_item_owner_hashes(self):
-        for name in ("src/ui_iteminfo.cpp", "src/game_inventory.cpp"):
+        for name in ("src/ui_iteminfo.cpp", "src/game_inventory.cpp", "src/output.cpp"):
             with self.subTest(owner=name), tempfile.TemporaryDirectory() as temporary:
                 self.root = Path(temporary)
                 repository, source = self.patch_fixture()
@@ -148,7 +161,7 @@ class SetupTests(unittest.TestCase):
                 self.assertIn(f"Upstream source differs from pinned release: {name}", result.stderr)
 
     def test_patch_rejects_missing_and_ambiguous_item_owner_anchors(self):
-        for name in ("src/ui_iteminfo.cpp", "src/game_inventory.cpp"):
+        for name in ("src/ui_iteminfo.cpp", "src/game_inventory.cpp", "src/output.cpp"):
             for change in ("missing", "duplicate"):
                 with self.subTest(owner=name, change=change), tempfile.TemporaryDirectory() as temporary:
                     self.root = Path(temporary)

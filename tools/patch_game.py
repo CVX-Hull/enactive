@@ -36,7 +36,7 @@ def replace_once(path: Path, old: str, new: str) -> None:
 
 for name in ("cdda_harness.h", "cdda_harness.cpp"):
     shutil.copyfile(ROOT / "native" / name, source / "src" / name)
-for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp", "game.cpp", "action.cpp", "ui_iteminfo.cpp", "game_inventory.cpp"):
+for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp", "game.cpp", "action.cpp", "ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp"):
     path = source / "src" / name
     text = path.read_text()
     if '#include "cdda_harness.h"' not in text:
@@ -85,6 +85,16 @@ replace_once(source / "src/game_inventory.cpp",
     '            cdda_harness::menu_query harness_menu( "default" );\n'
     '            return ctxt.handle_input();\n'
     '        }();')
+# Nearby-list examination uses the current curses item-info renderer, not the
+# separate iteminfo_window owner above. Mark only its wait, before coordinates.
+replace_once(source / "src/output.cpp",
+    '        action = ctxt.handle_input();\n'
+    '        std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );',
+    '        action = [&]() {\n'
+    '            cdda_harness::menu_query harness_menu( "default" );\n'
+    '            return ctxt.handle_input();\n'
+    '        }();\n'
+    '        std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );')
 replace_once(source / "src/do_turn.cpp", 'void handle_key_blocking_activity()\n{',
     'void handle_key_blocking_activity()\n{\n'
     '    cdda_harness::scope harness_activity( cdda_harness::boundary_kind::activity_poll );')
