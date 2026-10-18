@@ -108,3 +108,8 @@ was a decision/freshness requirement, not missing loopback access. #108 tracks
 the bounded observation/caller correction; do not broaden rules, change actors
 or switch transports to bypass that rejection. A later assessment needs an explicit
 prospective decision; the stopped admission supplies no remaining input authority.
+The [subsequent bounded correction/probe](acceptance/2026-10-18-walk-reassessment.md)
+used existing explicitly approved CLI calls without broader rules or another actor.
+It verified stop evidence and the fresh Observe/Resume sequence; the first load
+probe remained unexercised. Narrow rule activation is still unverified, and the
+original approval denial was not retried. Further survival needs its own admission.

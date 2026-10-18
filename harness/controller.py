@@ -965,11 +965,30 @@ class Controller:
         dx, dy, action = DIRECTIONS[direction]
         completed = 0
         previous = None
+        observation = None
+        observation_phase = None
+        observation_received_monotonic = None
+        terminal_response = None
+
+        def exchange(phase: str, kind: str, **payload: Any) -> dict[str, Any]:
+            nonlocal observation, observation_phase, observation_received_monotonic, terminal_response
+            response = self._exchange(kind, timeout, **payload)
+            snapshot, received_monotonic = self.observation_snapshot()
+            terminal_response = copy.deepcopy(response)
+            if response["status"] == "ready":
+                validate_state(response)
+                observation = copy.deepcopy(response)
+                observation_phase = phase
+                # Status readers may have accepted another state since the exchange.
+                # Only the entire matching snapshot supplies its original frame age.
+                observation_received_monotonic = received_monotonic if snapshot == response else None
+            return response
+
         try:
             if self.frozen:
                 raise ControlError("Control is frozen; explicitly observe to reconcile first")
             for _ in range(steps):
-                before = self._exchange("observe", timeout)
+                before = exchange("pre_step", "observe")
                 if before["status"] != "ready":
                     raise ControlError(before.get("error") or "Walk stopped: observe failed")
                 if previous is not None and any(before[key] != previous[key]
@@ -980,8 +999,8 @@ class Controller:
                 self._walk_guard(before, dx, dy)
                 if action not in before["actions"]:
                     raise ControlError("Walk stopped: movement action is not registered")
-                after = self._exchange("action", timeout, generation=generation, action=action,
-                                       session=before["session"], revision=before["revision"])
+                after = exchange("post_step", "action", generation=generation, action=action,
+                                 session=before["session"], revision=before["revision"])
                 if after["status"] != "ready":
                     raise ControlError(after.get("error") or "Walk stopped: action failed")
                 if not observed_step(before, after, dx, dy):
@@ -994,6 +1013,14 @@ class Controller:
                       "detail": "Requested tile displacement observed; objective success is not inferred"}
         except ControlError as exc:
             result = {"status": "stopped", "steps": completed, "error": str(exc)}
+            with self.data_lock:
+                self.frozen = True
+                self.pause_requested = True
+                self._revoke()
+                self._pause_file()
+        result.update(observation=observation, observation_phase=observation_phase,
+                      observation_received_monotonic=observation_received_monotonic,
+                      terminal_response=terminal_response)
         self._record({"kind": "walk", "direction": direction, "steps": steps}, result)
         return result
 

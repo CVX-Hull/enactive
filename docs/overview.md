@@ -20,8 +20,10 @@ player sub-agent can act as a bounded campaign operator while the lead supervise
 the waypoint planner has a separate candidate-only role.
 The service executes an explicitly started waypoint task with per-step feedback;
 without a player response it stops on a deadline. General survival is not implemented.
-The seven-day campaign is currently blocked by [#108](https://github.com/CVX-Hull/enactive/issues/108),
-a walk-outcome observation/caller gap found in the [stopped deciding attempt](acceptance/2026-10-18-seven-day-stop.md).
+A [bounded real-game probe](acceptance/2026-10-18-walk-reassessment.md) now verifies
+walk-stop evidence and required fresh Observe/Resume. Seven-day play still needs
+its prospective finite admission; the [stopped deciding attempt](acceptance/2026-10-18-seven-day-stop.md)
+remains failed. [Work](work.md) links the active path.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign
 continuation. The [MVP completion audit](acceptance/2026-10-17-completion.md) maps
@@ -133,9 +135,12 @@ created Ned Meyers/Belgium and collected supplies, but stopped after13game secon
 on an approval rejection after a guarded-walk stop lacked a fresh verified player
 observation. The rejection was honored and normal Save/Quit preserved the partial;
 48charges include the denied request and cleanup. No first-day/seven-day success.
-[#108](https://github.com/CVX-Hull/enactive/issues/108) owns the narrow observation/
-caller correction before another prospective admission; broader permissions are
-not its remedy. Unused allowance cannot silently resume the stopped investigation.
+The [walk correction](acceptance/2026-10-18-walk-reassessment.md) now retains the
+actual stop observation and freezes input until explicit fresh Observe/Resume.
+Its native zero-step probe passed after an earlier unexercised load probe;17combined
+charges and zero game advance, with lifecycle ACKs still unknown. Broader permissions
+were unnecessary. Further campaign play requires prospective admission, not unused
+allowance from the stopped attempt.
 
 Campaigns expose concrete memory, planning, monitoring and UI needs. The
 [review workflow](project-management.md#campaign-driven-improvement) routes observed

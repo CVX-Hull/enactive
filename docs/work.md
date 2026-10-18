@@ -98,11 +98,14 @@ partial.72rows/48charges include the one denied request and four cleanup inputs;
 three native ACKs remain unknown. No human rescue and no day1/seven-day success.
 Independent review verified all409final artifact hashes and actual images.
 
-[#108](https://github.com/CVX-Hull/enactive/issues/108) is the actual bounded
-observation/caller blocker: retain the real walk outcome observation, require
-fresh reassessment, migrate callers/tests/docs and validate a separately bounded
-native probe. Further #100/#82 execution is blocked until correction and a new
-prospective admission decision; unused001 allowance cannot resume it. The seven
+[#108](https://github.com/CVX-Hull/enactive/issues/108) now has the
+[bounded correction and native evidence](acceptance/2026-10-18-walk-reassessment.md):
+actual walk observation, frozen stop, required fresh Observe/Resume and migrated
+callers/tests/docs. Probe001 stopped unexercised on its literal load-unknown clause;
+prospective002 retained its original cumulative limits and verified the zero-step
+sequence.17combined charges, zero game advance, all lifecycle ACK unknowns retained.
+Correction publication and a new prospective #100/#82 admission decision remain
+the next gate; unused001 allowance cannot resume the stopped investigation. The seven
 named daily children [#100–106](https://github.com/CVX-Hull/enactive/issues/82)
 remain uncompleted with actual dependencies/estimates in GitHub. Source changes
 only follow normal native/controller shutdown. No generic memory/monitor/VLA

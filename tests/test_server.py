@@ -241,6 +241,7 @@ class ServerTests(unittest.TestCase):
                         "expected_revision": current["revision"], **payload})
                     self.assertEqual(code, 409, body)
             self.assertEqual(len(bridge.delivered), delivered)
+
             code, body, _ = self.request()
             self.assertEqual(code, 200)
             self.assertEqual(json.loads(body)["run_lease"], {"task_id": "http-task",
@@ -261,6 +262,33 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(self.post({"kind": "observe"})[0], 200)
             self.assertEqual(self.post({"kind": "resume"})[0], 200)
             self.assertIsNone(self.controller.status()["run_lease"])
+
+    def test_walk_stop_evidence_and_reassessment_through_http(self):
+        with FakeBridge(self.controller) as bridge:
+            self.assertEqual(self.post({"kind": "observe"})[0], 200)
+            self.assertEqual(self.post({"kind": "resume"})[0], 200)
+            bridge.value["scene"]["visible_creatures"] = [{"name": "cat", "hostile": False}]
+            current = self.controller.state
+            code, body, _ = self.post({"kind": "walk", "direction": "east", "steps": 2,
+                "expected_session": current["session"], "expected_revision": current["revision"]})
+            result = json.loads(body)
+            self.assertEqual((code, result["status"], result["steps"]), (409, "stopped", 0))
+            self.assertEqual(result["observation_phase"], "pre_step")
+            self.assertEqual(result["terminal_response"], result["observation"])
+            self.assertEqual(result["observation"]["scene"]["visible_creatures"][0]["name"], "cat")
+            self.assertEqual(result["observation"]["frame"], bridge.value["frame"])
+            self.assertIsInstance(result["observation_received_monotonic"], float)
+            delivered = len(bridge.delivered)
+            self.assertTrue(json.loads(self.request()[1])["frozen"])
+            self.assertEqual(self.post({"kind": "resume"})[0], 409)
+            self.assertEqual(len(bridge.delivered), delivered)
+            self.assertEqual(self.post({"kind": "observe"})[0], 200)
+            status = json.loads(self.request()[1])
+            self.assertFalse(status["frozen"])
+            self.assertTrue(status["pause_requested"])
+            self.assertEqual(self.post({"kind": "resume"})[0], 200)
+            self.assertFalse(json.loads(self.request()[1])["pause_requested"])
+            self.assertFalse(any(request["kind"] == "action" for request in bridge.requests))
 
     def test_recovery_exact_payloads_and_types_before_dispatch(self):
         self.controller.state = recovery_state()

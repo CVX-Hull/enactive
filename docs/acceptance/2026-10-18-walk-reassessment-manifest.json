@@ -1,0 +1,176 @@
+{
+  "schema_version": 1,
+  "kind": "historical-native-acceptance",
+  "platform": "macOS arm64; pinned CDDA0.I-1/wirev3; prepared project-local windowed bundle/userdir",
+  "upstream_pin": "native/upstream.json",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "freetype_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+  "initial_build_binary_sha256": "9fc9dd8cc8375a2556929cb17974b7a0b67e3e38036c2e460defe3a288ff7bc0",
+  "installed_binary_sha256": "9cf1f76db19d6b401582bd7e6768422b653f6204069bd544804b8a5490e95273",
+  "date": "2026-10-18",
+  "verified_at": "2026-10-18",
+  "video": null,
+  "report": "docs/acceptance/2026-10-18-walk-reassessment.md",
+  "source_commit": "e8840c625613d5380eb48ab906824dda425fe9c6",
+  "identity_note": "Production source32bbae6; only reviewed prospective documents changed before frozen e8840c6 native probe. Native unchanged, no new build claim. Source changes resumed after normal native/controller shutdown.",
+  "verification_scope": "Two bounded functional probes:001unexercised,002actualzero-stepstop/evidence/hold/reassessment/inventory.41rows17charges0gameadvance; originalcombinedlimits retained. No survival result.",
+  "limitations": [
+    "Only native zero-step friendly-creature case; portable fault cases are separate.",
+    "Six lifecycle ACKs across both probes remain unknown; fresh observations/process absence do not resolve them.",
+    "External approvals/terminalqueues/process-exit observations require separate lead tool trace.",
+    "Native CUA inventory access/lock report unresolved; ordinary engine/spectator path worked without human or native CUA input.",
+    "Local-only artifacts are absent on a fresh checkout."
+  ],
+  "artifacts": {
+    ".runtime/campaigns/walk-reassessment-001/admission.json": {
+      "bytes": 4129,
+      "sha256": "a494281fc847b1316364eba3c4a10a3525d2e9f3e4be4d5952eca08ad87c30b1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-001/commands.jsonl": {
+      "bytes": 6898,
+      "sha256": "ff1c37f1de29ba35f3b580ba5a300dfba3888e6c711a9a4d06ca3b3f524116bc",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-001/investigation-stop.json": {
+      "bytes": 838,
+      "sha256": "91a9ffc4175f026ee5eb90de992d93a568539be3015749632b4ef6c46a885d5f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-001/closeout.json": {
+      "bytes": 1301,
+      "sha256": "31c57c5af32fc757f5413712db1cb9b183b22594763abc428b04f1d7c2e0a64f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-001/artifacts-closeout.json": {
+      "bytes": 8145,
+      "sha256": "b94788b15d659646024030e0c090969274e9eac9c3166a2d2f61809eed5bd26e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-001/0004-receipt.json": {
+      "bytes": 213,
+      "sha256": "79aa57963a434ed1a593ae574c8e33cd0c34086a8421568b2f825a00826bbb21",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/admission.json": {
+      "bytes": 3672,
+      "sha256": "7b542320f9379db5aad380d2515c09017f48f35af30f6fc9cf49c9bff26e0c96",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/commands.jsonl": {
+      "bytes": 13234,
+      "sha256": "ec00efb5d5bcdd5da956b735c3c6bbd5ef7439fb386cd5d46267489b94935531",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/investigation-complete.json": {
+      "bytes": 1308,
+      "sha256": "a310f2a226a934938f0f419f39311c7afcaece00d64c791cd353fda37d8fbe4e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/closeout.json": {
+      "bytes": 2144,
+      "sha256": "97948bf73e20bb1aa0f301c72c5ed6b41751e704abc8d65f9b05188fa14ddd55",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/artifacts-closeout.json": {
+      "bytes": 13129,
+      "sha256": "93e9e7a88996b646a8b288b422ca70fb9c56f0a19b7a9e136ac911355c750145",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/0004-receipt.json": {
+      "bytes": 213,
+      "sha256": "f8723426f4537a0eb22e420df4a4a3cf39a415c5c6d2268e6ece4b113dd4e4f8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/0008-receipt.json": {
+      "bytes": 1265,
+      "sha256": "524c5cd7a13d622321e7c7b47bc05e7fe586cd1233cd858ca3d424bf55312559",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/0012-receipt.json": {
+      "bytes": 10656,
+      "sha256": "57632ac4e0c5c1340ce26ab813e2b6da3e7c59d7bde7505cdf5e3fb80b2fca8a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/0013-receipt.json": {
+      "bytes": 146325,
+      "sha256": "87451e57d4da83dc55ef639368269cb5a352e285d60a77ab71cc7596c0532a59",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/0014-receipt.json": {
+      "bytes": 106,
+      "sha256": "c56043305319614373da899ffd38709fa94069c0f7eb8e07bab11c3c533229e7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/0015-receipt.json": {
+      "bytes": 4709,
+      "sha256": "4265528f6af62ba195274273c9c3cbb65875b8d0177f22b244e4a6b9af3a2fb0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/0016-receipt.json": {
+      "bytes": 4710,
+      "sha256": "931924924bba6a858c7b590f2f5a73ac8a29530e302cedf01832fb804e6320ef",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/0017-receipt.json": {
+      "bytes": 1155,
+      "sha256": "eed0b854b616c87be746aab4549a4407f445f2423297a465dfe3bff18b9fe79c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/0018-receipt.json": {
+      "bytes": 4710,
+      "sha256": "1b5966dfa23ac95dcabd30371a1e92fb9df2b083fb6bb2feadbf52e045e76470",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/0020-receipt.json": {
+      "bytes": 213,
+      "sha256": "4d3c137116d0781c76471a2f2d7fd47b44c250763bd49b5f0f597fa088b8aa40",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/0021-receipt.json": {
+      "bytes": 789,
+      "sha256": "0a2f1c4c732910a397659b9f2debbf62aa30ed2825bfb98d59b38be3347ba75e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/0024-receipt.json": {
+      "bytes": 213,
+      "sha256": "cdd869a1cd99a4361457202ca308cb3a6d0d544b3d8f1a723a2fdd6b779ab057",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/0026-receipt.json": {
+      "bytes": 171493,
+      "sha256": "ce4c09c7af2591f09d7fa4786782158fae901361c1f6923ed23eedf8d0c53ef5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/walk-reassessment-002/spectator-hold.jpg": {
+      "bytes": 252459,
+      "sha256": "e17a7e583610d5c430eae51ba2a73d6be1171b8dc2d1cac5911fe4699ab50ac7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/repairs/walk-reassessment/review-record.json": {
+      "bytes": 1812,
+      "sha256": "6d9c7f33c02f39a501b5659805416c699f8f389fd1b34d413aae0c7a71d8a6fd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/repairs/walk-reassessment/focused-lead.log": {
+      "bytes": 889,
+      "sha256": "1bcdde0861e464f08fb7345c7c6ec882c054b6e4c67e92d0b61a960fd6516fa9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/repairs/walk-reassessment/common-candidate.log": {
+      "bytes": 74558,
+      "sha256": "ecb779732278199a1d27b0c902b6845491efa745e44540c36fec061e78389ebd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/repairs/walk-reassessment/commit-candidate.log": {
+      "bytes": 74769,
+      "sha256": "09e442eb37ee004a0eb8df4120b4d5bc17671b79b03481928ffe1c62870342a6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/repairs/walk-reassessment/commit-probe-scope.log": {
+      "bytes": 74764,
+      "sha256": "cee47c78729394a38df9956d03e183bb17a8f4876f63d7bc070127dc6a7e3db4",
+      "availability": "local-only; not included in Git"
+    }
+  }
+}

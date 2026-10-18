@@ -78,15 +78,20 @@ A registered action can be rejected if it has no usable single-key binding. A
 walk may report `stopped` after all requested steps completed; inspect `steps`
 and the frame before deciding again. See the [protocol](protocol.md).
 
-Public `walk` currently returns an aggregate, not a native observation packet; a
-stop result omits its actual stop frame/session/revision. After any stopped walk,
-obtain a separate fresh Observe, inspect the actual image and reason, and explicitly
-reassess before another decision. Do not substitute a movement action using the
-earlier frame. Native command preflight does not replace that player assessment.
-[#108](https://github.com/CVX-Hull/enactive/issues/108) tracks the observation gap;
-no mechanical post-stop player-assessment gate is claimed today. Actual approval
-denial ends the admitted investigation under its stop rules; no retry, permission
-expansion or actor/transport switch is a recovery path around it.
+Public `walk` returns an aggregate with a nested `observation`, its phase and
+original receipt clock, and a separate `terminal_response`. Inspect both: after
+an uncertain input the observation can still be the pre-action image. Missing or
+unavailable observations remain explicit. Capture the nested frame when retaining
+walk evidence; an aggregate is not a native response packet.
+
+Every stopped walk now leaves dispatch paused and frozen. Obtain a separate fresh
+Observe, inspect its actual image and the stop reason, reassess, then explicitly
+Resume before choosing the next input using its current session/revision. Status,
+internal preflight and an earlier retained frame cannot substitute for this step.
+Do not automatically replace a stopped walk with ordinary movement. The controller
+requires Observe/Resume; it cannot prove your interpretation. Actual approval
+denial still ends an investigation under its admitted stop rules; no retry,
+permission expansion or actor/transport switch is a recovery around it.
 
 Use each command's actual CLI grammar: Observe, Resume, Pause, status and goal do
 not accept `--expect`; ordinary key/action/walk require it. Observe and Resume

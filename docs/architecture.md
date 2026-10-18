@@ -65,9 +65,16 @@ is established by this operating procedure.
 The [first fresh deciding attempt](acceptance/2026-10-18-seven-day-stop.md) later
 stopped at13game seconds after an approval rejection following a guarded-walk stop.
 Its aggregate omitted the observation needed for the player's next decision;
-native preflight alone does not supply that semantic reassessment. #108 owns the
-bounded observation/caller correction. The original partial and normal cleanup
-remain evidence; neither operator mode nor readiness proves seven-day autonomy.
+native preflight alone does not supply that semantic reassessment. The
+[bounded correction](changes/023-walk-reassessment.md) retains the actual last walk
+observation separately from its terminal exchange and reuses the controller's
+Pause/frozen/generation mechanisms. A stopped walk requires explicit fresh Observe
+and Resume; the player still interprets the image and decides again. Original
+partial and normal cleanup remain evidence, not seven-day autonomy.
+The [targeted native probe](acceptance/2026-10-18-walk-reassessment.md) verified a
+zero-step stop, frozen Resume rejection, fresh Observe/Resume and inventory/cancel;
+partial-walk fault tests remain a separate portable lane. No survival progress was
+claimed and the earlier unexercised load probe remains retained.
 
 ## Runtime and state
 
@@ -110,7 +117,7 @@ and durable host token; a later Pause cannot reverse that committed input.
 
 ### How do I recover control?
 
-![Current recovery workflow: reconcile after startup or uncertainty, remain paused, explicitly resume, and pause or take over when needed.](diagrams/recovery.svg)
+![Current recovery workflow: reconcile after startup, uncertainty or a stopped walk, remain paused, explicitly resume, and pause or take over when needed.](diagrams/recovery.svg)
 
 Rounded boxes are operator workflow states; arrow labels are the conditions that
 change them. The initial dot marks controller startup/restart; attached notes
