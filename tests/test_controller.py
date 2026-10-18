@@ -898,6 +898,13 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(result["status"], "complete")
             self.assertEqual(result["steps"], 3)
             self.assertEqual(fake.value["scene"]["position"], [3, 0, 0])
+            self.assertEqual(result["observation"], fake.value)
+            self.assertEqual(result["terminal_response"], result["observation"])
+            self.assertEqual(result["observation_phase"], "post_step")
+            self.assertEqual(result["observation_received_monotonic"], self.controller.observation_snapshot()[1])
+            self.assertFalse(self.controller.frozen)
+            self.assertFalse(self.controller.pause_requested)
+            self.assertFalse((fake.bridge / "pause").exists())
 
     def test_walk_preserves_full_progress_when_final_post_guard_blocks(self):
         def block_beyond_destination(fake, request):
@@ -911,6 +918,12 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(result["steps"], 1)
             self.assertEqual(fake.value["scene"]["position"], [1, 0, 0])
             self.assertEqual(sum(r["kind"] == "action" for r in fake.requests), 1)
+            self.assertEqual(result["observation_phase"], "post_step")
+            self.assertEqual(result["observation"]["scene"]["position"], [1, 0, 0])
+            self.assertEqual(result["terminal_response"], result["observation"])
+            self.assertTrue(self.controller.frozen)
+            self.assertTrue(self.controller.pause_requested)
+            self.assertTrue((fake.bridge / "pause").exists())
 
     def test_walk_stops_on_creature_even_when_not_hostile(self):
         def creature(fake, request):
@@ -923,6 +936,9 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(result["status"], "stopped")
             self.assertEqual(result["steps"], 1)
             self.assertEqual(sum(r["kind"] == "action" for r in fake.requests), 1)
+            self.assertEqual(result["observation_phase"], "post_step")
+            self.assertEqual(result["observation"]["scene"]["visible_creatures"],
+                             [{"name": "cat", "hostile": False}])
 
     def test_walk_stops_on_unknown_terrain_furniture_and_no_progress(self):
         with FakeBridge(self.controller) as fake:
@@ -936,6 +952,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 self.assertEqual(result["status"], "stopped")
                 tile.clear()
                 tile.update(original)
+                self.ready()
             self.assertFalse(any(r["kind"] == "action" for r in fake.requests))
         def no_progress(fake, request):
             if request["kind"] == "action":
@@ -958,6 +975,188 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             result = self.controller.execute("walk", direction="north", steps=4, **self.expect())
             self.assertEqual(result["status"], "stopped")
             self.assertEqual(sum(r["kind"] == "action" for r in fake.requests), 1)
+            self.assertEqual(result["observation"]["category"], "YESNO")
+            self.assertEqual(result["observation_phase"], "post_step")
+
+    def test_walk_zero_step_stop_requires_explicit_observe_and_resume(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            fake.value["scene"]["visible_creatures"] = [{"name": "cat", "hostile": False}]
+            generation = self.controller.pause_generation
+            result = self.controller.execute("walk", direction="east", steps=2, **self.expect())
+            self.assertEqual((result["status"], result["steps"]), ("stopped", 0))
+            self.assertEqual(result["observation"], fake.value)
+            self.assertEqual(result["terminal_response"], result["observation"])
+            self.assertEqual(result["observation_phase"], "pre_step")
+            self.assertIsInstance(result["observation_received_monotonic"], float)
+            self.assertGreater(self.controller.pause_generation, generation)
+            self.assertTrue((fake.bridge / "pause").exists())
+            # Internal authority preflight is not the explicit reconciliation command.
+            self.assertEqual(self.controller._exchange("observe", 2)["status"], "ready")
+            self.assertTrue(self.controller.frozen)
+            for _ in range(2):
+                self.assertTrue(self.controller.status()["frozen"])
+                for kind, payload in (("action", {"action": "RIGHT", **self.expect()}), ("resume", {})):
+                    self.assertEqual(self.controller.execute(kind, **payload)["status"], "controller_error")
+            self.assertFalse(any(r["kind"] == "action" for r in fake.requests))
+            self.assertEqual(self.controller.execute("observe")["status"], "ready")
+            self.assertFalse(self.controller.frozen)
+            self.assertTrue(self.controller.pause_requested)
+            self.assertEqual(self.controller.execute("action", action="RIGHT", **self.expect())["status"], "controller_error")
+            fake.value["scene"]["visible_creatures"] = []
+            self.assertEqual(self.controller.execute("resume")["status"], "ready")
+            self.assertEqual(self.controller.execute("action", action="RIGHT", **self.expect())["status"], "ready")
+            self.assertEqual(result["observation"]["scene"]["position"], [0, 0, 0])
+            self.assertEqual(result["observation"]["scene"]["visible_creatures"],
+                             [{"name": "cat", "hostile": False}])
+
+    def test_walk_snapshot_clock_requires_entire_matching_snapshot(self):
+        with FakeBridge(self.controller):
+            self.ready()
+            before = state("walk-before")
+            after = state("walk-after", revision=before["revision"] + 1)
+            after["scene"]["position"] = [1, 0, 0]
+            for mismatch in (None, {"frame": after["frame"]}, {**after, "frame": "different.png"},
+                             {**after, "error": "conflicting copy"}, after):
+                with self.subTest(snapshot=mismatch):
+                    with patch.object(self.controller, "_exchange", side_effect=[before, after]), \
+                            patch.object(self.controller, "observation_snapshot", side_effect=[(before, 12.5), (mismatch, 14.5)]):
+                        result = self.controller.execute("walk", direction="east", steps=1,
+                            expected_session=before["session"], expected_revision=before["revision"])
+                    self.assertEqual(result["status"], "complete")
+                    self.assertEqual(result["observation"], after)
+                    self.assertEqual(result["observation_received_monotonic"], 14.5 if mismatch == after else None)
+                    self.assertEqual(result["terminal_response"], after)
+            after["scene"]["position"][0] = 999
+            self.assertEqual(result["observation"]["scene"]["position"], [1, 0, 0])
+            self.assertEqual(result["terminal_response"]["scene"]["position"], [1, 0, 0])
+
+    def test_walk_without_exchange_has_null_evidence(self):
+        result = self.controller.execute("walk", direction="east", steps=1,
+            expected_session="game-test", expected_revision=1)
+        self.assertEqual(result["status"], "stopped")
+        for key in ("observation", "observation_phase", "observation_received_monotonic", "terminal_response"):
+            self.assertIsNone(result[key])
+
+    def test_walk_observe_timeout_has_null_observation_and_exact_terminal(self):
+        with FakeBridge(self.controller):
+            self.ready()
+            terminal = {"status": "timeout", "id": "observe-timeout", "error": "outcome unknown"}
+            with patch.object(self.controller, "_exchange", return_value=terminal):
+                result = self.controller.execute("walk", direction="east", steps=1, **self.expect())
+            self.assertEqual(result["status"], "stopped")
+            self.assertIsNone(result["observation"])
+            self.assertIsNone(result["observation_phase"])
+            self.assertIsNone(result["observation_received_monotonic"])
+            self.assertEqual(result["terminal_response"], terminal)
+
+    def test_walk_retains_ready_response_without_available_frame(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            fake.value.update(frame_ok=False, frame="")
+            result = self.controller.execute("walk", direction="east", steps=1, **self.expect())
+            self.assertEqual((result["status"], result["steps"]), ("stopped", 0))
+            self.assertEqual(result["observation"], fake.value)
+            self.assertEqual(result["observation_phase"], "pre_step")
+            self.assertFalse(result["observation"]["frame_ok"])
+            self.assertEqual(result["terminal_response"], result["observation"])
+
+    def test_walk_bad_first_response_never_uses_prior_global_observation(self):
+        for fault in ("malformed", "rejected"):
+            controller = Controller(self.root / fault, timeout=2.0)
+            self.addCleanup(controller.close)
+            with self.subTest(fault=fault), FakeBridge(controller) as fake:
+                self.assertEqual(controller.execute("observe")["status"], "ready")
+                self.assertEqual(controller.execute("resume")["status"], "ready")
+                def fail_observe(bridge, request):
+                    if fault == "malformed":
+                        bridge.value["protocol"] = 99
+                    else:
+                        bridge.value.update(status="rejected", error="not ready")
+                    return True
+                fake.behavior = fail_observe
+                result = controller.execute("walk", direction="east", steps=1, expected_session=controller.state["session"],
+                        expected_revision=controller.state["revision"])
+                self.assertEqual(result["status"], "stopped")
+                self.assertIsNone(result["observation"])
+                self.assertIsNone(result["observation_phase"])
+                self.assertIsNone(result["observation_received_monotonic"])
+                terminal = result["terminal_response"]
+                self.assertEqual(terminal["status"], "controller_error" if fault == "malformed" else "rejected")
+                self.assertEqual(terminal, controller.events[-2]["outcome"])
+
+    def test_walk_uncertain_action_retains_pre_step_observation_and_exact_terminal(self):
+        for fault in ("timeout", "stale", "malformed"):
+            controller = Controller(self.root / fault, timeout=2.0)
+            self.addCleanup(controller.close)
+            with self.subTest(fault=fault), FakeBridge(controller) as fake:
+                self.assertEqual(controller.execute("observe")["status"], "ready")
+                self.assertEqual(controller.execute("resume")["status"], "ready")
+                claimed = threading.Event()
+                real_monotonic = time.monotonic
+                def fail_action(bridge, request):
+                    if request["kind"] == "action":
+                        if fault == "timeout":
+                            claimed.set()
+                            return False
+                        if fault == "stale":
+                            bridge.value["revision"] = request["revision"]
+                        else:
+                            bridge.value["protocol"] = 99
+                    return True
+                fake.behavior = fail_action
+                proxy = SimpleNamespace(time=time.time, sleep=time.sleep,
+                    monotonic=lambda: real_monotonic() + (3 if claimed.is_set() else 0))
+                with patch("harness.controller.time", proxy):
+                    result = controller.execute("walk", direction="east", steps=1, expected_session=controller.state["session"],
+                        expected_revision=controller.state["revision"])
+                self.assertEqual((result["status"], result["steps"]), ("stopped", 0))
+                self.assertEqual(result["observation_phase"], "pre_step")
+                self.assertEqual(result["observation"]["scene"]["position"], [0, 0, 0])
+                self.assertEqual(result["observation"]["id"], [r for r in fake.requests if r["kind"] == "observe"][-1]["id"])
+                self.assertIsInstance(result["observation_received_monotonic"], float)
+                terminal = result["terminal_response"]
+                self.assertEqual(terminal["status"], "timeout" if fault == "timeout" else "controller_error")
+                self.assertEqual(terminal["id"], [r for r in fake.requests if r["kind"] == "action"][-1]["id"])
+                self.assertEqual(terminal, controller.events[-2]["outcome"])
+                self.assertEqual(len(controller.unknown_outcomes), 1)
+                self.assertEqual(sum(r["kind"] == "action" for r in fake.requests), 1)
+                self.assertTrue(controller.frozen)
+
+    def test_walk_stop_revokes_queued_generation_and_pause_race(self):
+        entered = threading.Event()
+        release = threading.Event()
+        for pause_race in (False, True):
+            entered.clear()
+            release.clear()
+            with self.subTest(pause_race=pause_race), FakeBridge(self.controller) as fake:
+                self.ready()
+                fake.value["scene"]["visible_creatures"] = [{"name": "cat", "hostile": False}]
+                original = self.controller._walk_guard
+                def stop(value, dx, dy):
+                    entered.set()
+                    self.assertTrue(release.wait(2))
+                    return original(value, dx, dy)
+                with patch.object(self.controller, "_walk_guard", side_effect=stop), ThreadPoolExecutor(2) as pool:
+                    walking = pool.submit(self.controller.execute, "walk", direction="east", steps=1, **self.expect())
+                    self.assertTrue(entered.wait(2))
+                    generation = self.controller.pause_generation
+                    queued = pool.submit(self.controller.execute, "action", action="RIGHT", **self.expect())
+                    deadline = time.monotonic() + 1
+                    while self.controller._command_work < 2 and time.monotonic() < deadline:
+                        time.sleep(0.002)
+                    self.assertEqual(self.controller._command_work, 2)
+                    if pause_race:
+                        self.controller.pause()
+                    release.set()
+                    result = walking.result(3)
+                    self.assertEqual(queued.result(3)["status"], "pause_requested")
+                self.assertEqual(result["status"], "stopped")
+                self.assertGreater(self.controller.pause_generation, generation + int(pause_race))
+                self.assertTrue(self.controller.frozen)
+                self.assertTrue(self.controller.pause_requested)
+                self.assertTrue((fake.bridge / "pause").exists())
+                self.assertFalse(any(r["kind"] == "action" for r in fake.requests))
 
     def test_goal_and_journal_do_not_claim_game_success(self):
         result = self.controller.execute("goal", text="Find water")
@@ -970,7 +1169,10 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
         for kind, payload in [("key", {"key": "abc"}), ("key", {"key": "é"}),
                               ("walk", {"direction": "east", "steps": 9}),
                               ("observe", {"timeout": 16}), ("observe", {"timeout": True})]:
-            self.assertEqual(self.controller.execute(kind, **payload)["status"], "controller_error")
+            result = self.controller.execute(kind, **payload)
+            self.assertEqual(result["status"], "controller_error")
+            self.assertNotIn("observation", result)
+            self.assertNotIn("terminal_response", result)
 
     def test_shutdown_retires_waiter_before_releasing_writer_lock(self):
         with ThreadPoolExecutor() as pool:

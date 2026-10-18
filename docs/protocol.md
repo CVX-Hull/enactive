@@ -382,14 +382,11 @@ a retained access failure. No broader survival reliability or unattended service
 is implied by this procedure.
 
 The [first fresh deciding attempt](acceptance/2026-10-18-seven-day-stop.md) stopped
-on actual approval denial after a guarded-walk stop. Public `walk` currently emits
-an aggregate without its stop observation; ordinary native preflight does not
-replace the player's semantic reassessment. Obtain and interpret a separate fresh
-Observe after a stopped walk before another decision, rather than substituting an
-ordinary movement from the earlier image. This is currently a procedural player
-requirement; #108 owns the missing observation/control contract. Honor the actual
-denial and the frozen campaign's stop rules; no implicit continuation or rule/actor/
-transport change restores that stopped admission.
+on actual approval denial after a guarded-walk stop. The corrected public-walk
+contract below retains its actual observation and requires fresh Observe/Resume;
+ordinary native preflight still cannot prove the player's semantic reassessment.
+Honor the actual denial and that frozen campaign's stop rules; no implicit
+continuation or rule/actor/transport change restores the stopped admission.
 
 
 
@@ -422,6 +419,28 @@ A guarded walk checks the next tile even after its final requested displacement.
 It can return `stopped` with all requested steps completed if the next tile is
 blocked. Read `steps` and the fresh observation; `stopped` does not mean no
 movement occurred and must not cause an automatic retry.
+
+An admitted walk aggregate always includes `observation` (the last validated ready
+response returned during this walk, or null), `observation_phase` (`pre_step`,
+`post_step`, or null), `observation_received_monotonic` (its original receipt clock,
+only when the atomic snapshot fully matches that response, otherwise null), and
+`terminal_response` (the exact last exchange return, or null before any exchange).
+Earlier ingress/admission errors remain plain `controller_error`. Post-step marks
+the attempted input, not credited displacement. A timeout can leave only a
+pre-action observation: the separate terminal response preserves the unknown;
+neither the old image nor a later image supplies its missing acknowledgment.
+Unavailable/stale frames and menu responses retain their actual limitations.
+These are evidence, not renewed authority or proof of objective success.
+
+Every stopped walk freezes dispatch, requests Pause, revokes the original
+admission generation and publishes the sentinel before returning. Even a known
+zero-step stop requires explicit successful Observe, player interpretation of the
+fresh image and reason, then explicit Resume before another input. Status reads,
+internal native preflight and the retained walk image cannot clear the hold.
+Queued old generations stay revoked. Complete walks add no hold. The controller
+enforces this sequence; semantic reassessment remains the player's responsibility.
+The [repair brief](changes/023-walk-reassessment.md) explains scope and migration;
+native wire3 and conservative movement guards are unchanged.
 
 ## Passive gameplay records and evidence
 
