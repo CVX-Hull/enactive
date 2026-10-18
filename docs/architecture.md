@@ -80,9 +80,11 @@ The [same-character functional continuation](acceptance/2026-10-18-seven-day-con
 then stopped correctly on readable unsupported LIST_ITEMS. Ordinary native menu
 coverage now includes nearby lists, crafting and construction; a scoped query marker
 retains original generic bindings only at pinned direction/item-detail/comparison
-input calls. Unknown contexts remain unsupported. [The bounded native proof](changes/026-ordinary-survival-menus.md)
-is separate from survival; the earlier cleanup exception performed no Save and
-grants no standing fallback.
+input calls. Unknown contexts remain unsupported. [The qualified native proof](acceptance/2026-10-18-ordinary-menus.md)
+verified item examination/comparison and crafting/construction entry/cancel, then
+normal Save/Quit. Its first renderer failure remains retained; direction-query
+regression and post-shutdown reload remain open. Neither earlier cleanup exception
+grants standing fallback authority.
 
 ## Runtime and state
 

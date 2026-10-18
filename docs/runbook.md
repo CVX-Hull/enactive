@@ -391,4 +391,6 @@ Native CUA access failed and no user rescue was requested. One prospectively rec
 cleanup exception invoked upstream Ctrl-C Quit, confirmed its actual supported
 prompt and closed without Save. It remains failed normal-save acceptance; that
 expired exception is not standing recovery authority. Current menu repair and its
-separate real-game proof are tracked in #112; other unknown boundaries still stop.
+[qualified real-game proof](acceptance/2026-10-18-ordinary-menus.md) are tracked in #112.
+Item examination/comparison and work-menu entry/cancel worked; direction/reload
+remain unexercised. Other unknown boundaries still stop.

@@ -43,15 +43,15 @@ Active and deprecated controls fail after their due date. Event triggers can req
 | --- | --- | --- | --- | --- | --- |
 | C-PORTABLE | active | 2026-10-18 | 2026-10-18 | unassessed | 2027-01-15 |
 | C-RUNTIME | active | 2026-10-18 | 2026-10-18 | unassessed | 2027-01-15 |
-| C-NATIVE | active | 2026-10-18 | 2026-10-18 | unassessed | 2027-01-15 |
+| C-NATIVE | active | 2026-10-18 | 2026-10-18 | partially_effective | 2027-01-15 |
 | C-USABILITY | active | 2026-10-18 | 2026-10-18 | effective | 2027-01-15 |
 | C-BOUNDARY | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
-| C-REVIEW | active | 2026-10-18 | 2026-10-18 | unassessed | 2027-01-15 |
+| C-REVIEW | active | 2026-10-18 | 2026-10-18 | partially_effective | 2027-01-15 |
 | C-GOVERNANCE | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-PROTOCOL | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-SETUP | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
 | C-RELEASE | active | 2026-10-18 | 2026-10-18 | partially_effective | 2027-01-15 |
-| C-MAINTENANCE | active | 2026-10-18 | 2026-10-18 | unassessed | 2027-01-15 |
+| C-MAINTENANCE | active | 2026-10-18 | 2026-10-18 | partially_effective | 2027-01-15 |
 | C-VISUAL | active | 2026-10-18 | 2026-10-18 | unassessed | 2027-01-15 |
 
 ## Mechanisms and coverage
@@ -116,21 +116,21 @@ Owner: integration maintainer; lead verifies evidence. Trigger: relevant native 
 Enforcement: Required by S-PROTOCOL/S-DELIVERY and release review; manual, outside the portable gate.
 Failure response: Retain failed/unknown probes, block the affected claim and repair or document the supported limit.
 
-Evidence / implementation: [docs/runbook.md#native-acceptance-lane](../docs/runbook.md#native-acceptance-lane), [docs/setup.md](../docs/setup.md), [docs/acceptance/2026-10-17-mvp.md](../docs/acceptance/2026-10-17-mvp.md), [docs/acceptance/2026-10-17-mvp-manifest.json](../docs/acceptance/2026-10-17-mvp-manifest.json), [docs/acceptance/2026-10-17-recovery-memory.md](../docs/acceptance/2026-10-17-recovery-memory.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md), [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md), [docs/acceptance/2026-10-18-operator-access-stop.md](../docs/acceptance/2026-10-18-operator-access-stop.md), [docs/acceptance/2026-10-18-campaign-operator.md](../docs/acceptance/2026-10-18-campaign-operator.md), [docs/acceptance/2026-10-18-seven-day-stop.md](../docs/acceptance/2026-10-18-seven-day-stop.md), [docs/acceptance/2026-10-18-walk-reassessment.md](../docs/acceptance/2026-10-18-walk-reassessment.md).
+Evidence / implementation: [docs/runbook.md#native-acceptance-lane](../docs/runbook.md#native-acceptance-lane), [docs/setup.md](../docs/setup.md), [docs/acceptance/2026-10-17-mvp.md](../docs/acceptance/2026-10-17-mvp.md), [docs/acceptance/2026-10-17-mvp-manifest.json](../docs/acceptance/2026-10-17-mvp-manifest.json), [docs/acceptance/2026-10-17-recovery-memory.md](../docs/acceptance/2026-10-17-recovery-memory.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md), [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md), [docs/acceptance/2026-10-18-operator-access-stop.md](../docs/acceptance/2026-10-18-operator-access-stop.md), [docs/acceptance/2026-10-18-campaign-operator.md](../docs/acceptance/2026-10-18-campaign-operator.md), [docs/acceptance/2026-10-18-seven-day-stop.md](../docs/acceptance/2026-10-18-seven-day-stop.md), [docs/acceptance/2026-10-18-walk-reassessment.md](../docs/acceptance/2026-10-18-walk-reassessment.md), [docs/acceptance/2026-10-18-ordinary-menus.md](../docs/acceptance/2026-10-18-ordinary-menus.md).
 
 Coverage gap: Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-18. Outcome: Probe002 targeted functional pass; probe001 unexercised after unknown load. No survival result.
-Scope: Same preserved Ned/Belgium;41rows/17combinedcharges,0gameadvance, original856.281seconds through native closeout. Unchanged installed binary/windowed userdir; no rebuild.
-Exercise evidence: [docs/acceptance/2026-10-18-walk-reassessment.md](../docs/acceptance/2026-10-18-walk-reassessment.md).
+Last exercise: 2026-10-18. Outcome: Qualified menu navigation; first native probe failed; direction regression/reload remain unexercised. No survival result.
+Scope: 107+160 artifacts independently checked;66rows/36combinedcharges,112whole,0gameadvance. Corrected source471e412 built/installed and normal Save/Quit returned main menu; lifecycle ACKs remain unknown.
+Exercise evidence: [docs/acceptance/2026-10-18-ordinary-menus.md](../docs/acceptance/2026-10-18-ordinary-menus.md).
 
-Maintenance review: 2026-10-18. Effectiveness: unassessed.
-Findings: Actual zero-step guard and deliberate reassessment sequence observed; three new lifecycle ACK unknowns in each probe retained. Native CUA inventory access/lock cause remains unknown; supported engine/spectator worked without human rescue.
-Cost: Existing project-local tools and one serialized runtime; one worker plus independent reviews. Two probes total17charges and856.281seconds through native closeout; review/publication continues original45-minute envelope. Model/approval spend and sustained benefit unmeasured.
-Follow-up: #108 publication, then prospective #100/#82 finite campaign admission. #75 reviews restrictive wording/capture duplication at existing triggers; keep January15maintenance and October24research dates unchanged. No old attempt revival, compatibility path, broader permissions or automatic learning.
-Review evidence: [docs/acceptance/2026-10-18-walk-reassessment.md](../docs/acceptance/2026-10-18-walk-reassessment.md).
+Maintenance review: 2026-10-18. Effectiveness: partially_effective.
+Findings: Static call-chain review missed the actual current renderer despite passing patch fixtures. Native proof exposed it, stopped and retained the failure; precise owner correction worked in the tested paths. Direction chooser and post-shutdown reload remain unexercised;112staysopen.
+Cost: One isolated worker, lead tight follow-up and independent reviews; two serialized native probes36charges/1128.917seconds through closeout, plus review/publication under original45minute clock. Existing mature tooling reused; external model/approval cost unmeasured.
+Follow-up: #112 remaining direction/reload acceptance under separate prospective scope, then #100/#82 admission with all112charges/original creation clock. #75 reviews actual call chains, fixture limits, finite-proof estimation and recording burden. Existing January15maintenance/October24research triggers unchanged.
+Review evidence: [docs/acceptance/2026-10-18-ordinary-menus.md](../docs/acceptance/2026-10-18-ordinary-menus.md).
 
 Next review: 2027-01-15.
 
@@ -194,21 +194,21 @@ Owner: lead; reviewer supplies independent findings. Trigger: significant change
 Enforcement: Required by S-AGENT and the GitHub work/PR workflow; independent agent review is manually recorded, not an independent GitHub human approval. Hosted enforcement is recorded separately in acceptance.
 Failure response: Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.
 
-Evidence / implementation: [AGENTS.md](../AGENTS.md), [docs/engineering.md](../docs/engineering.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/work.md](../docs/work.md), [docs/project-management.md](../docs/project-management.md), [docs/changes/003-public-workflow.md](../docs/changes/003-public-workflow.md), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md), [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md), [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md), [docs/acceptance/2026-10-18-waypoint-readiness.md](../docs/acceptance/2026-10-18-waypoint-readiness.md), [docs/setup.md#choose-an-explicit-git-identity](../docs/setup.md#choose-an-explicit-git-identity), [docs/changes/015-enactive-migration.md](../docs/changes/015-enactive-migration.md), [docs/acceptance/2026-10-18-enactive-migration.md](../docs/acceptance/2026-10-18-enactive-migration.md), [docs/acceptance/2026-10-18-operator-access-stop.md](../docs/acceptance/2026-10-18-operator-access-stop.md), [docs/acceptance/2026-10-18-campaign-operator.md](../docs/acceptance/2026-10-18-campaign-operator.md), [docs/acceptance/2026-10-18-seven-day-stop.md](../docs/acceptance/2026-10-18-seven-day-stop.md), [docs/acceptance/2026-10-18-walk-reassessment.md](../docs/acceptance/2026-10-18-walk-reassessment.md).
+Evidence / implementation: [AGENTS.md](../AGENTS.md), [docs/engineering.md](../docs/engineering.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/work.md](../docs/work.md), [docs/project-management.md](../docs/project-management.md), [docs/changes/003-public-workflow.md](../docs/changes/003-public-workflow.md), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md), [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md), [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md), [docs/acceptance/2026-10-18-waypoint-readiness.md](../docs/acceptance/2026-10-18-waypoint-readiness.md), [docs/setup.md#choose-an-explicit-git-identity](../docs/setup.md#choose-an-explicit-git-identity), [docs/changes/015-enactive-migration.md](../docs/changes/015-enactive-migration.md), [docs/acceptance/2026-10-18-enactive-migration.md](../docs/acceptance/2026-10-18-enactive-migration.md), [docs/acceptance/2026-10-18-operator-access-stop.md](../docs/acceptance/2026-10-18-operator-access-stop.md), [docs/acceptance/2026-10-18-campaign-operator.md](../docs/acceptance/2026-10-18-campaign-operator.md), [docs/acceptance/2026-10-18-seven-day-stop.md](../docs/acceptance/2026-10-18-seven-day-stop.md), [docs/acceptance/2026-10-18-walk-reassessment.md](../docs/acceptance/2026-10-18-walk-reassessment.md), [docs/acceptance/2026-10-18-ordinary-menus.md](../docs/acceptance/2026-10-18-ordinary-menus.md).
 
 Coverage gap: No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process. Reuse fit and the adequacy of its rationale are semantic judgments; CI does not prove them. Identity configuration prevents inferred defaults but does not inspect file contents or prove a message, branch or remote ref contains no personal information; full-message inspection remains manual.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-18. Outcome: Independent design/diff/visual/scope and actual-artifact review found no P1/P2 in stated scope.
-Scope: One isolated worker/controller-tests, lead integration/shared runtime; all51+82artifact hashes/41records/actual images verified; public identity/full messages inspected.
-Exercise evidence: [docs/acceptance/2026-10-18-walk-reassessment.md](../docs/acceptance/2026-10-18-walk-reassessment.md).
+Last exercise: 2026-10-18. Outcome: Qualified menu navigation; first native probe failed; direction regression/reload remain unexercised. No survival result.
+Scope: 107+160 artifacts independently checked;66rows/36combinedcharges,112whole,0gameadvance. Corrected source471e412 built/installed and normal Save/Quit returned main menu; lifecycle ACKs remain unknown.
+Exercise evidence: [docs/acceptance/2026-10-18-ordinary-menus.md](../docs/acceptance/2026-10-18-ordinary-menus.md).
 
-Maintenance review: 2026-10-18. Effectiveness: unassessed.
-Findings: Review caught the literal cleanup-only restriction before further input. Separate prospective probe preserved original limits and failure; source/actual-execution/portable claims remain distinct. External tool queues/process exits require lead trace.
-Cost: Existing project-local tools and one serialized runtime; one worker plus independent reviews. Two probes total17charges and856.281seconds through native closeout; review/publication continues original45-minute envelope. Model/approval spend and sustained benefit unmeasured.
-Follow-up: #108 publication, then prospective #100/#82 finite campaign admission. #75 reviews restrictive wording/capture duplication at existing triggers; keep January15maintenance and October24research dates unchanged. No old attempt revival, compatibility path, broader permissions or automatic learning.
-Review evidence: [docs/acceptance/2026-10-18-walk-reassessment.md](../docs/acceptance/2026-10-18-walk-reassessment.md).
+Maintenance review: 2026-10-18. Effectiveness: partially_effective.
+Findings: Static call-chain review missed the actual current renderer despite passing patch fixtures. Native proof exposed it, stopped and retained the failure; precise owner correction worked in the tested paths. Direction chooser and post-shutdown reload remain unexercised;112staysopen.
+Cost: One isolated worker, lead tight follow-up and independent reviews; two serialized native probes36charges/1128.917seconds through closeout, plus review/publication under original45minute clock. Existing mature tooling reused; external model/approval cost unmeasured.
+Follow-up: #112 remaining direction/reload acceptance under separate prospective scope, then #100/#82 admission with all112charges/original creation clock. #75 reviews actual call chains, fixture limits, finite-proof estimation and recording burden. Existing January15maintenance/October24research triggers unchanged.
+Review evidence: [docs/acceptance/2026-10-18-ordinary-menus.md](../docs/acceptance/2026-10-18-ordinary-menus.md).
 
 Next review: 2027-01-15.
 
@@ -324,21 +324,21 @@ Owner: maintainer; lead tracks active work. Trigger: behavior/control failure, r
 Enforcement: Manual requirements under S-OPS/S-AGENT/S-DOCS/S-EVIDENCE, with registry fields, references and overdue dates enforced by C-GOVERNANCE in the common lane.
 Failure response: Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.
 
-Evidence / implementation: [docs/work.md](../docs/work.md), [docs/runbook.md](../docs/runbook.md), [docs/research-engineering.md](../docs/research-engineering.md), [docs/research.md](../docs/research.md), [docs/environment.md](../docs/environment.md), [docs/acceptance/2026-10-18-waypoint-readiness.md](../docs/acceptance/2026-10-18-waypoint-readiness.md), [docs/acceptance/2026-10-18-operator-access-stop.md](../docs/acceptance/2026-10-18-operator-access-stop.md), [docs/acceptance/2026-10-18-campaign-operator.md](../docs/acceptance/2026-10-18-campaign-operator.md), [docs/acceptance/2026-10-18-seven-day-readiness.md](../docs/acceptance/2026-10-18-seven-day-readiness.md), [docs/acceptance/2026-10-18-seven-day-stop.md](../docs/acceptance/2026-10-18-seven-day-stop.md), [docs/acceptance/2026-10-18-walk-reassessment.md](../docs/acceptance/2026-10-18-walk-reassessment.md).
+Evidence / implementation: [docs/work.md](../docs/work.md), [docs/runbook.md](../docs/runbook.md), [docs/research-engineering.md](../docs/research-engineering.md), [docs/research.md](../docs/research.md), [docs/environment.md](../docs/environment.md), [docs/acceptance/2026-10-18-waypoint-readiness.md](../docs/acceptance/2026-10-18-waypoint-readiness.md), [docs/acceptance/2026-10-18-operator-access-stop.md](../docs/acceptance/2026-10-18-operator-access-stop.md), [docs/acceptance/2026-10-18-campaign-operator.md](../docs/acceptance/2026-10-18-campaign-operator.md), [docs/acceptance/2026-10-18-seven-day-readiness.md](../docs/acceptance/2026-10-18-seven-day-readiness.md), [docs/acceptance/2026-10-18-seven-day-stop.md](../docs/acceptance/2026-10-18-seven-day-stop.md), [docs/acceptance/2026-10-18-walk-reassessment.md](../docs/acceptance/2026-10-18-walk-reassessment.md), [docs/acceptance/2026-10-18-ordinary-menus.md](../docs/acceptance/2026-10-18-ordinary-menus.md).
 
 Coverage gap: Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-18. Outcome: Scoped failure/control/process review completed; broader sustained effectiveness remains unassessed.
-Scope: Actual campaign observation gap -> bounded controller fix; first load probe unexercised -> prospective wording correction preserving original counters/clocks. No unrelated date renewal.
-Exercise evidence: [docs/acceptance/2026-10-18-walk-reassessment.md](../docs/acceptance/2026-10-18-walk-reassessment.md).
+Last exercise: 2026-10-18. Outcome: Qualified menu navigation; first native probe failed; direction regression/reload remain unexercised. No survival result.
+Scope: 107+160 artifacts independently checked;66rows/36combinedcharges,112whole,0gameadvance. Corrected source471e412 built/installed and normal Save/Quit returned main menu; lifecycle ACKs remain unknown.
+Exercise evidence: [docs/acceptance/2026-10-18-ordinary-menus.md](../docs/acceptance/2026-10-18-ordinary-menus.md).
 
-Maintenance review: 2026-10-18. Effectiveness: unassessed.
-Findings: Strict probe wording caused an avoidable unexercised attempt; retain the failure and assess control cost. Reused existing CLI/parser/validator/Git; passive one-off recording is bounded and retired from use after closeout, not a new runtime/history framework.
-Cost: Existing project-local tools and one serialized runtime; one worker plus independent reviews. Two probes total17charges and856.281seconds through native closeout; review/publication continues original45-minute envelope. Model/approval spend and sustained benefit unmeasured.
-Follow-up: #108 publication, then prospective #100/#82 finite campaign admission. #75 reviews restrictive wording/capture duplication at existing triggers; keep January15maintenance and October24research dates unchanged. No old attempt revival, compatibility path, broader permissions or automatic learning.
-Review evidence: [docs/acceptance/2026-10-18-walk-reassessment.md](../docs/acceptance/2026-10-18-walk-reassessment.md).
+Maintenance review: 2026-10-18. Effectiveness: partially_effective.
+Findings: Static call-chain review missed the actual current renderer despite passing patch fixtures. Native proof exposed it, stopped and retained the failure; precise owner correction worked in the tested paths. Direction chooser and post-shutdown reload remain unexercised;112staysopen.
+Cost: One isolated worker, lead tight follow-up and independent reviews; two serialized native probes36charges/1128.917seconds through closeout, plus review/publication under original45minute clock. Existing mature tooling reused; external model/approval cost unmeasured.
+Follow-up: #112 remaining direction/reload acceptance under separate prospective scope, then #100/#82 admission with all112charges/original creation clock. #75 reviews actual call chains, fixture limits, finite-proof estimation and recording burden. Existing January15maintenance/October24research triggers unchanged.
+Review evidence: [docs/acceptance/2026-10-18-ordinary-menus.md](../docs/acceptance/2026-10-18-ordinary-menus.md).
 
 Next review: 2027-01-15.
 

@@ -26,7 +26,9 @@ its prospective finite admission; the [stopped deciding attempt](acceptance/2026
 remains failed. A [same-character functional continuation](acceptance/2026-10-18-seven-day-continuation-stop.md)
 then stopped on unsupported nearby-items UI without verified time advance;
 [ordinary-menu coverage #112](https://github.com/CVX-Hull/enactive/issues/112)
-is the current blocker. [Work](work.md) links the active path.
+has a [qualified native repair](acceptance/2026-10-18-ordinary-menus.md): item detail,
+comparison and work-menu navigation worked; direction/reload checks remain open.
+[Work](work.md) links the active path.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign
 continuation. The [MVP completion audit](acceptance/2026-10-17-completion.md) maps

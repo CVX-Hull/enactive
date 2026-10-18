@@ -1,0 +1,440 @@
+{
+  "schema_version": 1,
+  "kind": "historical-native-acceptance",
+  "date": "2026-10-18",
+  "verified_at": "2026-10-18",
+  "source_commit": "471e4126bd1032755949d96701527df0e0395df8",
+  "upstream_pin": "native/upstream.json",
+  "platform": "macOS arm64/pinned CDDA0.I-1/wire3/windowed project userdir",
+  "report": "docs/acceptance/2026-10-18-ordinary-menus.md",
+  "video": null,
+  "verification_scope": "Qualified menu navigation; first failure retained; direction query/post-shutdown reload/alternate renderer unexercised; all unknowns retained",
+  "artifacts": {
+    ".runtime/repairs/ordinary-menu-coverage/native-build-output-receipt.json": {
+      "bytes": 396,
+      "sha256": "d88e02a76c354cc4d8e74562f05d6367da90f6b4854aa0c57c1916300dce6727",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/repairs/ordinary-menu-coverage/output-owner-commit.log": {
+      "bytes": 75024,
+      "sha256": "21b6e63b137cd9147fccd24ccdb6818583314feedfbc49f363e72c222b621b36",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/repairs/ordinary-menu-coverage/output-owner-common.log": {
+      "bytes": 1976,
+      "sha256": "a1d1580f2349b1e0d90a7255fbee3b630e0d4893dd694e6cac981dd96357e774",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/repairs/ordinary-menu-coverage/candidate471-ci.json": {
+      "bytes": 288,
+      "sha256": "4344c76adc7b1b82180368001db18fadb3dfdd464fa5ebd0e82cf049273a33e8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-001/admission.json": {
+      "bytes": 2170,
+      "sha256": "dc1caaba2cb597e2b1e0b5eeb91fc207d5e07413bae5488828e1ee314843c126",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-001/record.py": {
+      "bytes": 4202,
+      "sha256": "2bca2614935e75e212ac066d2bee9e330ac792447cb511b2d66b8c5b3e58490c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-001/commands.jsonl": {
+      "bytes": 10393,
+      "sha256": "800cae2af73b870f8bd3cd6c5d763ffba70221d63f02642b9b078a24afdd71e0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-001/native-closeout.json": {
+      "bytes": 1637,
+      "sha256": "c6c60f1016303b6a84309744dc5f03311e3b8290d6a06b19e24791727a4274b4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-001/artifacts-native-closeout.json": {
+      "bytes": 16861,
+      "sha256": "dc775201f182e0e95cbf00e6071feb686a367bd94090dfbbe837e2d17b92f5e0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/admission.json": {
+      "bytes": 2310,
+      "sha256": "9f1ab6ee9b0ed20c80874323c78afa601a411c27015c86c84a5390b4fe8c9bd4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/record.py": {
+      "bytes": 4273,
+      "sha256": "dbf4de184d4fbc5587404ec999884967b182e18baf91c941c8b5ee721bdf8f35",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/commands.jsonl": {
+      "bytes": 15792,
+      "sha256": "f33aa7c5e369444440e890fda54b08ec4e428f110ebe373ff3a94d33b26657d8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/native-closeout.json": {
+      "bytes": 2023,
+      "sha256": "253433021fe98291a08dbe14b83380050f27810664321105df4859393544f941",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/artifacts-native-closeout.json": {
+      "bytes": 25179,
+      "sha256": "8b6379cc5f62de96f839366140e0e07a69af27a7642e03d39a2e7fbbf57f3f8c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0007-receipt.json": {
+      "bytes": 213,
+      "sha256": "60e13fd3d1d7a66afe5baf88b59fe69d70f9f8766d541bbfc28dc042477d1204",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0007-capture.json": {
+      "bytes": 699,
+      "sha256": "b636e1cb70b921882eb22d44dd10a54cf6963765404c4b69e896dca88bcf4824",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0008-receipt.json": {
+      "bytes": 4707,
+      "sha256": "b411be736c4fd335e6de7d4029731d34258903aa827911cf5eeb4db5141495de",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0008-capture.json": {
+      "bytes": 757,
+      "sha256": "4438a6274c5fce678b018870c7d369bf24d5478e205ac4fddd4bdd303e36dff9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0008-frame-1792362371592-69346-1-77.png": {
+      "bytes": 109374,
+      "sha256": "c315f60b7fc8054a2e38af0ce382b2c0914ed5f159839de7fa79eb60fedfb1de",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0011-receipt.json": {
+      "bytes": 1264,
+      "sha256": "0458361d108a79e669a0d6ecd058a88d744c63b1f1bac7dcdb305148226c6c7f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0011-capture.json": {
+      "bytes": 802,
+      "sha256": "ea60bc1cab62b159ad34c57e2eca828b209a4d3cd726056acd97f1da5a6d46e9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0011-frame-1792362371592-69346-1-91.png": {
+      "bytes": 63249,
+      "sha256": "b8078672c58b06349ea1db64fd28447a30e9465cb55f8981edeb32f6b6598aca",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0013-receipt.json": {
+      "bytes": 943,
+      "sha256": "9bc0a7ef94056b9452ce36821145cbde0d1eb05e68dc1699d54619014f6e7b1a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0013-capture.json": {
+      "bytes": 805,
+      "sha256": "68574624fb703856faa4f575351d3e2be7fc0a72ed73b9c2ca3be8e8f8c442e9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0013-frame-1792362371592-69346-1-106.png": {
+      "bytes": 109336,
+      "sha256": "33f1149bb4bfc0c6b253c57257e05962e57f3b8469c9306f2bae5fbead2819b9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0014-receipt.json": {
+      "bytes": 717,
+      "sha256": "8bd36b59e9abd9f0968e9c6111b8dbf9224c7e0a69677a89fe161c1e7aca736f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0014-capture.json": {
+      "bytes": 846,
+      "sha256": "7adf8962cf01e65b63c4588c45d3eee3b8d7cc62c0f49aa9ac87fc967ddbab0a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0014-frame-1792362371592-69346-1-114.png": {
+      "bytes": 83888,
+      "sha256": "413cdba39c8fa7d8e06e5d4b90b1248e7d64b0ac62f0a20480aeee7c00724d0f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0015-receipt.json": {
+      "bytes": 943,
+      "sha256": "c41bcae57b3327d69d2323b089de6c7dc7b96cee4c6539a608cc9efba5fe8b04",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0015-capture.json": {
+      "bytes": 784,
+      "sha256": "8be82b34dae22e40ed7388a687ed29b45208d2aa0b41a94977eb1fbba25d1cb1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0015-frame-1792362371592-69346-1-121.png": {
+      "bytes": 109275,
+      "sha256": "dfa0d133f48efd4560257580c91edf91552c528bf8caf09802ad0323e65126f4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0018-receipt.json": {
+      "bytes": 713,
+      "sha256": "82e4e47d29f5a917fc54c0c4be7ad741870ece19d966164feef6d1f04023f882",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0018-capture.json": {
+      "bytes": 806,
+      "sha256": "cd95a98bdc649ec202a5a1cd2d5325cad03712d3a3243eac949e797b39573441",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0018-frame-1792362371592-69346-1-143.png": {
+      "bytes": 30420,
+      "sha256": "f1e26060b9701460fee4d3f7ba9be49048ee9b6ab574efab8802321b2976097a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0019-receipt.json": {
+      "bytes": 1270,
+      "sha256": "1a333054957f67e5615df46edf295733f0d9b1169944dbddcd2be79ea9ac71bd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0019-capture.json": {
+      "bytes": 785,
+      "sha256": "0ce444fdd90309ae72ca86486888515c7ffe3009e68f8e866d96eba877c16fb9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0019-frame-1792362371592-69346-1-150.png": {
+      "bytes": 83227,
+      "sha256": "ab4a62939cafb75347b895581f8d5d49ca874e1e9414f7595fbdc47501528ddc",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0021-receipt.json": {
+      "bytes": 4711,
+      "sha256": "08244661434e8946f1bdd05ae10f1ff90a3f3e8e09a318d769554d7f16236ba1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0021-capture.json": {
+      "bytes": 811,
+      "sha256": "9debd2048bcf5ee99b60ed7ab9abfd45c8642d63779cb4501879370b0fce4628",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0021-frame-1792362371592-69346-1-165.png": {
+      "bytes": 109377,
+      "sha256": "5cf8fec873de3804fe6f6a0642070b56d79908578ead0d6f90a0787d54d45df0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0022-receipt.json": {
+      "bytes": 1187,
+      "sha256": "35d26c381f41d79f3786ea6935c4d99907b4c407143f6886c6ae27fc13dcf6cc",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0022-capture.json": {
+      "bytes": 805,
+      "sha256": "d57a26b096aef04472a31200823707f54da0e16476692864e2887eb4c9c40e34",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0022-frame-1792362371592-69346-1-176.png": {
+      "bytes": 9034,
+      "sha256": "e37d63aa7bbee84b1c3dbf4e9276969ead1ce7eba8f4e8fbcb4d768c1f47ed53",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0023-receipt.json": {
+      "bytes": 4711,
+      "sha256": "335ca9c8c449b317f1c7fadc22b5b7182b519ffd354ab700f6bbce8421545305",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0023-capture.json": {
+      "bytes": 780,
+      "sha256": "3d4c479d3142da9a335bb322d81a01fa71e43181248edea661edf88b29d9b392",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0023-frame-1792362371592-69346-1-183.png": {
+      "bytes": 109377,
+      "sha256": "5cf8fec873de3804fe6f6a0642070b56d79908578ead0d6f90a0787d54d45df0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0024-receipt.json": {
+      "bytes": 912,
+      "sha256": "d3b5a13a52d2178d577c202232e559c30477da1a21617f74ead9e215b70db60b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0024-capture.json": {
+      "bytes": 811,
+      "sha256": "7d98fe768aa815412315326bf34f35f298c36d28b02007bfb08555a59acd5607",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0024-frame-1792362371592-69346-1-190.png": {
+      "bytes": 60280,
+      "sha256": "84743023a29da5a9633a590b8b2a0f7f8b1940bb51def96ead6351e0e6cfa629",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0025-receipt.json": {
+      "bytes": 4711,
+      "sha256": "528f6720bb8a22f5b6234c5dfa58ff0939aa3477dfddfffd0675e1cca6fbbb90",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0025-capture.json": {
+      "bytes": 797,
+      "sha256": "aaa8ae45ca93bc38a25d4435d5e8d532fb68d9b67c69432058121985cf0c5a12",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0025-frame-1792362371592-69346-1-199.png": {
+      "bytes": 109377,
+      "sha256": "5cf8fec873de3804fe6f6a0642070b56d79908578ead0d6f90a0787d54d45df0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0026-receipt.json": {
+      "bytes": 1295,
+      "sha256": "2f204dec0979d4be80d2ea7be591c69fcd4a76ecf7dfe006e503e8fb7096f575",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0026-capture.json": {
+      "bytes": 828,
+      "sha256": "e3bc96c5e204e7d7b0cffdddcadc05c980c68ec1353f0c12204b5400bd8f9a23",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0026-frame-1792362371592-69346-1-208.png": {
+      "bytes": 49333,
+      "sha256": "45ceb658cf17b41c26d4804f07bbd36a9e9ee4669a1b38026de02b883bd15281",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0027-receipt.json": {
+      "bytes": 4711,
+      "sha256": "cd3a39be89b936d897f1afdcffaa5fd5c18d94bb90d806b9efc6f367ad9de44c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0027-capture.json": {
+      "bytes": 865,
+      "sha256": "ea604d21e5859410c0cdb50c534244df87710fb6974580d85db9c289a43dcf50",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0027-frame-1792362371592-69346-1-223.png": {
+      "bytes": 109377,
+      "sha256": "5cf8fec873de3804fe6f6a0642070b56d79908578ead0d6f90a0787d54d45df0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0029-receipt.json": {
+      "bytes": 182410,
+      "sha256": "c44fced0f7e95287fff9fed27e7bb05a843a166647bda7ca02e3ad7e05bb0235",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0029-capture.json": {
+      "bytes": 754,
+      "sha256": "4c7ef4da50347f1fd33819afa7d0146e7f782290cd6e05845164207bea0cc9a9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0029-frame-1792362371592-69346-1-229.png": {
+      "bytes": 109377,
+      "sha256": "5cf8fec873de3804fe6f6a0642070b56d79908578ead0d6f90a0787d54d45df0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0030-receipt.json": {
+      "bytes": 4710,
+      "sha256": "b74bff82fb8e0cfa91d8c6790559917715548ec8e23367634db58ece6fcc77f6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0030-capture.json": {
+      "bytes": 749,
+      "sha256": "29b4d5e0f5f483080bfdfe502f617a4d95e4478494dad59be56712470ea1cbfa",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0030-frame-1792362371592-69346-1-244.png": {
+      "bytes": 109377,
+      "sha256": "5cf8fec873de3804fe6f6a0642070b56d79908578ead0d6f90a0787d54d45df0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0032-receipt.json": {
+      "bytes": 679,
+      "sha256": "658c19f9a3af04543b31dd639390fdeaf319c5960887bc7f5b97cd517c58a84a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0032-capture.json": {
+      "bytes": 844,
+      "sha256": "b07b80507f04cade2fa7b5dc21ace305ed77adaa168ee7ad44e0bb187f3cbddb",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0032-frame-1792362371592-69346-1-257.png": {
+      "bytes": 108296,
+      "sha256": "078bb2698f21a930d4c001ad7a192592abbc15552b71f5eae6e24c092d82d4ff",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0033-receipt.json": {
+      "bytes": 213,
+      "sha256": "e1250ce6d90df8fb584fa2c3a8e9c782b2d1cb916a6393cc7e71756ff3b4000c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0033-capture.json": {
+      "bytes": 657,
+      "sha256": "2612dd51864a01c6e3d4933cb32041d361679cd76fdc91934be39d3ac5d2fd40",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0034-receipt.json": {
+      "bytes": 789,
+      "sha256": "ed971fb67b7bc459494e174efbc2108b2c9ace5f15f16eebe57b3c82b5cd67a6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0034-capture.json": {
+      "bytes": 742,
+      "sha256": "b95a3bd916d6669f6612698e397bf60f568d8a1ee6b0797d8307a7f92fef8346",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0034-frame-1792362551165-69346-2-277.png": {
+      "bytes": 13902,
+      "sha256": "e98e052962d4724b5b5caa46af224e122df4e9f0595cc0cbf0b1a703d9ddf1d2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0035-receipt.json": {
+      "bytes": 201450,
+      "sha256": "8bc8f5f3419c3416fb221b077a34be8ede7fc59a6564e538f104d9c30b7d3eae",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0035-capture.json": {
+      "bytes": 755,
+      "sha256": "63c0599784d14e9565b108ffc29b4789dad7c48f1533ccca50f1fc69c5cc9a93",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0035-frame-1792362551165-69346-2-279.png": {
+      "bytes": 13902,
+      "sha256": "e98e052962d4724b5b5caa46af224e122df4e9f0595cc0cbf0b1a703d9ddf1d2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0037-receipt.json": {
+      "bytes": 680,
+      "sha256": "92c25abc0939b8e7362faa42eace275eddf48a695b0794707b822b8a540ad8fa",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0037-capture.json": {
+      "bytes": 794,
+      "sha256": "bfad620e71d7e0407f05d35d54a0c2226e0f85741b5ffde6b39c44b9fbb0df66",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/frames/0037-frame-1792362551165-69346-2-310.png": {
+      "bytes": 14332,
+      "sha256": "728213baffa1bcf0025763c97087e4471462a5c4c29095ee27f7990914adc602",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0038-receipt.json": {
+      "bytes": 213,
+      "sha256": "fbf7a69ba67b887da6badf966c6065dd1bec8ebb1d63069c0c9941e06733374a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0038-capture.json": {
+      "bytes": 648,
+      "sha256": "1b6cdc2c2200efee9e3500f972ce3e50b9293c3bc553de638e42c525ac72cc38",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0040-receipt.json": {
+      "bytes": 200560,
+      "sha256": "d4dff5d46c2ce0b98bdf7a2f9e6f471da539e0da5dd9280f8507dcd0475a7d5a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/0040-capture.json": {
+      "bytes": 589,
+      "sha256": "628836161e80d17c81a54459449485555d8b452d883ee1bf19ec7205b9c594a0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/ordinary-menu-probe-002/preparation/spectator-normal.png": {
+      "bytes": 244375,
+      "sha256": "64e49d0e6bd179a84808fd2700fc851cba046bd26902e2292def2c1424edf64e",
+      "availability": "local-only; not included in Git"
+    }
+  },
+  "identity_note": "Same normally created Ned Meyers/Belgium; two functional menu proofs with failures/unknowns retained; clean committed source frozen during each.",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "freetype_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+  "initial_build_binary_sha256": "f11f4f397eb015ce7406a873590cefa62b7766dd446f4e42c0fec9d371b53e56",
+  "installed_binary_sha256": "297b443a235af6e4803bb6d2a15bd595f0461124f7fe87c297a59b2382d5f704",
+  "limitations": [
+    "Direction query, alternate item renderer and post-shutdown reload unexercised;112 remains open.",
+    "First native proof failed; all lifecycle ACK unknowns retained; no survival progress.",
+    "Private originals unavailable in freshcheckout; published screenshot is byte-identical and tracked by Git.",
+    "Process/port/approval/queue evidence requires primary lead trace."
+  ]
+}

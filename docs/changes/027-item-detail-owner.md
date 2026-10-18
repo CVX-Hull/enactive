@@ -1,10 +1,16 @@
 ---
 owner: lead
-review_trigger: Pinned item-detail caller, proof resources, candidate or authority changes
-status: proposed
+date: 2026-10-18
+scope: Corrected item-detail owner and qualified partial second proof
+status: historical
 ---
 
 # Complete the actual nearby-item detail owner
+
+The [actual result](../acceptance/2026-10-18-ordinary-menus.md) verifies repaired item
+navigation, comparison and work-menu entry/cancel, with normal Save/Quit. Direction
+query and post-shutdown reload remain unexercised; #112 stays open. Both proof
+admissions are closed. The original prospective text below grants no further input.
 
 [#112](https://github.com/CVX-Hull/enactive/issues/112)'s first native proof on
 candidate6484151 verified nearby items, the creature tab and filter/cancel, then
