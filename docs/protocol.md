@@ -101,12 +101,14 @@ An accepted asynchronous lifecycle request is not a completed task; inspect stat
 The CLI exposes gameplay-start, gameplay-continue, gameplay-abandon, gameplay-request
 and gameplay-plan; see the [operator procedure](runbook.md).
 
-The selected player is a dedicated sub-agent in this active Codex chat. The lead
-admits tasks and owns runtime/verification. The player reads bounded visible evidence
-and returns candidate data only; it does not send raw game inputs or manage the game.
-Role instructions are not an OS sandbox. The same external planning interface can
-be answered by the lead, with no automatic fallback. Missing player, deadline,
-invalid plan or changed evidence stops visibly. No separate paid API is connected.
+The waypoint planner is a dedicated sub-agent in this active Codex chat. The lead
+admits tasks and owns runtime/verification. This planner reads bounded visible
+evidence and returns candidate data only; it does not send raw game inputs or
+manage the game. The same external planning interface can be answered by the
+lead, with no automatic fallback. Missing planner, deadline, invalid plan or changed
+evidence stops visibly. No separate paid API is connected. A separately admitted
+campaign operator uses the external operator procedure below; it cannot send
+ordinary inputs while a waypoint run holds its lease.
 
 Each external request contains request_id, deadline_ms and decoded ProviderInput
 `input` (task, packet, skills, binding, public_context, admission_monotonic). One
@@ -327,6 +329,58 @@ Each record has `id` (1–128 chars), `channel` (`gameplay`/`control`), `source_
 verifies containment, file existence, at most 1 MiB and hash, without parsing old
 bytes. Invalid references block startup. These surface as `historical_unknowns`
 and journal evidence, granting no authority, replay or inferred resolution.
+
+## Designated campaign operator
+
+The lead may designate one general-purpose sub-agent to choose and send ordinary
+operator commands for a bounded campaign segment. This is an external operator
+workflow using the existing authenticated CLI, not a new runtime supervisor or
+RunLease type. The waypoint planner remains candidate-only. No runtime contract,
+wire version, stored task format or automatic role restoration changes.
+
+The lead owns source/release acceptance, finite admission, game/service lifecycle,
+escalation and final verification. The designated operator owns ordinary decisions,
+the charged capture sequence and visible-outcome assessment only for its named
+segment. Its brief names the immutable source/native, allowed command and file
+scope, actor identity, phase and cumulative limits, cleanup reserve and stop rules.
+It may not launch processes, modify source/saves, publish work, start a competing
+task, use debug advantages or silently extend a segment. Explorers/reviewers are
+not input operators. Role instructions and recorded actor names do not isolate
+tools or authenticate an agent to the OS.
+
+Admit this mode only with no live waypoint lease, unresolved live request or
+competing executor. Retained historical unknowns stay unknown. The controller
+still checks current session/revision, frame, boundary and host authority for
+every input; serialization does not identify which chat requested it. The lead
+must not issue ordinary inputs or Resume while the player is assigned input.
+Status, watching and emergency Pause remain available. Deliberate native inspection
+or a new Observe decision uses the handoff procedure to avoid racing the player.
+
+For handoff, request stop/Pause and have the operator finish its current tool call,
+Pause, and return a source-linked checkpoint with no further command scheduled.
+Verify that the agent turn and every retained execution handle are terminal, then
+check controller status for no live request/recovery or run lease. Status alone
+does not establish an empty external tool queue. Lead Pause fences remaining
+pre-takeover requests at the existing generation/token checks; committed native
+actions or activities may still take effect. Fresh Observe must show an interpretable
+paused boundary before inspection or another actor is authorized. Unresolved or
+unknown effects retain their normal reconciliation rules; never replay an input.
+
+Returning input requires a new explicit bounded actor assignment, fresh evidence
+and Resume by that actor. Preserve original history, consumed budgets and spatial
+invalidation; no ownership, saved command or active model call is restored. A missing
+or unquiesced operator, failed access/approval, corrupt accounting or unreadable
+state stops further play. The lead may perform bounded ordinary recovery after
+handoff using the established recovery procedure; user rescue is not the fallback.
+
+Actor assignment/quiescence and campaign semantic limits are workflow controls.
+They are not an exclusive external capability or a sandbox against a malicious
+cooperating agent. The native/controller authority, Pause and in-process waypoint
+lease retain their implemented guarantees. The [operator probe](changes/020-campaign-operator.md)
+defines the initial development acceptance; no broader survival reliability or
+unattended service is implied by this procedure.
+
+
 
 ## Closed-loop play and observations
 

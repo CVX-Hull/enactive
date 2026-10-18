@@ -26,8 +26,12 @@ See [the permission audit](operator-permissions.md) before requesting elevation
 or changing executor ownership. Narrow project-local CLI rules are prepared and
 matching-tested; trusted reload/live activation remains unverified. Existing
 capture wrappers do not match those rules. User keys/unlock/rescue are not the
-routine fallback. The current sub-agent remains planning-only; proposed direct
-execution requires a separately frozen ownership handoff.
+routine fallback. A waypoint planner remains candidate-only. A designated campaign
+operator needs the explicit bounded assignment and handoff below; permission rules
+do not establish actor identity or restore ownership.
+Before admitting gameplay, have that actor perform a passive access preflight with
+the required explicit tool permission mode. Lead access alone is insufficient;
+see the [actor preflight](operator-permissions.md#dedicated-gameplay-context).
 
 ## Start and observe
 
@@ -270,6 +274,43 @@ frames from injected evidence faults. Preserve raw unsupported receipts outside
 the task store. A rendering failure cannot be repaired by substituting a later
 frame. Save normally and stop only owned processes after acceptance.
 
+## Designated campaign operator
+
+This procedure follows the [operator contract](protocol.md#designated-campaign-operator).
+The lead starts the one prepared windowed game/controller and verifies visible
+identity, source/native, budgets, empty live requests and no waypoint lease before
+assignment. Use a clean-context general-purpose agent with an explicit bounded
+brief; read-only explorer/reviewer roles are not suitable. A separate source
+worktree is unnecessary for a player that cannot edit source or launch processes.
+
+Assign only ordinary registered actions/keys, Observe/Resume/Pause/status and dated
+goal recording, plus named project-local evidence paths. Charge inputs before
+dispatch, including rejected/unknown requests and full requested walk expansion.
+The player must inspect actual frames and fresh applicability, distinguish carried
+from reachable supplies, and retain public reasons and unknowns. Do not trust an
+old summary as current state or equate `ready` with successful consumption/rest.
+Campaign-specific limits remain explicit; the controller is not a general needs
+or campaign-budget verifier.
+
+While assigned, the lead may watch/status-check and issue emergency Pause but
+does not Resume, send ordinary inputs or race Observe decisions. For deliberate
+inspection, ask the player to finish its current tool, Pause and return a bounded
+checkpoint, then stop issuing calls. Verify its turn and all execution handles
+are terminal. A timed-out observation of an agent is not proof that it stopped;
+re-poll the same handle. Check no live gameplay/recovery request or lease, issue
+lead Pause, then obtain a fresh paused Observe. Native activity may still run;
+retain its outcome or use scoped recovery without inventing cancellation.
+
+Record the new actor/phase and remaining original limits before authorizing input
+again. A returning player reobserves, verifies applicability and explicitly
+Resumes; no old capability or input is restored. The lead handles unsupported
+native prompts only after this handoff, using actual readable frames and separately
+charged CUA evidence. Failed access, approval denial or unknown/unreadable state
+stops the affected play; never ask the user for routine keys/unlock or route around
+the failed control. Lifecycle/save operations stay under the declared cleanup
+scope and deadlines. The [initial probe](changes/020-campaign-operator.md) records
+the finite development acceptance, separate from a seven-day deciding campaign.
+
 ## Explicit waypoint tasks and the player
 
 The service supports one bounded waypoint-and-return task. Start from a fresh
@@ -290,8 +331,8 @@ justifications, not a private reasoning transcript. Start the player before task
 admission so the 30-second call ceiling is usable; task wall time remains 120 seconds
 including planning and Pause. No response means stop, not automatic replanning.
 
-The lead supervises and owns the game/service; the player must not start/continue
-runs, resume, send raw inputs, edit source/saves, or launch another process. Both
+The lead supervises and owns the game/service; this waypoint planner must not
+start/continue runs, resume, send raw inputs, edit source/saves, or launch another process. Both
 use one external planning contract. Sub-agent role instructions do not remove its
 inherited tool permissions. Keep the planning brief narrow and retain requests,
 responses, real receipts and frames. Codex usage and model identity are unmeasured

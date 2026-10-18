@@ -26,15 +26,17 @@ Historical artifacts are retained as evidence without being accepted as runtime 
 
 The [overview](overview.md) provides the user-facing system picture. One local
 macOS game and one controller are supported. Codex in an active chat is the
-planner, normally through a dedicated player sub-agent. The service executes
+planner, with a designated campaign operator or a waypoint planning sub-agent under
+the [single-executor procedure](protocol.md#designated-campaign-operator). The service executes
 explicitly admitted waypoint tasks with feedback; general autonomous survival and
 other hosts remain unverified. Normal
 windowed operation and project isolation are [charter constraints](charter.md).
 
 | Boundary / owner | Input and output | Authority and failure behavior |
 | --- | --- | --- |
-| Lead / active Codex chat | User objective → bounded task admission and supervision | Owns shared runtime and verification; explicit start/continue; no automatic restart |
-| Player / dedicated sub-agent | Bounded retained visible evidence → stage candidate | Proposes data only through external handoff; same model roles need not be different tiers; missing/late player stops; role instructions do not create OS isolation |
+| Lead / active Codex chat | User objective → bounded admission, supervision and deliberate takeover | Owns source/game/service and verification; schedules one executor; Pause/quiescent handoff before inspection; no automatic restart |
+| Campaign operator / designated general-purpose sub-agent | Visible evidence → ordinary operator commands and assessed outcomes | Explicit finite segment only, no waypoint lease; existing CLI/controller checks; cooperative actor assignment is not an exclusive external capability or OS isolation |
+| Waypoint planner / dedicated sub-agent | Bounded retained visible evidence → stage candidate | Candidate data only; no raw input, task start or lifecycle ownership; missing/late planner stops; roles need not be different model tiers |
 | Gameplay runtime / harness maintainer | Task and candidate → verified skill progress and public status | Sole run worker; exact controller lease and native receipt mapping; fresh revalidation after planning; original budgets and unknown effects preserved |
 | Controller / harness maintainer | Observed-state-bound commands → validated bridge requests, results and journal | One process with separate serialized gameplay and recovery writers; explicit run lease; process lock; deadlines; pause revokes ownership and freezes dispatch; never mutates saves or game state |
 | Native bridge / integration maintainer | Bounded requests → actual input events, metadata and rendered frames | Game thread only; engine validates outcomes; session/revision/expiry checks; unsupported input boundaries cannot claim success |
@@ -48,6 +50,15 @@ not extra services or a requirement for additional people. Implementation paths:
 [native bridge](../native/cdda_harness.cpp), [viewer](../web/app.js),
 [gameplay records](../harness/gameplay/contracts.py),
 [evidence store](../harness/gameplay/evidence.py), [task memory](../harness/gameplay/memory.py), [setup](../tools/setup.py).
+
+Only one execution arrangement is active at a time: an external campaign operator
+uses ordinary CLI inputs, or the leased waypoint service executes plans. They are
+different responsibilities in the current system, not old/new wire contracts or
+compatibility paths. A dedicated operator keeps game observations out of the lead's
+engineering context. Its identity and stop handshake are procedural; the controller
+does not authenticate individual sub-agents. The first bounded proof is defined
+in [the operating brief](changes/020-campaign-operator.md); until real evidence is
+published, delegation itself is not a demonstrated survival capability.
 
 ## Runtime and state
 

@@ -1,0 +1,170 @@
+{
+  "schema_version": 1,
+  "kind": "historical-native-acceptance",
+  "platform": "macOS arm64; pinned CDDA0.I-1/wirev3; prepared project-local windowed bundle/userdir",
+  "upstream_pin": "native/upstream.json",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "installed_binary_sha256": "9cf1f76db19d6b401582bd7e6768422b653f6204069bd544804b8a5490e95273",
+  "date": "2026-10-18",
+  "verified_at": "2026-10-18",
+  "video": null,
+  "report": "docs/acceptance/2026-10-18-operator-access-stop.md",
+  "source_commit": "bb1c1b7e3a3921620c4781a83a16598a72deb143",
+  "verification_scope": "Operator001 stopped before player input;22rows9charges,0observedgameadvance; actor sandbox failure,3unknownlifecycleACKs,normalcleanup;no7dayresult.",
+  "limitations": [
+    "Actor sent no successful Observe/Resume or gameplay; two missing error captures were reconstructed explicitly from originals for cleanup only.",
+    "Native exit code unavailable; process absence, controller exit0 and port closure are separate lead checks.",
+    "Rule matching is not activation; no automatic review rejection occurred.",
+    "Original wall clock includes review/publication; formal terminal closeout stays local."
+  ],
+  "artifacts": {
+    ".runtime/campaigns/player-operator-001/admission.json": {
+      "bytes": 1766,
+      "sha256": "54ff988a29dd06c5cccbf16f2624ca60b6ccde41771bc6f62ccf70376da82231",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/commands.jsonl": {
+      "bytes": 7456,
+      "sha256": "df771ec5342f517e80fb386059465286d65a34a1d32f04c75e205bca4cde0024",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/phase-a-checkpoint.md": {
+      "bytes": 2389,
+      "sha256": "884648f9ea8d0d88b92b08ec42422f0017db187657efd1d9c37483476901a3ee",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/investigation-stop.json": {
+      "bytes": 620,
+      "sha256": "13800472415eaca3b44385538a07a51a73fd882be495387250a866a4c67ab151",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/cleanup-closeout.json": {
+      "bytes": 1142,
+      "sha256": "4e540eb7f449fe0ffb2ac085bb2bec688e75eb60e2f9045a9094885648649ba5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/artifacts-prefix22.json": {
+      "bytes": 14518,
+      "sha256": "3118536f474dfa8f3ba1c293d827900d4e24a75f8a428c711089263d7458ddc3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/0012-stdout.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/0012-stderr.txt": {
+      "bytes": 68,
+      "sha256": "31784cb537ad76120911037672aa5f2f980a01120547eaff9f48006449ef00fe",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/0013-stdout.txt": {
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/0013-stderr.txt": {
+      "bytes": 68,
+      "sha256": "31784cb537ad76120911037672aa5f2f980a01120547eaff9f48006449ef00fe",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/0012-capture.json": {
+      "bytes": 529,
+      "sha256": "c7589e1fe3a8f0ad064a560b08349ba8fe6151dcf0bcaf29d3258b1cfa7b146a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/0013-capture.json": {
+      "bytes": 538,
+      "sha256": "23c3ce019f59e038ff048da658a704376877ab7c933e6981a617d55bf82a4685",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/0005-receipt.json": {
+      "bytes": 213,
+      "sha256": "1734c6c36176bbbf0d7844cae7cf2d6144c579c07b4708ddb6f2b29efb672e4e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/0017-receipt.json": {
+      "bytes": 213,
+      "sha256": "bd80e1f067909a207a0ac3ec09985812fe30004ee570fd5f1fe3de3d7c81df35",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/0021-receipt.json": {
+      "bytes": 213,
+      "sha256": "5948eec8fe71a5dc3653519d3f41dff8aaf1263ed11d6fcb0ce5284b906c2c1b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/preparation/candidate-runs.json": {
+      "bytes": 428,
+      "sha256": "c54102e35f5ed1f3807feefe264ec389866a0a35875e617407f157c658f0c95e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/preparation/capture.py": {
+      "bytes": 8624,
+      "sha256": "4d613cf2f50b6c9ca467fe80035d9a91408954f946e76f23ad4dbeaaf2658a11",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/0004-capture.json": {
+      "bytes": 677,
+      "sha256": "b893ccc2862deecf21f40584dc434b86856c1eff9430921b54cdb368ee67da3f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/frames/0004-frame-1792351634254-45496-135.png": {
+      "bytes": 13736,
+      "sha256": "5f387e4b0b59b1539f603fe4bbb97aead0535d58a595bcd01e75ffdbb43329f7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/0006-capture.json": {
+      "bytes": 585,
+      "sha256": "9762b7acc216fd9024e13b37e39d05086f74b6f8fd68cf64529fd889807eb5be",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/frames/0006-frame-1792351782719-45496-1-155.png": {
+      "bytes": 128805,
+      "sha256": "1deb5d0e94275c9f0bcfcbdb05b0843d93348fb13991428e4a0bc576880388ff",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/0008-capture.json": {
+      "bytes": 664,
+      "sha256": "210fcd68241d202b4b008c7221546042b5a9d44cc77d8769e85261d8c5893a39",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/frames/0008-frame-1792351782719-45496-1-172.png": {
+      "bytes": 58406,
+      "sha256": "424e9931251fa707be39d07a879bc7140653ffc513dda87b99891692b8078789",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/0014-capture.json": {
+      "bytes": 614,
+      "sha256": "8905040ae3e8bff4ad8e6ade98cf301a115844f88d6edc3b8eeccea53d8a5b47",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/frames/0014-frame-1792351782719-45496-1-262.png": {
+      "bytes": 128813,
+      "sha256": "a87895a7deaf5725c99e55383b0a8716d6903a74663ed5ea3a18659fab705072",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/0018-capture.json": {
+      "bytes": 617,
+      "sha256": "188f07214a832a45e7afbb17549ce9371ad83f00861bc9549de350841e1b2bb1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/frames/0018-frame-1792351927213-45496-2-300.png": {
+      "bytes": 12708,
+      "sha256": "6db4bfa7979be55aa50ab5ab12dddc3787cf9f50ed05a10dee068deaecda7bd9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/0020-capture.json": {
+      "bytes": 650,
+      "sha256": "36bb1b4f0ebabb658532046c6c29c19ddd549230639178e6ac431535c34bb70e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/player-operator-001/frames/0020-frame-1792351927213-45496-2-315.png": {
+      "bytes": 13142,
+      "sha256": "bb8ea74110d0bb6b168be6d5d541387adf28690ba4e7e5fc3d60c01f47764716",
+      "availability": "local-only; not included in Git"
+    }
+  },
+  "freetype_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+  "initial_build_binary_sha256": "9fc9dd8cc8375a2556929cb17974b7a0b67e3e38036c2e460defe3a288ff7bc0",
+  "identity_note": "Frozen execution bb1c1b7; existing pinned native unchanged. This record does not claim a native rebuild or successful delegated input."
+}

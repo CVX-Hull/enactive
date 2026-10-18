@@ -155,6 +155,16 @@ and unknown. Revisit fast-moving agent evidence at controller redesign and relea
 when older than 90 days; dated findings do not prove current-model performance.
 Controls: C-REVIEW, C-PORTABLE, C-NATIVE, C-MAINTENANCE.
 
+For real gameplay, a general-purpose sub-agent may be the one designated campaign
+operator under [the explicit operator contract](protocol.md#designated-campaign-operator).
+The lead retains design/admission, lifecycle, escalation and verification; source
+work stops during a frozen native probe. The operator owns only its bounded input
+and evidence paths, with no source, save-editing, publication or process-launch role.
+Do not assign input to a read-only explorer/reviewer or silently promote the
+waypoint candidate-only planner. Pause, terminal tool calls and explicit quiescent
+handoff precede lead inspection or actor replacement. Agent identity strings are
+audit fields, not security capabilities; shared inherited permissions remain.
+
 ## S-DOCS Useful maintained documentation
 
 Principles: P-KNOWLEDGE, P-REVIEW, P-CHANGE.

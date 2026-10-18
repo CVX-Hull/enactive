@@ -12,6 +12,9 @@ Read [architecture](docs/architecture.md), [protocol](docs/protocol.md) and
 for delegation: the lead owns design/integration/verification; parallel workers use
 separate worktrees and disjoint ownership; one integrator and shared-runtime owner;
 named agent_type; clean-context workers/reviewers; bounded briefs.
+For gameplay, the lead may explicitly designate one general-purpose campaign
+operator under the protocol's bounded actor/handoff procedure. The waypoint
+planner remains candidate-only; explorers/reviewers never send game inputs.
 
 - User instructions take precedence. Global skills are optional references;
   do not import ceremony without a concrete project need.

@@ -65,25 +65,34 @@ observations separate from engineering discussion. It does not require a weaker
 model tier or another paid API. It inherits parent permissions; role instructions
 do not create security isolation, and delegation alone cannot remove approvals.
 
-**Current arrangement:** the player proposes candidates through the
-[existing planning contract](protocol.md#bounded-injected-planner). The lead owns
-admission, raw input, recovery and the shared game/service; the harness executes
-accepted waypoint plans. The actual rehearsal handoff was summary-only advice,
-not transferred execution. Do not use the read-only explorer/reviewer roles to
-send game inputs.
+The waypoint planner proposes candidates through the
+[existing planning contract](protocol.md#bounded-injected-planner); it still has
+no raw-input role. A separately designated campaign operator may use ordinary
+inputs under the [bounded actor contract](protocol.md#designated-campaign-operator).
+The lead retains admission, source/game/service ownership, escalation and final
+verification. These responsibilities are mutually scheduled, not simultaneous
+executors or alternate protocol versions.
 
-**Proposed next arrangement:** a designated player could own decisions and
-ordinary input for a bounded admitted segment, while the lead handles engineering,
-review, deliberate inspection and escalation. Only one executor may own the
-runtime at a time. Before enabling it, freeze its command/write scope, retain the
-same charged ledger and deadlines, and demonstrate Pause/revoke, fresh-state
-handoff, unknown handling and normal cleanup. Lead inspection first revokes and
-quiesces the player; returning control needs fresh observation and explicit
-authorization. Missing player or approval failure stops visibly. User rescue is
-not the fallback. This is a design change to the present planning-only policy,
-not an already activated role or an additional simultaneous executor.
+The operator's clean-context brief identifies command/file scope, phase and
+cumulative limits. Pause, completed tool calls, an explicitly quiescent agent,
+empty live request/lease checks and fresh paused observation precede lead
+inspection. Returning control needs a new bounded assignment and fresh Resume;
+historical unknowns and accounting do not reset. Actor names and instructions
+are workflow controls, not exclusive external capabilities or a sandbox. Do not
+use explorer/reviewer roles to send input. See the [runbook](runbook.md#designated-campaign-operator).
 
-Track this bounded operating-mode decision in #81 and, if implementation is
-needed, a scoped child before execution. The lead remains accountable for design,
-budget/source acceptance, adjudication and final verification. Do not expand an
-active frozen campaign's authority mid-run just because a new role is convenient.
+[#97](https://github.com/CVX-Hull/enactive/issues/97) and its
+[finite probe](changes/020-campaign-operator.md) own initial graphical proof.
+Until that evidence is accepted, no successful direct-player handoff is claimed.
+Missing/unquiesced player, denied approval or failed readable access stops; user
+rescue is not the fallback. Do not expand an active frozen campaign mid-run.
+
+Test access from the **designated actor**, before gameplay admission. A successful
+lead call does not prove that the player's next tool invocation will request the
+same permission mode. When this session requires elevation, the brief must name
+`sandbox_permissions: "require_escalated"` and a narrow justification explicitly;
+omitting the field uses the default sandbox. Honor an approval rejection; do not
+route it through another actor. A sandbox connection failure before any elevated
+request is a different event and must not be reported as automatic-review denial.
+Retain the actual passive preflight and terminal tool result. Project allow-rule
+matching still does not prove live activation.

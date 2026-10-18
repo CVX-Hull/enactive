@@ -82,8 +82,13 @@ capabilities, finite whole-run/segment/attempt limits and independent outcome
 review. It must consume the deadline-control finding, actual throughput and the
 [permission/player audit](operator-permissions.md): narrowly matched CLI rules are
 prepared and policy-tested, activation is unverified; dedicated direct player
-execution needs an explicit ownership design and acceptance, not silent expansion
-of the current advisory role. #82 stays gated until that decision. No new generic
+execution is defined by [the bounded operator brief](changes/020-campaign-operator.md)
+and [#97](https://github.com/CVX-Hull/enactive/issues/97). Its
+[first probe](acceptance/2026-10-18-operator-access-stop.md) stopped before player
+input on an omitted tool escalation setting; the probe including cleanup used9charges with
+zero observed game-time advance. [Brief021](changes/021-operator-access-preflight.md)
+requires actor access before a separate bounded replacement. Real handoff
+acceptance remains pending. #82 stays gated until that decision. No new generic
 monitor, memory database or paid API is required by the rehearsal evidence.
 
 Pilot001's 150-input/45-minute/six-game-hour ceilings remain historical fixed limits,
@@ -101,10 +106,11 @@ The next brief cannot turn a later scene into an old request's missing receipt.
 
 ## Allocation and parallel work
 
-The lead owns admission, design, the only executor/game/save/port, finding
-adjudication and final acceptance. One player may propose bounded choices; read-only
-source/evidence reviews can run alongside it. No implementation worker is needed
-just to start the pilot. After evidence freezes #79/#80 interfaces, at most two
+The lead owns admission, design, the game/save/port, finding adjudication and
+final acceptance. A designated operator may own bounded ordinary input under the
+explicit actor contract; a waypoint planner remains candidate-only. Lead inspection
+requires Pause and a quiescent handoff. Read-only source/evidence reviews can run
+alongside; no source or competing executor changes during an admitted native probe. After evidence freezes #79/#80 interfaces, at most two
 workers may use separate worktrees and disjoint paths; one integrator and serialized
 native acceptance remain. Shared runtime, save or cache work cannot be parallelized
 by creating more source checkouts.
