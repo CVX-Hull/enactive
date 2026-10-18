@@ -422,7 +422,7 @@
       "name": "Design and independent change review",
       "mode": "manual",
       "scope": "Consequential designs, implementation, tests, delegation and exceptions.",
-      "mechanism": "Lead owns design/integration and verifies returned evidence; at most two workers use separate project-local worktrees and named disjoint paths, with shared runtime serialized; fresh-context review assesses contracts, risk and maintainability before acceptance. Review new or expanded custom infrastructure across code/docs/workflow/controls against S-CODE: name the existing option, unmet gap, smallest scope, owner/cost and retirement trigger; reject unjustified duplication. Before publication, inspect explicit Git author/committer identities and all new commit messages, including co-author trailers, under S-WORK. Use repository-local Git identity configuration.",
+      "mechanism": "Lead owns design/integration and verifies returned evidence; at most two workers use separate project-local worktrees and named disjoint paths, with shared runtime serialized; fresh-context review assesses contracts, risk and maintainability before acceptance. Review new or expanded custom infrastructure across code/docs/workflow/controls against S-CODE: name the existing option, unmet gap, smallest scope, owner/cost and retirement trigger; reject unjustified duplication. Before publication, inspect explicit Git author/committer identities and all new commit messages, including co-author trailers, under S-WORK. Use repository-local Git identity configuration. Before merging a PR whose Issue completion awaits merged-main validation, read gh pr view --json closingIssuesReferences, require an empty list and re-read after removing references. Prose negation is not a parser control; use GitHub computed data, no custom keyword parser.",
       "owner": "lead; reviewer supplies independent findings",
       "trigger": "significant change, new boundary/guarantee/dependency or integration checkpoint",
       "evidence": [
@@ -469,9 +469,9 @@
           "docs/acceptance/2026-10-18-ordinary-menus.md"
         ],
         "effectiveness": "partially_effective",
-        "findings": "Retain missed renderer and first failed proof; exact correction worked in tested navigation. Separate prospective gate used peek direct chooser instead of auto-selected pickup; normal saved-character reload and cancellation verified. Alternate renderer/arbitrarymenus remain unexercised; ACKs stay unknown.",
+        "findings": "Retain missed renderer and first failed proof; exact correction worked in tested navigation. Separate prospective gate used peek direct chooser instead of auto-selected pickup; normal saved-character reload and cancellation verified. Alternate renderer/arbitrarymenus remain unexercised; ACKs stay unknown. PR114 negative prose contained a closing reference:112closed22:51:57Z before mainCI22:54:02Z.75records the miss; explicit computed closingIssuesReferences check now required before future affected merges.",
         "cost": "Original two menu proofs36charges/1128.917seconds, then separately scoped gate10charges/269.804seconds through closeout; whole122. Existing tools/passive recorder reused; review/publication time and external model/approval usage not zero or fully instrumented.",
-        "follow_up": "#112 protected publication then prospective #100/#82 with122charges/original whole clock; #75 actual call-chain review, fixture limits, proof estimation and evidence/checkpoint burden. Existing maintenance/research due dates unchanged; no automatic learning or broader rules."
+        "follow_up": "#112 protected publication then prospective #100/#82 with122charges/original whole clock; #75 actual call-chain review, fixture limits, proof estimation and evidence/checkpoint burden. Existing maintenance/research due dates unchanged; no automatic learning or broader rules. Exercise the computed-reference check on the next PR; native112acceptance remains valid after actual main success, without rewriting the ordering failure."
       },
       "next_review": "2027-01-15"
     },

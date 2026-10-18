@@ -232,6 +232,10 @@ and full messages, including co-author trailers. Use explicit repository-local G
 configuration as described in [setup](setup.md#choose-an-explicit-git-identity);
 never substitute an inferred OS account name or local email for the maintainer's
 public identity. Review all new commits, not only the eventual squash commit.
+Before merging where issue completion awaits merged-main validation, inspect
+GitHub’s `closingIssuesReferences` and require none under the
+[project workflow](project-management.md). Negating a closing phrase in prose does
+not prevent automatic closure. Update Issue/Project only after actual validation.
 Before a significant change, write a short [review brief](changes/001-engineering-system.md)
 covering problem, visible behavior, alternatives, maintenance/reversibility,
 evidence/uncertainty and decision needed. Routine fixes need only a cohesive diff
