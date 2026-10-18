@@ -1,10 +1,16 @@
 ---
 owner: lead
-status: proposed
-review_trigger: Actor authority, probe scope, source, limits or acceptance changes
+status: historical
+date: 2026-10-18
+scope: Prospective operator001 admission retained unchanged after access-stop outcome
 ---
 
 # A dedicated player with explicit takeover
+
+This admission stopped before delegated gameplay. The
+[actual result](../acceptance/2026-10-18-operator-access-stop.md) retains failure;
+[replacement brief021](021-operator-access-preflight.md) adds an actor permission
+preflight without renewing this run or changing its original rules below.
 
 For [#97](https://github.com/CVX-Hull/enactive/issues/97), keep gameplay observations
 in a dedicated sub-agent context while the lead handles engineering and deliberate

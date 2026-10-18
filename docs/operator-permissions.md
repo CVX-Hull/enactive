@@ -86,3 +86,13 @@ use explorer/reviewer roles to send input. See the [runbook](runbook.md#designat
 Until that evidence is accepted, no successful direct-player handoff is claimed.
 Missing/unquiesced player, denied approval or failed readable access stops; user
 rescue is not the fallback. Do not expand an active frozen campaign mid-run.
+
+Test access from the **designated actor**, before gameplay admission. A successful
+lead call does not prove that the player's next tool invocation will request the
+same permission mode. When this session requires elevation, the brief must name
+`sandbox_permissions: "require_escalated"` and a narrow justification explicitly;
+omitting the field uses the default sandbox. Honor an approval rejection; do not
+route it through another actor. A sandbox connection failure before any elevated
+request is a different event and must not be reported as automatic-review denial.
+Retain the actual passive preflight and terminal tool result. Project allow-rule
+matching still does not prove live activation.

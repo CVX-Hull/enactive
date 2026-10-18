@@ -140,7 +140,11 @@ partial report remains history; no seven-day success follows. The next gate is
 #81's independent readiness protocol. [Operator permissions](operator-permissions.md)
 separates tested command rules from activation and the candidate-only waypoint
 planner from a designated campaign operator. The [operator probe](changes/020-campaign-operator.md)
-must verify actual delegated input and takeover before campaign adoption.
+stopped before delegated input when the actor omitted the available escalation
+setting. [Actual failure and cleanup](acceptance/2026-10-18-operator-access-stop.md)
+remain evidence; [the replacement](changes/021-operator-access-preflight.md) first
+requires a harmless approved access check by that actor. Actual delegated input
+and takeover must still be verified before campaign adoption.
 Campaigns also expose concrete memory, planning,
 monitoring and viewer needs. The [review workflow](project-management.md#campaign-driven-improvement)
 routes observed problems into bounded improvements and checks their effect in later

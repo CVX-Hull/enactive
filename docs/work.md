@@ -83,7 +83,12 @@ review. It must consume the deadline-control finding, actual throughput and the
 [permission/player audit](operator-permissions.md): narrowly matched CLI rules are
 prepared and policy-tested, activation is unverified; dedicated direct player
 execution is defined by [the bounded operator brief](changes/020-campaign-operator.md)
-and [#97](https://github.com/CVX-Hull/enactive/issues/97), with real handoff acceptance pending. #82 stays gated until that decision. No new generic
+and [#97](https://github.com/CVX-Hull/enactive/issues/97). Its
+[first probe](acceptance/2026-10-18-operator-access-stop.md) stopped before player
+input on an omitted tool escalation setting; the probe including cleanup used9charges with
+zero observed game-time advance. [Brief021](changes/021-operator-access-preflight.md)
+requires actor access before a separate bounded replacement. Real handoff
+acceptance remains pending. #82 stays gated until that decision. No new generic
 monitor, memory database or paid API is required by the rehearsal evidence.
 
 Pilot001's 150-input/45-minute/six-game-hour ceilings remain historical fixed limits,

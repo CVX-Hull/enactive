@@ -29,6 +29,9 @@ capture wrappers do not match those rules. User keys/unlock/rescue are not the
 routine fallback. A waypoint planner remains candidate-only. A designated campaign
 operator needs the explicit bounded assignment and handoff below; permission rules
 do not establish actor identity or restore ownership.
+Before admitting gameplay, have that actor perform a passive access preflight with
+the required explicit tool permission mode. Lead access alone is insufficient;
+see the [actor preflight](operator-permissions.md#dedicated-gameplay-context).
 
 ## Start and observe
 
