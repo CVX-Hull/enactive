@@ -51,7 +51,9 @@ class RuntimeTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
-        self.controller = Controller(Path(temporary.name), timeout=0.8)
+        # Functional file/thread exchanges share CI scheduling and storage.
+        # Use the controller tests' budget; explicit deadline tests stay separate.
+        self.controller = Controller(Path(temporary.name), timeout=2.0)
         self.addCleanup(self.controller.close)
         self.bridge = VisibleBridge(self.controller)
         self.bridge.__enter__()
@@ -70,7 +72,10 @@ class RuntimeTests(unittest.TestCase):
             if result:
                 return result
             threading.Event().wait(0.005)
-        self.fail(f"Runtime condition timed out: {self.runtime.status()}")
+        recent = [{key: request[key] for key in ("id", "kind", "deadline_ms")}
+                  for request in self.bridge.requests[-6:]]
+        self.fail(f"Runtime condition timed out: {self.runtime.status()}; "
+                  f"recent native requests: {recent}; observed_ms: {int(time.time() * 1000)}")
 
     def expect(self):
         state, _ = self.controller.observation_snapshot()

@@ -71,6 +71,32 @@ The follow-up probe must use a CI-passing commit with **no PR** before subsequen
 opening and normally merging its verification PR. Preserve the first probe rather
 than calling it a rejection or rewriting main to hide it.
 
+The corrected probe used `dc3af0cb10a4e82ef3ddd757c73af03fd04ce67e` after
+[push CI](https://github.com/CVX-Hull/enactive/actions/runs/39141103320) passed and
+before any PR was associated with that commit. GitHub rejected the direct push
+with GH013, explicitly requiring a PR; main remained unchanged. The subsequent
+[PR86](https://github.com/CVX-Hull/enactive/pull/86), including the cleanup note,
+passed exact-head push/PR checks and merged through the normal protected squash
+endpoint as `578811f7eed0422e478cb7896c4492d550e657ac`, without bypass.
+
+Its [first merged-main run](https://github.com/CVX-Hull/enactive/actions/runs/39141550351)
+failed one unchanged Pause/continuation test: a later native action reached the
+functional fixture's 0.8-second deadline and correctly retained an unknown outcome.
+The ephemeral CI journal was not retained, so the exact runner delay or race cannot
+be reconstructed. Cutover remained held. A separate controlled synthetic probe
+delayed the final terminal result by one second: 0.8 seconds produced unknown and
+failed completion; two seconds preserved the test's exact rejection, continuation
+and completed-route assertions. This demonstrates budget sensitivity, not the
+historical CI cause or native efficacy. Its first diagnostic invocation used the
+host interpreter without project dependencies; the project-local rerun executed it.
+
+The bounded repair gives functional runtime tests the same two-second exchange
+budget already used by controller tests and adds correlated request IDs, kinds and
+deadlines to timeout diagnostics. Explicit deadline tests and production code,
+budgets and unknown-outcome handling remain unchanged. This test-only maintenance
+is separate from the preserved original mainline trees. Fresh exact-candidate and
+merged-main checks are required; earlier passes do not replace the failed run.
+
 ## Failures, boundaries and maintenance
 
 The first author-field-only audit missed co-author trailers. Raw Git-object
