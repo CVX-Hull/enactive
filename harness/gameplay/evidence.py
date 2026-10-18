@@ -91,7 +91,9 @@ def _metadata(observation: dict[str, Any]) -> dict[str, Any]:
 
 
 def _scene_authority(observation: dict[str, Any]) -> dict[str, Any]:
-    return {key: observation[key] for key in ("scene", "boundary", "category", "actions", "in_game", "paused")}
+    # Host Pause changes transport permission, not game facts or scene revision.
+    # _metadata still forbids rewriting paused (or anything else) on one frame.
+    return {key: observation[key] for key in ("scene", "boundary", "category", "actions", "in_game")}
 
 
 def _validate_observation(value: dict[str, Any] | str | bytes) -> dict[str, Any]:

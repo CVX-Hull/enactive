@@ -42,8 +42,8 @@ Active and deprecated controls fail after their due date. Event triggers can req
 | Control | Lifecycle | Last exercise | Maintenance review | Effectiveness | Next review |
 | --- | --- | --- | --- | --- | --- |
 | C-PORTABLE | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
-| C-RUNTIME | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
-| C-NATIVE | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
+| C-RUNTIME | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
+| C-NATIVE | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-USABILITY | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
 | C-BOUNDARY | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-REVIEW | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
@@ -64,21 +64,21 @@ Owner: maintainer. Trigger: each integration checkpoint and configured CI event.
 Enforcement: Common command and opt-in local hook; main also requires the observed GitHub Actions controller check (app 15368) with strict freshness under active ruleset 25319489. Local hooks remain bypassable; dated hosted/probe evidence is in public-workflow acceptance.
 Failure response: Preserve failure output, fix the cause and rerun before claiming portable acceptance.
 
-Evidence / implementation: [tools/check.py](../tools/check.py), [tests/test_controller.py](../tests/test_controller.py), [tests/test_server.py](../tests/test_server.py), [tests/test_setup.py](../tests/test_setup.py), [tests/test_viewer.cjs](../tests/test_viewer.cjs), [.github/workflows/check.yml](../.github/workflows/check.yml), [.githooks/pre-commit](../.githooks/pre-commit), [pyproject.toml](../pyproject.toml), [requirements-dev.lock](../requirements-dev.lock), [tests/test_devtools.py](../tests/test_devtools.py), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [tests/test_gameplay_contracts.py](../tests/test_gameplay_contracts.py), [tests/test_gameplay_evidence.py](../tests/test_gameplay_evidence.py), [tests/test_cli.py](../tests/test_cli.py), [tests/test_gameplay_memory.py](../tests/test_gameplay_memory.py), [tests/test_evaluation.py](../tests/test_evaluation.py), [tools/evaluate.py](../tools/evaluate.py), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md).
+Evidence / implementation: [tools/check.py](../tools/check.py), [tests/test_controller.py](../tests/test_controller.py), [tests/test_server.py](../tests/test_server.py), [tests/test_setup.py](../tests/test_setup.py), [tests/test_viewer.cjs](../tests/test_viewer.cjs), [.github/workflows/check.yml](../.github/workflows/check.yml), [.githooks/pre-commit](../.githooks/pre-commit), [pyproject.toml](../pyproject.toml), [requirements-dev.lock](../requirements-dev.lock), [tests/test_devtools.py](../tests/test_devtools.py), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [tests/test_gameplay_contracts.py](../tests/test_gameplay_contracts.py), [tests/test_gameplay_evidence.py](../tests/test_gameplay_evidence.py), [tests/test_cli.py](../tests/test_cli.py), [tests/test_gameplay_memory.py](../tests/test_gameplay_memory.py), [tests/test_evaluation.py](../tests/test_evaluation.py), [tools/evaluate.py](../tools/evaluate.py), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [tests/test_gameplay_planner.py](../tests/test_gameplay_planner.py), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
 
 Coverage gap: Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
 Last exercise: 2026-10-17. Outcome: Passed within the reported scope; unsuccessful attempts and limits retained.
-Scope: 207 Python tests plus viewer/common checks; HTTP/CLI recovery and passive evaluation fixtures.
-Exercise evidence: [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md).
+Scope: 231 Python tests plus viewer/common checks; injected planner lifecycle/accounting and Pause evidence regressions. No native or model-performance claim.
+Exercise evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Late Observe fence, repeated-run grouping and useful-dispatch flaws repaired after independent review. Governance representation update retained fail-closed checks.
+Findings: Independent planner review exposed oversized-metric, contradictory-usage and lifetime-anchor defects; repaired regressions and rereview passed. Independent pixel inspection corrected a mistaken visual defect claim before production renderer changes. Hosted CI exposed a claimed-timeout fixture scheduling race; controlled post-claim clocks preserve no-replay assertions. A separate final-gate fixture missed transient-file polling on CI; an explicit after-claim/release handshake preserves revocation/no-delivery assertions. Focused checks pass; exact-head CI remains required.
 Cost: Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.
-Follow-up: Review on contract/failure/release changes or due date. #8 broad native recovery/timing, #24 model experiments and #42–44 monitoring implementation/evaluation remain separate.
-Review evidence: [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md).
+Follow-up: Revisit on relevant contract/failure/release changes or due date. #47 tutorial content, #9 native runner, #33 predicate evidence and #24 model evaluation remain separate.
+Review evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
 
 Next review: 2027-01-15.
 
@@ -90,21 +90,21 @@ Owner: controller and viewer maintainer. Trigger: every relevant request, observ
 Enforcement: Implemented at runtime; regression execution is C-PORTABLE. Source references alone establish no behavioral pass.
 Failure response: Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.
 
-Evidence / implementation: [harness/controller.py](../harness/controller.py), [harness/server.py](../harness/server.py), [web/app.js](../web/app.js), [tests/test_controller.py](../tests/test_controller.py), [tests/test_server.py](../tests/test_server.py), [tests/test_viewer.cjs](../tests/test_viewer.cjs), [docs/protocol.md](../docs/protocol.md), [native/cdda_harness.cpp](../native/cdda_harness.cpp), [harness/gameplay/evidence.py](../harness/gameplay/evidence.py), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md).
+Evidence / implementation: [harness/controller.py](../harness/controller.py), [harness/server.py](../harness/server.py), [web/app.js](../web/app.js), [tests/test_controller.py](../tests/test_controller.py), [tests/test_server.py](../tests/test_server.py), [tests/test_viewer.cjs](../tests/test_viewer.cjs), [docs/protocol.md](../docs/protocol.md), [native/cdda_harness.cpp](../native/cdda_harness.cpp), [harness/gameplay/evidence.py](../harness/gameplay/evidence.py), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
 
 Coverage gap: Tests exercise fake-bridge and browser fixtures. Native takeover and engine input behavior need C-NATIVE. Pause cannot cancel an already-running activity; no structured damage/trap or combat guarantee.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
 Last exercise: 2026-10-17. Outcome: Passed within the reported scope; unsuccessful attempts and limits retained.
-Scope: Public operator recovery, exact decoded authority and separately retained unknown histories.
-Exercise evidence: [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md).
+Scope: Production WAIT YES/NO, ordinary-input rejection during activity, lost gameplay/control results and no-replay reconciliation; separately instrumented native final-gate ordering.
+Exercise evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
 
-Maintenance review: 2026-10-17. Effectiveness: partially_effective.
-Findings: Real public recovery worked after explicit Pause/Observe. Immediate unpaused requests can reject due to native capture revision; #8 owns the timing repair.
+Maintenance review: 2026-10-17. Effectiveness: effective.
+Findings: Pause preserves scene authority; immediate recovery works. Actual unknown histories survive reconciliation. Final-gate ordering passed labeled timing probes; no universal stop bound.
 Cost: Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.
-Follow-up: Review on contract/failure/release changes or due date. #8 broad native recovery/timing, #24 model experiments and #42–44 monitoring implementation/evaluation remain separate.
-Review evidence: [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md).
+Follow-up: Revisit on relevant contract/failure/release changes or due date. #47 tutorial content, #9 native runner, #33 predicate evidence and #24 model evaluation remain separate.
+Review evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
 
 Next review: 2027-01-15.
 
@@ -116,21 +116,21 @@ Owner: integration maintainer; lead verifies evidence. Trigger: relevant native 
 Enforcement: Required by S-PROTOCOL/S-DELIVERY and release review; manual, outside the portable gate.
 Failure response: Retain failed/unknown probes, block the affected claim and repair or document the supported limit.
 
-Evidence / implementation: [docs/runbook.md#native-acceptance-lane](../docs/runbook.md#native-acceptance-lane), [docs/setup.md](../docs/setup.md), [docs/acceptance/2026-10-17-mvp.md](../docs/acceptance/2026-10-17-mvp.md), [docs/acceptance/2026-10-17-mvp-manifest.json](../docs/acceptance/2026-10-17-mvp-manifest.json), [docs/acceptance/2026-10-17-recovery-memory.md](../docs/acceptance/2026-10-17-recovery-memory.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md).
+Evidence / implementation: [docs/runbook.md#native-acceptance-lane](../docs/runbook.md#native-acceptance-lane), [docs/setup.md](../docs/setup.md), [docs/acceptance/2026-10-17-mvp.md](../docs/acceptance/2026-10-17-mvp.md), [docs/acceptance/2026-10-17-mvp-manifest.json](../docs/acceptance/2026-10-17-mvp-manifest.json), [docs/acceptance/2026-10-17-recovery-memory.md](../docs/acceptance/2026-10-17-recovery-memory.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
 
 Coverage gap: Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
 Last exercise: 2026-10-17. Outcome: Passed within the reported scope; unsuccessful attempts and limits retained.
-Scope: Windowed debug and WAIT recovery through public surfaces; one retained native evaluation measurement.
-Exercise evidence: [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md).
+Scope: Fresh pinned build; real WAIT behavior, finished-before-claim, save/reload, raw debug/capture/takeover, reply loss and controlled revocation races; restored production binary verified.
+Exercise evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
 
-Maintenance review: 2026-10-17. Effectiveness: partially_effective.
-Findings: Native sources and installed binary matched prior accepted receipt. Successful owned YES/NO and debug delivery coexist with retained load/time/race failures; no new full concurrency/timeout claim.
+Maintenance review: 2026-10-17. Effectiveness: effective.
+Findings: Native recovery acceptance passed within pinned hook/scenario scope. Independent pixel review withdrew a false renderer diagnosis. Tutorial load content remains #47; instrumentation and failed driver attempts are retained separately.
 Cost: Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.
-Follow-up: Review on contract/failure/release changes or due date. #8 broad native recovery/timing, #24 model experiments and #42–44 monitoring implementation/evaluation remain separate.
-Review evidence: [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md).
+Follow-up: Revisit on relevant contract/failure/release changes or due date. #47 tutorial content, #9 native runner, #33 predicate evidence and #24 model evaluation remain separate.
+Review evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
 
 Next review: 2027-01-15.
 
@@ -142,21 +142,21 @@ Owner: lead with operator feedback. Trigger: user-facing behavior/guidance chang
 Enforcement: Required review under S-UX/S-DOCS/S-WORK; no automatic usability gate.
 Failure response: Correct misleading flows or guidance and retain consequential limits before milestone acceptance.
 
-Evidence / implementation: [docs/overview.md](../docs/overview.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/runbook.md](../docs/runbook.md), [web/app.js](../web/app.js), [docs/walkthrough.md](../docs/walkthrough.md), [docs/architecture.md](../docs/architecture.md), [docs/project-management.md](../docs/project-management.md), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md).
+Evidence / implementation: [docs/overview.md](../docs/overview.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/runbook.md](../docs/runbook.md), [web/app.js](../web/app.js), [docs/walkthrough.md](../docs/walkthrough.md), [docs/architecture.md](../docs/architecture.md), [docs/project-management.md](../docs/project-management.md), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
 
 Coverage gap: Human judgment; no automated usability score or user study is claimed. Document links alone do not demonstrate comprehension.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
 Last exercise: 2026-10-17. Outcome: Passed within the reported scope; unsuccessful attempts and limits retained.
-Scope: Real spectator confirmation and debug controls; 640/375 px static recovery layouts; monitor diagram.
-Exercise evidence: [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md).
+Scope: Actual graphical spectator Yes and explicit Observe reached normal play while paused; current overview/runbook and recovery diagram labels reconciled.
+Exercise evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
 
 Maintenance review: 2026-10-17. Effectiveness: partially_effective.
-Findings: Separate operator controls and uncertainty labels inspected. Narrow labels wrap; native game text remains small at phone width. Static fixtures are not runtime proof.
+Findings: Actual recovery UI preserves pause and unknown outcomes. Existing flow diagram now names public interfaces. No new mobile usability study or broad visual redesign.
 Cost: Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.
-Follow-up: Review on contract/failure/release changes or due date. #8 broad native recovery/timing, #24 model experiments and #42–44 monitoring implementation/evaluation remain separate.
-Review evidence: [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md).
+Follow-up: Revisit on relevant contract/failure/release changes or due date. #47 tutorial content, #9 native runner, #33 predicate evidence and #24 model evaluation remain separate.
+Review evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
 
 Next review: 2027-01-15.
 

@@ -1,0 +1,2141 @@
+{
+  "schema_version": 1,
+  "kind": "historical-native-acceptance",
+  "date": "2026-10-17",
+  "report": "docs/acceptance/2026-10-17-native-recovery-planner.md",
+  "source_commit": "63d92c4fb0f4cc88c884a830040e520307c59d74",
+  "identity_note": "Runtime and planner sources checkpoint; subsequent edits are CI test synchronization, documentation/diagram and evidence only. Production binary restored byte-for-byte after timing probes.",
+  "platform": "macOS arm64; project-local pinned CDDA 0.I-1 and environment",
+  "video": null,
+  "limitations": [
+    "Single host/scenario; no universal activity preemption/latency or general survival claim.",
+    "Fault-injected host loss/publication and instrumented native timing are separately labeled.",
+    "Tutorial data/load repair remains #47; error continuation is not repair.",
+    "Local media/logs are not public artifacts; hashes identify bytes, not semantic truth.",
+    "No live model provider or autonomous supervisor."
+  ],
+  "artifacts": {
+    ".runtime/evidence/round008/build_gate_probe.py": {
+      "bytes": 3099,
+      "sha256": "196cd2718e9436de3a2c1a5c7c76fcdfc8173d88c505908f30dcf3b5097fd8df",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/ci-race-focused-repair.txt": {
+      "bytes": 144,
+      "sha256": "1189cdd12692c3eaa38cc98c9b4fb319f512161986bc6c3267bb2fc43997240e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/ci-race-focused.txt": {
+      "bytes": 846,
+      "sha256": "2151382cdd423fb498b21c3242abf99242c4646331c7359957e87a3753a28b7c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/diagnostic/before-build-manifest.json": {
+      "bytes": 1035,
+      "sha256": "bece1c1ad9bd1f7b8718e94a45093ff3cee0c73d844c2f5b53b52107fa007f64",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/diagnostic/build-manifest.json": {
+      "bytes": 1034,
+      "sha256": "77ee4854cc2004031c2397ca085a40584bcaa0c819ec9fa020a2e9213be14074",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/diagnostic/pixel-build-manifest.json": {
+      "bytes": 1034,
+      "sha256": "62661169f57f8c2a0278ec4e49e0c023b176b23af379b2524dd39d9d328005db",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/diagnostic/pixel-byte-audit.json": {
+      "bytes": 1902,
+      "sha256": "6b4480752eeee569dc5eaffee06f78199bbfe28d8dadfb720f3090cc525880e2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/diagnostic/restored-build-manifest.json": {
+      "bytes": 1035,
+      "sha256": "3239609599f21fcea615439d065104d0e724b51905b06be3f6bbee27c18d0c82",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/diagnostic/restored-receipt.json": {
+      "bytes": 734,
+      "sha256": "24ed7f9f0c98ba3499602dc565a40695cf3df46655bccc9500cc90964249a73c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/events-cutoff.jsonl": {
+      "bytes": 112701,
+      "sha256": "b231bde34b17d9919a4c4393503d24a47f0b145297acdc174f4ff7e6029a0442",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/evidence-regression-after.txt": {
+      "bytes": 154,
+      "sha256": "19db99b8bc1404c666dd6ac52654f9d7931b73a56ffec4a532a2ef1654826e9d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/final-common.txt": {
+      "bytes": 37209,
+      "sha256": "c3b05b4588562528e80d818aed6d1ffdb1329710f2ca5c5148c18fcb823820cf",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/finish_race_server.py": {
+      "bytes": 1355,
+      "sha256": "82f3ad56f289144348e955cae5390bfe11c109a78cb840837fd89d98310de91f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/gate-probe/after_commit.json": {
+      "bytes": 7379,
+      "sha256": "555589e973ad1f0313eb176a4c1b1d8d3be557f788623bc659aaa7101d5a4afe",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/gate-probe/before_claim.json": {
+      "bytes": 3105,
+      "sha256": "f6a592e531fe44228f4743dfdaa540a1584376095bf961dc8ec2406e9a3c1579",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/gate-probe/before_commit.json": {
+      "bytes": 3131,
+      "sha256": "28b20d32a97365e922031318dc5d34db623ecf9831cb07747d3b9ea7f8bc1354",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/gate-probe/build-manifest.json": {
+      "bytes": 1149,
+      "sha256": "3a8fa18a15fbed8cc25919c5bbbb0326245ddf9b7331185bac39967fda86fbfc",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/gate-probe/production-build-manifest.json": {
+      "bytes": 1035,
+      "sha256": "3239609599f21fcea615439d065104d0e724b51905b06be3f6bbee27c18d0c82",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/gate-probe/restored-receipt.json": {
+      "bytes": 163,
+      "sha256": "7afe670a2430c722fbab7463e97f4d0b5808cb12735434fcaef823bcd289d470",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/integrated-common.txt": {
+      "bytes": 37209,
+      "sha256": "a0c1199720bcb22a727b4e2759201e5671005f1dace7dc5c047383f409e0c115",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/lost_gameplay_control.py": {
+      "bytes": 2454,
+      "sha256": "7ff799c4635ff0d4a6725270abffe2d19d0452178eab9e64f007304bf58e6401",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/01-main-menu-observe.json": {
+      "bytes": 949,
+      "sha256": "0fd95f971fa108dad8239294dae2c6779d43736cc0c4004186b7d679d334e4e1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/01-main-menu-observe.png": {
+      "bytes": 12112,
+      "sha256": "a85bb509e897702c3e0a315f21e88b5a52bfc83a90cfe6846283dcd05512a40e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/02-main-menu-resume.json": {
+      "bytes": 949,
+      "sha256": "d615d2b8f05a20fd0e428f1d3c0219b5a3bdbed2edf6a90502d5429f22c733f2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/02-main-menu-resume.png": {
+      "bytes": 12112,
+      "sha256": "a85bb509e897702c3e0a315f21e88b5a52bfc83a90cfe6846283dcd05512a40e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/03-select-h-world.json": {
+      "bytes": 1011,
+      "sha256": "dc541722374bbfc6037fdf88fdb2b7af33f3ffa3aafccd81f16775fb03c1c2e3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/03-select-h-world.png": {
+      "bytes": 12831,
+      "sha256": "6735677cfba4749fbe761d8556610d6f912ca2457a9155b5fc6269e22a006309",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/04-load-andres.json": {
+      "bytes": 405,
+      "sha256": "36224ed66209e88d8bb279ce7cbb24eecb4c05749c0a409ee254ac3b6ba7acba",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/05-loaded-world-observe.json": {
+      "bytes": 5448,
+      "sha256": "d0f8149749b2a74acc9c4f992af899d13e79d49cd40c2c7c97818592f5e2f226",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/05-loaded-world-observe.png": {
+      "bytes": 265482,
+      "sha256": "2d75cebab2dd052a45d604c133ed7864356ce271f27e81298f76ac930771b8e2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/06-resume-loaded-world.json": {
+      "bytes": 5448,
+      "sha256": "3c627893f6ed4e2330536379baf40b3316875142b48f78f0aebfb7593a2def0b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/06-resume-loaded-world.png": {
+      "bytes": 265483,
+      "sha256": "b944c0b834a3150c73955a9d56d903e69c9119e0767c5b6c1e141a57be898350",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/07-before-pause-evidence.json": {
+      "bytes": 5449,
+      "sha256": "0062084dba5fd32ab718864a0b640c784433419718a660838df8dab0705f56e6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/07-before-pause-evidence.png": {
+      "bytes": 265482,
+      "sha256": "3ee09b55263f1f815386f3d6556012e2ab41323d908dbd3eef57ffab13449cec",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/08-pause-normal-play.json": {
+      "bytes": 208,
+      "sha256": "bdb98df6f2a48ebc2a0fcbee0375b1b4b784671fe6075e379fec97782e83381b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/09-after-pause-evidence.json": {
+      "bytes": 5448,
+      "sha256": "c8442f3390f828903f155e6faade63aa0d6c434cfc2c12c13e29c34c7a4808d3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/09-after-pause-evidence.png": {
+      "bytes": 265482,
+      "sha256": "f7e24a28fd5b443981e49ce1447063b5e921ccd4ec81fd1fdff359221176bca5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/10-normal-pause-evidence-result.json": {
+      "bytes": 1552,
+      "sha256": "0080a2a968c45c7ee86a2374ce9f1b42cccb969b6aac8718c3989ba898f21db4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/11-resume-for-wait.json": {
+      "bytes": 5449,
+      "sha256": "d5b19b873042f91b2dfc44277d0d0f7225f6681cb90c5c5e84dca5bb17ed92a1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/11-resume-for-wait.png": {
+      "bytes": 265481,
+      "sha256": "6e60a0078db15ff7e4fd5609cd33e99d30cd57d9cc8860612b97dcedaa6e08c0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/12-open-wait-menu.json": {
+      "bytes": 1044,
+      "sha256": "9646ad65b0524c4eed46f90e730fba9fd6e70511f9fef09bc18a0523419eb3aa",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/12-open-wait-menu.png": {
+      "bytes": 251000,
+      "sha256": "725152d5d1c40bec39cdfc18b54408ba8699c482276dcbaf8cd4ac43ab9f5ce8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/13-wait-duration-menu.json": {
+      "bytes": 1016,
+      "sha256": "614217c945ede8b396267eab1566b0642f5aba6568a6c499515f0b5e25583ab8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/13-wait-duration-menu.png": {
+      "bytes": 215535,
+      "sha256": "7a39f40ea91d1fe080f7f5b19157f40515e806ebdaad72c127f40aac0d6e66f3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/14-unrelated-query-rejected.json": {
+      "bytes": 278,
+      "sha256": "e573a4643b05f790d552a701b5c978440dc304a58a07074e80dfd0424186f20c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/15-after-native-stop.json": {
+      "bytes": 5432,
+      "sha256": "8708092a148ff8eea14b2d4944f3b590ce5f50d636c2f70b846ff066899f564d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/15-after-native-stop.png": {
+      "bytes": 265480,
+      "sha256": "157d7787f89c289e74a89c318378ea9144d8278779eb5bb8c9371f1f20a37059",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/16-resume-wait-test.json": {
+      "bytes": 5432,
+      "sha256": "14de432b5989e531c2baf84785b297cdcfd2dad72dfd2818ac970362f40062f6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/16-resume-wait-test.png": {
+      "bytes": 265481,
+      "sha256": "41ad4657d8d1c0f9d0596b45de65869eb22c54a87a9afa97062f3efdf5263862",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/17-open-wait.json": {
+      "bytes": 140,
+      "sha256": "2ce24a2096fd5d942d639674d7b4b9e244b09ce4bd0fee3f47e7a95012672148",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/18-duration.json": {
+      "bytes": 1426,
+      "sha256": "9aa5fc70d6de59a89dd2e8cdb77603ae1743f424e75ce06e6862b3e6348a8f99",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/18-duration.png": {
+      "bytes": 91229,
+      "sha256": "9d3eb655cde72e3ce731c23e03f8819a9e4b7b9bd32796fc4f55dcdd1d627ab3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/19-wait-again.json": {
+      "bytes": 1426,
+      "sha256": "19c15c6c32151de5db5afca1cf3d2cb31b280c8d99bf1007aae0fb48ab512306",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/19-wait-again.png": {
+      "bytes": 91229,
+      "sha256": "9d3eb655cde72e3ce731c23e03f8819a9e4b7b9bd32796fc4f55dcdd1d627ab3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/20-close-wield.json": {
+      "bytes": 5525,
+      "sha256": "49e68adcf66610c9ecdbc17e4dc6abc7bb47c7b0e3c937dd76f4c8193b629a9f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/20-close-wield.png": {
+      "bytes": 265481,
+      "sha256": "3cb4249faf316f00eaf62efa2e546a8787aa11bee943465a10852f4f25130b14",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/21-open-wait.json": {
+      "bytes": 1027,
+      "sha256": "b1bafb0ecd439391921b9c51f98a298aa985fa96435ae4d483a4eefd3f8c15c1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/21-open-wait.png": {
+      "bytes": 250992,
+      "sha256": "196b08ae48b1ce65ecc293cc0f17e7fe34c157bd1133620c84ba3f4eee335c31",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/22-duration.json": {
+      "bytes": 1018,
+      "sha256": "7b318e8231963319c7f0a6dc51ef9a6a470dffe2698b665bbc62d9ec0b645d50",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/22-duration.png": {
+      "bytes": 215551,
+      "sha256": "83918a0a35df0438d9d53cb9a0fd49e01a49f32dc3c5e10520992072ed0cdbd0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/23-explicit-yes.json": {
+      "bytes": 1371,
+      "sha256": "b4fb65cc48a7e575c47df2bd08f31a8705fcb07e94906f50f4082b5e1e9a1829",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/24-after-yes.json": {
+      "bytes": 5249,
+      "sha256": "de526f44e9486326c99a91e303a3727a1f81e971d8ef2416241806ab4446f29a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/24-after-yes.png": {
+      "bytes": 264925,
+      "sha256": "944cf652271bd214507078e75ff928e2270d21b1721dc89ee252ec13162f420a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/25-resume-after-yes.json": {
+      "bytes": 5249,
+      "sha256": "fca671c728c38054a8a361e397e880a864ce756beae3b98f43314f47339e8c51",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/25-resume-after-yes.png": {
+      "bytes": 264925,
+      "sha256": "944cf652271bd214507078e75ff928e2270d21b1721dc89ee252ec13162f420a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/26-open-wait.json": {
+      "bytes": 1028,
+      "sha256": "e4ee4c4648051e22eb10f8d8f890be428d116770d677216998112e574aa9ff48",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/26-open-wait.png": {
+      "bytes": 250509,
+      "sha256": "ea0a6e69af7c9de721b0400a516ae4e89936cf715bceeb3741ab3e7231a76b58",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/27-duration.json": {
+      "bytes": 1019,
+      "sha256": "d583241c022df340dffadb6c6acd512a47ceed4d9e5a30fd0233bbb53e355bab",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/27-duration.png": {
+      "bytes": 215168,
+      "sha256": "9a4955542eeee92187f1a2f66e67724e135ff49fdcfe73852a71caa904e2f823",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/28-no-owned-prompt.json": {
+      "bytes": 1148,
+      "sha256": "ac2ea3b2ef63a0d61a3de09994b96014256963a05472e072dccd0ae3035837f3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/28-no-owned-prompt.png": {
+      "bytes": 251511,
+      "sha256": "19b95186d3930e64a7b5514ba072dfb6eb5bf00dedfd9f4addda0a580d221db1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/29-after-native-stop.json": {
+      "bytes": 5334,
+      "sha256": "f113959da56a47d536aafce33cddf758d6b60759d46b565e53e5a769da73671a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/29-after-native-stop.png": {
+      "bytes": 265677,
+      "sha256": "ec50a7df0674c47ab16f0cfe61336bb7fd59278b384aae832dfe48d8080da9b4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/30-resume-no-probe.json": {
+      "bytes": 5334,
+      "sha256": "a25b7256eaad2706c328672d33063bc2d54b7256763ddae55ce5ae16130d37e1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/30-resume-no-probe.png": {
+      "bytes": 265674,
+      "sha256": "c79c8ae0ba95456f29d96b7772b10a1bb2205640fe47ca722f773436164ee80b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/31-wait-menu.json": {
+      "bytes": 1028,
+      "sha256": "2275717fa3c0b4244788998f43e198bbc49cddbc6b731d2ba08255eae282e4b5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/31-wait-menu.png": {
+      "bytes": 251199,
+      "sha256": "de251a5e1751db72f16f7efdaffa45d8d9e30dd567ae638a7bd653edc5fde153",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/32-duration.json": {
+      "bytes": 1019,
+      "sha256": "319a05257b608c8f3fc73c3b883f13698b6844a5e8f93e7f779e17c226a071c3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/32-duration.png": {
+      "bytes": 215632,
+      "sha256": "c6f19d75f23db284192a72180cf3cbca8fe85018160468d5cc3276ff28cadca5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/33-normal-before-capture-loss.json": {
+      "bytes": 5334,
+      "sha256": "e00c6d27f51c38e6878fe6fc8491d201e1e9a77dcf424e0e457333cfbd2c0325",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/33-normal-before-capture-loss.png": {
+      "bytes": 266086,
+      "sha256": "a7b068bdd12264e230c49ff29d93069822f146ea9286afd8408f5eee5d485a19",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/34-capture-write-fault.json": {
+      "bytes": 5318,
+      "sha256": "4d70fbc49e2e7d80a7f867ac4341eb526c1b172a252ddf8095da99510b938c57",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/35-capture-fault-status.json": {
+      "bytes": 204108,
+      "sha256": "5a5d1d2e750fd7c060e7153c44e9ebbbae57f2fe70bc94a78925c52ca3a07bc2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/36-capture-restored.json": {
+      "bytes": 5334,
+      "sha256": "0adfb48ca5bcd7ecd40b8b408fbbbd874d39c8b9f4615524a864e74a0ec59bec",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/36-capture-restored.png": {
+      "bytes": 266085,
+      "sha256": "3c9b46f08ff22cfb8a11aff2599c892f066070c0ef8ed91446d2caea67ba27ec",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/37-missing-capture.json": {
+      "bytes": 5300,
+      "sha256": "29fcc2a77dc21da41d37768c952ac39882172a38e2a36f36d8a533a3987c8949",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/38-missing-capture-resume.json": {
+      "bytes": 194,
+      "sha256": "22f014e12a812ae05d1dd9eca91268b8e77bf80bd6185e39baa6059ee2e8d11d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/39-restored-capture.json": {
+      "bytes": 5334,
+      "sha256": "42a53522aa26543a744332d7d5cf69c0ab49e17ceb5b4fbeb0c1e937cd3bde04",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/39-restored-capture.png": {
+      "bytes": 266084,
+      "sha256": "d5c16858d832cbf6a659faaa50eb202ff0c46b9e517cc594384194882796837e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/40-resume-for-save.json": {
+      "bytes": 5334,
+      "sha256": "d80b8b4a52c2d7b066c084375c1884aeb8f5d5242455220b8d1aca140092f8f4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/40-resume-for-save.png": {
+      "bytes": 266084,
+      "sha256": "47e6fffd36f93ab6f3b5fd4b7db54770aeeefbe8f864d1e7d2ad59dd93213b77",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/41-save-quit-prompt.json": {
+      "bytes": 915,
+      "sha256": "6dac77890cd2db32a2080fa85b84117c56faa6662816b7e2306a983f8bab3f10",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/41-save-quit-prompt.png": {
+      "bytes": 260008,
+      "sha256": "3b3c63040a7abf294f15ef287d6d630e263be56c36eed66bfdb7f375477c1520",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/42-save-and-quit.json": {
+      "bytes": 385,
+      "sha256": "43951f2cf26f3eca6f75b1e27b3d0591d25511e9c79665487f84d078c81a4660",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/43-main-menu-reconcile.json": {
+      "bytes": 940,
+      "sha256": "a2e77daa307c770c29451c618b99d0deffbe9a4faca315803b11786d800af63c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/43-main-menu-reconcile.png": {
+      "bytes": 11889,
+      "sha256": "13e9572d592db751b7f5cb2f888bcc3bd5419f5e7132b15d01062973bda7c613",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/44-resume-menu.json": {
+      "bytes": 940,
+      "sha256": "8cd84792c921136c901c247d0b6fab99771cf897171aea5300b18f337d759123",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/44-resume-menu.png": {
+      "bytes": 11889,
+      "sha256": "13e9572d592db751b7f5cb2f888bcc3bd5419f5e7132b15d01062973bda7c613",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/45-select-tutorial.json": {
+      "bytes": 1034,
+      "sha256": "e3b851c1db5db8dff362c5ce45117f20093c417882dfd0a11d3dde58ca21968c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/45-select-tutorial.png": {
+      "bytes": 11875,
+      "sha256": "5fc78a90588a53f767744d3707557bbcfdffbf8f6e169553736374772080a77f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/46-tutorial-character.json": {
+      "bytes": 1024,
+      "sha256": "fdcdfa70ecde88630912d5b8640677468668058f3c141edb5ca72ab1f2197e4a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/46-tutorial-character.png": {
+      "bytes": 12695,
+      "sha256": "f4687981bdc97dcc2940b5be09e51ace30b29e46ba03fcd6f613bc440a90156a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/47-load-tutorial.json": {
+      "bytes": 811,
+      "sha256": "915882cec181c7bfb7133c5ccdd71cb96aa40fd6d42a0c96fadb383cee86f782",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/47-load-tutorial.png": {
+      "bytes": 9862,
+      "sha256": "17b2eff96c31f3fe4dc3074cd1835295467740530c100fed9d6612fe9062c466",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/48-debug-ignore-rejected.json": {
+      "bytes": 285,
+      "sha256": "d5eac9543c416e86b86dbd61b746dffce40c9de1b6d354e28458cf097c6cce75",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/49-debug-copy-rejected.json": {
+      "bytes": 285,
+      "sha256": "647ef815c704c7d8d39525bba24ad3b24b7e9d915690f8eacc2e948eb4922d8e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/50-debug-motion-rejected.json": {
+      "bytes": 289,
+      "sha256": "0a64a50a9d50edb1c32e7247d6e321db4db403338b0cbea0d3a83637c81a52c8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/51-debug-wrong-instance.json": {
+      "bytes": 471,
+      "sha256": "5f758ab7dcc038cad26af3dbd518b176cb76e40b64c07559ebf238f240f209ca",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/52-debug-continue-once.json": {
+      "bytes": 1064,
+      "sha256": "a3a73c7622bb2122b383de50ed927e8b56e6cfbbedc2ce811818fc333f729832",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/53-next-debug.json": {
+      "bytes": 697,
+      "sha256": "c288887536118a4e28f327c3373a32ed5d6eb4bed2873fdda7aac8112a98f6a0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/53-next-debug.png": {
+      "bytes": 10283,
+      "sha256": "5cd2c804e8916f9ecc7b29948f4b36c2dc9a6a440e890d6aefc0dede7a1ab69f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/54-old-debug-rejected.json": {
+      "bytes": 419,
+      "sha256": "235ef25106d755842c26d7ac39587ce69261f8c2b6a78b5c4d441686d6eff6f7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/55-lost-ordinary-result.json": {
+      "bytes": 313,
+      "sha256": "03536d922bf21269f5bd1623c5a866af7cc5368703774974c21c0dc549259c20",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/56-ordinary-pending-status.json": {
+      "bytes": 13518,
+      "sha256": "199193c225abaa9f5a75e98aefc151592a8527d41376576b2525e108d602d6be",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/56-ordinary-pending-status.png": {
+      "bytes": 10283,
+      "sha256": "5cd2c804e8916f9ecc7b29948f4b36c2dc9a6a440e890d6aefc0dede7a1ab69f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/57-lost-control-result.json": {
+      "bytes": 458,
+      "sha256": "cdc8d7c5129d7a819a18c3c5b2211e22d5dc9c37957b9193b224f597e43af063",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/58-both-pending-status.json": {
+      "bytes": 14069,
+      "sha256": "5f28183ea4c1adabc1bd13aff97fe39bf93c49184ef5918e1896df19c3247fca",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/58-both-pending-status.png": {
+      "bytes": 10283,
+      "sha256": "5cd2c804e8916f9ecc7b29948f4b36c2dc9a6a440e890d6aefc0dede7a1ab69f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/59-reconcile-historical-pending.json": {
+      "bytes": 697,
+      "sha256": "cef38cd248a5cfd0eedf7b028c5252b51664734483b38a670caf28c3de9eb414",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/59-reconcile-historical-pending.png": {
+      "bytes": 10283,
+      "sha256": "5cd2c804e8916f9ecc7b29948f4b36c2dc9a6a440e890d6aefc0dede7a1ab69f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/60-lost-ordinary-second.json": {
+      "bytes": 313,
+      "sha256": "4b43876cde688b7367a3a680766b12c756929875bd792cba556dd6f87d4c503e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/61-lost-control-second.json": {
+      "bytes": 561,
+      "sha256": "669bf89b22add133cce7f32289c91ac11e2900b3919fa5d364ca828e19c071c2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/62-both-current-pending.json": {
+      "bytes": 18670,
+      "sha256": "ea406b504761dbaa2c0a322965feccb8dcb88cbe71225c2f5127850bbd14326d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/62-both-current-pending.png": {
+      "bytes": 9758,
+      "sha256": "5266094544325538d0d00b420206e52f5ea445bdc4912e866eca59f387599a6e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/63-after-controller-restart.json": {
+      "bytes": 15439,
+      "sha256": "17ba837b089535b4da9d5b929a1c82c2606677a88bbbdc72957520a674d4fec2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/63-after-controller-restart.png": {
+      "bytes": 9758,
+      "sha256": "5266094544325538d0d00b420206e52f5ea445bdc4912e866eca59f387599a6e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/64-restart-reconcile.json": {
+      "bytes": 697,
+      "sha256": "2e2446dbf4c6a61439365025727e2d403a22b7c9dc09e5cbc73fc7756d9cc237",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/64-restart-reconcile.png": {
+      "bytes": 9758,
+      "sha256": "5266094544325538d0d00b420206e52f5ea445bdc4912e866eca59f387599a6e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/65-reconciled-unknowns.json": {
+      "bytes": 17438,
+      "sha256": "4c6a30e53372bacf2b44453a015851843927d3a80e4523fd7e6c4aa5d74c927f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/65-reconciled-unknowns.png": {
+      "bytes": 9758,
+      "sha256": "5266094544325538d0d00b420206e52f5ea445bdc4912e866eca59f387599a6e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/66-before-native-takeover.json": {
+      "bytes": 260,
+      "sha256": "b600855b382ad0be77509a708034920e53b3cc251b2e1a2614f8a7ef28ea2bf6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/67-native-takeover-reject.json": {
+      "bytes": 418,
+      "sha256": "f6e82a85138b95dd367a70a81ae8e80481bb7abce143ce6bb771ced342cc5cb7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/68-after-native-takeover.json": {
+      "bytes": 716,
+      "sha256": "fc427cb568a77864b082ddf86e58bd33d0b6f8750f134eedf88cc354173182f4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/68-after-native-takeover.png": {
+      "bytes": 9758,
+      "sha256": "5266094544325538d0d00b420206e52f5ea445bdc4912e866eca59f387599a6e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/69-debug-capture-fault.json": {
+      "bytes": 664,
+      "sha256": "ff473ef307a99c8fff04208416bdbfd4c839df70fae51db0d05f34cc98de3191",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/70-debug-capture-rejection.json": {
+      "bytes": 395,
+      "sha256": "d7b35e630bd41dad41517250780a2e09c3b675d946bb05c036ddfae5cc765889",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/71-debug-capture-restored.json": {
+      "bytes": 698,
+      "sha256": "465bde0fadec35f33f82312c0922052a19440c8d9ab9a4f0b0f271d1293db96d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/71-debug-capture-restored.png": {
+      "bytes": 10166,
+      "sha256": "0b23614b967b550f485db988d8772176e3f9452ef6bc1d6273023295e8b7cf8c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/diag01-menu.json": {
+      "bytes": 930,
+      "sha256": "fa2441685046158f0f496c72072bacbeae8dba7a90bc6d985710a8a064384a18",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/diag01-menu.png": {
+      "bytes": 11974,
+      "sha256": "10536a74813307f063f4bc7145c695f26fa4a89dd5c501816f347cd8e45bdd2d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/diag02-resume.json": {
+      "bytes": 930,
+      "sha256": "ff0793baebbc66882bd290804a805c82a735e2e23b55988d04362b2314ab4f80",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/diag02-resume.png": {
+      "bytes": 11974,
+      "sha256": "10536a74813307f063f4bc7145c695f26fa4a89dd5c501816f347cd8e45bdd2d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/diag03-character.json": {
+      "bytes": 1011,
+      "sha256": "e8ae06b489e106ee59f5293274260a8e31b4baa8da5862dcc7f6801d2a3e8d70",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/diag03-character.png": {
+      "bytes": 12795,
+      "sha256": "5e642a4a87eec4d07aa03a684702c0e58c173c5d9d81a4c14c763f0f3d0097d8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/diag04-load.json": {
+      "bytes": 798,
+      "sha256": "875fd5263c43563f01c77793ec3c1f2b49b3e77bf1cc60718a3d6c8e2f04aadc",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/diag04-load.png": {
+      "bytes": 9862,
+      "sha256": "17b2eff96c31f3fe4dc3074cd1835295467740530c100fed9d6612fe9062c466",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/diag05-after-escape.json": {
+      "bytes": 687,
+      "sha256": "680e501f91ea0f99397bf96d0db9ce699eae9ba5ae8a46f542318aebbd3e1b74",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/diag05-after-escape.png": {
+      "bytes": 9862,
+      "sha256": "17b2eff96c31f3fe4dc3074cd1835295467740530c100fed9d6612fe9062c466",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/diag06-continue-first.json": {
+      "bytes": 1047,
+      "sha256": "fb993a771542f4a45abf339991b5ca4d46a689bc5378dd9211b3c15ead9612ce",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/diag07-second-error.json": {
+      "bytes": 688,
+      "sha256": "fa51b3c8e9403735bb12569a70342d239462c381ec14c0f1744d009f019bb1b6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/diag07-second-error.png": {
+      "bytes": 10283,
+      "sha256": "5cd2c804e8916f9ecc7b29948f4b36c2dc9a6a440e890d6aefc0dede7a1ab69f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/fault_actual_wait_key_dispatched.json": {
+      "bytes": 1285,
+      "sha256": "328662c765d642b7c5057edf0d773c6beab510073602037a163ba63e4b990589",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/fault_actual_wait_yes_answer_delivered.json": {
+      "bytes": 1671,
+      "sha256": "7485886f205c4446e4ac912e6180245a75d2cc9a51f2c5dd577fd898ebc98132",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/fault_control_loss_second_dismissal_delivered.json": {
+      "bytes": 1364,
+      "sha256": "06890c246aea1f217ab7c7da2c327f75f4e8c93e82df4a5a56124291b3f3ca7f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/fault_ordinary_loss_ready.json": {
+      "bytes": 899,
+      "sha256": "54a7533f157a4ca3ecd4566a0befb2f594369b5ddc0908734c1e00c1f24069aa",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/fault_ordinary_loss_second_ready.json": {
+      "bytes": 900,
+      "sha256": "6c99d72a84896db09bf3c3ef940e3556c7d11b90291c3ba8c6853f59db3a6775",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final-viewer-normal-paused.png": {
+      "bytes": 223610,
+      "sha256": "d53e0c9191266af95b26008d4beadb75526c0966a52f7a283ea40c8c4e1f92bb",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final01-finished-race.json": {
+      "bytes": 5184,
+      "sha256": "25a3120613e952569e78594ac5ad057cb3996befaa12caa09ea118daa2105b5e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final01-finished-race.png": {
+      "bytes": 110210,
+      "sha256": "23f1163a0d9c2c6013948b18aa4da12a0371a385d79f2b6256ef2ee80569ae59",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final02-resume.json": {
+      "bytes": 5184,
+      "sha256": "80e2b67652d598210324ced0ba8293259c6eadf917683592481a9452163ff7dc",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final02-resume.png": {
+      "bytes": 110210,
+      "sha256": "23f1163a0d9c2c6013948b18aa4da12a0371a385d79f2b6256ef2ee80569ae59",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final03-wait.json": {
+      "bytes": 1026,
+      "sha256": "9c83488b166bacb3426fb6be963280321591a8a3bd0a843066ed8dd62f4a2904",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final03-wait.png": {
+      "bytes": 104625,
+      "sha256": "2e2b7389812d0d5797bb1cff994bc98523ffff77560424a2920824a5df344a42",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final04-duration.json": {
+      "bytes": 1017,
+      "sha256": "c171caa984c99f649975aeee737d949ecbad667659ce2867d2b0488a8479fb33",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final04-duration.png": {
+      "bytes": 100297,
+      "sha256": "28b16755024be00afd940a2083c8a25236e4d8ed1c619618c7190abd44cc6319",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final05-before-activity.json": {
+      "bytes": 927,
+      "sha256": "d862de2972ddfe71f76e5bc9d0947fa13b2200336eac2ee3c3423f6d8541c78d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final05-before-activity.png": {
+      "bytes": 100297,
+      "sha256": "28b16755024be00afd940a2083c8a25236e4d8ed1c619618c7190abd44cc6319",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final06-start-wait.json": {
+      "bytes": 3691,
+      "sha256": "44478636c76f474626dac0f53aa2ed6bf2c62ee950a581c5fa0d00e98ca4bd86",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final06-start-wait.png": {
+      "bytes": 109704,
+      "sha256": "6382eb337f97cb71c340e6fc8798e2a2ccf310e118c7e92fe195bc489c77809b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final07-reject-key.json": {
+      "bytes": 285,
+      "sha256": "70fbf6debf1bc2f43724d2249cf671720b89969d277c7836950295674a037b97",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final07-reject-resume.json": {
+      "bytes": 194,
+      "sha256": "22f014e12a812ae05d1dd9eca91268b8e77bf80bd6185e39baa6059ee2e8d11d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final08-interrupt.json": {
+      "bytes": 1164,
+      "sha256": "affadd71298a28bb82b3ebbdd1e185e146084a3e137d373113d4153bf6747199",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final08-interrupt.png": {
+      "bytes": 105991,
+      "sha256": "e568b7c25bbc51035e21d11f09f5c4c2170eef88ecd80f4cb0ca994ca7b8371e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final09-ui-answer-reconciled.json": {
+      "bytes": 85939,
+      "sha256": "1ecc95e7aee54805eb37446e8b42ff84f2155337a72c188ada87a24de00976e8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final09-ui-answer-reconciled.png": {
+      "bytes": 110016,
+      "sha256": "93cf9d7d95bf11f3b3cc068ed04c381a5f64559a1347e896fd1027b6caa31363",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final10-backlog-resume.json": {
+      "bytes": 5186,
+      "sha256": "9e1651e32448b10662151a27703ae598b68b638efb8576057d1ca7d64da399ba",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final10-backlog-resume.png": {
+      "bytes": 110016,
+      "sha256": "93cf9d7d95bf11f3b3cc068ed04c381a5f64559a1347e896fd1027b6caa31363",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final11-before-one-turn.json": {
+      "bytes": 5187,
+      "sha256": "2082799e8a8023a19a496bd6fd35771c500f9409581f0e60e4297ef6e9a49700",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final11-before-one-turn.png": {
+      "bytes": 110016,
+      "sha256": "93cf9d7d95bf11f3b3cc068ed04c381a5f64559a1347e896fd1027b6caa31363",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final12-one-turn.json": {
+      "bytes": 5277,
+      "sha256": "dc031be3c4cb3c0de59dd58e06577c50aa11a1cf943a3227ab8a5272746f47eb",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final12-one-turn.png": {
+      "bytes": 110035,
+      "sha256": "8065083d193a0d4baf902a93fa7dda584263c0ffba9b1bfb40d9f0d78b47ee6c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final13-pause.json": {
+      "bytes": 208,
+      "sha256": "bdb98df6f2a48ebc2a0fcbee0375b1b4b784671fe6075e379fec97782e83381b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final14-pause-observe.json": {
+      "bytes": 5186,
+      "sha256": "6ea41ff9e955d535c41bd751b38ed616092c6054bc14290887cd6b96b9fe58de",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final14-pause-observe.png": {
+      "bytes": 110035,
+      "sha256": "8065083d193a0d4baf902a93fa7dda584263c0ffba9b1bfb40d9f0d78b47ee6c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final15-save-resume.json": {
+      "bytes": 5186,
+      "sha256": "5da8d459db21d47f9c9cdb2300c48bcaa672c140985bb211fa8d8a9c93beadee",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final15-save-resume.png": {
+      "bytes": 110035,
+      "sha256": "8065083d193a0d4baf902a93fa7dda584263c0ffba9b1bfb40d9f0d78b47ee6c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final16-save.json": {
+      "bytes": 914,
+      "sha256": "f798e9a71f295a3886a0434554916c1afc967945adce9d35922140d34ced3d0b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final16-save.png": {
+      "bytes": 106901,
+      "sha256": "e222ad360c14ebe58c986ac83fa9650212b06a9b640ac844a810e922b9456152",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final17-same-process-reload.json": {
+      "bytes": 5187,
+      "sha256": "94a5fff54044fae88d6ca8ef51896cd32265c29246b1f0114b7b011c402dab43",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final17-same-process-reload.png": {
+      "bytes": 110016,
+      "sha256": "22c95469bf394658097080fb4490654b91ae6d00b0f4c097da911f1039ef523e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final18-resume.json": {
+      "bytes": 5187,
+      "sha256": "1ec13343fb13bb8a8123b6b9592a6b0662ad535f101dd3158e5ec74de3ed9dc9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final18-resume.png": {
+      "bytes": 110016,
+      "sha256": "22c95469bf394658097080fb4490654b91ae6d00b0f4c097da911f1039ef523e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final19-old-session.json": {
+      "bytes": 279,
+      "sha256": "d988e929a9ccb6350aa9e3113e96c60785a7819d0cda2d086b6f59bb87f17209",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final20-save-again.json": {
+      "bytes": 915,
+      "sha256": "f15f03cb1b788d00b8b8bfd14459bfd7641e82d82ffd7d2bb4938fcaada44b7a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final20-save-again.png": {
+      "bytes": 106880,
+      "sha256": "0b4c1a41d0dbc81c25a85f1996f053be1b77ed2a8b169eaea56f5cd3e9b78276",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final21-tutorial-selection.json": {
+      "bytes": 929,
+      "sha256": "e7c254a44264914f7921962c1450ac7a691d143bc845fd5031bc94a460be4fb7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final21-tutorial-selection.png": {
+      "bytes": 13259,
+      "sha256": "36b367431de0b5ba33060848b85e4301025dbc681e87988023370f1e975c146d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final22-tutorial-resume.json": {
+      "bytes": 929,
+      "sha256": "0d2597eb5bcd132c5dce082727a829c98707a2f8b59cd0f9a612a0f3b1d39bbb",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final22-tutorial-resume.png": {
+      "bytes": 13259,
+      "sha256": "36b367431de0b5ba33060848b85e4301025dbc681e87988023370f1e975c146d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final23-tutorial-load.json": {
+      "bytes": 811,
+      "sha256": "1925b0d07836a2dd13ce807d36c2fa833806fc4d39c1b292d742830abf1ae96d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final23-tutorial-load.png": {
+      "bytes": 9862,
+      "sha256": "17b2eff96c31f3fe4dc3074cd1835295467740530c100fed9d6612fe9062c466",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final24-debug.json": {
+      "bytes": 698,
+      "sha256": "ed4333a7b3b0454d27742c09d0f993379973f49b2cb8d61f56970db05b0c032c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final24-debug.png": {
+      "bytes": 9862,
+      "sha256": "17b2eff96c31f3fe4dc3074cd1835295467740530c100fed9d6612fe9062c466",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final25-reject-C.json": {
+      "bytes": 285,
+      "sha256": "77a9c04b783718c74bbc8aaa2e05503efc663f7f192f0e6809f17df269891d92",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final25-reject-I.json": {
+      "bytes": 285,
+      "sha256": "009e1413b685e8c39b0bd6b41369a4ab5d905c440ae019a35e19b4eb491e16b7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final25-reject-RIGHT.json": {
+      "bytes": 289,
+      "sha256": "ecc55943ebc596f02e59062cb4026f8f90ff0ecbb3ab329d32e7bf4c7b774e01",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final26-debug-fresh.json": {
+      "bytes": 698,
+      "sha256": "1b14041fa4e98b8a8d343c2ce1bd796cbfc557d84702e38f93743c92fdf29277",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final26-debug-fresh.png": {
+      "bytes": 9862,
+      "sha256": "17b2eff96c31f3fe4dc3074cd1835295467740530c100fed9d6612fe9062c466",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final27-debug-continue.json": {
+      "bytes": 1064,
+      "sha256": "b78a3276b459072f8bc4b9093df2f3fab4d7938dccd1c2fb994d0756d66d8b84",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final28-next-debug.json": {
+      "bytes": 697,
+      "sha256": "9bbbe1f1db10f0c769c95cbedc50ee86c30024d7516e4c8e584f8248e0fc94f7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final28-next-debug.png": {
+      "bytes": 10283,
+      "sha256": "5cd2c804e8916f9ecc7b29948f4b36c2dc9a6a440e890d6aefc0dede7a1ab69f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final29-old-debug-rejected.json": {
+      "bytes": 419,
+      "sha256": "d4c223e6ba51cb017dde04b5022e51f67fcd81e4c679da720c1eeb22814d5ef1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final30-capture-failed.json": {
+      "bytes": 663,
+      "sha256": "df67b9443c04be7909790ebba7abaf004394b3c4defc113f1cb108ce0a4e7a06",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final30-fault-setup-first.json": {
+      "bytes": 483,
+      "sha256": "ddbdfc7f72026534ceac32e40e31f48274c7d3d73cfe17745b0e9fd0f02c5db0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final31-capture-reject.json": {
+      "bytes": 383,
+      "sha256": "f14c30ef45e4f197fe3eb4c187c0e0e8494f834c591a13f2c59dac7a0b8524e8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final32-capture-restored.json": {
+      "bytes": 697,
+      "sha256": "d37b170c4dcaf84814e1dfbc489760623fc843e103e36fff8f5f4c1b0d1be80e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final32-capture-restored.png": {
+      "bytes": 10283,
+      "sha256": "5cd2c804e8916f9ecc7b29948f4b36c2dc9a6a440e890d6aefc0dede7a1ab69f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final33-capture-failed.json": {
+      "bytes": 663,
+      "sha256": "f8e8ecbac47e3540396576ccdc623f6f65313cbe9f265c5b9665cda2277d3e04",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final34-last-good-frame-rejected.json": {
+      "bytes": 418,
+      "sha256": "a646cd2ad6b762a8a0d272083eb33abad4b2fd492ce1ea8d7bf0c95e277b63a5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final35-capture-restored.json": {
+      "bytes": 697,
+      "sha256": "6632c4434ba95ecd4ea770b2e6a2138e300ecc0a5d7983e3c3942b0559d350af",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final35-capture-restored.png": {
+      "bytes": 10283,
+      "sha256": "5cd2c804e8916f9ecc7b29948f4b36c2dc9a6a440e890d6aefc0dede7a1ab69f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final36-takeover-rejected.json": {
+      "bytes": 419,
+      "sha256": "2ce7693014c636702b51b315d96f32841b5834de753418e65ca105708659d525",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final37-after-takeover.json": {
+      "bytes": 697,
+      "sha256": "ed4b14165a730a619df146a32816fa18d1981116a7a9c8c3d4d5af73f3d4aa47",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final37-after-takeover.png": {
+      "bytes": 10283,
+      "sha256": "5cd2c804e8916f9ecc7b29948f4b36c2dc9a6a440e890d6aefc0dede7a1ab69f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final38-native-fallback.json": {
+      "bytes": 697,
+      "sha256": "944570a4dabd044f7331af2ee667388320a3c357bb920994e4b9c507ad03e984",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/final38-native-fallback.png": {
+      "bytes": 9758,
+      "sha256": "5266094544325538d0d00b420206e52f5ea445bdc4912e866eca59f387599a6e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finish-race-delay.json": {
+      "bytes": 9098,
+      "sha256": "44ed6a8a286aac7e7a6460faf473edb486dcd6a909f331c38a0a0f4d8a817773",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finish01-loaded.json": {
+      "bytes": 5183,
+      "sha256": "53f3c0d2fe892ed148b3b8207d26e33ecd4c67fecb5eca5b9c9a7f3d6f905d9b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finish01-loaded.png": {
+      "bytes": 110067,
+      "sha256": "40c0908a72ba2e8d9c8357036fc5d8e6fb31d5b14433ffa7f49857ea824caa6a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finish02-resume.json": {
+      "bytes": 5183,
+      "sha256": "95db7e78ac65d4541f9924d9b928d516bfa71d7fc6df43b457619fd76394a7f6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finish02-resume.png": {
+      "bytes": 110067,
+      "sha256": "40c0908a72ba2e8d9c8357036fc5d8e6fb31d5b14433ffa7f49857ea824caa6a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finish03-wait.json": {
+      "bytes": 1024,
+      "sha256": "f8016fb46f9d29da5e064d5ed444766f9035810d9b71688889a3c622460a22d3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finish03-wait.png": {
+      "bytes": 104521,
+      "sha256": "27f5d962dbc7243027715c1a808adcd9afddb8b507e2b244313ca6907beda588",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finish04-duration.json": {
+      "bytes": 1016,
+      "sha256": "8c38900175cf5a87f29879287d42f5a98d4db27c6c2176f93696745742d26bbd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finish04-duration.png": {
+      "bytes": 100187,
+      "sha256": "bdcd3f3a02eb89633b3e2131b0aa622e7d680f3378cacf0a26b154c6390347e9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finish05-before-race.json": {
+      "bytes": 926,
+      "sha256": "38c925d664afc80e29a9e7b94c4e75306a94b5ba5e8bc62a379a4fb20abd2cea",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finish05-before-race.png": {
+      "bytes": 100187,
+      "sha256": "bdcd3f3a02eb89633b3e2131b0aa622e7d680f3378cacf0a26b154c6390347e9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finished_before_claim/before.json": {
+      "bytes": 45046,
+      "sha256": "018bf10e2466041842ac710df42dbef58a657f06d2d82d9f65ce1b82f6a92888",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finished_before_claim/before_interrupt.json": {
+      "bytes": 56290,
+      "sha256": "77b56239013d58fb8ef947771211654fc673aacf02a19a2e9aa5bf79822732b9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finished_before_claim/result.json": {
+      "bytes": 10653,
+      "sha256": "a18cb0bb0a79ba60cde6ed6f56b511ecc110e5b53a9928502182db544d2beec3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finished_before_claim_interrupt.json": {
+      "bytes": 5870,
+      "sha256": "de25e3193335856b07af4eb3dfab1d0f7cc7c83be7a5babe6350499d038020ad",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finished_before_claim_interrupt.png": {
+      "bytes": 110210,
+      "sha256": "23f1163a0d9c2c6013948b18aa4da12a0371a385d79f2b6256ef2ee80569ae59",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finished_before_claim_ordinary.json": {
+      "bytes": 3709,
+      "sha256": "631d864347cacd7c80647faa5be2fc369cac2a45c9a5da7abd5c6134637ed5ca",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/finished_before_claim_ordinary.png": {
+      "bytes": 109629,
+      "sha256": "250731a0e7a1110a985f62a45f562c76ed46cc835d54548c4a9972dc7a812b02",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate01-loaded.json": {
+      "bytes": 5180,
+      "sha256": "e2d8c0254d08f941583369868ae340b58deff42db6f4454fb17d2301c7201cb8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate01-loaded.png": {
+      "bytes": 110089,
+      "sha256": "a5cbeb63a26fc6203a15374d7b6a64d37d6c19b5198ebb952d41535c2b18623f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate02-resume.json": {
+      "bytes": 5180,
+      "sha256": "6b2ecd7167c8452d75d25057be1b776e7faa868d52d9f1f1daa44a556a63e7e4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate02-resume.png": {
+      "bytes": 110089,
+      "sha256": "a5cbeb63a26fc6203a15374d7b6a64d37d6c19b5198ebb952d41535c2b18623f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate03-wait.json": {
+      "bytes": 1020,
+      "sha256": "a6fa19c970ff3a7eaa32d43fd41ce5a836b36f87a2df06882f03450dba6b964c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate03-wait.png": {
+      "bytes": 104554,
+      "sha256": "05fed8317c549c5ebd0bdfe482038cff725b0ef504a323c996a41ed6b4152386",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate04-duration.json": {
+      "bytes": 1012,
+      "sha256": "6d9f5b88639ed92fa8be30d1917fd60f79bc84830ecef1be3dd6cade822639f0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate04-duration.png": {
+      "bytes": 100230,
+      "sha256": "bdc83bbf7b59804fe09262e5c7ef5bd94089b526d04cc602ae845c39c43a0dc9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate05-before-interrupt.json": {
+      "bytes": 923,
+      "sha256": "89f0add405f5d00fa29ffbbcf94bc75ad49521af458c592fc9ced11146478acd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate05-before-interrupt.png": {
+      "bytes": 100230,
+      "sha256": "bdc83bbf7b59804fe09262e5c7ef5bd94089b526d04cc602ae845c39c43a0dc9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate06-after-cases.json": {
+      "bytes": 5183,
+      "sha256": "c7414bf0e261e2cd35788836f28713d80d90fd774cb156dda23388776a5b4f0a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate06-after-cases.png": {
+      "bytes": 110062,
+      "sha256": "ccf51e9c74f8c4d30879f901d5e5456dbd6154d2fb6ea337e8d59d3e44e0a57c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate07-resume.json": {
+      "bytes": 5183,
+      "sha256": "bceb63bb0dc7e5c3d9233eec9ba7f7a7a7503edafaaedafa1550127164adc08b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate07-resume.png": {
+      "bytes": 110062,
+      "sha256": "ccf51e9c74f8c4d30879f901d5e5456dbd6154d2fb6ea337e8d59d3e44e0a57c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate08-save.json": {
+      "bytes": 910,
+      "sha256": "7620df3be3c17dc44b63fe4879c987410e5cdbd60d0bb92b05bba64421de3c30",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate08-save.png": {
+      "bytes": 106956,
+      "sha256": "d644120b68bfa9813ba21e3099bfb6ac9bb014854932eaf0ce56dc0da07852c9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_after_commit_after.json": {
+      "bytes": 5182,
+      "sha256": "413e8dae2f6c592f1353021d88fd7ad6cd4a3615a301703537a661d40614a443",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_after_commit_after.png": {
+      "bytes": 110062,
+      "sha256": "ccf51e9c74f8c4d30879f901d5e5456dbd6154d2fb6ea337e8d59d3e44e0a57c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_after_commit_answer.json": {
+      "bytes": 1363,
+      "sha256": "09e09a6460a7dfacfbca6ce3ef5cabf5c9884e84d5c877cf0a5cd0e652af138e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_after_commit_observe.json": {
+      "bytes": 896,
+      "sha256": "79866928d83889aca0543ad16710125598e7d19f1e5ae24cf1b8c37b296eabfd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_after_commit_observe.png": {
+      "bytes": 106041,
+      "sha256": "46568b8b787c23cbf941540649a8cc6cdc7e2c4d2f0342c715fc2f38cd73633a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_after_commit_pause.json": {
+      "bytes": 208,
+      "sha256": "bdb98df6f2a48ebc2a0fcbee0375b1b4b784671fe6075e379fec97782e83381b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_before_claim_after.json": {
+      "bytes": 896,
+      "sha256": "7644b42d955961be1a4080a384600d7cdd314ccf6edcdf84d1683ee5647b2bb0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_before_claim_after.png": {
+      "bytes": 106041,
+      "sha256": "46568b8b787c23cbf941540649a8cc6cdc7e2c4d2f0342c715fc2f38cd73633a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_before_claim_answer.json": {
+      "bytes": 1422,
+      "sha256": "3860257d91504f9af16c7717eee788092c38e45af176bccf0e346544e9730cbf",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_before_claim_answer.png": {
+      "bytes": 106041,
+      "sha256": "46568b8b787c23cbf941540649a8cc6cdc7e2c4d2f0342c715fc2f38cd73633a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_before_claim_observe.json": {
+      "bytes": 896,
+      "sha256": "5e310b845702dc4139ed29cda8af32772fc298abe9260b70ddf61809cae21bf9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_before_claim_observe.png": {
+      "bytes": 106041,
+      "sha256": "46568b8b787c23cbf941540649a8cc6cdc7e2c4d2f0342c715fc2f38cd73633a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_before_claim_pause.json": {
+      "bytes": 208,
+      "sha256": "bdb98df6f2a48ebc2a0fcbee0375b1b4b784671fe6075e379fec97782e83381b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_before_commit_after.json": {
+      "bytes": 896,
+      "sha256": "e0e08a01081005d8ff7eec2c76c4e8dd6dd6a530e8771bd7ffccfa340e06e5ca",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_before_commit_after.png": {
+      "bytes": 106041,
+      "sha256": "46568b8b787c23cbf941540649a8cc6cdc7e2c4d2f0342c715fc2f38cd73633a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_before_commit_answer.json": {
+      "bytes": 1422,
+      "sha256": "2ba9f080a51fce0d1e8291a5d1d75f435cad278f1596e5807fb98c82c1bdd37c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_before_commit_answer.png": {
+      "bytes": 106041,
+      "sha256": "46568b8b787c23cbf941540649a8cc6cdc7e2c4d2f0342c715fc2f38cd73633a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_before_commit_observe.json": {
+      "bytes": 896,
+      "sha256": "185e08c1dedc8306cf1a0d348ef9a3b5aea037978b52c7491622ff93cd3ca385",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_before_commit_observe.png": {
+      "bytes": 106041,
+      "sha256": "46568b8b787c23cbf941540649a8cc6cdc7e2c4d2f0342c715fc2f38cd73633a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_before_commit_pause.json": {
+      "bytes": 208,
+      "sha256": "bdb98df6f2a48ebc2a0fcbee0375b1b4b784671fe6075e379fec97782e83381b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_owned_prompt/before.json": {
+      "bytes": 51626,
+      "sha256": "a273ba68d9f48f776006ed7e93fed5d6d43bd46a4bfea433cf844ca6050f1861",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_owned_prompt/before_interrupt.json": {
+      "bytes": 55841,
+      "sha256": "54a92983a6faed11ed1fca99e7214ff61b1a699ac098e7561c020ebf8662379c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_owned_prompt/result.json": {
+      "bytes": 5522,
+      "sha256": "409977b4a1ed24eaadada9cddf8fb370d283a701d704f6ef2a5be9257d4a3a26",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_owned_prompt_interrupt.json": {
+      "bytes": 1160,
+      "sha256": "636980ede85c563f8c35727c7934378498b4c60fed770f222a82c7137626e1c1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_owned_prompt_interrupt.png": {
+      "bytes": 106041,
+      "sha256": "46568b8b787c23cbf941540649a8cc6cdc7e2c4d2f0342c715fc2f38cd73633a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_owned_prompt_ordinary.json": {
+      "bytes": 3705,
+      "sha256": "59026b0473109cd6c930b7e5604cbed27a657546406cba61a8a17d7632bbc04e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/gate_owned_prompt_ordinary.png": {
+      "bytes": 109621,
+      "sha256": "a701192fb22312e4ab1ba8860c412ee1b8fc314daa0cf6e9997e3b25a1e8bac9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_no/before.json": {
+      "bytes": 171754,
+      "sha256": "3abdf6dab19516cf18aa088b42f76f083b72212f2f569ac65ea2e21c7191e60b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_no/before_interrupt.json": {
+      "bytes": 175101,
+      "sha256": "62ea6037c8e6e81e9a46096014b83e65db2222be281475d01d2648578f88c8f3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_no/result.json": {
+      "bytes": 5513,
+      "sha256": "83a886167e9b1cf1eddcd41ba504f21b02540e890760c986d69a7739a30fce7b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_no_interrupt.json": {
+      "bytes": 1148,
+      "sha256": "3f4afd18b534be3ebe54b4e8f9db7b72ec2b177114eabd8cb8ebdf50aa248b09",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_no_interrupt.png": {
+      "bytes": 251149,
+      "sha256": "85fd0ed4a1baaae8adfa1606cd57e5f7eeefd6372ee7fd1dc36100b5175166ed",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_no_ordinary.json": {
+      "bytes": 3712,
+      "sha256": "29385cc76fbbc23e2a649ffd6cf860a3f331f75e9c5eb97c857f8d146907dba8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_no_ordinary.png": {
+      "bytes": 264424,
+      "sha256": "d80abe7c316c7f5defd13b11b903e95ff61397b3138e0268395bf16cd042da6e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_no_second/before.json": {
+      "bytes": 193123,
+      "sha256": "28e9982f695be68c33fd4ce7c39a1c25d6ccb1e980836a79ffde87c44ecfe0e3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_no_second/before_interrupt.json": {
+      "bytes": 190740,
+      "sha256": "847f2500cd4337006e686ec39e2e4930ead8dc546dabeaaafff0778bfec848a7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_no_second/result.json": {
+      "bytes": 5513,
+      "sha256": "c57db25a6242b2f3814bb7996e0dbd07d48aa10884bc81b24b13a0e3edcb0849",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_no_second_interrupt.json": {
+      "bytes": 1148,
+      "sha256": "1d60ba8a02038a22847413a5f7152582953eff30db8a2a5c1f5b839e21d13a99",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_no_second_interrupt.png": {
+      "bytes": 252461,
+      "sha256": "9623a99317036b968800e8f43341cfeadd637bc1b206a9ea972adeca35d775ea",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_no_second_ordinary.json": {
+      "bytes": 3712,
+      "sha256": "8e66ca3af3a7df2506424a1d53abf96842f0bc5bafdecb12f6bd82dd9f54c721",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_no_second_ordinary.png": {
+      "bytes": 265589,
+      "sha256": "463984295f1ca3f7786fe4f3594b16c03b8803b5542ef160325eff672dd85605",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_yes/before.json": {
+      "bytes": 78467,
+      "sha256": "2793218c9054941fd038e65431340446a46a4b69a420723f166c12950cd74b52",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_yes/result.json": {
+      "bytes": 1118,
+      "sha256": "f2f8deeed35aac864bdf33c1a68f9445568447703cf0609ff3ddadfbf3747337",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_yes_ordinary.json": {
+      "bytes": 988,
+      "sha256": "84b9ea0560bbfce96cfd0f1d99566ca3737a9749ce003006c3e75a6e3e6465d7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_yes_ordinary.png": {
+      "bytes": 251626,
+      "sha256": "fd2f2cb9bd5b4ced92a6e786063ce2876e527cba90857ab1c4c1f36b9aa5d360",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_yes_second/before.json": {
+      "bytes": 133697,
+      "sha256": "4110aa7ca4c95ffd8b828fa1c04ba0f50fec890339bc35569e544ba988201552",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_yes_second/before_interrupt.json": {
+      "bytes": 137953,
+      "sha256": "21c99b077dd6cf02a93311d2c2cdf5be5c23b874e5b50deb0403c9b2290084fd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_yes_second/result.json": {
+      "bytes": 5532,
+      "sha256": "ffa17312aa677cd831f5ef30a556595c2c320d4d4052b02103679ef125f157c9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_yes_second_interrupt.json": {
+      "bytes": 1166,
+      "sha256": "150af6e6c068b41364acd0423df85e3241103906c4f3f19fcc63fc34f84e7e18",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_yes_second_interrupt.png": {
+      "bytes": 257447,
+      "sha256": "6ec13934aa04d430f58caf0dacdde2b706fd01261e2c4edfc0f1211909a820d9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_yes_second_ordinary.json": {
+      "bytes": 3711,
+      "sha256": "9c79abd66f7cd6215f1158b9bbc4c1bd8bad3a6945b3ef431ec4ff04fc9001d8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/immediate_yes_second_ordinary.png": {
+      "bytes": 264980,
+      "sha256": "fddc71ba16a83ed6247f553d8f8ea766cebb5767d980636a046318b1bb753885",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss01-menu.json": {
+      "bytes": 928,
+      "sha256": "b14ae99486759c14893aba3080bb07b74286c07da683cd30a92b303b46121f46",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss01-menu.png": {
+      "bytes": 99982,
+      "sha256": "47f56bd8f3e1c374203bfa1e02483d8398dcf6bff3396bddaf2a5f079d034f7a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss02-resume.json": {
+      "bytes": 928,
+      "sha256": "c0e06d658b123a220f6f9581ddfe234508528cc42845e5e9ec2699fde7a3fe9a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss02-resume.png": {
+      "bytes": 99982,
+      "sha256": "47f56bd8f3e1c374203bfa1e02483d8398dcf6bff3396bddaf2a5f079d034f7a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss03-wait-key.json": {
+      "bytes": 403,
+      "sha256": "93e65659e905e6fd4294bbd58ae4d4f7371631cee369451b44897e9de0219f68",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss04-interrupt.json": {
+      "bytes": 1167,
+      "sha256": "3f5ef341034e122c53ba7b21d07aa2490b44b321ed8321d23c4de5a7c02ead3d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss04-interrupt.png": {
+      "bytes": 106081,
+      "sha256": "2583e76593f5e62e2565779fbba1eb98aebe3a9814c732c676d3088b79922f01",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss05-answer-yes.json": {
+      "bytes": 629,
+      "sha256": "9ca1a1372cb7e03ea738e144bbfa27503e0a89fa53e3db3222c49331df779299",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss06-both-pending.json": {
+      "bytes": 31194,
+      "sha256": "7eab7ad4c800d861dae8fcc95686db572e3e3a4072230a72b954da7629ca40d4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss06-both-pending.png": {
+      "bytes": 110087,
+      "sha256": "2eea4a8139b123aa4b80969a450e378de1227ae4b076ff7798dd35e6eea41c0d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss07-normal-restart.json": {
+      "bytes": 22216,
+      "sha256": "4f2f76fa37cd427820d2f2fb6b2eae2f94d18937406de059631e4a460ad66f59",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss07-normal-restart.png": {
+      "bytes": 110087,
+      "sha256": "2eea4a8139b123aa4b80969a450e378de1227ae4b076ff7798dd35e6eea41c0d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss08-reconcile.json": {
+      "bytes": 5187,
+      "sha256": "fef66790ed6c3f72c12a8d0e15d4ab48a5a9bb855afee877a36daf2552c26e7a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss08-reconcile.png": {
+      "bytes": 110087,
+      "sha256": "2eea4a8139b123aa4b80969a450e378de1227ae4b076ff7798dd35e6eea41c0d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss09-unknowns-retained.json": {
+      "bytes": 34955,
+      "sha256": "838010dd849b2456c28a21972a87a31c532ff44f91c7abfdb1a4b612f1a48153",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/loss09-unknowns-retained.png": {
+      "bytes": 110087,
+      "sha256": "2eea4a8139b123aa4b80969a450e378de1227ae4b076ff7798dd35e6eea41c0d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/lost_gameplay_control/result.json": {
+      "bytes": 1357,
+      "sha256": "068616bc2a6f04afc349df6c8201a2e7123df304f4e263f39f4ff4dcb87c14fa",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/normal-pause-evidence/evidence.json": {
+      "bytes": 8022,
+      "sha256": "5aae084c4c71efe92599d656b9219513e1edd7d17de5a2f2fb82bcbcf49db9ba",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/normal-pause-evidence/frames/6fd9218b8cad63228076511d33860d0edaeb335634bf86d46d1e2dce8f3ead4e.png": {
+      "bytes": 265482,
+      "sha256": "3ee09b55263f1f815386f3d6556012e2ab41323d908dbd3eef57ffab13449cec",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/normal-pause-evidence/frames/9ed2110df27e50c88ad20549841dfae1245e2b7e07604db63b463a3a5d8d1951.png": {
+      "bytes": 265482,
+      "sha256": "f7e24a28fd5b443981e49ce1447063b5e921ccd4ec81fd1fdff359221176bca5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/pixels01-before-continue.json": {
+      "bytes": 689,
+      "sha256": "3f24cb35e46fb224de74f4930866eb97a80a599651a972b5b02b947dee4b5917",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/pixels01-before-continue.png": {
+      "bytes": 10283,
+      "sha256": "5cd2c804e8916f9ecc7b29948f4b36c2dc9a6a440e890d6aefc0dede7a1ab69f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/pixels02-continue.json": {
+      "bytes": 1051,
+      "sha256": "fcbc99a65d04151c9a31ae991e0508e203e6872860c9075762bd59846c5cd6b8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored01-day-loaded.json": {
+      "bytes": 5354,
+      "sha256": "5e418679db1a4c2005aeb95fe49bef8d03c777ae60d57ab8adda160548a3e55f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored01-day-loaded.png": {
+      "bytes": 126409,
+      "sha256": "bdab874a3a20fe86ab576fc0b8d3f4ea4e06a875dba4f4176eca735f0481f1b1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored02-resume.json": {
+      "bytes": 5355,
+      "sha256": "992294c0e2fbc544d97e27ce93a6304e2fa8de93b7f34d78e0d1eba5cfa4de20",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored02-resume.png": {
+      "bytes": 126412,
+      "sha256": "914e933dbea24dd24de12872a2222becbf68fd8a3a551633a3bbd58816bec1cd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored03-wait.json": {
+      "bytes": 1021,
+      "sha256": "3e23df7a11547b42453233b3d38cbd07ebb325c50b82c5df349b8f53e8714ef4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored03-wait.png": {
+      "bytes": 119644,
+      "sha256": "f01d1b62561195c7bf921cf31ea96e6715a22dc38332b50158eb2906b06fd2d5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored04-wait-menu.json": {
+      "bytes": 1012,
+      "sha256": "3545d32d77d72bc9afa75dc6dbf356d903d677411b8ed5157e907b55980fee51",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored04-wait-menu.png": {
+      "bytes": 104951,
+      "sha256": "88d1e911d1fd0dcadc40ed01e247292868ab5838e561282a79f8f3d836f36ad3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored05-before-no.json": {
+      "bytes": 923,
+      "sha256": "678a1324148f26ab9c9ac1e4121f4575dd04bae4647087944745b33c74341e3f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored05-before-no.png": {
+      "bytes": 104951,
+      "sha256": "88d1e911d1fd0dcadc40ed01e247292868ab5838e561282a79f8f3d836f36ad3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored06-stop.json": {
+      "bytes": 5436,
+      "sha256": "0c16b68fc35844d54c46b6d58aeec65ceaac8dd31085021b54bcb1bcd3b4ce9d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored06-stop.png": {
+      "bytes": 127411,
+      "sha256": "56ddebdbda0dc214076dc9759770380199eeb30ca709c75681fb73263e2a36ad",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored07-resume.json": {
+      "bytes": 5436,
+      "sha256": "ea057ceb3cf41191f63b0eadb55ec4368f1c3ccad60bec91b7060cdf4c70b9f2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored07-resume.png": {
+      "bytes": 127413,
+      "sha256": "0e6c74d93b867fac1ef13f1e54ef15b1309e97d042cf188040544f4cafcc87f0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored08-south.json": {
+      "bytes": 304,
+      "sha256": "e83ac20d8a9884dd86cefbfbf7504905e7eff5881f8fc0d995c65a399d9d1c63",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored09-shelter-floor.json": {
+      "bytes": 5360,
+      "sha256": "b2ac7a663eb2ad538eaabe1c03ab018682504c4d651e0517691fe263e4255b9b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored09-shelter-floor.png": {
+      "bytes": 126495,
+      "sha256": "c6b57655d6ee325ad802ad8261e3a74308a0d9219255b117b819bf0e5284571b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored10-sheltered-start.json": {
+      "bytes": 5187,
+      "sha256": "7848ed527d4c97a244c2ec5918305679e3ec3f9dc8701f14a87987bd02b7db01",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored10-sheltered-start.png": {
+      "bytes": 111239,
+      "sha256": "3005f59cbdb5f6e5168a4812fd260ac06f736614475623c23356d16d70b17ce3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored11-resume.json": {
+      "bytes": 5187,
+      "sha256": "5f804e030b65e813445c6d56b5f159f2b8203f96327b720689ed91642796696d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored11-resume.png": {
+      "bytes": 111239,
+      "sha256": "3005f59cbdb5f6e5168a4812fd260ac06f736614475623c23356d16d70b17ce3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored12-wait.json": {
+      "bytes": 1028,
+      "sha256": "4a9a7e57144b47f0f84f43f425a2ed08a99404763a33a8e0284686c1c6b414f9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored12-wait.png": {
+      "bytes": 105775,
+      "sha256": "c8361c2712c68182549e5dfff36be4aa31dabfeb868e797f2661f8f559b00198",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored13-duration.json": {
+      "bytes": 1019,
+      "sha256": "70f86b959d641cd67b48cb48bdc6ea7050ec517d5b7836063b9929f1dcd48014",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored13-duration.png": {
+      "bytes": 101133,
+      "sha256": "d298b0481646470fa1a20faceafd98882eb9e60695fad6b3bdcadc92847ca8aa",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored14-before-no.json": {
+      "bytes": 929,
+      "sha256": "fd52e5f767e28c24f5d162213ec43c8b4a65431b522cadf3ffeecbaaa085f153",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored14-before-no.png": {
+      "bytes": 101133,
+      "sha256": "d298b0481646470fa1a20faceafd98882eb9e60695fad6b3bdcadc92847ca8aa",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored15-owned-no-observe.json": {
+      "bytes": 901,
+      "sha256": "b34f9a9a39946d21a56fa60ffadabd76d9f87a91dbd5da282e44043b98e69a95",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored15-owned-no-observe.png": {
+      "bytes": 106877,
+      "sha256": "17ab59acc4b9b1ad1f912737373f87b367cd776e3847678392c4e7ceae45b3e7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored16-answer-no.json": {
+      "bytes": 1371,
+      "sha256": "fa29bb120fb6dc464624d8943d11b99606151113c7f832dffc52e4eb81d5ab72",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored17-after-no.json": {
+      "bytes": 3602,
+      "sha256": "2db314ec4a81fc5b1a868648602bc3403a6494e2538ec197221a30296f12bfe9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored17-after-no.png": {
+      "bytes": 109419,
+      "sha256": "2e50e4289a1dc29c03b360033b922e06c9677d4c29b8e441210ccb66d4d265ec",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored18-no-finished.json": {
+      "bytes": 5187,
+      "sha256": "269369d8c860f5db7c21f5c9e9499a8bc6b00663b405f5ee791c46f5506df213",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored18-no-finished.png": {
+      "bytes": 110189,
+      "sha256": "7a105fe544b1b2234a228ddd1e4de8cf7186aade0ca7009c157072af4d9e6ec2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored19-resume.json": {
+      "bytes": 5187,
+      "sha256": "588da7ead18ee75d4ec1b9e822e85c7bbf28ea2ec9989e830d77c1415d06f8a7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored19-resume.png": {
+      "bytes": 110189,
+      "sha256": "7a105fe544b1b2234a228ddd1e4de8cf7186aade0ca7009c157072af4d9e6ec2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored20-wait.json": {
+      "bytes": 1028,
+      "sha256": "8579dae3a35825dafdedf0b2b71be86367470172ac6f3d3f929702a163ab3cd0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored20-wait.png": {
+      "bytes": 104607,
+      "sha256": "79750f5e99f3da070d9dbb2879e83c8e9417d9d18feb619a7ba1a467b286fbe3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored21-duration.json": {
+      "bytes": 1019,
+      "sha256": "c5eff5d9ac0eef0a56f77567182dddc9a6a62f91bf4533ed254dd41db225e6cb",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored21-duration.png": {
+      "bytes": 99982,
+      "sha256": "47f56bd8f3e1c374203bfa1e02483d8398dcf6bff3396bddaf2a5f079d034f7a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored22-before-save.json": {
+      "bytes": 5187,
+      "sha256": "94788bd61ccc4d43173e19e03b22d7c8daff6bfb6608eebf39eba6feeaf007e5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored22-before-save.png": {
+      "bytes": 110087,
+      "sha256": "2eea4a8139b123aa4b80969a450e378de1227ae4b076ff7798dd35e6eea41c0d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored23-resume.json": {
+      "bytes": 5187,
+      "sha256": "7ba0e5e3eb8fd7a8959cd65d24828fd6ae06cf7b9958a4237aa63e9e766c2255",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored23-resume.png": {
+      "bytes": 110087,
+      "sha256": "2eea4a8139b123aa4b80969a450e378de1227ae4b076ff7798dd35e6eea41c0d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored24-old-session-rejected.json": {
+      "bytes": 279,
+      "sha256": "8f589bba0d7edb7780fe3f70e2e06e8c3c37c367a8e5251b5a05ab379af2ebbd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored25-save.json": {
+      "bytes": 915,
+      "sha256": "ae6144b126c846d2d03666085b7f3ea7ee491b6499cdb5fa733b6369d29de675",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored25-save.png": {
+      "bytes": 106969,
+      "sha256": "862e1763c9b02d3ae7280c64420bae96b2c9fff893c62051638b0769b66f1aca",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored_owned_no/before.json": {
+      "bytes": 44664,
+      "sha256": "e9d67c5bf30e4c3aedcf4c4ab275973cf4b8c479c32148ecfe6957e4d5999ad0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored_owned_no/result.json": {
+      "bytes": 1116,
+      "sha256": "b55bf6672f2e84ecb21a971685c43010ae99a51706e33399bc0a5dc7e2c72e52",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored_owned_no_ordinary.json": {
+      "bytes": 985,
+      "sha256": "8ddc454b15a38e4bf7a6abd3a3400fd26583f80696218086b6e70bc2de7cd63b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/restored_owned_no_ordinary.png": {
+      "bytes": 121480,
+      "sha256": "b1adce49eab939190ffc4e916617bebea6cc78e96ba38a626b05806b2d146a57",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/sheltered_owned_no/before.json": {
+      "bytes": 112907,
+      "sha256": "c8fd80e02996e787d740c866c107b9f8641182a44549d25ec1dcbc6a0c1c110a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/sheltered_owned_no/before_interrupt.json": {
+      "bytes": 117129,
+      "sha256": "b8694bf1d770a11044762e53e2c60d349a378861772cf674361f6cb8aeee326e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/sheltered_owned_no/result.json": {
+      "bytes": 5532,
+      "sha256": "1b972c3e0f8c9fc6b6a08f4da65a5067b56d481f9cca98e6d022cf2d29ca789e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/sheltered_owned_no_interrupt.json": {
+      "bytes": 1167,
+      "sha256": "db92228a94206ef2db4a68d50d599a77ea5ba75eed451409d56f9c981bc6de3a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/sheltered_owned_no_interrupt.png": {
+      "bytes": 106877,
+      "sha256": "17ab59acc4b9b1ad1f912737373f87b367cd776e3847678392c4e7ceae45b3e7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/sheltered_owned_no_ordinary.json": {
+      "bytes": 3712,
+      "sha256": "0f4e0c00a03e871ad83efa3f18b8a7e439b9513545eb337e41b8eaa354280b41",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/sheltered_owned_no_ordinary.png": {
+      "bytes": 110750,
+      "sha256": "a651651feed5f1f27bacb3e04549bcfcc5cd52c1ce00788e15a324d8375b6de2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/boundary-prior-response.json": {
+      "bytes": 568,
+      "sha256": "4f1dc76d37eebff5360ea3340c710cf3750a1183dd1d41214f213086742ebd97",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/boundary.json": {
+      "bytes": 1362,
+      "sha256": "54d74c8d4be760c52fda51b3c38da584e32942642e21f194a915f816ab7f35fa",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/duplicate-prior-response.json": {
+      "bytes": 580,
+      "sha256": "0a61b702a303d2e34202f14f22af32b1806906766b8795889b55a5b875877dfc",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/duplicate.json": {
+      "bytes": 1371,
+      "sha256": "917a2e6481623f2431feb1202e3c241ad107e302ce4482f76b37fd7eb989ebb1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/expired-prior-response.json": {
+      "bytes": 509,
+      "sha256": "8ae8e431a8ec104f586521df4e181a6661f1ecd536914fd898faed471c7fe7c7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/expired.json": {
+      "bytes": 1370,
+      "sha256": "c4863d183bec7c48ac91d2b19349f172c06e3bb9ab9721ec1721ea3da8029090",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/frame-prior-response.json": {
+      "bytes": 563,
+      "sha256": "732ed1c944666b8391c8cbf0b3dad626871080e439879f89fee01893548b6136",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/frame.json": {
+      "bytes": 1329,
+      "sha256": "189ae9221dd7c1fe7d1d7d67d6985ff1bf45edd36bf9b646d173a19068fc77e7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/generation-prior-response.json": {
+      "bytes": 568,
+      "sha256": "9c03601839b1b4b894fb6be4ddc687dd5ecd83eb494d72e4daf80741258f177c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/generation.json": {
+      "bytes": 1360,
+      "sha256": "046bc41a22e8a455f43a4566a620d8f0234829939d754cdf4c1189828d6d1269",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/old_boot-prior-response.json": {
+      "bytes": 563,
+      "sha256": "e72367346f70dabf8aa6d0f73ffaa03d335fc75fa024fa9928f6a4de89db7dd3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/old_boot.json": {
+      "bytes": 1339,
+      "sha256": "a005517b020c1119b51f8521d402eef31ec25954e3e43a965530a8edaf4bb0e2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/revision-prior-response.json": {
+      "bytes": 563,
+      "sha256": "ead92c7b28ef1fce7c9efa6add0f4c973e5a26e983e0b1ac05d6c9fa2eef2b9b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/revision.json": {
+      "bytes": 1354,
+      "sha256": "2ef848b85fb2c79106d9445d5d1021fac42fb857b5464ae8ca4de846a671a879",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/revoked_counter-prior-response.json": {
+      "bytes": 568,
+      "sha256": "4971e14c3ce41270226414ad4041d2e9cd2edf5a65b324f6e49c138cec12795c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/revoked_counter.json": {
+      "bytes": 1361,
+      "sha256": "0d002bbf6e0d5628cc524e19837fec457c032478aa40dc944b9c30786d764747",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/session-prior-response.json": {
+      "bytes": 581,
+      "sha256": "8cb30578343e4837fd2d4ed2f0dffd7c177798050487c35b652648cdb381ec45",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native/wire-negatives/session.json": {
+      "bytes": 1367,
+      "sha256": "49fc3f8155a5eafeec6b7d7252d20d0301141aa5b699633a77ab133d43d5db54",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native-build-receipt.json": {
+      "bytes": 1860,
+      "sha256": "0b412ef06e9707177e51e75decc7c09cf90e2ec592e89655507f4ff0cfb8dff2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native-source-candidate.json": {
+      "bytes": 750,
+      "sha256": "c07b2487c90777804e48a9b1025d9b4245fe168ca46f3dfda763ea8cf0285736",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native_gate_cases.py": {
+      "bytes": 2341,
+      "sha256": "03bb71a8125263d8c5794ee29af50515f79c259121b0aeecbb11b8e5a9949644",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/pause-regression-before.txt": {
+      "bytes": 1379,
+      "sha256": "914778aa21a2d855a588219cb0898dec185b3132360886c84e8662686cca0c2a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/planner-integrated.txt": {
+      "bytes": 121,
+      "sha256": "a76d00aa79fef97652fb0caf3fb9c9ecd5b3d49e114fc4ec4aa8fdb226bf1284",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/probe_immediate_interrupt.py": {
+      "bytes": 2088,
+      "sha256": "e5dfb083e651b9ec0d3c203aa8d230d70cff34e8c8a7fb248b4ed4db89d6bcc2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/public_probe.py": {
+      "bytes": 1423,
+      "sha256": "c13fe6c7d77365328dfe63f3cadde1bf8482172b2537b6d3bf0319b29c1ae928",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/sticky_fault_server.py": {
+      "bytes": 2562,
+      "sha256": "58b738933f32614a9b64c541a8f4b625be3e5a2b937a34ef08028c8b95818eb9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/tutorial-diagnosis.json": {
+      "bytes": 1433,
+      "sha256": "8f2edd015a38a46661a4048c833dfa9a7f06a2907e9ebe6870a3d0fda3872066",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/native-recovery.png": {
+      "bytes": 110152,
+      "sha256": "3feb9a3244e6bd13909f394558e00ed67a53bf516c42b08523ed5847f863d04f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/final-hosted-failure.txt": {
+      "bytes": 60445,
+      "sha256": "401d0e726a612801c9301d6d134a33885f1b416b22c7659984ac440db0e1b8e5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round008/final-gate-fixture-focused.txt": {
+      "bytes": 144,
+      "sha256": "2e5591aee9f7091fc46722d7b46984ed2b713789b7d28b0eda2df7cc8659c322",
+      "availability": "local-only; not included in Git"
+    }
+  },
+  "installed_binary_sha256": "e3c022b5da440d2e4a31fc537ea07c988c2a767bf96197b83de4c7224d47bf87",
+  "upstream_pin": "native/upstream.json",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "freetype_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+  "initial_build_binary_sha256": "a25ab8acbb4a21083ab856b3b294252f95c8b29796eee2cbe541386c7440abc6",
+  "verified_at": "2026-10-17",
+  "verification_scope": "Independent review verified all 420 original artifact sizes/hashes, production restoration, and bounded native claims. Lead inspected the public recovery UI and rendered recovery diagram. The report separates production, host fault, instrumented timing and withdrawn diagnostic evidence. Final hosted CI/publication is recorded separately."
+}

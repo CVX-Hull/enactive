@@ -1,4 +1,4 @@
-"""Passive gameplay records and retained player-visible evidence.
+"""Gameplay records, retained evidence and bounded injected planning.
 
-No planner, controller lease, input dispatch, or model provider is implemented here.
+No controller lease, input dispatch, concrete model provider or supervisor lives here.
 """

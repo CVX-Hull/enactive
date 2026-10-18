@@ -12,6 +12,8 @@ import tempfile
 import threading
 import time
 import unittest
+from unittest.mock import patch
+from types import SimpleNamespace
 
 from harness.controller import Controller, ControlError, atomic_json, read_json, validate_state, validate_control_request, validate_control_response
 
@@ -651,31 +653,32 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
     def test_pause_after_claim_rejects_key_action_and_resume_at_final_gate(self):
         for kind in ("key", "action", "resume"):
             with self.subTest(kind=kind):
-                claimed = threading.Event()
+                armed = threading.Event()
+                entered = threading.Event()
                 release = threading.Event()
+                admitted = []
                 def gate(fake, request):
-                    if request["kind"] == kind and claimed.is_set():
-                        release.wait(1)
+                    if request["kind"] == kind and armed.is_set():
+                        admitted.append(request["authority"].copy())
+                        entered.set()
+                        if not release.wait(5):
+                            raise AssertionError("final-gate fixture was not released")
                 with FakeBridge(self.controller, before_gate=gate) as fake:
                     self.ready()
-                    claimed.set()
+                    armed.set()
                     payload = {"key": "x"} if kind == "key" else {"action": "UP"} if kind == "action" else {}
                     previous = len(fake.delivered)
                     with ThreadPoolExecutor() as pool:
-                        result = pool.submit(self.controller.execute, kind, **payload, **self.expect())
-                        deadline = time.monotonic() + 1
-                        while time.monotonic() < deadline:
-                            request = read_json(fake.bridge / "claimed.json")
-                            if request is not None and request["kind"] == kind:
-                                break
-                            time.sleep(0.002)
-                        else:
-                            self.fail("input was not claimed")
-                        admitted = request["authority"].copy()
-                        self.controller.pause()
-                        self.assertNotEqual(admitted, read_json(fake.bridge / "authority.json"))
-                        release.set()
-                        self.assertIn(result.result()["status"], {"rejected", "pause_requested"})
+                        result = pool.submit(self.controller.execute, kind, timeout=10, **payload, **self.expect())
+                        try:
+                            # The gate signals after atomic claim and stays blocked until
+                            # Pause has revoked authority. No transient-file polling race.
+                            self.assertTrue(entered.wait(5), "input was not claimed")
+                            self.controller.pause()
+                            self.assertNotEqual(admitted[0], read_json(fake.bridge / "authority.json"))
+                        finally:
+                            release.set()
+                        self.assertIn(result.result(timeout=5)["status"], {"rejected", "pause_requested"})
                     self.assertEqual(len(fake.delivered), previous)
 
     def test_pause_after_native_commit_does_not_undo_delivered_input(self):
@@ -804,17 +807,31 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.ready()
 
     def test_claimed_timeout_is_unknown_and_never_replayed(self):
+        claimed = threading.Event()
+        monotonic = time.monotonic
+
         def abandon(fake, request):
-            return request["kind"] != "key"
+            if request["kind"] == "key":
+                claimed.set()
+                return False
+            return True
+
+        # Expire the host wait only after the fixture has consumed the key.
+        # A real one-second watchdog still fails if the fixture never claims it.
+        # This tests claimed uncertainty, independently of runner scheduling.
+        clock = SimpleNamespace(time=lambda: time.time() + (2 if claimed.is_set() else 0), sleep=time.sleep,
+                                monotonic=lambda: monotonic() + (2 if claimed.is_set() else 0))
         with FakeBridge(self.controller, abandon) as fake:
             self.ready()
-            result = self.controller.execute("key", key="x", timeout=0.06, **self.expect())
-            self.assertEqual(result["status"], "timeout")
-            self.assertEqual(result["retirement"], "absent_may_be_claimed_or_dispatched")
-            self.assertEqual(self.controller.execute("key", key="x", **self.expect())["status"], "controller_error")
-            self.assertEqual(self.controller.execute("observe")["status"], "ready")
-            self.assertTrue(self.controller.pause_requested)
-            self.assertEqual(sum(r["kind"] == "key" for r in fake.requests), 1)
+            with patch("harness.controller.time", clock):
+                result = self.controller.execute("key", key="x", timeout=1, **self.expect())
+                self.assertTrue(claimed.is_set(), "fixture did not claim the key")
+                self.assertEqual(result["status"], "timeout")
+                self.assertEqual(result["retirement"], "absent_may_be_claimed_or_dispatched")
+                self.assertEqual(self.controller.execute("key", key="x", **self.expect())["status"], "controller_error")
+                self.assertEqual(self.controller.execute("observe")["status"], "ready")
+                self.assertTrue(self.controller.pause_requested)
+                self.assertEqual(sum(r["kind"] == "key" for r in fake.requests), 1)
 
     def test_wrong_id_response_cannot_finish_request(self):
         atomic_json(self.controller.bridge / "response.json", state("prior-uuid"))

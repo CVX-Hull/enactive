@@ -185,7 +185,9 @@
         "tests/test_gameplay_memory.py",
         "tests/test_evaluation.py",
         "tools/evaluate.py",
-        "docs/acceptance/2026-10-17-public-recovery-evaluation.md"
+        "docs/acceptance/2026-10-17-public-recovery-evaluation.md",
+        "tests/test_gameplay_planner.py",
+        "docs/acceptance/2026-10-17-native-recovery-planner.md"
       ],
       "failure_response": "Preserve failure output, fix the cause and rerun before claiming portable acceptance.",
       "limitations": "Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing.",
@@ -196,20 +198,20 @@
       "last_exercise": {
         "date": "2026-10-17",
         "outcome": "Passed within the reported scope; unsuccessful attempts and limits retained.",
-        "scope": "207 Python tests plus viewer/common checks; HTTP/CLI recovery and passive evaluation fixtures.",
+        "scope": "231 Python tests plus viewer/common checks; injected planner lifecycle/accounting and Pause evidence regressions. No native or model-performance claim.",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-recovery-evaluation.md"
+          "docs/acceptance/2026-10-17-native-recovery-planner.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-recovery-evaluation.md"
+          "docs/acceptance/2026-10-17-native-recovery-planner.md"
         ],
         "effectiveness": "effective",
-        "findings": "Late Observe fence, repeated-run grouping and useful-dispatch flaws repaired after independent review. Governance representation update retained fail-closed checks.",
+        "findings": "Independent planner review exposed oversized-metric, contradictory-usage and lifetime-anchor defects; repaired regressions and rereview passed. Independent pixel inspection corrected a mistaken visual defect claim before production renderer changes. Hosted CI exposed a claimed-timeout fixture scheduling race; controlled post-claim clocks preserve no-replay assertions. A separate final-gate fixture missed transient-file polling on CI; an explicit after-claim/release handshake preserves revocation/no-delivery assertions. Focused checks pass; exact-head CI remains required.",
         "cost": "Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.",
-        "follow_up": "Review on contract/failure/release changes or due date. #8 broad native recovery/timing, #24 model experiments and #42\u201344 monitoring implementation/evaluation remain separate."
+        "follow_up": "Revisit on relevant contract/failure/release changes or due date. #47 tutorial content, #9 native runner, #33 predicate evidence and #24 model evaluation remain separate."
       },
       "next_review": "2027-01-15"
     },
@@ -231,7 +233,8 @@
         "docs/protocol.md",
         "native/cdda_harness.cpp",
         "harness/gameplay/evidence.py",
-        "docs/acceptance/2026-10-17-public-recovery-evaluation.md"
+        "docs/acceptance/2026-10-17-public-recovery-evaluation.md",
+        "docs/acceptance/2026-10-17-native-recovery-planner.md"
       ],
       "failure_response": "Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.",
       "limitations": "Tests exercise fake-bridge and browser fixtures. Native takeover and engine input behavior need C-NATIVE. Pause cannot cancel an already-running activity; no structured damage/trap or combat guarantee.",
@@ -242,20 +245,20 @@
       "last_exercise": {
         "date": "2026-10-17",
         "outcome": "Passed within the reported scope; unsuccessful attempts and limits retained.",
-        "scope": "Public operator recovery, exact decoded authority and separately retained unknown histories.",
+        "scope": "Production WAIT YES/NO, ordinary-input rejection during activity, lost gameplay/control results and no-replay reconciliation; separately instrumented native final-gate ordering.",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-recovery-evaluation.md"
+          "docs/acceptance/2026-10-17-native-recovery-planner.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-recovery-evaluation.md"
+          "docs/acceptance/2026-10-17-native-recovery-planner.md"
         ],
-        "effectiveness": "partially_effective",
-        "findings": "Real public recovery worked after explicit Pause/Observe. Immediate unpaused requests can reject due to native capture revision; #8 owns the timing repair.",
+        "effectiveness": "effective",
+        "findings": "Pause preserves scene authority; immediate recovery works. Actual unknown histories survive reconciliation. Final-gate ordering passed labeled timing probes; no universal stop bound.",
         "cost": "Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.",
-        "follow_up": "Review on contract/failure/release changes or due date. #8 broad native recovery/timing, #24 model experiments and #42\u201344 monitoring implementation/evaluation remain separate."
+        "follow_up": "Revisit on relevant contract/failure/release changes or due date. #47 tutorial content, #9 native runner, #33 predicate evidence and #24 model evaluation remain separate."
       },
       "next_review": "2027-01-15"
     },
@@ -273,7 +276,8 @@
         "docs/acceptance/2026-10-17-mvp.md",
         "docs/acceptance/2026-10-17-mvp-manifest.json",
         "docs/acceptance/2026-10-17-recovery-memory.md",
-        "docs/acceptance/2026-10-17-public-recovery-evaluation.md"
+        "docs/acceptance/2026-10-17-public-recovery-evaluation.md",
+        "docs/acceptance/2026-10-17-native-recovery-planner.md"
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
       "limitations": "Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.",
@@ -284,20 +288,20 @@
       "last_exercise": {
         "date": "2026-10-17",
         "outcome": "Passed within the reported scope; unsuccessful attempts and limits retained.",
-        "scope": "Windowed debug and WAIT recovery through public surfaces; one retained native evaluation measurement.",
+        "scope": "Fresh pinned build; real WAIT behavior, finished-before-claim, save/reload, raw debug/capture/takeover, reply loss and controlled revocation races; restored production binary verified.",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-recovery-evaluation.md"
+          "docs/acceptance/2026-10-17-native-recovery-planner.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-recovery-evaluation.md"
+          "docs/acceptance/2026-10-17-native-recovery-planner.md"
         ],
-        "effectiveness": "partially_effective",
-        "findings": "Native sources and installed binary matched prior accepted receipt. Successful owned YES/NO and debug delivery coexist with retained load/time/race failures; no new full concurrency/timeout claim.",
+        "effectiveness": "effective",
+        "findings": "Native recovery acceptance passed within pinned hook/scenario scope. Independent pixel review withdrew a false renderer diagnosis. Tutorial load content remains #47; instrumentation and failed driver attempts are retained separately.",
         "cost": "Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.",
-        "follow_up": "Review on contract/failure/release changes or due date. #8 broad native recovery/timing, #24 model experiments and #42\u201344 monitoring implementation/evaluation remain separate."
+        "follow_up": "Revisit on relevant contract/failure/release changes or due date. #47 tutorial content, #9 native runner, #33 predicate evidence and #24 model evaluation remain separate."
       },
       "next_review": "2027-01-15"
     },
@@ -318,7 +322,8 @@
         "docs/architecture.md",
         "docs/project-management.md",
         "docs/acceptance/2026-10-17-public-workflow.md",
-        "docs/acceptance/2026-10-17-public-recovery-evaluation.md"
+        "docs/acceptance/2026-10-17-public-recovery-evaluation.md",
+        "docs/acceptance/2026-10-17-native-recovery-planner.md"
       ],
       "failure_response": "Correct misleading flows or guidance and retain consequential limits before milestone acceptance.",
       "limitations": "Human judgment; no automated usability score or user study is claimed. Document links alone do not demonstrate comprehension.",
@@ -329,20 +334,20 @@
       "last_exercise": {
         "date": "2026-10-17",
         "outcome": "Passed within the reported scope; unsuccessful attempts and limits retained.",
-        "scope": "Real spectator confirmation and debug controls; 640/375 px static recovery layouts; monitor diagram.",
+        "scope": "Actual graphical spectator Yes and explicit Observe reached normal play while paused; current overview/runbook and recovery diagram labels reconciled.",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-recovery-evaluation.md"
+          "docs/acceptance/2026-10-17-native-recovery-planner.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-recovery-evaluation.md"
+          "docs/acceptance/2026-10-17-native-recovery-planner.md"
         ],
         "effectiveness": "partially_effective",
-        "findings": "Separate operator controls and uncertainty labels inspected. Narrow labels wrap; native game text remains small at phone width. Static fixtures are not runtime proof.",
+        "findings": "Actual recovery UI preserves pause and unknown outcomes. Existing flow diagram now names public interfaces. No new mobile usability study or broad visual redesign.",
         "cost": "Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.",
-        "follow_up": "Review on contract/failure/release changes or due date. #8 broad native recovery/timing, #24 model experiments and #42\u201344 monitoring implementation/evaluation remain separate."
+        "follow_up": "Revisit on relevant contract/failure/release changes or due date. #47 tutorial content, #9 native runner, #33 predicate evidence and #24 model evaluation remain separate."
       },
       "next_review": "2027-01-15"
     },

@@ -31,6 +31,13 @@ defines this round's interfaces and handoffs; its [acceptance](acceptance/2026-1
 separates delivered controls, passive instrumentation and future monitor behavior.
 Live allocation remains in GitHub.
 
+The [native recovery and planner-port brief](changes/008-native-recovery-planner-port.md)
+defines the next repair and bounded planner interfaces. Native predicate acceptance
+still follows recovery acceptance; a planner port alone does not enable model play.
+The [round 008 evidence](acceptance/2026-10-17-native-recovery-planner.md) records
+portable and native outcomes, failure evidence, and the separately tracked tutorial
+load defect. Publication and execution stages remain in the Project.
+
 The [foundation design brief](changes/004-gameplay-foundation.md) connects the native
 and gameplay investigation contracts to their bounded implementation handoffs.
 Live readiness and allocations remain in the Project, not in this navigation page.

@@ -178,10 +178,12 @@ is the ordinary current-v3 observation shape. `dispatched` is nonterminal.
 successful frame is available. `not_applicable` and `rejected` report no applicable
 operation or a failed gate. Host timeout is `unknown`; host failures are
 `controller_error`. No status alone proves cancellation, error repair or task success.
-Immediate interruption from an unpaused activity can reject when the native Pause
-revision invalidates its prior capture. The current operator workflow is explicit
-Pause → Observe → decide whether interruption is still eligible; no automatic
-refresh or retry. Broader timing acceptance remains #8.
+Transport-only Pause preserves scene revision so recovery can validate the rendered
+activity frame that informed admission. Actual input, takeover, resume and boundary
+changes still invalidate authority. An activity can finish or reach an unrelated
+prompt before claim; inspect the result and observe deliberately, without automatic
+refresh or retry. [Native acceptance](acceptance/2026-10-17-native-recovery-planner.md)
+separates production gameplay from injected timing and reply-loss probes.
 
 The original gameplay response/pending identity is preserved. Control results may
 update passive state but cannot resume gameplay. `control_pending` and
@@ -239,9 +241,9 @@ TaskSpec, EvidenceRef, EvidencePacket, SkillDescriptor, PlanCandidate,
 PrimitiveResult, StageResult and RunStatus. Serialized records carry
 `schema: "gameplay/1"` and `record_type`; `to_dict`/`from_dict` reject unknown fields,
 wrong types, unsupported enums, nonfinite numbers and contradictory completion
-claims. JSON is bounded to 1 MiB. These are interfaces, not a running planner,
-supervisor, model adapter or task executor. The [larger design](design/gameplay.md)
-remains the specification for those later consumers.
+claims. JSON is bounded to 1 MiB. The injected planner below consumes these records;
+a concrete model adapter, supervisor and task executor remain later work under
+the [larger design](design/gameplay.md).
 
 [EvidenceStore](../harness/gameplay/evidence.py) accepts only native-v3 positively
 marked normal-play observations with a successful frame and the existing visible
@@ -259,7 +261,10 @@ that receipt. Clock discontinuity, missing/corrupt source, unsupported boundary,
 revision regression, contradiction or session replacement invalidates current
 authority. A conflicting retained identity cannot become current again, including
 when it was not the current frame; same-revision scene conflicts invalidate
-retained peers. Historical references remain verifiable but cannot authorize input.
+retained peers. Transport-only Pause may produce distinct frames at the same
+scene revision: `paused` remains immutable within one frame but is excluded from
+cross-frame scene comparison. Actual scene/boundary conflicts still dispute peers.
+Historical references remain verifiable but cannot authorize input.
 Reopening starts without current authority or a dispatch reservation.
 
 Each caller-owned task/run store has one writer, at most 32 distinct frames and
@@ -310,3 +315,60 @@ append: 128 facts, 32 interpretations, 32 hypotheses, 16 plans, 16 procedures,
 and eight source references. No silent eviction. Source-status scans deduplicate
 up to the store's 32 frames; freshness/fact/position access may add targeted hash
 reads. Retained-byte limits are storage limits, not total I/O measurements.
+
+## Bounded injected planner
+
+[`PlannerPort`](../harness/gameplay/planner.py) belongs to one immutable TaskSpec.
+Construct it with `PlannerConfig`, a trusted provider callable and the original
+`admission_monotonic` in seconds. This is the same admission origin used by
+[evaluation](evaluation.md), with explicit seconds-to-milliseconds conversion.
+Construction and delayed first submission do not restart the task clock. The first
+invoked request pins the exact start EvidenceRef; continuation cannot replace it
+or replenish the original turn/call/time/spend ceilings.
+
+`PlanningRequest` supplies typed task/evidence, accepted skill descriptors, exact
+plan/version/epoch, expected outbound/return stage, remaining distance and bounded
+public context. The caller owns route progress and capability truth. The provider
+receives immutable serialized `ProviderInput` and a cooperative cancellation event,
+then returns `ProviderReply(candidate_json, usage)`. It receives no controller or
+filesystem handles. Trusted Python injection is not an isolation sandbox.
+
+`submit` reserves cost before invocation and returns a unique call ID. `poll` takes
+that ID and the caller's current `PlanningBinding`; mismatches permanently discard
+applicability. Candidate JSON must satisfy the existing PlanCandidate schema,
+binding, supplied skill/version and exact route semantics. Success returns data,
+never permission to dispatch. `cancel` and `close` invalidate pending/completed
+candidates; close returns without waiting for a stuck provider. No automatic retry,
+restoration, model selection or live provider is implemented.
+
+| Limit | Contract |
+| --- | --- |
+| Concurrent/lifetime calls | One physical call; at most ten lifetime calls per port |
+| Context/reply | At most 1 MiB each; defaults 1 MiB / 16 KiB |
+| Input/output tokens | At most 1,048,576 each; defaults 32,768 / 2,048; adapter must honor them, bytes are not token estimates |
+| Supplied capabilities/context | At most 32 descriptors and 4096 public-context characters |
+| Uninvoked rejections | Last 64 audit entries plus total/dropped counters |
+| Deadline | At most 30 seconds per call, further limited by task and remaining budgets |
+
+A timed-out call retains the physical slot until its provider exits, preventing
+thread accumulation. Deadline, cancellation, close and stale bindings win over late
+results. Provider completion is recorded separately from the stop and financial
+settlement timestamps. Unknown cost does not keep an already completed call's
+measured duration running.
+
+Network mode requires declared credential availability, bounded pricing and a
+positive operator-approved spend ceiling/reservation. Missing prerequisites reject
+before invocation. These are adapter declarations, not credential discovery or a
+billing-system guarantee. This increment uses fixture providers only. Missing cost
+or malformed/contradictory usage retains the reservation; valid actual cost can
+settle even when token metrics are absent. Over-bound raw usage freezes future
+calls before evaluation sanitization. Representable overshoot remains visible;
+unrepresentable overshoot is null with a reason. Failed and cancelled calls retain
+late cost without reviving their candidate.
+
+`snapshot(cutoff_monotonic=...)` returns immutable accounting and exactly one
+`evaluation/1` event per invoked call. Uninvoked rejections stay separate. Record
+one snapshot once, with other events in timestamp order. Later knowledge belongs
+in a new named artifact; do not append repeated snapshots as duplicate model calls.
+Unknown metrics carry reasons. A physically unfinished call is censored at cutoff;
+a completed call ends at physical completion even if its reservation is unsettled.

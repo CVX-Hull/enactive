@@ -77,13 +77,17 @@ frame or old acceptance record as proof a current process is healthy.
 
 ## Operator recovery
 
-For activity interruption, choose Pause, then Observe, inspect the decoded
-activity frame, and choose Request interrupt if still advertised. A committed
+For activity interruption, inspect the fresh decoded activity frame and choose
+Request interrupt if advertised. The control performs Pause before admission.
+A committed
 activity continues while paused; it may finish or enter another prompt before
-recovery applies. Current native timing can reject an immediate interruption
-when Pause has invalidated the prior rendered revision. Preserve that rejection,
-observe deliberately, and decide anew; never automatically retry. This limitation
-is tracked in [#8](https://github.com/CVX-Hull/cdda-player/issues/8).
+recovery applies. Transport-only Pause preserves scene revision; a fresh native
+probe opened the owned WAIT question without the former Pause/Observe workaround.
+Preserve any rejection, observe deliberately, and decide anew; never automatically
+retry. [Round 008 evidence](acceptance/2026-10-17-native-recovery-planner.md) records
+the YES/NO, completed-activity, unknown-result, revocation and reload probes,
+including controlled fault injection and its limits. Tutorial save-load errors
+remain a separate [content defect](https://github.com/CVX-Hull/cdda-player/issues/47).
 
 For prompt answers and debug continuation, use Observe, inspect the frame, and use the
 explicit recovery button when eligible. An owned confirmation exposes Yes/No;

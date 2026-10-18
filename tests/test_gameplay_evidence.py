@@ -105,6 +105,35 @@ class EvidenceTests(unittest.TestCase):
         # Invalidation history is independent of historical truth.
         self.assertEqual(self.store.source_status(ref), "retained")
 
+    def test_transport_pause_preserves_scene_but_not_current_frame_identity(self):
+        before = self.publish()
+        original = self.ingest(before)
+        generation = self.store.authority_generation()
+        paused = dict(before, frame="frame-synthetic-world-2.png", paused=True)
+        current = self.ingest(self.publish(paused))
+        self.assertEqual(self.current(), current)
+        self.assertNotEqual(current, original)
+        self.assertGreater(self.store.authority_generation(), generation)
+        self.assertEqual(self.store.source_status(original), "retained")
+        self.assertEqual(self.store.position(original), self.store.position(current))
+        # A paused transport does not explain changed game facts at this revision.
+        conflicting = deepcopy(paused)
+        conflicting["frame"] = "frame-synthetic-world-3.png"
+        conflicting["scene"]["neighbors"][0]["terrain"] = "t_wall"
+        with self.assertRaises(EvidenceError):
+            self.ingest(self.publish(conflicting))
+        self.assertEqual(self.store.source_status(original), "disputed")
+        self.assertEqual(self.store.source_status(current), "disputed")
+        with self.assertRaises(EvidenceError):
+            self.current()
+
+    def test_transport_pause_cannot_rewrite_an_immutable_frame(self):
+        original = self.publish()
+        ref = self.ingest(original)
+        with self.assertRaises(EvidenceError):
+            self.ingest(dict(original, paused=True))
+        self.assertEqual(self.store.source_status(ref), "disputed")
+
     def test_original_survives_bridge_cache_eviction_and_reopen(self):
         value = self.publish()
         ref = self.ingest(value)

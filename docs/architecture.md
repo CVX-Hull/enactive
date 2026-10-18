@@ -119,7 +119,7 @@ or in the setup manifest's owned temporary build. [Setup](setup.md) and the
 ## Change boundaries and verification
 
 Keep the controller independent of HTTP/server and setup tooling; only the server
-and CLI assemble it. The passive gameplay package cannot import controller/server/CLI, build tooling or
+and CLI assemble it. The gameplay package cannot import controller/server/CLI, build tooling or
 network/process launch modules. Its retention reservation is capacity accounting,
 not an input lease. The viewer consumes the local service contract. Native game
 access stays in the integration patch. Configured Import Linter dependency contracts and narrow protocol checks catch
@@ -155,3 +155,18 @@ process-local store generation prevents intervening invalidations from disappear
 when an earlier frame returns. Candidate validity is advisory data, not dispatch
 authority. Retirement/restart never reconstructs an execution lease. See the
 [bounded memory contract](protocol.md#passive-task-memory) for ceilings and costs.
+
+## Bounded planning without execution authority
+
+The [planner port](protocol.md#bounded-injected-planner) accepts an immutable task,
+visible evidence and caller-supplied capabilities. It invokes trusted injected
+provider code with serialized data, validates a returned candidate and accounts
+for the call. It owns no controller, dispatch lease or recovery tools. There is no
+concrete model provider or automatic supervisor yet.
+
+One task run owns one port, one physical provider slot and its original admission
+clock/start evidence. Cancellation and stale results permanently remove candidate
+applicability; late completion can update accounting only. A provider that ignores
+cancellation occupies the slot until it exits. This bounds resource growth without
+claiming that Python can forcibly terminate provider code. Independent deterministic
+fixtures test this lifecycle; they do not measure model quality or native gameplay.

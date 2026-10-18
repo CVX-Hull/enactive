@@ -754,7 +754,10 @@ bool poll( keyboard_mode mode, input_event &event )
     try {
         if( fs::exists( path( "pause" ) ) && !paused ) {
             paused = true;
-            ++revision;
+            // Host Pause revokes its durable token but changes no game input or
+            // rendered scene. Advancing revision here invalidates the capture
+            // needed by the recovery request admitted under the new token.
+            // Actual input, turn, boundary and takeover changes still advance it.
             dirty = true;
         }
         try {

@@ -10,7 +10,8 @@ Investigation for [#6](https://github.com/CVX-Hull/cdda-player/issues/6), based 
 CDDA 0.I-1 commit `7b2efa5cea38e4d4d97dd0e63b28b9148623da59` and harness base
 `806c0ba`. Boundary/session authority and durable revocation are implemented in
 [#29](https://github.com/CVX-Hull/cdda-player/issues/29); the v3 transport increment implements the Python recovery operations under #30.
-Public UI/CLI and broader acceptance remain #31/#8. The current
+Public UI/CLI are implemented under #31; [round 008 acceptance](../acceptance/2026-10-17-native-recovery-planner.md)
+records broader native scenarios for #8. The current
 [protocol](../protocol.md) owns implemented envelopes and limits; this document
 retains the source rationale and wider operator design. The original investigation
 itself did not build or demonstrate native recovery.
@@ -28,7 +29,7 @@ patched-file hashes are in [upstream.json](../../native/upstream.json).
 | [`player_activity.cpp`](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/src/player_activity.cpp), `is_interruptible_with_kb`, `canceled`; [`character.cpp`](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/src/character.cpp), `cancel_activity` | Interruptibility is policy plus instance flags. Cancellation invokes actor cleanup and backlog/hauling/sound changes. Calling `cancel_activity` indiscriminately would skip the ordinary input policy and is rejected. |
 | [`output.cpp`](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/src/output.cpp), `query_yn`; [`keybindings.json`](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/data/raw/keybindings.json) | Confirmation uses `YESNO` with `YES`/`NO`. Bindings are resolved from the active engine context, not assumed from a fixed y/n layout. A generic YESNO prompt alone does not identify an interruption confirmation. |
 | [`debug.cpp`](https://github.com/CleverRaven/Cataclysm-DDA/blob/7b2efa5cea38e4d4d97dd0e63b28b9148623da59/src/debug.cpp), `debug_error_prompt` | Redraws the actual error and calls raw `get_input_event`, outside its own `input_context`. Space continues; I suppresses future instances; C copies in tiles. Some errors are buffered before UI initialization. No general crash recovery follows from this path. |
-| [patch_game.py](../../tools/patch_game.py), [bridge](../../native/cdda_harness.cpp) | At investigation base `806c0ba`, scope was a boolean set/cleared around input waits. `poll` refuses unscoped calls and pending requests; a nested raw debug call might inherit an outer scope. The trace does not prove that such nesting occurs at runtime. That baseline metadata could not distinguish ordinary play from activity polling. Native-v2 now uses the explicit RAII boundary model below; see the current protocol and fresh foundation acceptance. |
+| [patch_game.py](../../tools/patch_game.py), [bridge](../../native/cdda_harness.cpp) | At investigation base `806c0ba`, scope was a boolean set/cleared around input waits. `poll` refuses unscoped calls and pending requests; a nested raw debug call might inherit an outer scope. The trace does not prove that such nesting occurs at runtime. That baseline metadata could not distinguish ordinary play from activity polling. Native-v3 uses the explicit RAII boundary model below; see the current protocol and fresh foundation acceptance. |
 
 The historical [raw vehicle error](../acceptance/2026-10-17-mvp.md#real-game-acceptance-2026-10-17)
 froze remote progress and needed native Space. It motivates this work but was not
@@ -50,11 +51,12 @@ does not select “ignore future errors”, copy to the clipboard or declare the
 fixed. Preserve the error evidence. All recovery leaves gameplay paused and requires
 fresh normal-play or supported-menu observation plus explicit resume before new gameplay.
 
-Current Python transport flow: **what a recovery request can establish, and when
-control can resume**. The proposed public buttons remain future work. Boxes are steps, not processes; arrows name outcomes. The uncertain
+Current operator recovery flow: **what a recovery request can establish, and when
+control can resume**. Public spectator, CLI and Python operations share this flow.
+Boxes are steps, not processes; arrows name outcomes. The uncertain
 path preserves native fallback rather than declaring success.
 
-![Current Python recovery: pause, use an exact engine prompt, reconcile, then explicitly resume only at normal play or a supported menu.](../diagrams/native-recovery.svg)
+![Current operator recovery: pause, use an exact engine prompt, reconcile, then explicitly resume only at normal play or a supported menu.](../diagrams/native-recovery.svg)
 
 The activity and debug branches both return to observation. Neither an answer nor
 a dismissal proves task completion. [Editable diagram](../diagrams/native-recovery.mmd).
@@ -110,7 +112,8 @@ generation, host revocation token, kind, creation/expiry, maximum 4096 bytes. Us
 late request is rejected and never automatically resent. A manual repeat requires
 new evidence and a new ID. Host restart pauses, retires unclaimed work and preserves
 uncertain claimed work for reconciliation, on both channels. The process lock
-outlives both writers. The ordinary HTTP ingress rejects recovery; #31 owns its later operator surface.
+outlives both writers. The ordinary HTTP command ingress rejects recovery. The implemented authenticated
+`/api/recovery`, spectator and CLI share the [current recovery contract](../protocol.md).
 The planner facade does not expose recovery actions; they are explicit operator
 controls, not a cryptographic isolation boundary from arbitrary local code.
 
@@ -183,8 +186,8 @@ that resumable backlog will never run later. Display these limits to the operato
 Portable tests cover envelopes, identity races, state mapping and negative dispatch.
 Patch anchoring/hash checks and a real native build cover integration with this pin.
 #30's [targeted acceptance](../acceptance/2026-10-17-recovery-memory.md) records
-source/build identity, before/after frames and traces; #8 retains the broader
-integrated acceptance.
+source/build identity, before/after frames and traces; [round 008](../acceptance/2026-10-17-native-recovery-planner.md)
+records broader integrated acceptance and separates fault-injected timing.
 A labelled test-only debug prompt probe may exercise the real prompt function, but
 must not manufacture a passing gameplay outcome or conceal the historical error.
 Test-injected diagnostics and naturally encountered errors are separate evidence.
