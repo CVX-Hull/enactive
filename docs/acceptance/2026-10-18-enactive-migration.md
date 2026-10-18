@@ -56,8 +56,20 @@ verified source-tree/topology preservation, closure provenance and Project value
 no confirmed defect remained in the reviewed documentation candidate.
 CI-passing direct-push rejection, exact final candidate CI and protected
 PR/merged-main publication are required before migration completion.
-The native PR and Actions records supply exact candidate and merge identities;
-passing portable CI does not establish gameplay acceptance.
+The [migration PR #85](https://github.com/CVX-Hull/enactive/pull/85) and its
+[passing PR run](https://github.com/CVX-Hull/enactive/actions/runs/39140794341)
+supply the initial candidate identity. Passing portable CI does not establish
+gameplay acceptance.
+
+The initial rejection probe used that already-open PR's exact passing head,
+`8f6aa679eeda1b4e3d482339d56a03f9b2400b28`. GitHub accepted the fast-forward and
+marked PR85 merged; rule suite `4587077851` records **pass**, not bypass. This
+does not demonstrate a required-PR rejection. GitHub's
+[documented PR rule](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-rulesets/available-rules-for-rulesets#require-a-pull-request-before-merging)
+requires association with an opened PR; it does not require the merge button.
+The follow-up probe must use a CI-passing commit with **no PR** before subsequently
+opening and normally merging its verification PR. Preserve the first probe rather
+than calling it a rejection or rewriting main to hide it.
 
 ## Failures, boundaries and maintenance
 
@@ -70,9 +82,11 @@ timeout interrupted read-only verification; bounded read retries completed it.
 No native Issue was transferred twice and no closed Issue was reopened for migration.
 The first common run could not launch the local headless Chromium renderer inside
 the sandbox. The authorized rerun passed the full lane; both outputs are retained.
-Replacement security settings, including private vulnerability reporting and secret
-scanning/push protection, require readback after public visibility before retiring
-the source repository.
+After public visibility, live readback verified enabled private vulnerability
+reporting, secret scanning and push protection, with the same merge/security settings
+as the source. Dependabot alerts are disabled on both repositories; no new
+Dependabot automation is claimed. All 57 identified original tainted PR or rewritten
+main commits return 404 under the independent public replacement.
 
 Original snapshots, the native Git bundle/commit map, canary results, raw-object
 scan and migration verification receipts stay in ignored, private project-local
@@ -84,8 +98,10 @@ downloaded objects, and historical CI links may require maintainer access.
 
 Native implementation, saves and runtime evidence are unchanged. No graphical
 session or build is claimed. All tooling, copies and backups remain project-local;
-global installations and Git profiles are untouched. Disposable canary resources
-are separate from the real repositories and Project and are removed after evidence
-retention. Future publication follows [explicit local identity setup](../setup.md#choose-an-explicit-git-identity)
+global installations and Git profiles are untouched. The temporary canary Project
+was deleted. GitHub denied deletion of the two disposable private probe repositories
+with HTTP 403; they were archived privately using existing permissions, with evidence
+retained. No token scopes were expanded. Both real repositories and the existing
+Project were excluded from cleanup. Future publication follows [explicit local identity setup](../setup.md#choose-an-explicit-git-identity)
 and full-message/trailer inspection under C-REVIEW; this manual control does not
 prove arbitrary-file privacy. #75 retains the next maintenance trigger and due date.
