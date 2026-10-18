@@ -49,11 +49,14 @@ game seconds. Ramiro Winston/Sneedville is normally saved, but reload remains
 unverified. A real advisory player handoff retained its facts and original budget;
 it did not establish full continuity or first-day success.
 
-The next bounded [reuse-first recovery brief](changes/016-autonomous-native-recovery.md)
-uses app-bundle launch and native automation access, then tests actual pickup Escape,
-ordinary restart identity and the existing pickup_all selector. App binding is
-observed; general native input is not. Keep both failed attempts and the separate
-menu-only operation probe visible. This is not a renewed survival allowance.
+The [reuse-first recovery preflight](changes/016-autonomous-native-recovery.md)
+stopped before admission when desktop automation reported an access/lock failure;
+no user unlock was requested and no probe input charged. Its replacement
+[direction-menu brief](changes/017-native-direction-menu.md) adds narrow engine
+query coverage with unchanged native keybindings, then tests normal restart,
+actual Escape, adjacent and current-tile selection. Build/native acceptance remain
+pending. Keep both failed attempts, the separate menu-only operation and unadmitted
+preflight visible. This is not a renewed survival allowance.
 Original #79 M/Low, 2–4 and #80 M/Low, 3–5 focused-session estimates remain in Issues;
 32 game seconds cannot calibrate survival throughput or a calendar forecast.
 

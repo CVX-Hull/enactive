@@ -36,6 +36,17 @@ class interrupt_query
     private:
         bool active;
 };
+// Marks only the pinned direction helper's input wait, preserving its keymap.
+class direction_query
+{
+    public:
+        direction_query();
+        ~direction_query();
+        direction_query( const direction_query & ) = delete;
+        direction_query &operator=( const direction_query & ) = delete;
+    private:
+        bool active;
+};
 void activity_interruptible( bool value );
 void playing( bool value );
 void boundary();

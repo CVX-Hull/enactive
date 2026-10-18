@@ -8,6 +8,7 @@
   "macos_url": "https://github.com/CleverRaven/Cataclysm-DDA/releases/download/0.I-1/cdda-osx-with-graphics-universal-2026-09-19-2324.dmg",
   "macos_sha256": "8c169974d93762d1bedffee75c6847eb70a1d5b05e6448c1b829e314ba8bfaf6",
   "source_files": {
+    "src/action.cpp": "dad9b0a62e0f08aa2cdcf72d81f600a608ee248a6013c8c8ff974af0fbe14f99",
     "Makefile": "d6e2c585e55562e4a88fc7fbe7b4bdd55874c6844952c5e633815328971d50e6",
     "src/input_context.cpp": "b097561a600be533c16f298a87897962d14b13de3f9d87e0de47123a9739972a",
     "src/main.cpp": "c7d35485c7c6a7b42d552485c7f82e66064e9b3014685711380a648c3c0f9454",

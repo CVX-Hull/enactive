@@ -39,9 +39,10 @@ Launch the prepared app **bundle**, which executes that project's wrapper and
 explicit userdir. Direct terminal execution of the wrapper produced a game that
 native app automation could not bind in the first-day rehearsal. Bundle launch
 exposed the actual window in a subsequent menu-only probe. Neither launch method
-by itself proves recovery works. For an agent campaign, verify the running window
-is bound and windowed before loading the character; do not wait for a stall to
-discover missing access. A UI tool may launch the exact stopped bundle directly,
+by itself proves recovery works. For an agent campaign, verify current actual
+native frames, windowed configuration and control access before loading the
+character; do not make a desktop UI tool's binding/unlock availability a
+prerequisite for supported engine menus. A UI tool may launch the exact stopped bundle directly,
 but must not use app lookup to check whether another game is already running.
 
 Open http://127.0.0.1:8766/ to watch. Port 8766 was used for the MVP because 8765
@@ -74,14 +75,19 @@ For a timeout or frozen viewer: preserve the error/journal and last frame; inspe
 the native window. Unsupported upstream error screens may need native dismissal.
 Observe to reconcile current state, then explicitly resume only when interpretable.
 Do not resend an uncertain action. New observations do not prove its old objective.
-The agent must handle routine dismissal through verified native automation rather
-than requiring the user to press a key. Pause remote control first, inspect the
-actual native prompt, charge any native input to the same accounting, and retain
-its result separately from remote receipts. Never send a remote key at an
+The agent must handle routine prompts through verified engine input rather
+than requiring the user to press a key. At the explicitly instrumented common
+direction query, a fresh DEFAULTMODE/menu frame supports ordinary selection or
+cancel after explicit Resume; it has no gameplay scene. Unrelated DEFAULTMODE
+contexts remain unsupported. If using verified desktop automation for a different
+prompt, Pause remote control first, inspect the actual prompt, charge any native
+input to the same accounting, and retain its result separately from remote receipts.
+Never send a remote key at an
 unsupported boundary, invent an acknowledgment or turn an unreadable prompt into
 permission. Unavailable access or required human rescue fails campaign readiness.
-The [autonomous recovery brief](changes/016-autonomous-native-recovery.md) defines
-the pending pickup Escape probe; general native recovery is not yet demonstrated.
+The [direction-menu brief](changes/017-native-direction-menu.md) defines the pending
+rebuilt-engine selection/cancel probe. The reuse-first desktop-tool preflight
+failed before admission; general native recovery is not yet demonstrated.
 
 For service restart: stop that service normally, start one controller, observe
 and reconcile, then resume. For a game crash/restart: preserve diagnostics, follow

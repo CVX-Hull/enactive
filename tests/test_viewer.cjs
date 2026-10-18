@@ -51,6 +51,38 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.throws(() => run('authority()'), /Wait for/);
   await decode();
   assert.equal(run('authority().expected_revision'), 1);
+  // The read-only objective follows saved status, including while a draft is being edited.
+  const objective = element('recorded-objective-text');
+  Object.defineProperty(objective, 'innerHTML', {set() { assert.fail('Recorded objective must use textContent'); }});
+  assert.equal(objective.textContent, 'No objective recorded.');
+  const requestsBeforeObjective = requests.length;
+  const savedGoal = 'Survive the first day.\nFind shelter and preserve supplies.';
+  context.input.goal = savedGoal;
+  run('render(input)');
+  assert.equal(objective.textContent, savedGoal);
+  assert.equal(element('goal').value, savedGoal);
+  context.document.activeElement = element('goal');
+  element('goal').value = 'Unsaved draft: explore instead';
+  context.input.goal = 'Saved objective from a later status';
+  run('render(input)');
+  assert.equal(objective.textContent, context.input.goal);
+  assert.equal(element('goal').value, 'Unsaved draft: explore instead');
+  const untrustedGoal = '<img src=x onerror="fetch(\'/api/gameplay\')">\n<script>resume()</script> & "quoted"';
+  context.input.goal = untrustedGoal;
+  run('render(input)');
+  assert.equal(objective.textContent, untrustedGoal, 'Markup must remain literal text');
+  const longGoal = 'unbroken'.repeat(200) + '\nKeep every recorded line.';
+  context.input.goal = longGoal;
+  run('render(input)');
+  assert.equal(objective.textContent, longGoal, 'Long objectives remain fully available');
+  for (const emptyGoal of ['', '  \n\t', null, undefined]) {
+    context.input.goal = emptyGoal;
+    run('render(input)');
+    assert.equal(objective.textContent, 'No objective recorded.');
+  }
+  assert.equal(requests.length, requestsBeforeObjective, 'Rendering objectives must not submit any request');
+  assert.equal(run('authority().expected_revision'), 1, 'Recorded text cannot change frame authority');
+  context.document.activeElement = null;
   element('key').value = 'x';
   render(2, 'frame-1-1-2.png');
   assert.throws(() => run('authority()'), /Wait for/);
@@ -373,6 +405,11 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.equal(element('task-abandon').disabled, false);
   assert.match(element('task-control-note').textContent, /Abandon this task before starting another/);
   const html = fs.readFileSync(path.join(__dirname, '../web/index.html'), 'utf8');
+  assert.match(html, /<section class="recorded-objective" aria-labelledby="recorded-objective-heading">/);
+  assert.match(html, /id="recorded-objective-heading"[^>]*>Recorded objective</);
+  assert.match(html, /id="recorded-objective-text" tabindex="0">No objective recorded\.</);
+  assert.ok(html.indexOf('id="recorded-objective-text"') < html.indexOf('id="frame-shell"'),
+    'Recorded objective belongs before the native frame in document order; graphical layout needs browser acceptance');
   assert.match(html, /Codex usage, token consumption and subscription cost are unmeasured/);
   assert.match(html, /Unknown effects prohibit continuation/);
   console.log('Viewer regressions passed: exact decoded authority; task start/continue/abandon identity; slow planning, stale/paused/unknown/error evidence; independent Pause and recovery; no implicit resume or retry.');

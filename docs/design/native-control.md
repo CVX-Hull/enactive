@@ -63,6 +63,14 @@ a dismissal proves task completion. [Editable diagram](../diagrams/native-recove
 
 ## Boundary identity and scope
 
+The [direction-menu increment](../changes/017-native-direction-menu.md) instruments
+the pinned common `choose_direction` input wait without renaming DEFAULTMODE.
+This preserves the engine's category-local current-tile/custom bindings; its
+binding fallback is global `default`, not DEFAULTMODE. Empty-stack/in-game RAII
+admission excludes debug/activity ancestors and nested input. The marker ends
+before chooser callbacks. This is narrow supported menu coverage, not general
+recovery or a new wire kind; build and graphical acceptance are separate duties.
+
 Native wire version 3 is the current producer/consumer contract. Reject older
 and mixed versions. Prior releases remain historical source, with no current
 runtime reader. Rollback requires a coordinated system and validated data

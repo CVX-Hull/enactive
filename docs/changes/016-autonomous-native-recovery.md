@@ -1,10 +1,18 @@
 ---
 owner: lead
 review_trigger: Native launch, recovery, saved-character identity or campaign autonomy changes
-status: proposed
+status: superseded
+scope: Unadmitted desktop-automation pickup recovery proposal
+replacement: docs/changes/017-native-direction-menu.md
 ---
 
 # Remove required human intervention from campaign recovery
+
+This proposal did not reach probe admission: native UI automation reported an
+access/lock failure before launching/binding the game. No user unlock was requested.
+[Brief017](017-native-direction-menu.md) replaces this prerequisite with explicit
+engine direction-menu support and a newly reviewed native build/probe. The
+following text preserves the original proposal, not current execution instructions.
 
 The [first-day rehearsal](../acceptance/2026-10-18-first-day-rehearsal.md)
 reached a fresh character and real supplies, but a pickup direction prompt required

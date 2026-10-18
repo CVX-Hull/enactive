@@ -112,8 +112,11 @@ The [first-day rehearsal](acceptance/2026-10-18-first-day-rehearsal.md) then rea
 Ramiro Winston, real ration pickup, a threat-driven retreat and an advisory player
 handoff, but required user Escape at an unsupported pickup prompt after only
 32 game seconds. It supplies no autonomous first-day success. Required human
-rescue blocks campaign readiness; [the next brief](changes/016-autonomous-native-recovery.md)
-tests existing app-bundle/native controls and normal restart before further play.
+rescue blocks campaign readiness. A desktop-tool access preflight failed before
+load or input; [the next brief](changes/017-native-direction-menu.md) adds narrow
+engine direction-menu coverage while preserving its original bindings, then tests
+actual selection/cancel and normal restart. Build and graphical acceptance remain
+pending; broader autonomy is not established.
 Campaigns also expose concrete memory, planning,
 monitoring and viewer needs. The [review workflow](project-management.md#campaign-driven-improvement)
 routes observed problems into bounded improvements and checks their effect in later

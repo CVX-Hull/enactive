@@ -716,6 +716,24 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             fake.value["frame_ok"] = False
             self.assertEqual(self.controller.execute("resume")["status"], "controller_error")
 
+    def test_direction_menu_uses_existing_authority_without_gameplay_scene(self):
+        # Transport contract only: the real engine must prove classification/bindings.
+        with FakeBridge(self.controller) as fake:
+            fake.value.update(category="DEFAULTMODE", scene=None, actions=["QUIT", "pause", "RIGHT"])
+            fake.value["boundary"]["kind"] = "menu"
+            self.assertEqual(self.controller.execute("observe")["status"], "ready")
+            before = len(fake.delivered)
+            self.assertEqual(self.controller.execute("action", action="QUIT", **self.expect())["status"], "controller_error")
+            self.assertEqual(len(fake.delivered), before)
+            self.assertEqual(self.controller.execute("resume")["status"], "ready")
+            stale = self.expect()
+            self.assertEqual(self.controller.execute("action", action="pause", **stale)["status"], "ready")
+            self.assertIsNone(self.controller.state["scene"])
+            before = len(fake.delivered)
+            self.assertEqual(self.controller.execute("action", action="QUIT", **stale)["status"], "controller_error")
+            self.assertEqual(len(fake.delivered), before)
+            self.assertEqual(self.controller.execute("action", action="QUIT", **self.expect())["status"], "ready")
+
     def test_unknown_old_world_action_is_retained_across_new_world_reconciliation(self):
         def reload(fake, request):
             if request["kind"] == "key":

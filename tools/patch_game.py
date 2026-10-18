@@ -38,7 +38,7 @@ def replace_once(path: Path, old: str, new: str) -> None:
 
 for name in ("cdda_harness.h", "cdda_harness.cpp"):
     shutil.copyfile(ROOT / "native" / name, source / "src" / name)
-for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp", "game.cpp"):
+for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp", "game.cpp", "action.cpp"):
     path = source / "src" / name
     text = path.read_text()
     if '#include "cdda_harness.h"' not in text:
@@ -54,6 +54,15 @@ replace_once(source / "src/handle_action.cpp",
     'input_context game::get_player_input( std::string &action )\n{\n'
     '    cdda_harness::scope harness_player( uquit == QUIT_WATCH ?\n'
     '        cdda_harness::boundary_kind::unsupported : cdda_harness::boundary_kind::normal_play );')
+# Preserve DEFAULTMODE and its local bindings; end permission before callbacks.
+replace_once(source / "src/action.cpp",
+    '        action = ctxt.handle_input();\n'
+    '        if( std::optional<tripoint_rel_ms> vec = ctxt.get_direction_rel_ms( action ) ) {',
+    '        action = [&]() {\n'
+    '            cdda_harness::direction_query harness_direction;\n'
+    '            return ctxt.handle_input();\n'
+    '        }();\n'
+    '        if( std::optional<tripoint_rel_ms> vec = ctxt.get_direction_rel_ms( action ) ) {')
 replace_once(source / "src/do_turn.cpp", 'void handle_key_blocking_activity()\n{',
     'void handle_key_blocking_activity()\n{\n'
     '    cdda_harness::scope harness_activity( cdda_harness::boundary_kind::activity_poll );')
