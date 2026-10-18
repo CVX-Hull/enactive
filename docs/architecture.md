@@ -71,6 +71,10 @@ observation separately from its terminal exchange and reuses the controller's
 Pause/frozen/generation mechanisms. A stopped walk requires explicit fresh Observe
 and Resume; the player still interprets the image and decides again. Original
 partial and normal cleanup remain evidence, not seven-day autonomy.
+The [targeted native probe](acceptance/2026-10-18-walk-reassessment.md) verified a
+zero-step stop, frozen Resume rejection, fresh Observe/Resume and inventory/cancel;
+partial-walk fault tests remain a separate portable lane. No survival progress was
+claimed and the earlier unexercised load probe remains retained.
 
 ## Runtime and state
 

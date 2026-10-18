@@ -1,10 +1,15 @@
 ---
 owner: lead
-review_trigger: Functional probe scope, lifecycle reconciliation or cumulative limits change
-status: active
+date: 2026-10-18
+scope: Second functional probe with prospective load reconciliation and original cumulative limits
+status: historical
 ---
 
 # Verify the repaired walk boundary after ordinary load
+
+Completed within its declared scope; [actual results](../acceptance/2026-10-18-walk-reassessment.md)
+retain the earlier unexercised probe and all unknowns. The original protocol below
+is historical and grants no further input authority.
 
 This is one prospective functional probe for [#108](https://github.com/CVX-Hull/enactive/issues/108),
 not another survival campaign or permission workaround. Controller code remains
