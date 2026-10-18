@@ -75,7 +75,14 @@ blocked-by relationships. A failed check stays recorded. Rework returns to the
 appropriate stage with a reason. Closed duplicates/cancellations record disposition
 and any replacement, remain outside Done and are excluded from delivery counts.
 Do not use automatic close/merge-to-Done rules: a merge can precede validation.
-Avoid closing issue keywords in a PR when validation must follow its merge.
+Before merging a PR whose issue completion depends on post-merge validation,
+inspect `gh pr view <number> --json closingIssuesReferences` and require an empty
+list. Remove every closing reference and read the field again; prose negation
+does not disable GitHub keyword parsing. Use neutral `Refs #N` wording, then update
+the Issue and Project only after actual merged-main evidence. Reuse GitHub’s
+computed field instead of maintaining a keyword parser.
+[The observed failure](https://github.com/CVX-Hull/enactive/issues/75) records why
+this explicit check supplements prose review.
 
 Use these Project single-select fields consistently:
 

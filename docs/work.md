@@ -32,7 +32,7 @@ The campaign milestone has no committed delivery date.
 | Useful survival pilot and its first review | [Pilot001](acceptance/2026-10-18-survival-pilot.md) stopped on an unknown world-selection acknowledgment before spawning; retained findings and cleanup are gap evidence, not survival success | [#78 pilot](https://github.com/CVX-Hull/enactive/issues/78), then [#83 first review](https://github.com/CVX-Hull/enactive/issues/83) |
 | Continuity and first-day rehearsal | [Rehearsal001](acceptance/2026-10-18-first-day-rehearsal.md) failed autonomy. The [direction probe](acceptance/2026-10-18-native-direction-menu.md) verified same-character reload and actual pickup selection/cancel without user keys; the [later same-character run](acceptance/2026-10-18-first-day-completion.md) reached24h14m29s without user rescue, with qualified needs/rest evidence and a retained cleanup deadline deviation | [#91 recovery](https://github.com/CVX-Hull/enactive/issues/91), [#79 continuity](https://github.com/CVX-Hull/enactive/issues/79) and [#80 first day](https://github.com/CVX-Hull/enactive/issues/80); shared execution is serialized |
 | Executable seven-day readiness | [Accepted preparation](acceptance/2026-10-18-seven-day-readiness.md) for frozen001; actual later failure/gaps remain separate | [#81 readiness](https://github.com/CVX-Hull/enactive/issues/81) |
-| Seven-day campaign | Same-character owned segments, visible calendar/needs/identity, restart/handoff and reviewed endpoint; first001 and continuation002 stopped partial, current #112 menu coverage gates play | [#82 execution](https://github.com/CVX-Hull/enactive/issues/82), [qualified menu repair](acceptance/2026-10-18-ordinary-menus.md) and daily children #100–106 |
+| Seven-day campaign | Same-character owned segments, visible calendar/needs/identity, restart/handoff and reviewed endpoint; first001 and continuation002 stopped partial; #112 is accepted, integrated029 awaits finite admission | [#82 execution](https://github.com/CVX-Hull/enactive/issues/82), [qualified menu repair](acceptance/2026-10-18-ordinary-menus.md) and daily children #100–106 |
 
 The first integrated pilot/review round used **18 charged inputs**, including four
 cleanup inputs, and 229.232 seconds through the final receipt capture. It stopped
@@ -119,8 +119,18 @@ corrected-candidate evidence; direction-query regression and post-shutdown reloa
 remain unexercised. Both proof admissions are closed, with36combined charges,112whole
 and zero verified game advance. A [separate remaining-gate check](acceptance/2026-10-18-menu-gate.md)
 then verified actual direction cancellation and prior-save reload,10newcharges/122whole,
-zero game advance. #112 closes only after verified publication; next survival
-assignment remains prospective. No old budget/queue is renewed.
+zero game advance. Protected exact/merged-main CI accepted publication; #112 is
+complete. Its PR description accidentally triggered GitHub issue closure before
+main CI finished, despite a prose negation. [The maintenance control](project-management.md#work-items-and-flow)
+now requires the computed closing-reference list to be empty before such merges;
+#75 retains the observed deviation.
+
+The [integrated next round](changes/029-seven-day-integrated.md) scopes the whole
+remaining seven-day outcome on one source/native/recorder freeze. Daily checkpoints,
+shared lifecycle/recovery reserves and actual midpoint player replacement remain
+finite, carrying122whole charges and the original clock. Lead owns admission and
+review; the player first reassesses sustainable visible resupply. Its proposed
+status is not input authority. No old budget/queue is renewed.
 Neither stopped study supplies unused authority for the next one. The seven
 named daily children [#100–106](https://github.com/CVX-Hull/enactive/issues/82)
 remain uncompleted with actual dependencies/estimates in GitHub. Source changes
