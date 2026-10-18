@@ -19,8 +19,11 @@ GitHub Issues and the [public Project](https://github.com/users/CVX-Hull/project
 dependencies, estimates and blockers. Repository docs own durable purpose,
 contracts, procedures, decisions and dated evidence. [Work](work.md) is the
 navigation entry point; exceptions are issues linked to their affected standard.
-[Dated acceptance](acceptance/2026-10-17-public-workflow.md) records live configuration
-and enforcement probes; this contract alone does not prove current settings.
+[Enactive migration acceptance](acceptance/2026-10-18-enactive-migration.md) records
+replacement configuration and enforcement probes; the original
+[public-workflow acceptance](acceptance/2026-10-17-public-workflow.md) remains
+historical. The [campaign path](work.md#path-to-seven-day-survival) links capability
+gates to owned Issues; this contract alone does not prove current settings.
 
 Use GitHub's issues, sub-issues, dependencies, milestones, pull requests, fields,
 saved views and built-in workflows. No custom tracker or background scheduler.

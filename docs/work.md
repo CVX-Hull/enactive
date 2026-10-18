@@ -1,136 +1,94 @@
 ---
 owner: lead
-review_trigger: Work tracker location, authority or workflow changes
+review_trigger: Work tracker location, authority, campaign path or workflow changes
 status: active
 ---
 
 # Work and decisions
-
-Work now lives in Enactive with the same Issue numbers and existing Project.
-The [migration record](acceptance/2026-10-18-enactive-migration.md) distinguishes
-native Issues, historical PR records and verified preservation of planning values.
-
-The [waypoint readiness brief](changes/014-waypoint-readiness.md) records the
-current guard repair, hosted workflow maintenance and gated experiment decision.
-[Round014 acceptance](acceptance/2026-10-18-waypoint-readiness.md) separates portable,
-real native and hosted publication evidence, with failures retained.
-GitHub retains live acceptance, dependencies and estimates.
-
-The [overview](overview.md) explains current capabilities and limitations.
-[Integrated player acceptance](acceptance/2026-10-18-integrated-player.md)
-records the delivered runtime, dedicated player sub-agent, spectator and native
-Pause/continuation. The [protocol](protocol.md) owns current behavior. Change briefs
-below record historical design and allocation; they are not outstanding work lists.
 
 [Public Project](https://github.com/users/CVX-Hull/projects/2) ·
 [Issues](https://github.com/CVX-Hull/enactive/issues) ·
 [Pull requests](https://github.com/CVX-Hull/enactive/pulls) ·
 [Milestones](https://github.com/CVX-Hull/enactive/milestones)
 
-GitHub Issues own scope, acceptance, dependencies, estimates, accountable owners,
-blockers and exceptions. The Project's Status field owns execution stage; Horizon
-owns Now/Next/Later sequencing. This page is navigation, not a second backlog.
-[Project management](project-management.md) defines the workflow and
-[engineering](engineering.md) owns mandatory standards.
+GitHub Issues own scope, acceptance, dependencies, estimates, owners and blockers.
+Project Status owns execution stage; Horizon owns Now/Next/Later. This page explains
+the delivery path, not a second live backlog. The [overview](overview.md) explains
+current capability; [project management](project-management.md) owns the workflow.
 
-The [seven-day campaign](https://github.com/CVX-Hull/enactive/issues/10) turns
-real play into evidence for memory, planning, monitoring and viewer improvements.
-The [campaign review workflow](project-management.md#campaign-driven-improvement)
-applies to future campaigns too: bounded segments, evidence-backed findings,
-explicit dispositions and owned follow-ups, with gameplay success assessed separately.
-GitHub owns the current campaign series and review-loop readiness.
+## Path to seven-day survival
 
-The [closed-loop gameplay outcome](https://github.com/CVX-Hull/enactive/issues/16)
-tracks the [tiered-gameplay proposal](research-tiered-gameplay.md), its bounded
-implementation slices, evaluation gates and maintenance follow-ups. Native
-interruption/recovery remains in [its existing outcome](https://github.com/CVX-Hull/enactive/issues/5).
+The [campaign outcome #10](https://github.com/CVX-Hull/enactive/issues/10) means a
+normally created fresh character alive after seven elapsed in-game days, with
+maintained needs, shelter/rest, meaningful supply/travel decisions, ordinary
+save/resume, understandable progress and user Pause/control. Failed, dead, partial
+or unknown attempts remain evidence and do not count as successful completion.
+The campaign milestone has no committed delivery date.
 
-The [monitoring follow-on](https://github.com/CVX-Hull/enactive/issues/40)
-tracks reusable expectations, semantic outcome monitoring and evidence-aware
-escalation beyond movement. Its [design](design/outcome-monitoring.md) and
-[research](research-outcome-monitoring.md) are separate from waypoint acceptance.
-The [public recovery and evaluation brief](changes/007-recovery-evaluation-monitoring.md)
-records round 007's interfaces and handoffs; its [acceptance](acceptance/2026-10-17-public-recovery-evaluation.md)
-separates delivered controls, passive instrumentation and future monitor behavior.
-Live allocation remains in GitHub.
+| Gate | Evidence needed to proceed | Tracked outcome |
+| --- | --- | --- |
+| Useful survival pilot and its first review | Ordinary creation/input/supply loop, actual UI/control friction, finite consumed limits and source-linked success or gap findings | [#78 pilot](https://github.com/CVX-Hull/enactive/issues/78), then [#83 first review](https://github.com/CVX-Hull/enactive/issues/83) |
+| Continuity and first-day rehearsal | Context/accounting survives player replacement and normal restart; a real first-day needs/shelter/supply/travel/rest loop works | [#79 continuity](https://github.com/CVX-Hull/enactive/issues/79) and [#80 first day](https://github.com/CVX-Hull/enactive/issues/80); design may overlap after the pilot, shared execution is serialized |
+| Executable seven-day readiness | Accepted #79/#80/#83, actual capability gaps resolved, measured throughput, finite total/segment/attempt limits, frozen scenario/candidate and independent outcome review | [#81 readiness](https://github.com/CVX-Hull/enactive/issues/81) |
+| Seven-day campaign | Bounded owned segments of the same fresh character, real visible calendar/needs/identity evidence, save/restart/handoff and reviewed endpoint | [#82 execution](https://github.com/CVX-Hull/enactive/issues/82), split and estimated before Ready |
 
-The [memory-representation investigation](https://github.com/CVX-Hull/enactive/issues/59)
-tracks the user-requested mathematical/statistical exploration and bounded
-simulation study. Its [brief](changes/013-memory-representation-study.md) defines
-competing perspectives, falsifiable comparisons, review and completion; the
-[initial memory review](research-memory-learning.md) is evidence to challenge,
-not a selected implementation. The [study synthesis](research-memory-representations.md)
-and [dated evidence](acceptance/2026-10-18-memory-representations.md) record completed
-offline comparisons and the recommendation to test simple baselines on visible
-traces. They change no live gameplay contract. GitHub owns study acceptance,
-follow-up readiness and allocations.
+The current first delivery round combines **#78 with #83's dependent review**.
+It ends with one retained bounded attempt, an honest success/gap decision, routed
+findings and concrete next #79/#80 briefs. Share evidence inspection and the finding
+table rather than running two equivalent retrospectives. #83 consumes pilot evidence
+and does not delay pilot admission. Original individual estimates remain in Issues;
+the whole round has a provisional M/Medium **3–5 focused-session effort range** for
+preparation, play, review/rework and publication, assuming no bridge redesign or
+substantial implementation. This is not a calendar forecast or an expanded play cap.
 
-The [passive supervisor brief](changes/010-passive-supervisor.md) defines round 010:
-remaining-route history, one eligible intent, fresh stage planning and explicit
-continuation. Its integration gaps were subsequently addressed by the controller
-lease and integrated-player increments. Live allocation and readiness remain in GitHub.
-Its [acceptance](acceptance/2026-10-17-passive-supervisor.md) separates portable
-component evidence from future production integration and model/native efficacy.
+Pilot limits remain **150 charged inputs, 45 minutes from admission and six in-game
+hours**, including creation and menus; reserve ten inputs and the final two minutes
+for eligible normal cleanup. Unknown delivery is charged and never replayed blindly.
+The admission brief pins current source/native configuration, scenario, player,
+accounting and stop rules. A useful failed pilot can finish an investigation and
+review; it cannot establish first-day or seven-day survival.
 
-The [bounded skills and native evidence brief](changes/009-bounded-skills-native-evidence.md)
-defines round 009: one-step movement proposals/results and real predicate acceptance.
-Its [acceptance](acceptance/2026-10-17-bounded-skills.md) records actual skill movement, negative boundaries and separate fault lanes. Reviewed interfaces keep dispatch and future supervision separate. Live readiness,
-ownership and acceptance remain in GitHub.
+The active player interprets fresh graphical evidence and chooses ordinary menu,
+key or action inputs. The harness's automated task is still bounded waypoint-and-return;
+there is no general survival planner, durable campaign context or mechanically
+enforced campaign-wide ledger. The pilot determines the smallest real gaps before
+implementation. [Protocol](protocol.md) owns current authority and uncertainty.
 
-The [native recovery and planner-port brief](changes/008-native-recovery-planner-port.md)
-records the accepted repair and bounded planner interfaces. A planner port alone does not enable model play.
-The [round 008 evidence](acceptance/2026-10-17-native-recovery-planner.md) records
-portable and native outcomes, failure evidence, and the separately tracked tutorial
-load defect. Publication and execution stages remain in the Project.
+## Allocation and parallel work
 
-The [foundation design brief](changes/004-gameplay-foundation.md) connects the native
-and gameplay investigation contracts to their bounded implementation handoffs.
-Live readiness and allocations remain in the Project, not in this navigation page.
-The [implementation brief](changes/005-foundation-implementation.md) fixes the
-native-v2 and gameplay-evidence interfaces for the accepted source increment. Its
-[acceptance](acceptance/2026-10-17-foundation-implementation.md) separates portable,
-build and real native evidence; live closure and remaining work are in GitHub.
+The lead owns admission, design, the only executor/game/save/port, finding
+adjudication and final acceptance. One player may propose bounded choices; read-only
+source/evidence reviews can run alongside it. No implementation worker is needed
+just to start the pilot. After evidence freezes #79/#80 interfaces, at most two
+workers may use separate worktrees and disjoint paths; one integrator and serialized
+native acceptance remain. Shared runtime, save or cache work cannot be parallelized
+by creating more source checkouts.
 
-The [recovery and memory brief](changes/006-recovery-memory.md) records the frozen
-interfaces, migration and handoffs. Its [acceptance](acceptance/2026-10-17-recovery-memory.md)
-separates Python recovery, passive memory and targeted native probes from future
-public controls and integrated gameplay. Live allocation and status remain in GitHub.
+## Parallel questions and maintenance
 
-Use Direction for outcomes and sequencing, Execution for delivery stage, and
-Needs attention for issues labeled blocked, decision-needed or risk. At checkpoints,
-the lead marks aging review/validation work with a risk label and records the cause;
-this is manual triage, not an automatic aging detector. Exceptions are issues with
-scope, affected standard, owner, reason, mitigation and expiry/revisit. Cancelled
-or duplicate work is closed as not planned and excluded from accepted delivery.
+- [Memory #70/#71](https://github.com/CVX-Hull/enactive/issues/70): #71 can inspect existing visible traces if review capacity permits. No persistent memory architecture or benchmark is a pilot prerequisite; actual campaign handoff belongs to #79.
+- [Comparison/tiering #16/#24/#25](https://github.com/CVX-Hull/enactive/issues/16): #72/#73/#74 remain genuine #24 gates; #73's complete both-arm export also needs #72. Additional tiers, matched trials and runtime evaluation export are a separate lane; #73 is revisited on a demonstrated accounting/export need or comparison selection.
+- [General monitoring #40/#42–44](https://github.com/CVX-Hull/enactive/issues/40): recurring campaign findings may justify bounded capabilities, but active player interpretation does not claim that framework is delivered.
+- [Research review #26](https://github.com/CVX-Hull/enactive/issues/26): October 24, 2026 active-work/event trigger remains; grooming does not renew it.
+- [Maintenance #75](https://github.com/CVX-Hull/enactive/issues/75): migration/CI events triggered scoped review. Current main CI passed after fixture hardening; the historical timeout cause is unproven and needs correlated evidence if repeated. This is visible review work, not an invented pilot dependency.
 
-The user reviews direction, tradeoffs and evidence through the [overview](overview.md).
-A milestone update records achieved outcomes, remaining risk, decisions and evidence.
-Controls have event triggers and recorded due dates in the [maintenance table](controls.md#maintenance).
-No scheduler automatically renews dates or performs maintenance.
+Conditional native automation #9, other-host/browser #11, broader tooling #12,
+advanced learning #27 and tutorial repair #47 retain their existing revisit triggers.
+No new paid provider, training, world model, background service or global setup is
+selected. All actual campaign gaps enter the [review-to-backlog workflow](project-management.md#campaign-driven-improvement)
+with an owner, disposition and appropriate acceptance; useful review is separate
+from survival success and generalized learning claims.
 
-The [controller lease brief](changes/011-controller-run-lease.md) defines round 011
-under [#50](https://github.com/CVX-Hull/enactive/issues/50): atomic ownership,
-queued-input exclusion and operator takeover. Its [acceptance](acceptance/2026-10-17-controller-run-lease.md)
-separates portable races and manual native probes. Round 012 subsequently supplied
-receipt assembly and service/provider integration. Higher-level broad-objective task formation is
-tracked in [#10](https://github.com/CVX-Hull/enactive/issues/10). Live allocation
-and acceptance remain in GitHub.
+## Decisions and dated evidence
 
-## Historical acceptance
+The [survival grooming checkpoint](acceptance/2026-10-18-survival-grooming.md) records
+all open-item dispositions, graph/Project checks, estimates, review and publication
+limits. GitHub owns subsequent changes. The [migration record](acceptance/2026-10-18-enactive-migration.md)
+explains canonical Enactive references and historical PR archives.
 
-[Public workflow acceptance](acceptance/2026-10-17-public-workflow.md) records source publication,
-GitHub views, hosted failures/repairs and branch-rule probes.
-
-The [consolidated MVP audit](acceptance/2026-10-17-completion.md) maps the original
-requested outcomes to evidence, including real graphical play and its limits.
-The [documentation increment](acceptance/2026-10-17-documentation-review.md) records
-metadata, lifecycle and visual-review checks. Historical reports do not override
-current workflow or establish current process health.
-
-[Integrated player acceptance](acceptance/2026-10-18-integrated-player.md) records
-round012 runtime, active-chat player, spectator and native Pause/continuation.
-Live closure, subsequent evaluation and guard-policy follow-up remain in GitHub.
-
-[Backlog maintenance checkpoint](acceptance/2026-10-18-backlog-grooming.md) records
-the scoped post-integration triage and cleanup. Follow the Project for subsequent
-readiness, allocation and sequencing.
+[Integrated player acceptance](acceptance/2026-10-18-integrated-player.md) and
+[waypoint readiness](acceptance/2026-10-18-waypoint-readiness.md) are real bounded
+native evidence, not fresh-character survival results. The [original MVP audit](acceptance/2026-10-17-completion.md)
+and [earlier grooming checkpoint](acceptance/2026-10-18-backlog-grooming.md) remain
+historical. The overview links deeper designs, studies and acceptance; historical
+briefs do not override current contracts or live Project fields.
