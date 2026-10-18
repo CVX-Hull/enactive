@@ -12,6 +12,23 @@ the user watches through a good graphical interface, supported by an understanda
 enforced and maintainable engineering system. Carry work through implementation,
 independent review and a real graphical gameplay demonstration.
 
+## Active continuation: seven-day survival
+
+The user extended the goal to complete the entire
+[seven-day campaign path](work.md#path-to-seven-day-survival), outcome
+[#10](https://github.com/CVX-Hull/enactive/issues/10): bounded pilot/review,
+continuity and first-day rehearsal, independently reviewed readiness, then a real
+normally created fresh character alive after seven elapsed in-game days with
+essential needs maintained, meaningful supply/travel decisions, ordinary rest,
+save/restart and player handoff, watchable progress and user Pause/takeover.
+
+Carry the work through implementation, truthful graphical acceptance, findings
+routing, protected publication and cleanup. Preserve finite prospective resource
+limits, failed/partial/unknown attempts and current authority rules. Intermediate
+demonstrations and completed research do not complete this continuation. GitHub
+Issues #78–#83 own scope, gates and acceptance; the current path links their briefs
+and evidence. MVP completion below remains historical scoped evidence.
+
 ## Required outcomes
 
 1. **Research and choose the right setup.** Investigate CDDA, integration/reuse
@@ -81,7 +98,7 @@ This document owns the consolidated requested outcome. The [charter](charter.md)
 owns principles; [standards](engineering.md) own requirements; [controls](controls.md)
 expose enforcement and gaps; [work](work.md) links GitHub's current progress and priorities.
 Start at the [overview](overview.md) to assess what currently exists. Dated
-[consolidated acceptance](acceptance/2026-10-17-completion.md) maps all outcomes;
+[consolidated acceptance](acceptance/2026-10-17-completion.md) maps the original MVP outcomes;
 [MVP](acceptance/2026-10-17-mvp.md),
 [engineering](acceptance/2026-10-17-engineering-system.md) and
 [documentation](acceptance/2026-10-17-documentation-review.md) reports supply
