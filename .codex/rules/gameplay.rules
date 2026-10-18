@@ -1,0 +1,30 @@
+# Owner: lead. Review on CLI entry-point, permission or authority changes.
+# User-authorized ordinary Enactive play only, from this trusted checkout.
+# Prefix rules permit execution outside the sandbox; they do not confine files,
+# pin source bytes or create a per-agent sandbox. Never use with an unreviewed
+# checkout. Keep source frozen during admitted play. Managed restrictions win.
+# Existing one-off campaign capture wrappers are NOT matched by this rule.
+prefix_rule(
+    pattern = [".venv/bin/python", "-m", "harness", [
+        "status", "observe", "pause", "resume", "goal", "key", "action", "walk",
+        "request_interrupt", "answer_interrupt", "continue_debug_once",
+        "gameplay-request", "gameplay-plan", "gameplay-start",
+        "gameplay-continue", "gameplay-abandon",
+    ]],
+    decision = "allow",
+    justification = "Ordinary authenticated loopback Enactive commands under an admitted campaign; native authority and campaign accounting still apply.",
+    match = [
+        ".venv/bin/python -m harness status",
+        ".venv/bin/python -m harness pause",
+        ".venv/bin/python -m harness key ESC --expect example:1",
+        ".venv/bin/python -m harness walk east --steps 1 --expect example:2",
+    ],
+    not_match = [
+        ".venv/bin/python -c print(1)",
+        ".venv/bin/python tools/setup.py --install",
+        ".venv/bin/python -m harness serve --port 8766",
+        ".venv/bin/python -m another_module status",
+        "python -m harness status",
+        "gh pr merge 1",
+    ],
+)
