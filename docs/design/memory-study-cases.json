@@ -1,0 +1,70 @@
+{
+  "protocol": "memory-study-v1",
+  "cases": [
+    {
+      "name": "duplicate",
+      "events": [{"id": "a", "kind": "observe"}, {"id": "a", "kind": "observe"}],
+      "queries": [{"after": 1, "kind": "source_eligible", "id": "a", "expected": true}, {"after": 1, "kind": "archive_count", "expected": 1}]
+    },
+    {
+      "name": "changed_and_delayed",
+      "events": [{"id": "a", "kind": "observe", "key": "open", "value": false, "turn": 3}, {"id": "c", "kind": "derive", "proofs": [["a"]]}, {"id": "b", "kind": "observe", "key": "open", "value": true, "turn": 5}, {"id": "d", "kind": "observe", "key": "open", "value": false, "turn": 4}],
+      "queries": [{"after": 1, "kind": "supported", "id": "c", "expected": true}, {"after": 2, "kind": "supported", "id": "c", "expected": false}, {"after": 3, "kind": "current_value", "key": "open", "expected": true}, {"after": 3, "kind": "historical", "id": "a", "expected": true}, {"after": 3, "kind": "supported", "id": "c", "expected": false}]
+    },
+    {
+      "name": "same_turn_conflict",
+      "events": [{"id": "a", "kind": "observe", "key": "open", "turn": 5}, {"id": "b", "kind": "observe", "key": "open", "value": false, "turn": 5}, {"id": "c", "kind": "derive", "proofs": [["a"]]}],
+      "queries": [{"after": 2, "kind": "current_value", "key": "open", "expected": null}, {"after": 2, "kind": "supported", "id": "c", "expected": false}]
+    },
+    {
+      "name": "unknown_turn",
+      "events": [{"id": "a", "kind": "observe", "key": "open", "turn": 5}, {"id": "b", "kind": "observe", "key": "open", "value": false, "turn": null}, {"id": "c", "kind": "derive", "proofs": [["a"]]}],
+      "queries": [{"after": 2, "kind": "current_value", "key": "open", "expected": null}, {"after": 2, "kind": "supported", "id": "c", "expected": false}]
+    },
+    {
+      "name": "alternate_proof",
+      "events": [{"id": "a", "kind": "observe"}, {"id": "b", "kind": "observe"}, {"id": "d", "kind": "observe"}, {"id": "c", "kind": "derive", "proofs": [["a", "b"], ["d"]]}, {"id": "x", "kind": "dispute_source", "source": "b"}, {"id": "y", "kind": "dispute_source", "source": "d"}],
+      "queries": [{"after": 3, "kind": "supported", "id": "c", "expected": true}, {"after": 4, "kind": "supported", "id": "c", "expected": true}, {"after": 5, "kind": "supported", "id": "c", "expected": false}, {"after": 5, "kind": "historical", "id": "d", "expected": true}]
+    },
+    {
+      "name": "shared_ancestor",
+      "events": [{"id": "a", "kind": "observe"}, {"id": "b", "kind": "observe"}, {"id": "d", "kind": "observe"}, {"id": "c", "kind": "derive", "proofs": [["a", "b"], ["a", "d"]]}, {"id": "x", "kind": "dispute_source", "source": "a"}],
+      "queries": [{"after": 4, "kind": "supported", "id": "c", "expected": false}, {"after": 4, "kind": "source_eligible", "id": "b", "expected": true}]
+    },
+    {
+      "name": "nested_claim",
+      "events": [{"id": "a", "kind": "observe"}, {"id": "b", "kind": "derive", "proofs": [["a"]]}, {"id": "c", "kind": "derive", "proofs": [["b"]]}, {"id": "x", "kind": "dispute_source", "source": "a"}],
+      "queries": [{"after": 2, "kind": "supported", "id": "c", "expected": true}, {"after": 3, "kind": "supported", "id": "c", "expected": false}]
+    },
+    {
+      "name": "retirement_rebuild",
+      "events": [{"id": "a", "kind": "observe"}, {"id": "c", "kind": "derive", "proofs": [["a"]]}, {"id": "x", "kind": "retire_claim", "claim": "c"}],
+      "queries": [{"after": 1, "kind": "supported", "id": "c", "expected": true}, {"after": 2, "kind": "supported", "id": "c", "rebuild": true, "expected": false}, {"after": 2, "kind": "historical", "id": "c", "expected": true}]
+    },
+    {
+      "name": "disputed_latest_no_resurrection",
+      "events": [{"id": "a", "kind": "observe", "key": "open", "value": false, "turn": 3}, {"id": "b", "kind": "observe", "key": "open", "turn": 5}, {"id": "x", "kind": "dispute_source", "source": "b"}],
+      "queries": [{"after": 2, "kind": "current_value", "key": "open", "expected": null}, {"after": 2, "kind": "source_eligible", "id": "a", "expected": false}]
+    },
+    {
+      "name": "session_alias",
+      "events": [{"id": "a", "kind": "observe", "key": "open"}, {"id": "c", "kind": "derive", "proofs": [["a"]]}, {"id": "x", "kind": "new_session", "session": "s2", "frame": "f2"}, {"id": "b", "kind": "observe", "key": "open", "value": false, "session": "s2", "frame": "f2"}],
+      "queries": [{"after": 3, "kind": "supported", "id": "c", "expected": false}, {"after": 3, "kind": "current_value", "key": "open", "expected": false}, {"after": 3, "kind": "source_eligible", "id": "a", "session": "s1", "frame": "f1", "expected": false}, {"after": 3, "kind": "historical", "id": "a", "expected": true}]
+    },
+    {
+      "name": "frame_alias",
+      "events": [{"id": "a", "kind": "observe", "key": "open", "frame": "other"}],
+      "queries": [{"after": 0, "kind": "current_value", "key": "open", "expected": null}, {"after": 0, "kind": "source_eligible", "id": "a", "expected": false}]
+    },
+    {
+      "name": "unknown_effect",
+      "events": [{"id": "a", "kind": "effect", "command": "move", "outcome": "unknown"}],
+      "queries": [{"after": 0, "kind": "effect", "command": "move", "expected": "unknown"}, {"after": 0, "kind": "effect", "command": "move", "rebuild": true, "turn": 100, "expected": "unknown"}]
+    }
+  ],
+  "identity_ambiguity": {
+    "visible": {"session": "s2", "frame": "f2", "landmark": "identical doorway", "relocalization": null},
+    "assessor_worlds": [{"old_location_matches": true}, {"old_location_matches": false}],
+    "expected_unique_match": null
+  }
+}

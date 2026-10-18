@@ -180,3 +180,55 @@ provisional rather than a calibrated elapsed-time forecast. Re-estimate openly o
 new evidence. Do not force a preferred conclusion to meet that range. Research
 currency and memory/evaluation maintenance use #26's existing active review trigger,
 plus model/observer/engine changes and false-memory or regression incidents.
+
+## Implementation allocation
+
+The [evidence matrix](../research-memory-representations.md) selects four falsifiable
+comparisons and the [frozen protocol](../design/memory-study-protocol.md) fixes
+inputs, assumptions, baselines, scoring, configurations and seeds. The study still
+has no simulation result or adopted live schema. The source/protocol checkpoint
+must be published before implementation workers receive their exact base revision.
+GitHub #62 owns execution; #63 owns final adjudication and review.
+
+| Owner | Exclusive implementation paths | Acceptance |
+| --- | --- | --- |
+| Lineage worker | `tools/memory_study/lineage.py`, `tests/test_memory_study_lineage.py` | L's 12 literal fixtures/32 queries; replay/view equality; duplicate, time, scope, retraction and retirement controls; hand-calculated counters; no other owned paths |
+| Retrieval worker | `tools/memory_study/retrieval.py`, `tests/test_memory_study_retrieval.py` | C's exact FTS/schema/query, shared answerer, source/session filters, deterministic generator, idempotent and lossy controls; backend failure stays explicit |
+| Lead | Remaining `tools/memory_study/` modules, remaining study tests, reports/docs/tracking | E/D implementation, common accounting/runner, leakage audit, exact-config execution, integration, reproducibility, negative results and final verification |
+| Clean-context reviewer | Read-only changed code/protocol/results | Challenge correctness, independence/leakage, baselines, scope, reproducibility and claims against primary evidence |
+
+Workers use separate project-local worktrees, one writer per checkout, no native
+runtime, API calls, installs or shared output/cache writes. Lead passes the
+published base revision and absolute worktree path in each brief. Use the existing
+root `.venv/bin/python` as a read-only interpreter/dependency source; put bytecode,
+tool caches and test output in each worktree. Workers stop after two failed repair
+attempts or ownership drift; lead integrates inspected diffs. No worker changes
+the protocol or tunes a rule from final outcomes.
+
+### Fixed module handoff
+
+Each suite exports `run(seeds: tuple[int, ...]) -> list[dict]`. Rows are independent
+**seed aggregates per condition/method**, not per-query pseudo-replicates. Each row
+has exactly `suite` (`L`/`E`/`C`/`D`), `seed` (integer), `condition` (string),
+`method` (string), and `metrics` (mapping of descriptive metric name to finite
+number). Conditions encode every varying regime/budget; no condition merging
+that hides failures. Include denominators/counts for rates and document units.
+The lead-owned runner validates rows, retains raw seed aggregates and writes
+aggregate reports with source/config hashes and runtime identity. Timing is
+measured by the runner and excluded from deterministic content comparison.
+
+Common helpers, owned by the lead, are `json_bytes(value) -> int` (canonical
+UTF-8 JSON, sorted keys, separators comma/colon, no NaN), and
+`rng(seed: int, namespace: str) -> random.Random` (seed the private generator from
+the integer value of SHA-256 of UTF-8 `namespace + ':' + str(seed)`). Suite names
+are namespaces; separately randomized reservoirs use `C-reservoir:<condition>`.
+No Python process-randomized `hash()` seeds. Workers may import only these helpers
+from `tools.memory_study.common`; they own no shared helper edits. Suite-local
+dataclasses, generators and method functions remain in their assigned modules.
+
+Tests use literal/development examples only, exercise formulas/semantics/leakage
+and report schema, and must not assert a preferred performance ranking. Exact
+worker commands are given with their worktree. The final seed set is run by the
+lead only after integration and code/config freeze. Preserve report revisions on
+any later bug or analysis change. This is experimental scaffolding, not a generic
+agent-memory framework or a second runtime contract.

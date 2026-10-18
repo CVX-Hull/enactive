@@ -41,6 +41,12 @@ maintenance question rather than expanding bibliography for its own sake.
 
 ## Embodied control / VLA
 
+The [cross-disciplinary representation study](research-memory-representations.md)
+compares mathematical, database, control and statistical views of memory. Its
+[simulation protocol](design/memory-study-protocol.md) was independently reviewed
+and frozen before implementation; no comparison results or architecture selection
+are claimed.
+
 The [memory and continuous-learning review](research-memory-learning.md) covers
 episode memory, revisable beliefs, retrieval, forgetting, evaluated improvement
 and mathematical foundations through 2026-10-18, including October 14–15
