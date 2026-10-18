@@ -42,7 +42,8 @@ def nonempty(value: str) -> str:
     return value
 
 
-def main() -> int:
+def command_parser() -> argparse.ArgumentParser:
+    """Build the CLI grammar for callers that must inspect effective arguments."""
     parser = argparse.ArgumentParser(description="Control the real local CDDA game through its serialized service")
     commands = parser.add_subparsers(dest="command", required=True)
     serve = commands.add_parser("serve", help="Start loopback service; startup always pauses")
@@ -90,7 +91,11 @@ def main() -> int:
             gameplay.add_argument("request_id", type=nonempty)
             gameplay.add_argument("--candidate", type=Path, required=True,
                                   help="One bounded gameplay/1 PlanCandidate JSON file")
-    args = vars(parser.parse_args())
+    return parser
+
+
+def main() -> int:
+    args = vars(command_parser().parse_args())
     command = args.pop("command")
     if command == "serve":
         controller = None

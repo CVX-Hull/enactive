@@ -16,7 +16,8 @@ explains preserved work, historical PR records and the limits of metadata remova
 An agent plays real Cataclysm: Dark Days Ahead while you watch the graphical game
 and retain control. The harness makes observations, actions and uncertainty visible.
 It needs an active Codex player to choose plans and interpret scenes. A dedicated
-player sub-agent can answer bounded planning requests while the lead supervises.
+player sub-agent can act as a bounded campaign operator while the lead supervises;
+the waypoint planner has a separate candidate-only role.
 The service executes an explicitly started waypoint task with per-step feedback;
 without a player response it stops on a deadline. General survival is not implemented.
 
@@ -37,12 +38,15 @@ defines the rule and its enforcement.
 
 Current system context: **who decides, what you see, and where you retain control**.
 
-![Player responsibilities: you direct the lead, a player proposes a plan, and the service verifies and executes while you retain Pause.](diagrams/player.svg)
+![Player responsibilities: one campaign operator or the leased waypoint service sends input, with explicit handoff and user Pause.](diagrams/player.svg)
 
 Boxes show responsibilities, not separate model tiers. The harness contains the
 run service, controller and spectator; the native bridge runs inside CDDA. A player
-sub-agent keeps gameplay context separate from engineering work. It proposes plans;
-the service validates and executes. [Editable diagram](diagrams/player.mmd).
+sub-agent keeps gameplay context separate from engineering work. A designated
+operator uses ordinary input checked by the controller under a finite brief; a waypoint planner
+submits candidate data for the leased service to execute. Only one arrangement
+owns input at a time. Actor assignment is procedural; it does not isolate inherited
+tools. [Editable diagram](diagrams/player.mmd), [handoff contract](protocol.md#designated-campaign-operator).
 
 CDDA decides game outcomes. The controller checks whether a requested input is
 allowed in the observed state. The viewer shows actual game frames and control
@@ -134,8 +138,9 @@ unknown exact sleep duration, nine lifecycle acknowledgments and two cleanup
 requests outside the deadline policy qualify this functional result. The first
 partial report remains history; no seven-day success follows. The next gate is
 #81's independent readiness protocol. [Operator permissions](operator-permissions.md)
-separates tested command rules from activation and the current planning-only
-player from proposed delegated execution.
+separates tested command rules from activation and the candidate-only waypoint
+planner from a designated campaign operator. The [operator probe](changes/020-campaign-operator.md)
+must verify actual delegated input and takeover before campaign adoption.
 Campaigns also expose concrete memory, planning,
 monitoring and viewer needs. The [review workflow](project-management.md#campaign-driven-improvement)
 routes observed problems into bounded improvements and checks their effect in later

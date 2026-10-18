@@ -1,18 +1,19 @@
 ---
-title: Player, supervisor and operator control
+title: One gameplay executor and explicit takeover
 ---
 flowchart TD
-  accTitle: Player proposes and the service controls execution
-  accDescr: The user directs the lead and can Pause the controller. The lead admits a bounded task. A dedicated player sub-agent reads retained visible evidence and proposes a plan. The service validates that plan against fresh evidence and budgets, then a skill proposes one action and the controller checks its lease. The real game returns evidence and the spectator shows verified progress or uncertainty. The player has no raw-input role; agent instructions do not create an operating-system sandbox.
-  User[You: objective and boundaries] --> Lead[Lead: task admission and supervision]
-  Lead --> Task[One bounded task]
-  Task --> Service[Run service: validate plan<br/>Fresh evidence and original budgets]
-  Evidence[Retained visible observations] --> Player[Dedicated player sub-agent<br/>Proposes the next leg]
-  Player -->|Candidate data only| Service
-  Service --> Skill[Skill: propose and verify one step]
-  Skill --> Controller[Controller: exact lease<br/>Deadline and native authority]
-  Controller --> Game[Real windowed CDDA]
-  Game --> Evidence
-  Evidence --> Service
-  Service --> Viewer[Spectator: verified progress<br/>Next check and stop reason]
-  User -->|Pause revokes new input| Controller
+  accTitle: One campaign operator or one waypoint executor with explicit handoff
+  accDescr: The user directs the lead and retains Pause. The lead admits a finite segment and chooses one execution arrangement. A campaign operator sends ordinary commands under a bounded brief. Alternatively, a waypoint planner proposes candidate data and the leased run service executes it. Both reach the same controller and real windowed game. Visible evidence returns to the player and spectator. Lead inspection requires Pause, terminal player tools, quiescence and fresh observation. Role assignment is procedural, not operating-system isolation.
+  User["You: objective and boundaries"] --> Lead["Lead: admission, source and lifecycle<br/>Supervision and final verification"]
+  Lead --> Choice["Choose one execution arrangement"]
+  Choice --> Operator["Campaign operator sub-agent<br/>Ordinary inputs in a finite segment"]
+  Choice --> Planner["Waypoint planning sub-agent<br/>Candidate data only"]
+  Planner --> Service["Run service and skill<br/>Fresh checks and exact lease"]
+  Operator --> Controller["One controller<br/>Native authority and deadlines"]
+  Service --> Controller
+  Controller --> Game["Real windowed CDDA"]
+  Game --> Evidence["Player-visible evidence<br/>Both players use current evidence"]
+  Evidence --> Viewer["Spectator: objective and state<br/>Progress, Pause and uncertainty"]
+  User -->|"Pause stops new dispatch"| Controller
+  Lead --> Handoff["Deliberate takeover<br/>Pause, terminal tools, quiescence<br/>Fresh paused observation"]
+  Handoff -->|"New explicit bounded assignment"| Choice
