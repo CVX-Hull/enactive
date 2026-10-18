@@ -53,7 +53,9 @@ class ServerTests(unittest.TestCase):
         (self.root / "web" / "index.html").write_text('<meta content="__CONTROLLER_TOKEN__">')
         (self.root / "web" / "app.js").write_text('"use strict";')
         (self.root / "web" / "style.css").write_text('body {}')
-        self.controller = Controller(self.root, timeout=0.15)
+        # Functional file/HTTP exchanges allow scheduler and fsync latency.
+        # Expiry and responsiveness tests below retain explicit short limits.
+        self.controller = Controller(self.root, timeout=2.0)
         runtime_module = ModuleType("harness.runtime")
         runtime_module.GameplayRuntime = StubRuntime
         with patch.dict(sys.modules, {"harness.runtime": runtime_module}):
@@ -308,7 +310,7 @@ class ServerTests(unittest.TestCase):
         stale = self.recovery_payload()
         with ControlBridge(self.controller) as bridge:
             code, body, _ = self.recovery(stale)
-            self.assertEqual(code, 200)
+            self.assertEqual(code, 200, body)
             self.assertEqual(json.loads(body)["status"], "prompt_opened")
             self.assertEqual(self.recovery(stale)[0], 409)
             answer = self.recovery_payload("answer_interrupt")

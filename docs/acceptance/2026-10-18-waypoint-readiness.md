@@ -138,6 +138,24 @@ runner runtime warnings, active rules and merged-tree identity are a separate
 publication lane; the linked PR/issue readback records their final results.
 No new protection configuration or destructive enforcement probe is claimed.
 
+The first protected merge, PR76, matched the reviewed tree and both candidate runs
+passed. Its [merged-main run39134201358](https://github.com/CVX-Hull/cdda-player/actions/runs/39134201358)
+then failed one of438 tests: the functional HTTP recovery round trip returned409
+instead of200 on its first call. The log did not retain that response body. The
+150ms fixture budget was therefore investigated, rather than rerunning until green.
+A controlled200ms synthetic consumer delay reproduced409 with an unknown outcome
+and retirement before claim. This supports scheduler/I/O sensitivity, not a proven
+exact hosted latency cause. The same test passes under that delay with a two-second
+functional allowance, matching the existing controller fixture. All25 loopback HTTP
+tests pass. Independent clean-context review found no material issue in this repair
+or the scoped diagnosis. The assertion now includes the response body for future diagnostics;
+its expected status, stale-authority rejection and delivery assertions remain.
+Explicit30/40ms expiry and150/200ms responsiveness checks, production deadlines,
+native code and gameplay are unchanged. The separate repair PR and final exact
+candidate/main results belong in the linked publication readback. The original
+failed hosted run and controlled reproduction remain evidence; no new native lane
+is claimed for a test-fixture/documentation change.
+
 Only C-REVIEW, C-RELEASE and C-MAINTENANCE receive this scoped exercise record;
 unrelated review dates stay unchanged. [The next maintenance item](https://github.com/CVX-Hull/cdda-player/issues/75) owns dependency,
 runner, workflow, release/failure/resumption triggers and the existing January15
