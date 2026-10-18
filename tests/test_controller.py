@@ -300,11 +300,14 @@ class ControllerTests(unittest.TestCase):
             self.ready()
             with ThreadPoolExecutor() as pool:
                 pending = pool.submit(self.controller.execute, "key", key="x", **self.expect())
-                self.assertTrue(entered.wait(2))
-                original = self.controller.pending.copy()
-                original_admission = self.controller.admissions / f'{original["id"]}.json'
-                self.controller.state = recovery_state()
                 try:
+                    self.assertTrue(entered.wait(2))
+                    # Native claim may precede publication bookkeeping. Inspect
+                    # the shared pending identity after its data-lock boundary.
+                    with self.controller.data_lock:
+                        original = self.controller.pending.copy()
+                        self.controller.state = recovery_state()
+                    original_admission = self.controller.admissions / f'{original["id"]}.json'
                     with ControlBridge(self.controller) as control:
                         result = self.controller.recover("request_interrupt", **self.recovery_expect())
                         self.assertEqual(result["status"], "prompt_opened")

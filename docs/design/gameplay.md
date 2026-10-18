@@ -57,13 +57,13 @@ because an epoch changed. Service/game restart does not resume tasks from a jour
 
 ### Dedicated player sub-agent
 
-![Selected round012 design: the dedicated player proposes plans, the service validates and executes, and you retain Pause.](../diagrams/player.svg)
+![Current player responsibilities: the dedicated player proposes plans, the service validates and executes, and you retain Pause.](../diagrams/player.svg)
 
 Solid arrows show responsibility and feedback, not independent model tiers.
 [Editable diagram](../diagrams/player.mmd). Current behavior is specified in the
 [protocol](../protocol.md#integrated-gameplay-lifecycle).
 
-The selected next integration uses one dedicated player sub-agent within the active
+The integrated runtime uses one dedicated player sub-agent within the active
 Codex chat. The lead owns task admission, shared runtime, supervision and final
 verification; the player reads bounded retained observations and proposes the next
 stage. The service validates candidates, checks fresh evidence and executes through
@@ -73,9 +73,11 @@ launch another game. Its working context contains gameplay evidence rather than
 engineering history. The lead can answer the same planning interface when needed;
 there is no automatic player fallback.
 
-The
-[integration brief](../changes/012-integrated-player.md#player-arrangement) owns
-its implementation, deadlines, accounting limits and acceptance. The user chose
+The [current protocol](../protocol.md#integrated-gameplay-lifecycle) owns the runtime
+contract, deadlines and accounting limits. The
+[integration brief](../changes/012-integrated-player.md#player-arrangement) records
+the decision, and [round012 acceptance](../acceptance/2026-10-18-integrated-player.md)
+records the implementation and native evidence. The user chose
 active-chat planning without a separately billed model API. A dedicated role does
 not imply a cheaper model, OS isolation, independent persistence or measured token
 cost. Losing the player must stop on a bounded deadline. A separate Codex session
