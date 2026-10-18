@@ -9,6 +9,7 @@
     "tools/diagrams.py": "f36470eeee167ab0039e17f9b6288e6d0d620df704419dbffa864bad54b7d4c1",
     "docs/diagrams/action.mmd": "e336746259893f76f0be296e86cacada2cdd0bd626a901232c6e720392108a81",
     "docs/diagrams/context.mmd": "ab7a504ffd6c627b29226cef6000a3f4b58b0f7697e5337d473a2a48c1920d63",
+    "docs/diagrams/memory-learning-loop.mmd": "b533f5ade625c8e1aa84a49c20c761cee491626b0e62fc5ac00881a4484e2aed",
     "docs/diagrams/native-recovery.mmd": "ab5710e53e064c78ec415a6a3623ccb918972979843d1b0bb384940871ac4170",
     "docs/diagrams/outcome-monitoring.mmd": "7d294be1628682dba90ee57a663e18dc73d5c11eb4ff3b6db8e9abc3e891606f",
     "docs/diagrams/player.mmd": "ff24660a99063110afd1115ac62f0ce8276d364a1103cf01cfaf8ef72afa8255",
@@ -21,6 +22,7 @@
   "outputs": {
     "docs/diagrams/action.svg": "7bd335d170d92d98b83322369bfe93b6e307c5b7a9bc9e64de0a13f3f3101038",
     "docs/diagrams/context.svg": "cbdd849c9ce9d285c32159ce9e1efbcdab8ec6b25aaaf514cbc1e623d706421e",
+    "docs/diagrams/memory-learning-loop.svg": "86fcc72ccfcab07570ff11f58058e5fc066016a455087dbdfe819c28b56006ce",
     "docs/diagrams/native-recovery.svg": "28aef44c10db37589d6f1f49c63748c546b4896f7556bf72d16fc6114795eaf6",
     "docs/diagrams/outcome-monitoring.svg": "502281089fee845913ce7f212cef4a6eee6f946a0f9b63a0ee63e97e469c3c88",
     "docs/diagrams/player.svg": "bd8e37f90aa59ff1bb0b27f2ca4dfe7057131f7c639e018f96ca5fcddc25b4db",

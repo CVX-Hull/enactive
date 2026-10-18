@@ -1,0 +1,22 @@
+---
+title: Proposed evidence and learning loop
+---
+flowchart TD
+  accTitle: Proposed memory advice and reviewed improvement retain the existing action authority
+  accDescr: One panel shows proposed memory advice: visible game observations enter scoped evidence, queries select applicable claims and relevant context, and unknowns lead to abstention or visible sensing. The player proposes a bounded plan; the existing supervisor and controller alone validate and execute it. A separate panel shows offline improvement: evidence-based candidate lessons undergo held-out evaluation and review before an authorized later version change. There is no automatic promotion or memory-to-game authority edge. Boxes are logical responsibilities, not extra services or an implemented persistent-memory feature.
+  subgraph Advice["Proposed memory advice; existing action authority"]
+    Game["Windowed CDDA"] -->|Visible observations| Evidence["Evidence: origin, scope and time"]
+    Evidence --> Query["Query applicable claims<br/>and relevant context"]
+    Query -->|Adequate context| Player["Player proposes a bounded plan"]
+    Query -->|Unknown| Unknown["Abstain or request<br/>visible evidence"]
+    Unknown -->|If available| Evidence
+    Player -->|Candidate data only| Control["Existing supervisor and controller<br/>Fresh guards; sole input authority"]
+    Control -->|Authorized action| Game
+  end
+  subgraph Improve["Offline improvement; separate acceptance"]
+    Lesson["Candidate lesson from experience<br/>Context and counterexamples"] -.-> Evaluate["Held-out evaluation<br/>Transfer, retention and cost"]
+    Evaluate -.->|Insufficient evidence| Revise["Reject or revise<br/>Preserve the evidence"]
+    Revise -.-> Lesson
+    Evaluate -.->|Qualified benefit| Review["Review a versioned change"]
+    Review -.-> Version["Authorized later implementation<br/>Native acceptance when needed"]
+  end

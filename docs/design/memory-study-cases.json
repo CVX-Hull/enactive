@@ -1,5 +1,5 @@
 {
-  "protocol": "memory-study-v1",
+  "protocol": "memory-study-v1.1",
   "cases": [
     {
       "name": "duplicate",

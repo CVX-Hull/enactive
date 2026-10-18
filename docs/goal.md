@@ -97,3 +97,9 @@ defines the research lenses, operational meaning of elegance, falsifiable
 comparisons, reproducibility, independent review and completion evidence. It
 includes adopt/test/defer decisions and bounded implementation follow-ups; it does
 not equate a research or synthetic result with a live gameplay capability.
+
+The [study synthesis](research-memory-representations.md) and
+[dated research acceptance](acceptance/2026-10-18-memory-representations.md) map
+this extension to primary-source review, reproducible comparisons, independent
+checks, a proposed representation/learning loop and staged follow-ups. Real-game
+memory or policy benefit remains a separate evaluation obligation.

@@ -94,6 +94,13 @@ arrangement; [round 012 acceptance](acceptance/2026-10-18-integrated-player.md) 
 two completed native tasks, Pause/continuation and the unsuccessful first route. Comparative model efficiency, generic semantic
 monitoring and broader survival remain separately tracked follow-ups.
 
+The [memory study](research-memory-representations.md) compares six mathematical
+and engineering views, with reproducible simulations and negative results. It
+recommends traceable evidence, explicit applicability, simple replay/query
+baselines and offline evaluated lessons. The next step is a bounded visible-trace
+benchmark; persistent memory, continuous policy improvement and new model tiers
+remain unimplemented. [Study evidence](acceptance/2026-10-18-memory-representations.md).
+
 The [tiered-gameplay proposal](research-tiered-gameplay.md) explores a capable
 planner, bounded skills and feedback, with additional model tiers conditional on
 measured benefit. Its [tracked outcome](https://github.com/CVX-Hull/cdda-player/issues/16)

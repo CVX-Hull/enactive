@@ -1,0 +1,59 @@
+{
+  "protocol": "memory-study-v1.1",
+  "suites": {
+    "L": [
+      {
+        "condition": "{regime}/{case}/passes={passes}",
+        "axes": {"regime": ["literal", "permuted_final"], "case": ["duplicate", "changed_and_delayed", "same_turn_conflict", "unknown_turn", "alternate_proof", "shared_ancestor", "nested_claim", "retirement_rebuild", "disputed_latest_no_resurrection", "session_alias", "frame_alias", "unknown_effect"], "passes": [1, 4, 16]},
+        "methods": ["archive_replay", "incremental_view", "diagnostic_no_deduplication", "diagnostic_no_valid_time", "diagnostic_no_alternate_proofs", "diagnostic_no_scope", "diagnostic_no_retirement_on_rebuild"],
+        "metrics": ["queries", "mismatches", "false_current", "unsupported", "lost_supported", "history_loss", "resurrection", "scope_leaks", "false_confirmed_effects", "rebuilds", "query_archive_inspections", "query_source_inspections", "query_claim_inspections", "query_index_operations", "update_event_inspections", "update_index_operations", "update_dependency_traversals", "update_cache_inspections", "update_cache_invalidations", "update_validation_inspections", "rebuild_event_inspections", "rebuild_index_operations", "archive_records", "archive_bytes", "index_entries", "extra_state_bytes", "source_records", "claim_records", "dependency_edges", "eligibility_cache_entries", "frontier_cache_entries", "peak_query_state_bytes", "correct", "total_work", "received_events"]
+      },
+      {
+        "condition": "identity_ambiguity", "axes": {}, "methods": ["identification_control"],
+        "metrics": ["identical_visible_inputs", "assessor_worlds", "unique_identity_available", "visible_input_bytes"]
+      }
+    ],
+    "E": [
+      {
+        "condition": "q={q}:rho={rho}:n={n}:copies={copies}",
+        "axes": {"q": [0.6, 0.8, 0.95], "rho": [0.0, 0.75], "n": [1, 4, 12], "copies": [1, 4, 16]},
+        "methods": ["naive", "dedup"],
+        "metrics": ["episodes", "origins", "visible_copies", "input_bytes", "origin_validation_visits", "model_in_class", "replay_decision_change", "abstained", "realized_utility", "expected_regret", "brier", "log_loss", "forecast", "wrong_high_confidence", "replay_forecast_change", "model_evaluations", "likelihood_signs", "extra_state_bytes"]
+      },
+      {
+        "condition": "q={q}:rho={rho}:n={n}:copies={copies}",
+        "axes": {"q": [0.6, 0.8, 0.95], "rho": [0.0, 0.75], "n": [1, 4, 12], "copies": [1, 4, 16]},
+        "methods": ["envelope"],
+        "metrics": ["episodes", "origins", "visible_copies", "input_bytes", "origin_validation_visits", "model_in_class", "replay_decision_change", "abstained", "realized_utility", "expected_regret", "lower", "upper", "width", "contains_true_model_posterior", "replay_forecast_change", "model_evaluations", "likelihood_signs", "extra_state_bytes"]
+      }
+    ],
+    "C": [
+      {
+        "condition": "outcomes={outcomes};source={source};session={session};visibility={visibility};k={k}",
+        "axes": {"outcomes": ["rare-update", "all-allow"], "source": ["normal", "rare-unavailable"], "session": ["normal", "distractors"], "visibility": ["full", "masked"], "k": [4, 8, 16]},
+        "methods": ["exact", "fts5", "recent", "reservoir", "majority-depth1", "majority-depth2", "majority-depth4", "majority-depth8", "truncation-depth1", "truncation-depth2", "truncation-depth4", "truncation-depth8"],
+        "metrics": ["retained_records", "archive_records", "retained_record_bytes", "archive_record_bytes", "lineage_entries", "lineage_bytes", "sqlite_database_bytes", "index_entries", "fts_document_rows_constructed", "metadata_rows_constructed", "projection_records_visited"],
+        "strata": ["", "rare_", "updated_", "missing_", "ordinary_"],
+        "stratified_metrics": ["queries", "decision_correct", "answer_correct", "known_answers", "necessary_abstentions", "avoidable_abstentions", "unsupported_answers", "wrong_answers", "required_latest_sources", "latest_records_recalled", "latest_source_lineage_recalled", "records_returned", "context_record_bytes", "wrong_operation_candidates", "retrieval_records_scanned", "eligible_match_candidates_ranked", "answerer_records_visited"]
+      },
+      {
+        "condition": "same-bit;labels={labels}", "axes": {"labels": [2, 16, 256]}, "methods": ["same-bit"],
+        "metrics": ["queries", "answer_correct", "retained_bits", "retained_records", "retained_record_bytes"]
+      }
+    ],
+    "D": [
+      {
+        "condition": "{regime}:phase={phase}",
+        "axes": {"regime": ["drift", "context_irrelevant", "no_drift", "hidden_domain"], "phase": [1, 2, 3, 4]},
+        "methods": ["fixed", "pooled", "scoped", "window8", "window16", "window32"],
+        "metrics": ["steps", "observations_seen", "input_archive_records", "input_archive_bytes", "state_bytes", "count_bins", "window_entries", "prediction_cells_consulted", "update_state_writes", "brier", "log_loss", "first16_brier", "last16_brier", "first16_log_loss", "last16_log_loss"]
+      },
+      {
+        "condition": "{regime}:probe_after_phase={phase}",
+        "axes": {"regime": ["drift", "context_irrelevant", "no_drift", "hidden_domain"], "phase": [1, 3]},
+        "methods": ["fixed", "pooled", "scoped", "window8", "window16", "window32"],
+        "metrics": ["probe_actions", "probability_error", "retention_error_change", "prediction_cells_consulted", "state_bytes"]
+      }
+    ]
+  }
+}

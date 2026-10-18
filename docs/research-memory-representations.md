@@ -8,17 +8,24 @@ review_trigger: Study protocol, source evidence, observed memory failure or repr
 
 This study asks **which distinctions the player must preserve to make a better
 decision later**. A bigger memory, a graph and a confidence number are not answers
-by themselves. The proposed comparison starts with ordinary replay and queries,
+by themselves. The comparison starts with ordinary replay and queries,
 then asks what an additional mechanism buys. No candidate below changes the
 [current runtime](architecture.md) or [memory contract](protocol.md).
 
 Research cutoff: **2026-10-18**. This extends the [initial review](research-memory-learning.md)
 under the [study brief](changes/013-memory-representation-study.md). The
 [experiment protocol](design/memory-study-protocol.md) defines the comparisons;
-the protocol was independently reviewed and frozen before implementation. Results
-and adoption decisions remain pending. GitHub [#59](https://github.com/CVX-Hull/cdda-player/issues/59)
-owns the outcome. These are project hypotheses, not a claim to exhaust current
-literature or identify a universally best memory system.
+the initial protocol was independently reviewed before implementation, with
+documented clarifications frozen before final collection. Two fresh processes
+produced identical results for **355,840 seed aggregates**. The
+[acceptance report](acceptance/2026-10-18-memory-representations.md) records exact
+provenance, independent checks, limitations and reproduction.
+
+**Recommendation: preserve source identity and applicability; start with replay
+and exact scoped queries; evaluate reusable lessons offline.** Test this against
+real visible traces before adding a persistent memory architecture. These are
+research decisions, not a new runtime feature or a universally best memory system.
+GitHub [#59](https://github.com/CVX-Hull/cdda-player/issues/59) owns the study outcome.
 
 ## One problem, six useful views
 
@@ -146,9 +153,10 @@ or entity match invented by a database or model.
 
 ## Candidate representation and operations to challenge
 
-The minimal conceptual candidate is **evidence → scoped claims → query views**,
-with evaluated lessons produced outside the live authority path. It is a candidate
-for the study, not an accepted schema or a new requirement to replace TaskMemory.
+The recommended design basis is **evidence → scoped claims → query views**,
+with evaluated lessons produced outside the live authority path. This is a
+conceptual representation to test next, not an accepted runtime schema or a
+requirement to replace TaskMemory.
 
 1. An immutable observation identifies origin, session/frame, receipt order and
    any actually known event time. Derived text points to those origins rather
@@ -182,20 +190,87 @@ learned lesson can issue an action, refresh a lease or override a guard.
 | Vector/graph memory service | Measured lexical/relational failures justify extra machinery | Embeddings, extraction, indexing and review costs are unmeasured |
 | Adaptive prompt or weight optimization | Later held-out gameplay shows a stable, evaluable objective | Current study does not train, call APIs or establish policy improvement |
 
-## What will count as useful evidence
+## What the experiments changed
 
-The [protocol](design/memory-study-protocol.md) tests lineage/time/scope laws,
-dependence and model uncertainty, bounded retrieval/compression, and sequential
-learning/retention. It includes strong simple baselines, missing-context and
-misspecified-model regimes, exact counterexamples, and resource accounting.
-It may show that replay is sufficient, that intervals mostly abstain, or that
-scoping harms sample efficiency when context is irrelevant. Those are legitimate
-outcomes. No complexity score is traded against an authority violation.
+All declared regimes ran with 256 held-out seeds. These are selected contrasts,
+not a ranking pooled over incompatible tasks. The [selected data](assets/memory-study-results.json)
+and [full evidence report](acceptance/2026-10-18-memory-representations.md) give
+denominators, costs, uncertainty, complete-report locations and reproduction.
 
-The owner-facing decision will show a few concepts, one learning loop and the
-authority boundary, backed by tables of assumptions, benefits, regressions and
-maintenance cost. Diagrams and a final adopt/test/defer recommendation follow
-results; neither a diagram nor a synthetic score will certify real-game efficacy.
-The study's independent protocol and final reviews remain required. Research
-maintenance follows [#26](https://github.com/CVX-Hull/cdda-player/issues/26), with
-earlier review on observer/model/engine changes or a false-memory regression.
+| Comparison | Observed tradeoff | Design consequence |
+| --- | --- | --- |
+| Scoped replay versus dependency cache | Both satisfy all lineage laws. Across 12 literal templates, one query pass costs 526 versus 606 counted work units; 16 passes cost 5,596 versus 2,436. | Cache only when repeated queries repay update/invalidation cost. These heterogeneous counters are not execution time. |
+| Deduplicated likelihood versus model envelope | At independent `q=.8`, four origins, the envelope abstains on every seed and loses utility. At correlated `q=.6`, 12 origins, it prevents the nominal model's harmful decisions. Outside its class, posterior containment can be zero. | Origin deduplication is necessary but does not establish source independence. Intervals need justified models and an abstention cost. |
+| Exact queries versus FTS5 and compaction | Fully visible, correctly tagged synthetic queries: exact and FTS answer-or-abstain correctly on 32/32 queries. Majority summaries preserve the newest citation yet answer the updated key correctly on only 92/256 seeds. | Retrieval cues, citation lineage and retained meaning are separate. Preserve inspectable source content; test extraction and missing metadata separately. |
+| Scoped learning versus pooled or fixed predictions | After within-context drift, scoped all-history Brier loss is .340, pooled .223, fixed .250. Scoped memory preserves untouched-context predictions but cannot notice a mechanism change by context name alone. | Test transfer, retention and drift together. More memory can make predictions worse; no learning remains a legitimate baseline. |
+
+Other controls matter: an idempotent majority projection loses no additional
+information on repeated application; truncation does. Many query names can ask
+for the same retained bit. Hidden context stays unidentifiable. Logs containing
+only one action cannot identify the reward of an untried action. Thus neither a
+universal query-entropy memory tax nor a general claim of continuous improvement
+is justified. These simulations measure explicit toy operators and fixed-logger
+predictions, not LLM summaries, a trained player or survival.
+
+## One advice loop and one improvement loop
+
+Reader question: **how can memory and learning help without acquiring action
+authority?** This is a proposed logical view, with the existing execution boundary.
+
+![Proposed memory advice and offline improvement remain separate from the existing controller's action authority.](diagrams/memory-learning-loop.svg)
+
+Boxes denote responsibilities, not processes, stores or model tiers. Solid arrows
+show proposed gameplay information and the existing guarded execution path;
+dashed arrows show offline evaluation and review. [Editable source](diagrams/memory-learning-loop.mmd).
+Text equivalent: visible observations retain origin/scope/time; queries supply
+applicable context or report unknown; the player proposes a bounded plan; only
+the existing supervisor/controller can validate and execute it. An observation
+request still needs that authority. Separately, candidate lessons retain context
+and counterexamples, undergo held-out evaluation, and are rejected/revised or
+reviewed for a later authorized version change. There is no automatic promotion.
+The [current memory contract](protocol.md#passive-task-memory) remains authoritative.
+
+The conceptual roles map onto existing types rather than introducing six new
+services: `EvidenceRef`/`Fact` retain observation references; `Interpretation`,
+`Hypothesis` and `Belief` distinguish non-factual interpretations from facts;
+`RememberedPlan` retains a `PlanCandidate`; `ProcedureReference` names a
+`SkillDescriptor`; `RememberedAction` retains a `PrimitiveResult`. A belief's
+`valid` flag checks retained support, not proposition truth. A plan proposes work;
+a procedure reference describes it; neither is permission to execute. A future
+cross-session store would require a separately reviewed contract and migration.
+
+Keep three meanings distinct. Suite L asks whether a claim is currently applicable
+under explicit lifecycle rules. Suite C asks what the eligible archive says;
+it does not establish current world truth. Neither can satisfy the controller's
+fresh evidence guard. A stronger model may interpret supplied observations better;
+it cannot manufacture missing identity or counterfactual observations.
+
+## Adopt, test and defer
+
+| Decision | Smallest justified scope | Evidence needed to change it |
+| --- | --- | --- |
+| Adopt as design principles | Origin identity; explicit applicability/time; separate history, current support, disagreement and retirement; disposable views; offline reviewed improvement | Revisit a distinction if real traces show its ambiguity or maintenance cost; never exchange authority for convenience |
+| Test next | A bounded visible-trace memory benchmark, starting from current TaskMemory, current-frame/full-visible-history and exact scoped replay | Repeatable useful questions, source-grounded answers/unknowns, held-out failures and measured cost; stop if simpler baselines suffice |
+| Defer dependency caches | Keep replay as the correctness baseline | A measured query workload where cache benefit includes updates, rebuilds and invalidation tests |
+| Defer numeric belief/envelope storage | Do not relabel retrieval scores or source validity as calibrated probability | Defensible target/model class, dependence handling, held-out proper losses, abstention utility and misspecification tests |
+| Defer general ATMS, PSR, vector/graph service and weight/prompt optimization | No new backend or trained tier selected | A demonstrated baseline defect, bounded implementation brief and independent regression/maintenance assessment; gameplay claims additionally require native evaluation |
+
+This is elegant in an operational sense: a small set of meanings composes through
+explicit references; current answers can be inspected against history; views can
+be rebuilt; and retirement has one meaning. Replay has fewer invalidation states
+than a cache. Remaining costs are real: correct extraction, event identity,
+retention/deletion, scope drift and evaluation design. A sophisticated formalism
+does not pay those costs for us, and adding fields without a query need is not
+progress. No arbitrary elegance score overrides correctness or action authority.
+
+The next benchmark is [#70](https://github.com/CVX-Hull/cdda-player/issues/70),
+linked from the study outcome. It must
+separate memory question quality from native policy benefit under
+[#24/#56](https://github.com/CVX-Hull/cdda-player/issues/56), and coordinate monitor
+work [#40](https://github.com/CVX-Hull/cdda-player/issues/40). Advanced learning
+[#27](https://github.com/CVX-Hull/cdda-player/issues/27) remains conditional.
+Research maintenance follows [#26](https://github.com/CVX-Hull/cdda-player/issues/26),
+including its 2026-10-24 active-work review and earlier observer/model/engine or
+false-memory triggers. Do not refresh a research date without reassessing evidence.
+Any later format change migrates all callers/data together and removes the old
+path under S-MIGRATION; this study adds only its current v1.1 offline format.

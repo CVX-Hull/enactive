@@ -1,7 +1,8 @@
 ---
 owner: lead
-status: active
-review_trigger: Research scope, simulation protocol, evidence, selected representation or user constraints change
+status: historical
+date: 2026-10-18
+scope: Memory investigation brief, predeclared comparisons and implementation handoff; completed research evidence linked below, no runtime architecture adoption
 ---
 
 # Investigate memory representations and continuous improvement
@@ -185,9 +186,10 @@ plus model/observer/engine changes and false-memory or regression incidents.
 
 The [evidence matrix](../research-memory-representations.md) selects four falsifiable
 comparisons and the [frozen protocol](../design/memory-study-protocol.md) fixes
-inputs, assumptions, baselines, scoring, configurations and seeds. The study still
-has no simulation result or adopted live schema. The source/protocol checkpoint
-must be published before implementation workers receive their exact base revision.
+inputs, assumptions, baselines, scoring, configurations and seeds. At this
+allocation checkpoint no simulation result or live schema had been adopted.
+The source/protocol checkpoint had to be published before implementation workers
+received their exact base revision.
 GitHub #62 owns execution; #63 owns final adjudication and review.
 
 | Owner | Exclusive implementation paths | Acceptance |
@@ -232,3 +234,16 @@ worker commands are given with their worktree. The final seed set is run by the
 lead only after integration and code/config freeze. Preserve report revisions on
 any later bug or analysis change. This is experimental scaffolding, not a generic
 agent-memory framework or a second runtime contract.
+
+## Outcome record
+
+The [synthesis](../research-memory-representations.md) and
+[acceptance](../acceptance/2026-10-18-memory-representations.md) record the research,
+two complete identical collections, independent reproduction checks, readable
+advice/improvement diagram and adopt/test/defer recommendation. Source/protocol
+checkpoint PR68 and implementation/results PR69 provide protected publication.
+The minimal next slice is a player-visible trace benchmark before persistent
+memory redesign. Its live scope, estimate and acceptance are in GitHub, alongside
+native baseline #24/#56, monitoring #40, maintenance #26 and conditional #27.
+This historical brief preserves the original questions/allocation and does not
+promise an implemented memory architecture or completed native-policy evaluation.

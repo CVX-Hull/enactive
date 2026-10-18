@@ -42,8 +42,11 @@ tracks the user-requested mathematical/statistical exploration and bounded
 simulation study. Its [brief](changes/013-memory-representation-study.md) defines
 competing perspectives, falsifiable comparisons, review and completion; the
 [initial memory review](research-memory-learning.md) is evidence to challenge,
-not a selected implementation. GitHub owns its research/protocol/simulation/decision
-stages. This does not claim completed simulations or change live gameplay contracts.
+not a selected implementation. The [study synthesis](research-memory-representations.md)
+and [dated evidence](acceptance/2026-10-18-memory-representations.md) record completed
+offline comparisons and the recommendation to test simple baselines on visible
+traces. They change no live gameplay contract. GitHub owns study acceptance,
+follow-up readiness and allocations.
 
 The [passive supervisor brief](changes/010-passive-supervisor.md) defines round 010:
 remaining-route history, one eligible intent, fresh stage planning and explicit

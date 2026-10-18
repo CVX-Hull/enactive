@@ -6,9 +6,11 @@ review_trigger: Hypotheses, comparison rules, generators, visibility, budgets or
 
 # Memory representation experiment protocol
 
-Protocol **memory-study-v1**, frozen **2026-10-18** after independent protocol
+Protocol **memory-study-v1.1**, current revision **2026-10-18**. Initial v1 was
+frozen on that date after independent protocol
 review and lead resolution of eligibility, literal fixtures, retrieval specification
-and update-key sampling findings. **No comparison outcomes collected at freeze.** The
+and update-key sampling findings. **No comparison outcomes collected at initial freeze;
+no final-seed outcomes collected before the v1.1 clarifications below.** The
 [study brief](../changes/013-memory-representation-study.md) owns scope and the
 [research synthesis](../research-memory-representations.md) owns rationale/sources.
 This file owns the proposed synthetic experiment. It introduces no live runtime
@@ -109,7 +111,10 @@ claim in the same scope. Derivation graphs are acyclic. Distinct property keys c
 support one claim; a world update supersedes an older source for its own key and
 therefore invalidates dependent claims. Deriving does not copy an observation into
 a new independent source. A source dispute is permanent in this bounded experiment.
-A retirement is also permanent for that claim ID, regardless of new derivations.
+A retirement is also permanent for that claim ID. There is exactly one creation
+per claim ID: a derive event's event ID is its claim ID; no add-proof/update-claim
+operation exists. An identical replay deduplicates, while reuse with changed
+payload or another creation targeting an existing claim is an input error.
 Archive record existence remains true after either event.
 
 **Input identity.** `event_id` identifies the semantic event. Identical replays
@@ -120,13 +125,17 @@ query returns the latest received explicit status for that command, or unknown.
 Clock passage/rebuild/query repetition does not confirm it. No simulated command
 is dispatched. Queries may request a rebuild before reading the same archive.
 
-**Methods.** (1) archive replay recomputes every query using ordinary dictionaries
+**Methods.** (1) archive replay recomputes semantic queries using ordinary dictionaries
 and recursive Boolean dependency evaluation; (2) incremental view maintains
 reverse dependencies and cached eligibility, but must return the same result.
 Both retain the same archive/lifecycle. Diagnostic ablations remove origin
 deduplication, valid-time ordering, alternate proofs, scope checks, or retirement
 application during rebuild, one at a time. Label them intentionally incomplete;
 they do not describe current TaskMemory or establish its failure.
+Archive-count/history-existence queries directly read already retained/charged
+archive and identity metadata; they do not rebuild unused state. Incremental effect
+queries directly read their already maintained status map without allocating empty
+eligibility caches. These obvious query paths add no new state/architecture.
 
 **Cases.** The literal [fixtures](memory-study-cases.json) fix events, prefix queries
 and expected answers independently of both implementations. The file's defaults
@@ -245,6 +254,10 @@ and availability; apply latest-by-receipt for matching exact keys, then the same
 masked-operation consensus rule. No answer without sufficient records. Therefore
 bad retrieval can cause abstention; it cannot silently bypass scope checks.
 The assessor scores whether abstention is necessary or due to missing retrieval.
+Masked mode still issues all 32 underlying key queries: 16 pairs have identical
+visible inputs/expected consensus answers and are not independent samples. Stratum
+precedence is rare, updated, missing exact-key eligible record, then ordinary;
+hidden operation is scorer-only for these strata, never supplied to the answerer.
 
 **Methods / budgets.** Working context k∈{4,8,16}:
 
@@ -290,12 +303,16 @@ Record the serialized in-memory SQLite database byte size separately from canoni
 record bytes. The session-distractor variant changes metadata and regenerates body
 consistently for every non-rare record at indices divisible by 5; query remains s1.
 All retrieval paths see the same altered records.
+Charge FTS construction explicitly: one FTS document row and one metadata row
+prepared/inserted per archive record, separately from query candidates and SQLite
+bytes. These are logical row counters, not SQLite's internal instruction costs.
 
 **Compaction controls.** Apply the majority projection 1, 2, 4 and 8 times to its
 output, treating each summary as one record but preserving its lineage and chosen
 outcome. This operator is idempotent after its first pass; assert that result.
 A separate explicit progressive-truncation operator removes the oldest half of
-remaining records per pass (rounding down, minimum one removed while nonempty),
+remaining **raw 64 archive** records per pass (rounding down, minimum one removed
+while nonempty), with availability/session filtering in the common answerer,
 then exact retrieval. It demonstrates one loss mechanism and can saturate; no
 universal growth law is fitted. Include the same-bit query-label counterexample
 with 2, 16 and 256 distinct labels, all answered by one retained bit.
@@ -305,6 +322,11 @@ avoidable abstention, rare/updated-group recall, wrong-operation candidates befo
 filtering, records returned, scans/candidates examined, retained/index/lineage bytes,
 and projection work. Report all methods, k, visibility, source/session regimes and
 compaction depths. Do not collapse rare and common outcomes into one ranking.
+Distinguish latest-source lineage recall (required raw source ID retained among
+returned support IDs) from latest-record semantic recall (matching exact key,
+receipt and outcome; summary ID may differ). Include each denominator. A summary
+can retain the right citation while losing the latest outcome; source recall must
+not be reported as answer correctness.
 
 ## D — Sequential learning, retention and unidentifiable alternatives
 
@@ -347,6 +369,16 @@ not an estimator contest or a numerical reproduction of doubly robust learning.
 
 ## Analysis, failure handling and publication
 
+The [declared matrix](memory-study-matrix.json) fixes exact condition/method keys
+and required metric names independently of suite output. The runner checks these
+and complete-method/control invariants before reporting completion. Per seed,
+L/E/C/D contain 505/162/579/144 rows, respectively; the full final set has 355,840
+seed aggregates. A matching count with renamed/missing methods is not coverage.
+Paired differences use archive replay, deduplicated Bayes, exact archive recall
+and pooled counts as their respective references; named identification/same-bit
+controls have no paired reference. Shared metrics are differenced within a seed
+and condition, never by pretending the two samples were independent.
+
 Use all declared configurations. Report per-seed aggregates, then means and
 descriptive `1.96 * sample_sd / sqrt(256)` Monte Carlo half-widths across independent
 seed aggregates, with paired differences where useful. They describe simulation
@@ -384,3 +416,20 @@ remaining material findings. A 1e-12 decision-threshold tie tolerance prevents
 floating-point artifacts. No simulation implementation or comparison outcomes
 existed at this freeze. Later changes must preserve this record and explain their
 effect before affected runs; previous outputs remain evidence, not disposable noise.
+
+### v1.1 implementation clarifications — before final collection
+
+Worker questions exposed choices not fully specified by v1: repeated claim creation,
+raw versus prefiltered truncation, masked-query multiplicity/strata and whether
+source-lineage recall implies retained semantic content. The lead fixed these
+above before the affected C/L comparisons. Initial E development tests have run;
+no final seeds or study reports have been collected. Hypotheses, distributions,
+budgets, methods, final seeds and primary utility measures are unchanged. This
+revision removes ambiguous interpretation; no v1 execution/reader path is retained.
+Implementation review additionally required exact condition/method/metric-schema
+coverage and runtime exact-law gates in the runner, and explicit FTS construction
+counters. They are enforced before final collection; failed/rejected rows are
+preserved rather than becoming a completed report.
+A final fairness review removed unnecessary reconstruction for replay's metadata
+queries and empty eligibility caches for incremental effect queries. No final
+outcomes had been collected; these use existing state, not a new optimizer.

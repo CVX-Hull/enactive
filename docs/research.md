@@ -44,8 +44,10 @@ maintenance question rather than expanding bibliography for its own sake.
 The [cross-disciplinary representation study](research-memory-representations.md)
 compares mathematical, database, control and statistical views of memory. Its
 [simulation protocol](design/memory-study-protocol.md) was independently reviewed
-and frozen before implementation; no comparison results or architecture selection
-are claimed.
+before implementation, with documented clarifications frozen before final
+collection. The [results and reproduction](acceptance/2026-10-18-memory-representations.md)
+support a simple replay/query design basis and a bounded visible-trace benchmark;
+they do not establish native efficacy or select a new live memory architecture.
 
 The [memory and continuous-learning review](research-memory-learning.md) covers
 episode memory, revisable beliefs, retrieval, forgetting, evaluated improvement
