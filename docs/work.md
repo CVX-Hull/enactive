@@ -6,12 +6,11 @@ status: active
 
 # Work and decisions
 
-The [integrated player brief](changes/012-integrated-player.md) joins
-[#52 runtime](https://github.com/CVX-Hull/cdda-player/issues/52) and
-[#23 spectator](https://github.com/CVX-Hull/cdda-player/issues/23) into one
-end-to-end delivery under #36. It records the selected dedicated player sub-agent,
-two disjoint implementation allocations and real gameplay acceptance. The Project
-owns readiness and live status; the brief does not establish shipped capability.
+The [overview](overview.md) explains current capabilities and limitations.
+[Integrated player acceptance](acceptance/2026-10-18-integrated-player.md)
+records the delivered runtime, dedicated player sub-agent, spectator and native
+Pause/continuation. The [protocol](protocol.md) owns current behavior. Change briefs
+below record historical design and allocation; they are not outstanding work lists.
 
 [Public Project](https://github.com/users/CVX-Hull/projects/2) ·
 [Issues](https://github.com/CVX-Hull/cdda-player/issues) ·
@@ -34,14 +33,14 @@ tracks reusable expectations, semantic outcome monitoring and evidence-aware
 escalation beyond movement. Its [design](design/outcome-monitoring.md) and
 [research](research-outcome-monitoring.md) are separate from waypoint acceptance.
 The [public recovery and evaluation brief](changes/007-recovery-evaluation-monitoring.md)
-defines this round's interfaces and handoffs; its [acceptance](acceptance/2026-10-17-public-recovery-evaluation.md)
+records round 007's interfaces and handoffs; its [acceptance](acceptance/2026-10-17-public-recovery-evaluation.md)
 separates delivered controls, passive instrumentation and future monitor behavior.
 Live allocation remains in GitHub.
 
 The [passive supervisor brief](changes/010-passive-supervisor.md) defines round 010:
 remaining-route history, one eligible intent, fresh stage planning and explicit
-continuation. Real leases, service/provider integration and native receipt assembly
-remain #36 gates. Live allocation and readiness remain in GitHub.
+continuation. Its integration gaps were subsequently addressed by the controller
+lease and integrated-player increments. Live allocation and readiness remain in GitHub.
 Its [acceptance](acceptance/2026-10-17-passive-supervisor.md) separates portable
 component evidence from future production integration and model/native efficacy.
 
@@ -84,8 +83,8 @@ No scheduler automatically renews dates or performs maintenance.
 The [controller lease brief](changes/011-controller-run-lease.md) defines round 011
 under [#50](https://github.com/CVX-Hull/cdda-player/issues/50): atomic ownership,
 queued-input exclusion and operator takeover. Its [acceptance](acceptance/2026-10-17-controller-run-lease.md)
-separates portable races and manual native probes. Parent #36 retains receipt assembly
-and service/provider integration. Higher-level broad-objective task formation is
+separates portable races and manual native probes. Round 012 subsequently supplied
+receipt assembly and service/provider integration. Higher-level broad-objective task formation is
 tracked in [#10](https://github.com/CVX-Hull/cdda-player/issues/10). Live allocation
 and acceptance remain in GitHub.
 
@@ -103,3 +102,7 @@ current workflow or establish current process health.
 [Integrated player acceptance](acceptance/2026-10-18-integrated-player.md) records
 round012 runtime, active-chat player, spectator and native Pause/continuation.
 Live closure, subsequent evaluation and guard-policy follow-up remain in GitHub.
+
+[Backlog maintenance checkpoint](acceptance/2026-10-18-backlog-grooming.md) records
+the scoped post-integration triage and cleanup. Follow the Project for subsequent
+readiness, allocation and sequencing.

@@ -652,22 +652,22 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-17",
-        "outcome": "Passed within recorded scope after preserved repairs; limitations retained.",
-        "scope": "Behavior-triggered current guidance/control review, incident retention and owned runtime cleanup.",
+        "date": "2026-10-18",
+        "outcome": "Scoped backlog and maintenance review detected stale guidance and repeated tracking; repaired navigation and groomed work. Runtime cleanup preserved saves/evidence.",
+        "scope": "All open issues, dependency/readiness review, current-work navigation, owned refs/process inventory and retained control gaps; no gameplay trial or dependency upgrade.",
         "evidence": [
-          "docs/acceptance/2026-10-17-recovery-memory.md"
+          "docs/acceptance/2026-10-18-backlog-grooming.md"
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-17",
+        "date": "2026-10-18",
         "evidence": [
-          "docs/acceptance/2026-10-17-recovery-memory.md"
+          "docs/acceptance/2026-10-18-backlog-grooming.md"
         ],
         "effectiveness": "unassessed",
-        "findings": "Current docs and scopes updated to v3 and passive memory; prior reports remain history. Native/semantic failures preserved and repaired without weakening guards. Long-term effectiveness remains unmeasured.",
-        "cost": "Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.",
-        "follow_up": "Review on relevant contract/failure/release or recorded due date. #31 public controls, #8 broad recovery, #33 gameplay evidence and #13 maintenance remain separate work."
+        "findings": "Manual checkpoint review detected stale navigation, repeated CI-warning entries and obsolete prerequisite text. Corrections and explicit next actions are recorded; sustained effectiveness is unmeasured.",
+        "cost": "Two read-only sweeps, lead reconciliation and clean-context review; no native trial. Exact effort and long-term forecast error are unavailable.",
+        "follow_up": "Lead owns triggered action-runtime migration and remaining workflow review in #13; #26 retains research review on 2026-10-24 if active or before resuming. Preserve the existing general due date; no automatic renewal."
       },
       "next_review": "2027-01-15"
     },

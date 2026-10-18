@@ -51,7 +51,7 @@ Active and deprecated controls fail after their due date. Event triggers can req
 | C-PROTOCOL | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-SETUP | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
 | C-RELEASE | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
-| C-MAINTENANCE | active | 2026-10-17 | 2026-10-17 | unassessed | 2027-01-15 |
+| C-MAINTENANCE | active | 2026-10-18 | 2026-10-18 | unassessed | 2027-01-15 |
 | C-VISUAL | active | 2026-10-18 | 2026-10-18 | effective | 2027-01-15 |
 
 ## Mechanisms and coverage
@@ -330,15 +330,15 @@ Coverage gap: Review quality and event-trigger detection remain manual. No backg
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within recorded scope after preserved repairs; limitations retained.
-Scope: Behavior-triggered current guidance/control review, incident retention and owned runtime cleanup.
-Exercise evidence: [docs/acceptance/2026-10-17-recovery-memory.md](../docs/acceptance/2026-10-17-recovery-memory.md).
+Last exercise: 2026-10-18. Outcome: Scoped backlog and maintenance review detected stale guidance and repeated tracking; repaired navigation and groomed work. Runtime cleanup preserved saves/evidence.
+Scope: All open issues, dependency/readiness review, current-work navigation, owned refs/process inventory and retained control gaps; no gameplay trial or dependency upgrade.
+Exercise evidence: [docs/acceptance/2026-10-18-backlog-grooming.md](../docs/acceptance/2026-10-18-backlog-grooming.md).
 
-Maintenance review: 2026-10-17. Effectiveness: unassessed.
-Findings: Current docs and scopes updated to v3 and passive memory; prior reports remain history. Native/semantic failures preserved and repaired without weakening guards. Long-term effectiveness remains unmeasured.
-Cost: Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.
-Follow-up: Review on relevant contract/failure/release or recorded due date. #31 public controls, #8 broad recovery, #33 gameplay evidence and #13 maintenance remain separate work.
-Review evidence: [docs/acceptance/2026-10-17-recovery-memory.md](../docs/acceptance/2026-10-17-recovery-memory.md).
+Maintenance review: 2026-10-18. Effectiveness: unassessed.
+Findings: Manual checkpoint review detected stale navigation, repeated CI-warning entries and obsolete prerequisite text. Corrections and explicit next actions are recorded; sustained effectiveness is unmeasured.
+Cost: Two read-only sweeps, lead reconciliation and clean-context review; no native trial. Exact effort and long-term forecast error are unavailable.
+Follow-up: Lead owns triggered action-runtime migration and remaining workflow review in #13; #26 retains research review on 2026-10-24 if active or before resuming. Preserve the existing general due date; no automatic renewal.
+Review evidence: [docs/acceptance/2026-10-18-backlog-grooming.md](../docs/acceptance/2026-10-18-backlog-grooming.md).
 
 Next review: 2027-01-15.
 
