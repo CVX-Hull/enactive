@@ -98,8 +98,10 @@ downloaded objects, and historical CI links may require maintainer access.
 
 Native implementation, saves and runtime evidence are unchanged. No graphical
 session or build is claimed. All tooling, copies and backups remain project-local;
-global installations and Git profiles are untouched. Disposable canary resources
-are separate from the real repositories and Project and are removed after evidence
-retention. Future publication follows [explicit local identity setup](../setup.md#choose-an-explicit-git-identity)
+global installations and Git profiles are untouched. The temporary canary Project
+was deleted. GitHub denied deletion of the two disposable private probe repositories
+with HTTP 403; they were archived privately using existing permissions, with evidence
+retained. No token scopes were expanded. Both real repositories and the existing
+Project were excluded from cleanup. Future publication follows [explicit local identity setup](../setup.md#choose-an-explicit-git-identity)
 and full-message/trailer inspection under C-REVIEW; this manual control does not
 prove arbitrary-file privacy. #75 retains the next maintenance trigger and due date.
