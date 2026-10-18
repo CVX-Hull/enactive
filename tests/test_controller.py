@@ -1027,3 +1027,383 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 self.assertEqual(sum(r["kind"] == "resume" for r in fake.requests), previous)
             finally:
                 self.controller.command_lock = original
+
+    def acquire(self, **changes):
+        values = {"task_id": "task-test", "execution_epoch": 0, "owner": "supervisor", **self.expect(), **changes}
+        return self.controller.acquire_run(**values)
+
+    def test_run_lease_exact_identity_status_and_release(self):
+        from dataclasses import FrozenInstanceError, replace
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            authority = self.controller.authority.copy()
+            lease = self.acquire()
+            self.assertNotEqual(authority, self.controller.authority)
+            self.assertEqual(self.controller.status()["run_lease"],
+                             {"task_id": "task-test", "execution_epoch": 0, "owner": "supervisor", "session": "game-test"})
+            with self.assertRaises(FrozenInstanceError):
+                lease.owner = "other"
+            impostor = replace(lease)
+            result = self.controller.execute_run(impostor, action="UP", **self.expect())
+            self.assertEqual(result["status"], "controller_error")
+            with self.assertRaises(ControlError):
+                self.controller.release_run(impostor)
+            self.assertIsNotNone(self.controller.status()["run_lease"])
+            moved = self.controller.execute_run(lease, action="UP", **self.expect())
+            self.assertEqual(moved["status"], "ready")
+            self.assertEqual([r["kind"] for r in fake.delivered], ["resume", "action"])
+            self.assertEqual(self.controller.release_run(lease)["status"], "pause_requested")
+            self.assertIsNone(self.controller.status()["run_lease"])
+            self.assertTrue((fake.bridge / "pause").exists())
+            self.assertEqual(self.controller.execute_run(lease, action="DOWN", **self.expect())["status"], "controller_error")
+            self.assertEqual(self.controller.execute("resume")["status"], "ready")
+            replacement = self.acquire()
+            self.assertIsNot(lease, replacement)
+            with self.assertRaises(ControlError):
+                self.controller.release_run(lease)
+            self.assertIsNotNone(self.controller.status()["run_lease"])
+
+    def test_run_lease_excludes_external_writers_but_allows_observe_goal_pause(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            lease = self.acquire()
+            before = len(fake.requests)
+            for kind, payload in (("key", {"key": "."}), ("action", {"action": "UP"}),
+                                  ("walk", {"direction": "north", "steps": 1}), ("resume", {})):
+                with self.subTest(kind=kind):
+                    result = self.controller.execute(kind, **payload, **({} if kind == "resume" else self.expect()))
+                    self.assertEqual(result["status"], "controller_error")
+            leaked = self.controller.execute("action", action="UP", lease=lease, **self.expect())
+            self.assertEqual(leaked["status"], "controller_error")
+            self.assertEqual(len(fake.requests), before)
+            self.assertEqual(self.controller.execute("goal", text="another goal")["status"], "recorded")
+            self.assertEqual(self.controller.status()["run_lease"]["task_id"], "task-test")
+            self.assertEqual(self.controller.execute("observe")["status"], "ready")
+            self.assertEqual(self.controller.execute("pause")["status"], "pause_requested")
+            self.assertIsNone(self.controller.status()["run_lease"])
+            self.assertEqual(self.controller.execute("resume")["status"], "ready")
+            self.assertIsNone(self.controller.status()["run_lease"])
+
+    def test_run_acquisition_validates_identifiers_and_expected_fresh_normal_evidence(self):
+        with FakeBridge(self.controller):
+            self.ready()
+        baseline = copy.deepcopy(self.controller.state)
+        for changes in ({"task_id": ""}, {"task_id": "x" * 161}, {"owner": " "}, {"owner": 1},
+                        {"execution_epoch": True}, {"execution_epoch": -1}, {"execution_epoch": 0.0},
+                        {"expected_session": "old"}, {"expected_revision": True}, {"expected_revision": -1}):
+            with self.subTest(changes=changes), self.assertRaises(ControlError):
+                self.acquire(**changes)
+        mutations = ({"timestamp_ms": int(time.time() * 1000) - 5000},
+                     {"timestamp_ms": int(time.time() * 1000) + 5000}, {"frame_ok": False},
+                     {"frame": ""}, {"status": "rejected"}, {"error": "capture failed"},
+                     {"paused": True}, {"in_game": False})
+        for change in mutations:
+            with self.subTest(change=change), self.assertRaises(ControlError):
+                self.controller.state = {**copy.deepcopy(baseline), **change}
+                self.acquire()
+        for kind in ("menu", "activity_poll", "unsupported"):
+            with self.subTest(kind=kind), self.assertRaises(ControlError):
+                self.controller.state = copy.deepcopy(baseline)
+                self.controller.state.update(scene=None)
+                self.controller.state["boundary"]["kind"] = kind
+                self.acquire()
+        self.controller.state = baseline
+        self.controller.unknown_outcomes.append({"status": "unknown", "request": {"id": "historical"}})
+        lease = self.acquire()
+        self.assertEqual(len(self.controller.unknown_outcomes), 1)
+        with self.assertRaises(ControlError):
+            self.acquire()
+        self.controller.release_run(lease)
+        with self.assertRaises(ControlError):
+            self.acquire()
+
+    def test_run_acquisition_rejects_pending_and_inboxes_without_retiring_them(self):
+        with FakeBridge(self.controller):
+            self.ready()
+        for name in ("request.json", "claimed.json", "control.json", "control-claimed.json"):
+            path = self.controller.bridge / name
+            atomic_json(path, {"evidence": name})
+            try:
+                with self.subTest(name=name), self.assertRaises(ControlError):
+                    self.acquire()
+                self.assertEqual(read_json(path), {"evidence": name})
+            finally:
+                path.unlink()
+        for field in ("pending", "control_pending"):
+            setattr(self.controller, field, {"id": "outstanding"})
+            try:
+                with self.subTest(field=field), self.assertRaises(ControlError):
+                    self.acquire()
+            finally:
+                setattr(self.controller, field, None)
+
+    def test_simultaneous_run_acquisition_has_one_winner(self):
+        with FakeBridge(self.controller):
+            self.ready()
+        start = threading.Barrier(3)
+        def acquire():
+            start.wait()
+            try:
+                return self.acquire()
+            except ControlError:
+                return None
+        with ThreadPoolExecutor(2) as pool:
+            futures = [pool.submit(acquire) for _ in range(2)]
+            start.wait()
+            results = [future.result(2) for future in futures]
+        self.assertEqual(sum(value is not None for value in results), 1)
+
+    def test_acquire_rejects_active_command_and_recovery_locks(self):
+        with FakeBridge(self.controller):
+            self.ready()
+        for lock in (self.controller.command_lock, self.controller.control_lock):
+            with lock, self.assertRaises(ControlError):
+                self.acquire()
+
+    def test_queued_command_blocks_acquisition_and_walk_keeps_entry_generation(self):
+        waiting, release = threading.Event(), threading.Event()
+        original = self.controller.command_lock
+        class Gate:
+            def __enter__(self):
+                waiting.set()
+                if not release.wait(2):
+                    raise AssertionError("test gate not released")
+                original.acquire()
+            def __exit__(self, *args):
+                original.release()
+            def acquire(self, blocking=True):
+                return original.acquire(blocking=blocking)
+            def release(self):
+                original.release()
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            self.controller.command_lock = Gate()
+            try:
+                with ThreadPoolExecutor(1) as pool:
+                    queued = pool.submit(self.controller.execute, "walk", direction="north", steps=1, **self.expect())
+                    self.assertTrue(waiting.wait(1))
+                    with self.assertRaises(ControlError):
+                        self.acquire()
+                    # Revoke then restore transport readiness while the command is queued.
+                    # A walk must retain its original admission, rather than recapture it.
+                    self.controller.pause()
+                    self.controller.pause_requested = False
+                    (fake.bridge / "pause").unlink()
+                    release.set()
+                    result = queued.result(2)
+                self.assertNotEqual(result["status"], "complete")
+                self.assertEqual([r["kind"] for r in fake.delivered], ["resume"])
+            finally:
+                release.set()
+                self.controller.command_lock = original
+
+    def test_lease_revoked_by_paused_observation_even_without_generation_change(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            lease = self.acquire()
+            generation = fake.value["boundary"]["control_generation"]
+            fake.value["paused"] = True
+            (fake.bridge / "pause").touch()
+            self.assertEqual(self.controller.execute("observe")["status"], "ready")
+            self.assertEqual(self.controller.state["boundary"]["control_generation"], generation)
+            self.assertIsNone(self.controller.status()["run_lease"])
+            self.assertEqual(self.controller.execute_run(lease, action="UP", **self.expect())["status"], "controller_error")
+
+    def test_leased_preflight_rejects_changed_session_revision_or_boundary(self):
+        for change in ("session", "revision", "menu", "future"):
+            with self.subTest(change=change), FakeBridge(self.controller) as fake:
+                self.ready()
+                lease = self.acquire()
+                expected = self.expect()
+                if change == "session":
+                    fake.value["session"] = "another-world"
+                elif change == "revision":
+                    fake.value["revision"] += 1
+                elif change == "menu":
+                    fake.value.update(scene=None)
+                    fake.value["boundary"]["kind"] = "menu"
+                else:
+                    def future(bridge, request):
+                        bridge.value["timestamp_ms"] = int(time.time() * 1000) + 2000
+                        return True
+                    fake.behavior = future
+                result = self.controller.execute_run(lease, action="UP", **expected)
+                self.assertEqual(result["status"], "controller_error")
+                self.assertFalse(any(r["kind"] == "action" for r in fake.delivered))
+                self.controller.pause()
+                # Restore a known world before the next subcase's Observe/Resume.
+                self.controller.state = None
+
+    def test_pause_revokes_lease_between_preflight_and_publication(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            lease = self.acquire()
+            original = self.controller._exchange
+            def exchange(kind, *args, **kwargs):
+                if kind == "action":
+                    self.controller.pause()
+                return original(kind, *args, **kwargs)
+            with patch.object(self.controller, "_exchange", side_effect=exchange):
+                result = self.controller.execute_run(lease, action="UP", **self.expect())
+            self.assertEqual(result["status"], "controller_error")
+            self.assertFalse(any(r["kind"] == "action" for r in fake.requests))
+            self.assertEqual(self.controller.unknown_outcomes, [])
+            self.assertEqual(list(self.controller.admissions.glob("*.json")), [])
+            self.assertIsNone(self.controller.status()["run_lease"])
+
+    def test_pause_after_leased_native_claim_rejects_at_commit(self):
+        claimed, release = threading.Event(), threading.Event()
+        def gate(fake, request):
+            if request["kind"] == "action":
+                claimed.set()
+                if not release.wait(2):
+                    raise AssertionError("claim gate not released")
+        with FakeBridge(self.controller, before_gate=gate) as fake:
+            self.ready()
+            lease = self.acquire()
+            with ThreadPoolExecutor(1) as pool:
+                future = pool.submit(self.controller.execute_run, lease, action="UP", **self.expect())
+                self.assertTrue(claimed.wait(1))
+                self.controller.pause()
+                release.set()
+                result = future.result(2)
+            self.assertEqual(result["status"], "rejected")
+            self.assertEqual([r["kind"] for r in fake.delivered], ["resume"])
+            self.assertIsNone(self.controller.status()["run_lease"])
+
+    def test_leased_timeout_and_malformed_response_revoke_without_retry(self):
+        for malformed in (False, True):
+            with self.subTest(malformed=malformed), FakeBridge(self.controller) as fake:
+                self.ready()
+                lease = self.acquire()
+                def fail(bridge, request):
+                    if request["kind"] == "action":
+                        if malformed:
+                            bridge.value["protocol"] = 2
+                            return True
+                        return False
+                    return True
+                fake.behavior = fail
+                result = self.controller.execute_run(lease, action="UP", timeout=0.08, **self.expect())
+                self.assertEqual(result["status"], "controller_error" if malformed else "timeout")
+                self.assertIsNone(self.controller.status()["run_lease"])
+                self.assertTrue(self.controller.frozen)
+                self.assertEqual(sum(r["kind"] == "action" for r in fake.requests), 1)
+                self.assertTrue(self.controller.unknown_outcomes)
+            # Reset only the live fixture slot before the next isolated fault;
+            # the durable admission and recorded uncertainty remain intact.
+            self.controller.pending = None
+            self.controller.state = None
+
+    def test_recovery_admission_and_shutdown_revoke_lease_without_restoration(self):
+        with FakeBridge(self.controller):
+            self.ready()
+            lease = self.acquire()
+        self.controller.state = recovery_state()
+        with ControlBridge(self.controller):
+            result = self.controller.recover("request_interrupt", **self.recovery_expect())
+            self.assertEqual(result["status"], "prompt_opened")
+        self.assertIsNone(self.controller.status()["run_lease"])
+        self.assertEqual(self.controller.execute_run(lease, action="UP", **self.expect())["status"], "controller_error")
+        self.controller.close()
+        self.controller = Controller(self.root, timeout=2)
+        self.addCleanup(self.controller.close)
+        self.assertIsNone(self.controller.status()["run_lease"])
+        self.assertTrue(self.controller.pause_requested)
+        with self.assertRaises(ControlError):
+            self.acquire()
+
+    def test_execute_run_accepts_only_one_registered_action(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            lease = self.acquire()
+            for action in ("walk", "not-registered", "", 1):
+                with self.subTest(action=action):
+                    self.assertEqual(self.controller.execute_run(lease, action=action, **self.expect())["status"], "controller_error")
+            with self.assertRaises(TypeError):
+                self.controller.execute_run(lease, action="UP", key="x", **self.expect())
+            self.assertFalse(any(r["kind"] == "action" for r in fake.requests))
+
+    def test_acquisition_after_explicit_timeout_reconciliation_preserves_unknown(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            fake.behavior = lambda bridge, request: request["kind"] != "action"
+            self.assertEqual(self.controller.execute("action", action="UP", timeout=0.08,
+                                                     **self.expect())["status"], "timeout")
+            with self.assertRaises(ControlError):
+                self.acquire()
+            self.assertEqual(self.controller.execute("observe")["status"], "ready")
+            self.assertIsNone(self.controller.pending)
+            self.assertEqual(self.controller.execute("resume")["status"], "ready")
+            uncertainty = copy.deepcopy(self.controller.unknown_outcomes)
+            self.assertTrue(uncertainty)
+            self.acquire()
+            self.assertEqual(self.controller.unknown_outcomes, uncertainty)
+
+    def test_old_entry_cannot_dispatch_after_acquire_release_and_resume(self):
+        entered, release = threading.Event(), threading.Event()
+        class DelayedAction(str):
+            def __len__(self):
+                # Hold validation after the entry generation was captured, but
+                # before this caller is registered at the command-lock queue.
+                entered.set()
+                if not release.wait(2):
+                    raise AssertionError("entry validation gate not released")
+                return super().__len__()
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            with ThreadPoolExecutor(1) as pool:
+                future = pool.submit(self.controller.execute, "action", action=DelayedAction("UP"), **self.expect())
+                try:
+                    self.assertTrue(entered.wait(1))
+                    lease = self.acquire()
+                    self.controller.release_run(lease)
+                    self.assertEqual(self.controller.execute("resume")["status"], "ready")
+                    before = len(fake.requests)
+                finally:
+                    release.set()
+                self.assertEqual(future.result(2)["status"], "pause_requested")
+            self.assertEqual(len(fake.requests), before)
+            self.assertFalse(any(request["kind"] == "action" for request in fake.requests))
+
+    def test_live_lease_close_and_restart_never_restore_capability(self):
+        with FakeBridge(self.controller):
+            self.ready()
+            lease = self.acquire()
+            expected = self.expect()
+            self.controller.close()
+            self.assertIsNone(self.controller.status()["run_lease"])
+            self.assertEqual(self.controller.execute_run(lease, action="UP", **expected)["status"], "controller_error")
+        self.controller = Controller(self.root, timeout=2)
+        self.addCleanup(self.controller.close)
+        self.assertIsNone(self.controller.status()["run_lease"])
+        self.assertTrue(self.controller.pause_requested)
+        with FakeBridge(self.controller):
+            self.ready()
+            replacement = self.acquire()
+            self.assertIsNot(replacement, lease)
+            self.assertEqual(self.controller.execute_run(lease, action="UP", **self.expect())["status"], "controller_error")
+            self.assertEqual(self.controller.status()["run_lease"]["task_id"], "task-test")
+
+    def test_walk_does_not_renew_generation_between_steps(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            original = self.controller._walk_guard
+            checked = 0
+            def guard(value, dx, dy):
+                nonlocal checked
+                checked += 1
+                result = original(value, dx, dy)
+                if checked == 2:
+                    # Restore visible readiness after revocation, so only the
+                    # retained admission generation can prevent a second input.
+                    self.controller.pause()
+                    self.controller.pause_requested = False
+                    (fake.bridge / "pause").unlink()
+                return result
+            with patch.object(self.controller, "_walk_guard", side_effect=guard):
+                result = self.controller.execute("walk", direction="north", steps=2, **self.expect())
+            self.assertEqual(result["status"], "stopped")
+            self.assertEqual(result["steps"], 1)
+            self.assertEqual(sum(request["kind"] == "action" for request in fake.delivered), 1)
+            self.assertEqual(self.controller.unknown_outcomes, [])

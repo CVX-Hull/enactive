@@ -19,6 +19,44 @@ input identity blocks startup instead of fabricating a synthetic request. An off
 migration must preserve uncertainty and cannot grant authority or replay inputs.
 See [coordinated migration](runbook.md#coordinated-migration).
 
+## Controller run ownership
+
+The in-process controller API exposes `acquire_run(task_id, execution_epoch,
+owner, *, expected_session, expected_revision)`, `execute_run(lease, *, action,
+expected_session, expected_revision, timeout=None)` and `release_run(lease)`.
+A frozen RunLease belongs to exactly one controller and native session; only the
+exact returned Python object authorizes input. Descriptive fields or a JSON copy
+cannot reconstruct it. The public status `run_lease` is null or descriptive
+`task_id`, `execution_epoch`, `owner`, `session`; it never grants authority.
+
+Acquisition is explicit, nonblocking and has one winner. It requires no active or
+queued ordinary/control writer, live lease, pending effect or native inbox, plus
+reconciled, unpaused, fresh successful normal-play evidence matching the supplied
+session/revision. It rotates native authority and admission generation without
+observing, resuming or dispatching. Historical unknowns remain historical unknowns;
+new ownership cannot establish the outcome or continuation of an older task.
+
+Ordinary external key/action/walk/resume reject while leased. Existing HTTP/CLI
+input reaches this same controller gate; it cannot supply or obtain a capability.
+Observe/status, record-only goal and Pause remain available. The viewer displays
+run ownership and disables ordinary input/Resume until takeover. A model call
+never holds controller locks. The service does not yet instantiate the supervisor
+or acquire these leases automatically.
+
+A leased call submits one semantic action, using existing native-v3 observation
+and input checks. The original command admission generation and exact live lease
+are checked around queueing/preflight and immediately before atomic publication.
+Every walk step uses its original entry generation. Pre-takeover or pre-acquisition
+queued inputs cannot become current merely by waiting. No stale expected revision
+is silently refreshed.
+
+Pause and release revoke before returning; release requires the current capability
+and also pauses. Recovery, native takeover/session change, a paused native
+observation, transport failure and shutdown invalidate ownership. Resume does not
+restore a lease. Startup restores no task or capability. Native token validation
+remains the final input commit gate; an already committed action cannot be undone.
+Exact logical-intent/native-receipt assembly and service lifecycle remain #36 work.
+
 ## Transport and state
 
 
@@ -48,7 +86,7 @@ startup retirement, shutdown and observed takeover. Admission and revocation sha
 the host data lock. The native gate reads the token again immediately before
 committing input; a claimed request with an obsolete, missing or malformed token
 is rejected. Pause after that commit cannot undo input. Native control generation
-and the host token are separate authorities; future run leases will use this same
+and the host token are separate authorities; controller run leases use this same
 revocation mechanism.
 
 The SDL input loop pumps normal events while polling. RAII scopes span
@@ -435,7 +473,7 @@ undoing observed progress. `EvidenceStore.observation(ref)` supplies an integrit
 checked deep copy of retained history; it never refreshes authority or freshness.
 
 The passive supervisor below owns task completion, handoff, epochs and nonprogress
-readmission. Dispatch leases remain future #36 duties. The [native acceptance](acceptance/2026-10-17-bounded-skills.md)
+readmission. Controller leases now exist; connecting this passive caller to them remains a #36 duty. The [native acceptance](acceptance/2026-10-17-bounded-skills.md)
 proves a short manually driven example, not autonomy, trap safety or general survival.
 
 ## Passive waypoint supervision

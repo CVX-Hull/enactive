@@ -201,21 +201,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within round010 portable/review scope; no native or live-provider claim.",
-        "scope": "313 Python tests plus viewer, import, document, diagram and governance checks; 73 focused supervisor/skill cases use real passive components and synthetic retained frames.",
+        "outcome": "Passed within round011 scope; startup/transition uncertainty and development failures retained.",
+        "scope": "332 Python tests plus viewer/import/docs/diagram/governance checks; 82 controller/HTTP cases use isolated bridges and ports.",
         "evidence": [
-          "docs/acceptance/2026-10-17-passive-supervisor.md"
+          "docs/acceptance/2026-10-17-controller-run-lease.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-passive-supervisor.md"
+          "docs/acceptance/2026-10-17-controller-run-lease.md"
         ],
         "effectiveness": "effective",
-        "findings": "Independent reviews found expiry ordering, terminal status, foreign-world budgets, missing completion evidence and sticky-dispute admission defects. Regression fixes and rereviews passed; controls remain bounded and do not prove native/model effectiveness.",
-        "cost": "Existing project-local tools, 313 portable tests, one isolated worker and targeted independent reviews; no new generic framework or global dependency.",
-        "follow_up": "Review on changed supervisor/lease/receipt contracts or failures; #36 owns production integration, #24 owns native/model evaluation, #13 owns broad maintenance."
+        "findings": "Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.",
+        "cost": "Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.",
+        "follow_up": "Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open."
       },
       "next_review": "2027-01-15"
     },
@@ -248,21 +248,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within the reported scope; unsuccessful attempts and limits retained.",
-        "scope": "Production WAIT YES/NO, ordinary-input rejection during activity, lost gameplay/control results and no-replay reconciliation; separately instrumented native final-gate ordering.",
+        "outcome": "Passed within round011 scope; startup/transition uncertainty and development failures retained.",
+        "scope": "Real leased step and return, competing input exclusion, browser Pause/stale capability, explicit resume without lease, menu rejection and release; portable concurrency races separate.",
         "evidence": [
-          "docs/acceptance/2026-10-17-native-recovery-planner.md"
+          "docs/acceptance/2026-10-17-controller-run-lease.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-native-recovery-planner.md"
+          "docs/acceptance/2026-10-17-controller-run-lease.md"
         ],
         "effectiveness": "effective",
-        "findings": "Pause preserves scene authority; immediate recovery works. Actual unknown histories survive reconciliation. Final-gate ordering passed labeled timing probes; no universal stop bound.",
-        "cost": "Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.",
-        "follow_up": "Revisit on relevant contract/failure/release changes or due date. #47 tutorial content, #9 native runner, #33 predicate evidence and #24 model evaluation remain separate."
+        "findings": "Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.",
+        "cost": "Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.",
+        "follow_up": "Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open."
       },
       "next_review": "2027-01-15"
     },
@@ -292,21 +292,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within round009 bounded scope; fault/native lanes remain distinct.",
-        "scope": "263 portable tests and viewer/import/docs controls; actual retained movement, menu/activity, Pause, stale and reload/creature predicates as applicable to this control.",
+        "outcome": "Passed within round011 scope; startup/transition uncertainty and development failures retained.",
+        "scope": "Unchanged native source/build identity verified; real windowed lease input and takeover probes, retained receipts/frames and world-transition timeouts; no new native timing injection.",
         "evidence": [
-          "docs/acceptance/2026-10-17-bounded-skills.md"
+          "docs/acceptance/2026-10-17-controller-run-lease.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-bounded-skills.md"
+          "docs/acceptance/2026-10-17-controller-run-lease.md"
         ],
         "effectiveness": "effective",
-        "findings": "Round009 review fixed disputed-source disposition and evidence-driver attribution; existing tools enforce shared policy boundary. Claims remain bounded; no autonomous supervisor.",
-        "cost": "Reused existing local tooling; 263 tests and separate native acceptance, one isolated worker and independent reviews.",
-        "follow_up": "Review on changed contracts or failures; #13 owns broad maintenance, future supervision remains separately tracked."
+        "findings": "Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.",
+        "cost": "Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.",
+        "follow_up": "Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open."
       },
       "next_review": "2027-01-15"
     },
@@ -338,21 +338,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within the reported scope; unsuccessful attempts and limits retained.",
-        "scope": "Actual graphical spectator Yes and explicit Observe reached normal play while paused; current overview/runbook and recovery diagram labels reconciled.",
+        "outcome": "Passed within round011 scope; startup/transition uncertainty and development failures retained.",
+        "scope": "Real browser spectator shows active run owner and disabled Resume, then Pause takeover; portable controls regression; no broader task dashboard claimed.",
         "evidence": [
-          "docs/acceptance/2026-10-17-native-recovery-planner.md"
+          "docs/acceptance/2026-10-17-controller-run-lease.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-native-recovery-planner.md"
+          "docs/acceptance/2026-10-17-controller-run-lease.md"
         ],
-        "effectiveness": "partially_effective",
-        "findings": "Actual recovery UI preserves pause and unknown outcomes. Existing flow diagram now names public interfaces. No new mobile usability study or broad visual redesign.",
-        "cost": "Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.",
-        "follow_up": "Revisit on relevant contract/failure/release changes or due date. #47 tutorial content, #9 native runner, #33 predicate evidence and #24 model evaluation remain separate."
+        "effectiveness": "effective",
+        "findings": "Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.",
+        "cost": "Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.",
+        "follow_up": "Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open."
       },
       "next_review": "2027-01-15"
     },
@@ -427,21 +427,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within round010 portable/review scope; no native or live-provider claim.",
-        "scope": "Independent brief, shared-source, documentation/visual and two integrated code reviews; five reproduced integrated defects fixed and both rereviews clean.",
+        "outcome": "Passed within round011 scope; startup/transition uncertainty and development failures retained.",
+        "scope": "Independent clean-context brief and integrated code review; separate visual review corrected recovery/revocation wording; lead verified native evidence.",
         "evidence": [
-          "docs/acceptance/2026-10-17-passive-supervisor.md"
+          "docs/acceptance/2026-10-17-controller-run-lease.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-passive-supervisor.md"
+          "docs/acceptance/2026-10-17-controller-run-lease.md"
         ],
         "effectiveness": "effective",
-        "findings": "Independent reviews found expiry ordering, terminal status, foreign-world budgets, missing completion evidence and sticky-dispute admission defects. Regression fixes and rereviews passed; controls remain bounded and do not prove native/model effectiveness.",
-        "cost": "Existing project-local tools, 313 portable tests, one isolated worker and targeted independent reviews; no new generic framework or global dependency.",
-        "follow_up": "Review on changed supervisor/lease/receipt contracts or failures; #36 owns production integration, #24 owns native/model evaluation, #13 owns broad maintenance."
+        "findings": "Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.",
+        "cost": "Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.",
+        "follow_up": "Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open."
       },
       "next_review": "2027-01-15"
     },
@@ -693,21 +693,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within round010 portable/review scope; no native or live-provider claim.",
-        "scope": "Passive supervisor diagram and updated skill diagram rendered with pinned local tooling; final 1000-pixel supervisor preview inspected by lead and independent reviewer.",
+        "outcome": "Passed within round011 scope; startup/transition uncertainty and development failures retained.",
+        "scope": "Current ownership diagram rendered with pinned local tools and inspected at 1050 pixels; real spectator owner and Pause states inspected.",
         "evidence": [
-          "docs/acceptance/2026-10-17-passive-supervisor.md"
+          "docs/acceptance/2026-10-17-controller-run-lease.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-passive-supervisor.md"
+          "docs/acceptance/2026-10-17-controller-run-lease.md"
         ],
         "effectiveness": "effective",
-        "findings": "Independent reviews found expiry ordering, terminal status, foreign-world budgets, missing completion evidence and sticky-dispute admission defects. Regression fixes and rereviews passed; controls remain bounded and do not prove native/model effectiveness.",
-        "cost": "Existing project-local tools, 313 portable tests, one isolated worker and targeted independent reviews; no new generic framework or global dependency.",
-        "follow_up": "Review on changed supervisor/lease/receipt contracts or failures; #36 owns production integration, #24 owns native/model evaluation, #13 owns broad maintenance."
+        "findings": "Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.",
+        "cost": "Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.",
+        "follow_up": "Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open."
       },
       "next_review": "2027-01-15"
     }

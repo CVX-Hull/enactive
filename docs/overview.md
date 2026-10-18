@@ -54,6 +54,7 @@ explain why native integration was selected and when we would reconsider it.
 | Input authority and takeover | Native-v3 distinguishes ordinary play, menus, activity polls and debug prompts; revoked tokens and old worlds are rejected. Already-committed actions and activities cannot be undone by Pause | [Recovery acceptance](acceptance/2026-10-17-recovery-memory.md) |
 | Retained gameplay evidence and memory | Typed records and bounded retention now have native normal/menu/activity, movement and reload evidence; missing/conflicting copies are tested in a separate fault lane | [Current evidence contract](protocol.md#passive-gameplay-records-and-evidence) |
 | Passive movement skills | One proposed step at a time with cumulative route history; version 1 had native acceptance, version 2 continuation has portable tests | [Skill contract](protocol.md#passive-bounded-movement-skills) |
+| Run input ownership | Explicit in-process lease excludes competing remote input; Pause returns control; supervisor/service wiring remains separate | [Ownership contract](protocol.md#controller-run-ownership) |
 | Passive waypoint supervisor | Coordinates planning, progress, stops and explicit continuation in component tests; service/game/provider integration remains separate | [Supervisor contract](protocol.md#passive-waypoint-supervision) |
 | Bounded planner interface | Injected providers return validated data with cancellation, deadlines and cost accounting; fixtures pass, but no concrete model provider or autonomous supervisor is connected | [Planner contract](protocol.md#bounded-injected-planner) |
 | Evaluation records | Passive versioned outcome/cost recorder and offline summaries; external planning and future adapters are not automatically measured | [Evaluation guide](evaluation.md) |
@@ -85,7 +86,9 @@ adds Python recovery transport and passive task memory. Public recovery controls
 adds the Pause timing repair, integrated native recovery evidence and a bounded
 planner port. Round 009 adds passive movement skills and native predicate acceptance.
 Round 010 adds passive waypoint supervision and remaining-route continuation;
-the service still requires Codex to choose gameplay actions.
+the service still requires Codex to choose gameplay actions. Round 011 adds
+controller run ownership and immediate operator takeover; it does not connect the
+passive supervisor to the game.
 
 The [tiered-gameplay proposal](research-tiered-gameplay.md) explores a capable
 planner, bounded skills and feedback, with additional model tiers conditional on

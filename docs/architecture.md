@@ -32,7 +32,7 @@ windowed operation and project isolation are [charter constraints](charter.md).
 | Boundary / owner | Input and output | Authority and failure behavior |
 | --- | --- | --- |
 | Planner / active Codex session | Actual observations → objective and bounded input requests | Chooses goals; cannot infer success from transport acknowledgment; uncertain state requires reconciliation |
-| Controller / harness maintainer | Observed-state-bound commands → validated bridge requests, results and journal | One process with separate serialized gameplay and recovery writers; process lock; deadlines; pause freezes dispatch; never mutates saves or game state |
+| Controller / harness maintainer | Observed-state-bound commands → validated bridge requests, results and journal | One process with separate serialized gameplay and recovery writers; explicit run lease; process lock; deadlines; pause revokes ownership and freezes dispatch; never mutates saves or game state |
 | Native bridge / integration maintainer | Bounded requests → actual input events, metadata and rendered frames | Game thread only; engine validates outcomes; session/revision/expiry checks; unsupported input boundaries cannot claim success |
 | Spectator / viewer maintainer | Frames and state → display and operator controls | Input authority only after matching current image decodes; stale state stays visible; browser controls require origin/token validation |
 | Gameplay evidence and memory / harness maintainer | Native observations → retained original frames and bounded typed task views | Passive only; validates provenance, freshness, source disputes and invalidation generations; never dispatches or promotes historical facts into current authority |
@@ -207,7 +207,29 @@ intents from real authority. Explicit continuation verifies the remaining route;
 unknown effects stay unresolved, and complete legs need verification without
 another move. A new timestamp or model assertion cannot clear a nonprogress stop.
 
-Service lifecycle, the atomic controller lease across all ingress, native receipt
+The controller now enforces a process-local lease across ordinary ingress.
+The passive supervisor still grants no lease. Service lifecycle, native receipt
 assembly and live provider remain [#36](https://github.com/CVX-Hull/cdda-player/issues/36).
 The current service does not instantiate this supervisor. Portable composition
 tests therefore establish no autonomous/native/model performance claim.
+
+## Run ownership and operator takeover
+
+This current logical view answers “Who can send the next input, and how do I take
+over?” Boxes are controller/caller responsibilities in one host process; arrows
+show acquisition, attempted input and revocation. Native token validation still
+occurs inside the game at commit. Status is descriptive, not a capability.
+
+![Controller run ownership: one explicit owner, competing inputs rejected, Pause revokes before returning.](diagrams/run-ownership.svg)
+
+[Editable diagram](diagrams/run-ownership.mmd). A trusted in-process caller claims
+only fresh normal-play authority with empty writer queues. It receives an exact
+object capability for single semantic actions. External key/action/walk/resume
+reject while owned; Observe/status/goal remain available. Pause, recovery, native
+takeover, transport failures and shutdown revoke the owner. Explicit release also pauses;
+Resume restores transport only. Queued requests retain their original admission
+generation and cannot cross takeover or acquisition. No process restores a lease.
+
+[Protocol](protocol.md#controller-run-ownership) owns the precise contract. This
+controller capability is implemented independently of supervisor/service wiring;
+#36 still owns that integration and exact logical/native receipt mapping.

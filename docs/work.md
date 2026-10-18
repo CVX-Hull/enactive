@@ -74,6 +74,14 @@ A milestone update records achieved outcomes, remaining risk, decisions and evid
 Controls have event triggers and recorded due dates in the [maintenance table](controls.md#maintenance).
 No scheduler automatically renews dates or performs maintenance.
 
+The [controller lease brief](changes/011-controller-run-lease.md) defines round 011
+under [#50](https://github.com/CVX-Hull/cdda-player/issues/50): atomic ownership,
+queued-input exclusion and operator takeover. Its [acceptance](acceptance/2026-10-17-controller-run-lease.md)
+separates portable races and manual native probes. Parent #36 retains receipt assembly
+and service/provider integration. Higher-level broad-objective task formation is
+tracked in [#10](https://github.com/CVX-Hull/cdda-player/issues/10). Live allocation
+and acceptance remain in GitHub.
+
 ## Historical acceptance
 
 [Public workflow acceptance](acceptance/2026-10-17-public-workflow.md) records source publication,

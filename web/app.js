@@ -78,9 +78,9 @@ function recoveryAuthority(kind, choice) {
 function updateControls() {
   const recoveryPending = recoveryBusy || recoveryNeedsObserve || !!latest?.control_pending;
   document.querySelectorAll('.send').forEach((button) => {
-    button.disabled = gameplayBusy || recoveryPending || !currentFrame() || !!latest?.frozen || !!latest?.pause_requested;
+    button.disabled = !!latest?.run_lease || gameplayBusy || recoveryPending || !currentFrame() || !!latest?.frozen || !!latest?.pause_requested;
   });
-  $('resume').disabled = gameplayBusy || recoveryPending || !currentFrame() || !!latest?.frozen ||
+  $('resume').disabled = !!latest?.run_lease || gameplayBusy || recoveryPending || !currentFrame() || !!latest?.frozen ||
     !['normal_play', 'menu'].includes(displayed?.boundary?.kind);
   $('observe').disabled = observeBusy;
   $('pause').disabled = false;
@@ -146,6 +146,10 @@ function showResult(result, recovery = false) {
 }
 async function command(kind, payload = {}) {
   const ordinary = !['pause', 'goal', 'observe'].includes(kind);
+  if (ordinary && latest?.run_lease) {
+    showError('A gameplay run owns input. Pause to take over, then observe and resume.');
+    return;
+  }
   if (ordinary && (gameplayBusy || recoveryBusy || recoveryNeedsObserve || latest?.control_pending)) return;
   if (kind === 'observe' && observeBusy) return;
   if (ordinary) gameplayBusy = true;
@@ -242,7 +246,7 @@ function render(data) {
   $('connection-dot').className = `dot ${data.connection}`;
   $('age').textContent = data.age_ms === null ? 'No observation' : `${(data.age_ms / 1000).toFixed(1)}s old`;
   const paused = data.pause_requested || state?.paused;
-  $('control-state').textContent = data.frozen ? 'PAUSED · UNRECONCILED' : paused ? 'PAUSED' : 'REMOTE CONTROL READY';
+  $('control-state').textContent = data.frozen ? 'PAUSED · UNRECONCILED' : paused ? 'PAUSED' : data.run_lease ? `RUN OWNED · ${data.run_lease.owner}` : 'REMOTE CONTROL READY';
   $('control-state').classList.toggle('active', !paused && !data.frozen);
   const boundary = state?.boundary?.kind;
   $('category').textContent = boundary ? `${boundary.replaceAll('_', ' ').toUpperCase()} · ${state.category}` : 'NO VERIFIED INPUT BOUNDARY';

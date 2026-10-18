@@ -1,0 +1,455 @@
+{
+  "schema_version": 1,
+  "kind": "historical-native-acceptance",
+  "platform": "macOS arm64; project-local pinned CDDA 0.I-1 and environment",
+  "upstream_pin": "native/upstream.json",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "freetype_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+  "initial_build_binary_sha256": "0405e34af99e7b60f9da67fd37e9cca8769b1d1c294eb622af80999be4854b37",
+  "installed_binary_sha256": "e3c022b5da440d2e4a31fc537ea07c988c2a767bf96197b83de4c7224d47bf87",
+  "date": "2026-10-17",
+  "report": "docs/acceptance/2026-10-17-controller-run-lease.md",
+  "source_commit": "0a5b0ad39fa22683cf170f1d84dc0758fbe1ad30",
+  "identity_note": "Integrated controller checkpoint plus working-tree viewer/HTTP changes; native-source-identity.json records exact runtime hashes. Final source must retain these hashes.",
+  "video": null,
+  "verified_at": "2026-10-17",
+  "verification_scope": "332 portable tests plus viewer/import/docs controls; independent review; manual real leased step/return, competing-input rejection, Pause and release, menu rejection and explicit resume. Exact native IDs and cleanup are retained in local native-summary.json.",
+  "limitations": [
+    "manual in-process caller, no autonomous supervisor/provider",
+    "new concurrency races are portable; no new native timing injection",
+    "load/save/quit timeouts preserved as unknown; current-state/process observations separate",
+    "Original receipts, PNGs, journal and driver stay project-local and ignored; preserve for review. A fresh checkout lacks these files. No saves deleted."
+  ],
+  "artifacts": {
+    ".runtime/evidence/round011/integrated-common.log": {
+      "sha256": "f4f5745df54305ac8c7ebb7ea6347d6194a96d2601473f6fd59d025008909c5b",
+      "bytes": 55042,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/integrated-focused.log": {
+      "sha256": "bfdd9122e9dac120f07f3678229caea96ba07045883f67a63fe3bca91c3f330f",
+      "bytes": 12892,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/001-observe.json": {
+      "sha256": "c4dab3b0344741bd3f401558f681105e6051e3cd4ef64c4f4736e8eb2ecbbaa1",
+      "bytes": 916,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/001-observe.png": {
+      "sha256": "97d02968aa8f1d798c490ac25c2d7640a4111eee674ce72a2fd011037eaffc45",
+      "bytes": 12540,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/002-resume.json": {
+      "sha256": "55d371766749fd58c0883944a262efb754d393221041836b472da422e5ce9065",
+      "bytes": 917,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/002-resume.png": {
+      "sha256": "97d02968aa8f1d798c490ac25c2d7640a4111eee674ce72a2fd011037eaffc45",
+      "bytes": 12540,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/003-key.json": {
+      "sha256": "0280553a92b92bc9e90a88fd36765ef98719fa6b78ede9445b5b403ccef2c479",
+      "bytes": 917,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/003-key.png": {
+      "sha256": "3395a6738906018ee766c157e0f1449bc7654fbad55cbedb5293f930c5dc5f1d",
+      "bytes": 12796,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/004-key.json": {
+      "sha256": "93cf8e0883f7893db7657292cee665f992ab1b240f0e7c64428cdc270c41a048",
+      "bytes": 917,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/004-key.png": {
+      "sha256": "97d02968aa8f1d798c490ac25c2d7640a4111eee674ce72a2fd011037eaffc45",
+      "bytes": 12540,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/005-key.json": {
+      "sha256": "c767a75d740fc53904e8495de54e493aab57b5112a9442878cb883bc7cace219",
+      "bytes": 917,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/005-key.png": {
+      "sha256": "5234ebfa2b85d71dbe8f31090687d6ec469a2cc548107a2bf65c949149a7342f",
+      "bytes": 12542,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/006-key.json": {
+      "sha256": "70421be2ad7d6e5c95f100bbc12b4c337d1d69f6dd679301f546ce5822d18bc6",
+      "bytes": 918,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/006-key.png": {
+      "sha256": "240b7f3b394fc616f4c31cc0f7b39eb36feeacce7cd8036a79728a5c2308c898",
+      "bytes": 12519,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/007-key.json": {
+      "sha256": "688c1776d5fc48e193618f5d3c4b471e06ebfcf643be068c514a6e530b8761cf",
+      "bytes": 907,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/007-key.png": {
+      "sha256": "f48d611cb22125cdc80badc90d2f8b35ba2c46f1fa255fd124e3420d8c1d20c8",
+      "bytes": 13336,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/008-key.json": {
+      "sha256": "ecf926a7763afabe1ed06e12cad86369c8137b6da515d711cdb8562b2210c422",
+      "bytes": 280,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/009-observe.json": {
+      "sha256": "6464e87dd6d96be88684a123534f2802f33c312916976daebcc1f111aace12ed",
+      "bytes": 5171,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/009-observe.png": {
+      "sha256": "9d50ab45977373be08c242da3fe7c8fa805c68a0277194db063bfd2b3315a9a6",
+      "bytes": 112863,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/010-resume.json": {
+      "sha256": "bebb07500f264944fc80b6bfeafbbe64b394e7101f4850f5b0f6f9c0373e8016",
+      "bytes": 5172,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/010-resume.png": {
+      "sha256": "9d50ab45977373be08c242da3fe7c8fa805c68a0277194db063bfd2b3315a9a6",
+      "bytes": 112863,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/011-observe.json": {
+      "sha256": "74f448dfc85da44266a01b84c839e3b4b717d97527f018fe504b1c5982d5a229",
+      "bytes": 5172,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/011-observe.png": {
+      "sha256": "9d50ab45977373be08c242da3fe7c8fa805c68a0277194db063bfd2b3315a9a6",
+      "bytes": 112863,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/012-observe.json": {
+      "sha256": "8d8285d1c14aa641b473c6bf69c33cbfec2ea216ea0db16e88141383fe2a4053",
+      "bytes": 5172,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/012-observe.png": {
+      "sha256": "9d50ab45977373be08c242da3fe7c8fa805c68a0277194db063bfd2b3315a9a6",
+      "bytes": 112863,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/013-acquired.json": {
+      "sha256": "522f6dec83241885be0e43c5214fd7a11b7cb43e6170f8dbadcdc9b451f5f506",
+      "bytes": 230,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/014-status.json": {
+      "sha256": "e4eb8c10bc119be0c70006a528fa6ea43b3296b9f5610cbe50f256162bed6fb3",
+      "bytes": 90826,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/014-status.png": {
+      "sha256": "9d50ab45977373be08c242da3fe7c8fa805c68a0277194db063bfd2b3315a9a6",
+      "bytes": 112863,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/015-action.json": {
+      "sha256": "f99eced72a2a572c46a6ca6a46f64503c6572a96a4ee08a3842c16f68a93a8df",
+      "bytes": 173,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/016-walk.json": {
+      "sha256": "0ccbde43c2aa48f5aa8db96a07bc40de9c856bb394f7f8294dcf81aa41cd6187",
+      "bytes": 173,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/017-leased-RIGHT.json": {
+      "sha256": "fef3f6a69005103cec77908049591e8f901a5377dec345d94eb723f322c725e2",
+      "bytes": 5180,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/017-leased-RIGHT.png": {
+      "sha256": "f56f137b007443684afe41230b5b33e0bd6ec25614f7dacee049ce2f350cc128",
+      "bytes": 112844,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/018-leased-LEFT.json": {
+      "sha256": "19ff8a5c69aa998e61438d451a2607c3ffed1e85b93e9ff40fc44d9a396b9a83",
+      "bytes": 5172,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/018-leased-LEFT.png": {
+      "sha256": "241bbaf3e2675088913b05f8f92001dbb1cc4fd25862d905a78c24485fbae4a5",
+      "bytes": 113084,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/019-status.json": {
+      "sha256": "2b9f34086c6e6ae6b3f171d2c0961f7077e866bcec79baa83e9563533779827a",
+      "bytes": 113837,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/019-status.png": {
+      "sha256": "241bbaf3e2675088913b05f8f92001dbb1cc4fd25862d905a78c24485fbae4a5",
+      "bytes": 113084,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/020-leased-RIGHT.json": {
+      "sha256": "39c770141fbda976b783583c01527489da48f30c137e954675b6860042deb1d5",
+      "bytes": 163,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/021-observe.json": {
+      "sha256": "44d17f67aa334be4123fffe286a25994b050efcbe601f94a028463e659e6a212",
+      "bytes": 5171,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/021-observe.png": {
+      "sha256": "241bbaf3e2675088913b05f8f92001dbb1cc4fd25862d905a78c24485fbae4a5",
+      "bytes": 113084,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/022-resume.json": {
+      "sha256": "fbbfb8edfedbd9a5075ef51086d328c99e6f32b541fad5f09b5b3b0b1755c400",
+      "bytes": 5171,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/022-resume.png": {
+      "sha256": "241bbaf3e2675088913b05f8f92001dbb1cc4fd25862d905a78c24485fbae4a5",
+      "bytes": 113084,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/023-status.json": {
+      "sha256": "f01b0762ebae841495db9030f7a8e7deaad474f15eefa136a88257c52eb8c58a",
+      "bytes": 140606,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/023-status.png": {
+      "sha256": "241bbaf3e2675088913b05f8f92001dbb1cc4fd25862d905a78c24485fbae4a5",
+      "bytes": 113084,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/024-action.json": {
+      "sha256": "0a7a558cc432c8acba8d54663409c2d21c81539709f1bd8ee5bc7178e4cd4572",
+      "bytes": 1319,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/024-action.png": {
+      "sha256": "c55645ea1e603e6cbb7ed9ddadc35cf75d8eec6a255d75200f2e21655da6d48f",
+      "bytes": 52425,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/025-menu-acquisition-rejected.json": {
+      "sha256": "d22556466741ef5e751b7a585491936247be89f7ac12e18a0de2a120891629e9",
+      "bytes": 135,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/026-key.json": {
+      "sha256": "c1c97129f05b0b45624137bacda342fbf51ba19ac0f80325578780a6180bd2ec",
+      "bytes": 5172,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/026-key.png": {
+      "sha256": "c916c174a7ed9ffa58a248a5eeea00d1cdede5e87a504bc56d6ad637fbba4b69",
+      "bytes": 113034,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/027-observe.json": {
+      "sha256": "0e1b347cff8fc4a0f1e407ce709a563a10dcc8588e8d3a63d3a483ab4f19bd1e",
+      "bytes": 5172,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/027-observe.png": {
+      "sha256": "c916c174a7ed9ffa58a248a5eeea00d1cdede5e87a504bc56d6ad637fbba4b69",
+      "bytes": 113034,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/028-acquired.json": {
+      "sha256": "0e98237f28b321c0232a1d1444dffc2ca93bf90c106dfbb060ed6cc22de73902",
+      "bytes": 228,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/029-status.json": {
+      "sha256": "55a18e2337f8b934ccb541471f164aeb80cf54a358f8da8fcf6ba012290d5f68",
+      "bytes": 165719,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/029-status.png": {
+      "sha256": "c916c174a7ed9ffa58a248a5eeea00d1cdede5e87a504bc56d6ad637fbba4b69",
+      "bytes": 113034,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/030-release.json": {
+      "sha256": "46e50fc90231f4ac2fb224eb15dc7ed47ba161b54d0166bc81c2931b8dda8e67",
+      "bytes": 196,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/031-status.json": {
+      "sha256": "b3f573b212a2fec21eed6569ab7aace154a07c5a32777508bdc775976edd039e",
+      "bytes": 160415,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/031-status.png": {
+      "sha256": "c916c174a7ed9ffa58a248a5eeea00d1cdede5e87a504bc56d6ad637fbba4b69",
+      "bytes": 113034,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/032-leased-RIGHT.json": {
+      "sha256": "6f06a1d4859b3ba29ad2eed2eed3670e15eeb1f72272f6b4d67eb62fb71805c9",
+      "bytes": 163,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/033-observe.json": {
+      "sha256": "b0f3a5ed39c54f7131b80a3475c5574c3b4d0774eb0af39f1c453eb4f552386a",
+      "bytes": 5171,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/033-observe.png": {
+      "sha256": "c916c174a7ed9ffa58a248a5eeea00d1cdede5e87a504bc56d6ad637fbba4b69",
+      "bytes": 113034,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/034-resume.json": {
+      "sha256": "dceb8058b8c0114d3e1ed10ad98921a1c22684efe055bd230059c820eaf897d3",
+      "bytes": 5172,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/034-resume.png": {
+      "sha256": "c916c174a7ed9ffa58a248a5eeea00d1cdede5e87a504bc56d6ad637fbba4b69",
+      "bytes": 113034,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/035-pause.json": {
+      "sha256": "7666d4c7c82548f9cd256a038f804011e3a21730c204cece51c775696796da31",
+      "bytes": 196,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/036-status.json": {
+      "sha256": "40f9ffd35e00061ef13dfb83ba442fcd533786919c0fef5f1f3c5da2a84f0f44",
+      "bytes": 177471,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/036-status.png": {
+      "sha256": "c916c174a7ed9ffa58a248a5eeea00d1cdede5e87a504bc56d6ad637fbba4b69",
+      "bytes": 113034,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/037-observe.json": {
+      "sha256": "f3409f5151cb0d4895fcc5ab51f80272a2d05a1be6623a5538bcc5ca9d5f382c",
+      "bytes": 5171,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/037-observe.png": {
+      "sha256": "c916c174a7ed9ffa58a248a5eeea00d1cdede5e87a504bc56d6ad637fbba4b69",
+      "bytes": 113034,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/038-resume.json": {
+      "sha256": "91bdd92f93d45bc5ae910533d3c08395e10bdf540c2c3ec7a9f872d72af98d96",
+      "bytes": 5172,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/038-resume.png": {
+      "sha256": "c916c174a7ed9ffa58a248a5eeea00d1cdede5e87a504bc56d6ad637fbba4b69",
+      "bytes": 113034,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/039-action.json": {
+      "sha256": "3a33d986d5ab3443c6dfa7e7989fe0852a34bf316fecc363001ddcf1b8a4307e",
+      "bytes": 800,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/039-action.png": {
+      "sha256": "7d2bc00a5cb95e5f009226ca6a04b5bc3c9cdc919ffaba80d32578444ca96181",
+      "bytes": 110339,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/040-key.json": {
+      "sha256": "988629314cf8a59aebb8c6ed04d68224e9d61df7d80daaf3ea28bdd1fa05a398",
+      "bytes": 281,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/041-observe.json": {
+      "sha256": "c3094a15794a9ccace8b65bd21b5d67ee6f00ba6a59a7b2306c81998f49e57a7",
+      "bytes": 924,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/041-observe.png": {
+      "sha256": "162010faba4e549e37e099650129b608ee5cd08ccbd1f97e6407fa18355e0226",
+      "bytes": 12442,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/042-resume.json": {
+      "sha256": "c19d22183ef7db1d62d598bad0e99fbd9802f579ed24ee715a98836afd013170",
+      "bytes": 925,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/042-resume.png": {
+      "sha256": "162010faba4e549e37e099650129b608ee5cd08ccbd1f97e6407fa18355e0226",
+      "bytes": 12442,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/043-key.json": {
+      "sha256": "b6bf3c0566d27f6687c2668852d9c1d7da83daaee0189e70919160a1e21b44ef",
+      "bytes": 802,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/043-key.png": {
+      "sha256": "e513c9f4355732559d10911a92efb71c716272e54cecdca5ae71c80bb6962649",
+      "bytes": 12877,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/044-key.json": {
+      "sha256": "c177724bebde045a8e9eaa119dd8feadc25d224843a6f0a5a6ed452f0ba431b2",
+      "bytes": 279,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/journal.jsonl": {
+      "sha256": "e591c72f95121ccbda60920b17da9c48469a644eea0a03b6658f50b7a268464b",
+      "bytes": 116662,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/spectator-leased.png": {
+      "sha256": "d6c5f63ba67205986ce686f339f33baf289ccd646c20a4a56e27e62a6f5b0710",
+      "bytes": 228249,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native/spectator-paused.png": {
+      "sha256": "595f8cd0d9a2c9c49d2d282ace139e352c9dd6f6530ef184e5035f0a0746a054",
+      "bytes": 194443,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native-provenance.json": {
+      "sha256": "91e496e0937f49e7f6e4dac4e19a16a9e676eb2c31a14dc1ebee82b1728a1347",
+      "bytes": 807,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native-source-identity.json": {
+      "sha256": "ef8503d0ef458569132bd787bfa736e2e22ae6944d2cb610be4356e90a777b52",
+      "bytes": 802,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native-summary.json": {
+      "sha256": "9ec9492b4776f6c80014d2971ce880184c4c7d80aeca5efd148820e80e8bca78",
+      "bytes": 19111,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/native_driver.py": {
+      "sha256": "cfa6f170f4056f297d68aae6ffb7ca78f93020db2c8ef799437007ce19ad3e04",
+      "bytes": 2210,
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/evidence/round011/run-ownership.png": {
+      "sha256": "9a99033effe5166a0f1b8cab8117ea8d2487e699839fe011dab281fc9bfd6cc4",
+      "bytes": 70786,
+      "availability": "local-only; not included in Git"
+    }
+  }
+}

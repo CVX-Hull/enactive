@@ -68,6 +68,40 @@ class ServerTests(unittest.TestCase):
             payload.update(interrupt_request_id=state["boundary"]["interrupt_request_id"], choice="NO")
         return payload
 
+    def test_run_lease_enforced_on_existing_http_ingress(self):
+        with FakeBridge(self.controller) as bridge:
+            self.assertEqual(self.post({"kind": "observe"})[0], 200)
+            self.assertEqual(self.post({"kind": "resume"})[0], 200)
+            current = self.controller.state
+            lease = self.controller.acquire_run("http-task", 0, "test-player",
+                expected_session=current["session"], expected_revision=current["revision"])
+            delivered = len(bridge.delivered)
+            for kind, payload in (("key", {"key": "x"}), ("action", {"action": "RIGHT"}),
+                                  ("walk", {"direction": "east", "steps": 1}), ("resume", {})):
+                with self.subTest(kind=kind):
+                    code, body, _ = self.post({"kind": kind, "expected_session": current["session"],
+                        "expected_revision": current["revision"], **payload})
+                    self.assertEqual(code, 409, body)
+            self.assertEqual(len(bridge.delivered), delivered)
+            code, body, _ = self.request()
+            self.assertEqual(code, 200)
+            self.assertEqual(json.loads(body)["run_lease"], {"task_id": "http-task",
+                "execution_epoch": 0, "owner": "test-player", "session": current["session"]})
+            self.assertEqual(self.post({"kind": "observe"})[0], 200)
+            self.assertEqual(self.post({"kind": "goal", "text": "record only"})[0], 200)
+            # Public JSON cannot supply an in-process capability or start a run.
+            self.assertEqual(self.post({"kind": "action", "action": "RIGHT", "run_lease": {}})[0], 400)
+            self.assertEqual(self.post({"kind": "acquire_run"})[0], 409)
+            self.assertEqual(self.post({"kind": "pause"})[0], 200)
+            self.assertIsNone(self.controller.status()["run_lease"])
+            rejected = self.controller.execute_run(lease, action="RIGHT",
+                expected_session=current["session"], expected_revision=current["revision"])
+            self.assertNotEqual(rejected["status"], "ready")
+            self.assertEqual(len(bridge.delivered), delivered)
+            self.assertEqual(self.post({"kind": "observe"})[0], 200)
+            self.assertEqual(self.post({"kind": "resume"})[0], 200)
+            self.assertIsNone(self.controller.status()["run_lease"])
+
     def test_recovery_exact_payloads_and_types_before_dispatch(self):
         self.controller.state = recovery_state()
         good = self.recovery_payload()

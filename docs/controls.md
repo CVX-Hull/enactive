@@ -44,7 +44,7 @@ Active and deprecated controls fail after their due date. Event triggers can req
 | C-PORTABLE | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-RUNTIME | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-NATIVE | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
-| C-USABILITY | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
+| C-USABILITY | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-BOUNDARY | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-REVIEW | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-GOVERNANCE | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
@@ -70,15 +70,15 @@ Coverage gap: Fake bridge tests do not execute CDDA. Loopback tests require bind
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within round010 portable/review scope; no native or live-provider claim.
-Scope: 313 Python tests plus viewer, import, document, diagram and governance checks; 73 focused supervisor/skill cases use real passive components and synthetic retained frames.
-Exercise evidence: [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md).
+Last exercise: 2026-10-17. Outcome: Passed within round011 scope; startup/transition uncertainty and development failures retained.
+Scope: 332 Python tests plus viewer/import/docs/diagram/governance checks; 82 controller/HTTP cases use isolated bridges and ports.
+Exercise evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Independent reviews found expiry ordering, terminal status, foreign-world budgets, missing completion evidence and sticky-dispute admission defects. Regression fixes and rereviews passed; controls remain bounded and do not prove native/model effectiveness.
-Cost: Existing project-local tools, 313 portable tests, one isolated worker and targeted independent reviews; no new generic framework or global dependency.
-Follow-up: Review on changed supervisor/lease/receipt contracts or failures; #36 owns production integration, #24 owns native/model evaluation, #13 owns broad maintenance.
-Review evidence: [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md).
+Findings: Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.
+Cost: Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.
+Follow-up: Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open.
+Review evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
 
 Next review: 2027-01-15.
 
@@ -96,15 +96,15 @@ Coverage gap: Tests exercise fake-bridge and browser fixtures. Native takeover a
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within the reported scope; unsuccessful attempts and limits retained.
-Scope: Production WAIT YES/NO, ordinary-input rejection during activity, lost gameplay/control results and no-replay reconciliation; separately instrumented native final-gate ordering.
-Exercise evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
+Last exercise: 2026-10-17. Outcome: Passed within round011 scope; startup/transition uncertainty and development failures retained.
+Scope: Real leased step and return, competing input exclusion, browser Pause/stale capability, explicit resume without lease, menu rejection and release; portable concurrency races separate.
+Exercise evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Pause preserves scene authority; immediate recovery works. Actual unknown histories survive reconciliation. Final-gate ordering passed labeled timing probes; no universal stop bound.
-Cost: Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.
-Follow-up: Revisit on relevant contract/failure/release changes or due date. #47 tutorial content, #9 native runner, #33 predicate evidence and #24 model evaluation remain separate.
-Review evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
+Findings: Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.
+Cost: Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.
+Follow-up: Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open.
+Review evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
 
 Next review: 2027-01-15.
 
@@ -122,15 +122,15 @@ Coverage gap: Historical MVP evidence is host/scenario specific; no automated na
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within round009 bounded scope; fault/native lanes remain distinct.
-Scope: 263 portable tests and viewer/import/docs controls; actual retained movement, menu/activity, Pause, stale and reload/creature predicates as applicable to this control.
-Exercise evidence: [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
+Last exercise: 2026-10-17. Outcome: Passed within round011 scope; startup/transition uncertainty and development failures retained.
+Scope: Unchanged native source/build identity verified; real windowed lease input and takeover probes, retained receipts/frames and world-transition timeouts; no new native timing injection.
+Exercise evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Round009 review fixed disputed-source disposition and evidence-driver attribution; existing tools enforce shared policy boundary. Claims remain bounded; no autonomous supervisor.
-Cost: Reused existing local tooling; 263 tests and separate native acceptance, one isolated worker and independent reviews.
-Follow-up: Review on changed contracts or failures; #13 owns broad maintenance, future supervision remains separately tracked.
-Review evidence: [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
+Findings: Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.
+Cost: Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.
+Follow-up: Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open.
+Review evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
 
 Next review: 2027-01-15.
 
@@ -148,15 +148,15 @@ Coverage gap: Human judgment; no automated usability score or user study is clai
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within the reported scope; unsuccessful attempts and limits retained.
-Scope: Actual graphical spectator Yes and explicit Observe reached normal play while paused; current overview/runbook and recovery diagram labels reconciled.
-Exercise evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
+Last exercise: 2026-10-17. Outcome: Passed within round011 scope; startup/transition uncertainty and development failures retained.
+Scope: Real browser spectator shows active run owner and disabled Resume, then Pause takeover; portable controls regression; no broader task dashboard claimed.
+Exercise evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
 
-Maintenance review: 2026-10-17. Effectiveness: partially_effective.
-Findings: Actual recovery UI preserves pause and unknown outcomes. Existing flow diagram now names public interfaces. No new mobile usability study or broad visual redesign.
-Cost: Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.
-Follow-up: Revisit on relevant contract/failure/release changes or due date. #47 tutorial content, #9 native runner, #33 predicate evidence and #24 model evaluation remain separate.
-Review evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
+Maintenance review: 2026-10-17. Effectiveness: effective.
+Findings: Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.
+Cost: Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.
+Follow-up: Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open.
+Review evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
 
 Next review: 2027-01-15.
 
@@ -200,15 +200,15 @@ Coverage gap: No code checker proves reasoning quality, typing completeness, dec
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within round010 portable/review scope; no native or live-provider claim.
-Scope: Independent brief, shared-source, documentation/visual and two integrated code reviews; five reproduced integrated defects fixed and both rereviews clean.
-Exercise evidence: [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md).
+Last exercise: 2026-10-17. Outcome: Passed within round011 scope; startup/transition uncertainty and development failures retained.
+Scope: Independent clean-context brief and integrated code review; separate visual review corrected recovery/revocation wording; lead verified native evidence.
+Exercise evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Independent reviews found expiry ordering, terminal status, foreign-world budgets, missing completion evidence and sticky-dispute admission defects. Regression fixes and rereviews passed; controls remain bounded and do not prove native/model effectiveness.
-Cost: Existing project-local tools, 313 portable tests, one isolated worker and targeted independent reviews; no new generic framework or global dependency.
-Follow-up: Review on changed supervisor/lease/receipt contracts or failures; #36 owns production integration, #24 owns native/model evaluation, #13 owns broad maintenance.
-Review evidence: [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md).
+Findings: Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.
+Cost: Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.
+Follow-up: Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open.
+Review evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
 
 Next review: 2027-01-15.
 
@@ -356,15 +356,15 @@ Coverage gap: Receipt freshness is not cross-host byte equality or proof against
 
 Lifecycle: active. Rationale: Required to keep user-facing visual explanations reviewable and synchronized.. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within round010 portable/review scope; no native or live-provider claim.
-Scope: Passive supervisor diagram and updated skill diagram rendered with pinned local tooling; final 1000-pixel supervisor preview inspected by lead and independent reviewer.
-Exercise evidence: [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md).
+Last exercise: 2026-10-17. Outcome: Passed within round011 scope; startup/transition uncertainty and development failures retained.
+Scope: Current ownership diagram rendered with pinned local tools and inspected at 1050 pixels; real spectator owner and Pause states inspected.
+Exercise evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Independent reviews found expiry ordering, terminal status, foreign-world budgets, missing completion evidence and sticky-dispute admission defects. Regression fixes and rereviews passed; controls remain bounded and do not prove native/model effectiveness.
-Cost: Existing project-local tools, 313 portable tests, one isolated worker and targeted independent reviews; no new generic framework or global dependency.
-Follow-up: Review on changed supervisor/lease/receipt contracts or failures; #36 owns production integration, #24 owns native/model evaluation, #13 owns broad maintenance.
-Review evidence: [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md).
+Findings: Queue-generation gap is now covered; reconstructed capabilities and competing ingress reject. Independent visual review corrected transport-failure recovery wording. Native input and portable races remain separate; no autonomous player claim.
+Cost: Existing locks and project-local tools; one isolated worker, independent reviews, 332 portable tests and serialized manual native probes.
+Follow-up: Revisit at new ingress/lease/lifecycle changes or failures. #36 receipt/service/provider integration, #23 task UI, #24 model evaluation and #13 broad maintenance remain open.
+Review evidence: [docs/acceptance/2026-10-17-controller-run-lease.md](../docs/acceptance/2026-10-17-controller-run-lease.md).
 
 Next review: 2027-01-15.
 

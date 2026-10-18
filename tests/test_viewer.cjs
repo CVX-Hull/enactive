@@ -58,6 +58,25 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.equal(element('key').value, '');
   assert.equal(run('authority().expected_revision'), 2);
 
+  context.input.run_lease = {task_id: 'task', execution_epoch: 0, owner: 'waypoint player', session: 'test'};
+  run('render(input)');
+  assert.match(element('control-state').textContent, /RUN OWNED.*waypoint player/);
+  assert.ok(sendButtons.every(button => button.disabled));
+  assert.equal(element('resume').disabled, true);
+  assert.equal(element('observe').disabled, false);
+  assert.equal(element('pause').disabled, false);
+  const countBeforeLeaseInput = requests.length;
+  for (const kind of ['action', 'key', 'walk', 'resume']) await run(`command('${kind}')`);
+  assert.equal(requests.length, countBeforeLeaseInput, 'leased viewer must not submit ordinary input');
+  assert.match(element('error').textContent, /Pause to take over/);
+  context.input.run_lease = null;
+  context.input.pause_requested = true;
+  run('render(input)');
+  assert.equal(element('control-state').textContent, 'PAUSED');
+  assert.ok(sendButtons.every(button => button.disabled), 'revoked lease does not imply resumed input');
+  context.input.pause_requested = false;
+  run('render(input)');
+
   render(3, 'frame-1-1-3.png');
   render(4, 'frame-1-1-3.png', {status: 'dispatched', frame_ok: false});
   await decode();

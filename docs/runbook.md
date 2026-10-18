@@ -9,6 +9,17 @@ status: active
 Supported scope: one prepared local macOS game.
 For fresh installation use [setup](setup.md); use [overview](overview.md) for limits.
 
+## When a run owns input
+
+The viewer identifies an active run owner and disables ordinary inputs and Resume.
+Observe and Pause stay available. Use Pause to take over, inspect a current frame,
+and explicitly Resume before manual input. A released or revoked run is not
+restored by Resume. Recording goal text never starts or replaces a task.
+Only trusted in-process callers can currently acquire a run lease; the service
+has no start/continue task endpoint yet. Restart begins paused without ownership.
+If a result is unknown, preserve it and reconcile under the procedures below;
+acquiring new ownership does not prove the old task succeeded.
+
 ## Start and observe
 
 First inspect existing terminals/processes to avoid starting a second game or

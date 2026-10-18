@@ -12,6 +12,7 @@ import secrets
 import threading
 import time
 import uuid
+from dataclasses import dataclass, asdict
 from typing import Any
 
 from harness.movement import DIRECTIONS, MovementBlocked, guard, observed_step
@@ -29,6 +30,16 @@ INPUT_BOUNDARIES = frozenset({"normal_play", "menu"})
 
 class ControlError(Exception):
     """A visible controller failure; never evidence of game success."""
+
+
+@dataclass(frozen=True)
+class RunLease:
+    """Descriptive fields are public; only the controller's exact object grants input."""
+
+    task_id: str
+    execution_epoch: int
+    owner: str
+    session: str
 
 
 def atomic_json(path: Path, value: dict[str, Any]) -> None:
@@ -180,6 +191,8 @@ class Controller:
         self.closed = False
         self.pause_requested = True
         self.pause_generation = 0
+        self._run_lease: RunLease | None = None
+        self._command_work = 0
         self.authority = {"controller_boot_id": uuid.uuid4().hex, "counter": 0}
         self.unknown_outcomes: list[dict[str, Any]] = []
         self.goal = ""
@@ -486,7 +499,6 @@ class Controller:
                 self.closed = True
                 self.frozen = True
                 self.pause_requested = True
-                self.pause_generation += 1
                 self._revoke()
             self._pause_file()
             # The process lock outlives every writer, including HTTP worker threads.
@@ -502,6 +514,8 @@ class Controller:
 
     def _revoke(self) -> None:
         """Call under data_lock: token publication precedes retirement/admission."""
+        self._run_lease = None
+        self.pause_generation += 1
         counter = self.authority["counter"] + 1
         if counter > 2_147_483_647:
             self.authority = {"controller_boot_id": uuid.uuid4().hex, "counter": 0}
@@ -547,8 +561,7 @@ class Controller:
             changed_session = self.state is not None and response["session"] != self.state["session"]
             takeover = self.state is not None and response["paused"] and (
                 response["boundary"]["control_generation"] != self.state["boundary"]["control_generation"])
-            if changed_session or takeover:
-                self.pause_generation += 1
+            if changed_session or takeover or (response["paused"] and self._run_lease is not None):
                 self._revoke()
                 if changed_session:
                     self.frozen = True
@@ -562,7 +575,8 @@ class Controller:
             if response["paused"]:
                 self.pause_requested = True
 
-    def _exchange(self, kind: str, timeout: float, *, generation: int | None = None, **payload: Any) -> dict[str, Any]:
+    def _exchange(self, kind: str, timeout: float, *, generation: int | None = None,
+                  lease: RunLease | None = None, **payload: Any) -> dict[str, Any]:
         request_id = str(uuid.uuid4())
         started = time.monotonic()
         request = {"protocol": 3, "id": request_id, "kind": kind,
@@ -575,6 +589,7 @@ class Controller:
         if len(json.dumps(request).encode()) > MAX_REQUEST:
             raise ControlError("Request exceeds 4096 bytes")
         terminal_received = False
+        admitted_input = False
         try:
             if self.closed:
                 raise ControlError("Controller is shutting down")
@@ -582,6 +597,7 @@ class Controller:
                 raise ControlError("Unresolved bridge request; observe to reconcile")
             with self.data_lock:
                 if kind in {"key", "action", "resume"}:
+                    self._check_owner(lease, generation)
                     if self.control_lock.locked() or self.control_pending is not None:
                         raise ControlError("Recovery is pending; ordinary input is blocked")
                     if generation is None or generation != self.pause_generation:
@@ -594,6 +610,7 @@ class Controller:
                     # Survives a host crash after native dispatch removes claimed.json.
                     # Uncertain admissions are retained across reconciliation and restart.
                     atomic_json(self.admissions / f"{request_id}.json", request)
+                    admitted_input = True
                 if self.pending is not None:
                     self._unknown(self.pending, "reconciliation does not establish original outcome")
                 atomic_json(self.bridge / "request.json", request)
@@ -636,7 +653,8 @@ class Controller:
         except (ControlError, OSError) as exc:
             with self.data_lock:
                 self._revoke()
-                self._unknown(request, str(exc))
+                if admitted_input:
+                    self._unknown(request, str(exc))
                 if terminal_received:
                     self.pending = None
             self._pause_file()
@@ -653,7 +671,6 @@ class Controller:
     def pause(self) -> dict[str, Any]:
         # This path deliberately never waits for the command lock or the game.
         with self.data_lock:
-            self.pause_generation += 1
             self.pause_requested = True
             self._revoke()
             self._pause_file()
@@ -663,19 +680,99 @@ class Controller:
         self._record({"kind": "pause"}, result)
         return result
 
+    def acquire_run(self, task_id: str, execution_epoch: int, owner: str, *,
+                    expected_session: str, expected_revision: int) -> RunLease:
+        """Claim reconciled normal play without waiting for or sending native work."""
+        for name, value in (("task_id", task_id), ("owner", owner)):
+            if not isinstance(value, str) or not value.strip() or len(value) > 160:
+                raise ControlError(f"Run {name} must be nonempty text of at most 160 characters")
+        if type(execution_epoch) is not int or execution_epoch < 0:
+            raise ControlError("Run execution_epoch must be a nonnegative integer")
+        if not self.command_lock.acquire(blocking=False):
+            raise ControlError("Command writer is active")
+        try:
+            if not self.control_lock.acquire(blocking=False):
+                raise ControlError("Recovery writer is active")
+            try:
+                with self.data_lock:
+                    if self._command_work:
+                        raise ControlError("Command work is active or queued")
+                    if self._run_lease is not None:
+                        raise ControlError("A run already owns this controller")
+                    if self.closed or self.frozen or self.pause_requested or (self.bridge / "pause").exists():
+                        raise ControlError("Run acquisition requires a reconciled, resumed controller")
+                    if (self.pending is not None or self.control_pending is not None
+                            or any((self.bridge / name).exists() for name in
+                                   ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
+                        raise ControlError("Native or recovery work is pending")
+                    if self.state is None:
+                        raise ControlError("Run acquisition requires a current observation")
+                    self._run_frame(self.state)
+                    self._expect(self.state, expected_session, expected_revision)
+                    self._revoke()
+                    lease = RunLease(task_id, execution_epoch, owner, self.state["session"])
+                    self._run_lease = lease
+                    return lease
+            finally:
+                self.control_lock.release()
+        finally:
+            self.command_lock.release()
+
+    @staticmethod
+    def _run_frame(state: dict[str, Any]) -> None:
+        validate_state(state)
+        age = int(time.time() * 1000) - state["timestamp_ms"]
+        if (state["status"] != "ready" or state["error"] or state["paused"]
+                or not state["in_game"] or not state["frame_ok"] or not state["frame"]
+                or state["boundary"]["kind"] != "normal_play" or not -1000 <= age <= 3000):
+            raise ControlError("Run input requires a fresh successful normal-play frame")
+
+    def _check_owner(self, lease: RunLease | None, generation: int | None) -> None:
+        """Call under data_lock at each admission/commit boundary."""
+        if lease is None:
+            if self._run_lease is not None:
+                raise ControlError("A run owns input; Pause or release it before external input")
+            return
+        if (lease is not self._run_lease or generation != self.pause_generation
+                or self.state is None or lease.session != self.state["session"]
+                or self.closed or self.frozen or self.pause_requested):
+            raise ControlError("Run lease is stale or input authority was revoked")
+
+    def execute_run(self, lease: RunLease, *, action: str, expected_session: str,
+                    expected_revision: int, timeout: float | None = None) -> dict[str, Any]:
+        """The only leased ingress: one semantic action, with no arbitrary payload."""
+        # None is the external-path marker internally, never a valid capability.
+        if lease is None:
+            return {"status": "controller_error", "error": "Run lease is stale or input authority was revoked"}
+        return self._execute("action", timeout, {"action": action, "expected_session": expected_session,
+                                               "expected_revision": expected_revision}, lease)
+
+    def release_run(self, lease: RunLease) -> dict[str, Any]:
+        with self.data_lock:
+            if lease is None or lease is not self._run_lease:
+                raise ControlError("Run lease is stale; cannot release another owner")
+            return self.pause()
+
     def execute(self, kind: str, *, timeout: float | None = None, **payload: Any) -> dict[str, Any]:
+        return self._execute(kind, timeout, payload, None)
+
+    def _execute(self, kind: str, timeout: float | None, payload: dict[str, Any],
+                 lease: RunLease | None) -> dict[str, Any]:
         wait = self.timeout if timeout is None else timeout
+        admitted = False
         with self.data_lock:
             admitted_generation = self.pause_generation
         try:
             if self.closed:
                 raise ControlError("Controller is closed")
+            if not isinstance(kind, str) or kind not in {"observe", "pause", "resume", "goal", "key", "action", "walk"}:
+                raise ControlError("Unknown command")
+            if set(payload) - {"key", "action", "direction", "steps", "text", "expected_session", "expected_revision"}:
+                raise ControlError("Unknown command fields")
             if kind == "pause":
                 return self.pause()
             if isinstance(wait, bool) or not isinstance(wait, (int, float)) or not 0 < wait <= MAX_WAIT:
                 raise ControlError("Timeout must be greater than 0 and at most 15 seconds")
-            if kind not in {"observe", "key", "action", "resume", "walk", "goal"}:
-                raise ControlError("Unknown command")
             if kind == "key":
                 key = payload.get("key")
                 if not isinstance(key, str) or not (key in NAMED_KEYS or len(key) == 1 and 32 <= ord(key) <= 126):
@@ -691,14 +788,25 @@ class Controller:
                 result = {"status": "recorded", "goal": goal}
                 self._record({"kind": "goal", "text": goal}, result)
                 return result
+            with self.data_lock:
+                if kind != "observe":
+                    self._check_owner(lease, admitted_generation)
+                self._command_work += 1
+                admitted = True
             with self.command_lock:
                 if self.closed:
                     raise ControlError("Controller is closed")
+                with self.data_lock:
+                    if kind != "observe":
+                        self._check_owner(lease, admitted_generation)
+                        if kind == "walk" and admitted_generation != self.pause_generation:
+                            raise ControlError("Admission superseded by pause or takeover")
                 if kind == "walk":
                     result = self._walk(payload.get("direction"), payload.get("steps"), wait,
-                                        payload.get("expected_session"), payload.get("expected_revision"))
+                                        payload.get("expected_session"), payload.get("expected_revision"),
+                                        admitted_generation)
                 else:
-                    result = self._command(kind, wait, payload, admitted_generation)
+                    result = self._command(kind, wait, payload, admitted_generation, lease)
                 with self.data_lock:
                     self.last_result = result
                 return result
@@ -706,11 +814,20 @@ class Controller:
             result = {"status": "controller_error", "error": str(exc)}
             with self.data_lock:
                 self.last_result = result
-            self._record({"kind": kind, **payload}, result)
+            # Invalid ingress can contain arbitrary Python objects, including a
+            # leaked capability. Never serialize those into a durable record.
+            self._record({"kind": kind if isinstance(kind, str) else "invalid"}, result)
             return result
+        finally:
+            if admitted:
+                with self.data_lock:
+                    self._command_work -= 1
 
-    def _command(self, kind: str, timeout: float, payload: dict[str, Any], generation: int) -> dict[str, Any]:
+    def _command(self, kind: str, timeout: float, payload: dict[str, Any], generation: int,
+                 lease: RunLease | None = None) -> dict[str, Any]:
         with self.data_lock:
+            if kind != "observe":
+                self._check_owner(lease, generation)
             if kind in {"key", "action", "resume"} and (self.control_lock.locked() or self.control_pending is not None):
                 raise ControlError("Recovery is pending; ordinary input is blocked")
             if kind in {"key", "action", "resume"} and generation != self.pause_generation:
@@ -742,8 +859,11 @@ class Controller:
         if observed["status"] != "ready":
             return observed
         with self.data_lock:
+            self._check_owner(lease, generation)
             if kind in {"key", "action", "resume"} and generation != self.pause_generation:
                 return {"status": "pause_requested", "error": "Resume superseded by a later pause"}
+            if lease is not None:
+                self._run_frame(observed)
         if (observed["boundary"]["kind"] not in INPUT_BOUNDARIES or not observed["frame_ok"]
                 or int(time.time() * 1000) - observed["timestamp_ms"] > 3000):
             raise ControlError("Input requires a fresh matching normal-play or supported menu frame")
@@ -754,7 +874,7 @@ class Controller:
         if kind == "action" and payload["action"] not in observed["actions"]:
             raise ControlError("Action is not registered in the current input context")
         primitive = {kind: payload[kind]} if kind in {"key", "action"} else {}
-        result = self._exchange(kind, timeout, generation=generation, session=observed["session"],
+        result = self._exchange(kind, timeout, generation=generation, lease=lease, session=observed["session"],
                                 revision=observed["revision"], **primitive)
         if kind == "resume" and result["status"] == "ready":
             with self.data_lock:
@@ -780,12 +900,11 @@ class Controller:
         except MovementBlocked as exc:
             raise ControlError(str(exc)) from exc
 
-    def _walk(self, direction: Any, steps: Any, timeout: float, expected_session: Any, expected_revision: Any) -> dict[str, Any]:
+    def _walk(self, direction: Any, steps: Any, timeout: float, expected_session: Any,
+              expected_revision: Any, generation: int) -> dict[str, Any]:
         if not isinstance(direction, str) or direction not in DIRECTIONS or type(steps) is not int or not 1 <= steps <= 8:
             raise ControlError("Walk requires north/south/east/west and 1–8 steps")
         dx, dy, action = DIRECTIONS[direction]
-        with self.data_lock:
-            generation = self.pause_generation
         completed = 0
         previous = None
         try:
@@ -834,7 +953,6 @@ class Controller:
             with self.data_lock:
                 self._revoke()
                 self._pause_file()
-                self.pause_generation += 1
                 self.pause_requested = True
                 self.frozen = True
                 self.transport_error = str(exc)
@@ -849,5 +967,6 @@ class Controller:
                     "control_pending": copy.deepcopy(self.control_pending),
                     "control_unknown_outcomes": copy.deepcopy(self.control_unknown_outcomes),
                     "historical_unknowns": copy.deepcopy(list(self.historical_unknowns)),
+                    "run_lease": None if self._run_lease is None else asdict(self._run_lease),
                     "journal": str(self.journal.relative_to(self.root)),
                     "expect": None if self.state is None else f'{self.state["session"]}:{self.state["revision"]}'}
