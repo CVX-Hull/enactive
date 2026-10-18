@@ -170,3 +170,19 @@ applicability; late completion can update accounting only. A provider that ignor
 cancellation occupies the slot until it exits. This bounds resource growth without
 claiming that Python can forcibly terminate provider code. Independent deterministic
 fixtures test this lifecycle; they do not measure model quality or native gameplay.
+
+## Passive skill verification
+
+The movement skill is a bounded local verifier. It returns one proposed input,
+then waits for its correlated result. The caller owns authority and dispatch;
+there is no background player or automatic retry. The controller's existing walk
+and the skill share `harness/movement.py`, so their visible terrain/creature rules
+cannot drift into independent copies. Import Linter keeps that policy free of
+controller, gameplay, networking, clocks and filesystem dependencies.
+
+![One proposed step passes through caller-owned dispatch and retained evidence before progress or a stop is reported.](diagrams/skill.svg)
+
+[Editable diagram](diagrams/skill.mmd). The [skill contract](protocol.md#passive-bounded-movement-skills)
+owns identity, budgets, generation checks and failure behavior. The manual native
+acceptance driver supplied the caller role; it is not a production supervisor.
+The planner port still requires an explicitly supplied accepted capability tuple.

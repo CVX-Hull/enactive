@@ -31,3 +31,12 @@ forbidden_modules = [
     "harness.controller", "harness.server", "harness.__main__",
     "http", "urllib", "socket", "subprocess", "tools",
 ]
+
+[[tool.importlinter.contracts]]
+name = "Movement policy remains pure and shared"
+type = "forbidden"
+source_modules = ["harness.movement"]
+forbidden_modules = [
+    "harness.controller", "harness.gameplay", "harness.server", "harness.__main__",
+    "http", "urllib", "socket", "subprocess", "tools", "time", "pathlib", "os",
+]

@@ -21,6 +21,7 @@ class DevToolTests(unittest.TestCase):
         (self.root / "harness").mkdir()
         self.write("__init__.py", "")
         self.write("controller.py", "import json\n")
+        self.write("movement.py", "import typing\n")
         self.write("server.py", "from . import controller\nimport http.server\n")
         self.write("__main__.py", "from . import controller, server\n")
         (self.root / "harness/gameplay").mkdir()
@@ -48,7 +49,13 @@ class DevToolTests(unittest.TestCase):
     def test_composition_root_and_http_adapter_are_allowed(self):
         result = self.lint_imports()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("3 kept, 0 broken", result.stdout)
+        self.assertIn("4 kept, 0 broken", result.stdout)
+
+    def test_movement_policy_cannot_acquire_io_or_gameplay_dependencies(self):
+        for module in ("harness.controller", "harness.gameplay.evidence", "time", "pathlib", "os"):
+            with self.subTest(module=module):
+                self.write("movement.py", f"import {module}\n")
+                self.assert_broken(self.lint_imports(), "harness.movement")
 
     def test_gameplay_evidence_cannot_dispatch_or_launch_tools(self):
         for module in ("harness.controller", "harness.server", "harness.__main__",

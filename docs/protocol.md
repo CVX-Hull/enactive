@@ -372,3 +372,55 @@ one snapshot once, with other events in timestamp order. Later knowledge belongs
 in a new named artifact; do not append repeated snapshots as duplicate model calls.
 Unknown metrics carry reasons. A physically unfinished call is censored at cutoff;
 a completed call ends at physical completion even if its reservation is unsettled.
+
+## Passive bounded movement skills
+
+`harness/gameplay/skills.py` implements `MovementStage` and the versioned
+`CARDINAL_MOVEMENT` descriptor. `ACCEPTED_SKILLS` contains this one capability.
+Descriptors declare implemented predicates; arbitrary strings are not executable
+conditions. This supports full outbound/return legs of 1–4 cardinal steps and
+uses the TaskSpec's original primitive, turn and wall budgets. The module never
+sends input, acquires authority, resumes, retries or repairs a plan.
+
+Construction binds the immutable task, original task-start evidence/admission
+clock, stage-start, prior primitive count and (for return) retained waypoint.
+Return history must cover the full outbound distance. A stopped instance cannot
+be rearmed, and partial-leg continuation is not implemented. Trusted caller history
+is not an authorization mechanism for arbitrary Python callers.
+
+`propose` returns a frozen `StepProposal` or terminal `SkillEvaluation`. Exactly
+one logical action can be outstanding; proposing consumes primitive budget even
+if later rejected. Every call requires finite nondecreasing clocks. The checkpoint
+and EvidenceStore authority generation must match, all credited/start/waypoint
+sources must remain undisputed, and the next tile must pass the shared guard.
+The guard requires fresh normal play, unpaused/unfrozen control, no visible
+creatures, and a CLEAR empty allowlisted cardinal neighbor with a registered action.
+
+The caller reserves after-frame capacity, rechecks authority and serializes one
+input. Logical proposal IDs differ from native UUIDs. The caller must retain an
+exact mapping from its journaled action admission and outcome; the controller's
+preflight Observe UUID is not an action receipt. No action admission means
+`not_dispatched` only when the call's non-dispatch is established. Transport
+uncertainty remains `unknown`. A later Observe cannot replace a missing result.
+
+`settle` requires the exact logical ID and before-reference. It computes displacement
+from retained observations independently. Verified movement requires the current,
+fresh after-frame, same session, advanced revision, nonregressing turn, exact unit
+displacement and no intervening generation change beyond that after-reference.
+Duplicate results cannot add progress. Malformed or conflicting results cannot
+release an unresolved proposal. Unknown/dispatched-only outcomes stop unknown;
+rejection, non-dispatch and the first zero/unexpected displacement stop the stage.
+Unsupported menu/activity or missing-frame results remain raw external evidence
+and cannot be relabeled as normal-play evidence. Release unused reservations.
+
+The final post-step guard runs even at the target: full displacement may coexist
+with a blocked/interrupted result. Historical verified progress stays recorded
+when older sources become disputed, but completion and new credit are forbidden;
+the result becomes unknown. Completion requires the full target and all requested
+steps. A committed time/turn overshoot is recorded as budget exhaustion without
+undoing observed progress. `EvidenceStore.observation(ref)` supplies an integrity
+checked deep copy of retained history; it never refreshes authority or freshness.
+
+Task completion, stage handoff, continued epochs, dispatch leases and nonprogress
+readmission remain future supervisor duties. The [native acceptance](acceptance/2026-10-17-bounded-skills.md)
+proves a short manually driven example, not autonomy, trap safety or general survival.

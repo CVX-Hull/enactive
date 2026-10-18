@@ -8,8 +8,9 @@ review_trigger: Gameplay interfaces, supported observations, model adapters, bud
 
 Design for implementation under [#17](https://github.com/CVX-Hull/cdda-player/issues/17).
 Typed gameplay/1 records and the passive bounded evidence adapter are implemented
-under [#32](https://github.com/CVX-Hull/cdda-player/issues/32). Task execution, skills,
-supervisor, planner and end-to-end observation acceptance remain future work.
+under [#32](https://github.com/CVX-Hull/cdda-player/issues/32). The bounded injected
+planner port is implemented under #34; task execution, skills, supervisor and
+end-to-end observation acceptance remain future work.
 [Architecture](../architecture.md) and [protocol](../protocol.md) are authoritative
 about implemented behavior; the [foundation acceptance](../acceptance/2026-10-17-foundation-implementation.md)
 separates portable evidence tests from native-v2 boundary probes. The
@@ -106,8 +107,11 @@ standard-library typed records for internal data. No generated executable schema
 | `RunStatus` | Task/plan/stage IDs, execution epoch, state, active model/configuration and skill version, progress, remaining budgets, next check, last public reason, lease ownership/pause/freshness and evidence references. Model timing/cost is additional telemetry, not completion proof. |
 
 Implemented module ownership: `harness/gameplay/contracts.py` and `evidence.py`.
-Proposed sibling modules `skills.py`, `supervisor.py`, `planner.py` and `status.py`
-do not exist yet. The model/provider-specific adapter goes behind `planner.py`;
+The bounded injected `planner.py` and passive full-leg `skills.py` are implemented.
+The skill proposes/evaluates one step; it cannot dispatch or continue an interrupted leg.
+See the [current skill contract](../protocol.md#passive-bounded-movement-skills).
+Proposed sibling modules `supervisor.py` and `status.py` do not exist yet. A future model/provider-specific
+adapter goes behind the injected planner interface;
 imports must not reverse the controller boundary.
 
 ## Admission, progress and completion
@@ -142,12 +146,12 @@ displacement with a blocked result; retain the evidence and do not claim success
 | --- | --- | --- |
 | Position and unit displacement | Native-v3 relative position and session rotate on world entry/exit, including same-process reload | Future task/supervisor consumers must invalidate task origins and candidates on session replacement |
 | Next tile and creature stop | CLEAR neighboring terrain/furniture; UI visible-creature list | No farther route knowledge; missing or stale values block |
-| Matching frame, turn and authority | Native frame/status/session/revision/turn; passive adapter validates retained originals and receipt age | Real end-to-end pipeline acceptance remains #33 |
-| Ordinary play rather than running activity or raw error | Native-v3 positive boundary discriminator; category and `in_game` alone remain insufficient | Future execution consumers must require normal_play; recovery controls remain separate |
+| Matching frame, turn and authority | Native frame/status/session/revision/turn; passive adapter validates retained originals and receipt age | [Round 009](../acceptance/2026-10-17-bounded-skills.md) exercises actual retained native frames; fault lanes are separate |
+| Ordinary play rather than running activity or raw error | Native-v3 positive boundary discriminator; category and `in_game` alone remain insufficient | The passive skill requires normal_play; recovery controls remain separate |
 | Damage, trap absence, safe water or inventory | Not structured guarantees | Excluded from deterministic predicates; no new exports selected for this task |
 
 Thus #19 uses the implemented passive observation adapter and negative-case
-validation, with real pipeline acceptance still required; no broad map or inventory exporter. Native boundary metadata is owned by #7 and shared explicitly.
+validation, with bounded native pipeline acceptance recorded in round 009; no broad map or inventory exporter. Native boundary metadata is owned by #7 and shared explicitly.
 
 ## Supervision and correction
 

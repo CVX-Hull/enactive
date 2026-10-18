@@ -12,6 +12,7 @@
     "docs/diagrams/native-recovery.mmd": "ab5710e53e064c78ec415a6a3623ccb918972979843d1b0bb384940871ac4170",
     "docs/diagrams/outcome-monitoring.mmd": "7d294be1628682dba90ee57a663e18dc73d5c11eb4ff3b6db8e9abc3e891606f",
     "docs/diagrams/recovery.mmd": "3a29b59da36d5eb58d9eddf592a57dbdbc17dcfcc9c082ff8374d26f50f1301d",
+    "docs/diagrams/skill.mmd": "67d76c5e2448a1d37db03c5a5222b6ecca7be8e15847a218cd2e8257a2469add",
     "docs/diagrams/tiered-gameplay.mmd": "763b5a8c2b882a84d61d4e1a48275b06d5b5cb52f540587c204bf7c96d5639f0"
   },
   "outputs": {
@@ -20,6 +21,7 @@
     "docs/diagrams/native-recovery.svg": "28aef44c10db37589d6f1f49c63748c546b4896f7556bf72d16fc6114795eaf6",
     "docs/diagrams/outcome-monitoring.svg": "502281089fee845913ce7f212cef4a6eee6f946a0f9b63a0ee63e97e469c3c88",
     "docs/diagrams/recovery.svg": "963d312dc4b37a7f38e99fcecb6800569680360786935803147f9fd6c7ed37a4",
+    "docs/diagrams/skill.svg": "ebd6f1a344af346da42d089089c59f976cba6b680a72e5b260a13bbf08cdbd43",
     "docs/diagrams/tiered-gameplay.svg": "d042979b06d5df84ed7e6fb9c1de61763c69f2ee5ecfcb75022129b7f58f4239"
   }
 }

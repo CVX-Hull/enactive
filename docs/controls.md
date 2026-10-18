@@ -64,21 +64,21 @@ Owner: maintainer. Trigger: each integration checkpoint and configured CI event.
 Enforcement: Common command and opt-in local hook; main also requires the observed GitHub Actions controller check (app 15368) with strict freshness under active ruleset 25319489. Local hooks remain bypassable; dated hosted/probe evidence is in public-workflow acceptance.
 Failure response: Preserve failure output, fix the cause and rerun before claiming portable acceptance.
 
-Evidence / implementation: [tools/check.py](../tools/check.py), [tests/test_controller.py](../tests/test_controller.py), [tests/test_server.py](../tests/test_server.py), [tests/test_setup.py](../tests/test_setup.py), [tests/test_viewer.cjs](../tests/test_viewer.cjs), [.github/workflows/check.yml](../.github/workflows/check.yml), [.githooks/pre-commit](../.githooks/pre-commit), [pyproject.toml](../pyproject.toml), [requirements-dev.lock](../requirements-dev.lock), [tests/test_devtools.py](../tests/test_devtools.py), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [tests/test_gameplay_contracts.py](../tests/test_gameplay_contracts.py), [tests/test_gameplay_evidence.py](../tests/test_gameplay_evidence.py), [tests/test_cli.py](../tests/test_cli.py), [tests/test_gameplay_memory.py](../tests/test_gameplay_memory.py), [tests/test_evaluation.py](../tests/test_evaluation.py), [tools/evaluate.py](../tools/evaluate.py), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [tests/test_gameplay_planner.py](../tests/test_gameplay_planner.py), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
+Evidence / implementation: [tools/check.py](../tools/check.py), [tests/test_controller.py](../tests/test_controller.py), [tests/test_server.py](../tests/test_server.py), [tests/test_setup.py](../tests/test_setup.py), [tests/test_viewer.cjs](../tests/test_viewer.cjs), [.github/workflows/check.yml](../.github/workflows/check.yml), [.githooks/pre-commit](../.githooks/pre-commit), [pyproject.toml](../pyproject.toml), [requirements-dev.lock](../requirements-dev.lock), [tests/test_devtools.py](../tests/test_devtools.py), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [tests/test_gameplay_contracts.py](../tests/test_gameplay_contracts.py), [tests/test_gameplay_evidence.py](../tests/test_gameplay_evidence.py), [tests/test_cli.py](../tests/test_cli.py), [tests/test_gameplay_memory.py](../tests/test_gameplay_memory.py), [tests/test_evaluation.py](../tests/test_evaluation.py), [tools/evaluate.py](../tools/evaluate.py), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [tests/test_gameplay_planner.py](../tests/test_gameplay_planner.py), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
 
 Coverage gap: Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within the reported scope; unsuccessful attempts and limits retained.
-Scope: 231 Python tests plus viewer/common checks; injected planner lifecycle/accounting and Pause evidence regressions. No native or model-performance claim.
-Exercise evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
+Last exercise: 2026-10-17. Outcome: Passed within round009 bounded scope; fault/native lanes remain distinct.
+Scope: 263 portable tests and viewer/import/docs controls; actual retained movement, menu/activity, Pause, stale and reload/creature predicates as applicable to this control.
+Exercise evidence: [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Independent planner review exposed oversized-metric, contradictory-usage and lifetime-anchor defects; repaired regressions and rereview passed. Independent pixel inspection corrected a mistaken visual defect claim before production renderer changes. Hosted CI exposed a claimed-timeout fixture scheduling race; controlled post-claim clocks preserve no-replay assertions. A separate final-gate fixture missed transient-file polling on CI; an explicit after-claim/release handshake preserves revocation/no-delivery assertions. Focused checks pass; exact-head CI remains required.
-Cost: Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.
-Follow-up: Revisit on relevant contract/failure/release changes or due date. #47 tutorial content, #9 native runner, #33 predicate evidence and #24 model evaluation remain separate.
-Review evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
+Findings: Round009 review fixed disputed-source disposition and evidence-driver attribution; existing tools enforce shared policy boundary. Claims remain bounded; no autonomous supervisor.
+Cost: Reused existing local tooling; 263 tests and separate native acceptance, one isolated worker and independent reviews.
+Follow-up: Review on changed contracts or failures; #13 owns broad maintenance, future supervision remains separately tracked.
+Review evidence: [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
 
 Next review: 2027-01-15.
 
@@ -116,21 +116,21 @@ Owner: integration maintainer; lead verifies evidence. Trigger: relevant native 
 Enforcement: Required by S-PROTOCOL/S-DELIVERY and release review; manual, outside the portable gate.
 Failure response: Retain failed/unknown probes, block the affected claim and repair or document the supported limit.
 
-Evidence / implementation: [docs/runbook.md#native-acceptance-lane](../docs/runbook.md#native-acceptance-lane), [docs/setup.md](../docs/setup.md), [docs/acceptance/2026-10-17-mvp.md](../docs/acceptance/2026-10-17-mvp.md), [docs/acceptance/2026-10-17-mvp-manifest.json](../docs/acceptance/2026-10-17-mvp-manifest.json), [docs/acceptance/2026-10-17-recovery-memory.md](../docs/acceptance/2026-10-17-recovery-memory.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
+Evidence / implementation: [docs/runbook.md#native-acceptance-lane](../docs/runbook.md#native-acceptance-lane), [docs/setup.md](../docs/setup.md), [docs/acceptance/2026-10-17-mvp.md](../docs/acceptance/2026-10-17-mvp.md), [docs/acceptance/2026-10-17-mvp-manifest.json](../docs/acceptance/2026-10-17-mvp-manifest.json), [docs/acceptance/2026-10-17-recovery-memory.md](../docs/acceptance/2026-10-17-recovery-memory.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
 
 Coverage gap: Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within the reported scope; unsuccessful attempts and limits retained.
-Scope: Fresh pinned build; real WAIT behavior, finished-before-claim, save/reload, raw debug/capture/takeover, reply loss and controlled revocation races; restored production binary verified.
-Exercise evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
+Last exercise: 2026-10-17. Outcome: Passed within round009 bounded scope; fault/native lanes remain distinct.
+Scope: 263 portable tests and viewer/import/docs controls; actual retained movement, menu/activity, Pause, stale and reload/creature predicates as applicable to this control.
+Exercise evidence: [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Native recovery acceptance passed within pinned hook/scenario scope. Independent pixel review withdrew a false renderer diagnosis. Tutorial load content remains #47; instrumentation and failed driver attempts are retained separately.
-Cost: Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.
-Follow-up: Revisit on relevant contract/failure/release changes or due date. #47 tutorial content, #9 native runner, #33 predicate evidence and #24 model evaluation remain separate.
-Review evidence: [docs/acceptance/2026-10-17-native-recovery-planner.md](../docs/acceptance/2026-10-17-native-recovery-planner.md).
+Findings: Round009 review fixed disputed-source disposition and evidence-driver attribution; existing tools enforce shared policy boundary. Claims remain bounded; no autonomous supervisor.
+Cost: Reused existing local tooling; 263 tests and separate native acceptance, one isolated worker and independent reviews.
+Follow-up: Review on changed contracts or failures; #13 owns broad maintenance, future supervision remains separately tracked.
+Review evidence: [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
 
 Next review: 2027-01-15.
 
@@ -162,27 +162,27 @@ Next review: 2027-01-15.
 
 ### C-BOUNDARY — Architectural dependency contracts (automatic)
 
-Declared controller and server dependency boundaries, including indirect imports through harness modules. Passive gameplay records and evidence must not import controller, HTTP, CLI or process/build tooling. Import Linter uses the pyproject.toml forbidden contracts: controller cannot depend on server, CLI, declared network modules or build tooling; server cannot depend on CLI/tools; CLI may compose both.
+Declared controller and server dependency boundaries, including indirect imports through harness modules. Passive gameplay records and evidence must not import controller, HTTP, CLI or process/build tooling. Shared movement policy cannot depend on consumers, clock, filesystem or transport. Import Linter uses the pyproject.toml forbidden contracts: controller cannot depend on server, CLI, declared network modules or build tooling; server cannot depend on CLI/tools; CLI may compose both. Fourth forbidden contract isolates harness.movement; negative import fixtures exercise it.
 
 Owner: harness maintainer. Trigger: common command; architecture changes require rule review.
 Enforcement: Common command runs the real lint-imports executable and propagates failure; temporary source fixtures exercise allowed composition and direct/indirect forbidden imports.
 Failure response: Remove reversed dependency or review the boundary and checker together before accepting changed architecture.
 
-Evidence / implementation: [pyproject.toml](../pyproject.toml), [tools/check.py](../tools/check.py), [tests/test_devtools.py](../tests/test_devtools.py), [docs/architecture.md](../docs/architecture.md), [docs/decisions/003-development-controls.md](../docs/decisions/003-development-controls.md).
+Evidence / implementation: [pyproject.toml](../pyproject.toml), [tools/check.py](../tools/check.py), [tests/test_devtools.py](../tests/test_devtools.py), [docs/architecture.md](../docs/architecture.md), [docs/decisions/003-development-controls.md](../docs/decisions/003-development-controls.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
 
 Coverage gap: Static import graph with configured external roots. Dynamic imports, external-package internals, undeclared libraries and semantic C++ isolation remain review concerns; this is not comprehensive module layering.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within recorded scope after preserved repairs; limitations retained.
-Scope: Three Import Linter contracts, adding passive gameplay and negative import fixtures.
-Exercise evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
+Last exercise: 2026-10-17. Outcome: Passed within round009 bounded scope; fault/native lanes remain distinct.
+Scope: Four Import Linter contracts, including shared movement purity and negative clock/filesystem/controller/gameplay fixtures.
+Exercise evidence: [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Passive records/evidence cannot import controller/server/CLI or process/network/tooling modules; an initial missing test-fixture package was repaired.
-Cost: Existing mature tool reused; no new dependency.
-Follow-up: Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates.
-Review evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
+Findings: Round009 review fixed disputed-source disposition and evidence-driver attribution; existing tools enforce shared policy boundary. Claims remain bounded; no autonomous supervisor.
+Cost: Reused existing local tooling; 263 tests and separate native acceptance, one isolated worker and independent reviews.
+Follow-up: Review on changed contracts or failures; #13 owns broad maintenance, future supervision remains separately tracked.
+Review evidence: [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
 
 Next review: 2027-01-15.
 
@@ -194,21 +194,21 @@ Owner: lead; reviewer supplies independent findings. Trigger: significant change
 Enforcement: Required by S-AGENT and the GitHub work/PR workflow; independent agent review is manually recorded, not an independent GitHub human approval. Hosted enforcement is recorded separately in acceptance.
 Failure response: Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.
 
-Evidence / implementation: [AGENTS.md](../AGENTS.md), [docs/engineering.md](../docs/engineering.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/work.md](../docs/work.md), [docs/project-management.md](../docs/project-management.md), [docs/changes/003-public-workflow.md](../docs/changes/003-public-workflow.md), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md).
+Evidence / implementation: [AGENTS.md](../AGENTS.md), [docs/engineering.md](../docs/engineering.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/work.md](../docs/work.md), [docs/project-management.md](../docs/project-management.md), [docs/changes/003-public-workflow.md](../docs/changes/003-public-workflow.md), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
 
 Coverage gap: No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within the reported scope; unsuccessful attempts and limits retained.
-Scope: Independent brief, recovery, evaluation, monitor/diagram and acceptance reviews.
-Exercise evidence: [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md).
+Last exercise: 2026-10-17. Outcome: Passed within round009 bounded scope; fault/native lanes remain distinct.
+Scope: 263 portable tests and viewer/import/docs controls; actual retained movement, menu/activity, Pause, stale and reload/creature predicates as applicable to this control.
+Exercise evidence: [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Review corrected asynchronous authority, cohort accounting, useful-action proof, completion precedence and nonexistent provider assumptions. Lead verified files and raw evidence.
-Cost: Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.
-Follow-up: Review on contract/failure/release changes or due date. #8 broad native recovery/timing, #24 model experiments and #42–44 monitoring implementation/evaluation remain separate.
-Review evidence: [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md).
+Findings: Round009 review fixed disputed-source disposition and evidence-driver attribution; existing tools enforce shared policy boundary. Claims remain bounded; no autonomous supervisor.
+Cost: Reused existing local tooling; 263 tests and separate native acceptance, one isolated worker and independent reviews.
+Follow-up: Review on changed contracts or failures; #13 owns broad maintenance, future supervision remains separately tracked.
+Review evidence: [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
 
 Next review: 2027-01-15.
 
@@ -220,21 +220,21 @@ Owner: maintainer. Trigger: common command; regenerate map after registry change
 Enforcement: Common command fails; negative tests exercise mapping/field/reference/drift failures. Normal mode never rewrites the map.
 Failure response: Fix missing/unknown mappings, unsafe references or metadata; regenerate stale map with --write and inspect the result.
 
-Evidence / implementation: [tools/governance.py](../tools/governance.py), [tests/test_governance.py](../tests/test_governance.py), [docs/control-registry.json](../docs/control-registry.json), [docs/acceptance/2026-10-17-mvp-manifest.json](../docs/acceptance/2026-10-17-mvp-manifest.json), [schemas/control-registry.schema.json](../schemas/control-registry.schema.json), [schemas/acceptance-manifest.schema.json](../schemas/acceptance-manifest.schema.json), [docs/decisions/003-development-controls.md](../docs/decisions/003-development-controls.md), [tools/documents.py](../tools/documents.py), [tests/test_documents.py](../tests/test_documents.py), [schemas/document.schema.json](../schemas/document.schema.json).
+Evidence / implementation: [tools/governance.py](../tools/governance.py), [tests/test_governance.py](../tests/test_governance.py), [docs/control-registry.json](../docs/control-registry.json), [docs/acceptance/2026-10-17-mvp-manifest.json](../docs/acceptance/2026-10-17-mvp-manifest.json), [schemas/control-registry.schema.json](../schemas/control-registry.schema.json), [schemas/acceptance-manifest.schema.json](../schemas/acceptance-manifest.schema.json), [docs/decisions/003-development-controls.md](../docs/decisions/003-development-controls.md), [tools/documents.py](../tools/documents.py), [tests/test_documents.py](../tests/test_documents.py), [schemas/document.schema.json](../schemas/document.schema.json), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
 
 Coverage gap: Structure, recorded dates and local file existence are checked, not prose truth, artifact hashes outside diagram receipts, media availability, actual review/execution, owner performance or historical lifecycle authorization. Due checks run only when invoked; fragment targets are not validated.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed, including genuine still-frame acceptance and malformed video rejection.
-Scope: Existing schema/path/provenance checks plus explicit video:null acceptance; 145-test common lane. No automatic verification of local media semantics.
-Exercise evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
+Last exercise: 2026-10-17. Outcome: Passed within round009 bounded scope; fault/native lanes remain distinct.
+Scope: 263 portable tests and viewer/import/docs controls; actual retained movement, menu/activity, Pause, stale and reload/creature predicates as applicable to this control.
+Exercise evidence: [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
 
 Maintenance review: 2026-10-17. Effectiveness: effective.
-Findings: Removed mandatory-video assumption for original still-frame evidence using existing JSON Schema; malformed video values and invalid intervals still reject. Generated control map and protocol-v2 agreement checked.
-Cost: Small existing-schema extension and one regression; no new validator.
-Follow-up: Review evidence format changes and control drift under #13; schema validity never proves content truth.
-Review evidence: [docs/acceptance/2026-10-17-foundation-implementation.md](../docs/acceptance/2026-10-17-foundation-implementation.md).
+Findings: Round009 review fixed disputed-source disposition and evidence-driver attribution; existing tools enforce shared policy boundary. Claims remain bounded; no autonomous supervisor.
+Cost: Reused existing local tooling; 263 tests and separate native acceptance, one isolated worker and independent reviews.
+Follow-up: Review on changed contracts or failures; #13 owns broad maintenance, future supervision remains separately tracked.
+Review evidence: [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md).
 
 Next review: 2027-01-15.
 

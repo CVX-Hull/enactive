@@ -14,18 +14,17 @@ import time
 import uuid
 from typing import Any
 
+from harness.movement import DIRECTIONS, MovementBlocked, guard, observed_step
+
 MAX_REQUEST = 4096
 MAX_WAIT = 15.0
 RECOVERY_KINDS = frozenset({"request_interrupt", "answer_interrupt", "continue_debug_once"})
 CONTROL_TERMINAL = frozenset({"prompt_opened", "answer_delivered", "dismissal_delivered", "not_applicable", "rejected"})
 NAMED_KEYS = frozenset({"ENTER", "ESC", "UP", "DOWN", "LEFT", "RIGHT", "TAB",
                         "BACKSPACE", "SPACE", "PAGEUP", "PAGEDOWN"})
-DIRECTIONS = {"north": (0, -1, "UP"), "south": (0, 1, "DOWN"),
-              "west": (-1, 0, "LEFT"), "east": (1, 0, "RIGHT")}
 BOUNDARY_KINDS = frozenset({"normal_play", "activity_poll", "interrupt_confirmation",
                             "debug_prompt", "menu", "unsupported"})
 INPUT_BOUNDARIES = frozenset({"normal_play", "menu"})
-SAFE_TERRAIN = frozenset({"t_floor", "t_grass", "t_dirt", "t_pavement", "t_pavement_y"})
 
 
 class ControlError(Exception):
@@ -775,29 +774,11 @@ class Controller:
             raise ControlError("Stale session or revision; observe and reconsider the command")
 
     def _walk_guard(self, state: dict[str, Any], dx: int, dy: int) -> list[int]:
-        if self.pause_requested or state["paused"] or self.frozen:
-            raise ControlError("Walk stopped: control is paused or frozen")
-        scene = state.get("scene")
-        if (state["boundary"]["kind"] != "normal_play" or not state["in_game"]
-                or not state["frame_ok"] or int(time.time() * 1000) - state["timestamp_ms"] > 3000
-                or not isinstance(scene, dict)):
-            raise ControlError("Walk stopped: normal play scene is unavailable")
-        creatures = scene.get("visible_creatures")
-        if not isinstance(creatures, list) or creatures:
-            raise ControlError("Walk stopped: visible creatures or unknown visibility")
-        position = scene.get("position")
-        if not isinstance(position, list) or len(position) != 3 or any(type(n) is not int for n in position):
-            raise ControlError("Walk stopped: position is unknown")
-        neighbors = scene.get("neighbors")
-        if not isinstance(neighbors, list):
-            raise ControlError("Walk stopped: neighboring terrain is unknown")
-        tile = next((tile for tile in neighbors if isinstance(tile, dict)
-                     and tile.get("dx") == dx and tile.get("dy") == dy), None)
-        if (not tile or tile.get("visible") is not True or tile.get("furniture") != "f_null"
-                or not isinstance(tile.get("terrain"), str)
-                or tile["terrain"] not in SAFE_TERRAIN):
-            raise ControlError("Walk stopped: next tile is not a visible, empty, allowlisted surface")
-        return position
+        try:
+            return list(guard(state, dx, dy, paused=self.pause_requested, frozen=self.frozen,
+                              now_timestamp_ms=int(time.time() * 1000)))
+        except MovementBlocked as exc:
+            raise ControlError(str(exc)) from exc
 
     def _walk(self, direction: Any, steps: Any, timeout: float, expected_session: Any, expected_revision: Any) -> dict[str, Any]:
         if not isinstance(direction, str) or direction not in DIRECTIONS or type(steps) is not int or not 1 <= steps <= 8:
@@ -819,17 +800,14 @@ class Controller:
                     raise ControlError("Walk stopped: input context changed between steps")
                 if completed == 0:
                     self._expect(before, expected_session, expected_revision)
-                position = self._walk_guard(before, dx, dy)
+                self._walk_guard(before, dx, dy)
                 if action not in before["actions"]:
                     raise ControlError("Walk stopped: movement action is not registered")
                 after = self._exchange("action", timeout, generation=generation, action=action,
                                        session=before["session"], revision=before["revision"])
                 if after["status"] != "ready":
                     raise ControlError(after.get("error") or "Walk stopped: action failed")
-                scene = after.get("scene")
-                expected = [position[0] + dx, position[1] + dy, position[2]]
-                if (after["session"] != before["session"] or after["category"] != before["category"]
-                        or not isinstance(scene, dict) or scene.get("position") != expected):
+                if not observed_step(before, after, dx, dy):
                     raise ControlError("Walk stopped: displacement or input context differs from expectation")
                 completed += 1
                 # Check threats and context even after the final requested step.

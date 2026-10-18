@@ -200,3 +200,17 @@ unresolved identities as verified `incident/1` references in
 old protocol records. These remain visible historical unknowns and grant no
 execution permission. Evidence store format 2 accepts only current-v3 observations;
 archive earlier stores and start new task stores, preserving original metadata.
+
+## Passive skill acceptance
+
+The movement skill is a library, not a new CLI command or live player. A manual
+acceptance caller binds TaskSpec and retained start evidence, requests one proposal,
+reserves an after-frame, dispatches once through the existing controller, retains
+the exact logical/native identity mapping, and settles once. Follow the
+[skill contract](protocol.md#passive-bounded-movement-skills); do not pass a controller
+walk loop as a primitive or automatically Observe/retry an unknown input.
+
+The [round 009 report](acceptance/2026-10-17-bounded-skills.md) separates actual native
+frames from injected evidence faults. Preserve raw unsupported receipts outside
+the task store. A rendering failure cannot be repaired by substituting a later
+frame. Save normally and stop only owned processes after acceptance.

@@ -1,0 +1,455 @@
+"""Portable skill tests with real retention; synthetic frames are not native proof."""
+from copy import deepcopy
+from dataclasses import FrozenInstanceError, replace
+from pathlib import Path
+import tempfile
+import unittest
+
+from harness.gameplay.contracts import Budgets, ContractError, PrimitiveResult, TaskSpec
+from harness.gameplay.evidence import EvidenceError, EvidenceStore
+from harness.gameplay.skills import CARDINAL_MOVEMENT, MovementStage, SkillEvaluation, StepProposal
+from harness.movement import DIRECTIONS
+
+
+class MovementSkillTests(unittest.TestCase):
+    def setUp(self):
+        root = Path(__file__).resolve().parents[1] / ".runtime" / "skill-tests"
+        root.mkdir(parents=True, exist_ok=True)
+        temporary = tempfile.TemporaryDirectory(dir=root)
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        self.serial = 0
+        self.reset()
+
+    def reset(self, **limits):
+        if hasattr(self, "store"):
+            self.store.close()
+        self.serial += 1
+        self.bridge = self.root / str(self.serial) / "bridge"
+        self.bridge.mkdir(parents=True)
+        self.store = EvidenceStore(self.bridge, self.bridge.parent / "retained", **limits)
+        self.addCleanup(self.store.close)
+        self.number = 0
+        self.values = {}
+
+    def frame(self, position=(0, 0, 0), *, turn=10, now=100.0,
+              timestamp=1_000_000, session="world", revision=None, change=None,
+              reservation=None):
+        self.number += 1
+        value = {"protocol": 3, "id": "native-observe-is-not-logical-action",
+                 "session": session, "revision": self.number if revision is None else revision,
+                 "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT"],
+                 "status": "ready", "error": "", "paused": False,
+                 "timestamp_ms": timestamp, "frame_ok": True,
+                 "frame": f"frame-{session}-{self.number}.png", "in_game": True,
+                 "boundary": {"kind": "normal_play", "id": "boundary", "control_generation": 0,
+                              "recovery_operations": [], "interrupt_request_id": None},
+                 "scene": {"provenance": "player-visible input boundary", "position": list(position),
+                           "turn": turn, "visible_creatures": [],
+                           "neighbors": [{"dx": dx, "dy": dy, "visible": True, "terrain": "t_floor",
+                                          "name": "floor", "furniture": "f_null"}
+                                         for dy in range(-1, 2) for dx in range(-1, 2) if (dx, dy) != (0, 0)]}}
+        if change:
+            change(value)
+        (self.bridge / value["frame"]).write_bytes(b"\x89PNG\r\n\x1a\nsynthetic-portable-fixture")
+        ref = self.store.ingest(value, received_monotonic=now, now_monotonic=now,
+                                now_timestamp_ms=timestamp, reservation=reservation)
+        self.values[ref.observation_id] = value
+        return ref
+
+    def task(self, direction="east", distance=2, **changes):
+        dx, dy, _ = DIRECTIONS[direction]
+        values = dict(task_id="task", session="world", origin=(0, 0, 0), direction=direction,
+                      distance=distance, target=(dx * distance, dy * distance, 0), task_version=1,
+                      budgets=Budgets(), operator_request_id="operator")
+        return TaskSpec(**(values | changes))
+
+    def stage(self, task=None, start=None, **changes):
+        start = self.frame() if start is None else start
+        values = dict(stage_id="outbound", stage_version=1, stage="outbound", store=self.store,
+                      task_start=start, stage_start=start, admission_monotonic=100.0,
+                      prior_primitive_count=0)
+        return MovementStage(task or self.task(), **(values | changes))
+
+    def propose(self, stage, action_id="logical-1", **changes):
+        return stage.propose(action_id, **(dict(now_monotonic=100.0, now_timestamp_ms=1_000_000,
+                                               paused=False, frozen=False) | changes))
+
+    def settle(self, stage, result, **changes):
+        return stage.settle(result, **(dict(now_monotonic=100.0, now_timestamp_ms=1_000_000,
+                                           paused=False, frozen=False) | changes))
+
+    def result(self, proposal, after=None, disposition="returned", displacement=None):
+        if displacement is None and after is not None and after.session == proposal.before.session:
+            a, b = self.store.position(proposal.before), self.store.position(after)
+            displacement = tuple(y - x for x, y in zip(a, b))
+        return PrimitiveResult(proposal.action_id, proposal.before, after, disposition, displacement,
+                               "Synthetic transport result")
+
+    def test_descriptor_declares_only_implemented_predicates_and_bindings(self):
+        self.assertEqual(CARDINAL_MOVEMENT.skill_version, 1)
+        self.assertEqual(set(CARDINAL_MOVEMENT.action_bindings), {"UP", "DOWN", "LEFT", "RIGHT"})
+        self.assertEqual(CARDINAL_MOVEMENT.maximum_budgets.primitives_per_stage, 4)
+        self.assertEqual(CARDINAL_MOVEMENT.contexts, ("normal_play",))
+        self.assertEqual(type(CARDINAL_MOVEMENT).from_dict(CARDINAL_MOVEMENT.to_dict()), CARDINAL_MOVEMENT)
+
+    def test_all_cardinal_full_legs_and_return(self):
+        for direction, (dx, dy, action) in DIRECTIONS.items():
+            with self.subTest(direction=direction):
+                self.reset()
+                task = self.task(direction, 4)
+                start = self.frame()
+                stage = self.stage(task, start)
+                for number in range(1, 5):
+                    proposal = self.propose(stage, f"out-{number}")
+                    self.assertIsInstance(proposal, StepProposal)
+                    self.assertEqual(proposal.action, action)
+                    self.assertEqual(proposal.expected_position, (dx * number, dy * number, 0))
+                    after = self.frame(proposal.expected_position, turn=10 + number)
+                    value = self.settle(stage, self.result(proposal, after))
+                    self.assertEqual(value.progress.verified_steps, number)
+                    self.assertEqual(value.stage_result is None, number < 4)
+                self.assertEqual(value.stage_result.disposition, "completed")
+                self.assertEqual(value.progress.displacement, (dx * 4, dy * 4, 0))
+                back = self.stage(task, start, stage="return", stage_id="return", stage_start=after,
+                                  waypoint=after, prior_primitive_count=4)
+                for number in range(1, 5):
+                    proposal = self.propose(back, f"back-{number}")
+                    after = self.frame((dx * (4 - number), dy * (4 - number), 0), turn=14 + number)
+                    value = self.settle(back, self.result(proposal, after))
+                self.assertEqual(value.stage_result.disposition, "completed")
+                self.assertEqual(value.progress.displacement, (-dx * 4, -dy * 4, 0))
+
+    def test_frozen_proposal_evaluation_and_single_outstanding(self):
+        stage = self.stage()
+        proposal = self.propose(stage)
+        with self.assertRaises(FrozenInstanceError):
+            proposal.action = "UP"
+        with self.assertRaises(ContractError):
+            self.propose(stage, "second")
+        after = self.frame((1, 0, 0), turn=11)
+        value = self.settle(stage, self.result(proposal, after))
+        with self.assertRaises(FrozenInstanceError):
+            value.reason = "changed"
+        self.assertEqual(stage.progress, value.progress)
+
+    def test_constructor_rejects_bad_types_identity_and_original_history(self):
+        start = self.frame()
+        for changes in ({"stage": "continue"}, {"stage_id": ""}, {"stage_version": True},
+                        {"admission_monotonic": float("nan")}, {"admission_monotonic": -1},
+                        {"admission_monotonic": 10**1000},
+                        {"prior_primitive_count": True}, {"prior_primitive_count": -1},
+                        {"store": object()}, {"task_start": start.to_dict()},
+                        {"task_start": replace(start, revision=99)}, {"stage": "return"}):
+            with self.subTest(changes=changes), self.assertRaises(ContractError):
+                self.stage(start=start, **changes)
+        with self.assertRaises(ContractError):
+            self.stage(task=self.task(session="other"), start=start)
+        middle = self.frame((1, 0, 0), turn=11)
+        with self.assertRaises(ContractError):
+            self.stage(start=start, stage_start=middle)
+        target = self.frame((2, 0, 0), turn=12)
+        for count in (0, 1):
+            with self.assertRaises(ContractError):
+                self.stage(start=start, stage="return", stage_start=target, waypoint=target,
+                           prior_primitive_count=count)
+        for waypoint in (start, replace(target, turn=9)):
+            with self.assertRaises(ContractError):
+                self.stage(start=start, stage="return", stage_start=target, waypoint=waypoint,
+                           prior_primitive_count=2)
+
+    def test_guard_preconditions_stop_before_proposal(self):
+        mutations = (
+            lambda v: v.update(paused=True),
+            lambda v: v.update(actions=["LEFT"]),
+            lambda v: v["scene"].update(visible_creatures=[{"name": "cat", "hostile": False}]),
+            lambda v: next(t for t in v["scene"]["neighbors"] if (t["dx"], t["dy"]) == (1, 0)).update(terrain="t_wall"),
+            lambda v: next(t for t in v["scene"]["neighbors"] if (t["dx"], t["dy"]) == (1, 0)).update(furniture="f_chair"),
+        )
+        for mutation in mutations:
+            with self.subTest(mutation=mutation):
+                self.reset()
+                start = self.frame(change=mutation)
+                value = self.propose(self.stage(start=start))
+                self.assertIsInstance(value, SkillEvaluation)
+                self.assertIn(value.stage_result.disposition, ("blocked", "interrupted"))
+                self.assertEqual(value.progress.verified_steps, 0)
+        for flags in ({"paused": True}, {"frozen": True}):
+            self.reset()
+            self.assertEqual(self.propose(self.stage(), **flags).stage_result.disposition, "interrupted")
+        self.reset()
+        def invisible(v):
+            tile = next(t for t in v["scene"]["neighbors"] if (t["dx"], t["dy"]) == (1, 0))
+            tile.clear()
+            tile.update(dx=1, dy=0, visible=False)
+        start = self.frame(change=invisible)
+        self.assertEqual(self.propose(self.stage(start=start)).stage_result.disposition, "blocked")
+
+    def test_unsupported_missing_or_malformed_frames_invalidate_before_proposal(self):
+        for mutation in (lambda v: v["boundary"].update(kind="menu"),
+                         lambda v: v.update(frame_ok=False), lambda v: v.update(scene=None),
+                         lambda v: v["scene"].update(position=[False, 0, 0]),
+                         lambda v: v["scene"]["neighbors"][0].clear()):
+            self.reset()
+            stage = self.stage()
+            with self.assertRaises(EvidenceError):
+                self.frame(change=mutation)
+            self.assertIsNotNone(self.propose(stage).stage_result)
+
+    def test_stale_first_frame_and_missing_retained_bytes_stop(self):
+        for missing in (False, True):
+            self.reset()
+            start = self.frame()
+            stage = self.stage(start=start)
+            if missing:
+                Path(start.frame_path).unlink()
+            value = self.propose(stage, now_monotonic=104 if not missing else 100,
+                                 now_timestamp_ms=1_004_000 if not missing else 1_000_000)
+            self.assertEqual(value.progress.verified_steps, 0)
+            self.assertIsNotNone(value.stage_result)
+
+    def test_generation_change_and_a_b_a_restoration_cannot_restore_intent(self):
+        start = self.frame()
+        stage = self.stage(start=start)
+        self.frame(revision=1)  # B shares scene/revision and is independently retained.
+        self.store.ingest(self.values[start.observation_id], received_monotonic=100,
+                          now_monotonic=100, now_timestamp_ms=1_000_000)
+        self.assertEqual(self.store.current(now_monotonic=100, now_timestamp_ms=1_000_000), start)
+        self.assertIsNotNone(self.propose(stage).stage_result)
+
+    def test_extra_generation_at_settlement_does_not_credit_movement(self):
+        stage = self.stage()
+        proposal = self.propose(stage)
+        self.frame((1, 0, 0), turn=11)
+        after = self.frame((1, 0, 0), turn=11, revision=2)
+        value = self.settle(stage, self.result(proposal, after))
+        self.assertEqual(value.stage_result.disposition, "unknown")
+        self.assertEqual(value.progress.verified_steps, 0)
+        self.assertEqual(value.stage_result.pending_action_id, proposal.action_id)
+
+    def test_older_credited_frame_dispute_invalidates_completion(self):
+        stage = self.stage()
+        first = self.propose(stage)
+        after = self.frame((1, 0, 0), turn=11)
+        self.settle(stage, self.result(first, after))
+        second = self.propose(stage, "logical-2")
+        final = self.frame((2, 0, 0), turn=12)
+        bad = deepcopy(self.values[after.observation_id])
+        bad["scene"]["position"] = [9, 0, 0]
+        with self.assertRaises(EvidenceError):
+            self.store.ingest(bad, received_monotonic=100, now_monotonic=100, now_timestamp_ms=1_000_000)
+        # Restore a fresh current frame; neither restoration nor full target fixes old evidence.
+        final = self.frame((2, 0, 0), turn=12)
+        self.assertEqual(self.store.source_status(after), "disputed")
+        value = self.settle(stage, self.result(second, final))
+        self.assertNotEqual(value.stage_result.disposition, "completed")
+        self.assertEqual(value.progress.verified_steps, 1)
+
+    def test_disputed_credited_source_before_next_proposal_stops_unknown(self):
+        stage = self.stage()
+        first = self.propose(stage)
+        after = self.frame((1, 0, 0), turn=11)
+        self.settle(stage, self.result(first, after))
+        bad = deepcopy(self.values[after.observation_id])
+        bad["scene"]["position"] = [9, 0, 0]
+        with self.assertRaises(EvidenceError):
+            self.store.ingest(bad, received_monotonic=100, now_monotonic=100,
+                              now_timestamp_ms=1_000_000)
+        value = self.propose(stage, "logical-2")
+        self.assertEqual(value.stage_result.disposition, "unknown")
+        self.assertEqual(value.progress.verified_steps, 1)
+        self.assertEqual(self.propose(stage, "logical-3"), value)
+
+    def test_correlation_malformed_and_conflicting_results_never_release_pending(self):
+        stage = self.stage()
+        proposal = self.propose(stage)
+        after = self.frame((1, 0, 0), turn=11)
+        good = self.result(proposal, after)
+        for bad in (None, good.to_dict(), replace(good, action_id="native-observe-is-not-logical-action"),
+                    replace(good, before=after), replace(good, observed_displacement=None),
+                    replace(good, observed_displacement=(9, 0, 0))):
+            with self.subTest(bad=bad), self.assertRaises(ContractError):
+                self.settle(stage, bad)
+            with self.assertRaises(ContractError):
+                self.propose(stage, "new")
+        value = self.settle(stage, good)
+        self.assertEqual(self.settle(stage, good), value)
+        self.assertEqual(stage.progress.verified_steps, 1)
+        with self.assertRaises(ContractError):
+            self.settle(stage, replace(good, reason="Conflicting duplicate"))
+        with self.assertRaises(ContractError):
+            self.propose(stage, proposal.action_id)
+
+    def test_unknown_rejection_and_no_progress_are_terminal(self):
+        for disposition in ("unknown", "dispatched", "rejected", "not_dispatched", "returned"):
+            self.reset()
+            stage = self.stage()
+            proposal = self.propose(stage)
+            after = proposal.before if disposition == "returned" else None
+            result = self.result(proposal, after, disposition)
+            value = self.settle(stage, result)
+            self.assertEqual(value.progress.verified_steps, 0)
+            self.assertIsNotNone(value.stage_result)
+            self.assertEqual(value.stage_result.disposition == "unknown", disposition in ("unknown", "dispatched"))
+            self.assertEqual(self.propose(stage, "another"), value)
+            self.frame((1, 0, 0), turn=11)
+            self.assertEqual(self.settle(stage, result), value)
+            with self.assertRaises(ContractError):
+                self.settle(stage, result.to_dict())
+            with self.assertRaises(ContractError):
+                self.settle(stage, replace(result, reason="Conflicting terminal result"))
+            self.assertEqual(self.propose(stage, "still-terminal"), value)
+
+    def test_unknown_cross_session_context_never_credits_or_later_reconciles(self):
+        stage = self.stage()
+        proposal = self.propose(stage)
+        new_world = self.frame((1, 0, 0), session="other-world")
+        value = self.settle(stage, self.result(proposal, new_world, "unknown"))
+        self.assertEqual(value.stage_result.disposition, "unknown")
+        self.assertEqual(value.progress.verified_steps, 0)
+        with self.assertRaises(ContractError):
+            self.settle(stage, self.result(proposal, None, "rejected"))
+        self.assertEqual(self.propose(stage), value)
+
+    def test_unexpected_stale_turn_and_revision_results_never_credit(self):
+        for options in ({"position": (0, 1, 0), "turn": 11}, {"position": (1, 0, 0), "turn": 9},
+                        {"position": (0, 0, 0), "turn": 10, "revision": 1},
+                        {"position": (1, 0, 0), "turn": 11, "now": 100}):
+            self.reset()
+            stage = self.stage()
+            proposal = self.propose(stage)
+            after = self.frame(**options)
+            clocks = dict(now_monotonic=104, now_timestamp_ms=1_004_000) if options.get("now") else {}
+            value = self.settle(stage, self.result(proposal, after), **clocks)
+            self.assertIsNotNone(value.stage_result)
+            self.assertEqual(value.progress.verified_steps, 0)
+
+    def test_partial_and_full_displacement_can_stop_on_post_guard(self):
+        for distance in (1, 2):
+            for stop in ("terrain", "creature", "action", "paused", "frozen"):
+                self.reset()
+                stage = self.stage(task=self.task(distance=distance))
+                proposal = self.propose(stage)
+                def mutation(v):
+                    if stop == "terrain":
+                        next(t for t in v["scene"]["neighbors"] if (t["dx"], t["dy"]) == (1, 0))["terrain"] = "t_wall"
+                    elif stop == "creature":
+                        v["scene"]["visible_creatures"] = [{"name": "cat", "hostile": False}]
+                    elif stop == "action":
+                        v["actions"] = ["LEFT"]
+                after = self.frame((1, 0, 0), turn=11, change=mutation)
+                flags = {stop: True} if stop in ("paused", "frozen") else {}
+                value = self.settle(stage, self.result(proposal, after), **flags)
+                self.assertEqual(value.progress.verified_steps, 1)
+                self.assertEqual(value.stage_result.disposition,
+                                 "interrupted" if flags else "blocked")
+
+    def test_budget_edges_preserve_original_clocks_turn_and_counts(self):
+        for budgets, prior in ((Budgets(primitives=0), 0), (Budgets(primitives=2), 2),
+                               (Budgets(primitives_per_stage=0), 0), (Budgets(turns=0), 0),
+                               (Budgets(wall_seconds=0), 0), (Budgets(primitive_wait_seconds=0), 0)):
+            self.reset()
+            stage = self.stage(task=self.task(budgets=budgets), prior_primitive_count=prior)
+            self.assertEqual(self.propose(stage).stage_result.disposition, "budget_exhausted")
+        self.reset()
+        start = self.frame()
+        current = self.frame(turn=12, now=102, timestamp=1_002_000)
+        stage = self.stage(task=self.task(budgets=Budgets(turns=2)), start=start, stage_start=current)
+        self.assertEqual(self.propose(stage, now_monotonic=102, now_timestamp_ms=1_002_000)
+                         .stage_result.disposition, "budget_exhausted")
+        self.reset()
+        start = self.frame()
+        current = self.frame(now=102, timestamp=1_002_000)
+        stage = self.stage(task=self.task(budgets=Budgets(wall_seconds=2)), start=start, stage_start=current)
+        self.assertEqual(self.propose(stage, now_monotonic=102, now_timestamp_ms=1_002_000)
+                         .stage_result.disposition, "budget_exhausted")
+
+    def test_wait_ceiling_and_post_commit_overshoot_keep_progress(self):
+        for final in (False, True):
+            self.reset()
+            task = self.task(distance=1 if final else 2,
+                             budgets=Budgets(wall_seconds=2, turns=1, primitive_wait_seconds=10))
+            stage = self.stage(task=task)
+            proposal = self.propose(stage, now_monotonic=101, now_timestamp_ms=1_001_000)
+            self.assertEqual(proposal.wait_seconds, 1)
+            token = self.store.reserve_dispatch(proposal.before, now_monotonic=101, now_timestamp_ms=1_001_000)
+            after = self.frame((1, 0, 0), turn=12, now=103, timestamp=1_003_000, reservation=token)
+            value = self.settle(stage, self.result(proposal, after), now_monotonic=103, now_timestamp_ms=1_003_000)
+            self.assertEqual(value.progress.verified_steps, 1)
+            self.assertEqual(value.stage_result.disposition, "budget_exhausted")
+
+    def test_exact_budget_limit_can_complete_but_cannot_authorize_another_step(self):
+        for distance in (1, 2):
+            self.reset()
+            task = self.task(distance=distance, budgets=Budgets(primitives=1, primitives_per_stage=1,
+                                                               turns=1, wall_seconds=1))
+            stage = self.stage(task=task)
+            proposal = self.propose(stage)
+            after = self.frame((1, 0, 0), turn=11, now=101, timestamp=1_001_000)
+            result = self.result(proposal, after)
+            value = self.settle(stage, result, now_monotonic=101, now_timestamp_ms=1_001_000)
+            self.assertEqual(value.progress.verified_steps, 1)
+            self.assertEqual(value.stage_result.disposition, "completed" if distance == 1 else "budget_exhausted")
+            self.assertEqual(self.propose(stage, "new", now_monotonic=101, now_timestamp_ms=1_001_000), value)
+
+    def test_duplicate_old_result_during_new_proposal_cannot_release_the_new_one(self):
+        stage = self.stage()
+        proposal = self.propose(stage)
+        after = self.frame((1, 0, 0), turn=11)
+        old = self.result(proposal, after)
+        value = self.settle(stage, old)
+        new = self.propose(stage, "logical-2")
+        self.assertEqual(self.settle(stage, old), value)
+        self.assertEqual(stage.progress.verified_steps, 1)
+        with self.assertRaises(ContractError):
+            self.propose(stage, "logical-3")
+        after = self.frame((2, 0, 0), turn=12)
+        self.assertEqual(self.settle(stage, self.result(new, after)).stage_result.disposition, "completed")
+
+    def test_invalid_and_regressing_clocks_terminate_without_releasing_pending(self):
+        for clocks in ({"now_monotonic": float("nan")}, {"now_monotonic": float("inf")},
+                       {"now_monotonic": True}, {"now_monotonic": 99}, {"now_monotonic": 10**1000},
+                       {"now_timestamp_ms": True}, {"now_timestamp_ms": -1},
+                       {"now_timestamp_ms": 1_000_000.0}):
+            self.reset()
+            stage = self.stage()
+            proposal = self.propose(stage)
+            value = self.settle(stage, self.result(proposal, None, "unknown"), **clocks)
+            self.assertIsNotNone(value.stage_result)
+            self.assertEqual(value.stage_result.pending_action_id, proposal.action_id)
+            self.assertEqual(self.propose(stage), value)
+        self.reset()
+        stage = self.stage()
+        proposal = self.propose(stage, now_monotonic=101, now_timestamp_ms=1_001_000)
+        value = self.settle(stage, self.result(proposal, None, "unknown"), now_monotonic=100.5)
+        self.assertIn("clock", value.reason.lower())
+        self.assertEqual(value.progress.verified_steps, 0)
+        self.reset()
+        stage = self.stage()
+        proposal = self.propose(stage, now_monotonic=101, now_timestamp_ms=1_001_000)
+        value = self.settle(stage, self.result(proposal, None, "unknown"),
+                            now_monotonic=102, now_timestamp_ms=1_000_999)
+        self.assertIn("clock", value.reason.lower())
+
+    def test_original_task_primitive_budget_includes_return_history(self):
+        task = self.task(distance=2, budgets=Budgets(primitives=3))
+        start = self.frame()
+        waypoint = self.frame(task.target, turn=12)
+        stage = self.stage(task, start, stage="return", stage_start=waypoint,
+                           waypoint=waypoint, prior_primitive_count=2)
+        proposal = self.propose(stage)
+        after = self.frame((1, 0, 0), turn=13)
+        value = self.settle(stage, self.result(proposal, after))
+        self.assertEqual(value.progress.verified_steps, 1)
+        self.assertEqual(value.stage_result.disposition, "budget_exhausted")
+
+    def test_capacity_preflight_stops_without_reserving_or_consuming_a_primitive(self):
+        self.reset(max_frames=1)
+        value = self.propose(self.stage())
+        self.assertIsNotNone(value.stage_result)
+        self.assertEqual(value.progress.verified_steps, 0)
+        self.assertEqual(len(self.store.historical_references), 1)
+
+
+if __name__ == "__main__":
+    unittest.main()

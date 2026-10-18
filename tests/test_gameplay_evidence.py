@@ -70,6 +70,28 @@ class EvidenceTests(unittest.TestCase):
         arguments.update(changes)
         return self.store.current(**arguments)
 
+    def test_observation_copy_cannot_mutate_store_or_refresh_authority(self):
+        first = self.ingest()
+        value = self.store.observation(first)
+        value["scene"]["position"][0] = 99
+        value["actions"].clear()
+        self.assertEqual(self.store.position(first), (0, 0, 0))
+        self.assertTrue(self.store.observation(first)["actions"])
+        second = self.ingest(self.publish(observation(2)))
+        generation = self.store.authority_generation()
+        self.assertEqual(self.store.observation(first)["revision"], first.revision)
+        self.assertEqual(self.current(), second)
+        self.assertEqual(self.store.authority_generation(), generation)
+
+    def test_observation_accessor_rejects_disputed_retained_source(self):
+        first = self.ingest()
+        conflict = observation()
+        conflict["scene"]["position"][0] = 1
+        with self.assertRaises(EvidenceError):
+            self.ingest(conflict)
+        with self.assertRaisesRegex(EvidenceError, "Disputed"):
+            self.store.observation(first)
+
     def test_retained_source_hash_identity_and_native_local_provenance(self):
         value = self.publish()
         ref = self.ingest(value)

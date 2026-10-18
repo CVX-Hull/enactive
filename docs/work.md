@@ -31,9 +31,13 @@ defines this round's interfaces and handoffs; its [acceptance](acceptance/2026-1
 separates delivered controls, passive instrumentation and future monitor behavior.
 Live allocation remains in GitHub.
 
+The [bounded skills and native evidence brief](changes/009-bounded-skills-native-evidence.md)
+defines round 009: one-step movement proposals/results and real predicate acceptance.
+Its [acceptance](acceptance/2026-10-17-bounded-skills.md) records actual skill movement, negative boundaries and separate fault lanes. Reviewed interfaces keep dispatch and future supervision separate. Live readiness,
+ownership and acceptance remain in GitHub.
+
 The [native recovery and planner-port brief](changes/008-native-recovery-planner-port.md)
-defines the next repair and bounded planner interfaces. Native predicate acceptance
-still follows recovery acceptance; a planner port alone does not enable model play.
+records the accepted repair and bounded planner interfaces. A planner port alone does not enable model play.
 The [round 008 evidence](acceptance/2026-10-17-native-recovery-planner.md) records
 portable and native outcomes, failure evidence, and the separately tracked tutorial
 load defect. Publication and execution stages remain in the Project.

@@ -518,6 +518,13 @@ class EvidenceStore:
         return tuple(item.reference for item in self._entries.values())
 
     @_serialized
+    def observation(self, reference: EvidenceRef) -> dict[str, Any]:
+        """Independent retained observation copy; historical data grants no authority."""
+        if self.source_status(reference) != "retained":
+            raise EvidenceError("Disputed observation cannot supply skill predicates")
+        return json_object(self._entries[reference.observation_id].observation)
+
+    @_serialized
     def historical_facts(self, reference: EvidenceRef) -> tuple[Fact, ...]:
         """Source-tagged measurements; being retained never implies freshness."""
         self.verify(reference)

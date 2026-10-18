@@ -878,6 +878,19 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(result["steps"], 3)
             self.assertEqual(fake.value["scene"]["position"], [3, 0, 0])
 
+    def test_walk_preserves_full_progress_when_final_post_guard_blocks(self):
+        def block_beyond_destination(fake, request):
+            if request["kind"] == "action":
+                fake.value["scene"]["neighbors"][-1]["terrain"] = "t_wall"
+            return True
+        with FakeBridge(self.controller, block_beyond_destination) as fake:
+            self.ready()
+            result = self.controller.execute("walk", direction="east", steps=1, **self.expect())
+            self.assertEqual(result["status"], "stopped")
+            self.assertEqual(result["steps"], 1)
+            self.assertEqual(fake.value["scene"]["position"], [1, 0, 0])
+            self.assertEqual(sum(r["kind"] == "action" for r in fake.requests), 1)
+
     def test_walk_stops_on_creature_even_when_not_hostile(self):
         def creature(fake, request):
             if request["kind"] == "action":
