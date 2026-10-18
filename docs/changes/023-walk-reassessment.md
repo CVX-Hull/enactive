@@ -1,10 +1,16 @@
 ---
 owner: lead
-review_trigger: Walk result, stop authority or acceptance scope changes
-status: active
+date: 2026-10-18
+scope: Walk correction design and first unexercised functional probe on candidate32bbae6
+status: historical
 ---
 
 # Walk outcome evidence and explicit reassessment
+
+The implementation design below remains the rationale for the current contract.
+Its first functional probe stopped after an unknown load receipt, before exercising
+walk. The original wording and failure are retained; the separately prospective
+[second probe](024-walk-reassessment-probe.md) does not amend this admission.
 
 [#108](https://github.com/CVX-Hull/enactive/issues/108) addresses the actual
 [stopped campaign](../acceptance/2026-10-18-seven-day-stop.md), published in PR109.
