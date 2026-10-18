@@ -308,8 +308,11 @@ native prompts only after this handoff, using actual readable frames and separat
 charged CUA evidence. Failed access, approval denial or unknown/unreadable state
 stops the affected play; never ask the user for routine keys/unlock or route around
 the failed control. Lifecycle/save operations stay under the declared cleanup
-scope and deadlines. The [initial probe](changes/020-campaign-operator.md) records
-the finite development acceptance, separate from a seven-day deciding campaign.
+scope and deadlines. The [two-phase result](acceptance/2026-10-18-campaign-operator.md)
+records finite development acceptance and its retained failed access prefix,
+separate from a seven-day deciding campaign. Derive summary counts from original
+IDs and distinguish inherited unknowns from the total including new ones; correct
+a mistaken summary separately without rewriting original evidence.
 
 ## Explicit waypoint tasks and the player
 

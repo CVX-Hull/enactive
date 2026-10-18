@@ -289,7 +289,9 @@
         "docs/acceptance/2026-10-17-public-recovery-evaluation.md",
         "docs/acceptance/2026-10-17-native-recovery-planner.md",
         "docs/acceptance/2026-10-17-bounded-skills.md",
-        "docs/acceptance/2026-10-18-integrated-player.md"
+        "docs/acceptance/2026-10-18-integrated-player.md",
+        "docs/acceptance/2026-10-18-operator-access-stop.md",
+        "docs/acceptance/2026-10-18-campaign-operator.md"
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
       "limitations": "Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.",
@@ -299,21 +301,23 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-18",
-        "outcome": "Passed within stated round012 scope; unsuccessful first route, transition uncertainty and development failures retained.",
-        "scope": "Unchanged accepted native binary; five runtime movement receipts across one blocked and two completed tasks, normal save/quit, no new native fault injection.",
+        "outcome": "Qualified two-phase operator acceptance; earlier default-sandbox failure, three lifecycle ACK unknowns and summary-count correction retained. Protected publication is separately verified.",
+        "scope": "Frozen d57f821 / unchanged native9cf1f76;13delegated inputs, paused/quiescent lead inspection and reassignment,46rows21charges/16game seconds, normal cleanup; no water source or seven-day result.",
         "evidence": [
-          "docs/acceptance/2026-10-18-integrated-player.md"
+          "docs/acceptance/2026-10-18-operator-access-stop.md",
+          "docs/acceptance/2026-10-18-campaign-operator.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
-          "docs/acceptance/2026-10-18-integrated-player.md"
+          "docs/acceptance/2026-10-18-operator-access-stop.md",
+          "docs/acceptance/2026-10-18-campaign-operator.md"
         ],
         "effectiveness": "effective",
-        "findings": "Integration review exposed post-publication journal classification, persistent-error recovery and duplicate Pause epoch defects; repaired with meaningful regressions. Native guard policy stopped the first route conservatively; #53 tracks policy review.",
-        "cost": "Existing project-local tooling; two disjoint workers, independent review, one player sub-agent, one serialized native runtime. No global setup or separate API spending; Codex usage unmeasured.",
-        "follow_up": "Revisit on lifecycle/receipt/guard changes or failures; #53 guard semantics, #24 comparative evaluation, #40 semantic monitoring, #10 broader tasks and #13 maintenance remain."
+        "findings": "Design review caught effective-timeout parsing and misplaced contract scope before native use. Actual actor failed by omitting available escalation despite lead access; preserved failure led to actor-specific passive preflight and explicit tool mode. Replacement verified both paused/quiescent handoffs. Separate count correction preserves originals. Portable checks/rule matching do not prove live permission activation, actor isolation or graphical outcome.",
+        "cost": "Existing CLI/controller/parser, pinned native, one-off bounded capture and original journals; one designated general-purpose player, lead-only source/runtime lifecycle and independent read-only reviews. No dependency/global setting/paid API. Approval/model usage and sustained maintenance cost unmeasured.",
+        "follow_up": "#81 freezes fresh deciding scenario, activity/overshoot/storage and finite split campaign limits with independent readiness; #82 stays gated. #97 closes after exact protected publication/main CI. #75 retains control failure/release/resumption trigger and existing2027-01-15 date; #26 retainsOctober24 research trigger. No generic memory/monitor framework or rule expansion justified."
       },
       "next_review": "2027-01-15"
     },
@@ -430,7 +434,9 @@
         "docs/acceptance/2026-10-18-waypoint-readiness.md",
         "docs/setup.md#choose-an-explicit-git-identity",
         "docs/changes/015-enactive-migration.md",
-        "docs/acceptance/2026-10-18-enactive-migration.md"
+        "docs/acceptance/2026-10-18-enactive-migration.md",
+        "docs/acceptance/2026-10-18-operator-access-stop.md",
+        "docs/acceptance/2026-10-18-campaign-operator.md"
       ],
       "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process. Reuse fit and the adequacy of its rationale are semantic judgments; CI does not prove them. Identity configuration prevents inferred defaults but does not inspect file contents or prove a message, branch or remote ref contains no personal information; full-message inspection remains manual.",
@@ -440,21 +446,23 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-18",
-        "outcome": "Passed within round014 local/source/native scope; hosted publication is a separately verified lane. Failures and limitations retained.",
-        "scope": "Cardinal-v3 current/future guard split, isolated handoff/integration, independent reviews, 438 portable tests, real completion/intermediate stop/Pause, official Actions-pin review and gated readiness.",
+        "outcome": "Qualified two-phase operator acceptance; earlier default-sandbox failure, three lifecycle ACK unknowns and summary-count correction retained. Protected publication is separately verified.",
+        "scope": "Frozen d57f821 / unchanged native9cf1f76;13delegated inputs, paused/quiescent lead inspection and reassignment,46rows21charges/16game seconds, normal cleanup; no water source or seven-day result.",
         "evidence": [
-          "docs/acceptance/2026-10-18-waypoint-readiness.md"
+          "docs/acceptance/2026-10-18-operator-access-stop.md",
+          "docs/acceptance/2026-10-18-campaign-operator.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
-          "docs/acceptance/2026-10-18-waypoint-readiness.md"
+          "docs/acceptance/2026-10-18-operator-access-stop.md",
+          "docs/acceptance/2026-10-18-campaign-operator.md"
         ],
         "effectiveness": "effective",
-        "findings": "One isolated worker handed back after two failed repairs; lead preserved failures and repaired integration. Independent design, implementation and separate readiness/current-doc reviews found no remaining material issues. Guard migration and future experiment gates are explicit. User-triggered reuse audit found existing mature parsers/validators/linters/renderers already used; clarified mandatory reuse rationale and review rejection across docs/workflow/controls. No new checker or generic framework.",
-        "cost": "Existing project-local tooling; one worker, read-only source sweeps and independent reviews, lead integration and one serialized native session. Failed repairs and first planner timeout retained; Codex usage and sustained review cost unmeasured.",
-        "follow_up": "Lead completes #13/#53/#56 only after protected exact candidate/main publication verification; #75 owns next workflow/dependency/runner/control release/failure/resumption trigger or 2027-01-15 review. #26 retains October24 research review. #24 stays blocked by #72/#73/#74; do not renew unrelated dates."
+        "findings": "Design review caught effective-timeout parsing and misplaced contract scope before native use. Actual actor failed by omitting available escalation despite lead access; preserved failure led to actor-specific passive preflight and explicit tool mode. Replacement verified both paused/quiescent handoffs. Separate count correction preserves originals. Portable checks/rule matching do not prove live permission activation, actor isolation or graphical outcome.",
+        "cost": "Existing CLI/controller/parser, pinned native, one-off bounded capture and original journals; one designated general-purpose player, lead-only source/runtime lifecycle and independent read-only reviews. No dependency/global setting/paid API. Approval/model usage and sustained maintenance cost unmeasured.",
+        "follow_up": "#81 freezes fresh deciding scenario, activity/overshoot/storage and finite split campaign limits with independent readiness; #82 stays gated. #97 closes after exact protected publication/main CI. #75 retains control failure/release/resumption trigger and existing2027-01-15 date; #26 retainsOctober24 research trigger. No generic memory/monitor framework or rule expansion justified."
       },
       "next_review": "2027-01-15"
     },
@@ -651,7 +659,9 @@
         "docs/research-engineering.md",
         "docs/research.md",
         "docs/environment.md",
-        "docs/acceptance/2026-10-18-waypoint-readiness.md"
+        "docs/acceptance/2026-10-18-waypoint-readiness.md",
+        "docs/acceptance/2026-10-18-operator-access-stop.md",
+        "docs/acceptance/2026-10-18-campaign-operator.md"
       ],
       "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",
@@ -661,21 +671,23 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-18",
-        "outcome": "Passed within round014 local/source/native scope; hosted publication is a separately verified lane. Failures and limitations retained.",
-        "scope": "Cardinal-v3 current/future guard split, isolated handoff/integration, independent reviews, 438 portable tests, real completion/intermediate stop/Pause, official Actions-pin review and gated readiness.",
+        "outcome": "Qualified two-phase operator acceptance; earlier default-sandbox failure, three lifecycle ACK unknowns and summary-count correction retained. Protected publication is separately verified.",
+        "scope": "Frozen d57f821 / unchanged native9cf1f76;13delegated inputs, paused/quiescent lead inspection and reassignment,46rows21charges/16game seconds, normal cleanup; no water source or seven-day result.",
         "evidence": [
-          "docs/acceptance/2026-10-18-waypoint-readiness.md"
+          "docs/acceptance/2026-10-18-operator-access-stop.md",
+          "docs/acceptance/2026-10-18-campaign-operator.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
-          "docs/acceptance/2026-10-18-waypoint-readiness.md"
+          "docs/acceptance/2026-10-18-operator-access-stop.md",
+          "docs/acceptance/2026-10-18-campaign-operator.md"
         ],
         "effectiveness": "unassessed",
-        "findings": "Triggered review migrated three hosted Actions pins and repaired current guard guidance. #24 remains gated by owned comparison/export/catalog work. Sustained maintenance effectiveness remains unmeasured; unrelated due dates unchanged. Scoped reuse audit retained project-specific containment/lifecycle/accounting glue around mature tools; source-form protocol scan remains a bounded maintenance-sensitive check, not a language parser. #75 includes simplification review.",
-        "cost": "Existing project-local tooling; one worker, read-only source sweeps and independent reviews, lead integration and one serialized native session. Failed repairs and first planner timeout retained; Codex usage and sustained review cost unmeasured.",
-        "follow_up": "Lead completes #13/#53/#56 only after protected exact candidate/main publication verification; #75 owns next workflow/dependency/runner/control release/failure/resumption trigger or 2027-01-15 review. #26 retains October24 research review. #24 stays blocked by #72/#73/#74; do not renew unrelated dates."
+        "findings": "Design review caught effective-timeout parsing and misplaced contract scope before native use. Actual actor failed by omitting available escalation despite lead access; preserved failure led to actor-specific passive preflight and explicit tool mode. Replacement verified both paused/quiescent handoffs. Separate count correction preserves originals. Portable checks/rule matching do not prove live permission activation, actor isolation or graphical outcome.",
+        "cost": "Existing CLI/controller/parser, pinned native, one-off bounded capture and original journals; one designated general-purpose player, lead-only source/runtime lifecycle and independent read-only reviews. No dependency/global setting/paid API. Approval/model usage and sustained maintenance cost unmeasured.",
+        "follow_up": "#81 freezes fresh deciding scenario, activity/overshoot/storage and finite split campaign limits with independent readiness; #82 stays gated. #97 closes after exact protected publication/main CI. #75 retains control failure/release/resumption trigger and existing2027-01-15 date; #26 retainsOctober24 research trigger. No generic memory/monitor framework or rule expansion justified."
       },
       "next_review": "2027-01-15"
     },

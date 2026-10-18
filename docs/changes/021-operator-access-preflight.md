@@ -1,10 +1,15 @@
 ---
 owner: lead
-status: proposed
-review_trigger: Actor permission mode, replacement-probe limits, source or acceptance changes
+status: historical
+date: 2026-10-18
+scope: Replacement operator002 prospective admission retained with dated actual result
 ---
 
 # Verify the actor before admitting replacement gameplay
+
+The [actual result](../acceptance/2026-10-18-campaign-operator.md) records both
+delegated phases and cleanup. Original prospective rules below remain unchanged;
+no seven-day campaign was admitted by this brief.
 
 For [#97](https://github.com/CVX-Hull/enactive/issues/97), preserve
 [probe001's failed access](../acceptance/2026-10-18-operator-access-stop.md).
