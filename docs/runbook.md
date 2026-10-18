@@ -20,6 +20,15 @@ the planning-only player never receives it. Restart begins paused without owners
 If a result is unknown, preserve it and reconcile under the procedures below;
 acquiring new ownership does not prove the old task succeeded.
 
+## Permissions and player ownership
+
+See [the permission audit](operator-permissions.md) before requesting elevation
+or changing executor ownership. Narrow project-local CLI rules are prepared and
+matching-tested; trusted reload/live activation remains unverified. Existing
+capture wrappers do not match those rules. User keys/unlock/rescue are not the
+routine fallback. The current sub-agent remains planning-only; proposed direct
+execution requires a separately frozen ownership handoff.
+
 ## Start and observe
 
 First inspect existing terminals/processes to avoid starting a second game or

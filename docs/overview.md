@@ -127,9 +127,15 @@ overnight wake and matching save/application-restart reload, without human rescu
 It stopped at an unsupported sound-distraction prompt; an existing native UI
 binding canceled it for normal cleanup.208charges included one agent-operated
 desktop key; six lifecycle receipts stay unknown. It is still short of a full
-day. The [prospective continuation](changes/019-first-day-continuation.md) retains
-the same character and original absolute clock/allowance, with a stricter added
-cap and verified native-window recovery; it admits no input by publication alone.
+day. The [same-character continuation](acceptance/2026-10-18-first-day-completion.md)
+then reached **24h14m29s alive with zero human rescue**, using227charged inputs
+including9cleanup and two autonomous native-window responses. Endpoint thirst,
+unknown exact sleep duration, nine lifecycle acknowledgments and two cleanup
+requests outside the deadline policy qualify this functional result. The first
+partial report remains history; no seven-day success follows. The next gate is
+#81's independent readiness protocol. [Operator permissions](operator-permissions.md)
+separates tested command rules from activation and the current planning-only
+player from proposed delegated execution.
 Campaigns also expose concrete memory, planning,
 monitoring and viewer needs. The [review workflow](project-management.md#campaign-driven-improvement)
 routes observed problems into bounded improvements and checks their effect in later

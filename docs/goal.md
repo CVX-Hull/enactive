@@ -21,6 +21,10 @@ continuity and first-day rehearsal, independently reviewed readiness, then a rea
 normally created fresh character alive after seven elapsed in-game days with
 essential needs maintained, meaningful supply/travel decisions, ordinary rest,
 save/restart and player handoff, watchable progress and user Pause/takeover.
+Routine play and recovery must not require user intervention. Reduce unnecessary
+approval friction through tested narrow project-scoped permissions while respecting
+managed restrictions; preserve one executor and explicit handoff if delegating
+play to a dedicated sub-agent.
 
 Carry the work through implementation, truthful graphical acceptance, findings
 routing, protected publication and cleanup. Preserve finite prospective resource

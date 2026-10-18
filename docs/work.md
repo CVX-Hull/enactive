@@ -30,8 +30,8 @@ The campaign milestone has no committed delivery date.
 | Gate | Evidence needed to proceed | Tracked outcome |
 | --- | --- | --- |
 | Useful survival pilot and its first review | [Pilot001](acceptance/2026-10-18-survival-pilot.md) stopped on an unknown world-selection acknowledgment before spawning; retained findings and cleanup are gap evidence, not survival success | [#78 pilot](https://github.com/CVX-Hull/enactive/issues/78), then [#83 first review](https://github.com/CVX-Hull/enactive/issues/83) |
-| Continuity and first-day rehearsal | [Rehearsal001](acceptance/2026-10-18-first-day-rehearsal.md) failed autonomy. The [direction probe](acceptance/2026-10-18-native-direction-menu.md) verified same-character reload and actual pickup selection/cancel without user keys; broader continuity/first-day work still requires a prospective finite continuation | [#91 recovery](https://github.com/CVX-Hull/enactive/issues/91), [#79 continuity](https://github.com/CVX-Hull/enactive/issues/79) and [#80 first day](https://github.com/CVX-Hull/enactive/issues/80); shared execution is serialized |
-| Executable seven-day readiness | Accepted #79/#80/#83, actual capability gaps resolved, measured throughput, finite total/segment/attempt limits, frozen scenario/candidate and independent outcome review | [#81 readiness](https://github.com/CVX-Hull/enactive/issues/81) |
+| Continuity and first-day rehearsal | [Rehearsal001](acceptance/2026-10-18-first-day-rehearsal.md) failed autonomy. The [direction probe](acceptance/2026-10-18-native-direction-menu.md) verified same-character reload and actual pickup selection/cancel without user keys; the [later same-character run](acceptance/2026-10-18-first-day-completion.md) reached24h14m29s without user rescue, with qualified needs/rest evidence and a retained cleanup deadline deviation | [#91 recovery](https://github.com/CVX-Hull/enactive/issues/91), [#79 continuity](https://github.com/CVX-Hull/enactive/issues/79) and [#80 first day](https://github.com/CVX-Hull/enactive/issues/80); shared execution is serialized |
+| Executable seven-day readiness | Adjudicated #79/#80/#83 evidence and exceptions, actual capability gaps resolved, measured throughput, finite total/segment/attempt limits, frozen scenario/candidate and independent outcome review | [#81 readiness](https://github.com/CVX-Hull/enactive/issues/81) |
 | Seven-day campaign | Bounded owned segments of the same fresh character, real visible calendar/needs/identity evidence, save/restart/handoff and reviewed endpoint | [#82 execution](https://github.com/CVX-Hull/enactive/issues/82), split and estimated before Ready |
 
 The first integrated pilot/review round used **18 charged inputs**, including four
@@ -66,12 +66,25 @@ Its [stopped prefix](acceptance/2026-10-18-first-day-rehearsal-002.md) reached
 normal application restart. An unsupported wheezing prompt stopped investigation;
 existing native CUA canceled it for normal cleanup with no human input.208charges
 include203play+5cleanup(one native UI); six lifecycle unknowns remain. No full-day
-success. The [prospective continuation](changes/019-first-day-continuation.md)
-keeps original500/180min/26h absolute caps and five already consumed cleanup inputs,
-plus a stricter64input/45min continuation cap. No new world, reset or native build.
-Fresh identity/control evidence and independent review remain admission gates.
-Original #79 M/Low, 2–4 and #80 M/Low, 3–5 focused-session estimates remain in Issues;
-32 game seconds cannot calibrate survival throughput or a calendar forecast.
+success at that stop. The [same-character continuation](acceptance/2026-10-18-first-day-completion.md),
+prospectively admitted after protectedPR95 inside the original500/180min/26h
+absolute envelope, then reached **24h14m29s alive**,227charges=218play+9cleanup,
+two agent-native CUA responses and zero human rescue. Endpoint Thirsty, unknown
+exact sleep duration and nine lifecycle ACKs remain explicit. Two final cleanup
+requests incorrectly used15s instead of ordinary5s deadlines; acceptance records
+the deviation, no retroactive brief amendment. Original741 and continuation200
+artifact hashes and ledger were independently checked. The lead owns functional
+acceptance with these qualifications. Original estimates remain historical;
+measured elapsed time includes reasoning/review/publication, not just game runtime.
+
+Next #81 freezes the fresh deciding scenario, candidate, practical supply/rest
+capabilities, finite whole-run/segment/attempt limits and independent outcome
+review. It must consume the deadline-control finding, actual throughput and the
+[permission/player audit](operator-permissions.md): narrowly matched CLI rules are
+prepared and policy-tested, activation is unverified; dedicated direct player
+execution needs an explicit ownership design and acceptance, not silent expansion
+of the current advisory role. #82 stays gated until that decision. No new generic
+monitor, memory database or paid API is required by the rehearsal evidence.
 
 Pilot001's 150-input/45-minute/six-game-hour ceilings remain historical fixed limits,
 not a renewable allowance. Every later attempt needs a prospective finite brief

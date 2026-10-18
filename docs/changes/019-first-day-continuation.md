@@ -1,10 +1,16 @@
 ---
 owner: lead
-status: proposed
+status: historical
+date: 2026-10-18
+scope: Prospective same-character continuation subsequently executed with recorded cleanup deviation
 review_trigger: Absolute rehearsal limits, desktop input scope, source identity or outcome changes
 ---
 
 # Finish the same rehearsal inside its original envelope
+
+Executed after protected PR95 publication. The [outcome](../acceptance/2026-10-18-first-day-completion.md)
+records24h14m29s alive, endpoint thirst, nine unknown acknowledgments and the
+cleanup deadline deviation. This historical admission is closed; it grants no new input.
 
 For #79/#80, finish Rosendo/Hotevilla's remaining first-day interval after the
 [stopped prefix](../acceptance/2026-10-18-first-day-rehearsal-002.md). This prospective
