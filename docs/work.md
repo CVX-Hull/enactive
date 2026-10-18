@@ -94,7 +94,14 @@ rations conserved, paused lead inspection and fresh reassignment. Three lifecycl
 ACKs and unknown water resupply remain; no human rescue. #81 consumes the qualified
 operator evidence and still freezes the fresh deciding protocol, activity/overshoot/
 evidence limits and split execution before independent readiness. #82 stays gated
-until that decision. No new generic
+until that decision. The [proposed deciding protocol](changes/022-seven-day-campaign.md)
+splits #82 into seven named daily children [#100–106](https://github.com/CVX-Hull/enactive/issues/82),
+with native dependencies, M/Low estimates and fixed original budgets; all remain
+blocked until their prerequisites. The [preparation review](acceptance/2026-10-18-seven-day-readiness.md)
+records clean design review, ten offline boundary tests, both actual actor access
+checks and passive native preflight; protected publication and fresh admission
+remain separate gates. A drafted protocol or tracker split is not
+readiness or a gameplay admission. No new generic
 monitor, memory database or paid API is required by the rehearsal evidence.
 
 Pilot001's 150-input/45-minute/six-game-hour ceilings remain historical fixed limits,
