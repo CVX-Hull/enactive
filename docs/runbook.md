@@ -392,5 +392,6 @@ cleanup exception invoked upstream Ctrl-C Quit, confirmed its actual supported
 prompt and closed without Save. It remains failed normal-save acceptance; that
 expired exception is not standing recovery authority. Current menu repair and its
 [qualified real-game proof](acceptance/2026-10-18-ordinary-menus.md) are tracked in #112.
-Item examination/comparison and work-menu entry/cancel worked; direction/reload
-remain unexercised. Other unknown boundaries still stop.
+Item examination/comparison and work-menu entry/cancel worked; the
+[subsequent gate](acceptance/2026-10-18-menu-gate.md) verified direction cancellation
+and prior-save reload. Unknown ACKs remain; other unknown boundaries still stop.

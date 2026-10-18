@@ -27,7 +27,9 @@ remains failed. A [same-character functional continuation](acceptance/2026-10-18
 then stopped on unsupported nearby-items UI without verified time advance;
 [ordinary-menu coverage #112](https://github.com/CVX-Hull/enactive/issues/112)
 has a [qualified native repair](acceptance/2026-10-18-ordinary-menus.md): item detail,
-comparison and work-menu navigation worked; direction/reload checks remain open.
+comparison and work-menu navigation worked. [The remaining direction/reload gate](acceptance/2026-10-18-menu-gate.md)
+also passed its real test; protected publication is separate, and further survival
+still needs prospective admission.
 [Work](work.md) links the active path.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign

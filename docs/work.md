@@ -117,8 +117,10 @@ owns the [qualified related-menu result](acceptance/2026-10-18-ordinary-menus.md
 Item examination/comparison and crafting/construction entry/cancel now have actual
 corrected-candidate evidence; direction-query regression and post-shutdown reload
 remain unexercised. Both proof admissions are closed, with36combined charges,112whole
-and zero verified game advance. Remaining checks require prospective scope; no
-old budget/queue is renewed.
+and zero verified game advance. A [separate remaining-gate check](acceptance/2026-10-18-menu-gate.md)
+then verified actual direction cancellation and prior-save reload,10newcharges/122whole,
+zero game advance. #112 closes only after verified publication; next survival
+assignment remains prospective. No old budget/queue is renewed.
 Neither stopped study supplies unused authority for the next one. The seven
 named daily children [#100–106](https://github.com/CVX-Hull/enactive/issues/82)
 remain uncompleted with actual dependencies/estimates in GitHub. Source changes

@@ -1,0 +1,296 @@
+{
+  "schema_version": 1,
+  "kind": "historical-native-acceptance",
+  "date": "2026-10-18",
+  "verified_at": "2026-10-18",
+  "source_commit": "0987cb17e115b7594d1b7fe97764ead675d34078",
+  "upstream_pin": "native/upstream.json",
+  "platform": "macOS arm64/pinned CDDA0.I-1/wire3/windowed project userdir",
+  "report": "docs/acceptance/2026-10-18-menu-gate.md",
+  "video": null,
+  "verification_scope": "Actual prior-save reload and Peekwhere chooser/cancel;25rows10charges122whole;0advance. NormalSaveQuit/processclosed, lifecycleunknownsretained.",
+  "artifacts": {
+    ".runtime/campaigns/direction-reload-001/admission.json": {
+      "bytes": 1768,
+      "sha256": "2df6e926f0e2de5c7bff816a78b6caa79ec0cf6cbfc3edaccf2d6aa69a135155",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/record.py": {
+      "bytes": 4201,
+      "sha256": "8cc912cef4ee6f94ba5ebb90c8a6cf2e078b8202559c2198af89b3a6631b5e4a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/commands.jsonl": {
+      "bytes": 9514,
+      "sha256": "92f441229c1675e6357f0c41406f029cf84672bff8163783ab176665b37cec06",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/native-closeout.json": {
+      "bytes": 1911,
+      "sha256": "149895791ed3598bd3747eaa25cf016de0b8ee5d03b2f0d5050341192db59ce6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/artifacts-native-closeout.json": {
+      "bytes": 16196,
+      "sha256": "dc752db1c113a4ceb14e60810d2a4efffe0f4956fee848fabebefbb302fd2e55",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/preparation/scope-commit.log": {
+      "bytes": 75031,
+      "sha256": "5992ef26d2322b0e985d9a3c2be8b631b6c59af1a4681dffd13baf153f24f067",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/preparation/spectator-direction.png": {
+      "bytes": 247018,
+      "sha256": "117a7c6cdf98abbe1556d14ddfe0cf40ef484088566e4820fe5e8844a62f57ef",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0004-receipt.json": {
+      "bytes": 774,
+      "sha256": "915c451afbaa4b8502f5f7eacacaf634eb44193f8ccb722400807d49a84d6d6a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0004-capture.json": {
+      "bytes": 809,
+      "sha256": "a891c253d97ab401b4bb25b889cf6876bcf1dfb950e466aeb58f9f2ae7055a42",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/frames/0004-frame-1792363236599-77727-41.png": {
+      "bytes": 13954,
+      "sha256": "5974403aa89bdba596c68b60630dd511297ce12221b12b64b8ecd69df18dda9b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0005-receipt.json": {
+      "bytes": 213,
+      "sha256": "e1df98f36c64cc7066b790274bb51d655bea143a30e9924d8bbf0b161b27e5db",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0005-capture.json": {
+      "bytes": 699,
+      "sha256": "4bc9a44410864d612f9a8400a5ee4da6d55bd1bada195f766e4e94c5ee865009",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0006-receipt.json": {
+      "bytes": 4707,
+      "sha256": "72df155fad8c748fce5f993e229738713ed1a8fa4267ec0ad793bdbb2c5456bc",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0006-capture.json": {
+      "bytes": 754,
+      "sha256": "1b2f87fc5f23d196d6045bc5e7935fae7325bb5e9a83950c9d6c0c6307eeec28",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/frames/0006-frame-1792363288394-77727-1-68.png": {
+      "bytes": 109374,
+      "sha256": "650c59759e8186975201290533550ff47e7f13ad23f60cb829a6be7d78af0370",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0007-receipt.json": {
+      "bytes": 93355,
+      "sha256": "2c4703b3f6a306aa34d5d2cdf5bb4f40a81e3f61421adc532a5103e4eeb9bebf",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0007-capture.json": {
+      "bytes": 767,
+      "sha256": "1e6e9793c9ef974cf34f111bedfcb151f7e90a381f210b160ad74cddfec7dcc4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/frames/0007-frame-1792363288394-77727-1-70.png": {
+      "bytes": 109374,
+      "sha256": "650c59759e8186975201290533550ff47e7f13ad23f60cb829a6be7d78af0370",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0009-receipt.json": {
+      "bytes": 1264,
+      "sha256": "5c7a0bcefdf156b87c974a71e219c4b54338d12d0d1a4025c816cacea0832adc",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0009-capture.json": {
+      "bytes": 800,
+      "sha256": "1d2298e69dffd389a88f86bb9423530fbac41167ae0bf5ee4bd416647bc120cd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/frames/0009-frame-1792363288394-77727-1-91.png": {
+      "bytes": 63253,
+      "sha256": "ea646e8a6062fa0ec0e50da12bf0df5e631c2d8f24ed37060667e2e61d5c6c8e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0010-receipt.json": {
+      "bytes": 4710,
+      "sha256": "aa6553dcd3509f21584b346c3ed7bd9ed2fbb48774b7f11a870de5089ec99014",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0010-capture.json": {
+      "bytes": 824,
+      "sha256": "39e4f154ff31d08c44ddf49a5747cc75772e3e58285eb1e214a36fb8a9bc438c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/frames/0010-frame-1792363288394-77727-1-101.png": {
+      "bytes": 109377,
+      "sha256": "df60a2a3d7325deba6e1f1c1cfe66cc312ae69d789dfc9da8ce1acbe02f6f843",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0011-receipt.json": {
+      "bytes": 759,
+      "sha256": "b44927912bc26446976903b7aec31efc41169f3e9383efc499bf09296d928df3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0011-capture.json": {
+      "bytes": 836,
+      "sha256": "dcc094572c0f8820948e947da4faff8dfeb7b521c19c07e22fb65eefbf991805",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/frames/0011-frame-1792363288394-77727-1-113.png": {
+      "bytes": 109512,
+      "sha256": "dedb0727740f707b2f0cd9167fbaed84940f1a40c2388823f70470c29d0892fd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0012-receipt.json": {
+      "bytes": 4710,
+      "sha256": "2b0bbc56cc6644776222021d03587e197e1ddaf4e190d4377c8cf20eaf9a360c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0012-capture.json": {
+      "bytes": 807,
+      "sha256": "502b3b88dbe2a9bebabb206a9dd39b0df4b6efad183a9c4654ab7ad522f779a0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/frames/0012-frame-1792363288394-77727-1-139.png": {
+      "bytes": 109142,
+      "sha256": "3ec1d04aa49b4156150e21eb45e1fe0e3daf5becde828bd11bab62dded56179d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0014-receipt.json": {
+      "bytes": 126699,
+      "sha256": "701255f1c97321d2aa34af0be710dc744e4bc7d0512d6d51709c3871d56a1cd4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0014-capture.json": {
+      "bytes": 735,
+      "sha256": "02f6c015454fe523fd2f5700a88f195f8c5758ca929f8360ad722319cb3dd114",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/frames/0014-frame-1792363288394-77727-1-145.png": {
+      "bytes": 109142,
+      "sha256": "3ec1d04aa49b4156150e21eb45e1fe0e3daf5becde828bd11bab62dded56179d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0015-receipt.json": {
+      "bytes": 4709,
+      "sha256": "f9c88ffc6b05c712f2f66d8b5a203bdf9947b1e6c104ee17d8041f549a7f11dd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0015-capture.json": {
+      "bytes": 722,
+      "sha256": "dae26a73adaf8a65a27c0fb174bbef4e785cb282a0d5e1d89dce780c85c53124",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/frames/0015-frame-1792363288394-77727-1-155.png": {
+      "bytes": 109142,
+      "sha256": "3ec1d04aa49b4156150e21eb45e1fe0e3daf5becde828bd11bab62dded56179d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0017-receipt.json": {
+      "bytes": 678,
+      "sha256": "81986c3bb835ec9c07cae8c5fafcca0fbf03a35b99be0fb82aa1d875fd5f0666",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0017-capture.json": {
+      "bytes": 805,
+      "sha256": "3f34a762aa23062aa9c513f89d53e3d4d945ae2602a02c5cfdb4ade26277a24c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/frames/0017-frame-1792363288394-77727-1-170.png": {
+      "bytes": 108060,
+      "sha256": "f8fae0a7fc88f85db6d3609b5c8a8301ca26637ac371c595e300ce3d715d49d1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0018-receipt.json": {
+      "bytes": 213,
+      "sha256": "2a526e8c16721b912906d5cc27398def4f2741eadc4ca94fc0bdb99ae1ad6af7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0018-capture.json": {
+      "bytes": 650,
+      "sha256": "a519f53ad71c3ce7bfe4289d2a8f46e2b5c554b7d87a3b54b4d50c9ffb039e87",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0019-receipt.json": {
+      "bytes": 789,
+      "sha256": "2bcc04b13b172e932f921eb11f5325037b76a69f6b9998547af379ec0c8ed0c0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0019-capture.json": {
+      "bytes": 740,
+      "sha256": "19a4e4f8af7b1b4bd2cb90fde83edb365cb00a5fae9d92f2e3741d473643c418",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/frames/0019-frame-1792363416529-77727-2-191.png": {
+      "bytes": 13777,
+      "sha256": "e05be07fe2fbd9f80e45309ce6d707255829e84645374bc28c2931a059471983",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0020-receipt.json": {
+      "bytes": 147013,
+      "sha256": "b5919f5cee3556377cc42f1f091dbc43bbbfa3963474b9becf4150762d52d95d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0020-capture.json": {
+      "bytes": 726,
+      "sha256": "2cb851bb8dc05f1ffbc22a4bc693ed705a76d884d2217387ec020e1c8c11d401",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/frames/0020-frame-1792363416529-77727-2-193.png": {
+      "bytes": 13777,
+      "sha256": "e05be07fe2fbd9f80e45309ce6d707255829e84645374bc28c2931a059471983",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0022-receipt.json": {
+      "bytes": 680,
+      "sha256": "5f4eddeea6e06cc47dbf23e1ddf614aae780e2c519e3324f869b5cf466091b18",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0022-capture.json": {
+      "bytes": 788,
+      "sha256": "7e8695558a2274527e7cebb59ae21f5d23a783f2b6d71904432d422050a80d86",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/frames/0022-frame-1792363416529-77727-2-215.png": {
+      "bytes": 14208,
+      "sha256": "7b29181957002942ab9276bb7fc6c1a609768bd316ac1b0b2afc476f74a37350",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0023-receipt.json": {
+      "bytes": 213,
+      "sha256": "0821be7e87819802ca523fa022cd6e8f3a2edce31dad1ab24b4245c6d685cd96",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0023-capture.json": {
+      "bytes": 647,
+      "sha256": "9d8bdd4cfcacc7862cde1b0b36aa7e2eba87c2819709ccc589ed499a1c1fa2ce",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0025-receipt.json": {
+      "bytes": 148929,
+      "sha256": "fecef60ed77dd8bbbdf31b57ea7e3b19096eef838515421c466a3a4e1dc923ea",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/direction-reload-001/0025-capture.json": {
+      "bytes": 567,
+      "sha256": "2454c01debd2b679524f85309c891bb0e3df3ffd6ab7bf511e8601d75543a9f7",
+      "availability": "local-only; not included in Git"
+    }
+  },
+  "identity_note": "Same normallycreatedNedBelgium; distinctprospective remaininggate after closedqualifiedproof; currentidentity/calendar not oldACK inference.",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "freetype_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+  "initial_build_binary_sha256": "f11f4f397eb015ce7406a873590cefa62b7766dd446f4e42c0fec9d371b53e56",
+  "installed_binary_sha256": "297b443a235af6e4803bb6d2a15bd595f0461124f7fe87c297a59b2382d5f704",
+  "limitations": [
+    "No survival or newplayadmission.",
+    "Three new lifecycleACKunknowns remain; currentstate/processabsence never repairs anACK.",
+    "Alternate item renderer/arbitrarymenus unexercised; this gate finalSave not postshutdownloadverified.",
+    "Private artifacts unavailable in freshcheckout; screenshottrackedbyGitbyteidentical to retainedoriginal.",
+    "Exact process/control/permission/actorqueueevidence requires primaryleadtrace."
+  ]
+}
