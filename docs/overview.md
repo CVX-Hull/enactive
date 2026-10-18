@@ -102,7 +102,11 @@ two completed native tasks, Pause/continuation and the unsuccessful first route.
 monitoring and broader survival remain separately tracked follow-ups.
 
 The [seven-day campaign outcome](https://github.com/CVX-Hull/enactive/issues/10)
-sets the next product target. Campaigns also expose concrete memory, planning,
+sets the next product target. The [delivery path](work.md#path-to-seven-day-survival)
+starts with a bounded survival pilot and its first finding review, then campaign
+continuity and an actual first-day rehearsal, an executable readiness decision,
+and the seven-day run. No fresh-character survival pilot has yet been accepted.
+Current waypoint demonstrations do not supply that evidence. Campaigns also expose concrete memory, planning,
 monitoring and viewer needs. The [review workflow](project-management.md#campaign-driven-improvement)
 routes observed problems into bounded improvements and checks their effect in later
 play. This is a manual engineering process; continuous policy learning remains
