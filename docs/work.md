@@ -22,6 +22,15 @@ tracks the [tiered-gameplay proposal](research-tiered-gameplay.md), its bounded
 implementation slices, evaluation gates and maintenance follow-ups. Native
 interruption/recovery remains in [its existing outcome](https://github.com/CVX-Hull/cdda-player/issues/5).
 
+The [monitoring follow-on](https://github.com/CVX-Hull/cdda-player/issues/40)
+tracks reusable expectations, semantic outcome monitoring and evidence-aware
+escalation beyond movement. Its [design](design/outcome-monitoring.md) and
+[research](research-outcome-monitoring.md) are separate from waypoint acceptance.
+The [public recovery and evaluation brief](changes/007-recovery-evaluation-monitoring.md)
+defines this round's interfaces and handoffs; its [acceptance](acceptance/2026-10-17-public-recovery-evaluation.md)
+separates delivered controls, passive instrumentation and future monitor behavior.
+Live allocation remains in GitHub.
+
 The [foundation design brief](changes/004-gameplay-foundation.md) connects the native
 and gameplay investigation contracts to their bounded implementation handoffs.
 Live readiness and allocations remain in the Project, not in this navigation page.

@@ -54,10 +54,11 @@ completion. A timeout produces an unknown outcome and freezes further actions.
 Observe/reconcile then explicitly resume; never automatically replay the input.
 
 Native keyboard/button input latches takeover. Pause prevents subsequent remote
-dispatch; it cannot cancel an already-started engine activity. Explicit Python operator recovery can request the native activity query, answer
+dispatch; it cannot cancel an already-started engine activity. Explicit operator recovery can request the native activity query, answer
 its exact owned prompt, or deliver one Space at the current raw debug prompt.
-These operations stay paused and preserve the original gameplay outcome; public
-recovery UI/CLI remains follow-on work. A service restart revokes durable input tokens and retains unfinished
+These operations stay paused and preserve the original gameplay outcome. The
+spectator, CLI and separate authenticated recovery endpoint expose them without
+waiting for the ordinary gameplay writer. A service restart revokes durable input tokens and retains unfinished
 admissions as unknown without replay. World entry/exit, including same-process
 save/reload, invalidates old session and relative-position authority. Full details:
 [protocol and guarded play](protocol.md).

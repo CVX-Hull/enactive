@@ -125,8 +125,9 @@ used to choose them; fresh-observing cannot silently authorize a stale choice.
 ## Explicit operator recovery
 
 `Controller.recover(kind, **payload)` is the local Python operator interface.
-The ordinary HTTP/CLI `execute` path rejects recovery kinds; public controls are
-tracked separately in [#31](https://github.com/CVX-Hull/cdda-player/issues/31).
+Authenticated loopback `POST /api/recovery`, explicit CLI recovery commands and
+the spectator recovery panel expose this same operator-only boundary. Ordinary
+`/api/command` and planner execution reject recovery kinds.
 Recovery first pauses and revokes gameplay, then admits its own durable token.
 The process lock outlives both writers; a nonblocking control lock prevents two
 recoveries. Recovery never waits for the ordinary command lock. The data lock
@@ -146,9 +147,18 @@ No deadline extension, implicit refresh or automatic retry is permitted.
 | `answer_interrupt` | `boundary_id`, `revision`, `frame`, `interrupt_request_id`, `choice` (`YES`/`NO`) | Exact owned rendered query; resolve that choice's active usable binding |
 | `continue_debug_once` | `boundary_id`, `revision`, `frame` | Exact raw debug prompt; deliver one Space, never ignore future errors |
 
-Python callers supply `expected_session` and `expected_control_generation`.
+Python and HTTP callers supply `expected_session` and `expected_control_generation`.
 Answers/dismissals also require `expected_boundary_id`, `expected_revision` and
 `expected_frame`; answers add the owning `interrupt_request_id` and `choice`.
+HTTP requests use exactly `kind` and the required fields above, with optional
+positive `timeout` up to 15 seconds. They retain the ordinary endpoint’s Host,
+origin, token, content-type and 4096-byte guards. Malformed input returns 400;
+rejected/unknown/controller-error outcomes return 409; other terminal recovery
+outcomes return 200. HTTP success reports delivery semantics only. The CLI uses
+`--session`, `--generation`, and for prompt operations `--boundary`, `--revision`,
+`--frame`; answers also require `--interrupt-request-id` and `--choice YES|NO`.
+No surface fetches new authority to silently replace an operator’s decision.
+
 The controller checks freshness and advertised operations. Native rechecks session,
 generation, eligibility and rendered prompt evidence, then reads the host token
 again at the final commit gate. Delivery latches Pause and increments native
@@ -168,6 +178,10 @@ is the ordinary current-v3 observation shape. `dispatched` is nonterminal.
 successful frame is available. `not_applicable` and `rejected` report no applicable
 operation or a failed gate. Host timeout is `unknown`; host failures are
 `controller_error`. No status alone proves cancellation, error repair or task success.
+Immediate interruption from an unpaused activity can reject when the native Pause
+revision invalidates its prior capture. The current operator workflow is explicit
+Pause → Observe → decide whether interruption is still eligible; no automatic
+refresh or retry. Broader timing acceptance remains #8.
 
 The original gameplay response/pending identity is preserved. Control results may
 update passive state but cannot resume gameplay. `control_pending` and

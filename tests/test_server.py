@@ -13,6 +13,7 @@ import unittest
 
 from harness.controller import Controller
 from harness.server import Server
+from tests.test_controller import ControlBridge, FakeBridge, recovery_state
 
 
 class ServerTests(unittest.TestCase):
@@ -50,6 +51,155 @@ class ServerTests(unittest.TestCase):
         defaults = {"Content-Type": "application/json", "X-CDDA-Token": self.controller.token}
         defaults.update(headers)
         return self.request("POST", "/api/command", json.dumps(value), **defaults)
+
+    def recovery(self, value, **headers):
+        defaults = {"Content-Type": "application/json", "X-CDDA-Token": self.controller.token}
+        defaults.update(headers)
+        return self.request("POST", "/api/recovery", json.dumps(value), **defaults)
+
+    def recovery_payload(self, kind="request_interrupt"):
+        state = self.controller.state
+        payload = {"kind": kind, "expected_session": state["session"],
+                   "expected_control_generation": state["boundary"]["control_generation"]}
+        if kind != "request_interrupt":
+            payload.update(expected_boundary_id=state["boundary"]["id"],
+                           expected_revision=state["revision"], expected_frame=state["frame"])
+        if kind == "answer_interrupt":
+            payload.update(interrupt_request_id=state["boundary"]["interrupt_request_id"], choice="NO")
+        return payload
+
+    def test_recovery_exact_payloads_and_types_before_dispatch(self):
+        self.controller.state = recovery_state()
+        good = self.recovery_payload()
+        invalid = [{}, {"kind": "pause"}, {**good, "extra": 1},
+                   {**good, "expected_revision": 1}]
+        for key, values in {"expected_session": [None, 1, ""],
+                            "expected_control_generation": [True, -1, 0.0, "0"],
+                            "timeout": [None, True, 0, -1, 16, float("nan"), float("inf")]}.items():
+            invalid.extend({**good, key: value} for value in values)
+        for kind in ("answer_interrupt", "continue_debug_once"):
+            self.controller.state = recovery_state("interrupt_confirmation", owner="owner")
+            full = self.recovery_payload(kind)
+            invalid.extend({k: v for k, v in full.items() if k != field}
+                           for field in full if field != "kind")
+            for field in ("expected_boundary_id", "expected_frame", "expected_revision"):
+                invalid.append({**full, field: False})
+            if kind == "answer_interrupt":
+                invalid.extend([{**full, "choice": "yes"}, {**full, "choice": []},
+                                {**full, "interrupt_request_id": None}])
+        with patch.object(self.controller, "recover") as recover:
+            for payload in invalid:
+                with self.subTest(payload=payload):
+                    self.assertEqual(self.recovery(payload)[0], 400)
+            recover.assert_not_called()
+
+    def test_recovery_security_controls_and_status_evidence(self):
+        self.controller.state = recovery_state()
+        payload = self.recovery_payload()
+        for headers, code in [({"Host": "evil.example"}, 403),
+                              ({"Origin": "null"}, 403), ({"Sec-Fetch-Site": "same-site"}, 403),
+                              ({"X-CDDA-Token": "wrong"}, 403), ({"Content-Type": "text/plain"}, 415)]:
+            self.assertEqual(self.recovery(payload, **headers)[0], code)
+        self.assertEqual(self.recovery({**payload, "padding": "x" * 4096})[0], 413)
+        for status in ("prompt_opened", "answer_delivered", "dismissal_delivered", "not_applicable",
+                       "rejected", "unknown", "controller_error", "dispatched"):
+            evidence = {"status": status, "id": "control-id", "error": "retained", "detail": {"frame_ok": False}}
+            with patch.object(self.controller, "recover", return_value=evidence) as recover:
+                code, body, _ = self.recovery(payload)
+                self.assertEqual(code, 200 if status in {"prompt_opened", "answer_delivered", "dismissal_delivered", "not_applicable"} else 409)
+                self.assertEqual(json.loads(body), evidence)
+                recover.assert_called_once_with("request_interrupt", expected_session=payload["expected_session"],
+                                                expected_control_generation=payload["expected_control_generation"])
+
+    def test_recovery_http_round_trip_and_stale_authority(self):
+        self.controller.state = recovery_state()
+        stale = self.recovery_payload()
+        with ControlBridge(self.controller) as bridge:
+            code, body, _ = self.recovery(stale)
+            self.assertEqual(code, 200)
+            self.assertEqual(json.loads(body)["status"], "prompt_opened")
+            self.assertEqual(self.recovery(stale)[0], 409)
+            answer = self.recovery_payload("answer_interrupt")
+            self.assertEqual(self.recovery({**answer, "interrupt_request_id": "wrong"})[0], 409)
+            code, body, _ = self.recovery(answer)
+            self.assertEqual((code, json.loads(body)["status"]), (200, "answer_delivered"))
+            self.assertTrue(self.controller.pause_requested)
+            self.assertEqual(len(bridge.delivered), 2)
+        self.controller.state = recovery_state("debug_prompt")
+        expected = self.recovery_payload("continue_debug_once")
+        for change in ({"expected_frame": "old.png"}, {"expected_revision": 99},
+                       {"expected_boundary_id": "old"}, {"expected_control_generation": 99}):
+            self.assertEqual(self.recovery({**expected, **change})[0], 409)
+        with ControlBridge(self.controller):
+            self.assertEqual(self.recovery(expected)[0], 200)
+
+    def test_recovery_missing_capture_and_unresolved_slot_remain_visible(self):
+        self.controller.state = recovery_state()
+        self.controller.state["frame_ok"] = False
+        self.assertEqual(self.recovery(self.recovery_payload())[0], 409)
+        self.controller.state = recovery_state()
+        code, body, _ = self.recovery({**self.recovery_payload(), "timeout": 0.03})
+        self.assertEqual((code, json.loads(body)["status"]), (409, "unknown"))
+        status = json.loads(self.request()[1])
+        self.assertIsNotNone(status["control_pending"])
+        self.assertEqual(len(status["control_unknown_outcomes"]), 1)
+        self.assertEqual(self.recovery(self.recovery_payload())[0], 409)
+        self.assertEqual(self.post({"kind": "pause"})[0], 200)
+
+    def test_pause_and_duplicate_recovery_while_control_writer_is_active(self):
+        entered = threading.Event()
+        release = threading.Event()
+        self.controller.state = recovery_state("debug_prompt")
+        payload = {**self.recovery_payload("continue_debug_once"), "timeout": 1.5}
+        def hold(bridge, request):
+            entered.set()
+            self.assertTrue(release.wait(2))
+        with ControlBridge(self.controller, before_gate=hold) as bridge, ThreadPoolExecutor() as pool:
+            recovering = pool.submit(self.recovery, payload)
+            try:
+                self.assertTrue(entered.wait(1))
+                self.assertEqual(self.recovery(payload)[0], 409)
+                self.assertEqual(self.post({"kind": "pause"})[0], 200)
+                self.assertFalse(recovering.done())
+            finally:
+                release.set()
+            code, body, _ = recovering.result()
+            self.assertEqual((code, json.loads(body)["status"]), (409, "rejected"))
+            self.assertEqual(bridge.delivered, [])
+
+    def test_only_explicit_observe_after_expiry_reconciles_http_recovery(self):
+        self.controller.state = recovery_state("debug_prompt")
+        payload = {**self.recovery_payload("continue_debug_once"), "timeout": 0.04}
+        with ControlBridge(self.controller, publish=False) as control:
+            self.assertEqual(self.recovery(payload)[0], 409)
+            original = self.controller.control_pending.copy()
+            with FakeBridge(self.controller) as ordinary:
+                ordinary.value = recovery_state("debug_prompt")
+                self.assertEqual(self.post({"kind": "observe"})[0], 200)
+                self.assertIsNotNone(json.loads(self.request()[1])["control_pending"])
+                time.sleep(max(0, (original["deadline_ms"] - time.time() * 1000) / 1000 + 0.02))
+                self.assertIsNotNone(json.loads(self.request()[1])["control_pending"])
+                self.assertEqual(self.post({"kind": "observe"})[0], 200)
+                status = json.loads(self.request()[1])
+                self.assertIsNone(status["control_pending"])
+                self.assertEqual(status["control_unknown_outcomes"][0]["request"]["id"], original["id"])
+            self.assertEqual(len(control.requests), 1)
+
+    def test_recovery_does_not_wait_for_ordinary_http_request(self):
+        with ThreadPoolExecutor() as pool:
+            waiting = pool.submit(self.post, {"kind": "observe", "timeout": 0.5})
+            deadline = time.monotonic() + 1
+            while not (self.controller.bridge / "request.json").exists() and time.monotonic() < deadline:
+                time.sleep(0.002)
+            self.controller.state = recovery_state()
+            original = self.controller.pending.copy()
+            with ControlBridge(self.controller):
+                code, data, _ = self.recovery(self.recovery_payload())
+                self.assertEqual((code, json.loads(data)["status"]), (200, "prompt_opened"))
+                self.assertFalse(waiting.done())
+                self.assertEqual(self.controller.pending["id"], original["id"])
+                self.assertEqual(self.post({"kind": "pause"})[0], 200)
+            waiting.result()
 
     def test_loopback_bind_and_private_config(self):
         self.assertEqual(self.server.server_address[0], "127.0.0.1")

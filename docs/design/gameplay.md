@@ -16,6 +16,12 @@ separates portable evidence tests from native-v2 boundary probes. The
 [research proposal](../research-tiered-gameplay.md) supplies evidence and alternatives;
 its broader examples are not capabilities of this slice.
 
+The proposed [outcome-monitoring contract](outcome-monitoring.md) addresses later
+semantic tasks and escalation. It does not replace this slice's exact waypoint
+predicates or add a dependency to its baseline acceptance. The
+[evaluation brief](../changes/007-recovery-evaluation-monitoring.md#waypoint-experiment-protocol)
+predeclares its comparison protocol; live provider and trial execution remain #24.
+
 ## Owner outcome and boundaries
 
 Ask the agent to reach a nearby waypoint and return to its starting tile while

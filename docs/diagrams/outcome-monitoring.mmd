@@ -1,0 +1,31 @@
+---
+title: Proposed outcome monitoring — evidence and response
+---
+flowchart TB
+  accTitle: Proposed evidence-grounded outcome monitoring
+  accDescr: Visible observations and the current task feed factual checks and fallible semantic monitoring. Their supported, contradicted or unknown claims inform an explicit response policy. It may continue bounded work, request evidence, ask for reasoning or plan repair, or stop for the operator. Every action still passes the existing authority gate; pause and uncertain transport bypass model review. Boxes are responsibilities, not required separate processes or model tiers.
+  E["Visible evidence and task\nFreshness, history and scope"]
+  F["Reusable factual checks\nSupported observation fields"]
+  M["Semantic monitor\nFallible; can abstain"]
+  R["Outcome report\nProgress, failure and completion\nSupported / contradicted / unknown"]
+  P["Explicit response policy\nInformation, competence and budgets"]
+  A["Continue or inspect\nOne bounded action candidate"]
+  H["Capable reasoning or plan repair\nEvidence-grounded candidate"]
+  S["Stop and explain\nOperator help or abandon"]
+  D["Record supported completion\nFinish or admit next stage"]
+  G["Existing authority gate\nPause, epoch, session, expiry"]
+  C["Windowed CDDA\nEngine decides outcome"]
+  E -->|Exact inputs| F
+  E -->|Bounded history| M
+  F -->|Facts with provenance| R
+  M -->|Interpretations and unknowns| R
+  R -->|Claims, not authority| P
+  P -->|Completion without blockers| D
+  P -->|Progress or information need| A
+  P -->|Reasoning or strategic mismatch| H
+  P -->|Unresolved or exhausted| S
+  H -->|Revalidate changed plan| P
+  A -->|Current candidate| G
+  G -->|Accepted input| C
+  C -->|Actual observation| E
+  G -->|Revoked or uncertain input| S

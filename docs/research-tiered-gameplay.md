@@ -6,6 +6,11 @@ review_trigger: Before gameplay architecture or model selection; weekly recency 
 
 # Tiered gameplay: research and proposed design
 
+The [outcome-monitoring evidence review](research-outcome-monitoring.md) extends
+this proposal with learned monitors, declarative expectations and information-aware
+escalation, including October 2026 work. Its [design](design/outcome-monitoring.md)
+is a separate follow-on; it does not expand the waypoint baseline.
+
 Research cutoff: **2026-10-17**. This is a discussion proposal, not an implemented
 contract or an authorization for unattended play. [Architecture](architecture.md)
 and [protocol](protocol.md) describe the current system.

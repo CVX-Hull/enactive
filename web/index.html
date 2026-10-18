@@ -27,6 +27,21 @@
       <details class="evidence"><summary>Control and observation details</summary><p>One input at a time. A ready response means the engine returned to input. Check the scene to verify the intended result.</p><p>Native keyboard input pauses remote control. A pause cannot undo an input already dispatched.</p></details>
     </section>
     <aside>
+      <section class="panel recovery-panel" aria-labelledby="recovery-heading">
+        <div class="panel-heading"><span id="recovery-heading" class="eyebrow">OPERATOR RECOVERY</span><span class="tiny">STAYS PAUSED</span></div>
+        <p id="recovery-state" class="hint" role="status">Observe to inspect recovery eligibility.</p>
+        <div class="recovery-buttons">
+          <button id="recovery-interrupt" type="button" hidden disabled>Request interrupt</button>
+          <button id="recovery-yes" type="button" hidden disabled>Yes · interrupt activity</button>
+          <button id="recovery-no" type="button" hidden disabled>No · keep activity</button>
+          <button id="recovery-debug" type="button" hidden disabled>Continue debug once</button>
+        </div>
+        <p class="hint">Pause prevents future remote input; it cannot undo a committed input or cancel an activity. Recovery reports prompt opening or input delivery, never proof of cancellation or repair. Inspect the new frame. No automatic answer, retry or Resume.</p>
+        <p id="gameplay-pending" class="hint">Gameplay: no live request</p>
+        <p id="recovery-pending" class="hint">Recovery: no live request</p>
+        <details><summary>Gameplay pending and unknown evidence</summary><pre id="gameplay-evidence">No evidence yet.</pre></details>
+        <details><summary>Recovery result, pending and unknown evidence</summary><pre id="recovery-result">No recovery sent.</pre><pre id="recovery-evidence">No evidence yet.</pre></details>
+      </section>
       <section class="panel goal-panel"><div class="panel-heading"><span class="eyebrow">CURRENT OBJECTIVE</span><span class="tiny">PLANNER</span></div><form id="goal-form"><label for="goal" class="sr-only">Current objective</label><textarea id="goal" rows="3" placeholder="Set a goal for this session…" maxlength="2000"></textarea><div class="form-footer"><span>Recorded for the planner</span><button class="text-button" type="submit">Save goal ↗</button></div></form></section>
       <section class="panel timeline-panel"><div class="panel-heading"><span class="eyebrow">SESSION TIMELINE</span><span id="event-count" class="tiny">0 EVENTS</span></div><ol id="timeline"><li class="empty">Your observations and inputs appear here.</li></ol><div class="journal"><span class="dot small"></span><span id="journal">Local journal</span></div></section>
       <details class="advanced"><summary>Advanced controls &amp; details</summary>

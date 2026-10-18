@@ -75,10 +75,33 @@ Use CDDA's normal Save menu before quitting. Stop the controller with Ctrl-C; it
 leaves remote control paused. Saves are in `.runtime/user/`. Never treat a stale
 frame or old acceptance record as proof a current process is healthy.
 
-## Python operator recovery
+## Operator recovery
 
-Public recovery buttons/CLI are follow-on [#31](https://github.com/CVX-Hull/cdda-player/issues/31).
-An operator controlling the existing Python `Controller` instance can call
+For activity interruption, choose Pause, then Observe, inspect the decoded
+activity frame, and choose Request interrupt if still advertised. A committed
+activity continues while paused; it may finish or enter another prompt before
+recovery applies. Current native timing can reject an immediate interruption
+when Pause has invalidated the prior rendered revision. Preserve that rejection,
+observe deliberately, and decide anew; never automatically retry. This limitation
+is tracked in [#8](https://github.com/CVX-Hull/cdda-player/issues/8).
+
+For prompt answers and debug continuation, use Observe, inspect the frame, and use the
+explicit recovery button when eligible. An owned confirmation exposes Yes/No;
+a raw debug prompt exposes one-shot continuation. Gameplay and recovery pending
+or unknown records remain separately inspectable. Pause remains available during
+either request. Recovery never automatically resumes play or repeats a request.
+
+For CLI use, copy the exact evidence that informed your decision:
+
+```sh
+.venv/bin/python -m harness request_interrupt --session SESSION --generation GENERATION
+.venv/bin/python -m harness answer_interrupt --session SESSION --generation GENERATION --boundary BOUNDARY --revision REVISION --frame FRAME --interrupt-request-id REQUEST_ID --choice NO
+.venv/bin/python -m harness continue_debug_once --session SESSION --generation GENERATION --boundary BOUNDARY --revision REVISION --frame FRAME
+```
+
+These are alternative operations, not a sequence to run blindly. Placeholders
+come from fresh observed state; old values reject rather than refresh themselves.
+An operator controlling the existing Python `Controller` instance can also call
 `recover`; never start a second controller to obtain this API. Obtain fresh
 observation and pass its session and control generation explicitly. At an eligible
 activity poll use `request_interrupt`. Inspect the actual returned owned prompt,

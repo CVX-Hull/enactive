@@ -269,7 +269,7 @@ def check_protocol(root: Path) -> list[str]:
         and isinstance(node.left.slice, ast.Constant) and node.left.slice.value == "protocol"
         and len(node.ops) == 1 and isinstance(node.ops[0], ast.NotEq)]
     viewer = (root / "web/app.js").read_text()
-    viewer_versions = [int(v) for v in re.findall(r"latest\.state\.protocol\s*!==\s*(\d+)\b", viewer)]
+    viewer_versions = [int(v) for v in re.findall(r"displayed\.protocol\s*!==\s*(\d+)\b", viewer)]
     docs = [int(v) for v in re.findall(r"\bProtocol version: (\d+)\.", (root / "docs/protocol.md").read_text())]
     evidence = ast.parse((root / "harness/gameplay/evidence.py").read_text())
     evidence_versions = []
@@ -286,7 +286,7 @@ def check_protocol(root: Path) -> list[str]:
              "server advertisement": dict_protocols(server), "CLI discovery validator": discovery_versions,
              "stored request validator": stored_versions, "viewer validator": viewer_versions,
              "evidence validator": evidence_versions, "docs/protocol.md": docs}
-    expected_counts = {"controller send": 2, "controller validator": 2, "stored request validator": 2}
+    expected_counts = {"controller send": 2, "controller validator": 2, "stored request validator": 2, "viewer validator": 2}
     errors = []
     if native.count('"protocol"') != 3 or native.count(r'\"protocol\"') != 1:
         errors.append("native protocol representation changed; review and update the bounded checker")

@@ -9,7 +9,34 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
-from .controller import Controller, MAX_REQUEST, atomic_json
+from .controller import Controller, MAX_REQUEST, MAX_WAIT, RECOVERY_KINDS, atomic_json
+
+
+def validate_recovery(body: dict[str, Any]) -> None:
+    """Validate caller authority without refreshing or substituting native state."""
+    kind = body["kind"]
+    if kind not in RECOVERY_KINDS:
+        raise ValueError("Unknown recovery operation")
+    required = {"kind", "expected_session", "expected_control_generation"}
+    strings = {"expected_session"}
+    integers = {"expected_control_generation"}
+    if kind != "request_interrupt":
+        required |= {"expected_boundary_id", "expected_revision", "expected_frame"}
+        strings |= {"expected_boundary_id", "expected_frame"}
+        integers.add("expected_revision")
+    if kind == "answer_interrupt":
+        required |= {"interrupt_request_id", "choice"}
+        strings |= {"interrupt_request_id", "choice"}
+    if body.keys() - {"timeout"} != required:
+        raise ValueError("Recovery fields must match the operation exactly")
+    if any(not isinstance(body[field], str) or not body[field] for field in strings):
+        raise ValueError("Recovery identity and choice fields must be nonempty strings")
+    if any(type(body[field]) is not int or body[field] < 0 for field in integers):
+        raise ValueError("Recovery generation and revision must be nonnegative integers")
+    if kind == "answer_interrupt" and body["choice"] not in {"YES", "NO"}:
+        raise ValueError("Interrupt choice must be YES or NO")
+    if "timeout" in body and (type(body["timeout"]) not in {int, float} or not 0 < body["timeout"] <= MAX_WAIT):
+        raise ValueError("Timeout must be greater than 0 and at most 15 seconds")
 
 
 class Server(ThreadingHTTPServer):
@@ -107,7 +134,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         if not self._trusted():
             return
-        if self.path != "/api/command":
+        if self.path not in {"/api/command", "/api/recovery"}:
             self._json(404, {"error": "Unknown endpoint"})
             return
         supplied = self.headers.get("X-CDDA-Token", "")
@@ -127,17 +154,22 @@ class Handler(BaseHTTPRequestHandler):
             body = json.loads(data, parse_constant=lambda value: (_ for _ in ()).throw(ValueError(value)))
             if not isinstance(body, dict) or not isinstance(body.get("kind"), str):
                 raise ValueError("Command must be a JSON object with a string kind")
-            allowed = {"kind", "timeout", "key", "action", "direction", "steps", "text",
-                       "expected_session", "expected_revision"}
-            if body.keys() - allowed:
-                raise ValueError("Unknown command fields")
+            if self.path == "/api/recovery":
+                validate_recovery(body)
+            else:
+                allowed = {"kind", "timeout", "key", "action", "direction", "steps", "text",
+                           "expected_session", "expected_revision"}
+                if body.keys() - allowed:
+                    raise ValueError("Unknown command fields")
         except (ValueError, OSError) as exc:
             self._json(400, {"error": f"Invalid command: {exc}"})
             return
         kind = body.pop("kind")
         try:
-            result = self.server.controller.execute(kind, **body)
+            dispatch = self.server.controller.recover if self.path == "/api/recovery" else self.server.controller.execute
+            result = dispatch(kind, **body)
         except (OSError, ValueError, TypeError) as exc:
             result = {"status": "controller_error", "error": f"Controller could not complete the request: {exc}"}
-        code = 200 if result["status"] in {"ready", "recorded", "pause_requested", "complete"} else 409
+        success = {"prompt_opened", "answer_delivered", "dismissal_delivered", "not_applicable"} if self.path == "/api/recovery" else {"ready", "recorded", "pause_requested", "complete"}
+        code = 200 if result["status"] in success else 409
         self._json(code, result)

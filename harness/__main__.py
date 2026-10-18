@@ -8,7 +8,7 @@ import sys
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, build_opener, ProxyHandler
 
-from .controller import Controller, ControlError, MAX_WAIT, read_json
+from .controller import Controller, ControlError, MAX_WAIT, RECOVERY_KINDS, read_json
 from .server import Server
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -23,6 +23,22 @@ def expectation(value: str) -> tuple[str, int]:
         return session, number
     except ValueError as exc:
         raise argparse.ArgumentTypeError("Use SESSION:REV from observe or status") from exc
+
+
+def nonnegative(value: str) -> int:
+    try:
+        number = int(value)
+        if number < 0:
+            raise ValueError
+        return number
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("Use a nonnegative integer from the displayed observation") from exc
+
+
+def nonempty(value: str) -> str:
+    if not value:
+        raise argparse.ArgumentTypeError("Observation identity must not be empty")
+    return value
 
 
 def main() -> int:
@@ -45,6 +61,20 @@ def main() -> int:
                                  help="Required session:revision from the observation informing this decision")
         if name not in {"status", "goal", "pause"}:
             command.add_argument("--timeout", type=float, default=5.0)
+    for name in sorted(RECOVERY_KINDS):
+        recovery = commands.add_parser(name, help="Explicit operator recovery; stays paused",
+            description="Uses only the authority you supply. Delivery does not prove cancellation or repair. "
+                        "An unknown result must be reconciled with explicit observe after expiry; never retry blindly or resume automatically.")
+        recovery.add_argument("--session", dest="expected_session", type=nonempty, required=True)
+        recovery.add_argument("--generation", dest="expected_control_generation", type=nonnegative, required=True)
+        recovery.add_argument("--timeout", type=float, default=5.0, help="Wait at most 15 seconds; native recovery expiry is 2 seconds")
+        if name != "request_interrupt":
+            recovery.add_argument("--boundary", dest="expected_boundary_id", type=nonempty, required=True)
+            recovery.add_argument("--revision", dest="expected_revision", type=nonnegative, required=True)
+            recovery.add_argument("--frame", dest="expected_frame", type=nonempty, required=True)
+        if name == "answer_interrupt":
+            recovery.add_argument("--interrupt-request-id", type=nonempty, required=True)
+            recovery.add_argument("--choice", choices=("YES", "NO"), required=True)
     args = vars(parser.parse_args())
     command = args.pop("command")
     if command == "serve":
@@ -82,7 +112,8 @@ def main() -> int:
             if "timeout" in args and not 0 < args["timeout"] <= MAX_WAIT:
                 raise ControlError("Timeout must be greater than 0 and at most 15 seconds")
             data = json.dumps({"kind": command, **args}).encode()
-            request = Request(base + "/api/command", data=data, headers=headers, method="POST")
+            endpoint = "/api/recovery" if command in RECOVERY_KINDS else "/api/command"
+            request = Request(base + endpoint, data=data, headers=headers, method="POST")
         # A walk may consume two bounded native exchanges per step; pause remains independent.
         network_timeout = 2 * args.get("timeout", 5) * args.get("steps", 1) + 5
         opener = build_opener(ProxyHandler({}))

@@ -53,15 +53,18 @@ explain why native integration was selected and when we would reconsider it.
 | Planner round trips | One real three-tile comparison used three individual decisions versus one guarded request, retaining per-step checks; not a general speed or safety result | [Timing trial](acceptance/2026-10-17-completion.md#fresh-real-game-timing-probe) |
 | Input authority and takeover | Native-v3 distinguishes ordinary play, menus, activity polls and debug prompts; revoked tokens and old worlds are rejected. Already-committed actions and activities cannot be undone by Pause | [Recovery acceptance](acceptance/2026-10-17-recovery-memory.md) |
 | Retained gameplay evidence and memory | Typed records, bounded evidence, historical facts, interpretations and invalidated plan candidates are portable-tested; planner execution and real pipeline acceptance remain later work | [Current evidence contract](protocol.md#passive-gameplay-records-and-evidence) |
+| Evaluation records | Passive versioned outcome/cost recorder and offline summaries; external planning and future adapters are not automatically measured | [Evaluation guide](evaluation.md) |
 | Autonomous survival | Not implemented; Codex remains the planner | [Current scope](architecture.md#scope-and-responsibilities) |
 | Reproducible installation | Fresh build demonstrated on this Mac; other hosts remain unverified | [Setup](setup.md), [historical provenance](acceptance/2026-10-17-mvp-manifest.json) |
 | Engineering assurance | Portable checks, source checks and review; native gameplay is a separate validation lane | [Control map](controls.md) |
 
 A dated demonstration supports the tested scenarios. It does not guarantee every
-future game state, host or version. The Python operator API can request an eligible activity interruption, answer its
+future game state, host or version. The spectator, CLI and Python operator API can request an eligible activity interruption, answer its
 exact confirmation and continue a raw debug prompt once. Recovery stays paused;
-delivery is not task success. Public spectator/CLI recovery controls remain future
-work (#31); native keyboard control remains available. There is no structured
+delivery is not task success. For activity interruption use Pause, Observe, then
+decide: immediate interruption can hit a native capture-revision rejection.
+[Public recovery acceptance](acceptance/2026-10-17-public-recovery-evaluation.md)
+records successes and failures. Native keyboard control remains available. There is no structured
 trap or damage guarantee and no general combat policy.
 
 ## Current direction and decisions
@@ -73,8 +76,9 @@ adds native input authority and passive evidence; it does not add autonomous pla
 explains the visual explanations, lifecycle records and maintenance checks.
 Next priorities and any open issues are in [work](work.md). Current priorities are control
 reliability and evidence quality before expanding unattended play. The [recovery and memory increment](acceptance/2026-10-17-recovery-memory.md)
-adds Python recovery transport and passive task memory. Public recovery controls
-and broad integrated acceptance remain separate follow-ons.
+adds Python recovery transport and passive task memory. This round adds public
+recovery controls and passive evaluation records; broad integrated acceptance
+remains separate.
 
 The [tiered-gameplay proposal](research-tiered-gameplay.md) explores a capable
 planner, bounded skills and feedback, with additional model tiers conditional on
@@ -82,11 +86,18 @@ measured benefit. Its [tracked outcome](https://github.com/CVX-Hull/cdda-player/
 links the design, implementation and evaluation work; it is not current gameplay
 capability.
 
+The [outcome-monitoring design](design/outcome-monitoring.md) explains the next
+architectural extension: distinguish exact visible facts from fallible semantic
+judgments, keep unknowns explicit, and choose between another observation,
+stronger reasoning, plan repair or operator help. Its
+[evidence review](research-outcome-monitoring.md) includes October 2026 research.
+This remains proposed behavior, not an implemented general monitor.
+
 The accepted foundation design specifies [native operator recovery](design/native-control.md)
 and [waypoint-and-return gameplay](design/gameplay.md). Its
 [brief](changes/004-gameplay-foundation.md) explains the source findings, ownership
 and verification gates. Boundary/session authority and typed evidence are now
-implemented, along with scoped Python activity interruption and debug continuation.
+implemented, along with scoped operator activity interruption and debug continuation.
 Waypoint execution and model planning remain future capabilities. The [implementation brief](changes/005-foundation-implementation.md)
 explains the accepted slice and its limits.
 

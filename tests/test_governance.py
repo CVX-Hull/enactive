@@ -208,7 +208,7 @@ class GovernanceTests(unittest.TestCase):
             ("harness/server.py", '"protocol": 3', '"protocol": 1'),
             ("harness/__main__.py", 'config["protocol"] != 3', 'config["protocol"] != 1'),
             ("harness/controller.py", 'request["protocol"] != 3', 'request["protocol"] != 1'),
-            ("web/app.js", 'latest.state.protocol !== 3', 'latest.state.protocol !== 1'),
+            ("web/app.js", 'displayed.protocol !== 3', 'displayed.protocol !== 1'),
             ("native/cdda_harness.cpp", r'\"protocol\":3', r'\"protocol\":2'),
             ("native/cdda_harness.cpp", 'integer_member( request, "protocol" ) != 3', 'integer_member( request, "protocol" ) != 2'),
             ("harness/gameplay/evidence.py", '"protocol": {"type": "integer", "const": 3}', '"protocol": {"type": "integer", "const": 2}'),
