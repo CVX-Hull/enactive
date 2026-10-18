@@ -1,0 +1,97 @@
+{
+  "schema_version": 1,
+  "kind": "historical-native-acceptance",
+  "platform": "macOS arm64; existing pinned native CDDA0.I-1, wirev3, windowed project wrapper/userdir",
+  "upstream_pin": "native/upstream.json",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "freetype_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+  "initial_build_binary_sha256": "0405e34af99e7b60f9da67fd37e9cca8769b1d1c294eb622af80999be4854b37",
+  "installed_binary_sha256": "e3c022b5da440d2e4a31fc537ea07c988c2a767bf96197b83de4c7224d47bf87",
+  "date": "2026-10-18",
+  "report": "docs/acceptance/2026-10-18-survival-pilot.md",
+  "source_commit": "dbc70174230c9efc46005292adb2ad4b5968e867",
+  "identity_note": "Clean committed source before attempt, no source/native changes during play. Installed binary matches prior native acceptance; initial build output is separately identified before preparation relinks/signs. Publication source/CI recorded in PR.",
+  "video": null,
+  "verified_at": "2026-10-18",
+  "verification_scope": "Actual rendered ordinary world creation and mod inspection; world-selection timeout/unknown; fresh supported creation-menu observation, no character spawn or supply play; independently reviewed eligible cancellation and normal Quit, owned process exit0; 18 charged inputs (14 play,4 cleanup),229.232 seconds through final receipt capture. Source/journal/frame receipts and unknowns retained. No rebuild or survival success. Portable and hosted publication results belong in PR.",
+  "limitations": [
+    "World confirmation timed out; later current creation menu does not resolve its effect.",
+    "Final quit receipt unknown; owned native process independently exited0.",
+    "No spawned character, supplies, first-day or seven-day survival evidence.",
+    "No native rebuild, semantic-monitor/learning/model/cost efficacy claim.",
+    "External Codex model identity/tokens/cost and separate review effort not measured.",
+    "Curated media/journals are local-only; public source alone cannot reproduce this observation."
+  ],
+  "artifacts": {
+    ".runtime/campaigns/survival-pilot-001/admission.json": {
+      "bytes": 478,
+      "sha256": "790c79db9f545e6956fe815c8a5bab6496d5b060fefb93d79fdf4eddd544080f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/survival-pilot-001/brief.md": {
+      "bytes": 4704,
+      "sha256": "2cf59f0f91fab8dea375fee54e81c3bd5004ede982baa558f454bf24322155b9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/survival-pilot-001/commands.jsonl": {
+      "bytes": 6038,
+      "sha256": "5fa6354c06ab7d62ec50652bd899f55df09c82505941afdb9d0a7a877d2aff8a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/survival-pilot-001/015-receipt.json": {
+      "bytes": 213,
+      "sha256": "9c18770c1ee8ea866fdbbd02d2ae4aac2a2800ba5d9374adb054d53b87c5468d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/survival-pilot-001/017-receipt.json": {
+      "bytes": 776,
+      "sha256": "4a9ec2b1de136e2d3fd3ddf5694ee2ab963638504dc716b65be099ae85718346",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/survival-pilot-001/stopped-status.json": {
+      "bytes": 77302,
+      "sha256": "887196fdf6fa5ab405190de1e6cce4c9d8b173bb5a5a037ae1a361b8322672e4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/survival-pilot-001/022-receipt.json": {
+      "bytes": 213,
+      "sha256": "401131b1427c9331556e613a3e5f9cfd5aa70ac7c51748d735b7235148948cff",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/survival-pilot-001/events-after-shutdown.jsonl": {
+      "bytes": 51579,
+      "sha256": "23ae5e45978ed6a620d5b5b2bf8d71652d25771d29529f8b22c1be26f3eebcc3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/survival-pilot-001/manifest.json": {
+      "bytes": 23806,
+      "sha256": "a662869fd885e4576b8b45b2f15b07e5acad58979702db2e789b2f60a1cf19df",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/survival-pilot-001/frames/007-frame-1792339913092-53190-159.png": {
+      "bytes": 21064,
+      "sha256": "3b608ed6b81d6a5762404289395d24b7da6617e7dc572cabc1b6bd6f41b1b246",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/survival-pilot-001/frames/013-frame-1792339913092-53190-198.png": {
+      "bytes": 9770,
+      "sha256": "1db0a467ce670a110796d5a33c6a6b922b7115402cb62c8b8c56cd458f5a0bd9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/survival-pilot-001/frames/014-frame-1792339913092-53190-206.png": {
+      "bytes": 9765,
+      "sha256": "2e5e286a82bea1e95fce64a574e84c1bf5961d3999826632776b0d0d87f8f35f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/survival-pilot-001/frames/017-frame-1792339913092-53190-224.png": {
+      "bytes": 10487,
+      "sha256": "1d6cfe136f94ed8d526a7cfb3e8dde51c74aa9aef7a6ee487c0e94bbc683992f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/survival-pilot-001/frames/021-frame-1792339913092-53190-331.png": {
+      "bytes": 13942,
+      "sha256": "b2327819adb18de0bd4640596297bc5f4e996ac81160477ce83cf73885424ace",
+      "availability": "local-only; not included in Git"
+    }
+  }
+}

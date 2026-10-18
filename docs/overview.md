@@ -20,9 +20,10 @@ player sub-agent can answer bounded planning requests while the lead supervises.
 The service executes an explicitly started waypoint task with per-step feedback;
 without a player response it stops on a deadline. General survival is not implemented.
 
-The consolidated implementation [goal](goal.md) records the full requested scope.
-The [completion audit](acceptance/2026-10-17-completion.md) maps that scope to
-implemented outcomes, independent review and dated gameplay evidence.
+The [project goal](goal.md) records the original MVP and active seven-day campaign
+continuation. The [MVP completion audit](acceptance/2026-10-17-completion.md) maps
+the original scope to implemented outcomes, independent review and dated gameplay
+evidence; it does not establish the campaign continuation.
 Direction and constraints live in the [charter](charter.md). This page summarizes
 current behavior; detailed promises live in [architecture](architecture.md).
 
@@ -105,8 +106,10 @@ The [seven-day campaign outcome](https://github.com/CVX-Hull/enactive/issues/10)
 sets the next product target. The [delivery path](work.md#path-to-seven-day-survival)
 starts with a bounded survival pilot and its first finding review, then campaign
 continuity and an actual first-day rehearsal, an executable readiness decision,
-and the seven-day run. No fresh-character survival pilot has yet been accepted.
-Current waypoint demonstrations do not supply that evidence. Campaigns also expose concrete memory, planning,
+and the seven-day run. The [first survival pilot](acceptance/2026-10-18-survival-pilot.md)
+created a world but stopped on an unknown transition before a character spawned.
+Its retained gap findings shape continuity and the first-day rehearsal; it supplies
+no successful survival evidence. Campaigns also expose concrete memory, planning,
 monitoring and viewer needs. The [review workflow](project-management.md#campaign-driven-improvement)
 routes observed problems into bounded improvements and checks their effect in later
 play. This is a manual engineering process; continuous policy learning remains
