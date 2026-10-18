@@ -137,6 +137,69 @@ When models, harnesses or tools change, record versions and compare representati
 accepted outcomes, defects, review effort, elapsed time and cost before revising
 capacity or forecasts. Historical model results are not current guarantees.
 
+## Campaign-driven improvement
+
+Every gameplay campaign is both a bounded product outcome and a source of evidence
+for future work. The lead owns this manual workflow for development rehearsals,
+deciding runs and future campaign objectives. Use the existing capability milestone,
+campaign issue and bounded segment children; an attempt does not need a new tracker
+or milestone. GitHub owns findings, decisions and follow-ups; retained gameplay
+artifacts supply evidence. A campaign is not automatically a learning experiment.
+
+Before Ready, record the campaign objective/scenario, success and failure criteria,
+source/configuration, player/executor, finite attempt and cumulative resource limits,
+stop/save/handoff rules, evidence retention, and review checkpoints and effort.
+Distinguish development evidence from any held-out assessment before using it to
+choose changes. Keep campaign-specific observed facts separate from reusable lesson
+candidates. Unknown identity, absent observations and uncertain delivery remain
+unknown; a review cannot reconstruct an unobserved outcome.
+
+Review at planned segment boundaries, handoffs, material failure/unknown stops and
+campaign closeout. A stopped attempt gets a review even if it cannot supply a
+successful gameplay result. Use a concise finding table in the campaign issue or
+linked dated report: source observation/action references; expected versus observed
+result and user consequence; suspected cause and alternative explanations; affected
+area; disposition; accountable owner; linked follow-up or revisit trigger; and the
+evidence required to accept a change. Diagnose missing observations, memory or
+retrieval, planning, execution/authority, outcome monitoring and UI separately;
+one failure may involve several areas. Record what the owner could not understand
+or control, not just what the player failed to accomplish.
+
+Route findings to existing issues first. Create a bounded child only for an actual
+unowned gap; do not reopen accepted foundations or add every research program to
+the critical path. Mark a finding as fix now, investigate, defer, reject/no change,
+or unresolved. A true readiness blocker gets a native GitHub dependency, blocked
+label, owner and next action; optional research gets a link and revisit trigger.
+Explain how the finding changes the next segment's objective, context, plan or
+limits, or why no change is justified. Never renew an attempt or budget silently.
+
+Before adopting an improvement, apply the existing reuse, review, migration and
+validation controls. Retest the demonstrated defect and relevant regression cases;
+generalized memory/lesson or performance claims also require separate held-out
+evidence with source-episode separation. Failed and successful development episodes
+remain development data, not fresh tests. In a deciding run, freeze the declared
+implementation and reusable lesson/prompt configuration; ordinary observations,
+campaign facts and plan corrections may still evolve under its protocol. If a
+repair changes the frozen candidate, stop and replan prospectively, retain the old
+attempt and declare any new assessment. Never patch away a deciding-run failure.
+
+At closeout, assess the gameplay outcome separately from the improvement findings.
+A useful failure review can complete its review task but cannot satisfy successful
+survival acceptance. Link accepted changes, unresolved risks and deferred work into
+the next campaign brief. A successful run alone does not establish causal benefit,
+general reliability or continuous learning. Read-only evidence/area reviews may run
+in parallel; shared execution, integration and native validation stay serialized.
+
+Enforce this through the existing Ready/Done and C-REVIEW checks: a campaign cannot
+be Ready without its review plan or Done without its outcome and finding dispositions.
+The lead verifies issue links/dependencies and the exact evidence; GitHub fields do
+not enforce semantic completeness. At campaign closeout, and under C-MAINTENANCE's
+existing event/date triggers, inspect review effort, recurring or reopened defects,
+unresolved finding age, escaped regressions and whether accepted changes helped
+later play. Record unavailable measurements. Simplify, improve or retire ineffective
+steps from evidence; do not add a scheduler, automatically renew dates, or create a
+second findings database.
+
 ## Milestone review and controls
 
 A milestone finishes only when its outcomes and required evidence lanes pass,

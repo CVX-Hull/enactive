@@ -98,6 +98,13 @@ arrangement; [round 012 acceptance](acceptance/2026-10-18-integrated-player.md) 
 two completed native tasks, Pause/continuation and the unsuccessful first route. Comparative model efficiency, generic semantic
 monitoring and broader survival remain separately tracked follow-ups.
 
+The [seven-day campaign outcome](https://github.com/CVX-Hull/cdda-player/issues/10)
+sets the next product target. Campaigns also expose concrete memory, planning,
+monitoring and viewer needs. The [review workflow](project-management.md#campaign-driven-improvement)
+routes observed problems into bounded improvements and checks their effect in later
+play. This is a manual engineering process; continuous policy learning remains
+unimplemented, and a successful campaign alone does not prove an improvement helped.
+
 The [memory study](research-memory-representations.md) compares six mathematical
 and engineering views, with reproducible simulations and negative results. It
 recommends traceable evidence, explicit applicability, simple replay/query

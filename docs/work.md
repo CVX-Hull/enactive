@@ -29,6 +29,13 @@ owns Now/Next/Later sequencing. This page is navigation, not a second backlog.
 [Project management](project-management.md) defines the workflow and
 [engineering](engineering.md) owns mandatory standards.
 
+The [seven-day campaign](https://github.com/CVX-Hull/cdda-player/issues/10) turns
+real play into evidence for memory, planning, monitoring and viewer improvements.
+The [campaign review workflow](project-management.md#campaign-driven-improvement)
+applies to future campaigns too: bounded segments, evidence-backed findings,
+explicit dispositions and owned follow-ups, with gameplay success assessed separately.
+GitHub owns the current campaign series and review-loop readiness.
+
 The [closed-loop gameplay outcome](https://github.com/CVX-Hull/cdda-player/issues/16)
 tracks the [tiered-gameplay proposal](research-tiered-gameplay.md), its bounded
 implementation slices, evaluation gates and maintenance follow-ups. Native
