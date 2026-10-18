@@ -30,7 +30,7 @@ The campaign milestone has no committed delivery date.
 | Gate | Evidence needed to proceed | Tracked outcome |
 | --- | --- | --- |
 | Useful survival pilot and its first review | [Pilot001](acceptance/2026-10-18-survival-pilot.md) stopped on an unknown world-selection acknowledgment before spawning; retained findings and cleanup are gap evidence, not survival success | [#78 pilot](https://github.com/CVX-Hull/enactive/issues/78), then [#83 first review](https://github.com/CVX-Hull/enactive/issues/83) |
-| Continuity and first-day rehearsal | [Rehearsal001](acceptance/2026-10-18-first-day-rehearsal.md) reached a fresh character, supplies and advisory replacement, then required user Escape at an unsupported pickup prompt. Verify autonomous recovery/restart before further survival | [#91 recovery](https://github.com/CVX-Hull/enactive/issues/91), [#79 continuity](https://github.com/CVX-Hull/enactive/issues/79) and [#80 first day](https://github.com/CVX-Hull/enactive/issues/80); shared execution is serialized |
+| Continuity and first-day rehearsal | [Rehearsal001](acceptance/2026-10-18-first-day-rehearsal.md) failed autonomy. The [direction probe](acceptance/2026-10-18-native-direction-menu.md) verified same-character reload and actual pickup selection/cancel without user keys; broader continuity/first-day work still requires a prospective finite continuation | [#91 recovery](https://github.com/CVX-Hull/enactive/issues/91), [#79 continuity](https://github.com/CVX-Hull/enactive/issues/79) and [#80 first day](https://github.com/CVX-Hull/enactive/issues/80); shared execution is serialized |
 | Executable seven-day readiness | Accepted #79/#80/#83, actual capability gaps resolved, measured throughput, finite total/segment/attempt limits, frozen scenario/candidate and independent outcome review | [#81 readiness](https://github.com/CVX-Hull/enactive/issues/81) |
 | Seven-day campaign | Bounded owned segments of the same fresh character, real visible calendar/needs/identity evidence, save/restart/handoff and reviewed endpoint | [#82 execution](https://github.com/CVX-Hull/enactive/issues/82), split and estimated before Ready |
 
@@ -52,11 +52,14 @@ it did not establish full continuity or first-day success.
 The [reuse-first recovery preflight](changes/016-autonomous-native-recovery.md)
 stopped before admission when desktop automation reported an access/lock failure;
 no user unlock was requested and no probe input charged. Its replacement
-[direction-menu brief](changes/017-native-direction-menu.md) adds narrow engine
-query coverage with unchanged native keybindings, then tests normal restart,
-actual Escape, adjacent and current-tile selection. Build/native acceptance remain
-pending. Keep both failed attempts, the separate menu-only operation and unadmitted
-preflight visible. This is not a renewed survival allowance.
+[direction-menu brief](changes/017-native-direction-menu.md) added narrow engine
+query coverage with unchanged native keybindings. Its
+[real probe](acceptance/2026-10-18-native-direction-menu.md) used14probe+4cleanup
+inputs/218.939seconds, with zero game-time advance and no user keys. Same-character
+reload, actual Escape, adjacent and current-tile selection worked; load/save/final
+Quit receipts stay unknown. This is no first-day success or renewed survival
+allowance. Keep failed attempts, the separate menu operation and unadmitted
+preflight visible. The next survival increment needs a finite prospective brief.
 Original #79 M/Low, 2–4 and #80 M/Low, 3–5 focused-session estimates remain in Issues;
 32 game seconds cannot calibrate survival throughput or a calendar forecast.
 

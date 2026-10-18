@@ -1,10 +1,15 @@
 ---
 owner: lead
 review_trigger: Native direction classification, keybindings, campaign recovery or build changes
-status: proposed
+status: active
 ---
 
 # Support the engine's explicit direction chooser
+
+Implemented at checkpoint `00bf9fb`; [dated acceptance](../acceptance/2026-10-18-native-direction-menu.md)
+records the build and bounded real probe with no user keystrokes. Independent
+evidence review and final protected publication are recorded in PR93. The following
+scope/limits remain the maintenance and acceptance basis, not a new probe allowance.
 
 [#91](https://github.com/CVX-Hull/enactive/issues/91) blocks autonomous first-day
 work. The [failed rehearsal](../acceptance/2026-10-18-first-day-rehearsal.md)

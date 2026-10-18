@@ -1,0 +1,276 @@
+{
+  "schema_version": 1,
+  "kind": "historical-native-acceptance",
+  "platform": "macOS arm64; pinned CDDA0.I-1/wirev3; prepared project-local windowed bundle/userdir",
+  "upstream_pin": "native/upstream.json",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "installed_binary_sha256": "9cf1f76db19d6b401582bd7e6768422b653f6204069bd544804b8a5490e95273",
+  "date": "2026-10-18",
+  "report": "docs/acceptance/2026-10-18-native-direction-menu.md",
+  "source_commit": "00bf9fb0bfec62be8fa293f0506cde33edc6c8a9",
+  "identity_note": "Clean committed checkpoint throughout build/probe; tree/PR/CI and146original artifact count are in the dated report. Later evidence/docs-only publication is checked by Git diff and CI. Git owns tracked-source history.",
+  "video": null,
+  "verified_at": "2026-10-18",
+  "verification_scope": "Same normally saved Ramiro Winston at day61 08:00:32; actual DEFAULTMODE menu pickup Escape, Pause refusal, adjacent item selector/cancel and current-tile pause; normal save/quit then process absence.18charged,14probe/4cleanup,218.939seconds,0game seconds,0required human/native desktop keys. UI recorded-objective keyboard scroll remains stable across polling.",
+  "limitations": [
+    "Specific direction helper only; not generalized recovery or survival success.",
+    "Load/save/final Quit receipts remain unknown; later observations/process absence are separate facts.",
+    "Current tile empty: query closed; no pickup/inventory success claimed.",
+    "No paid API, model-quality, learning or cost-efficacy result.",
+    "No movement, consumption, rest,24hours or seven-day success.",
+    "Campaign-wide semantic/time limits remain lead-enforced.",
+    "Native classifier ancestry reviewed in source; portable mocks do not prove engine branches.",
+    "Narrow viewport and other-host checks remain pending; screenshot is actual supplied browser viewport.",
+    "Selected local originals/media are unavailable on fresh checkout; one actual public screenshot is tracked.",
+    "Build retained source-archive Git-metadata diagnostics and official FreeType deployment-target link warning; host-only build/acceptance."
+  ],
+  "artifacts": {
+    ".runtime/campaigns/autonomous-recovery-probe-001/admission.json": {
+      "bytes": 1188,
+      "sha256": "f292135abcacc554df2a0348a3b746bb331d07fcfd6f2493df2bdf3f36fdaecf",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/commands.jsonl": {
+      "bytes": 9021,
+      "sha256": "c7e4d8d8ee71201dfa53d6fb3e48f2121e09b4796b78207383d721ce109f80b6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/closeout.json": {
+      "bytes": 917,
+      "sha256": "8b2408c07567324fbf5f9f8e98a7f6358350206ac8287cbe17ac56d25babccc9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/shutdown.json": {
+      "bytes": 282,
+      "sha256": "91ad8ef65d6e0aab01bd8db17da1ed9c19ec01c19c8410fe46b3343f04b51942",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/events-through-shutdown.jsonl": {
+      "bytes": 115367,
+      "sha256": "40721e488e511f73f0e693ceaa126384344f6e6ee6f39c5926751659374ef450",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/original-artifacts.json": {
+      "bytes": 36281,
+      "sha256": "b90494dc6f02aefbe41c429c588a81d78b9f638c9c70d2d7be68c4f1b73a691e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0003-receipt.json": {
+      "bytes": 213,
+      "sha256": "b2139f4baeb3616d982b6d161a114aaaa2041344cb467fe748a0c5c2509c4349",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0004-receipt.json": {
+      "bytes": 4744,
+      "sha256": "dffdad18df0db21a3e6c49601ccca42175694da16a62e1cbdeab4c2652d5dae8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0006-receipt.json": {
+      "bytes": 1265,
+      "sha256": "934d6eade2a4e84e309a4db47a164ca9efcbe4ae6efcabb96a31e91607b3b3a3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0009-receipt.json": {
+      "bytes": 4746,
+      "sha256": "02c54c01a786acbdbcf15b00d9bb8823a1c7125e2b399ceea3b693d06e9bc99a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0011-receipt.json": {
+      "bytes": 1155,
+      "sha256": "b22062dfc706ccde3f7a80b2fd71c030bfaed94d42d5fbacdfae121b0c01e2ab",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0013-receipt.json": {
+      "bytes": 775,
+      "sha256": "ae6b76207424fe0976d6754608dda80da5c12c9d7ba5c5faf71a6ce12420bf8d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0015-receipt.json": {
+      "bytes": 97,
+      "sha256": "a20c3cc54eb53fc3bb53adad4344fdaf3efc86e522e42c17eabccc4835a8110d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0017-receipt.json": {
+      "bytes": 775,
+      "sha256": "aad364e62f3576c3a4e516919ab43ca666d7f1c4e162f205a41420847650f8a6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0018-receipt.json": {
+      "bytes": 4748,
+      "sha256": "cb088b524c9c66beb080001580490a425a2bf046d346fb62374fa7ea7b322952",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0020-receipt.json": {
+      "bytes": 1295,
+      "sha256": "11ee1fe62c857535d1e802ea82e47ead6770122337f7ccbff3563471e35bacc5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0021-receipt.json": {
+      "bytes": 4748,
+      "sha256": "050fff839842cd732bcd88b6e29d65acaa518827a59ad470c1800eacef0c822a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0022-receipt.json": {
+      "bytes": 776,
+      "sha256": "51cd4a3ae500127738eabbc49b0fe896bc1945239dda45b55dbef00e14558d24",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0023-receipt.json": {
+      "bytes": 4748,
+      "sha256": "bf79949c0bcdd94ca2f677dc3e6fa21d98e866a0be6b67de525580e797d127ba",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0024-receipt.json": {
+      "bytes": 679,
+      "sha256": "217d57eb0642abdedd447ce119022972adb7905266f0dec81e90446d23e99d61",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0025-receipt.json": {
+      "bytes": 213,
+      "sha256": "f9a31041b6e1d13d6a8728579a48bfd659ead25688e79964f1545d63e5f6b772",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0026-receipt.json": {
+      "bytes": 789,
+      "sha256": "5ddd740b13671c439b7653d9bea38cd9c54adecfaaa56ff3437b6b3085cf55b7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0028-receipt.json": {
+      "bytes": 680,
+      "sha256": "2e0e39c0316dfe3b7203a4ca2715e7e1ddc781944ccc3f3e1d389ab1583140f7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/0029-receipt.json": {
+      "bytes": 213,
+      "sha256": "5b0b7a4de28a09f022638b27c96b454a754c6fa15a6a11b67018dee8a5192e76",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/frames/0004-frame-1792344190250-30497-1-98.png": {
+      "bytes": 133140,
+      "sha256": "fe5a277f9797784defc2d703350baa5ffeb332a01d23499cea73929260cacfe0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/frames/0006-frame-1792344190250-30497-1-112.png": {
+      "bytes": 63173,
+      "sha256": "5fe41defde91d88f39be49f1493f93c02b0469af3b5a9517e68ba4637af92c2f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/frames/0011-frame-1792344190250-30497-1-139.png": {
+      "bytes": 88595,
+      "sha256": "0500d2b6fc9665e0dcef1e0504180bcd6282d0fac9bc469fe9a2d9fc1fb1dc5a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/frames/0013-frame-1792344190250-30497-1-154.png": {
+      "bytes": 131730,
+      "sha256": "7e674244e80594ab431ae53708df59683c7db1bc92c2759a7fe6d9977a5cc30c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/frames/0018-frame-1792344190250-30497-1-176.png": {
+      "bytes": 133191,
+      "sha256": "7286a6100f8be8ba5b87ae0f47630d7b5577b18ea0c1374c2ac949f64e133208",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/frames/0020-frame-1792344190250-30497-1-191.png": {
+      "bytes": 60545,
+      "sha256": "d625e29c7271b58a481b7d0df1e6796cc4cec7ff5a4cf160fabd018eee0e6469",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/frames/0023-frame-1792344190250-30497-1-214.png": {
+      "bytes": 133191,
+      "sha256": "7286a6100f8be8ba5b87ae0f47630d7b5577b18ea0c1374c2ac949f64e133208",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/frames/0024-frame-1792344190250-30497-1-235.png": {
+      "bytes": 128842,
+      "sha256": "b8234dbcf756c06114c4c89c7096ff2e974659382bac25ec43c9a548dacd7858",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/frames/0026-frame-1792344330046-30497-2-255.png": {
+      "bytes": 12819,
+      "sha256": "9766d3ebdf30596b41e0f205ac82ae5b2590598ce54c1fd77894e0203a481253",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/frames/0028-frame-1792344330046-30497-2-270.png": {
+      "bytes": 13253,
+      "sha256": "2b7cb327f6294d4fc03483cf3309aad8a514f7577c40cb9ccf37ff79231e670f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/operations/native-direction-build-001/admission.json": {
+      "bytes": 627,
+      "sha256": "f9187e057098267d01e40a6464b4d2493fa0a6504ed841141e5eefde7fb1888b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/operations/native-direction-build-001/before.json": {
+      "bytes": 231,
+      "sha256": "91f6a6170925c0a47e34da0f421213ccb47ad6c44637639aae69ec5a2922bb9b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/operations/native-direction-build-001/previous-build-manifest.json": {
+      "bytes": 1035,
+      "sha256": "3239609599f21fcea615439d065104d0e724b51905b06be3f6bbee27c18d0c82",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/operations/native-direction-build-001/completed-build-manifest.json": {
+      "bytes": 1035,
+      "sha256": "f4572c204a9632f055b054dfdbcb5e41e56ae8acbd39593d9c252ef7c0e72d42",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/operations/native-direction-build-001/build.log": {
+      "bytes": 22753,
+      "sha256": "a12a2e7c7017e1a4d217228f76c9fdaa9fc096fcd5193a62b1c021bea645a67f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/operations/native-direction-build-001/install.log": {
+      "bytes": 304,
+      "sha256": "59bbdcd6badadc0cac1fb75256a6d34c12aa7175cffb4c15a2796a4c0e16da2c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/operations/native-direction-build-001/candidate-ci.json": {
+      "bytes": 361,
+      "sha256": "707f5891df4e7fb90db876563dcc9be27dd41e02673ffda1bb9c384133386af4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/operations/native-direction-build-001/installed-preflight.json": {
+      "bytes": 404,
+      "sha256": "0c4d6e7e3170c7b75425127e93ff60c11df0306fc451446980992364ff808ae3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/operations/native-direction-build-001/ui-native-probe.png": {
+      "bytes": 249495,
+      "sha256": "ed801cb7c12496bcd24b96abfd63c1dc3a2b0312c5c69d098e338028928eb104",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/operations/native-direction-build-001/ui-objective-before-scroll.png": {
+      "bytes": 163615,
+      "sha256": "7d0026dc30f0e4b681162042ceeea5344cd307ec152f63a195c806c90cf53deb",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/operations/native-direction-build-001/ui-objective-after-scroll.png": {
+      "bytes": 170450,
+      "sha256": "fc5b7e26365673d6543b341a3331400397500ba348e52c7b13d554b665e49308",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/operations/native-direction-build-001/ui-objective-scroll.json": {
+      "bytes": 87,
+      "sha256": "7360c9e0ec642c48df6e814b9f9da1163c8ce087ed4eba89b035aa6de0574414",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/preparation/access-preflight-failed.json": {
+      "bytes": 755,
+      "sha256": "fc55fb44b8ec9b4b645a9eadc9f58b82cb41f4c385706d0f7d390dc8c892813f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/preparation/access-preflight-observe.json": {
+      "bytes": 198,
+      "sha256": "c5d72594d1054b4a54e3013493d073081a8d26148ed84a3d6d5ee2c02c254fee",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/autonomous-recovery-probe-001/preparation/access-preflight-events.jsonl": {
+      "bytes": 16294,
+      "sha256": "90b3ac25e4a517c49cd6da1d77462d08d2a8221376de2d45fcccc82e17aefbdf",
+      "availability": "local-only; not included in Git"
+    }
+  },
+  "initial_build_binary_sha256": "9fc9dd8cc8375a2556929cb17974b7a0b67e3e38036c2e460defe3a288ff7bc0",
+  "freetype_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f"
+}

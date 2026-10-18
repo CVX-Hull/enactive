@@ -85,9 +85,10 @@ input to the same accounting, and retain its result separately from remote recei
 Never send a remote key at an
 unsupported boundary, invent an acknowledgment or turn an unreadable prompt into
 permission. Unavailable access or required human rescue fails campaign readiness.
-The [direction-menu brief](changes/017-native-direction-menu.md) defines the pending
-rebuilt-engine selection/cancel probe. The reuse-first desktop-tool preflight
-failed before admission; general native recovery is not yet demonstrated.
+The [direction-menu acceptance](acceptance/2026-10-18-native-direction-menu.md)
+records actual rebuilt-engine Escape, adjacent selection and empty-current-tile
+behavior without user keys. The reuse-first desktop-tool preflight failed before
+admission; this narrow support does not establish general native recovery.
 
 For service restart: stop that service normally, start one controller, observe
 and reconcile, then resume. For a game crash/restart: preserve diagnostics, follow

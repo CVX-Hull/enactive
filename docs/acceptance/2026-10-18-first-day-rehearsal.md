@@ -113,3 +113,7 @@ Independent review, mandatory common checks and hosted exact-candidate/merged-ma
 results are recorded in the publishing PR before acceptance. No new native build
 or successful first-day acceptance is claimed. #79/#80/#91 stay open until their
 own real acceptance is verified; the full seven-day goal remains active.
+
+Subsequent [direction-menu acceptance](2026-10-18-native-direction-menu.md) records
+the narrow native fix, normal Ramiro reload and actual pickup selection/cancel
+without user intervention. It does not change this rehearsal's failure or receipts.
