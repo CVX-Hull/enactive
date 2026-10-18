@@ -37,6 +37,14 @@ records round 007's interfaces and handoffs; its [acceptance](acceptance/2026-10
 separates delivered controls, passive instrumentation and future monitor behavior.
 Live allocation remains in GitHub.
 
+The [memory-representation investigation](https://github.com/CVX-Hull/cdda-player/issues/59)
+tracks the user-requested mathematical/statistical exploration and bounded
+simulation study. Its [brief](changes/013-memory-representation-study.md) defines
+competing perspectives, falsifiable comparisons, review and completion; the
+[initial memory review](research-memory-learning.md) is evidence to challenge,
+not a selected implementation. GitHub owns its research/protocol/simulation/decision
+stages. This does not claim completed simulations or change live gameplay contracts.
+
 The [passive supervisor brief](changes/010-passive-supervisor.md) defines round 010:
 remaining-route history, one eligible intent, fresh stage planning and explicit
 continuation. Its integration gaps were subsequently addressed by the controller

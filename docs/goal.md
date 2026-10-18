@@ -86,3 +86,14 @@ Start at the [overview](overview.md) to assess what currently exists. Dated
 [engineering](acceptance/2026-10-17-engineering-system.md) and
 [documentation](acceptance/2026-10-17-documentation-review.md) reports supply
 milestone evidence; they must not be mistaken for fresh execution.
+
+## Memory and continuous-learning investigation
+
+The user extended the requested work on 2026-10-18: thoroughly explore memory and
+self-learning representations through mathematics, statistics and other applicable
+fields, critically assess their CDDA fit, and simulate competing mechanisms before
+choosing a coherent design. The [investigation brief](changes/013-memory-representation-study.md)
+defines the research lenses, operational meaning of elegance, falsifiable
+comparisons, reproducibility, independent review and completion evidence. It
+includes adopt/test/defer decisions and bounded implementation follow-ups; it does
+not equate a research or synthetic result with a live gameplay capability.
