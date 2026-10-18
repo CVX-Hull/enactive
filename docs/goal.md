@@ -66,6 +66,10 @@ and evidence. MVP completion below remains historical scoped evidence.
 ## Non-negotiable constraints
 
 - Never launch fullscreen. Keep the experience usable in ordinary windows.
+- The user must not have to supply keys or routine recovery to keep the agent's
+  campaign running. Verify the agent's control and recovery access before play.
+  Required human rescue is a failed autonomy case and blocks campaign readiness;
+  voluntary user Pause/takeover remains available.
 - Keep new dependencies, binaries, environments, caches, saves and outputs under
   this project or an explicitly recorded owned temporary build directory. Do not
   install global packages, edit shell profiles or modify unrelated applications.

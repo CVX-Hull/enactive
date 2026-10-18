@@ -155,7 +155,8 @@ app is already present. `--install` refuses while a CDDA Tiles process is runnin
 It delegates to [prepare_game.py](../tools/prepare_game.py), which installs the
 binary, signs it locally, preserves the original binary, writes the launch
 wrapper, and forces the project user directory and windowed options. Launch
-only that prepared wrapper; do not launch an unprepared stock app. Normal game
+the prepared app bundle through the [runbook](runbook.md#start-and-observe), which
+executes that wrapper; do not launch an unprepared stock app. Normal game
 saves remain managed through CDDA's UI.
 
 The game source and official macOS app URLs and SHA-256 values come from

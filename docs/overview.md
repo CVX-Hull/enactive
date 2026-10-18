@@ -108,8 +108,13 @@ starts with a bounded survival pilot and its first finding review, then campaign
 continuity and an actual first-day rehearsal, an executable readiness decision,
 and the seven-day run. The [first survival pilot](acceptance/2026-10-18-survival-pilot.md)
 created a world but stopped on an unknown transition before a character spawned.
-Its retained gap findings shape continuity and the first-day rehearsal; it supplies
-no successful survival evidence. Campaigns also expose concrete memory, planning,
+The [first-day rehearsal](acceptance/2026-10-18-first-day-rehearsal.md) then reached
+Ramiro Winston, real ration pickup, a threat-driven retreat and an advisory player
+handoff, but required user Escape at an unsupported pickup prompt after only
+32 game seconds. It supplies no autonomous first-day success. Required human
+rescue blocks campaign readiness; [the next brief](changes/016-autonomous-native-recovery.md)
+tests existing app-bundle/native controls and normal restart before further play.
+Campaigns also expose concrete memory, planning,
 monitoring and viewer needs. The [review workflow](project-management.md#campaign-driven-improvement)
 routes observed problems into bounded improvements and checks their effect in later
 play. This is a manual engineering process; continuous policy learning remains

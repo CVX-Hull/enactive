@@ -28,12 +28,21 @@ was started directly by its wrapper; do not use lookup as a process-existence ch
 Use the existing spectator to inspect native frames when a tool cannot bind the
 already-running native window.
 Do not kill an unrelated service to free a port. From this checkout,
-use separate terminals, an available loopback port, and only the prepared wrapper:
+use an available loopback port and launch only the prepared project bundle:
 
 ```sh
 .venv/bin/python -m harness serve --port 8766
-.runtime/Cataclysm.app/Contents/MacOS/Cataclysm.sh
+open .runtime/Cataclysm.app
 ```
+
+Launch the prepared app **bundle**, which executes that project's wrapper and
+explicit userdir. Direct terminal execution of the wrapper produced a game that
+native app automation could not bind in the first-day rehearsal. Bundle launch
+exposed the actual window in a subsequent menu-only probe. Neither launch method
+by itself proves recovery works. For an agent campaign, verify the running window
+is bound and windowed before loading the character; do not wait for a stall to
+discover missing access. A UI tool may launch the exact stopped bundle directly,
+but must not use app lookup to check whether another game is already running.
 
 Open http://127.0.0.1:8766/ to watch. Port 8766 was used for the MVP because 8765
 was occupied; current availability must be checked. Observe, interpret the frame,
@@ -65,10 +74,19 @@ For a timeout or frozen viewer: preserve the error/journal and last frame; inspe
 the native window. Unsupported upstream error screens may need native dismissal.
 Observe to reconcile current state, then explicitly resume only when interpretable.
 Do not resend an uncertain action. New observations do not prove its old objective.
+The agent must handle routine dismissal through verified native automation rather
+than requiring the user to press a key. Pause remote control first, inspect the
+actual native prompt, charge any native input to the same accounting, and retain
+its result separately from remote receipts. Never send a remote key at an
+unsupported boundary, invent an acknowledgment or turn an unreadable prompt into
+permission. Unavailable access or required human rescue fails campaign readiness.
+The [autonomous recovery brief](changes/016-autonomous-native-recovery.md) defines
+the pending pickup Escape probe; general native recovery is not yet demonstrated.
 
 For service restart: stop that service normally, start one controller, observe
-and reconcile, then resume. For a game crash/restart: preserve diagnostics, launch
-the prepared wrapper, use normal CDDA load UI, and acquire new session authority.
+and reconcile, then resume. For a game crash/restart: preserve diagnostics, follow
+the bundle-based [start procedure](#start-and-observe), use normal CDDA load UI,
+and acquire new session authority.
 Old-session commands must not be reused, including after normal save/reload in the
 same process. Native-v3 rejects older and mixed components; restart a
 matching controller and native build, then observe. No save-file repair/editing is prescribed.

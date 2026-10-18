@@ -121,6 +121,10 @@ and cleanup in the runbook. Never replay an uncertain gameplay action or edit a
 save to demonstrate recovery. Retain evidence of failures; clean only identified
 project-owned resources after checking retention obligations. Saves require
 explicit user-directed deletion. Test relevant recovery paths when they change.
+The survival campaign must not depend on user keystrokes or routine rescue.
+Verify automated control/recovery access before admission; required human help is
+a retained autonomy failure, not accepted recovery. Native UI operation still uses
+ordinary engine input and current visible evidence; it cannot relax remote guards.
 Controls: C-RUNTIME, C-PORTABLE, C-NATIVE, C-MAINTENANCE.
 
 ## S-AGENT Accountable agent-assisted work

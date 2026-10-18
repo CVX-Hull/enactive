@@ -21,14 +21,16 @@ current capability; [project management](project-management.md) owns the workflo
 The [campaign outcome #10](https://github.com/CVX-Hull/enactive/issues/10) means a
 normally created fresh character alive after seven elapsed in-game days, with
 maintained needs, shelter/rest, meaningful supply/travel decisions, ordinary
-save/resume, understandable progress and user Pause/control. Failed, dead, partial
+save/resume, understandable progress and user Pause/control. The user must not
+have to supply keys or routine recovery; required rescue fails autonomy readiness.
+Failed, dead, partial
 or unknown attempts remain evidence and do not count as successful completion.
 The campaign milestone has no committed delivery date.
 
 | Gate | Evidence needed to proceed | Tracked outcome |
 | --- | --- | --- |
 | Useful survival pilot and its first review | [Pilot001](acceptance/2026-10-18-survival-pilot.md) stopped on an unknown world-selection acknowledgment before spawning; retained findings and cleanup are gap evidence, not survival success | [#78 pilot](https://github.com/CVX-Hull/enactive/issues/78), then [#83 first review](https://github.com/CVX-Hull/enactive/issues/83) |
-| Continuity and first-day rehearsal | Context/accounting survives player replacement and normal restart; a real first-day needs/shelter/supply/travel/rest loop works | [#79 continuity](https://github.com/CVX-Hull/enactive/issues/79) and [#80 first day](https://github.com/CVX-Hull/enactive/issues/80); design may overlap after the pilot, shared execution is serialized |
+| Continuity and first-day rehearsal | [Rehearsal001](acceptance/2026-10-18-first-day-rehearsal.md) reached a fresh character, supplies and advisory replacement, then required user Escape at an unsupported pickup prompt. Verify autonomous recovery/restart before further survival | [#91 recovery](https://github.com/CVX-Hull/enactive/issues/91), [#79 continuity](https://github.com/CVX-Hull/enactive/issues/79) and [#80 first day](https://github.com/CVX-Hull/enactive/issues/80); shared execution is serialized |
 | Executable seven-day readiness | Accepted #79/#80/#83, actual capability gaps resolved, measured throughput, finite total/segment/attempt limits, frozen scenario/candidate and independent outcome review | [#81 readiness](https://github.com/CVX-Hull/enactive/issues/81) |
 | Seven-day campaign | Bounded owned segments of the same fresh character, real visible calendar/needs/identity evidence, save/restart/handoff and reviewed endpoint | [#82 execution](https://github.com/CVX-Hull/enactive/issues/82), split and estimated before Ready |
 
@@ -40,14 +42,20 @@ observations supported ordinary menu cancellation and the native process exited 
 The [shared finding table](acceptance/2026-10-18-survival-pilot.md#shared-finding-and-disposition-review)
 routes the concrete gaps without creating a new framework.
 
-The next work combines **#79 continuity with #80 first-day preparation/rehearsal**.
-Their [prospective brief](changes/015-campaign-continuity-rehearsal.md) starts with
-existing advisory files/journals, explicit cumulative accounting, fresh player
-handoff, and a declared lifecycle procedure. It proposes one bounded development
-attempt; admission remains gated on exact source/configuration, limits and independent
-review. It does not continue or renew pilot001. Original M/Low, 2–4 and M/Low, 3–5
-focused-session estimates remain in Issues; menu-only evidence cannot calibrate
-survival throughput or a calendar forecast.
+The [#79/#80 rehearsal](changes/015-campaign-continuity-rehearsal.md) has now stopped
+after **57 charged inputs** (48 play/nine cleanup, including one requested native
+Escape supplied by the user), 727.918 seconds through closeout and only 32 elapsed
+game seconds. Ramiro Winston/Sneedville is normally saved, but reload remains
+unverified. A real advisory player handoff retained its facts and original budget;
+it did not establish full continuity or first-day success.
+
+The next bounded [reuse-first recovery brief](changes/016-autonomous-native-recovery.md)
+uses app-bundle launch and native automation access, then tests actual pickup Escape,
+ordinary restart identity and the existing pickup_all selector. App binding is
+observed; general native input is not. Keep both failed attempts and the separate
+menu-only operation probe visible. This is not a renewed survival allowance.
+Original #79 M/Low, 2–4 and #80 M/Low, 3–5 focused-session estimates remain in Issues;
+32 game seconds cannot calibrate survival throughput or a calendar forecast.
 
 Pilot001's 150-input/45-minute/six-game-hour ceilings remain historical fixed limits,
 not a renewable allowance. Every later attempt needs a prospective finite brief
