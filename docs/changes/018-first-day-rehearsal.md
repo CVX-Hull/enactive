@@ -1,10 +1,18 @@
 ---
 owner: lead
-status: proposed
+status: historical
+date: 2026-10-18
+scope: Original finite Rosendo rehearsal admission and stopped prefix before prospective continuation
 review_trigger: Rehearsal scope, resource limits, control access, identity or survival evidence changes
 ---
 
 # Complete one autonomous first-day rehearsal
+
+The [stopped prefix](../acceptance/2026-10-18-first-day-rehearsal-002.md) reached
+22h14m25s with no human rescue, then used verified native UI for normal cleanup.
+It did not complete24hours. The [prospective continuation](019-first-day-continuation.md)
+retains this original clock/allowance and preserved findings; it grants no reset.
+The scope below is historical admission evidence, not renewed permission.
 
 For [#79](https://github.com/CVX-Hull/enactive/issues/79) and
 [#80](https://github.com/CVX-Hull/enactive/issues/80), complete one ordinary
