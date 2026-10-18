@@ -84,7 +84,7 @@ struct input_scope {
     bool input;
 };
 std::vector<input_scope> scopes;
-bool direction_input_active = false;
+std::string active_menu_query;
 boundary_kind current_kind = boundary_kind::unsupported;
 int boundary_counter = 0;
 int control_generation = 0;
@@ -565,7 +565,8 @@ scope::scope( const std::string &name, const std::vector<std::string> &registere
     // settings, deathcam and unknown callers is never promoted by its name.
     static const std::set<std::string> menus = {
         "MAIN_MENU", "UILIST", "YESNO", "POPUP_WAIT", "STRING_INPUT",
-        "INVENTORY", "INVENTORY_SELECTOR", "SCROLLABLE_TEXT", "HELP_KEYBINDINGS",
+        "INVENTORY", "INVENTORY_SELECTOR", "LIST_ITEMS", "LIST_MONSTERS",
+        "CRAFTING", "CONSTRUCTION", "SCROLLABLE_TEXT", "HELP_KEYBINDINGS",
         "HELP", "LOOK", "LOOK_CLOSE", "OVERMAP", "CONFIRMATION",
         "DISPLAY_HELP", "MESSAGE_LOG", "PLAYER_INFO", "PICK_WORLD_DIALOG",
         "MODMANAGER_DIALOG", "WORLDGEN_CONFIRM_DIALOG", "MELEE_STYLE_PICKER",
@@ -573,9 +574,9 @@ scope::scope( const std::string &name, const std::vector<std::string> &registere
         "NEW_CHAR_SKILLS", "NEW_CHAR_SCENARIOS", "NEW_CHAR_DESCRIPTION"
     };
     boundary_kind kind = menus.count( name ) ? boundary_kind::menu : boundary_kind::unsupported;
-    // Only the exact direction helper wait may admit an otherwise unsupported
-    // DEFAULTMODE. Keep the category for native bindings and exclude ancestors.
-    if( name == "DEFAULTMODE" && direction_input_active && scopes.empty() && in_game ) {
+    // Only an exact pinned owner wait may admit a generic category. Keep native
+    // bindings and exclude enclosing scopes and nested input contexts.
+    if( !active_menu_query.empty() && name == active_menu_query && scopes.empty() && in_game ) {
         kind = boundary_kind::menu;
     }
     const bool nested = std::any_of( scopes.begin(), scopes.end(),
@@ -662,16 +663,17 @@ interrupt_query::~interrupt_query()
         new_boundary();
     }
 }
-direction_query::direction_query() : active( in_game && scopes.empty() && !direction_input_active )
+menu_query::menu_query( const std::string &category ) :
+    active( in_game && scopes.empty() && active_menu_query.empty() && !category.empty() )
 {
     if( active ) {
-        direction_input_active = true;
+        active_menu_query = category;
     }
 }
-direction_query::~direction_query()
+menu_query::~menu_query()
 {
     if( active ) {
-        direction_input_active = false;
+        active_menu_query.clear();
     }
 }
 void playing( bool value )

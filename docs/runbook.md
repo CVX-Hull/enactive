@@ -383,3 +383,14 @@ before starting another. Abandonment preserves evidence and does not erase unkno
 native effects. Service restart does not restore an active task. Stop the dedicated
 player at the end of the session, then save/quit normally and close only owned
 processes under the existing cleanup procedure.
+
+The [stopped functional continuation](acceptance/2026-10-18-seven-day-continuation-stop.md)
+demonstrates why access and cleanup reachability are separate. LIST_ITEMS was readable
+but unsupported, so neither advertised actions nor a fresh frame authorized Escape.
+Native CUA access failed and no user rescue was requested. One prospectively recorded
+cleanup exception invoked upstream Ctrl-C Quit, confirmed its actual supported
+prompt and closed without Save. It remains failed normal-save acceptance; that
+expired exception is not standing recovery authority. Current menu repair and its
+[qualified real-game proof](acceptance/2026-10-18-ordinary-menus.md) are tracked in #112.
+Item examination/comparison and work-menu entry/cancel worked; direction/reload
+remain unexercised. Other unknown boundaries still stop.

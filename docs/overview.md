@@ -23,7 +23,12 @@ without a player response it stops on a deadline. General survival is not implem
 A [bounded real-game probe](acceptance/2026-10-18-walk-reassessment.md) now verifies
 walk-stop evidence and required fresh Observe/Resume. Seven-day play still needs
 its prospective finite admission; the [stopped deciding attempt](acceptance/2026-10-18-seven-day-stop.md)
-remains failed. [Work](work.md) links the active path.
+remains failed. A [same-character functional continuation](acceptance/2026-10-18-seven-day-continuation-stop.md)
+then stopped on unsupported nearby-items UI without verified time advance;
+[ordinary-menu coverage #112](https://github.com/CVX-Hull/enactive/issues/112)
+has a [qualified native repair](acceptance/2026-10-18-ordinary-menus.md): item detail,
+comparison and work-menu navigation worked; direction/reload checks remain open.
+[Work](work.md) links the active path.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign
 continuation. The [MVP completion audit](acceptance/2026-10-17-completion.md) maps

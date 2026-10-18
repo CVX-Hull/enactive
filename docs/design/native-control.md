@@ -106,6 +106,15 @@ activity questions. Other YESNO prompts are not recovery targets. IDs change on
 entry/exit, native input, question replacement and new session, not every repaint.
 The matching frame/revision is still required when answering or dismissing a prompt.
 
+The [ordinary-menu increment](../changes/026-ordinary-survival-menus.md) reuses that
+exact-owner marker as `menu_query(category)`. It additionally marks only the pinned
+item-detail and comparison input waits, preserving lowercase `default` bindings;
+that generic category is never globally admitted. Named nearby-list, crafting and
+construction contexts join the finite menu set. Nested/debug/activity exclusions
+remain; `in_game` is world lifetime, not evidence that a character lives. The
+[failed continuation](../acceptance/2026-10-18-seven-day-continuation-stop.md) and
+its cleanup-without-Save qualification remain distinct from later native proof.
+
 ## Narrow recovery transport
 
 One existing controller process remains the host writer. Add a separate, bounded

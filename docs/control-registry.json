@@ -296,7 +296,8 @@
         "docs/acceptance/2026-10-18-operator-access-stop.md",
         "docs/acceptance/2026-10-18-campaign-operator.md",
         "docs/acceptance/2026-10-18-seven-day-stop.md",
-        "docs/acceptance/2026-10-18-walk-reassessment.md"
+        "docs/acceptance/2026-10-18-walk-reassessment.md",
+        "docs/acceptance/2026-10-18-ordinary-menus.md"
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
       "limitations": "Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.",
@@ -306,21 +307,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-18",
-        "outcome": "Probe002 targeted functional pass; probe001 unexercised after unknown load. No survival result.",
-        "scope": "Same preserved Ned/Belgium;41rows/17combinedcharges,0gameadvance, original856.281seconds through native closeout. Unchanged installed binary/windowed userdir; no rebuild.",
+        "outcome": "Qualified menu navigation; first native probe failed; direction regression/reload remain unexercised. No survival result.",
+        "scope": "107+160 artifacts independently checked;66rows/36combinedcharges,112whole,0gameadvance. Corrected source471e412 built/installed and normal Save/Quit returned main menu; lifecycle ACKs remain unknown.",
         "evidence": [
-          "docs/acceptance/2026-10-18-walk-reassessment.md"
+          "docs/acceptance/2026-10-18-ordinary-menus.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
-          "docs/acceptance/2026-10-18-walk-reassessment.md"
+          "docs/acceptance/2026-10-18-ordinary-menus.md"
         ],
-        "effectiveness": "unassessed",
-        "findings": "Actual zero-step guard and deliberate reassessment sequence observed; three new lifecycle ACK unknowns in each probe retained. Native CUA inventory access/lock cause remains unknown; supported engine/spectator worked without human rescue.",
-        "cost": "Existing project-local tools and one serialized runtime; one worker plus independent reviews. Two probes total17charges and856.281seconds through native closeout; review/publication continues original45-minute envelope. Model/approval spend and sustained benefit unmeasured.",
-        "follow_up": "#108 publication, then prospective #100/#82 finite campaign admission. #75 reviews restrictive wording/capture duplication at existing triggers; keep January15maintenance and October24research dates unchanged. No old attempt revival, compatibility path, broader permissions or automatic learning."
+        "effectiveness": "partially_effective",
+        "findings": "Static call-chain review missed the actual current renderer despite passing patch fixtures. Native proof exposed it, stopped and retained the failure; precise owner correction worked in the tested paths. Direction chooser and post-shutdown reload remain unexercised;112staysopen.",
+        "cost": "One isolated worker, lead tight follow-up and independent reviews; two serialized native probes36charges/1128.917seconds through closeout, plus review/publication under original45minute clock. Existing mature tooling reused; external model/approval cost unmeasured.",
+        "follow_up": "#112 remaining direction/reload acceptance under separate prospective scope, then #100/#82 admission with all112charges/original creation clock. #75 reviews actual call chains, fixture limits, finite-proof estimation and recording burden. Existing January15maintenance/October24research triggers unchanged."
       },
       "next_review": "2027-01-15"
     },
@@ -441,7 +442,8 @@
         "docs/acceptance/2026-10-18-operator-access-stop.md",
         "docs/acceptance/2026-10-18-campaign-operator.md",
         "docs/acceptance/2026-10-18-seven-day-stop.md",
-        "docs/acceptance/2026-10-18-walk-reassessment.md"
+        "docs/acceptance/2026-10-18-walk-reassessment.md",
+        "docs/acceptance/2026-10-18-ordinary-menus.md"
       ],
       "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process. Reuse fit and the adequacy of its rationale are semantic judgments; CI does not prove them. Identity configuration prevents inferred defaults but does not inspect file contents or prove a message, branch or remote ref contains no personal information; full-message inspection remains manual.",
@@ -451,21 +453,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-18",
-        "outcome": "Independent design/diff/visual/scope and actual-artifact review found no P1/P2 in stated scope.",
-        "scope": "One isolated worker/controller-tests, lead integration/shared runtime; all51+82artifact hashes/41records/actual images verified; public identity/full messages inspected.",
+        "outcome": "Qualified menu navigation; first native probe failed; direction regression/reload remain unexercised. No survival result.",
+        "scope": "107+160 artifacts independently checked;66rows/36combinedcharges,112whole,0gameadvance. Corrected source471e412 built/installed and normal Save/Quit returned main menu; lifecycle ACKs remain unknown.",
         "evidence": [
-          "docs/acceptance/2026-10-18-walk-reassessment.md"
+          "docs/acceptance/2026-10-18-ordinary-menus.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
-          "docs/acceptance/2026-10-18-walk-reassessment.md"
+          "docs/acceptance/2026-10-18-ordinary-menus.md"
         ],
-        "effectiveness": "unassessed",
-        "findings": "Review caught the literal cleanup-only restriction before further input. Separate prospective probe preserved original limits and failure; source/actual-execution/portable claims remain distinct. External tool queues/process exits require lead trace.",
-        "cost": "Existing project-local tools and one serialized runtime; one worker plus independent reviews. Two probes total17charges and856.281seconds through native closeout; review/publication continues original45-minute envelope. Model/approval spend and sustained benefit unmeasured.",
-        "follow_up": "#108 publication, then prospective #100/#82 finite campaign admission. #75 reviews restrictive wording/capture duplication at existing triggers; keep January15maintenance and October24research dates unchanged. No old attempt revival, compatibility path, broader permissions or automatic learning."
+        "effectiveness": "partially_effective",
+        "findings": "Static call-chain review missed the actual current renderer despite passing patch fixtures. Native proof exposed it, stopped and retained the failure; precise owner correction worked in the tested paths. Direction chooser and post-shutdown reload remain unexercised;112staysopen.",
+        "cost": "One isolated worker, lead tight follow-up and independent reviews; two serialized native probes36charges/1128.917seconds through closeout, plus review/publication under original45minute clock. Existing mature tooling reused; external model/approval cost unmeasured.",
+        "follow_up": "#112 remaining direction/reload acceptance under separate prospective scope, then #100/#82 admission with all112charges/original creation clock. #75 reviews actual call chains, fixture limits, finite-proof estimation and recording burden. Existing January15maintenance/October24research triggers unchanged."
       },
       "next_review": "2027-01-15"
     },
@@ -667,7 +669,8 @@
         "docs/acceptance/2026-10-18-campaign-operator.md",
         "docs/acceptance/2026-10-18-seven-day-readiness.md",
         "docs/acceptance/2026-10-18-seven-day-stop.md",
-        "docs/acceptance/2026-10-18-walk-reassessment.md"
+        "docs/acceptance/2026-10-18-walk-reassessment.md",
+        "docs/acceptance/2026-10-18-ordinary-menus.md"
       ],
       "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",
@@ -677,21 +680,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-18",
-        "outcome": "Scoped failure/control/process review completed; broader sustained effectiveness remains unassessed.",
-        "scope": "Actual campaign observation gap -> bounded controller fix; first load probe unexercised -> prospective wording correction preserving original counters/clocks. No unrelated date renewal.",
+        "outcome": "Qualified menu navigation; first native probe failed; direction regression/reload remain unexercised. No survival result.",
+        "scope": "107+160 artifacts independently checked;66rows/36combinedcharges,112whole,0gameadvance. Corrected source471e412 built/installed and normal Save/Quit returned main menu; lifecycle ACKs remain unknown.",
         "evidence": [
-          "docs/acceptance/2026-10-18-walk-reassessment.md"
+          "docs/acceptance/2026-10-18-ordinary-menus.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
-          "docs/acceptance/2026-10-18-walk-reassessment.md"
+          "docs/acceptance/2026-10-18-ordinary-menus.md"
         ],
-        "effectiveness": "unassessed",
-        "findings": "Strict probe wording caused an avoidable unexercised attempt; retain the failure and assess control cost. Reused existing CLI/parser/validator/Git; passive one-off recording is bounded and retired from use after closeout, not a new runtime/history framework.",
-        "cost": "Existing project-local tools and one serialized runtime; one worker plus independent reviews. Two probes total17charges and856.281seconds through native closeout; review/publication continues original45-minute envelope. Model/approval spend and sustained benefit unmeasured.",
-        "follow_up": "#108 publication, then prospective #100/#82 finite campaign admission. #75 reviews restrictive wording/capture duplication at existing triggers; keep January15maintenance and October24research dates unchanged. No old attempt revival, compatibility path, broader permissions or automatic learning."
+        "effectiveness": "partially_effective",
+        "findings": "Static call-chain review missed the actual current renderer despite passing patch fixtures. Native proof exposed it, stopped and retained the failure; precise owner correction worked in the tested paths. Direction chooser and post-shutdown reload remain unexercised;112staysopen.",
+        "cost": "One isolated worker, lead tight follow-up and independent reviews; two serialized native probes36charges/1128.917seconds through closeout, plus review/publication under original45minute clock. Existing mature tooling reused; external model/approval cost unmeasured.",
+        "follow_up": "#112 remaining direction/reload acceptance under separate prospective scope, then #100/#82 admission with all112charges/original creation clock. #75 reviews actual call chains, fixture limits, finite-proof estimation and recording burden. Existing January15maintenance/October24research triggers unchanged."
       },
       "next_review": "2027-01-15"
     },

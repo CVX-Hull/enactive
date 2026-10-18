@@ -1,10 +1,15 @@
 ---
 owner: lead
-review_trigger: Campaign candidate, resource limits, actor ownership or acceptance changes
-status: proposed
+date: 2026-10-18
+scope: Failed functional continuation002; source86c0708, same normallycreatedNed
+status: historical
 ---
 
 # Seven-day functional continuation on preserved Ned
+
+This prospective scope was admitted after protected PR111 and then stopped on
+unsupported LIST_ITEMS. The [actual failure and qualified cleanup](../acceptance/2026-10-18-seven-day-continuation-stop.md)
+remain evidence; the original protocol body below is not renewed authority.
 
 This proposed admission advances [#100–106/#82](https://github.com/CVX-Hull/enactive/issues/82)
 after the [accepted walk correction](../acceptance/2026-10-18-walk-reassessment.md).
