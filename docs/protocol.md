@@ -176,11 +176,20 @@ The SDL input loop pumps normal events while polling. RAII scopes span
 marker at ordinary avatar input distinguishes normal play; deathcam, unknown
 DEFAULTMODE callers, activity polling and raw debug prompts cannot inherit it.
 The pinned common direction helper marks only its own `handle_input()` wait as a
-menu, preserving DEFAULTMODE for native binding lookup. This marker activates only
-in-game with no enclosing scope or active direction query; classification requires
-the stack still be empty when that exact DEFAULTMODE input scope opens. Nested
-contexts and callbacks after the wait cannot inherit its permission. The ownership-
-aware RAII marker clears during return/unwinding. It exports no structured scene.
+menu, preserving DEFAULTMODE for native binding lookup. The same `menu_query(category)`
+RAII mechanism marks only the pinned item-detail and comparison input waits with
+their original lowercase `default` category. Neither generic name is globally
+admitted. The marker activates only in-game with no enclosing scope or active query;
+classification requires an exact category match and the stack still empty when
+that input scope opens. Nested contexts and callbacks after the wait cannot inherit
+permission. The marker clears during return/unwinding and exports no structured
+scene. `in_game` means world lifetime, not living-character proof; visible death
+still ends an admitted survival study.
+
+The finite ordinary-menu set also includes nearby `LIST_ITEMS`/`LIST_MONSTERS`,
+`CRAFTING` and `CONSTRUCTION`, with the engine retaining binding and outcome
+validation. Other unknown categories stay unsupported. Entry/exit coverage does
+not establish a recipe, activity, target safety, consumption or task outcome.
 Activity and debug scopes override enclosing input. Incidental animation polls are
 unscoped and cannot dispatch or acknowledge commands. An explicit lifecycle flag
 around main.cpp's do_turn loop gates gameplay metadata. Remote input_event delivery includes an

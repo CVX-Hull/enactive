@@ -36,14 +36,14 @@ class interrupt_query
     private:
         bool active;
 };
-// Marks only the pinned direction helper's input wait, preserving its keymap.
-class direction_query
+// Marks only pinned menu owners' input waits, preserving their native keymaps.
+class menu_query
 {
     public:
-        direction_query();
-        ~direction_query();
-        direction_query( const direction_query & ) = delete;
-        direction_query &operator=( const direction_query & ) = delete;
+        explicit menu_query( const std::string &category );
+        ~menu_query();
+        menu_query( const menu_query & ) = delete;
+        menu_query &operator=( const menu_query & ) = delete;
     private:
         bool active;
 };

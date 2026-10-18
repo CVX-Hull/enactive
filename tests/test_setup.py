@@ -51,6 +51,17 @@ class SetupTests(unittest.TestCase):
             "src/action.cpp": ('    input_context ctxt( "DEFAULTMODE", keyboard_mode::keycode );\n'
                 '        action = ctxt.handle_input();\n'
                 '        if( std::optional<tripoint_rel_ms> vec = ctxt.get_direction_rel_ms( action ) ) {\n}\n'),
+            "src/ui_iteminfo.cpp": ('void iteminfo_window::execute()\n{\n'
+                '    if( data.without_getch ) {\n        ui_manager::redraw();\n        return;\n    }\n\n'
+                '    while( true ) {\n        ui_manager::redraw();\n'
+                '        std::string action = ctxt.handle_input();\n\n'
+                '        if( data.handle_scrolling && data.arrow_scrolling && action == "UP" ) {\n}\n}\n}\n'
+                'void unrelated() { std::string action = ctxt.handle_input(); }\n'),
+            "src/game_inventory.cpp": ('bool game_menus::inv::compare_item_menu::show()\n{\n'
+                '    while( true ) {\n        ui_manager::redraw();\n\n'
+                '        std::string action = has_button_action() ? get_button_action() : ctxt.handle_input();\n\n'
+                '        if( action == "UP" ) {\n}\n}\n}\n'
+                'void unrelated() { std::string action = ctxt.handle_input(); }\n'),
             "src/do_turn.cpp": 'void handle_key_blocking_activity()\n{\n    if( has_unfinished_activity || u.has_destination() ) {\n                g->cancel_activity_query( _( "Confirm:" ) );\n}\n}',
             "src/game.cpp": '    if( query_yn( _( "%s Cancel auto move?" ), text ) )  {\n}\n    if( query_yn( "%s %s", text, u.activity.get_stop_phrase() ) ) {\n}',
             "src/debug.cpp": "    for( bool stop = false; !stop; ) {\n        ui_manager::redraw();\n}",
@@ -82,17 +93,32 @@ class SetupTests(unittest.TestCase):
         repository, source = self.patch_fixture()
         first = self.run_patch(repository, source)
         self.assertEqual(first.returncode, 0, first.stderr)
-        expected = {path.relative_to(source): path.read_bytes() for path in source.rglob("*.cpp")}
+        expected = {path.relative_to(source): path.read_bytes()
+                    for path in source.rglob("*") if path.is_file()}
+        for name in ("ui_iteminfo.cpp", "game_inventory.cpp"):
+            (source / "src" / name).write_text("stale patched contents")
         second = self.run_patch(repository, source)
         self.assertEqual(second.returncode, 0, second.stderr)
-        self.assertEqual(expected, {path.relative_to(source): path.read_bytes() for path in source.rglob("*.cpp")})
+        self.assertEqual(expected, {path.relative_to(source): path.read_bytes()
+                                    for path in source.rglob("*") if path.is_file()})
         self.assertIn("harness_input( category, registered_actions )", (source / "src/input_context.cpp").read_text())
         self.assertIn("harness_player( uquit == QUIT_WATCH", (source / "src/handle_action.cpp").read_text())
         direction = (source / "src/action.cpp").read_text()
         self.assertIn('input_context ctxt( "DEFAULTMODE", keyboard_mode::keycode );', direction)
-        self.assertEqual(direction.count("direction_query harness_direction"), 1)
+        self.assertEqual(direction.count('menu_query harness_menu( "DEFAULTMODE" )'), 1)
         self.assertIn('return ctxt.handle_input();\n        }();\n'
                       '        if( std::optional<tripoint_rel_ms> vec', direction)
+        for name, callback in (("ui_iteminfo.cpp", 'data.handle_scrolling && data.arrow_scrolling && action == "UP"'),
+                               ("game_inventory.cpp", 'action == "UP"')):
+            with self.subTest(owner=name):
+                text = (source / "src" / name).read_text()
+                self.assertIn('#include "cdda_harness.h"', text)
+                self.assertEqual(text.count('menu_query harness_menu( "default" )'), 1)
+                self.assertIn('return ctxt.handle_input();\n        }();\n\n'
+                              f'        if( {callback} )', text)
+                self.assertIn('void unrelated() { std::string action = ctxt.handle_input(); }', text)
+        self.assertIn('has_button_action() ? get_button_action() : [&]() {',
+                      (source / "src/game_inventory.cpp").read_text())
         self.assertIn("boundary_kind::activity_poll", (source / "src/do_turn.cpp").read_text())
         self.assertIn("boundary_kind::debug_prompt", (source / "src/debug.cpp").read_text())
         activity = (source / "src/do_turn.cpp").read_text()
@@ -110,6 +136,35 @@ class SetupTests(unittest.TestCase):
         result = self.run_patch(repository, source)
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("Upstream source differs", result.stderr)
+
+    def test_patch_rejects_changed_item_owner_hashes(self):
+        for name in ("src/ui_iteminfo.cpp", "src/game_inventory.cpp"):
+            with self.subTest(owner=name), tempfile.TemporaryDirectory() as temporary:
+                self.root = Path(temporary)
+                repository, source = self.patch_fixture()
+                (source / name).write_text("changed")
+                result = self.run_patch(repository, source)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(f"Upstream source differs from pinned release: {name}", result.stderr)
+
+    def test_patch_rejects_missing_and_ambiguous_item_owner_anchors(self):
+        for name in ("src/ui_iteminfo.cpp", "src/game_inventory.cpp"):
+            for change in ("missing", "duplicate"):
+                with self.subTest(owner=name, change=change), tempfile.TemporaryDirectory() as temporary:
+                    self.root = Path(temporary)
+                    repository, source = self.patch_fixture()
+                    path = source / name
+                    original = path.read_text()
+                    altered = (original.replace("ctxt.handle_input()", "ctxt.handle_input( 5 )")
+                               if change == "missing" else original * 2)
+                    path.write_text(altered)
+                    pin_path = repository / "native/upstream.json"
+                    pin = json.loads(pin_path.read_text())
+                    pin["source_files"][name] = hashlib.sha256(altered.encode()).hexdigest()
+                    pin_path.write_text(json.dumps(pin))
+                    result = self.run_patch(repository, source)
+                    self.assertNotEqual(result.returncode, 0)
+                    self.assertIn(f"Pinned source anchor changed: {path.resolve()}", result.stderr)
 
     def test_patch_rejects_ambiguous_normal_and_poll_anchors(self):
         for flags, message in (({"duplicate_normal": True}, "Pinned source anchor changed"),

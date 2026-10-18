@@ -32,7 +32,7 @@ The campaign milestone has no committed delivery date.
 | Useful survival pilot and its first review | [Pilot001](acceptance/2026-10-18-survival-pilot.md) stopped on an unknown world-selection acknowledgment before spawning; retained findings and cleanup are gap evidence, not survival success | [#78 pilot](https://github.com/CVX-Hull/enactive/issues/78), then [#83 first review](https://github.com/CVX-Hull/enactive/issues/83) |
 | Continuity and first-day rehearsal | [Rehearsal001](acceptance/2026-10-18-first-day-rehearsal.md) failed autonomy. The [direction probe](acceptance/2026-10-18-native-direction-menu.md) verified same-character reload and actual pickup selection/cancel without user keys; the [later same-character run](acceptance/2026-10-18-first-day-completion.md) reached24h14m29s without user rescue, with qualified needs/rest evidence and a retained cleanup deadline deviation | [#91 recovery](https://github.com/CVX-Hull/enactive/issues/91), [#79 continuity](https://github.com/CVX-Hull/enactive/issues/79) and [#80 first day](https://github.com/CVX-Hull/enactive/issues/80); shared execution is serialized |
 | Executable seven-day readiness | [Accepted preparation](acceptance/2026-10-18-seven-day-readiness.md) for frozen001; actual later failure/gaps remain separate | [#81 readiness](https://github.com/CVX-Hull/enactive/issues/81) |
-| Seven-day campaign | Bounded owned segments of the same fresh character, real visible calendar/needs/identity evidence, save/restart/handoff and reviewed endpoint; first001 stopped partial, accepted #108 correction permits a prospective continuation decision | [#82 execution](https://github.com/CVX-Hull/enactive/issues/82), [continuation proposal](changes/025-seven-day-continuation.md) and daily children #100–106 |
+| Seven-day campaign | Same-character owned segments, visible calendar/needs/identity, restart/handoff and reviewed endpoint; first001 and continuation002 stopped partial, current #112 menu coverage gates play | [#82 execution](https://github.com/CVX-Hull/enactive/issues/82), [menu repair](changes/026-ordinary-survival-menus.md) and daily children #100–106 |
 
 The first integrated pilot/review round used **18 charged inputs**, including four
 cleanup inputs, and 229.232 seconds through the final receipt capture. It stopped
@@ -105,11 +105,16 @@ callers/tests/docs. Probe001 stopped unexercised on its literal load-unknown cla
 prospective002 retained its original cumulative limits and verified the zero-step
 sequence.17combined charges, zero game advance, all lifecycle ACK unknowns retained.
 Protected PR110 and exact/merged-main CI accepted the correction; #108 is closed.
-The [prospective functional continuation](changes/025-seven-day-continuation.md)
-on preserved Ned now owns preparation for a new #100/#82 admission decision;
-unused001 allowance cannot resume the stopped investigation. It carries all65
-spent inputs and the original whole deadline, with mixed-candidate lineage and
-failed outcomes explicit. The seven
+The [functional continuation](changes/025-seven-day-continuation.md)
+on preserved Ned was prospectively admitted after protected PR111 exact/main CI,
+with all65spent inputs and the original whole deadline. Its
+[actual outcome](acceptance/2026-10-18-seven-day-continuation-stop.md) then stopped
+on readable unsupported LIST_ITEMS.30rows/11new charges bring the lineage to76,
+with no verified new game-time advance. No human rescue; a separately recorded
+cleanup-only upstream Quit exception closed the process without Save, whose normal
+acceptance failed. Load/final Quit ACKs stay unknown. [#112](https://github.com/CVX-Hull/enactive/issues/112)
+owns the [bounded related-menu repair/probe](changes/026-ordinary-survival-menus.md).
+Neither stopped study supplies unused authority for the next one. The seven
 named daily children [#100–106](https://github.com/CVX-Hull/enactive/issues/82)
 remain uncompleted with actual dependencies/estimates in GitHub. Source changes
 only follow normal native/controller shutdown. No generic memory/monitor/VLA

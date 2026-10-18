@@ -113,3 +113,10 @@ used existing explicitly approved CLI calls without broader rules or another act
 It verified stop evidence and the fresh Observe/Resume sequence; the first load
 probe remained unexercised. Narrow rule activation is still unverified, and the
 original approval denial was not retried. Further survival needs its own admission.
+
+The [later functional continuation](acceptance/2026-10-18-seven-day-continuation-stop.md)
+passed actual actor access and stopped on unsupported LIST_ITEMS. Broader permissions
+could not fix native UI coverage. Native CUA access also failed; no user unlock/keys
+were requested. A separately recorded cleanup-only upstream Quit exception closed
+the process without a new Save; normal Save/Quit acceptance failed. Its scope has
+expired and grants no general fallback or authority for further survival.

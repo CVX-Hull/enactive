@@ -30,15 +30,13 @@ makefile.write_text(make_text.replace("-mmacosx-version-min=10.15", "-mmacosx-ve
 
 def replace_once(path: Path, old: str, new: str) -> None:
     text = path.read_text()
-    if new in text:
-        return
     if text.count(old) != 1:
         raise SystemExit(f"Pinned source anchor changed: {path}: {old[:70]!r}")
     path.write_text(text.replace(old, new))
 
 for name in ("cdda_harness.h", "cdda_harness.cpp"):
     shutil.copyfile(ROOT / "native" / name, source / "src" / name)
-for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp", "game.cpp", "action.cpp"):
+for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp", "game.cpp", "action.cpp", "ui_iteminfo.cpp", "game_inventory.cpp"):
     path = source / "src" / name
     text = path.read_text()
     if '#include "cdda_harness.h"' not in text:
@@ -59,10 +57,34 @@ replace_once(source / "src/action.cpp",
     '        action = ctxt.handle_input();\n'
     '        if( std::optional<tripoint_rel_ms> vec = ctxt.get_direction_rel_ms( action ) ) {',
     '        action = [&]() {\n'
-    '            cdda_harness::direction_query harness_direction;\n'
+    '            cdda_harness::menu_query harness_menu( "DEFAULTMODE" );\n'
     '            return ctxt.handle_input();\n'
     '        }();\n'
     '        if( std::optional<tripoint_rel_ms> vec = ctxt.get_direction_rel_ms( action ) ) {')
+# Generic lowercase default is admitted only at these exact item-menu waits.
+# Include each owner in its unique anchor and end permission before callbacks.
+replace_once(source / "src/ui_iteminfo.cpp",
+    'void iteminfo_window::execute()\n{\n'
+    '    if( data.without_getch ) {\n        ui_manager::redraw();\n        return;\n    }\n\n'
+    '    while( true ) {\n        ui_manager::redraw();\n'
+    '        std::string action = ctxt.handle_input();',
+    'void iteminfo_window::execute()\n{\n'
+    '    if( data.without_getch ) {\n        ui_manager::redraw();\n        return;\n    }\n\n'
+    '    while( true ) {\n        ui_manager::redraw();\n'
+    '        std::string action = [&]() {\n'
+    '            cdda_harness::menu_query harness_menu( "default" );\n'
+    '            return ctxt.handle_input();\n'
+    '        }();')
+replace_once(source / "src/game_inventory.cpp",
+    'bool game_menus::inv::compare_item_menu::show()\n{\n'
+    '    while( true ) {\n        ui_manager::redraw();\n\n'
+    '        std::string action = has_button_action() ? get_button_action() : ctxt.handle_input();',
+    'bool game_menus::inv::compare_item_menu::show()\n{\n'
+    '    while( true ) {\n        ui_manager::redraw();\n\n'
+    '        std::string action = has_button_action() ? get_button_action() : [&]() {\n'
+    '            cdda_harness::menu_query harness_menu( "default" );\n'
+    '            return ctxt.handle_input();\n'
+    '        }();')
 replace_once(source / "src/do_turn.cpp", 'void handle_key_blocking_activity()\n{',
     'void handle_key_blocking_activity()\n{\n'
     '    cdda_harness::scope harness_activity( cdda_harness::boundary_kind::activity_poll );')
