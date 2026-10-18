@@ -84,6 +84,7 @@ struct input_scope {
     bool input;
 };
 std::vector<input_scope> scopes;
+bool direction_input_active = false;
 boundary_kind current_kind = boundary_kind::unsupported;
 int boundary_counter = 0;
 int control_generation = 0;
@@ -572,6 +573,11 @@ scope::scope( const std::string &name, const std::vector<std::string> &registere
         "NEW_CHAR_SKILLS", "NEW_CHAR_SCENARIOS", "NEW_CHAR_DESCRIPTION"
     };
     boundary_kind kind = menus.count( name ) ? boundary_kind::menu : boundary_kind::unsupported;
+    // Only the exact direction helper wait may admit an otherwise unsupported
+    // DEFAULTMODE. Keep the category for native bindings and exclude ancestors.
+    if( name == "DEFAULTMODE" && direction_input_active && scopes.empty() && in_game ) {
+        kind = boundary_kind::menu;
+    }
     const bool nested = std::any_of( scopes.begin(), scopes.end(),
     []( const input_scope & entry ) { return entry.input; } );
     if( query_depth > 0 && !owned_interrupt.empty() && name == "YESNO" &&
@@ -654,6 +660,18 @@ interrupt_query::~interrupt_query()
         --query_depth;
         query_input_depth = -1;
         new_boundary();
+    }
+}
+direction_query::direction_query() : active( in_game && scopes.empty() && !direction_input_active )
+{
+    if( active ) {
+        direction_input_active = true;
+    }
+}
+direction_query::~direction_query()
+{
+    if( active ) {
+        direction_input_active = false;
     }
 }
 void playing( bool value )

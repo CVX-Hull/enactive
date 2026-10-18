@@ -173,6 +173,12 @@ The SDL input loop pumps normal events while polling. RAII scopes span
 `input_context::handle_input`, including retries and nested contexts. An explicit
 marker at ordinary avatar input distinguishes normal play; deathcam, unknown
 DEFAULTMODE callers, activity polling and raw debug prompts cannot inherit it.
+The pinned common direction helper marks only its own `handle_input()` wait as a
+menu, preserving DEFAULTMODE for native binding lookup. This marker activates only
+in-game with no enclosing scope or active direction query; classification requires
+the stack still be empty when that exact DEFAULTMODE input scope opens. Nested
+contexts and callbacks after the wait cannot inherit its permission. The ownership-
+aware RAII marker clears during return/unwinding. It exports no structured scene.
 Activity and debug scopes override enclosing input. Incidental animation polls are
 unscoped and cannot dispatch or acknowledge commands. An explicit lifecycle flag
 around main.cpp's do_turn loop gates gameplay metadata. Remote input_event delivery includes an

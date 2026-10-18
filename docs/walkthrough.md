@@ -25,7 +25,9 @@ and journals remain local as described in [acceptance](acceptance/2026-10-17-mvp
 2. **Above: observation and control.** The screenshot says paused and shows its
    historical observation age. In a live session, stale/frozen state means you need
    a fresh interpretable observation before continuing.
-3. **Right: direction and recent events.** The goal records intent for the planner.
+3. **Recorded objective and recent events.** Recorded intent appears above the
+   native frame; edit/save it in the planner panel. Long text scrolls by keyboard.
+   The goal records intent for the planner.
    Saving a goal does not launch an autonomous agent. The timeline helps explain
    recent requests; it is not proof that their objectives succeeded.
 

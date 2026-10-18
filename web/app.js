@@ -374,6 +374,8 @@ function render(data) {
     if (actions.includes(chosen)) select.value = chosen;
     select.dataset.actions = JSON.stringify(actions);
   }
+  const recordedGoal = typeof data.goal === 'string' ? data.goal : '';
+  $('recorded-objective-text').textContent = recordedGoal.trim() ? recordedGoal : 'No objective recorded.';
   if (document.activeElement !== $('goal')) $('goal').value = data.goal;
   if (data.last_result) {
     $('last-result').textContent = JSON.stringify(data.last_result, null, 2);

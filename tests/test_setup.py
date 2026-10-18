@@ -35,7 +35,7 @@ class SetupTests(unittest.TestCase):
                     bundle.addfile(member, BytesIO(data))
         return path
 
-    def patch_fixture(self, *, extra_poll=False, duplicate_normal=False):
+    def patch_fixture(self, *, extra_poll=False, duplicate_normal=False, duplicate_direction=False):
         """Small pinned-source fixture tests patch mechanics, never native behavior."""
         repository = self.root / "repository"
         (repository / "native").mkdir(parents=True)
@@ -48,6 +48,9 @@ class SetupTests(unittest.TestCase):
             "Makefile": "-mmacosx-version-min=10.15\n-mmacosx-version-min=10.15\n",
             "src/input_context.cpp": "const std::string &input_context::handle_input( const int timeout )\n{\n        next_action = inp_mngr.get_input_event( preferred_keyboard_mode );\n}",
             "src/handle_action.cpp": "input_context game::get_player_input( std::string &action )\n{\n}",
+            "src/action.cpp": ('    input_context ctxt( "DEFAULTMODE", keyboard_mode::keycode );\n'
+                '        action = ctxt.handle_input();\n'
+                '        if( std::optional<tripoint_rel_ms> vec = ctxt.get_direction_rel_ms( action ) ) {\n}\n'),
             "src/do_turn.cpp": 'void handle_key_blocking_activity()\n{\n    if( has_unfinished_activity || u.has_destination() ) {\n                g->cancel_activity_query( _( "Confirm:" ) );\n}\n}',
             "src/game.cpp": '    if( query_yn( _( "%s Cancel auto move?" ), text ) )  {\n}\n    if( query_yn( "%s %s", text, u.activity.get_stop_phrase() ) ) {\n}',
             "src/debug.cpp": "    for( bool stop = false; !stop; ) {\n        ui_manager::redraw();\n}",
@@ -60,6 +63,8 @@ class SetupTests(unittest.TestCase):
         }
         if duplicate_normal:
             originals["src/handle_action.cpp"] *= 2
+        if duplicate_direction:
+            originals["src/action.cpp"] *= 2
         source = self.root / "source"
         for name, data in originals.items():
             target = source / name
@@ -83,6 +88,11 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(expected, {path.relative_to(source): path.read_bytes() for path in source.rglob("*.cpp")})
         self.assertIn("harness_input( category, registered_actions )", (source / "src/input_context.cpp").read_text())
         self.assertIn("harness_player( uquit == QUIT_WATCH", (source / "src/handle_action.cpp").read_text())
+        direction = (source / "src/action.cpp").read_text()
+        self.assertIn('input_context ctxt( "DEFAULTMODE", keyboard_mode::keycode );', direction)
+        self.assertEqual(direction.count("direction_query harness_direction"), 1)
+        self.assertIn('return ctxt.handle_input();\n        }();\n'
+                      '        if( std::optional<tripoint_rel_ms> vec', direction)
         self.assertIn("boundary_kind::activity_poll", (source / "src/do_turn.cpp").read_text())
         self.assertIn("boundary_kind::debug_prompt", (source / "src/debug.cpp").read_text())
         activity = (source / "src/do_turn.cpp").read_text()
@@ -103,6 +113,7 @@ class SetupTests(unittest.TestCase):
 
     def test_patch_rejects_ambiguous_normal_and_poll_anchors(self):
         for flags, message in (({"duplicate_normal": True}, "Pinned source anchor changed"),
+                               ({"duplicate_direction": True}, "Pinned source anchor changed"),
                                ({"extra_poll": True}, "SDL poll anchors changed")):
             with self.subTest(flags=flags), tempfile.TemporaryDirectory() as temporary:
                 previous = self.root

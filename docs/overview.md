@@ -55,6 +55,7 @@ explain why native integration was selected and when we would reconsider it.
 | --- | --- | --- |
 | Graphical local play | Verified in the dated MVP session; normal native window and browser spectator | [MVP acceptance](acceptance/2026-10-17-mvp.md) |
 | Observe, menus, individual inputs, supplies and save/reload | Demonstrated; results still require interpretation after each input | [Acceptance probes](acceptance/2026-10-17-mvp.md#real-game-acceptance-2026-10-17) |
+| Ordinary direction queries | Common chooser preserves CDDA bindings; real adjacent-pickup cancellation/selection and saved-character reload worked without user keys | [Direction-menu acceptance](acceptance/2026-10-18-native-direction-menu.md) |
 | Guarded short walks | Limited: cardinal directions, at most eight steps, conservative terrain and visible-creature stops | [Current contract](protocol.md#closed-loop-play-and-observations) |
 | Planner round trips | One real three-tile comparison used three individual decisions versus one guarded request, retaining per-step checks; not a general speed or safety result | [Timing trial](acceptance/2026-10-17-completion.md#fresh-real-game-timing-probe) |
 | Input authority and takeover | Native-v3 distinguishes ordinary play, menus, activity polls and debug prompts; revoked tokens and old worlds are rejected. Already-committed actions and activities cannot be undone by Pause | [Recovery acceptance](acceptance/2026-10-17-recovery-memory.md) |
@@ -112,8 +113,14 @@ The [first-day rehearsal](acceptance/2026-10-18-first-day-rehearsal.md) then rea
 Ramiro Winston, real ration pickup, a threat-driven retreat and an advisory player
 handoff, but required user Escape at an unsupported pickup prompt after only
 32 game seconds. It supplies no autonomous first-day success. Required human
-rescue blocks campaign readiness; [the next brief](changes/016-autonomous-native-recovery.md)
-tests existing app-bundle/native controls and normal restart before further play.
+rescue blocks campaign readiness. A desktop-tool access preflight failed before
+load or input. The [direction-menu increment](changes/017-native-direction-menu.md)
+then rebuilt the engine with its original bindings and
+[verified](acceptance/2026-10-18-native-direction-menu.md) actual reload, pickup
+cancellation/adjacent selection and current-tile behavior without user keys.
+It used18inputs/218.939seconds with no game-time advance; lifecycle receipts remain
+unknown. The recorded objective now appears above the native frame. Broader
+continuity, usable supplies/rest and autonomous first-day survival remain open.
 Campaigns also expose concrete memory, planning,
 monitoring and viewer needs. The [review workflow](project-management.md#campaign-driven-improvement)
 routes observed problems into bounded improvements and checks their effect in later
