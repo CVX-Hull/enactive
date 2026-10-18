@@ -162,7 +162,7 @@ The [planner port](protocol.md#bounded-injected-planner) accepts an immutable ta
 visible evidence and caller-supplied capabilities. It invokes trusted injected
 provider code with serialized data, validates a returned candidate and accounts
 for the call. It owns no controller, dispatch lease or recovery tools. There is no
-concrete model provider or automatic supervisor yet.
+concrete model provider connected to the service.
 
 One task run owns one port, one physical provider slot and its original admission
 clock/start evidence. Cancellation and stale results permanently remove candidate
@@ -186,3 +186,28 @@ controller, gameplay, networking, clocks and filesystem dependencies.
 owns identity, budgets, generation checks and failure behavior. The manual native
 acceptance driver supplied the caller role; it is not a production supervisor.
 The planner port still requires an explicitly supplied accepted capability tuple.
+
+## Passive task supervision
+
+The waypoint supervisor composes that planner, retained evidence, task memory and
+movement skill. One explicit task preserves its origin, waypoint, route history
+and budgets across pauses and remaining-route plans. The module offers one intent
+and consumes its exact correlated result; it cannot send an input or grant a lease.
+Outbound completion prompts a fresh return decision. Both verified legs and a
+fresh final guard are required for task completion.
+
+![A task alternates bound planning and one-step verification, preserving progress at stops.](diagrams/supervisor.svg)
+
+This current logical diagram answers “Where do feedback and correction happen?”
+Boxes are responsibilities/states in one serialized caller, not processes. Solid
+arrows show decisions and evidence flow; the dotted edge identifies future #36
+integration. The [editable diagram](diagrams/supervisor.mmd) and
+[exact contract](protocol.md#passive-waypoint-supervision) distinguish eligible
+intents from real authority. Explicit continuation verifies the remaining route;
+unknown effects stay unresolved, and complete legs need verification without
+another move. A new timestamp or model assertion cannot clear a nonprogress stop.
+
+Service lifecycle, the atomic controller lease across all ingress, native receipt
+assembly and live provider remain [#36](https://github.com/CVX-Hull/cdda-player/issues/36).
+The current service does not instantiate this supervisor. Portable composition
+tests therefore establish no autonomous/native/model performance claim.

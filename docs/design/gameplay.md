@@ -9,8 +9,10 @@ review_trigger: Gameplay interfaces, supported observations, model adapters, bud
 Design for implementation under [#17](https://github.com/CVX-Hull/cdda-player/issues/17).
 Typed gameplay/1 records and the passive bounded evidence adapter are implemented
 under [#32](https://github.com/CVX-Hull/cdda-player/issues/32). The bounded injected
-planner port is implemented under #34; task execution, skills, supervisor and
-end-to-end observation acceptance remain future work.
+planner port is implemented under #34, skills/native predicate acceptance under
+round009, and passive supervision/remaining-route continuation under round010.
+Service/controller/provider integration and end-to-end autonomous acceptance
+remain future work.
 [Architecture](../architecture.md) and [protocol](../protocol.md) are authoritative
 about implemented behavior; the [foundation acceptance](../acceptance/2026-10-17-foundation-implementation.md)
 separates portable evidence tests from native-v2 boundary probes. The
@@ -107,10 +109,12 @@ standard-library typed records for internal data. No generated executable schema
 | `RunStatus` | Task/plan/stage IDs, execution epoch, state, active model/configuration and skill version, progress, remaining budgets, next check, last public reason, lease ownership/pause/freshness and evidence references. Model timing/cost is additional telemetry, not completion proof. |
 
 Implemented module ownership: `harness/gameplay/contracts.py` and `evidence.py`.
-The bounded injected `planner.py` and passive full-leg `skills.py` are implemented.
-The skill proposes/evaluates one step; it cannot dispatch or continue an interrupted leg.
+The bounded injected `planner.py` and passive remaining-route `skills.py` are implemented.
+The skill proposes/evaluates one step; a new instance derives the remaining route
+from retained settled history. It cannot dispatch or automatically resume.
 See the [current skill contract](../protocol.md#passive-bounded-movement-skills).
-Proposed sibling modules `supervisor.py` and `status.py` do not exist yet. A future model/provider-specific
+The passive `supervisor.py` composes these components; service lifecycle and
+production controller ownership remain #36. Proposed `status.py` and a model/provider-specific
 adapter goes behind the injected planner interface;
 imports must not reverse the controller boundary.
 
@@ -144,7 +148,7 @@ displacement with a blocked result; retain the evidence and do not claim success
 
 | Predicate | Evidence available today | Gap/disposition |
 | --- | --- | --- |
-| Position and unit displacement | Native-v3 relative position and session rotate on world entry/exit, including same-process reload | Future task/supervisor consumers must invalidate task origins and candidates on session replacement |
+| Position and unit displacement | Native-v3 relative position and session rotate on world entry/exit, including same-process reload | Passive supervision rejects session replacement; future controller integration must propagate replacement promptly |
 | Next tile and creature stop | CLEAR neighboring terrain/furniture; UI visible-creature list | No farther route knowledge; missing or stale values block |
 | Matching frame, turn and authority | Native frame/status/session/revision/turn; passive adapter validates retained originals and receipt age | [Round 009](../acceptance/2026-10-17-bounded-skills.md) exercises actual retained native frames; fault lanes are separate |
 | Ordinary play rather than running activity or raw error | Native-v3 positive boundary discriminator; category and `in_game` alone remain insufficient | The passive skill requires normal_play; recovery controls remain separate |
@@ -160,9 +164,11 @@ primitive, `planning` at a stage boundary, or a terminal/suspended result. The m
 cannot directly enter `executing`. There is at most one unresolved primitive and
 one admitted stage. No gameplay is dispatched while a model call is pending.
 
-Each task execution has a monotonic control epoch. Pause, takeover, goal replacement, service
-restart and terminal stop invalidate it; native session changes invalidate all
-evidence. A candidate must exactly match the task/plan/epoch and original observed
+Each task execution has a monotonic control epoch. Pause, takeover and goal replacement
+revoke it; future service restart must restore no authority. A terminal stop ends
+the current admission, and explicit continuation requires a new epoch. Native
+session changes invalidate task applicability while historical evidence remains
+retained. A candidate must exactly match the task/plan/epoch and original observed
 session/revision, as well as the current skill version. Re-observation may establish
 that these still match; it must not substitute a newer revision into old intent.
 Discard late results and record why. A plan's verified history can survive expected
@@ -246,5 +252,6 @@ matched model outcomes. #23 verifies readable ordinary, paused, stale and slow s
 The [bounded memory increment](../changes/006-recovery-memory.md) implements passive
 TaskMemory over EvidenceStore. Current records, invalidation, retention ceilings
 and limitations are owned by the [protocol](../protocol.md#passive-task-memory).
-This does not implement the proposed supervisor, skill execution, model tiers or
-waypoint-and-return outcome described above.
+Round010 adds [passive supervision](../protocol.md#passive-waypoint-supervision)
+and skill continuation. Model tiers, service/controller integration and a native
+waypoint-and-return outcome remain distinct future work.

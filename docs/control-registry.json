@@ -163,7 +163,7 @@
       "id": "C-PORTABLE",
       "name": "Portable regression lane",
       "mode": "automatic",
-      "scope": "Controller, HTTP adapter, setup and spectator regressions. Includes gameplay record validation and bounded evidence retention using synthetic observations.",
+      "scope": "Controller, HTTP adapter, setup and spectator regressions. Includes gameplay record validation and bounded evidence retention using synthetic observations. Passive planner/skill/supervisor composition, continuation and uncertainty are covered by real-component synthetic fixtures.",
       "mechanism": "Common command compiles Python, runs selected Ruff correctness diagnostics, Import Linter contracts, JavaScript syntax checks, Python tests and delayed-image viewer tests; markdown-it-py parses document links/images before contained file-target checks; diff whitespace is checked.",
       "owner": "maintainer",
       "trigger": "each integration checkpoint and configured CI event",
@@ -188,7 +188,10 @@
         "docs/acceptance/2026-10-17-public-recovery-evaluation.md",
         "tests/test_gameplay_planner.py",
         "docs/acceptance/2026-10-17-native-recovery-planner.md",
-        "docs/acceptance/2026-10-17-bounded-skills.md"
+        "docs/acceptance/2026-10-17-bounded-skills.md",
+        "docs/acceptance/2026-10-17-passive-supervisor.md",
+        "tests/test_gameplay_supervisor.py",
+        "tests/test_gameplay_skills.py"
       ],
       "failure_response": "Preserve failure output, fix the cause and rerun before claiming portable acceptance.",
       "limitations": "Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing.",
@@ -198,21 +201,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within round009 bounded scope; fault/native lanes remain distinct.",
-        "scope": "263 portable tests and viewer/import/docs controls; actual retained movement, menu/activity, Pause, stale and reload/creature predicates as applicable to this control.",
+        "outcome": "Passed within round010 portable/review scope; no native or live-provider claim.",
+        "scope": "313 Python tests plus viewer, import, document, diagram and governance checks; 73 focused supervisor/skill cases use real passive components and synthetic retained frames.",
         "evidence": [
-          "docs/acceptance/2026-10-17-bounded-skills.md"
+          "docs/acceptance/2026-10-17-passive-supervisor.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-bounded-skills.md"
+          "docs/acceptance/2026-10-17-passive-supervisor.md"
         ],
         "effectiveness": "effective",
-        "findings": "Round009 review fixed disputed-source disposition and evidence-driver attribution; existing tools enforce shared policy boundary. Claims remain bounded; no autonomous supervisor.",
-        "cost": "Reused existing local tooling; 263 tests and separate native acceptance, one isolated worker and independent reviews.",
-        "follow_up": "Review on changed contracts or failures; #13 owns broad maintenance, future supervision remains separately tracked."
+        "findings": "Independent reviews found expiry ordering, terminal status, foreign-world budgets, missing completion evidence and sticky-dispute admission defects. Regression fixes and rereviews passed; controls remain bounded and do not prove native/model effectiveness.",
+        "cost": "Existing project-local tools, 313 portable tests, one isolated worker and targeted independent reviews; no new generic framework or global dependency.",
+        "follow_up": "Review on changed supervisor/lease/receipt contracts or failures; #36 owns production integration, #24 owns native/model evaluation, #13 owns broad maintenance."
       },
       "next_review": "2027-01-15"
     },
@@ -357,7 +360,7 @@
       "id": "C-BOUNDARY",
       "name": "Architectural dependency contracts",
       "mode": "automatic",
-      "scope": "Declared controller and server dependency boundaries, including indirect imports through harness modules. Passive gameplay records and evidence must not import controller, HTTP, CLI or process/build tooling. Shared movement policy cannot depend on consumers, clock, filesystem or transport.",
+      "scope": "Declared controller and server dependency boundaries, including indirect imports through harness modules. All passive gameplay modules, including supervision, must not import controller, HTTP, CLI or process/build tooling. Shared movement policy cannot depend on consumers, clock, filesystem or transport.",
       "mechanism": "Import Linter uses the pyproject.toml forbidden contracts: controller cannot depend on server, CLI, declared network modules or build tooling; server cannot depend on CLI/tools; CLI may compose both. Fourth forbidden contract isolates harness.movement; negative import fixtures exercise it.",
       "owner": "harness maintainer",
       "trigger": "common command; architecture changes require rule review",
@@ -367,7 +370,8 @@
         "tests/test_devtools.py",
         "docs/architecture.md",
         "docs/decisions/003-development-controls.md",
-        "docs/acceptance/2026-10-17-bounded-skills.md"
+        "docs/acceptance/2026-10-17-bounded-skills.md",
+        "docs/acceptance/2026-10-17-passive-supervisor.md"
       ],
       "failure_response": "Remove reversed dependency or review the boundary and checker together before accepting changed architecture.",
       "limitations": "Static import graph with configured external roots. Dynamic imports, external-package internals, undeclared libraries and semantic C++ isolation remain review concerns; this is not comprehensive module layering.",
@@ -377,21 +381,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within round009 bounded scope; fault/native lanes remain distinct.",
-        "scope": "Four Import Linter contracts, including shared movement purity and negative clock/filesystem/controller/gameplay fixtures.",
+        "outcome": "Passed within round010 portable/review scope; no native or live-provider claim.",
+        "scope": "Four Import Linter contracts including the new controller-free passive supervisor; existing negative fixtures remain active.",
         "evidence": [
-          "docs/acceptance/2026-10-17-bounded-skills.md"
+          "docs/acceptance/2026-10-17-passive-supervisor.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-bounded-skills.md"
+          "docs/acceptance/2026-10-17-passive-supervisor.md"
         ],
         "effectiveness": "effective",
-        "findings": "Round009 review fixed disputed-source disposition and evidence-driver attribution; existing tools enforce shared policy boundary. Claims remain bounded; no autonomous supervisor.",
-        "cost": "Reused existing local tooling; 263 tests and separate native acceptance, one isolated worker and independent reviews.",
-        "follow_up": "Review on changed contracts or failures; #13 owns broad maintenance, future supervision remains separately tracked."
+        "findings": "Independent reviews found expiry ordering, terminal status, foreign-world budgets, missing completion evidence and sticky-dispute admission defects. Regression fixes and rereviews passed; controls remain bounded and do not prove native/model effectiveness.",
+        "cost": "Existing project-local tools, 313 portable tests, one isolated worker and targeted independent reviews; no new generic framework or global dependency.",
+        "follow_up": "Review on changed supervisor/lease/receipt contracts or failures; #36 owns production integration, #24 owns native/model evaluation, #13 owns broad maintenance."
       },
       "next_review": "2027-01-15"
     },
@@ -412,7 +416,8 @@
         "docs/changes/003-public-workflow.md",
         "docs/acceptance/2026-10-17-public-workflow.md",
         "docs/acceptance/2026-10-17-public-recovery-evaluation.md",
-        "docs/acceptance/2026-10-17-bounded-skills.md"
+        "docs/acceptance/2026-10-17-bounded-skills.md",
+        "docs/acceptance/2026-10-17-passive-supervisor.md"
       ],
       "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process.",
@@ -422,21 +427,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within round009 bounded scope; fault/native lanes remain distinct.",
-        "scope": "263 portable tests and viewer/import/docs controls; actual retained movement, menu/activity, Pause, stale and reload/creature predicates as applicable to this control.",
+        "outcome": "Passed within round010 portable/review scope; no native or live-provider claim.",
+        "scope": "Independent brief, shared-source, documentation/visual and two integrated code reviews; five reproduced integrated defects fixed and both rereviews clean.",
         "evidence": [
-          "docs/acceptance/2026-10-17-bounded-skills.md"
+          "docs/acceptance/2026-10-17-passive-supervisor.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-bounded-skills.md"
+          "docs/acceptance/2026-10-17-passive-supervisor.md"
         ],
         "effectiveness": "effective",
-        "findings": "Round009 review fixed disputed-source disposition and evidence-driver attribution; existing tools enforce shared policy boundary. Claims remain bounded; no autonomous supervisor.",
-        "cost": "Reused existing local tooling; 263 tests and separate native acceptance, one isolated worker and independent reviews.",
-        "follow_up": "Review on changed contracts or failures; #13 owns broad maintenance, future supervision remains separately tracked."
+        "findings": "Independent reviews found expiry ordering, terminal status, foreign-world budgets, missing completion evidence and sticky-dispute admission defects. Regression fixes and rereviews passed; controls remain bounded and do not prove native/model effectiveness.",
+        "cost": "Existing project-local tools, 313 portable tests, one isolated worker and targeted independent reviews; no new generic framework or global dependency.",
+        "follow_up": "Review on changed supervisor/lease/receipt contracts or failures; #36 owns production integration, #24 owns native/model evaluation, #13 owns broad maintenance."
       },
       "next_review": "2027-01-15"
     },
@@ -459,7 +464,8 @@
         "tools/documents.py",
         "tests/test_documents.py",
         "schemas/document.schema.json",
-        "docs/acceptance/2026-10-17-bounded-skills.md"
+        "docs/acceptance/2026-10-17-bounded-skills.md",
+        "docs/acceptance/2026-10-17-passive-supervisor.md"
       ],
       "failure_response": "Fix missing/unknown mappings, unsafe references or metadata; regenerate stale map with --write and inspect the result.",
       "limitations": "Structure, recorded dates and local file existence are checked, not prose truth, artifact hashes outside diagram receipts, media availability, actual review/execution, owner performance or historical lifecycle authorization. Due checks run only when invoked; fragment targets are not validated.",
@@ -469,21 +475,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within round009 bounded scope; fault/native lanes remain distinct.",
-        "scope": "263 portable tests and viewer/import/docs controls; actual retained movement, menu/activity, Pause, stale and reload/creature predicates as applicable to this control.",
+        "outcome": "Passed within round010 portable/review scope; no native or live-provider claim.",
+        "scope": "Current metadata, local links, registry relationships, generated control map and maintenance records validated in common checks.",
         "evidence": [
-          "docs/acceptance/2026-10-17-bounded-skills.md"
+          "docs/acceptance/2026-10-17-passive-supervisor.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-bounded-skills.md"
+          "docs/acceptance/2026-10-17-passive-supervisor.md"
         ],
         "effectiveness": "effective",
-        "findings": "Round009 review fixed disputed-source disposition and evidence-driver attribution; existing tools enforce shared policy boundary. Claims remain bounded; no autonomous supervisor.",
-        "cost": "Reused existing local tooling; 263 tests and separate native acceptance, one isolated worker and independent reviews.",
-        "follow_up": "Review on changed contracts or failures; #13 owns broad maintenance, future supervision remains separately tracked."
+        "findings": "Independent reviews found expiry ordering, terminal status, foreign-world budgets, missing completion evidence and sticky-dispute admission defects. Regression fixes and rereviews passed; controls remain bounded and do not prove native/model effectiveness.",
+        "cost": "Existing project-local tools, 313 portable tests, one isolated worker and targeted independent reviews; no new generic framework or global dependency.",
+        "follow_up": "Review on changed supervisor/lease/receipt contracts or failures; #36 owns production integration, #24 owns native/model evaluation, #13 owns broad maintenance."
       },
       "next_review": "2027-01-15"
     },
@@ -676,7 +682,8 @@
         ".puppeteerrc.cjs",
         "docs/decisions/004-documentation-controls.md",
         "docs/acceptance/2026-10-17-public-workflow.md",
-        "docs/acceptance/2026-10-17-public-recovery-evaluation.md"
+        "docs/acceptance/2026-10-17-public-recovery-evaluation.md",
+        "docs/acceptance/2026-10-17-passive-supervisor.md"
       ],
       "failure_response": "Fix syntax or missing setup; regenerate stale output and inspect the rendered result. Never call a denied browser launch a passed check. Resolve semantic/readability findings through C-USABILITY/C-REVIEW.",
       "limitations": "Receipt freshness is not cross-host byte equality or proof against deliberate falsification. Rendering and SVG metadata do not prove meaning, accessibility for every reader or readable layout. Human rendered inspection is required. Ubuntu 24.04 CI was exercised with a scoped runner Chrome sandbox profile; other Linux hosts remain unverified.",
@@ -686,21 +693,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-17",
-        "outcome": "Passed within the reported scope; unsuccessful attempts and limits retained.",
-        "scope": "Proposed outcome-monitor diagram rendered with pinned tooling and inspected independently.",
+        "outcome": "Passed within round010 portable/review scope; no native or live-provider claim.",
+        "scope": "Passive supervisor diagram and updated skill diagram rendered with pinned local tooling; final 1000-pixel supervisor preview inspected by lead and independent reviewer.",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-recovery-evaluation.md"
+          "docs/acceptance/2026-10-17-passive-supervisor.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-17",
         "evidence": [
-          "docs/acceptance/2026-10-17-public-recovery-evaluation.md"
+          "docs/acceptance/2026-10-17-passive-supervisor.md"
         ],
         "effectiveness": "effective",
-        "findings": "Completion route and current authority boundary checked against the design. Logical boxes do not require separate models/processes.",
-        "cost": "Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.",
-        "follow_up": "Review on contract/failure/release changes or due date. #8 broad native recovery/timing, #24 model experiments and #42\u201344 monitoring implementation/evaluation remain separate."
+        "findings": "Independent reviews found expiry ordering, terminal status, foreign-world budgets, missing completion evidence and sticky-dispute admission defects. Regression fixes and rereviews passed; controls remain bounded and do not prove native/model effectiveness.",
+        "cost": "Existing project-local tools, 313 portable tests, one isolated worker and targeted independent reviews; no new generic framework or global dependency.",
+        "follow_up": "Review on changed supervisor/lease/receipt contracts or failures; #36 owns production integration, #24 owns native/model evaluation, #13 owns broad maintenance."
       },
       "next_review": "2027-01-15"
     }

@@ -11,6 +11,13 @@ the game, call a model or judge success. Future planner/skill adapters must reco
 their actual calls and outcomes. External Codex/operator planning is currently
 uninstrumented. An empty call list does not establish zero total cost.
 
+The [passive supervisor](protocol.md#passive-waypoint-supervision) exposes bounded
+action/decision events and the original planner port's accounting snapshot. Merge
+one snapshot at the chosen cutoff, then record its events once in elapsed-time
+order. The caller and independent assessor still supply manifest, final outcome,
+usefulness and harm judgments. Fixture events must remain labeled synthetic;
+an eligible intent never proves native dispatch or model effectiveness.
+
 The [round brief](changes/007-recovery-evaluation-monitoring.md#waypoint-experiment-protocol)
 owns the predeclared waypoint families, development/held-out split, repeats,
 budgets and pilot decision thresholds for #24. No live model comparison is claimed

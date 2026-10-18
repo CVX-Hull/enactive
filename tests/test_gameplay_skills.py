@@ -7,7 +7,7 @@ import unittest
 
 from harness.gameplay.contracts import Budgets, ContractError, PrimitiveResult, TaskSpec
 from harness.gameplay.evidence import EvidenceError, EvidenceStore
-from harness.gameplay.skills import CARDINAL_MOVEMENT, MovementStage, SkillEvaluation, StepProposal
+from harness.gameplay.skills import CARDINAL_MOVEMENT, MovementStage, RouteAttempt, SkillEvaluation, StepProposal, summarize_route
 from harness.movement import DIRECTIONS
 
 
@@ -67,8 +67,8 @@ class MovementSkillTests(unittest.TestCase):
     def stage(self, task=None, start=None, **changes):
         start = self.frame() if start is None else start
         values = dict(stage_id="outbound", stage_version=1, stage="outbound", store=self.store,
-                      task_start=start, stage_start=start, admission_monotonic=100.0,
-                      prior_primitive_count=0)
+                      task_start=start, checkpoint=start, admission_monotonic=100.0,
+                      history=())
         return MovementStage(task or self.task(), **(values | changes))
 
     def propose(self, stage, action_id="logical-1", **changes):
@@ -87,7 +87,7 @@ class MovementSkillTests(unittest.TestCase):
                                "Synthetic transport result")
 
     def test_descriptor_declares_only_implemented_predicates_and_bindings(self):
-        self.assertEqual(CARDINAL_MOVEMENT.skill_version, 1)
+        self.assertEqual(CARDINAL_MOVEMENT.skill_version, 2)
         self.assertEqual(set(CARDINAL_MOVEMENT.action_bindings), {"UP", "DOWN", "LEFT", "RIGHT"})
         self.assertEqual(CARDINAL_MOVEMENT.maximum_budgets.primitives_per_stage, 4)
         self.assertEqual(CARDINAL_MOVEMENT.contexts, ("normal_play",))
@@ -100,19 +100,21 @@ class MovementSkillTests(unittest.TestCase):
                 task = self.task(direction, 4)
                 start = self.frame()
                 stage = self.stage(task, start)
+                history = ()
                 for number in range(1, 5):
                     proposal = self.propose(stage, f"out-{number}")
                     self.assertIsInstance(proposal, StepProposal)
                     self.assertEqual(proposal.action, action)
                     self.assertEqual(proposal.expected_position, (dx * number, dy * number, 0))
                     after = self.frame(proposal.expected_position, turn=10 + number)
-                    value = self.settle(stage, self.result(proposal, after))
+                    result = self.result(proposal, after)
+                    value = self.settle(stage, result)
+                    history += (RouteAttempt("outbound", result),)
                     self.assertEqual(value.progress.verified_steps, number)
                     self.assertEqual(value.stage_result is None, number < 4)
                 self.assertEqual(value.stage_result.disposition, "completed")
                 self.assertEqual(value.progress.displacement, (dx * 4, dy * 4, 0))
-                back = self.stage(task, start, stage="return", stage_id="return", stage_start=after,
-                                  waypoint=after, prior_primitive_count=4)
+                back = self.stage(task, start, stage="return", stage_id="return", checkpoint=after, history=history)
                 for number in range(1, 5):
                     proposal = self.propose(back, f"back-{number}")
                     after = self.frame((dx * (4 - number), dy * (4 - number), 0), turn=14 + number)
@@ -138,7 +140,7 @@ class MovementSkillTests(unittest.TestCase):
         for changes in ({"stage": "continue"}, {"stage_id": ""}, {"stage_version": True},
                         {"admission_monotonic": float("nan")}, {"admission_monotonic": -1},
                         {"admission_monotonic": 10**1000},
-                        {"prior_primitive_count": True}, {"prior_primitive_count": -1},
+                        {"history": True}, {"history": []},
                         {"store": object()}, {"task_start": start.to_dict()},
                         {"task_start": replace(start, revision=99)}, {"stage": "return"}):
             with self.subTest(changes=changes), self.assertRaises(ContractError):
@@ -147,16 +149,13 @@ class MovementSkillTests(unittest.TestCase):
             self.stage(task=self.task(session="other"), start=start)
         middle = self.frame((1, 0, 0), turn=11)
         with self.assertRaises(ContractError):
-            self.stage(start=start, stage_start=middle)
+            self.stage(start=start, checkpoint=middle)
         target = self.frame((2, 0, 0), turn=12)
-        for count in (0, 1):
-            with self.assertRaises(ContractError):
-                self.stage(start=start, stage="return", stage_start=target, waypoint=target,
-                           prior_primitive_count=count)
-        for waypoint in (start, replace(target, turn=9)):
-            with self.assertRaises(ContractError):
-                self.stage(start=start, stage="return", stage_start=target, waypoint=waypoint,
-                           prior_primitive_count=2)
+        with self.assertRaises(ContractError):
+            self.stage(start=start, stage="return", checkpoint=target)
+        # The removed full-leg/count API has no compatibility path.
+        with self.assertRaises(TypeError):
+            self.stage(start=start, prior_primitive_count=2)
 
     def test_guard_preconditions_stop_before_proposal(self):
         mutations = (
@@ -349,18 +348,21 @@ class MovementSkillTests(unittest.TestCase):
                                (Budgets(primitives_per_stage=0), 0), (Budgets(turns=0), 0),
                                (Budgets(wall_seconds=0), 0), (Budgets(primitive_wait_seconds=0), 0)):
             self.reset()
-            stage = self.stage(task=self.task(budgets=budgets), prior_primitive_count=prior)
+            start = self.frame()
+            history = tuple(RouteAttempt("outbound", PrimitiveResult(f"rejected-{n}", start, None,
+                            "not_dispatched", None, "Known non-delivery")) for n in range(prior))
+            stage = self.stage(task=self.task(budgets=budgets), start=start, history=history)
             self.assertEqual(self.propose(stage).stage_result.disposition, "budget_exhausted")
         self.reset()
         start = self.frame()
         current = self.frame(turn=12, now=102, timestamp=1_002_000)
-        stage = self.stage(task=self.task(budgets=Budgets(turns=2)), start=start, stage_start=current)
+        stage = self.stage(task=self.task(budgets=Budgets(turns=2)), start=start, checkpoint=current)
         self.assertEqual(self.propose(stage, now_monotonic=102, now_timestamp_ms=1_002_000)
                          .stage_result.disposition, "budget_exhausted")
         self.reset()
         start = self.frame()
         current = self.frame(now=102, timestamp=1_002_000)
-        stage = self.stage(task=self.task(budgets=Budgets(wall_seconds=2)), start=start, stage_start=current)
+        stage = self.stage(task=self.task(budgets=Budgets(wall_seconds=2)), start=start, checkpoint=current)
         self.assertEqual(self.propose(stage, now_monotonic=102, now_timestamp_ms=1_002_000)
                          .stage_result.disposition, "budget_exhausted")
 
@@ -434,9 +436,15 @@ class MovementSkillTests(unittest.TestCase):
     def test_original_task_primitive_budget_includes_return_history(self):
         task = self.task(distance=2, budgets=Budgets(primitives=3))
         start = self.frame()
-        waypoint = self.frame(task.target, turn=12)
-        stage = self.stage(task, start, stage="return", stage_start=waypoint,
-                           waypoint=waypoint, prior_primitive_count=2)
+        outbound = self.stage(task, start)
+        history = ()
+        for n in range(1, 3):
+            proposal = self.propose(outbound, f"out-{n}")
+            waypoint = self.frame((n, 0, 0), turn=10+n)
+            result = self.result(proposal, waypoint)
+            self.settle(outbound, result)
+            history += (RouteAttempt("outbound", result),)
+        stage = self.stage(task, start, stage="return", checkpoint=waypoint, history=history)
         proposal = self.propose(stage)
         after = self.frame((1, 0, 0), turn=13)
         value = self.settle(stage, self.result(proposal, after))
@@ -449,6 +457,80 @@ class MovementSkillTests(unittest.TestCase):
         self.assertIsNotNone(value.stage_result)
         self.assertEqual(value.progress.verified_steps, 0)
         self.assertEqual(len(self.store.historical_references), 1)
+
+    def test_partial_continuation_derives_both_legs_and_never_replays_prefix(self):
+        task = self.task(distance=2)
+        start = self.frame()
+        history = ()
+        for leg, positions in (("outbound", ((1, 0, 0), (2, 0, 0))),
+                               ("return", ((1, 0, 0), (0, 0, 0)))):
+            for n, position in enumerate(positions):
+                checkpoint = self.store.current(now_monotonic=100, now_timestamp_ms=1_000_000)
+                stage = self.stage(task, start, stage=leg, checkpoint=checkpoint, history=history)
+                self.assertEqual(stage.progress.verified_steps, n)
+                proposal = self.propose(stage, f"{leg}-{n}")
+                self.assertEqual(proposal.expected_position, position)
+                after = self.frame(position, turn=11+len(history))
+                result = self.result(proposal, after)
+                self.settle(stage, result)
+                history += (RouteAttempt(leg, result),)
+        summary = summarize_route(task, self.store, start, history)
+        self.assertEqual((summary.primitive_count, summary.outbound_steps, summary.return_steps), (4, 2, 2))
+        self.assertEqual(summary.position, task.origin)
+        self.assertEqual(self.store.position(summary.waypoint), task.target)
+
+    def test_history_charges_failed_attempts_and_original_leg_limit(self):
+        task = self.task(budgets=Budgets(primitives_per_stage=2))
+        start = self.frame()
+        history = (RouteAttempt("outbound", PrimitiveResult("no-delivery", start, None,
+                         "not_dispatched", None, "Explicit rejection")),)
+        stage = self.stage(task, start, history=history)
+        proposal = self.propose(stage, "moved")
+        after = self.frame((1, 0, 0), turn=11)
+        result = self.result(proposal, after)
+        value = self.settle(stage, result)
+        self.assertEqual(value.stage_result.disposition, "budget_exhausted")
+        history += (RouteAttempt("outbound", result),)
+        continued = self.stage(task, start, checkpoint=after, history=history)
+        self.assertEqual(self.propose(continued, "new").stage_result.disposition, "budget_exhausted")
+        self.assertEqual(continued.progress.verified_steps, 1)
+
+    def test_complete_leg_verification_with_no_primitives_does_not_rearm_old_stage(self):
+        task = self.task(distance=1, budgets=Budgets(primitives=1, primitives_per_stage=1))
+        start = self.frame()
+        stage = self.stage(task, start)
+        proposal = self.propose(stage)
+        after = self.frame((1, 0, 0), turn=11)
+        result = self.result(proposal, after)
+        stopped = self.settle(stage, result, paused=True)
+        self.assertEqual(stopped.stage_result.disposition, "interrupted")
+        fresh = self.frame((1, 0, 0), turn=11)
+        self.assertEqual(self.propose(stage, "ignored"), stopped)
+        continued = self.stage(task, start, checkpoint=fresh, history=(RouteAttempt("outbound", result),))
+        verified = self.propose(continued, "verification-only")
+        self.assertEqual(verified.stage_result.disposition, "completed")
+        self.assertIsNone(verified.primitive_result)
+        self.assertIsNone(verified.stage_result.pending_action_id)
+
+    def test_history_rejects_unknown_wrong_duplicate_or_disputed_route(self):
+        start = self.frame()
+        after = self.frame((1, 0, 0), turn=11)
+        good = PrimitiveResult("one", start, after, "returned", (1, 0, 0), "Verified")
+        invalid = ((RouteAttempt("outbound", replace(good, transport_disposition="unknown")),),
+                   (RouteAttempt("outbound", replace(good, observed_displacement=(0, 0, 0))),),
+                   (RouteAttempt("return", good),),
+                   (RouteAttempt("outbound", good), RouteAttempt("outbound", good)),
+                   (RouteAttempt("outbound", replace(good, transport_disposition="not_dispatched")),))
+        for history in invalid:
+            with self.subTest(history=history), self.assertRaises(ContractError):
+                self.stage(start=start, checkpoint=after, history=history)
+        history = (RouteAttempt("outbound", good),)
+        with self.assertRaises(ContractError):
+            self.propose(self.stage(start=start, checkpoint=after, history=history), "one")
+        Path(start.frame_path).chmod(0o600)
+        Path(start.frame_path).write_bytes(b"disputed")
+        with self.assertRaises(EvidenceError):
+            self.stage(start=start, checkpoint=after, history=history)
 
 
 if __name__ == "__main__":

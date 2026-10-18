@@ -31,6 +31,13 @@ defines this round's interfaces and handoffs; its [acceptance](acceptance/2026-1
 separates delivered controls, passive instrumentation and future monitor behavior.
 Live allocation remains in GitHub.
 
+The [passive supervisor brief](changes/010-passive-supervisor.md) defines round 010:
+remaining-route history, one eligible intent, fresh stage planning and explicit
+continuation. Real leases, service/provider integration and native receipt assembly
+remain #36 gates. Live allocation and readiness remain in GitHub.
+Its [acceptance](acceptance/2026-10-17-passive-supervisor.md) separates portable
+component evidence from future production integration and model/native efficacy.
+
 The [bounded skills and native evidence brief](changes/009-bounded-skills-native-evidence.md)
 defines round 009: one-step movement proposals/results and real predicate acceptance.
 Its [acceptance](acceptance/2026-10-17-bounded-skills.md) records actual skill movement, negative boundaries and separate fault lanes. Reviewed interfaces keep dispatch and future supervision separate. Live readiness,

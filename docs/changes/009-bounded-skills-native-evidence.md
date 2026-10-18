@@ -1,10 +1,14 @@
 ---
 owner: lead
-status: active
-review_trigger: Round 009 interfaces, ownership, acceptance or scope changes
+status: historical
+date: 2026-10-17
+scope: Accepted round009 skill v1 and native evidence; current behavior is in protocol.md
 ---
 
 # Bounded movement skills and native evidence
+
+This is the accepted round009 snapshot. The [current contract](../protocol.md#passive-bounded-movement-skills)
+and [round010 brief](010-passive-supervisor.md) replace its full-leg-only API.
 
 ## Outcome and scope
 

@@ -53,7 +53,8 @@ explain why native integration was selected and when we would reconsider it.
 | Planner round trips | One real three-tile comparison used three individual decisions versus one guarded request, retaining per-step checks; not a general speed or safety result | [Timing trial](acceptance/2026-10-17-completion.md#fresh-real-game-timing-probe) |
 | Input authority and takeover | Native-v3 distinguishes ordinary play, menus, activity polls and debug prompts; revoked tokens and old worlds are rejected. Already-committed actions and activities cannot be undone by Pause | [Recovery acceptance](acceptance/2026-10-17-recovery-memory.md) |
 | Retained gameplay evidence and memory | Typed records and bounded retention now have native normal/menu/activity, movement and reload evidence; missing/conflicting copies are tested in a separate fault lane | [Current evidence contract](protocol.md#passive-gameplay-records-and-evidence) |
-| Passive movement skills | One proposed cardinal step at a time, verified progress and terminal stops; real one-tile outbound/return demonstrated, with no automatic dispatcher | [Skill contract](protocol.md#passive-bounded-movement-skills) |
+| Passive movement skills | One proposed step at a time with cumulative route history; version 1 had native acceptance, version 2 continuation has portable tests | [Skill contract](protocol.md#passive-bounded-movement-skills) |
+| Passive waypoint supervisor | Coordinates planning, progress, stops and explicit continuation in component tests; service/game/provider integration remains separate | [Supervisor contract](protocol.md#passive-waypoint-supervision) |
 | Bounded planner interface | Injected providers return validated data with cancellation, deadlines and cost accounting; fixtures pass, but no concrete model provider or autonomous supervisor is connected | [Planner contract](protocol.md#bounded-injected-planner) |
 | Evaluation records | Passive versioned outcome/cost recorder and offline summaries; external planning and future adapters are not automatically measured | [Evaluation guide](evaluation.md) |
 | Autonomous survival | Not implemented; Codex remains the planner | [Current scope](architecture.md#scope-and-responsibilities) |
@@ -82,7 +83,9 @@ Next priorities and any open issues are in [work](work.md). Current priorities a
 reliability and evidence quality before expanding unattended play. The [recovery and memory increment](acceptance/2026-10-17-recovery-memory.md)
 adds Python recovery transport and passive task memory. Public recovery controls and passive evaluation records are implemented. Round 008
 adds the Pause timing repair, integrated native recovery evidence and a bounded
-planner port. Round 009 adds passive movement skills and native predicate acceptance; automatic waypoint supervision remains separate.
+planner port. Round 009 adds passive movement skills and native predicate acceptance.
+Round 010 adds passive waypoint supervision and remaining-route continuation;
+the service still requires Codex to choose gameplay actions.
 
 The [tiered-gameplay proposal](research-tiered-gameplay.md) explores a capable
 planner, bounded skills and feedback, with additional model tiers conditional on
