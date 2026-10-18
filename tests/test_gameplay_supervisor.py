@@ -49,7 +49,7 @@ class Provider:
                     evidence_session=binding["evidence_session"], evidence_revision=binding["evidence_revision"],
                     stage=binding["expected_stage"], direction=direction,
                     distance_remaining=binding["distance_remaining"], skill_id="cardinal_movement",
-                    skill_version=2, reason="Synthetic bounded route")
+                    skill_version=3, reason="Synthetic bounded route")
         if self.change:
             data.update(self.change)
         return ProviderReply(json.dumps(PlanCandidate(**data).to_dict()), ProviderUsage(10, 5, 0, 0))
@@ -157,7 +157,7 @@ class SupervisorTests(unittest.TestCase):
         self.assertIsInstance(intent, DispatchIntent)
         self.assertFalse(intent.grants_dispatch_authority)
         self.assertEqual((intent.run_id, intent.task_id, intent.task_version, intent.skill_version),
-                         ("run", "task", 1, 2))
+                         ("run", "task", 1, 3))
         with self.assertRaises(FrozenInstanceError):
             intent.execution_epoch = 7
         after = self.frame((1, 0, 0), turn=11)
@@ -215,6 +215,64 @@ class SupervisorTests(unittest.TestCase):
         self.assertEqual(len(self.provider.requests), 2)
         self.assertIsNone(self.super.pending_intent)
         self.assertEqual(self.status().remaining_budgets.primitives, 0)
+
+    @staticmethod
+    def future_neighbor(value, dx, kind):
+        tile = next(t for t in value["scene"]["neighbors"] if (t["dx"], t["dy"]) == (dx, 0))
+        if kind == "invisible":
+            tile.clear()
+            tile.update(dx=dx, dy=0, visible=False)
+        else:
+            tile["furniture"] = "f_cupboard"
+
+    def test_completed_legs_before_cupboards_keep_fresh_return_planning(self):
+        self.admitted(distance=1)
+        self.step("out", (1, 0, 0), change=lambda v: self.future_neighbor(v, 1, "cupboard"))
+        self.wait_plan()
+        self.assertEqual(self.status().state, "admitted")
+        self.assertEqual(len(self.provider.requests), 2)
+        self.assertEqual(self.provider.requests[-1]["binding"]["expected_stage"], "return")
+        self.step("back", (0, 0, 0), change=lambda v: self.future_neighbor(v, -1, "cupboard"))
+        self.assertEqual(self.status().state, "completed")
+        self.assertEqual(len(self.super.route_history), 2)
+        self.assertIsNone(self.intent("extra"))
+
+    def test_completed_legs_allow_schema_valid_invisible_future_neighbors(self):
+        self.admitted(distance=1)
+        self.step("out", (1, 0, 0), change=lambda v: self.future_neighbor(v, 1, "invisible"))
+        self.wait_plan()
+        self.step("back", (0, 0, 0), change=lambda v: self.future_neighbor(v, -1, "invisible"))
+        self.assertEqual(self.status().state, "completed")
+        self.assertEqual(len(self.provider.requests), 2)
+        self.assertEqual(len(self.super.route_history), 2)
+
+    def test_outbound_completion_does_not_authorize_a_blocked_return_direction(self):
+        self.admitted(distance=1)
+        self.step("out", (1, 0, 0), change=lambda v: self.future_neighbor(v, -1, "cupboard"))
+        self.assertEqual(self.status().state, "blocked")
+        self.assertEqual(self.status().progress.verified_steps, 1)
+        self.assertEqual(len(self.provider.requests), 1)
+        self.assertIsNone(self.intent("blocked-return"))
+
+    def test_intermediate_next_neighbor_still_blocks_without_another_intent(self):
+        self.admitted(distance=2)
+        self.step("out", (1, 0, 0), change=lambda v: self.future_neighbor(v, 1, "cupboard"))
+        self.assertEqual(self.status().state, "blocked")
+        self.assertEqual(self.status().progress.verified_steps, 1)
+        self.assertEqual(len(self.provider.requests), 1)
+        self.assertIsNone(self.intent("blocked-next"))
+
+    def test_final_verification_after_a_threat_still_checks_current_evidence(self):
+        self.admitted(distance=1)
+        self.step("out", (1, 0, 0))
+        self.wait_plan()
+        self.step("back", (0, 0, 0), change=self.threat)
+        self.assertEqual(self.status().state, "blocked")
+        self.frame((0, 0, 0), turn=12, change=lambda v: self.future_neighbor(v, -1, "invisible"))
+        self.super.continue_task(**self.clocks())
+        self.assertEqual(self.status().state, "completed")
+        self.assertEqual(len(self.provider.requests), 2)
+        self.assertEqual(len(self.super.route_history), 2)
 
     def test_pause_at_deadline_cannot_convert_expiry_to_operator_retry_exemption(self):
         self.admitted(budgets=Budgets(primitive_wait_seconds=1))
@@ -543,7 +601,7 @@ class SupervisorTests(unittest.TestCase):
         self.assertTrue(provider.cancelled.is_set())
 
     def test_wrong_skill_version_candidate_cannot_become_an_intent(self):
-        provider = Provider(change={"skill_version": 1})
+        provider = Provider(change={"skill_version": 2})
         self.supervisor(provider=provider).start(**self.clocks())
         self.wait_plan()
         self.assertEqual(self.status().state, "failed")

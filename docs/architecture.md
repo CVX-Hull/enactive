@@ -181,7 +181,10 @@ The movement skill is a bounded local verifier. It returns one proposed input,
 then waits for its correlated result. The caller owns authority and dispatch;
 there is no background player or automatic retry. The controller's existing walk
 and the skill share `harness/movement.py`, so their visible terrain/creature rules
-cannot drift into independent copies. Import Linter keeps that policy free of
+cannot drift into independent copies. Version-3 cardinal skills verify the current
+boundary at an exact credited target; eligibility for another step additionally
+checks its next neighbor. Public walk retains its conservative post-step next-tile
+check. Import Linter keeps that policy free of
 controller, gameplay, networking, clocks and filesystem dependencies.
 
 ![One proposed step passes through caller-owned dispatch and retained evidence before progress or a stop is reported.](diagrams/skill.svg)
@@ -198,7 +201,8 @@ movement skill. One explicit task preserves its origin, waypoint, route history
 and budgets across pauses and remaining-route plans. The module offers one intent
 and consumes its exact correlated result; it cannot send an input or grant a lease.
 Outbound completion prompts a fresh return decision. Both verified legs and a
-fresh final guard are required for task completion.
+fresh current-boundary guard are required for task completion. Starting the return
+leg still validates the actual next tile before requesting a fresh plan.
 
 ![A task alternates bound planning and one-step verification, preserving progress at stops.](diagrams/supervisor.svg)
 

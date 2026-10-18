@@ -64,6 +64,11 @@ execution, and the recorder must retain any observed overrun.
 
 ## Offline review
 
+The [waypoint execution-readiness decision](changes/014-waypoint-readiness.md#execution-readiness-decision)
+distinguishes the implemented bounded skill path from missing matched-arm execution,
+runtime recorder export and trial/model measurement preparation. Condition names
+in this schema do not establish executable experimental arms.
+
 From the project root, using project-local files:
 
 ```sh

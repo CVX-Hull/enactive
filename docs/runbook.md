@@ -142,7 +142,7 @@ Required after relevant native/input/renderer/protocol/source-pin/compiler chang
 and before new native support claims. Complete relevant probes on an isolated
 project profile, windowed, without hidden information or edited saves:
 
-1. Build the pinned source using setup; record compiler, inputs and binary hash.
+1. Commit the source checkpoint under [S-DELIVERY](engineering.md#s-delivery-reproducible-and-isolated-delivery), then build the pinned source using setup; record compiler, inputs and binary hash.
 2. Inspect actual native and spectator frames, including menus and popup text.
 3. Exercise observation, bounded input, stale authority, pause and native takeover.
 4. Exercise the changed behavior plus timeout/reconciliation and restart as relevant.
@@ -156,8 +156,9 @@ A new automated native replay/probe runner remains a documented coverage gap.
 ## Evidence retention and cleanup
 
 Track small reports/manifests, source pins and checks in Git. Keep user saves,
-large media, journals, credentials and downloads out of Git. A manifest records
-artifact relative path, byte count, hash, source/candidate and limitations. Snapshot
+large media, journals, credentials and downloads out of Git. Use Git commit/tree,
+diff and PR for source identity. A manifest records external artifacts' relative
+paths, byte counts, hashes, source/candidate and limitations. Snapshot
 journals before indexing them: a live journal can append even during normal shutdown.
 Keep the full live journal, label the snapshot/cutoff, and verify its bytes/hash; do
 not truncate a journal or overwrite a historical hash to hide later events. A hash

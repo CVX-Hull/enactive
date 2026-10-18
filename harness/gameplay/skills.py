@@ -11,7 +11,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 import math
 
-from harness.movement import DIRECTIONS, MovementBlocked, expected_position, guard, observed_step
+from harness.movement import DIRECTIONS, MovementBlocked, current_guard, expected_position, guard, observed_step
 from .contracts import (
     Budgets, ContractError, EvidenceRef, PrimitiveResult, Progress, SkillDescriptor,
     Stage, StageResult, TaskSpec, Vector,
@@ -21,20 +21,23 @@ from .evidence import EvidenceError, EvidenceStore
 
 # Declarative predicates, not an interpreter for arbitrary condition strings.
 CARDINAL_MOVEMENT = SkillDescriptor(
-    skill_id="cardinal_movement", skill_version=2,
+    skill_id="cardinal_movement", skill_version=3,
     task_kinds=("waypoint_return",), stage_kinds=("outbound", "return"),
     contexts=("normal_play",), action_bindings=("UP", "DOWN", "LEFT", "RIGHT"),
     observable_predicates=("fresh_current_retained_normal_play", "same_session_and_checkpoint",
                            "undisputed_start_waypoint_and_credited_sources", "unpaused_unfrozen",
-                           "no_visible_creatures", "visible_empty_allowlisted_neighbor",
+                           "no_visible_creatures", "current_boundary_at_exact_verified_target",
+                           "visible_empty_allowlisted_neighbor_before_further_step",
                            "registered_cardinal_action", "original_task_budgets_remaining"),
     allowed_primitives=("cardinal_step",),
     postconditions=("correlated_logical_action_and_before_reference", "exact_unit_displacement",
                     "advanced_revision_and_nonregressing_turn", "fresh_current_after_evidence",
-                    "unchanged_or_single_correlated_authority_generation", "post_step_guard",
+                    "unchanged_or_single_correlated_authority_generation",
+                    "current_guard_at_target_full_guard_before_further_step",
                     "immutable_leg_target_and_cumulative_verified_steps"),
     stop_rules=("pause_or_freeze", "missing_stale_disputed_or_replaced_evidence",
-                "visible_creature_or_unknown_or_blocked_neighbor", "unregistered_action",
+                "visible_creature_or_unknown_current_boundary",
+                "unknown_or_blocked_neighbor_before_further_step", "unregistered_action",
                 "capacity_or_original_task_budget", "invalid_or_regressing_clock",
                 "unknown_or_dispatched_only_outcome", "rejected_or_not_dispatched",
                 "first_zero_or_unexpected_displacement", "no_automatic_retry_or_reconciliation"),
@@ -264,8 +267,11 @@ class MovementStage:
     def _guard(self, ref: EvidenceRef, *, now_timestamp_ms: int,
                paused: bool, frozen: bool) -> Vector:
         state = self._store.observation(ref)
-        position = guard(state, self._dx, self._dy, paused=paused, frozen=frozen,
-                         now_timestamp_ms=now_timestamp_ms)
+        # Exact displacement/history checks establish the step count independently.
+        # The caller still requires the immutable target position before completion.
+        predicate = current_guard if self._progress.verified_steps == self._task.distance else guard
+        position = predicate(state, self._dx, self._dy, paused=paused, frozen=frozen,
+                             now_timestamp_ms=now_timestamp_ms)
         if self._action not in CARDINAL_MOVEMENT.action_bindings or self._action not in state["actions"]:
             raise MovementBlocked("Movement stopped: cardinal action is not registered in current evidence")
         return position
@@ -389,8 +395,8 @@ class MovementStage:
         except EvidenceError as exc:
             return self._finish("unknown", str(exc), result)
         primitives, stage_primitives, turns, wall = self._remaining(now_monotonic, result.after)
-        if turns < 0 or wall < 0:
-            return self._finish("budget_exhausted", "Committed movement overshot original task time or turn budget", result)
+        if min(primitives, stage_primitives, turns, wall) < 0:
+            return self._finish("budget_exhausted", "Committed movement overshot an original task or stage budget", result)
         if self._progress.verified_steps == self._task.distance and position == self._target:
             return self._finish("completed", "Full leg target and all requested steps verified", result)
         if min(primitives, stage_primitives, turns, wall) <= 0:

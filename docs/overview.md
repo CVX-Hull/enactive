@@ -55,7 +55,7 @@ explain why native integration was selected and when we would reconsider it.
 | Planner round trips | One real three-tile comparison used three individual decisions versus one guarded request, retaining per-step checks; not a general speed or safety result | [Timing trial](acceptance/2026-10-17-completion.md#fresh-real-game-timing-probe) |
 | Input authority and takeover | Native-v3 distinguishes ordinary play, menus, activity polls and debug prompts; revoked tokens and old worlds are rejected. Already-committed actions and activities cannot be undone by Pause | [Recovery acceptance](acceptance/2026-10-17-recovery-memory.md) |
 | Retained gameplay evidence and memory | Typed records and bounded retention now have native normal/menu/activity, movement and reload evidence; missing/conflicting copies are tested in a separate fault lane | [Current evidence contract](protocol.md#passive-gameplay-records-and-evidence) |
-| Passive movement skills | One proposed step at a time with cumulative route history; version 2 has portable tests and a real player-assisted continuation probe | [Skill contract](protocol.md#passive-bounded-movement-skills) |
+| Passive movement skills | One proposed step at a time with cumulative route history; version 3 separates reached-target verification from eligibility for another step | [Skill contract](protocol.md#passive-bounded-movement-skills) |
 | Run input ownership | Explicit task owns input; competing remote inputs reject; Pause immediately revokes further dispatch | [Ownership contract](protocol.md#controller-run-ownership) |
 | Waypoint task supervision | Explicit start, fresh stage planning, verified steps, visible stops and continuation with original history/budgets | [Supervisor contract](protocol.md#passive-waypoint-supervision) |
 | Player planning handoff | Active-chat player returns bounded candidates; slow decisions require fresh evidence revalidation. Missing/stale replies stop; chat usage remains unmeasured | [Planner contract](protocol.md#bounded-injected-planner) |
@@ -74,9 +74,13 @@ production gameplay from controlled fault probes and preserves unsuccessful atte
 Native keyboard control remains available. Tutorial save loading still has a
 [tracked content defect](https://github.com/CVX-Hull/cdda-player/issues/47).
 There is no structured trap/damage guarantee or general combat policy. The movement
-guard also checks the next tile after the final requested step, so a cupboard beyond
-a reached waypoint can stop completion; [#53](https://github.com/CVX-Hull/cdda-player/issues/53)
-tracks review of that conservative policy.
+skill verifies the reached waypoint without requiring a further clear tile. Every
+remaining step and the actual return direction still require a visible empty
+allowlisted neighbor; public `walk` remains conservative after each step.
+[Waypoint readiness](changes/014-waypoint-readiness.md) records this decision and
+the gates remaining before a comparative experiment. Its
+[acceptance](acceptance/2026-10-18-waypoint-readiness.md) records real completion,
+intermediate-obstacle stopping and Pause/continuation, including failures.
 
 ## Current direction and decisions
 

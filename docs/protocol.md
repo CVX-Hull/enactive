@@ -501,7 +501,7 @@ a completed call ends at physical completion even if its reservation is unsettle
 `harness/gameplay/skills.py` implements `MovementStage` and the versioned
 `CARDINAL_MOVEMENT` descriptor. `ACCEPTED_SKILLS` contains this one capability.
 Descriptors declare implemented predicates; arbitrary strings are not executable
-conditions. Cardinal skill version 2 supports the remaining part of outbound/return
+conditions. Cardinal skill version 3 supports the remaining part of outbound/return
 legs of 1–4 steps using the TaskSpec's original primitive, turn and wall budgets.
 The module never sends input, acquires authority, automatically resumes or retries.
 
@@ -528,9 +528,15 @@ removed. Historical round009 drivers are evidence, not supported current callers
 one logical action can be outstanding; proposing consumes primitive budget even
 if later rejected. Every call requires finite nondecreasing clocks. The checkpoint
 and EvidenceStore authority generation must match, all credited/start/waypoint
-sources must remain undisputed, and the next tile must pass the shared guard.
-The guard requires fresh normal play, unpaused/unfrozen control, no visible
-creatures, and a CLEAR empty allowlisted cardinal neighbor with a registered action.
+sources must remain undisputed. The shared `current_guard` requires fresh normal
+play, unpaused/unfrozen control, known absence of visible creatures and valid current
+position. A registered cardinal action is required even at completion. At an exact,
+fully credited target this current-boundary check suffices; before any further step,
+the full `guard` additionally requires a CLEAR empty allowlisted cardinal neighbor.
+Evidence still requires all eight cells: an invisible future neighbor may omit its
+hidden contents, but a missing cell is invalid. Public controller `walk` retains its
+conservative next-neighbor check after every step. Version-2 cardinal candidates
+reject; no fallback descriptor or reader exists.
 
 The caller reserves after-frame capacity, rechecks authority and serializes one
 input. Logical proposal IDs differ from native UUIDs. The caller must retain an
@@ -588,8 +594,9 @@ pending attempt; other late outcomes stay unknown. Previously credited progress
 survives; raw late displacement is evidence, not new verified task progress.
 
 Outbound completion retains a waypoint and starts fresh return planning. Completion
-requires both legs, retained start/waypoint/final evidence, fresh final guard,
-current epoch and no unresolved primitive. Original wall time includes planning
+requires both legs, retained start/waypoint/final evidence, fresh current-boundary guard,
+current epoch and no unresolved primitive. Starting return planning still checks
+the actual return direction with the full next-neighbor guard. Original wall time includes planning
 and pauses; task and leg attempt counts include rejected proposals. A stop after
 full displacement or budget overshoot preserves progress without claiming success.
 

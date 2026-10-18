@@ -2,6 +2,11 @@
 
 <!-- Explain the user-visible problem and resulting behavior. Keep one reviewable outcome. -->
 
+<!-- S-CODE reuse review: for new/expanded custom tools, processes, docs generators or
+controls, link the existing brief/ADR or briefly name the existing option, unmet gap,
+smallest custom scope, maintenance owner/cost and replacement/retirement trigger.
+Prefer mature-tool configuration; do not create a separate inventory for this PR. -->
+
 ## Issue references
 
 Refs #
@@ -32,4 +37,5 @@ scope exclusions, migration limits and follow-up issues. Say why no docs change 
 ## Independent review evidence
 
 <!-- For consequential changes, identify reviewer (human or agent), candidate reviewed,
-findings and disposition. If pending, say so. Do not present agent review as human approval. -->
+findings and disposition. Challenge custom infrastructure/reuse rationale and reject
+unjustified duplication. If pending, say so. Do not present agent review as human approval. -->

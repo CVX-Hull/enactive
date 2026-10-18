@@ -112,7 +112,7 @@ class GameplayCliTests(unittest.TestCase):
         candidate = {"schema": "gameplay/1", "record_type": "PlanCandidate", "candidate_id": "candidate", "task_id": "task", "task_version": 1,
                      "plan_id": "plan", "plan_version": 1, "execution_epoch": 0, "evidence_session": "seen",
                      "evidence_revision": 7, "stage": "outbound", "direction": "east", "distance_remaining": 2,
-                     "skill_id": "cardinal_movement", "skill_version": 2, "reason": "Visible route is clear"}
+                     "skill_id": "cardinal_movement", "skill_version": 3, "reason": "Visible route is clear"}
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / "candidate.json"
             path.write_text(json.dumps(candidate))

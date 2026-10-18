@@ -26,5 +26,7 @@ named agent_type; clean-context workers/reviewers; bounded briefs.
   Record failure and uncertainty; never replace a real failure with a passing mock.
 - Keep the overview and authoritative contracts current with behavior. Historical
   reports, proposals and superseded ADRs are evidence, not current instructions.
+- Apply S-CODE's reuse review to tools, documentation and controls. Git owns tracked
+  source history; custom infrastructure needs a concrete gap and maintenance owner.
 - Run the common checks and inspect staged changes before checkpointing. Control
   definitions, coverage limits and gaps are in [the control map](docs/controls.md).

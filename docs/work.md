@@ -6,6 +6,12 @@ status: active
 
 # Work and decisions
 
+The [waypoint readiness brief](changes/014-waypoint-readiness.md) records the
+current guard repair, hosted workflow maintenance and gated experiment decision.
+[Round014 acceptance](acceptance/2026-10-18-waypoint-readiness.md) separates portable,
+real native and hosted publication evidence, with failures retained.
+GitHub retains live acceptance, dependencies and estimates.
+
 The [overview](overview.md) explains current capabilities and limitations.
 [Integrated player acceptance](acceptance/2026-10-18-integrated-player.md)
 records the delivered runtime, dedicated player sub-agent, spectator and native

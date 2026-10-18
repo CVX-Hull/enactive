@@ -25,13 +25,12 @@ def expected_position(position: Sequence[int], dx: int, dy: int) -> tuple[int, i
     return position[0] + dx, position[1] + dy, position[2]
 
 
-def guard(state: dict[str, Any], dx: int, dy: int, *, paused: bool,
-          frozen: bool, now_timestamp_ms: int) -> tuple[int, int, int]:
-    """Check the public walk policy on validated state; malformed requirements stop.
+def current_guard(state: dict[str, Any], dx: int, dy: int, *, paused: bool,
+                  frozen: bool, now_timestamp_ms: int) -> tuple[int, int, int]:
+    """Check the current visible boundary without requiring a future movement tile.
 
     Time is supplied, never refreshed here. This cannot grant native authority or
-    prove absence of traps/damage. Public walk deliberately checks the next tile
-    even after its final requested displacement.
+    prove absence of traps/damage. Malformed current requirements stop.
     """
     _delta(dx, dy)
     if (type(paused) is not bool or type(frozen) is not bool or not isinstance(state, dict)
@@ -50,6 +49,18 @@ def guard(state: dict[str, Any], dx: int, dy: int, *, paused: bool,
         raise MovementBlocked("Walk stopped: visible creatures or unknown visibility")
     position = scene.get("position")
     expected_position(position, dx, dy)
+    return tuple(position)
+
+
+def guard(state: dict[str, Any], dx: int, dy: int, *, paused: bool,
+          frozen: bool, now_timestamp_ms: int) -> tuple[int, int, int]:
+    """Check current_boundary plus the next visible, empty, allowlisted tile.
+
+    Public walk deliberately checks this even after its final displacement.
+    """
+    position = current_guard(state, dx, dy, paused=paused, frozen=frozen,
+                             now_timestamp_ms=now_timestamp_ms)
+    scene = state["scene"]
     neighbors = scene.get("neighbors")
     if not isinstance(neighbors, list):
         raise MovementBlocked("Walk stopped: neighboring terrain is unknown")
@@ -60,7 +71,7 @@ def guard(state: dict[str, Any], dx: int, dy: int, *, paused: bool,
     if (not tile or tile.get("visible") is not True or tile.get("furniture") != "f_null"
             or not isinstance(tile.get("terrain"), str) or tile["terrain"] not in SAFE_TERRAIN):
         raise MovementBlocked("Walk stopped: next tile is not a visible, empty, allowlisted surface")
-    return tuple(position)
+    return position
 
 
 def observed_step(before: dict[str, Any], after: dict[str, Any], dx: int, dy: int) -> bool:

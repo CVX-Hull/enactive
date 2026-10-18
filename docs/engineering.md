@@ -44,6 +44,7 @@ failure/recovery and acceptance for each consequential boundary. Keep controller
 logic independent of HTTP and build tooling. Explain consequential alternatives,
 maintenance cost and reversal triggers in a brief/ADR. Review boundary changes
 before implementation; keep current architecture synchronized afterward.
+Apply S-CODE's reuse review to infrastructure and architectural tool choices.
 Controls: C-BOUNDARY, C-REVIEW, C-GOVERNANCE.
 
 ## S-PROTOCOL Command and observation authority
@@ -70,6 +71,24 @@ implementations that fit the requirement; custom code needs a documented gap and
 a bounded scope. Review adoption, compatibility, licenses and upgrade burden. Current stack
 preferences are [decisions](decisions/002-local-contract.md), not permanent bans.
 
+This reuse requirement applies to architecture, implementation, documentation,
+workflow and controls. Before adding or substantially expanding a custom tool or
+process, record the existing capability considered, the concrete unmet requirement,
+the smallest necessary custom scope, its owner/maintenance cost and a replacement
+or retirement trigger in the existing brief, ADR or PR. Small changes need only a
+short rationale; no separate catalog or template is required. Prefer configuration
+and thin integration of maintained tools. Do not build another version-control,
+tracker, parser, validator, renderer or generic lint framework where an existing
+capability fits. Dependencies also have costs; reuse is a reasoned decision, not a
+requirement to add a package for every small project-specific rule.
+
+C-REVIEW requires the reviewer to challenge unsupported custom infrastructure and
+hold acceptance until its gap is justified or the duplication removed. Semantic
+fit cannot be proved by a keyword check or test for the presence of a rationale.
+Use mature tools to enforce their supported properties; keep project checks bounded
+to the remaining project rules. [ADR003](decisions/003-development-controls.md) and
+[ADR004](decisions/004-documentation-controls.md) record the existing choices.
+
 Test observable contracts, adversarial transitions and meaningful regressions.
 Changed expectations require a contract-grounded reason, not agreement with
 newly generated output. Do not weaken a check to conceal a failure. Syntax and
@@ -87,6 +106,11 @@ source/license provenance; checksum inputs; review upstream changes before
 upgrading. Launch only the prepared windowed wrapper with explicit userdir.
 A new game/compiler/patch build needs relevant native acceptance before a release
 claim. Inspect the staged diff and verify the exact candidate before checkpointing.
+Git owns tracked-source history and identity. Commit the source checkpoint before
+native acceptance; identify it by commit/tree and PR, and use Git diffs to show
+later source changes. Do not maintain a parallel per-source hash/history inventory.
+Checksums remain appropriate for downloaded inputs, built binaries and external
+evidence; bounded generated-output freshness receipts are checks, not source history.
 Controls: C-SETUP, C-RELEASE, C-NATIVE, C-REVIEW.
 
 ## S-OPS Observable operation and recovery
@@ -137,6 +161,8 @@ progressively detailed links. Split by reader, authority, cohesion or change
 frequency; no universal line/page count or documentation-volume target applies.
 Use a diagram only when it clarifies a boundary or interaction. Generate mechanical
 reference from an existing authoritative structure when it reduces duplication.
+Documentation generators and checks follow S-CODE's reuse decision and review
+requirement; stewardship/schema rules do not justify rebuilding their parsers.
 
 Stewardship metadata lives in YAML front matter, checked by `tools/documents.py`:
 all Markdown in docs/ and README/AGENTS/NOTICE identifies owner and status. Active
@@ -269,7 +295,11 @@ result; its effectiveness has been assessed within a stated scope. `last_exercis
 links to a dated execution/review result recording candidate, environment, lane,
 outcome and limits, not merely implementation source. Null means no recorded exercise.
 Maintenance review records findings, effectiveness, cost and follow-up with evidence.
-It can be unassessed; a fresh metadata review must not refresh native execution dates.
+Include custom tools/processes and previously rejected reuse options: revisit on
+changed needs, upstream capability/support, repeated defects or excessive upkeep;
+replace or retire redundant machinery rather than accumulating controls. Keep the
+decision with its existing owner and record, not a second maintenance system.
+Effectiveness can be unassessed; a fresh metadata review must not refresh native execution dates.
 Exercise and maintenance review are independent events. Dated reports retain prior
 observations when the latest record changes. A failure remains in history after repair.
 

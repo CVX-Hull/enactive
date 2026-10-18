@@ -13,7 +13,7 @@ import math
 import time
 from typing import Callable, Literal
 
-from harness.movement import DIRECTIONS, MovementBlocked, guard
+from harness.movement import DIRECTIONS, MovementBlocked, current_guard, guard
 from .contracts import (
     Budgets, ContractError, EvidencePacket, EvidenceRef, PrimitiveResult, Progress,
     RunStatus, Stage, TaskSpec, PlanCandidate,
@@ -187,7 +187,9 @@ class WaypointSupervisor:
             raise EvidenceError("Observation or evidence authority changed; explicit continuation required")
         dx, dy, action = self._delta()
         observation = self._store.observation(current)
-        guard(observation, dx, dy, paused=False, frozen=False, now_timestamp_ms=now_timestamp_ms)
+        progress = summary.outbound_steps if self._leg == "outbound" else summary.return_steps
+        predicate = current_guard if progress == self._task.distance else guard
+        predicate(observation, dx, dy, paused=False, frozen=False, now_timestamp_ms=now_timestamp_ms)
         if action not in observation["actions"]:
             raise MovementBlocked("Cardinal movement action is unavailable")
         self._summary = summary
@@ -220,7 +222,7 @@ class WaypointSupervisor:
         signature = (scene["position"], (dx, dy), action, action in state["actions"],
                      state["paused"], state["boundary"]["kind"], state["category"],
                      scene["visible_creatures"], None if tile is None else
-                     (tile["visible"], tile["terrain"], tile["furniture"]))
+                     (tile["visible"], tile.get("terrain"), tile.get("furniture")))
         return json.dumps(signature, sort_keys=True, separators=(",", ":"))
 
     def _new_stage(self, current: EvidenceRef) -> MovementStage:

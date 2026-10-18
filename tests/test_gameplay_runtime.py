@@ -44,7 +44,7 @@ def candidate(request):
     return PlanCandidate("candidate", binding["task_id"], binding["task_version"], binding["plan_id"],
         binding["plan_version"], binding["execution_epoch"], binding["evidence_session"],
         binding["evidence_revision"], binding["expected_stage"], direction, binding["distance_remaining"],
-        "cardinal_movement", 2, "Follow the bounded clear cardinal route").to_dict()
+        "cardinal_movement", 3, "Follow the bounded clear cardinal route").to_dict()
 
 
 class RuntimeTests(unittest.TestCase):
@@ -117,6 +117,17 @@ class RuntimeTests(unittest.TestCase):
             for metric in ("input_tokens", "output_tokens", "cached_input_tokens", "cost_usd"):
                 self.assertIsNone(event["payload"][metric])
                 self.assertTrue(event["payload"][metric + "_missing_reason"])
+
+    def test_obsolete_cardinal_candidate_is_rejected_without_consuming_current_request(self):
+        request = self.start()
+        old = candidate(request) | {"skill_version": 2}
+        result = self.runtime.command("plan", request_id=request["request_id"], candidate=old)
+        self.assertEqual(result["status"], "rejected")
+        self.assertFalse(any(r["kind"] == "action" for r in self.bridge.requests))
+        self.assertEqual(self.request()["request_id"], request["request_id"])
+        self.answer(request)
+        self.answer(self.request())
+        self.assertEqual(self.state("completed")["run"]["progress"]["verified_steps"], 2)
 
     def test_slow_plan_status_reads_preserve_generation_then_fresh_equivalent_refresh(self):
         request = self.start()

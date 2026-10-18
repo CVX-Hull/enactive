@@ -2,7 +2,7 @@
 import copy
 import unittest
 
-from harness.movement import DIRECTIONS, MovementBlocked, expected_position, guard, observed_step
+from harness.movement import DIRECTIONS, MovementBlocked, current_guard, expected_position, guard, observed_step
 from tests.test_controller import state
 
 
@@ -25,6 +25,48 @@ class MovementTests(unittest.TestCase):
                     self.assertFalse(observed_step(before, wrong, dx, dy))
                 after["scene"]["position"][2] += 1
                 self.assertFalse(observed_step(before, after, dx, dy))
+
+    def test_current_guard_does_not_require_a_future_neighbor(self):
+        for direction, (dx, dy, _) in DIRECTIONS.items():
+            for obstacle in ("wall", "cupboard", "invisible"):
+                with self.subTest(direction=direction, obstacle=obstacle):
+                    value = state()
+                    tile = next(t for t in value["scene"]["neighbors"]
+                                if (t["dx"], t["dy"]) == (dx, dy))
+                    if obstacle == "invisible":
+                        tile.clear()
+                        tile.update(dx=dx, dy=dy, visible=False)
+                    else:
+                        tile.update({"terrain": "t_wall"} if obstacle == "wall"
+                                    else {"furniture": "f_cupboard"})
+                    arguments = dict(paused=False, frozen=False,
+                                     now_timestamp_ms=value["timestamp_ms"])
+                    self.assertEqual(current_guard(value, dx, dy, **arguments), (0, 0, 0))
+                    with self.assertRaises(MovementBlocked):
+                        guard(value, dx, dy, **arguments)
+
+    def test_current_guard_preserves_every_current_boundary_stop(self):
+        changes = (lambda v: v.update(paused=True), lambda v: v.pop("boundary"),
+                   lambda v: v.update(in_game=False), lambda v: v.update(frame_ok=False),
+                   lambda v: v.update(timestamp_ms=True), lambda v: v.update(scene=None),
+                   lambda v: v["scene"].update(visible_creatures=None),
+                   lambda v: v["scene"].update(visible_creatures=[{"name": "cat"}]),
+                   lambda v: v["scene"].update(position=[True, 0, 0]))
+        for change in changes:
+            value = state()
+            change(value)
+            with self.subTest(change=change), self.assertRaises(MovementBlocked):
+                current_guard(value, 1, 0, paused=False, frozen=False,
+                              now_timestamp_ms=state()["timestamp_ms"])
+        for changes in ({"paused": True}, {"frozen": True},
+                        {"now_timestamp_ms": state()["timestamp_ms"] + 3001}):
+            arguments = dict(paused=False, frozen=False, now_timestamp_ms=state()["timestamp_ms"])
+            with self.subTest(changes=changes), self.assertRaises(MovementBlocked):
+                current_guard(state(), 1, 0, **(arguments | changes))
+        for dx, dy in ((0, 0), (1, 1), (True, 0)):
+            with self.assertRaises(MovementBlocked):
+                current_guard(state(), dx, dy, paused=False, frozen=False,
+                              now_timestamp_ms=state()["timestamp_ms"])
 
     def test_unknown_or_ambiguous_requirements_fail_closed(self):
         changes = [lambda v: v.pop("paused"), lambda v: v.pop("boundary"),

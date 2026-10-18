@@ -86,8 +86,19 @@ class MovementSkillTests(unittest.TestCase):
         return PrimitiveResult(proposal.action_id, proposal.before, after, disposition, displacement,
                                "Synthetic transport result")
 
+    def obstruct_neighbor(self, value, dx, dy, obstacle):
+        tile = next(t for t in value["scene"]["neighbors"] if (t["dx"], t["dy"]) == (dx, dy))
+        if obstacle == "invisible":
+            tile.clear()
+            tile.update(dx=dx, dy=dy, visible=False)
+        else:
+            tile.update({"terrain": "t_wall"} if obstacle == "wall" else {"furniture": "f_cupboard"})
+
     def test_descriptor_declares_only_implemented_predicates_and_bindings(self):
-        self.assertEqual(CARDINAL_MOVEMENT.skill_version, 2)
+        self.assertEqual(CARDINAL_MOVEMENT.skill_version, 3)
+        self.assertIn("current_boundary_at_exact_verified_target", CARDINAL_MOVEMENT.observable_predicates)
+        self.assertIn("visible_empty_allowlisted_neighbor_before_further_step", CARDINAL_MOVEMENT.observable_predicates)
+        self.assertIn("current_guard_at_target_full_guard_before_further_step", CARDINAL_MOVEMENT.postconditions)
         self.assertEqual(set(CARDINAL_MOVEMENT.action_bindings), {"UP", "DOWN", "LEFT", "RIGHT"})
         self.assertEqual(CARDINAL_MOVEMENT.maximum_budgets.primitives_per_stage, 4)
         self.assertEqual(CARDINAL_MOVEMENT.contexts, ("normal_play",))
@@ -134,6 +145,79 @@ class MovementSkillTests(unittest.TestCase):
         with self.assertRaises(FrozenInstanceError):
             value.reason = "changed"
         self.assertEqual(stage.progress, value.progress)
+
+    def test_final_neighbor_does_not_block_target_but_stops_an_intermediate_step(self):
+        for direction, (dx, dy, _) in DIRECTIONS.items():
+            for obstacle in ("wall", "cupboard", "invisible"):
+                for distance in (1, 2):
+                    with self.subTest(direction=direction, obstacle=obstacle, distance=distance):
+                        self.reset()
+                        task = self.task(direction, distance)
+                        start = self.frame()
+                        stage = self.stage(task, start)
+                        proposal = self.propose(stage)
+                        after = self.frame((dx, dy, 0), turn=11,
+                                           change=lambda v: self.obstruct_neighbor(v, dx, dy, obstacle))
+                        result = self.result(proposal, after)
+                        value = self.settle(stage, result)
+                        self.assertEqual(value.progress.verified_steps, 1)
+                        self.assertEqual(value.stage_result.disposition,
+                                         "completed" if distance == 1 else "blocked")
+                        self.assertIsNone(value.stage_result.pending_action_id)
+                        self.assertEqual(self.settle(stage, result), value)
+                        self.assertEqual(self.propose(stage, "no-extra-proposal"), value)
+                        continued = self.stage(task, start, checkpoint=after,
+                                               history=(RouteAttempt("outbound", result),))
+                        verified = self.propose(continued, "verify-or-step")
+                        self.assertEqual(verified.stage_result.disposition,
+                                         "completed" if distance == 1 else "blocked")
+                        self.assertIsNone(verified.primitive_result)
+                        self.assertIsNone(verified.stage_result.pending_action_id)
+                        self.assertEqual(self.propose(continued, "still-terminal"), verified)
+
+    def test_target_current_guards_still_stop_settlement_and_retained_verification(self):
+        for stop in ("creature", "action", "stale", "paused", "frozen"):
+            for retained in (False, True):
+                with self.subTest(stop=stop, retained=retained):
+                    self.reset()
+                    task = self.task(distance=1)
+                    start = self.frame()
+                    stage = self.stage(task, start)
+                    proposal = self.propose(stage)
+                    def mutation(v):
+                        self.obstruct_neighbor(v, 1, 0, "cupboard")
+                        if stop == "creature":
+                            v["scene"]["visible_creatures"] = [{"name": "cat", "hostile": False}]
+                        elif stop == "action":
+                            v["actions"] = ["LEFT"]
+                    after = self.frame((1, 0, 0), turn=11, change=mutation)
+                    result = self.result(proposal, after)
+                    flags = {stop: True} if stop in ("paused", "frozen") else {}
+                    clocks = dict(now_monotonic=104, now_timestamp_ms=1_004_000) if stop == "stale" else {}
+                    if retained:
+                        stage = self.stage(task, start, checkpoint=after,
+                                           history=(RouteAttempt("outbound", result),))
+                        value = self.propose(stage, "verify-only", **(flags | clocks))
+                    else:
+                        value = self.settle(stage, result, **(flags | clocks))
+                    self.assertNotEqual(value.stage_result.disposition, "completed")
+                    self.assertEqual(value.stage_result.disposition,
+                                     "interrupted" if flags else ("unknown" if stop == "stale" else "blocked"))
+                    self.assertEqual(value.progress.verified_steps, 1 if retained or stop != "stale" else 0)
+                    self.assertEqual(self.propose(stage, "no-rearm"), value)
+
+    def test_completed_target_still_requires_complete_schema_valid_evidence(self):
+        for change in (lambda v: v["scene"]["neighbors"].pop(),
+                       lambda v: v["scene"].update(visible_creatures=None)):
+            with self.subTest(change=change):
+                self.reset()
+                stage = self.stage(task=self.task(distance=1))
+                proposal = self.propose(stage)
+                with self.assertRaises(EvidenceError):
+                    self.frame((1, 0, 0), turn=11, change=change)
+                value = self.settle(stage, self.result(proposal, None, "unknown"))
+                self.assertNotEqual(value.stage_result.disposition, "completed")
+                self.assertEqual(value.progress.verified_steps, 0)
 
     def test_constructor_rejects_bad_types_identity_and_original_history(self):
         start = self.frame()
@@ -232,7 +316,8 @@ class MovementSkillTests(unittest.TestCase):
         after = self.frame((1, 0, 0), turn=11)
         self.settle(stage, self.result(first, after))
         second = self.propose(stage, "logical-2")
-        final = self.frame((2, 0, 0), turn=12)
+        final = self.frame((2, 0, 0), turn=12,
+                           change=lambda v: self.obstruct_neighbor(v, 1, 0, "cupboard"))
         bad = deepcopy(self.values[after.observation_id])
         bad["scene"]["position"] = [9, 0, 0]
         with self.assertRaises(EvidenceError):
@@ -315,9 +400,10 @@ class MovementSkillTests(unittest.TestCase):
                         {"position": (0, 0, 0), "turn": 10, "revision": 1},
                         {"position": (1, 0, 0), "turn": 11, "now": 100}):
             self.reset()
-            stage = self.stage()
+            stage = self.stage(task=self.task(distance=1))
             proposal = self.propose(stage)
-            after = self.frame(**options)
+            after = self.frame(**options, change=None if options.get("revision") == 1 else
+                               lambda v: self.obstruct_neighbor(v, 1, 0, "invisible"))
             clocks = dict(now_monotonic=104, now_timestamp_ms=1_004_000) if options.get("now") else {}
             value = self.settle(stage, self.result(proposal, after), **clocks)
             self.assertIsNotNone(value.stage_result)
@@ -341,7 +427,8 @@ class MovementSkillTests(unittest.TestCase):
                 value = self.settle(stage, self.result(proposal, after), **flags)
                 self.assertEqual(value.progress.verified_steps, 1)
                 self.assertEqual(value.stage_result.disposition,
-                                 "interrupted" if flags else "blocked")
+                                 "completed" if distance == 1 and stop == "terrain"
+                                 else "interrupted" if flags else "blocked")
 
     def test_budget_edges_preserve_original_clocks_turn_and_counts(self):
         for budgets, prior in ((Budgets(primitives=0), 0), (Budgets(primitives=2), 2),
@@ -375,7 +462,8 @@ class MovementSkillTests(unittest.TestCase):
             proposal = self.propose(stage, now_monotonic=101, now_timestamp_ms=1_001_000)
             self.assertEqual(proposal.wait_seconds, 1)
             token = self.store.reserve_dispatch(proposal.before, now_monotonic=101, now_timestamp_ms=1_001_000)
-            after = self.frame((1, 0, 0), turn=12, now=103, timestamp=1_003_000, reservation=token)
+            after = self.frame((1, 0, 0), turn=12, now=103, timestamp=1_003_000, reservation=token,
+                               change=lambda v: self.obstruct_neighbor(v, 1, 0, "cupboard") if final else None)
             value = self.settle(stage, self.result(proposal, after), now_monotonic=103, now_timestamp_ms=1_003_000)
             self.assertEqual(value.progress.verified_steps, 1)
             self.assertEqual(value.stage_result.disposition, "budget_exhausted")
@@ -387,12 +475,31 @@ class MovementSkillTests(unittest.TestCase):
                                                                turns=1, wall_seconds=1))
             stage = self.stage(task=task)
             proposal = self.propose(stage)
-            after = self.frame((1, 0, 0), turn=11, now=101, timestamp=1_001_000)
+            after = self.frame((1, 0, 0), turn=11, now=101, timestamp=1_001_000,
+                               change=lambda v: self.obstruct_neighbor(v, 1, 0, "cupboard") if distance == 1 else None)
             result = self.result(proposal, after)
             value = self.settle(stage, result, now_monotonic=101, now_timestamp_ms=1_001_000)
             self.assertEqual(value.progress.verified_steps, 1)
             self.assertEqual(value.stage_result.disposition, "completed" if distance == 1 else "budget_exhausted")
             self.assertEqual(self.propose(stage, "new", now_monotonic=101, now_timestamp_ms=1_001_000), value)
+
+    def test_retained_complete_target_rejects_each_original_budget_overshoot(self):
+        for exhausted in ("primitives", "primitives_per_stage", "turns", "wall_seconds"):
+            for overshot in (False, True):
+                with self.subTest(exhausted=exhausted, overshot=overshot):
+                    self.reset()
+                    task = self.task(distance=1, budgets=Budgets(**{exhausted: 0 if overshot else 1}))
+                    start = self.frame()
+                    after = self.frame((1, 0, 0), turn=11, now=101, timestamp=1_001_000,
+                                       change=lambda v: self.obstruct_neighbor(v, 1, 0, "invisible"))
+                    result = PrimitiveResult("retained-step", start, after, "returned", (1, 0, 0), "Verified")
+                    stage = self.stage(task, start, checkpoint=after, history=(RouteAttempt("outbound", result),))
+                    value = self.propose(stage, "verification-only", now_monotonic=101,
+                                         now_timestamp_ms=1_001_000)
+                    self.assertEqual(value.stage_result.disposition, "budget_exhausted" if overshot else "completed")
+                    self.assertEqual(value.progress.verified_steps, 1)
+                    self.assertIsNone(value.primitive_result)
+                    self.assertIsNone(value.stage_result.pending_action_id)
 
     def test_duplicate_old_result_during_new_proposal_cannot_release_the_new_one(self):
         stage = self.stage()

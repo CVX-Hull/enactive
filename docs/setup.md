@@ -240,6 +240,11 @@ common lane against that candidate, and record exact commit/tree identity, tools
 results and unexecuted lanes in a dated acceptance report. If partially staging,
 check an isolated export of the staged candidate rather than treating a working-tree
 hook as proof. Native changes additionally follow the [native acceptance lane](runbook.md#native-acceptance-lane).
+Commit the source before native acceptance. Use that Git commit/tree and subsequent
+`git diff`/PR identities for source provenance; do not duplicate Git with per-source
+checksum inventories. If relevant source changes, checkpoint again and repeat the
+affected lane. Preserve the old failed evidence. Hash external inputs, binaries,
+screenshots and logs under the runbook's retention policy.
 The public repository requires a PR and the Actions-bound `controller` check on
 main, with resolved conversations and no configured bypass. These rules do not
 prove native gameplay; verify their current configuration at publication. See

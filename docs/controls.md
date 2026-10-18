@@ -50,7 +50,7 @@ Active and deprecated controls fail after their due date. Event triggers can req
 | C-GOVERNANCE | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-PROTOCOL | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-SETUP | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
-| C-RELEASE | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
+| C-RELEASE | active | 2026-10-18 | 2026-10-18 | partially_effective | 2027-01-15 |
 | C-MAINTENANCE | active | 2026-10-18 | 2026-10-18 | unassessed | 2027-01-15 |
 | C-VISUAL | active | 2026-10-18 | 2026-10-18 | effective | 2027-01-15 |
 
@@ -188,27 +188,27 @@ Next review: 2027-01-15.
 
 ### C-REVIEW — Design and independent change review (manual)
 
-Consequential designs, implementation, tests, delegation and exceptions. Lead owns design/integration and verifies returned evidence; at most two workers use separate project-local worktrees and named disjoint paths, with shared runtime serialized; fresh-context review assesses contracts, risk and maintainability before acceptance.
+Consequential designs, implementation, tests, delegation and exceptions. Lead owns design/integration and verifies returned evidence; at most two workers use separate project-local worktrees and named disjoint paths, with shared runtime serialized; fresh-context review assesses contracts, risk and maintainability before acceptance. Review new or expanded custom infrastructure across code/docs/workflow/controls against S-CODE: name the existing option, unmet gap, smallest scope, owner/cost and retirement trigger; reject unjustified duplication.
 
 Owner: lead; reviewer supplies independent findings. Trigger: significant change, new boundary/guarantee/dependency or integration checkpoint.
 Enforcement: Required by S-AGENT and the GitHub work/PR workflow; independent agent review is manually recorded, not an independent GitHub human approval. Hosted enforcement is recorded separately in acceptance.
 Failure response: Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.
 
-Evidence / implementation: [AGENTS.md](../AGENTS.md), [docs/engineering.md](../docs/engineering.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/work.md](../docs/work.md), [docs/project-management.md](../docs/project-management.md), [docs/changes/003-public-workflow.md](../docs/changes/003-public-workflow.md), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md), [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md), [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
+Evidence / implementation: [AGENTS.md](../AGENTS.md), [docs/engineering.md](../docs/engineering.md), [docs/changes/001-engineering-system.md](../docs/changes/001-engineering-system.md), [docs/work.md](../docs/work.md), [docs/project-management.md](../docs/project-management.md), [docs/changes/003-public-workflow.md](../docs/changes/003-public-workflow.md), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [docs/acceptance/2026-10-17-public-recovery-evaluation.md](../docs/acceptance/2026-10-17-public-recovery-evaluation.md), [docs/acceptance/2026-10-17-bounded-skills.md](../docs/acceptance/2026-10-17-bounded-skills.md), [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acceptance/2026-10-17-passive-supervisor.md), [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md), [docs/acceptance/2026-10-18-waypoint-readiness.md](../docs/acceptance/2026-10-18-waypoint-readiness.md).
 
-Coverage gap: No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process.
+Coverage gap: No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process. Reuse fit and the adequacy of its rationale are semantic judgments; CI does not prove them.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-18. Outcome: Passed within stated round012 scope; unsuccessful first route, transition uncertainty and development failures retained.
-Scope: Two isolated implementation worktrees, independent boundary/core review, three reproduced integration defects repaired and independently rechecked.
-Exercise evidence: [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
+Last exercise: 2026-10-18. Outcome: Passed within round014 local/source/native scope; hosted publication is a separately verified lane. Failures and limitations retained.
+Scope: Cardinal-v3 current/future guard split, isolated handoff/integration, independent reviews, 438 portable tests, real completion/intermediate stop/Pause, official Actions-pin review and gated readiness.
+Exercise evidence: [docs/acceptance/2026-10-18-waypoint-readiness.md](../docs/acceptance/2026-10-18-waypoint-readiness.md).
 
 Maintenance review: 2026-10-18. Effectiveness: effective.
-Findings: Integration review exposed post-publication journal classification, persistent-error recovery and duplicate Pause epoch defects; repaired with meaningful regressions. Native guard policy stopped the first route conservatively; #53 tracks policy review.
-Cost: Existing project-local tooling; two disjoint workers, independent review, one player sub-agent, one serialized native runtime. No global setup or separate API spending; Codex usage unmeasured.
-Follow-up: Revisit on lifecycle/receipt/guard changes or failures; #53 guard semantics, #24 comparative evaluation, #40 semantic monitoring, #10 broader tasks and #13 maintenance remain.
-Review evidence: [docs/acceptance/2026-10-18-integrated-player.md](../docs/acceptance/2026-10-18-integrated-player.md).
+Findings: One isolated worker handed back after two failed repairs; lead preserved failures and repaired integration. Independent design, implementation and separate readiness/current-doc reviews found no remaining material issues. Guard migration and future experiment gates are explicit. User-triggered reuse audit found existing mature parsers/validators/linters/renderers already used; clarified mandatory reuse rationale and review rejection across docs/workflow/controls. No new checker or generic framework.
+Cost: Existing project-local tooling; one worker, read-only source sweeps and independent reviews, lead integration and one serialized native session. Failed repairs and first planner timeout retained; Codex usage and sustained review cost unmeasured.
+Follow-up: Lead completes #13/#53/#56 only after protected exact candidate/main publication verification; #75 owns next workflow/dependency/runner/control release/failure/resumption trigger or 2027-01-15 review. #26 retains October24 research review. #24 stays blocked by #72/#73/#74; do not renew unrelated dates.
+Review evidence: [docs/acceptance/2026-10-18-waypoint-readiness.md](../docs/acceptance/2026-10-18-waypoint-readiness.md).
 
 Next review: 2027-01-15.
 
@@ -292,53 +292,53 @@ Next review: 2027-01-15.
 
 ### C-RELEASE — Exact candidate and evidence review (manual)
 
-Checkpoint/release scope, source provenance and validation lanes. Inspect staged diff and candidate identity, run common checks against exact candidate, review pins/open exceptions and require relevant native probes for affected claims.
+Checkpoint/release scope, source provenance and validation lanes. Inspect staged diff and candidate identity, run common checks against exact candidate, review pins/open exceptions and require relevant native probes for affected claims. Git owns tracked-source identity: commit before native acceptance and use commit/tree/diff/PR; hash external artifacts instead of maintaining per-source history.
 
 Owner: lead or releasing maintainer. Trigger: checkpoint, release or support claim.
 Enforcement: Main requires a PR, the Actions-bound controller check and resolved conversations; no force-push/deletion or configured bypass. Lead still owns native/release acceptance. Zero required human approvals is an explicit single-account limit; agent review is not human approval.
 Failure response: Hold the affected acceptance/release claim until failed or unexecuted required lanes are resolved or scope is explicitly reduced.
 
-Evidence / implementation: [docs/setup.md#evidence-and-releases](../docs/setup.md#evidence-and-releases), [docs/engineering.md](../docs/engineering.md), [docs/runbook.md#native-acceptance-lane](../docs/runbook.md#native-acceptance-lane), [native/upstream.json](../native/upstream.json), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md).
+Evidence / implementation: [docs/setup.md#evidence-and-releases](../docs/setup.md#evidence-and-releases), [docs/engineering.md](../docs/engineering.md), [docs/runbook.md#native-acceptance-lane](../docs/runbook.md#native-acceptance-lane), [native/upstream.json](../native/upstream.json), [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md), [docs/acceptance/2026-10-18-waypoint-readiness.md](../docs/acceptance/2026-10-18-waypoint-readiness.md).
 
 Coverage gap: Working-tree hooks do not prove a partially staged candidate. Hosted source/check enforcement does not establish native gameplay, semantic review or release authority. No tag or release automation is installed; administrators can later change rules.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-17. Outcome: Passed within the dated scope after recorded repairs; limitations retained.
-Scope: Public source audit, Actions-bound active rules, rejected pending/failing-check merges, a rejected CI-passing direct fast-forward push with unchanged main, and successful protected PR14 merge.
-Exercise evidence: [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md).
+Last exercise: 2026-10-18. Outcome: Passed within round014 local/source/native scope; hosted publication is a separately verified lane. Failures and limitations retained.
+Scope: Cardinal-v3 current/future guard split, isolated handoff/integration, independent reviews, 438 portable tests, real completion/intermediate stop/Pause, official Actions-pin review and gated readiness.
+Exercise evidence: [docs/acceptance/2026-10-18-waypoint-readiness.md](../docs/acceptance/2026-10-18-waypoint-readiness.md).
 
-Maintenance review: 2026-10-17. Effectiveness: partially_effective.
-Findings: Public source audit, Actions-bound active rules, rejected pending/failing-check merges, a rejected CI-passing direct fast-forward push with unchanged main, and successful protected PR14 merge. Native/release authority remains manual; no independent human approval is claimed.
-Cost: Local full lane plus hosted installation/rendering and independent review; initial failures required rework. No reliable long-term cost estimate.
-Follow-up: Recheck on workflow/rules, runner, dependency or delegation changes and by 2027-01-15; issue #13 tracks the maintenance review. Preserve failures and adjust or retire controls from evidence.
-Review evidence: [docs/acceptance/2026-10-17-public-workflow.md](../docs/acceptance/2026-10-17-public-workflow.md).
+Maintenance review: 2026-10-18. Effectiveness: partially_effective.
+Findings: Exact runtime hashes, unchanged native binary, scoped portable and real native lanes recorded; immutable official Node24 action identities verified. Hosted candidate/main checks, warning resolution and active rules require separate publication readback; no new enforcement probe or human approval claimed. Round014 ad-hoc source hashes are retained history; current standard now requires a Git checkpoint before future native acceptance, avoiding parallel source inventories.
+Cost: Existing project-local tooling; one worker, read-only source sweeps and independent reviews, lead integration and one serialized native session. Failed repairs and first planner timeout retained; Codex usage and sustained review cost unmeasured.
+Follow-up: Lead completes #13/#53/#56 only after protected exact candidate/main publication verification; #75 owns next workflow/dependency/runner/control release/failure/resumption trigger or 2027-01-15 review. #26 retains October24 research review. #24 stays blocked by #72/#73/#74; do not renew unrelated dates.
+Review evidence: [docs/acceptance/2026-10-18-waypoint-readiness.md](../docs/acceptance/2026-10-18-waypoint-readiness.md).
 
 Next review: 2027-01-15.
 
 ### C-MAINTENANCE — Drift, recovery and retention review (manual)
 
-Active guidance, dependency/research freshness, failure evidence and project-owned cleanup. Review active guidance/visuals, controls and dependencies on changed behavior/failure/release/resumption and within recorded periodic dates. Record findings, effectiveness, cost and follow-up in registry with dated evidence; promote repeated defects into tests or revise/retire controls. C-GOVERNANCE detects elapsed due dates when invoked.
+Active guidance, dependency/research freshness, failure evidence and project-owned cleanup. Review active guidance/visuals, controls and dependencies on changed behavior/failure/release/resumption and within recorded periodic dates. Record findings, effectiveness, cost and follow-up in registry with dated evidence; promote repeated defects into tests or revise/retire controls. C-GOVERNANCE detects elapsed due dates when invoked. Revisit custom tools/processes and rejected reuse choices on upstream support/capability, requirement, defect or upkeep changes; replace or retire duplication under the existing owner/record.
 
 Owner: maintainer; lead tracks active work. Trigger: behavior/control failure, release, resumed work or active-development review interval.
 Enforcement: Manual requirements under S-OPS/S-AGENT/S-DOCS/S-EVIDENCE, with registry fields, references and overdue dates enforced by C-GOVERNANCE in the common lane.
 Failure response: Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.
 
-Evidence / implementation: [docs/work.md](../docs/work.md), [docs/runbook.md](../docs/runbook.md), [docs/research-engineering.md](../docs/research-engineering.md), [docs/research.md](../docs/research.md), [docs/environment.md](../docs/environment.md).
+Evidence / implementation: [docs/work.md](../docs/work.md), [docs/runbook.md](../docs/runbook.md), [docs/research-engineering.md](../docs/research-engineering.md), [docs/research.md](../docs/research.md), [docs/environment.md](../docs/environment.md), [docs/acceptance/2026-10-18-waypoint-readiness.md](../docs/acceptance/2026-10-18-waypoint-readiness.md).
 
 Coverage gap: Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-18. Outcome: Scoped backlog and maintenance review detected stale guidance and repeated tracking; repaired navigation and groomed work. Runtime cleanup preserved saves/evidence.
-Scope: All open issues, dependency/readiness review, current-work navigation, owned refs/process inventory and retained control gaps; no gameplay trial or dependency upgrade.
-Exercise evidence: [docs/acceptance/2026-10-18-backlog-grooming.md](../docs/acceptance/2026-10-18-backlog-grooming.md).
+Last exercise: 2026-10-18. Outcome: Passed within round014 local/source/native scope; hosted publication is a separately verified lane. Failures and limitations retained.
+Scope: Cardinal-v3 current/future guard split, isolated handoff/integration, independent reviews, 438 portable tests, real completion/intermediate stop/Pause, official Actions-pin review and gated readiness.
+Exercise evidence: [docs/acceptance/2026-10-18-waypoint-readiness.md](../docs/acceptance/2026-10-18-waypoint-readiness.md).
 
 Maintenance review: 2026-10-18. Effectiveness: unassessed.
-Findings: Manual checkpoint review detected stale navigation, repeated CI-warning entries and obsolete prerequisite text. Corrections and explicit next actions are recorded; sustained effectiveness is unmeasured.
-Cost: Two read-only sweeps, lead reconciliation and clean-context review; no native trial. Exact effort and long-term forecast error are unavailable.
-Follow-up: Lead owns triggered action-runtime migration and remaining workflow review in #13; #26 retains research review on 2026-10-24 if active or before resuming. Preserve the existing general due date; no automatic renewal.
-Review evidence: [docs/acceptance/2026-10-18-backlog-grooming.md](../docs/acceptance/2026-10-18-backlog-grooming.md).
+Findings: Triggered review migrated three hosted Actions pins and repaired current guard guidance. #24 remains gated by owned comparison/export/catalog work. Sustained maintenance effectiveness remains unmeasured; unrelated due dates unchanged. Scoped reuse audit retained project-specific containment/lifecycle/accounting glue around mature tools; source-form protocol scan remains a bounded maintenance-sensitive check, not a language parser. #75 includes simplification review.
+Cost: Existing project-local tooling; one worker, read-only source sweeps and independent reviews, lead integration and one serialized native session. Failed repairs and first planner timeout retained; Codex usage and sustained review cost unmeasured.
+Follow-up: Lead completes #13/#53/#56 only after protected exact candidate/main publication verification; #75 owns next workflow/dependency/runner/control release/failure/resumption trigger or 2027-01-15 review. #26 retains October24 research review. #24 stays blocked by #72/#73/#74; do not renew unrelated dates.
+Review evidence: [docs/acceptance/2026-10-18-waypoint-readiness.md](../docs/acceptance/2026-10-18-waypoint-readiness.md).
 
 Next review: 2027-01-15.
 
