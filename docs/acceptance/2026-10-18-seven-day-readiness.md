@@ -45,7 +45,7 @@ Native binary remains
 `9cf1f76db19d6b401582bd7e6768422b653f6204069bd544804b8a5490e95273`;
 no rebuild is claimed. Passive preflight source was
 `15172252d885a6e8c1b41410702c555d58c5fd8d`; this publication changes documentation
-only. Final admission must name the actual reviewed published source and CI,
+and the fault-test fixture below, not controller/native behavior. Final admission must name the actual reviewed published source and CI,
 helper/native hashes, both player instances, original clocks/limits and actual
 fresh state. T0/identity can only be recorded after the ordinary character spawns.
 No earlier character or first-day origin can substitute for that observation.
@@ -70,3 +70,36 @@ lesson promotion or generic memory/monitoring prerequisite is selected.
 Common/source checks, protected publication and the eventual actual campaign
 outcome remain separate evidence lanes. The overarching goal stays active until
 the real seven-day outcome and required follow-through are complete.
+
+## Required CI failure retained before admission
+
+The first documentation candidate `c9d0be3d232a89b70df478dfac97eb060c9b99c6`
+passed local common checks/normal hook and its [PR CI](https://github.com/CVX-Hull/enactive/actions/runs/39162686716),
+but [push CI](https://github.com/CVX-Hull/enactive/actions/runs/39162684507) failed
+the existing leased timeout/malformed-response test. The two subcases returned
+`controller_error` instead of `timeout`, and vice versa. Publication stayed blocked;
+no native campaign input or retry-until-green was used.
+
+Source inspection and independent sweep showed that its 80ms end-to-end deadline
+covered both preflight Observe and action handling. Expiry before publication and
+failure to read a malformed response before expiry have different legitimate
+outcomes. The failed runner's original correlated journal was not retained, so
+its exact scheduling/storage path remains unknown; local reproduction passed.
+This is evidence of an unsuitable timing-dependent test assertion, not proof of
+a production controller race or of a specific hosted-runner cause.
+
+The bounded fixture correction reuses the controlled-clock pattern already used
+by the original-deadline tests. It advances time only after the fake bridge claims
+the action for the lost-response case; the malformed response is read before
+clock expiry. A real watchdog still bounds the threaded fixture. Assertions retain
+one published action, exact fault classification, frozen/revoked lease and an
+unknown for that exact request ID. Assertion failures include the receipt; both
+assertion and watchdog failures include correlated requests and original journal.
+Separate original-deadline tests continue
+to require no action publication after expiry in queue/preflight/staging.
+Production timeouts, input guards, native source and campaign budgets are unchanged.
+The initial correction's error-message assertion omitted the word “response”; its
+failed log and subsequent four-test pass remain separate preparation evidence.
+Common checks, independent diff review and new exact-candidate/main CI are still
+required for the corrected candidate. [#75](https://github.com/CVX-Hull/enactive/issues/75)
+owns the scoped maintenance follow-up; no unrelated review date is renewed.
