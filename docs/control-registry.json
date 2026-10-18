@@ -297,7 +297,8 @@
         "docs/acceptance/2026-10-18-campaign-operator.md",
         "docs/acceptance/2026-10-18-seven-day-stop.md",
         "docs/acceptance/2026-10-18-walk-reassessment.md",
-        "docs/acceptance/2026-10-18-ordinary-menus.md"
+        "docs/acceptance/2026-10-18-ordinary-menus.md",
+        "docs/acceptance/2026-10-18-menu-gate.md"
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
       "limitations": "Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.",
@@ -307,21 +308,22 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-18",
-        "outcome": "Qualified menu navigation; first native probe failed; direction regression/reload remain unexercised. No survival result.",
-        "scope": "107+160 artifacts independently checked;66rows/36combinedcharges,112whole,0gameadvance. Corrected source471e412 built/installed and normal Save/Quit returned main menu; lifecycle ACKs remain unknown.",
+        "outcome": "Actual saved-character reload and direction cancellation passed; no survival claim; publication separate.",
+        "scope": "103artifacts/25rows10charges122whole,0gameadvance; sameacceptednative297b, doc-only candidate0987. NormalSaveQuit observed, all lifecycleACKunknowns retained.",
         "evidence": [
-          "docs/acceptance/2026-10-18-ordinary-menus.md"
+          "docs/acceptance/2026-10-18-menu-gate.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
+          "docs/acceptance/2026-10-18-menu-gate.md",
           "docs/acceptance/2026-10-18-ordinary-menus.md"
         ],
         "effectiveness": "partially_effective",
-        "findings": "Static call-chain review missed the actual current renderer despite passing patch fixtures. Native proof exposed it, stopped and retained the failure; precise owner correction worked in the tested paths. Direction chooser and post-shutdown reload remain unexercised;112staysopen.",
-        "cost": "One isolated worker, lead tight follow-up and independent reviews; two serialized native probes36charges/1128.917seconds through closeout, plus review/publication under original45minute clock. Existing mature tooling reused; external model/approval cost unmeasured.",
-        "follow_up": "#112 remaining direction/reload acceptance under separate prospective scope, then #100/#82 admission with all112charges/original creation clock. #75 reviews actual call chains, fixture limits, finite-proof estimation and recording burden. Existing January15maintenance/October24research triggers unchanged."
+        "findings": "Retain missed renderer and first failed proof; exact correction worked in tested navigation. Separate prospective gate used peek direct chooser instead of auto-selected pickup; normal saved-character reload and cancellation verified. Alternate renderer/arbitrarymenus remain unexercised; ACKs stay unknown.",
+        "cost": "Original two menu proofs36charges/1128.917seconds, then separately scoped gate10charges/269.804seconds through closeout; whole122. Existing tools/passive recorder reused; review/publication time and external model/approval usage not zero or fully instrumented.",
+        "follow_up": "#112 protected publication then prospective #100/#82 with122charges/original whole clock; #75 actual call-chain review, fixture limits, proof estimation and evidence/checkpoint burden. Existing maintenance/research due dates unchanged; no automatic learning or broader rules."
       },
       "next_review": "2027-01-15"
     },
@@ -443,7 +445,8 @@
         "docs/acceptance/2026-10-18-campaign-operator.md",
         "docs/acceptance/2026-10-18-seven-day-stop.md",
         "docs/acceptance/2026-10-18-walk-reassessment.md",
-        "docs/acceptance/2026-10-18-ordinary-menus.md"
+        "docs/acceptance/2026-10-18-ordinary-menus.md",
+        "docs/acceptance/2026-10-18-menu-gate.md"
       ],
       "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process. Reuse fit and the adequacy of its rationale are semantic judgments; CI does not prove them. Identity configuration prevents inferred defaults but does not inspect file contents or prove a message, branch or remote ref contains no personal information; full-message inspection remains manual.",
@@ -453,21 +456,22 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-18",
-        "outcome": "Qualified menu navigation; first native probe failed; direction regression/reload remain unexercised. No survival result.",
-        "scope": "107+160 artifacts independently checked;66rows/36combinedcharges,112whole,0gameadvance. Corrected source471e412 built/installed and normal Save/Quit returned main menu; lifecycle ACKs remain unknown.",
+        "outcome": "Actual saved-character reload and direction cancellation passed; no survival claim; publication separate.",
+        "scope": "103artifacts/25rows10charges122whole,0gameadvance; sameacceptednative297b, doc-only candidate0987. NormalSaveQuit observed, all lifecycleACKunknowns retained.",
         "evidence": [
-          "docs/acceptance/2026-10-18-ordinary-menus.md"
+          "docs/acceptance/2026-10-18-menu-gate.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
+          "docs/acceptance/2026-10-18-menu-gate.md",
           "docs/acceptance/2026-10-18-ordinary-menus.md"
         ],
         "effectiveness": "partially_effective",
-        "findings": "Static call-chain review missed the actual current renderer despite passing patch fixtures. Native proof exposed it, stopped and retained the failure; precise owner correction worked in the tested paths. Direction chooser and post-shutdown reload remain unexercised;112staysopen.",
-        "cost": "One isolated worker, lead tight follow-up and independent reviews; two serialized native probes36charges/1128.917seconds through closeout, plus review/publication under original45minute clock. Existing mature tooling reused; external model/approval cost unmeasured.",
-        "follow_up": "#112 remaining direction/reload acceptance under separate prospective scope, then #100/#82 admission with all112charges/original creation clock. #75 reviews actual call chains, fixture limits, finite-proof estimation and recording burden. Existing January15maintenance/October24research triggers unchanged."
+        "findings": "Retain missed renderer and first failed proof; exact correction worked in tested navigation. Separate prospective gate used peek direct chooser instead of auto-selected pickup; normal saved-character reload and cancellation verified. Alternate renderer/arbitrarymenus remain unexercised; ACKs stay unknown.",
+        "cost": "Original two menu proofs36charges/1128.917seconds, then separately scoped gate10charges/269.804seconds through closeout; whole122. Existing tools/passive recorder reused; review/publication time and external model/approval usage not zero or fully instrumented.",
+        "follow_up": "#112 protected publication then prospective #100/#82 with122charges/original whole clock; #75 actual call-chain review, fixture limits, proof estimation and evidence/checkpoint burden. Existing maintenance/research due dates unchanged; no automatic learning or broader rules."
       },
       "next_review": "2027-01-15"
     },
@@ -670,7 +674,8 @@
         "docs/acceptance/2026-10-18-seven-day-readiness.md",
         "docs/acceptance/2026-10-18-seven-day-stop.md",
         "docs/acceptance/2026-10-18-walk-reassessment.md",
-        "docs/acceptance/2026-10-18-ordinary-menus.md"
+        "docs/acceptance/2026-10-18-ordinary-menus.md",
+        "docs/acceptance/2026-10-18-menu-gate.md"
       ],
       "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",
@@ -680,21 +685,22 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-18",
-        "outcome": "Qualified menu navigation; first native probe failed; direction regression/reload remain unexercised. No survival result.",
-        "scope": "107+160 artifacts independently checked;66rows/36combinedcharges,112whole,0gameadvance. Corrected source471e412 built/installed and normal Save/Quit returned main menu; lifecycle ACKs remain unknown.",
+        "outcome": "Actual saved-character reload and direction cancellation passed; no survival claim; publication separate.",
+        "scope": "103artifacts/25rows10charges122whole,0gameadvance; sameacceptednative297b, doc-only candidate0987. NormalSaveQuit observed, all lifecycleACKunknowns retained.",
         "evidence": [
-          "docs/acceptance/2026-10-18-ordinary-menus.md"
+          "docs/acceptance/2026-10-18-menu-gate.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
+          "docs/acceptance/2026-10-18-menu-gate.md",
           "docs/acceptance/2026-10-18-ordinary-menus.md"
         ],
         "effectiveness": "partially_effective",
-        "findings": "Static call-chain review missed the actual current renderer despite passing patch fixtures. Native proof exposed it, stopped and retained the failure; precise owner correction worked in the tested paths. Direction chooser and post-shutdown reload remain unexercised;112staysopen.",
-        "cost": "One isolated worker, lead tight follow-up and independent reviews; two serialized native probes36charges/1128.917seconds through closeout, plus review/publication under original45minute clock. Existing mature tooling reused; external model/approval cost unmeasured.",
-        "follow_up": "#112 remaining direction/reload acceptance under separate prospective scope, then #100/#82 admission with all112charges/original creation clock. #75 reviews actual call chains, fixture limits, finite-proof estimation and recording burden. Existing January15maintenance/October24research triggers unchanged."
+        "findings": "Retain missed renderer and first failed proof; exact correction worked in tested navigation. Separate prospective gate used peek direct chooser instead of auto-selected pickup; normal saved-character reload and cancellation verified. Alternate renderer/arbitrarymenus remain unexercised; ACKs stay unknown.",
+        "cost": "Original two menu proofs36charges/1128.917seconds, then separately scoped gate10charges/269.804seconds through closeout; whole122. Existing tools/passive recorder reused; review/publication time and external model/approval usage not zero or fully instrumented.",
+        "follow_up": "#112 protected publication then prospective #100/#82 with122charges/original whole clock; #75 actual call-chain review, fixture limits, proof estimation and evidence/checkpoint burden. Existing maintenance/research due dates unchanged; no automatic learning or broader rules."
       },
       "next_review": "2027-01-15"
     },

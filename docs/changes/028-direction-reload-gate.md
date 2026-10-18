@@ -1,10 +1,15 @@
 ---
 owner: lead
-review_trigger: Direction caller, saved-character identity, candidate or validation limits change
-status: proposed
+date: 2026-10-18
+scope: Actual remaining direction/reload gate on0987cb1; closed authority
+status: historical
 ---
 
 # Close the remaining direction and reload gate
+
+The [actual result](../acceptance/2026-10-18-menu-gate.md) verifies both remaining
+checks with10newcharges/122whole and zero game advance. This gate is closed; the
+original prospective text below grants no further input. Publication remains separate.
 
 [#112](https://github.com/CVX-Hull/enactive/issues/112) remains open after the
 [qualified menu repair](../acceptance/2026-10-18-ordinary-menus.md). Its original

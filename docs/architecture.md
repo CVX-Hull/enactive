@@ -83,7 +83,8 @@ retains original generic bindings only at pinned direction/item-detail/compariso
 input calls. Unknown contexts remain unsupported. [The qualified native proof](acceptance/2026-10-18-ordinary-menus.md)
 verified item examination/comparison and crafting/construction entry/cancel, then
 normal Save/Quit. Its first renderer failure remains retained; direction-query
-regression and post-shutdown reload remain open. Neither earlier cleanup exception
+regression and post-shutdown reload were subsequently verified by a
+[separately scoped gate](acceptance/2026-10-18-menu-gate.md). Neither earlier cleanup exception
 grants standing fallback authority.
 
 ## Runtime and state
