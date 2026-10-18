@@ -192,11 +192,12 @@
         "docs/acceptance/2026-10-17-passive-supervisor.md",
         "tests/test_gameplay_supervisor.py",
         "tests/test_gameplay_skills.py",
-        "docs/acceptance/2026-10-18-integrated-player.md"
+        "docs/acceptance/2026-10-18-integrated-player.md",
+        "docs/acceptance/2026-10-18-enactive-migration.md"
       ],
       "failure_response": "Preserve failure output, fix the cause and rerun before claiming portable acceptance.",
       "limitations": "Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing.",
-      "enforcement": "Common command and opt-in local hook; main also requires the observed GitHub Actions controller check (app 15368) with strict freshness under active ruleset 25319489. Local hooks remain bypassable; dated hosted/probe evidence is in public-workflow acceptance.",
+      "enforcement": "Common command and opt-in local hook; main also requires the observed GitHub Actions controller check (app 15368) with strict freshness under active ruleset 25346774. Local hooks remain bypassable; dated hosted/probe evidence is in Enactive migration acceptance (original public-workflow results remain historical).",
       "status": "active",
       "rationale": null,
       "replacement": null,
@@ -411,7 +412,7 @@
       "name": "Design and independent change review",
       "mode": "manual",
       "scope": "Consequential designs, implementation, tests, delegation and exceptions.",
-      "mechanism": "Lead owns design/integration and verifies returned evidence; at most two workers use separate project-local worktrees and named disjoint paths, with shared runtime serialized; fresh-context review assesses contracts, risk and maintainability before acceptance. Review new or expanded custom infrastructure across code/docs/workflow/controls against S-CODE: name the existing option, unmet gap, smallest scope, owner/cost and retirement trigger; reject unjustified duplication.",
+      "mechanism": "Lead owns design/integration and verifies returned evidence; at most two workers use separate project-local worktrees and named disjoint paths, with shared runtime serialized; fresh-context review assesses contracts, risk and maintainability before acceptance. Review new or expanded custom infrastructure across code/docs/workflow/controls against S-CODE: name the existing option, unmet gap, smallest scope, owner/cost and retirement trigger; reject unjustified duplication. Before publication, inspect explicit Git author/committer identities and all new commit messages, including co-author trailers, under S-WORK. Use repository-local Git identity configuration.",
       "owner": "lead; reviewer supplies independent findings",
       "trigger": "significant change, new boundary/guarantee/dependency or integration checkpoint",
       "evidence": [
@@ -426,10 +427,13 @@
         "docs/acceptance/2026-10-17-bounded-skills.md",
         "docs/acceptance/2026-10-17-passive-supervisor.md",
         "docs/acceptance/2026-10-18-integrated-player.md",
-        "docs/acceptance/2026-10-18-waypoint-readiness.md"
+        "docs/acceptance/2026-10-18-waypoint-readiness.md",
+        "docs/setup.md#choose-an-explicit-git-identity",
+        "docs/changes/015-enactive-migration.md",
+        "docs/acceptance/2026-10-18-enactive-migration.md"
       ],
       "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
-      "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process. Reuse fit and the adequacy of its rationale are semantic judgments; CI does not prove them.",
+      "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process. Reuse fit and the adequacy of its rationale are semantic judgments; CI does not prove them. Identity configuration prevents inferred defaults but does not inspect file contents or prove a message, branch or remote ref contains no personal information; full-message inspection remains manual.",
       "enforcement": "Required by S-AGENT and the GitHub work/PR workflow; independent agent review is manually recorded, not an independent GitHub human approval. Hosted enforcement is recorded separately in acceptance.",
       "status": "active",
       "rationale": null,

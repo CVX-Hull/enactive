@@ -16,7 +16,7 @@ contract or an authorization for unattended play. [Architecture](architecture.md
 and [protocol](protocol.md) describe the current system.
 
 Implementation and evaluation action items are tracked in the GitHub outcome
-[Demonstrate evidence-driven closed-loop gameplay](https://github.com/CVX-Hull/cdda-player/issues/16).
+[Demonstrate evidence-driven closed-loop gameplay](https://github.com/CVX-Hull/enactive/issues/16).
 Its sub-issues own acceptance, dependencies and estimates; the Project owns live
 status. Existing native interruption/recovery work remains a prerequisite rather
 than a duplicate deliverable. Tracking the proposal does not make it implemented

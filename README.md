@@ -4,7 +4,7 @@ review_trigger: Product scope, entry points or setup changes
 status: active
 ---
 
-# CDDA Player
+# Enactive
 
 A local harness for real **Cataclysm: Dark Days Ahead** with a normal graphical
 game window and browser spectator console. Codex chooses goals and interprets
@@ -21,7 +21,7 @@ deeper design and evidence so you can review the big picture without reading cod
 - [Run, pause and recover](docs/runbook.md): commands, takeover, uncertainty and cleanup.
 - [Current work](docs/work.md): next outcomes, blockers, exceptions and deferred work.
 - [Public Project](https://github.com/users/CVX-Hull/projects/2) and
-  [Issues](https://github.com/CVX-Hull/cdda-player/issues): authoritative work status.
+  [Issues](https://github.com/CVX-Hull/enactive/issues): authoritative work status.
 - [Contributing](CONTRIBUTING.md) and [project workflow](docs/project-management.md).
 - [Charter](docs/charter.md): purpose, constraints, principles and quality priorities.
 - [Architecture](docs/architecture.md): current responsibilities and authority.

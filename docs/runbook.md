@@ -98,7 +98,7 @@ Preserve any rejection, observe deliberately, and decide anew; never automatical
 retry. [Round 008 evidence](acceptance/2026-10-17-native-recovery-planner.md) records
 the YES/NO, completed-activity, unknown-result, revocation and reload probes,
 including controlled fault injection and its limits. Tutorial save-load errors
-remain a separate [content defect](https://github.com/CVX-Hull/cdda-player/issues/47).
+remain a separate [content defect](https://github.com/CVX-Hull/enactive/issues/47).
 
 For prompt answers and debug continuation, use Observe, inspect the frame, and use the
 explicit recovery button when eligible. An owned confirmation exposes Yes/No;

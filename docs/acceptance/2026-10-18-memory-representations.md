@@ -21,7 +21,7 @@ The [brief](../changes/013-memory-representation-study.md),
 [literal fixtures](../design/memory-study-cases.json) and
 [exact matrix](../design/memory-study-matrix.json) define the scope. The initial
 reviewed source/protocol checkpoint was published in
-[PR68](https://github.com/CVX-Hull/cdda-player/pull/68), merged as
+[PR68 (historical PR record)](https://github.com/CVX-Hull/enactive/issues/68), merged as
 `a146e8a349cdd64217f79e7ad322509e6215b45c` with identical reviewed tree.
 Its merged-main [CI](https://github.com/CVX-Hull/cdda-player/actions/runs/39102289621)
 passed. Documented implementation clarifications, fair baseline query paths and
@@ -163,7 +163,7 @@ An additional diagram-only check in the restricted sandbox could not launch
 Chromium; repeating with the renderer's required local permissions passed. An
 unrelated regenerated recovery SVG was restored to its existing valid receipt.
 Final-candidate checks, protected publication and merged-tree verification are
-recorded in [PR69](https://github.com/CVX-Hull/cdda-player/pull/69) and linked Issues;
+recorded in [PR69 (historical PR record)](https://github.com/CVX-Hull/enactive/issues/69) and linked Issues;
 earlier CI above is not substituted for those later checks.
 
 ## Reproduction and maintenance
@@ -186,7 +186,7 @@ The [selection recipe](../../tools/select_memory_study_results.py) records the
 public illustrative projection; complete reports retain all conditions.
 
 Retain raw reports, manifests, earlier attempts and primary-source corpus locally
-until the next [#26](https://github.com/CVX-Hull/cdda-player/issues/26) review and
+until the next [#26](https://github.com/CVX-Hull/enactive/issues/26) review and
 the trace benchmark's adoption decision. Later deduplication/archive needs verified
 hashes and a recorded retention assessment; source/selected evidence remains in
 Git. Do not commit full third-party papers. Follow the existing manual October 24
@@ -205,7 +205,7 @@ retained. No save, global environment or unrelated process was changed.
 | Falsifiable simulation | Frozen protocol/matrix, strong baselines, development/final split, sensitivity and negative controls |
 | Reproducibility and independent review | Source hashes, two identical full collections, raw-statistic recalculation and selected independent algorithms |
 | Reviewable representation and elegance | Proposed advice/offline loops, existing-type mapping, qualitative invariants/costs, adopt/test/defer decisions |
-| Staged follow-up | Bounded [visible-trace benchmark #70](https://github.com/CVX-Hull/cdda-player/issues/70); native efficacy #24/#56, monitors #40, maintenance #26 and conditional #27 remain separate |
+| Staged follow-up | Bounded [visible-trace benchmark #70](https://github.com/CVX-Hull/enactive/issues/70); native efficacy #24/#56, monitors #40, maintenance #26 and conditional #27 remain separate |
 | Publication and isolation | PR68 source/protocol and PR69 implementation/results; local-only dependencies/artifacts, no native/API/training/global changes |
 
 There is no live schema migration in this increment. Offline v1.1 rejects obsolete

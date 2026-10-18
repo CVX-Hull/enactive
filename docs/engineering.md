@@ -213,6 +213,11 @@ Status owns execution stage: Backlog, Ready, In progress, Review, Validation, Do
 Blocked work retains its stage and records the condition, owner and next action.
 Deferred work needs a reason and revisit trigger. Cancelled or duplicate issues
 are closed as not planned and excluded from accepted delivery counts.
+Before publishing commits, verify the intended public author/committer identity
+and full messages, including co-author trailers. Use explicit repository-local Git
+configuration as described in [setup](setup.md#choose-an-explicit-git-identity);
+never substitute an inferred OS account name or local email for the maintainer's
+public identity. Review all new commits, not only the eventual squash commit.
 Before a significant change, write a short [review brief](changes/001-engineering-system.md)
 covering problem, visible behavior, alternatives, maintenance/reversibility,
 evidence/uncertainty and decision needed. Routine fixes need only a cohesive diff

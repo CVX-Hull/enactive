@@ -25,7 +25,7 @@ provenance, independent checks, limitations and reproduction.
 and exact scoped queries; evaluate reusable lessons offline.** Test this against
 real visible traces before adding a persistent memory architecture. These are
 research decisions, not a new runtime feature or a universally best memory system.
-GitHub [#59](https://github.com/CVX-Hull/cdda-player/issues/59) owns the study outcome.
+GitHub [#59](https://github.com/CVX-Hull/enactive/issues/59) owns the study outcome.
 
 ## One problem, six useful views
 
@@ -263,13 +263,13 @@ retention/deletion, scope drift and evaluation design. A sophisticated formalism
 does not pay those costs for us, and adding fields without a query need is not
 progress. No arbitrary elegance score overrides correctness or action authority.
 
-The next benchmark is [#70](https://github.com/CVX-Hull/cdda-player/issues/70),
+The next benchmark is [#70](https://github.com/CVX-Hull/enactive/issues/70),
 linked from the study outcome. It must
 separate memory question quality from native policy benefit under
-[#24/#56](https://github.com/CVX-Hull/cdda-player/issues/56), and coordinate monitor
-work [#40](https://github.com/CVX-Hull/cdda-player/issues/40). Advanced learning
-[#27](https://github.com/CVX-Hull/cdda-player/issues/27) remains conditional.
-Research maintenance follows [#26](https://github.com/CVX-Hull/cdda-player/issues/26),
+[#24/#56](https://github.com/CVX-Hull/enactive/issues/56), and coordinate monitor
+work [#40](https://github.com/CVX-Hull/enactive/issues/40). Advanced learning
+[#27](https://github.com/CVX-Hull/enactive/issues/27) remains conditional.
+Research maintenance follows [#26](https://github.com/CVX-Hull/enactive/issues/26),
 including its 2026-10-24 active-work review and earlier observer/model/engine or
 false-memory triggers. Do not refresh a research date without reassessing evidence.
 Any later format change migrates all callers/data together and removes the old

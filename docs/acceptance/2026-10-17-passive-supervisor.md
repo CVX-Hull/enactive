@@ -7,7 +7,7 @@ review_trigger: Round010 implementation, acceptance or publication claims change
 # Passive waypoint supervision — round 010
 
 This round delivers the passive coordination boundary for
-[#35](https://github.com/CVX-Hull/cdda-player/issues/35). One explicit task keeps its
+[#35](https://github.com/CVX-Hull/enactive/issues/35). One explicit task keeps its
 original route and budgets, requests a fresh return plan at the waypoint, and
 offers at most one intent awaiting a correlated result. The service still does
 not instantiate it. Real controller ownership, lifecycle, native receipt assembly

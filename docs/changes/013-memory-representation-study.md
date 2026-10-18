@@ -20,7 +20,7 @@ point to challenge, not a predetermined answer. The current
 [architecture](../architecture.md) and [protocol](../protocol.md) remain authoritative.
 This is research and experimental design, not authorization to change live gameplay
 contracts or claim a new gameplay capability. GitHub owns status and allocations;
-[study outcome #59](https://github.com/CVX-Hull/cdda-player/issues/59) owns acceptance
+[study outcome #59](https://github.com/CVX-Hull/enactive/issues/59) owns acceptance
 and its bounded children; [work](../work.md) links the Project.
 
 ## Questions and competing perspectives

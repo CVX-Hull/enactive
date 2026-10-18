@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         Search existing issues first. For suspected vulnerabilities, follow the
-        [security policy](https://github.com/CVX-Hull/cdda-player/blob/main/SECURITY.md).
+        [security policy](https://github.com/CVX-Hull/enactive/blob/main/SECURITY.md).
         Redact tokens, credentials, personal paths and private data. Do not upload saves by default.
   - type: textarea
     id: outcome

@@ -8,7 +8,7 @@ review_trigger: Round 010 interfaces, ownership, acceptance or scope changes
 
 ## Outcome and boundary
 
-Deliver [#35](https://github.com/CVX-Hull/cdda-player/issues/35) from main
+Deliver [#35](https://github.com/CVX-Hull/enactive/issues/35) from main
 `cc5691ccd6574d723e57b9c9ffe2224f95d20511`. Compose the accepted evidence,
 memory, planner and skill components into a single explicit waypoint-and-return
 task. After reaching the waypoint, require a new strategic return decision.

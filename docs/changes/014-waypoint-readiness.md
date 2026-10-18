@@ -8,7 +8,7 @@ scope: Round014 frozen design, implementation allocation and gated readiness dec
 # Waypoint evaluation readiness
 
 The user selected this iteration on 2026-10-18 under
-[#16](https://github.com/CVX-Hull/cdda-player/issues/16): policy #53, CI maintenance
+[#16](https://github.com/CVX-Hull/enactive/issues/16): policy #53, CI maintenance
 #13 and experiment preparation #56. Base: `c79856708371fb5563493a8377baca99c3d67130`.
 The [current protocol](../protocol.md) is authoritative. This brief records the
 consequential boundaries fixed before worker dispatch and the resulting
@@ -132,11 +132,11 @@ efficacy result or a new experiment protocol.
 | Model and measurement | Active chat can author bounded functional proposals | Actual identity/token/subscription cost is unreported; no verified same-model configuration or complete cost measurement lane |
 
 Three bounded blockers are tracked under #24:
-[#72 matched-arm contract/execution parity](https://github.com/CVX-Hull/cdda-player/issues/72)
+[#72 matched-arm contract/execution parity](https://github.com/CVX-Hull/enactive/issues/72)
 (M/Low, provisional 2–4 focused sessions);
-[#73 runtime evaluation adapter](https://github.com/CVX-Hull/cdda-player/issues/73)
+[#73 runtime evaluation adapter](https://github.com/CVX-Hull/enactive/issues/73)
 (M/Medium, 2–3 sessions); and
-[#74 trial catalog/model-measurement decision](https://github.com/CVX-Hull/cdda-player/issues/74)
+[#74 trial catalog/model-measurement decision](https://github.com/CVX-Hull/enactive/issues/74)
 (M/Low, 2–4 sessions).
 Each includes review, integration and its own validation; these are planning ranges,
 not elapsed commitments or additive team forecasts. Freeze interfaces and acceptance

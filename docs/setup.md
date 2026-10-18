@@ -33,6 +33,28 @@ for this Mac's existing toolchain and installation history.
 
 ## Install development controls locally
 
+### Choose an explicit Git identity
+
+Configure identity in this checkout before creating or pushing commits:
+
+```sh
+git config --local user.useConfigOnly true
+git config --local user.name "YOUR_PUBLIC_NAME"
+git config --local user.email "YOUR_GITHUB_NOREPLY_ADDRESS"
+git var GIT_AUTHOR_IDENT
+git var GIT_COMMITTER_IDENT
+```
+
+Use the contributor's intended public identity, not an inferred operating-system
+account name or machine-local email. The maintainer uses `CVX-Hull` and its GitHub
+provided noreply address. Inspect all new commit messages, including co-author
+trailers, before pushing; correct author fields alone do not sanitize a message.
+`git log --format=fuller origin/main..HEAD` is a local preflight, not proof that
+arbitrary file contents or other remote refs are private. These are repository-local
+settings; they do not configure other repositories. C-REVIEW owns this manual check.
+
+### Install pinned packages
+
 Use an existing `uv` executable with an explicit project cache and interpreter:
 
 ```sh

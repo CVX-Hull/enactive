@@ -7,7 +7,7 @@ scope: Round 011 controller ownership, portable races and manual real-game accep
 
 # Controller run ownership — round 011
 
-Round 011 delivers [#50](https://github.com/CVX-Hull/cdda-player/issues/50), the
+Round 011 delivers [#50](https://github.com/CVX-Hull/enactive/issues/50), the
 controller lease portion of #36. One explicit in-process owner can send observed
 semantic actions. Competing remote inputs reject, and Pause revokes ownership.
 The existing spectator shows the owner and preserves operator takeover. The

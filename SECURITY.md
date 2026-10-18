@@ -6,7 +6,7 @@ status: active
 
 # Security policy
 
-CDDA Player is a local game-control harness. The spectator binds loopback and
+Enactive is a local CDDA game-control harness. The spectator binds loopback and
 browser controls validate origin and controller authority. These controls do not
 make it a hosted service: public internet deployment, port forwarding and shared
 remote access are unsupported. See the current
@@ -20,7 +20,7 @@ its files through a public proxy or file share.
 ## Report a vulnerability privately
 
 Use GitHub private vulnerability reporting:
-[report a vulnerability](https://github.com/CVX-Hull/cdda-player/security/advisories/new).
+[report a vulnerability](https://github.com/CVX-Hull/enactive/security/advisories/new).
 This channel is enabled for this repository. If the private reporting option is unavailable, do not place exploit details or secrets
 in public issues or pull requests.
 

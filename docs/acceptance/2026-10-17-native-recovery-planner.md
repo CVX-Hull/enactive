@@ -115,7 +115,7 @@ reports invalid terrain/special/trap IDs. Missing active content during load is 
 inference, not a verified persisted-world diagnosis. See `tutorial-diagnosis.json`.
 Errors are preserved and continued individually; future errors are not suppressed.
 No valid tutorial gameplay outcome or repaired save is claimed.
-[Issue #47](https://github.com/CVX-Hull/cdda-player/issues/47) owns this separate
+[Issue #47](https://github.com/CVX-Hull/enactive/issues/47) owns this separate
 content-load diagnosis and repair; #8 does not claim to repair game data.
 
 ## Final production scenarios

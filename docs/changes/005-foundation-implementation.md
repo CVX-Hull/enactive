@@ -7,8 +7,8 @@ review_trigger: Native-v2 or gameplay evidence interfaces, implementation scope 
 # Input authority and gameplay evidence — implementation brief
 
 The owner needs reliable input authority before a planner can act on retained
-observations. This round implements [#29](https://github.com/CVX-Hull/cdda-player/issues/29)
-and [#32](https://github.com/CVX-Hull/cdda-player/issues/32) from base
+observations. This round implements [#29](https://github.com/CVX-Hull/enactive/issues/29)
+and [#32](https://github.com/CVX-Hull/enactive/issues/32) from base
 `abb58670f15d9c23daec43a32beda9a3d148d085`. GitHub owns live status and estimates.
 The [native design](../design/native-control.md) and
 [gameplay design](../design/gameplay.md) own the accepted larger behavior.

@@ -121,9 +121,9 @@ lane. This is agent review for lead adjudication, not independent human approval
 The full #24 experiment is **gated**: integrated matched primitive execution,
 runtime recorder/export, and feasible catalog/model-measurement preparation are
 tracked as bounded owned children and dependencies
-[#72](https://github.com/CVX-Hull/cdda-player/issues/72),
-[#73](https://github.com/CVX-Hull/cdda-player/issues/73) and
-[#74](https://github.com/CVX-Hull/cdda-player/issues/74). The existing four-family,
+[#72](https://github.com/CVX-Hull/enactive/issues/72),
+[#73](https://github.com/CVX-Hull/enactive/issues/73) and
+[#74](https://github.com/CVX-Hull/enactive/issues/74). The existing four-family,
 five-repetition protocol still implies at least40 arm-runs, or60 with its optional
 third condition. No deciding comparison, memory work or new model tier ran here.
 Native acquisition/trial runtime remains unestimated until a pilot measures it.
@@ -157,7 +157,7 @@ failed hosted run and controlled reproduction remain evidence; no new native lan
 is claimed for a test-fixture/documentation change.
 
 Only C-REVIEW, C-RELEASE and C-MAINTENANCE receive this scoped exercise record;
-unrelated review dates stay unchanged. [The next maintenance item](https://github.com/CVX-Hull/cdda-player/issues/75) owns dependency,
+unrelated review dates stay unchanged. [The next maintenance item](https://github.com/CVX-Hull/enactive/issues/75) owns dependency,
 runner, workflow, release/failure/resumption triggers and the existing January15
 deadline; #26's October24 research review remains separate. Sustained control
 effectiveness and independent human approval remain unmeasured/unavailable.

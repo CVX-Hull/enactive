@@ -128,7 +128,7 @@ A raw event remains an event: “the step reached the requested coordinate, then
 next-tile cupboard check stopped the task.” A possible lesson is “the current
 final-leg check may stop after reaching a waypoint.” Neither supports “all
 cupboards are impassable in every situation” or “ignore the guard.” Existing
-[#53](https://github.com/CVX-Hull/cdda-player/issues/53) owns that policy review.
+[#53](https://github.com/CVX-Hull/enactive/issues/53) owns that policy review.
 A good learning system can attribute a failure to its harness, observation coverage,
 planner, executor or evaluator instead of calling every stopped task a model error.
 
@@ -330,9 +330,9 @@ A later bounded comparison can test a few evidence-backed lessons. Broader maps,
 learned retrieval, automatic tactics, calibrated belief fusion and weight updates
 remain conditional on measured gaps and costs.
 
-Keep this evidence review under [#26](https://github.com/CVX-Hull/cdda-player/issues/26)'s
+Keep this evidence review under [#26](https://github.com/CVX-Hull/enactive/issues/26)'s
 active-review trigger. Link any future scope to existing evaluation and
-[#27](https://github.com/CVX-Hull/cdda-player/issues/27) conditional-learning work;
+[#27](https://github.com/CVX-Hull/enactive/issues/27) conditional-learning work;
 durable episode memory is distinct from training and needs its own bounded brief
 before execution. This discussion does not create or mark issues Ready. Before
 implementation, refresh decisive papers if older than the active weekly research

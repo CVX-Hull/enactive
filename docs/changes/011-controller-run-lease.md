@@ -9,7 +9,7 @@ review_trigger: Round 011 interfaces, ownership, acceptance or scope changes
 ## Outcome and scope
 
 From main `c1ba24480a73bdcf9dd8b48a54a2701c6038d1c2`, deliver the controller
-lease portion, tracked in [#50](https://github.com/CVX-Hull/cdda-player/issues/50), of [#36](https://github.com/CVX-Hull/cdda-player/issues/36).
+lease portion, tracked in [#50](https://github.com/CVX-Hull/enactive/issues/50), of [#36](https://github.com/CVX-Hull/enactive/issues/36).
 A trusted in-process caller can claim a reconciled controller for one run, send
 one observed-state-bound action at a time, and relinquish it. Existing HTTP/CLI
 inputs respect that owner. Pause immediately revokes ownership. This makes the

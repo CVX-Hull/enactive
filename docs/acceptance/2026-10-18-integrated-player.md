@@ -10,8 +10,8 @@ scope: Round012 integrated external-chat player, runtime and spectator; portable
 One dedicated player sub-agent now answers bounded planning requests while the
 service executes and verifies an explicitly admitted waypoint task. The lead owns
 task admission, shared runtime and acceptance. This delivers the bounded runtime
-[#52](https://github.com/CVX-Hull/cdda-player/issues/52) and spectator
-[#23](https://github.com/CVX-Hull/cdda-player/issues/23) together under
+[#52](https://github.com/CVX-Hull/enactive/issues/52) and spectator
+[#23](https://github.com/CVX-Hull/enactive/issues/23) together under
 [the brief](../changes/012-integrated-player.md). The
 [current protocol](../protocol.md#integrated-gameplay-lifecycle) owns behavior;
 [this manifest](2026-10-18-integrated-player-manifest.json) identifies local evidence.
@@ -101,7 +101,7 @@ Sub-agent role instructions are advisory, not OS isolation. There is no paid API
 configuration, general survival, generic semantic monitor or comparative model
 performance claim. The two completed one-tile tasks do not establish broad reliability.
 The first conservative guard stop remains a limitation tracked in
-[#53](https://github.com/CVX-Hull/cdda-player/issues/53); no policy was weakened for
+[#53](https://github.com/CVX-Hull/enactive/issues/53); no policy was weakened for
 this demonstration. #24 retains model comparisons, #40 semantic monitoring and
 #10 broad-objective task formation.
 

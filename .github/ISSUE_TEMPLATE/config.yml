@@ -1,5 +1,5 @@
 blank_issues_enabled: false
 contact_links:
   - name: Security policy
-    url: https://github.com/CVX-Hull/cdda-player/blob/main/SECURITY.md
+    url: https://github.com/CVX-Hull/enactive/blob/main/SECURITY.md
     about: Read how to report vulnerabilities privately; do not post sensitive details in an issue.

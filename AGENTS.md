@@ -4,7 +4,7 @@ review_trigger: Engineering standards or contributor workflow changes
 status: active
 ---
 
-# CDDA Player
+# Enactive
 
 Start with [the overview](docs/overview.md), then [engineering standards](docs/engineering.md).
 Read [architecture](docs/architecture.md), [protocol](docs/protocol.md) and
@@ -19,6 +19,9 @@ named agent_type; clean-context workers/reviewers; bounded briefs.
   together, remove old paths, and reject unsupported versions. No compatibility shims.
 - New dependencies, saves, caches and outputs stay project-local or in explicitly
   recorded owned temporary builds. No global installs/profiles/application changes.
+- Verify public commit identities and full messages, including co-author trailers,
+  before pushing. Use explicitly configured repository-local identity; never infer
+  the maintainer's public identity from the Mac account or publish its local email.
 - Never launch fullscreen. Use the prepared wrapper and explicit project userdir.
 - Preserve real CDDA behavior: player-visible observations only; no save editing
   or engine-validation bypass to manufacture a demonstration.

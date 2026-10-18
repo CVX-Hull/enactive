@@ -6,9 +6,9 @@ review_trigger: Gameplay interfaces, supported observations, model adapters, bud
 
 # First gameplay slice — waypoint and return
 
-Design for implementation under [#17](https://github.com/CVX-Hull/cdda-player/issues/17).
+Design for implementation under [#17](https://github.com/CVX-Hull/enactive/issues/17).
 Typed gameplay/1 records and the passive bounded evidence adapter are implemented
-under [#32](https://github.com/CVX-Hull/cdda-player/issues/32). The bounded injected
+under [#32](https://github.com/CVX-Hull/enactive/issues/32). The bounded injected
 planner port is implemented under #34, skills/native predicate acceptance under
 round009, and passive supervision/remaining-route continuation under round010.
 Round012 connects service/controller execution to an external active-chat player.

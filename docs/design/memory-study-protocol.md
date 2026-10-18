@@ -400,8 +400,8 @@ The implementation is a small offline package under `tools/memory_study/`, separ
 from `harness/`, with the [bounded allocation](../changes/013-memory-representation-study.md#implementation-allocation)
 fixing interfaces and ownership. At most two writers use separate worktrees;
 the lead owns the shared runner and integration. Re-estimate
-[#62](https://github.com/CVX-Hull/cdda-player/issues/62) after protocol review.
-[#63](https://github.com/CVX-Hull/cdda-player/issues/63) owns synthesis and staged
+[#62](https://github.com/CVX-Hull/enactive/issues/62) after protocol review.
+[#63](https://github.com/CVX-Hull/enactive/issues/63) owns synthesis and staged
 adoption, not automatic acceptance of a live memory redesign.
 
 ## Freeze record

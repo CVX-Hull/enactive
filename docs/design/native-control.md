@@ -6,10 +6,10 @@ review_trigger: Pinned engine input, activity, debug prompt, bridge protocol or 
 
 # Native interruption and error-screen design
 
-Investigation for [#6](https://github.com/CVX-Hull/cdda-player/issues/6), based on
+Investigation for [#6](https://github.com/CVX-Hull/enactive/issues/6), based on
 CDDA 0.I-1 commit `7b2efa5cea38e4d4d97dd0e63b28b9148623da59` and harness base
 `806c0ba`. Boundary/session authority and durable revocation are implemented in
-[#29](https://github.com/CVX-Hull/cdda-player/issues/29); the v3 transport increment implements the Python recovery operations under #30.
+[#29](https://github.com/CVX-Hull/enactive/issues/29); the v3 transport increment implements the Python recovery operations under #30.
 Public UI/CLI are implemented under #31; [round 008 acceptance](../acceptance/2026-10-17-native-recovery-planner.md)
 records broader native scenarios for #8. The current
 [protocol](../protocol.md) owns implemented envelopes and limits; this document

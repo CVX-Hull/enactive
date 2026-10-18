@@ -8,6 +8,9 @@ status: active
 
 This is a versioned overview, not a live process-status page.
 
+**Enactive** is the canonical repository name. The [migration record](acceptance/2026-10-18-enactive-migration.md)
+explains preserved work, historical PR records and the limits of metadata removal.
+
 ## What we are building
 
 An agent plays real Cataclysm: Dark Days Ahead while you watch the graphical game
@@ -72,7 +75,7 @@ results, revocation ordering, save/reload and raw-debug recovery have been exerc
 [Round 008 evidence](acceptance/2026-10-17-native-recovery-planner.md) separates normal
 production gameplay from controlled fault probes and preserves unsuccessful attempts.
 Native keyboard control remains available. Tutorial save loading still has a
-[tracked content defect](https://github.com/CVX-Hull/cdda-player/issues/47).
+[tracked content defect](https://github.com/CVX-Hull/enactive/issues/47).
 There is no structured trap/damage guarantee or general combat policy. The movement
 skill verifies the reached waypoint without requiring a further clear tile. Every
 remaining step and the actual return direction still require a visible empty
@@ -98,7 +101,7 @@ arrangement; [round 012 acceptance](acceptance/2026-10-18-integrated-player.md) 
 two completed native tasks, Pause/continuation and the unsuccessful first route. Comparative model efficiency, generic semantic
 monitoring and broader survival remain separately tracked follow-ups.
 
-The [seven-day campaign outcome](https://github.com/CVX-Hull/cdda-player/issues/10)
+The [seven-day campaign outcome](https://github.com/CVX-Hull/enactive/issues/10)
 sets the next product target. Campaigns also expose concrete memory, planning,
 monitoring and viewer needs. The [review workflow](project-management.md#campaign-driven-improvement)
 routes observed problems into bounded improvements and checks their effect in later
@@ -114,7 +117,7 @@ remain unimplemented. [Study evidence](acceptance/2026-10-18-memory-representati
 
 The [tiered-gameplay proposal](research-tiered-gameplay.md) explores a capable
 planner, bounded skills and feedback, with additional model tiers conditional on
-measured benefit. Its [tracked outcome](https://github.com/CVX-Hull/cdda-player/issues/16)
+measured benefit. Its [tracked outcome](https://github.com/CVX-Hull/enactive/issues/16)
 links the design, implementation and evaluation work; it is not current gameplay
 capability.
 

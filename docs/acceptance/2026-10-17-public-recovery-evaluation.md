@@ -12,7 +12,7 @@ retains complete outcome/cost measurements with missing values and failed runs.
 The reviewed monitoring design specifies how future gameplay can handle unexpected
 outcomes beyond exact movement; that monitor is not implemented by this round.
 
-Scope is #31, #18 and #41 in [PR #45](https://github.com/CVX-Hull/cdda-player/pull/45).
+Scope is #31, #18 and #41 in [PR #45 (historical PR record)](https://github.com/CVX-Hull/enactive/issues/45).
 The [brief](../changes/007-recovery-evaluation-monitoring.md) owns the selected
 interfaces and experiment protocol. Runtime source is commit
 `9ad6856601168f1727b9cb5f820252b46b6b12c3` (verify against the manifest); later

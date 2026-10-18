@@ -16,7 +16,7 @@ continuation. This round joins the remaining integration in #36 with spectator
 #23. It is a larger delivery outcome, with bounded disjoint implementation briefs;
 component completion alone does not finish the round. #24 retains comparative
 model experiments; #10 retains broad-objective task formation and survival.
-The bounded runtime allocation is [#52](https://github.com/CVX-Hull/cdda-player/issues/52).
+The bounded runtime allocation is [#52](https://github.com/CVX-Hull/enactive/issues/52).
 
 Two implementation allocations, one integrated candidate and one native acceptance
 session avoid repeating publication and runtime setup for each internal seam.

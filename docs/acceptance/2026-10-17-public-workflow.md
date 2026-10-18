@@ -59,7 +59,7 @@ passed rendering but timed out during a functional fixture's 250 ms resume setup
 Normal file/thread exchanges now allow two seconds; production deadlines and the
 explicit short timeout/freeze regressions are unchanged. Shared-runner scheduling
 sensitivity is the working explanation, not a measured latency diagnosis.
-[PR #14](https://github.com/CVX-Hull/cdda-player/pull/14) preserves the failures and repairs.
+[PR #14 (historical PR record)](https://github.com/CVX-Hull/enactive/issues/14) preserves the failures and repairs.
 
 The repaired candidate `c53527501771590443096b27eb9f588439952f38` passed the
 [push run](https://github.com/CVX-Hull/cdda-player/actions/runs/39070139456) and

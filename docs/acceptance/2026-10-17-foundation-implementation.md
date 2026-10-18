@@ -18,8 +18,8 @@ the exact compiled source; hashes are retained in the
 [manifest](2026-10-17-foundation-implementation-manifest.json). Later acceptance,
 control-maintenance and documentation changes do not change that native binary.
 The protected PR identifies the final candidate and hosted checks; Issues
-[#29](https://github.com/CVX-Hull/cdda-player/issues/29) and
-[#32](https://github.com/CVX-Hull/cdda-player/issues/32) own live acceptance/closure.
+[#29](https://github.com/CVX-Hull/enactive/issues/29) and
+[#32](https://github.com/CVX-Hull/enactive/issues/32) own live acceptance/closure.
 
 ## Separate evidence lanes
 

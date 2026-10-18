@@ -14,7 +14,7 @@ records external support and limits.
 
 ## Authority and review surfaces
 
-The selected public repository is [CVX-Hull/cdda-player](https://github.com/CVX-Hull/cdda-player).
+The selected public repository is [CVX-Hull/enactive](https://github.com/CVX-Hull/enactive).
 GitHub Issues and the [public Project](https://github.com/users/CVX-Hull/projects/2) own live priorities, stages, owners,
 dependencies, estimates and blockers. Repository docs own durable purpose,
 contracts, procedures, decisions and dated evidence. [Work](work.md) is the
