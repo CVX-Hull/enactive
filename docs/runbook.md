@@ -85,6 +85,15 @@ input to the same accounting, and retain its result separately from remote recei
 Never send a remote key at an
 unsupported boundary, invent an acknowledgment or turn an unreadable prompt into
 permission. Unavailable access or required human rescue fails campaign readiness.
+An app-inventory access/lock error does not prove an existing game binding is
+unusable. If an already-owned binding exists, inspect it once against the current
+bridge prompt before concluding access failed; do not use app lookup to launch
+another game. In [rehearsal002](acceptance/2026-10-18-first-day-rehearsal-002.md),
+that binding supplied actual before/after screenshots and ordinary Shift+Y at a
+sound-distraction query. Charge native input before sending it, retain its tool/
+image evidence separately from a bridge receipt, and Observe afterward. Remote
+takeover remains paused until explicit reauthorization. A failed/unreadable
+binding stops; no user unlock or alternative OS-event injection is prescribed.
 The [direction-menu acceptance](acceptance/2026-10-18-native-direction-menu.md)
 records actual rebuilt-engine Escape, adjacent selection and empty-current-tile
 behavior without user keys. The reuse-first desktop-tool preflight failed before

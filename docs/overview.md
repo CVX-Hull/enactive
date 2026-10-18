@@ -121,8 +121,15 @@ cancellation/adjacent selection and current-tile behavior without user keys.
 It used18inputs/218.939seconds with no game-time advance; lifecycle receipts remain
 unknown. The recorded objective now appears above the native frame. Broader
 continuity, usable supplies/rest and autonomous first-day survival remain open.
-The [next first-day brief](changes/018-first-day-rehearsal.md) combines those
-requirements in one finite fresh-character attempt, including handoff/restart.
+The [second rehearsal](acceptance/2026-10-18-first-day-rehearsal-002.md) then reached
+Rosendo/Hotevilla at22h14m25s: real meals/water, medical-supply excursion/return,
+overnight wake and matching save/application-restart reload, without human rescue.
+It stopped at an unsupported sound-distraction prompt; an existing native UI
+binding canceled it for normal cleanup.208charges included one agent-operated
+desktop key; six lifecycle receipts stay unknown. It is still short of a full
+day. The [prospective continuation](changes/019-first-day-continuation.md) retains
+the same character and original absolute clock/allowance, with a stricter added
+cap and verified native-window recovery; it admits no input by publication alone.
 Campaigns also expose concrete memory, planning,
 monitoring and viewer needs. The [review workflow](project-management.md#campaign-driven-improvement)
 routes observed problems into bounded improvements and checks their effect in later

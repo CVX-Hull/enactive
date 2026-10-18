@@ -60,9 +60,16 @@ reload, actual Escape, adjacent and current-tile selection worked; load/save/fin
 Quit receipts stay unknown. This is no first-day success or renewed survival
 allowance. Keep failed attempts, the separate menu operation and unadmitted
 preflight visible. The [next first-day brief](changes/018-first-day-rehearsal.md)
-proposes one fresh ordinary 24-hour attempt with actual consumption, rest,
-excursion/return, handoff and restart. It preserves the assisted attempt and its
-character. Admission still requires exact source/native and current control checks.
+admitted one fresh ordinary attempt preserving the assisted character.
+Its [stopped prefix](acceptance/2026-10-18-first-day-rehearsal-002.md) reached
+22h14m25s with meals/water, medical excursion/return, overnight wake, handoff and
+normal application restart. An unsupported wheezing prompt stopped investigation;
+existing native CUA canceled it for normal cleanup with no human input.208charges
+include203play+5cleanup(one native UI); six lifecycle unknowns remain. No full-day
+success. The [prospective continuation](changes/019-first-day-continuation.md)
+keeps original500/180min/26h absolute caps and five already consumed cleanup inputs,
+plus a stricter64input/45min continuation cap. No new world, reset or native build.
+Fresh identity/control evidence and independent review remain admission gates.
 Original #79 M/Low, 2–4 and #80 M/Low, 3–5 focused-session estimates remain in Issues;
 32 game seconds cannot calibrate survival throughput or a calendar forecast.
 

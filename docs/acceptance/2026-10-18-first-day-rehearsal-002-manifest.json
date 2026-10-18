@@ -1,0 +1,339 @@
+{
+  "schema_version": 1,
+  "kind": "historical-native-acceptance",
+  "platform": "macOS arm64; pinned CDDA0.I-1/wirev3; prepared project-local windowed bundle/userdir",
+  "upstream_pin": "native/upstream.json",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "installed_binary_sha256": "9cf1f76db19d6b401582bd7e6768422b653f6204069bd544804b8a5490e95273",
+  "date": "2026-10-18",
+  "report": "docs/acceptance/2026-10-18-first-day-rehearsal-002.md",
+  "source_commit": "72c8b9c13f53999457fc58c25db53e360121d0fc",
+  "identity_note": "Frozen execution source throughout original admission and stopped prefix250; documentation publication occurs in a separate project-local worktree. Git owns source history.",
+  "video": null,
+  "verified_at": "2026-10-18",
+  "verification_scope": "Partial Rosendo/Hotevilla22h14m25s,208charges203play+5cleanup including1agent-nativeUI;0human rescue; actual meals/water/medical-return/overnight wake/handoff/restart. Unsupported wheezing prompt ended investigation; normal cleanup/process absence. No24hour completion.",
+  "limitations": [
+    "Partial22h14m25s is not24hour or seven-day success.",
+    "Six lifecycle acknowledgments remain unknown; later observations do not repair them.",
+    "Exact sleep onset/duration unavailable; no8hour sleep or sleep-quality claim.",
+    "Warming after additional blanket is confounded by elapsed time; substantial encumbrance remains.",
+    "Existing native CUA binding worked on this host at this prompt; inventory reported lock/access failure. No general desktop reliability guarantee.",
+    "One CUA input is separately recorded without bridgeACK. Files alone do not prove precharge temporal ordering.",
+    "Semantic/campaign/microcaps remain lead-enforced; no general autonomous survival service/learning/model comparison.",
+    "Original images and saves stay local; one actual spectator screenshot is tracked. Narrow/other-host UI remains unverified."
+  ],
+  "artifacts": {
+    ".runtime/campaigns/first-day-rehearsal-002/admission.json": {
+      "bytes": 1554,
+      "sha256": "48394c0a9af85400c782fa4e5dbd723090f5aa5f8a87346441d77a8b66cfd3bd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/commands-prefix250.jsonl": {
+      "bytes": 83545,
+      "sha256": "8ef766c73f80ec79568038c61dc54526d1b34045427d784e5f4ca055a141c770",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/partial-closeout.json": {
+      "bytes": 2035,
+      "sha256": "0c30bf41c33e19363d29bd3a8307fe8a632dcfad38002e662ef0c60c6abe58c2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/advisory-checkpoint-04.md": {
+      "bytes": 4176,
+      "sha256": "2e68c62357e59e20054ff18246bf50554b424afb04c34bf9181bdcc171488e09",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/handoff01-response.md": {
+      "bytes": 480,
+      "sha256": "6c08de9d679d225120d9057e9c41cd56c9b2ad521915d26c1025180111804f75",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/identity002-ended.json": {
+      "bytes": 409,
+      "sha256": "cb609c68a2ab5ea78a8c7a2601ab4461e796117671f736be1877d24c47a1a104",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/restart01-process-exit.json": {
+      "bytes": 309,
+      "sha256": "b32f775f44b847ee02fe08d7805a572e0b034c805d468fc975458b91e09507db",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/original-artifacts-prefix250.json": {
+      "bytes": 183446,
+      "sha256": "2d5201e347648386217edaf6459720161592b25862e7741ad8ba51e7416ce700",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0240-native-before.png": {
+      "bytes": 217752,
+      "sha256": "2396071884c2faef548d2bee819e253f89827198c7b1df852749455521e49be7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0240-native-after.png": {
+      "bytes": 211322,
+      "sha256": "077830c30bee4d281dfd1dfb46a752971d6b3eacf71bbc8303a72ce3fae0c726",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0250-spectator-stopped.png": {
+      "bytes": 172660,
+      "sha256": "ffca8f1fac95d169aa6c1aeaf9f4ca786f561dd415696433744cfe5804d3107f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0026-receipt.json": {
+      "bytes": 1266,
+      "sha256": "d32ab3ecee15924eda530e7a7eb05c29378d0dcd23287238d73634f7519283dd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0026-frame-1792345692057-34183-1-265.png": {
+      "bytes": 60829,
+      "sha256": "353ec2f4508c9dd6ef5a6e14c32f59e8579b25f9b8989cded38e5cbe831ccae2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0051-receipt.json": {
+      "bytes": 1156,
+      "sha256": "8f827278400bf5cee86d9c3f7046be1f587490eb34d8530328dc0c720afd6320",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0051-frame-1792345692057-34183-1-529.png": {
+      "bytes": 51074,
+      "sha256": "093cce4d27f8dda6ed3c7a8661c4a01b74c7a5154cfd207149ad5c88f49a0368",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0054-receipt.json": {
+      "bytes": 1156,
+      "sha256": "e5b24c31d8cbcf51c641737cba3c3d2c40e3230ec624c6041ee92e6bb45a377a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0054-frame-1792345692057-34183-1-558.png": {
+      "bytes": 51430,
+      "sha256": "52c7c4da9cdc027f67fc2356837359f22ef60d0ddb4a44b1d1f09c82e2016962",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0084-receipt.json": {
+      "bytes": 4688,
+      "sha256": "6ba1869850ed74576fd40e68513776e8c895d50a36fc8a258c906552742a9aa9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0084-frame-1792345692057-34183-1-983.png": {
+      "bytes": 135212,
+      "sha256": "fe29ffe82908217007659fbb3943ab407620d6964ad3cbb137549a6349ac7e8c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0109-receipt.json": {
+      "bytes": 4750,
+      "sha256": "73afaf29bd49f8705cbd519e2df178c9ac4d62c41eb1fd86773d27070e735c26",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0109-frame-1792345692057-34183-1-1158.png": {
+      "bytes": 113632,
+      "sha256": "7eb5d18fd05afe85c750f82381f16852ca9a5ed7ba37c366e3e1a6068da5ff7e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0117-receipt.json": {
+      "bytes": 4757,
+      "sha256": "13a132be50deb9d469caf0df1c5b34e6c288b6da09804ea8386b6f9a5d0c5608",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0117-frame-1792345692057-34183-1-1214.png": {
+      "bytes": 122177,
+      "sha256": "35d0a555078d5ba95d76ed43f5077eb5d1827c060dd1dc72873570ad0ec535b0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0118-receipt.json": {
+      "bytes": 1158,
+      "sha256": "4f8b39d7bcb19f5ddefc0a4fc2dc0fb2febb5a78a79827c418fd1784bf2d8e8d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0118-frame-1792345692057-34183-1-1232.png": {
+      "bytes": 83933,
+      "sha256": "184eab52f0041e9e9a00123c22047eb34d340e779b42c953ec1abd63b086bba0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0129-receipt.json": {
+      "bytes": 213,
+      "sha256": "0571ff4ee7fd4d7583ac1a516fa7090e18eec1128167aeff3bd2a89d5c1485af",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0132-receipt.json": {
+      "bytes": 1264,
+      "sha256": "2afc7fa97b6df7742e4a54128cbb1073e746a7b12ba9f667e91fa72e5f2a333a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0132-frame-1792346715171-37784-1-73.png": {
+      "bytes": 58522,
+      "sha256": "2c1206911f849933884eb18647d9f5a11346d663d920d9de5f3d2c63cab14d7b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0137-receipt.json": {
+      "bytes": 1155,
+      "sha256": "f3ea45ec78c12a0341766d4059183aeb03b372ff1fbb37c5acffd3d3a06b21f1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0137-frame-1792346715171-37784-1-104.png": {
+      "bytes": 83940,
+      "sha256": "0f7d95214bbc4706db80ebdc888c9b64e8d31efbc7061460a11589a60e2ed14c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0178-receipt.json": {
+      "bytes": 1157,
+      "sha256": "d610023e1b9f4375417130e6e5534bab1b09a71ca0b2c9c546b572cec108df2c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0178-frame-1792346715171-37784-1-602.png": {
+      "bytes": 58658,
+      "sha256": "4256ddd3266d9c75bf8a8191e16d1eec01fb860ff3f1ae649f3881ede15f526c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0195-receipt.json": {
+      "bytes": 783,
+      "sha256": "634246361cc300bac0e4d0e6033c67d9602a5c9f1f576445ee595b7cfa76b501",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0195-frame-1792346715171-37784-1-835.png": {
+      "bytes": 116170,
+      "sha256": "b238bd71de033954b70e787d2bd4d26af02e8b8ba745bccece32b152c4882be7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0201-receipt.json": {
+      "bytes": 4713,
+      "sha256": "a68f90105718bca0c4defd1f643fe08a97a3bc1f2c7d5e3dd9e187d99c542e0f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0201-frame-1792346715171-37784-1-922.png": {
+      "bytes": 128336,
+      "sha256": "c2ddc2223df92b9c2677d739f0d4e6dd55abc834df7bcf2c6e9de22435fadb85",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0204-receipt.json": {
+      "bytes": 783,
+      "sha256": "9853f7d93e4e16f174173f6e76e554ff88633a9bdbc4d836d0518ef29ec95c55",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0204-frame-1792346715171-37784-1-949.png": {
+      "bytes": 119688,
+      "sha256": "521be3dddd0d641f574e01523aee72e78843b45c01b12d97c4c92d305446efee",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0205-receipt.json": {
+      "bytes": 783,
+      "sha256": "380894445b4ba793ca50c2cf1ca4ea7db9d5130cc50f3b62397319491e51d379",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0205-frame-1792346715171-37784-1-961.png": {
+      "bytes": 119681,
+      "sha256": "e33b78b3dd6f38e8432abb10865cd30e48267037b6fa338ceed21bcde50360d3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0206-receipt.json": {
+      "bytes": 4713,
+      "sha256": "429eba266a6f23408e85efa8b194eb312818b474eb1a8f2dfe55871dc8b22c7f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0206-frame-1792346715171-37784-1-969.png": {
+      "bytes": 130467,
+      "sha256": "40c91d2379c8933fde732ba0ff8d042827f4d9fee0e782bdf87cda6cc5b11817",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0207-receipt.json": {
+      "bytes": 729,
+      "sha256": "7cf3b3a2f6493476ca4615ba2ca26391f6913fb1e41eda454858e90998debd5c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0207-frame-1792346715171-37784-1-986.png": {
+      "bytes": 31739,
+      "sha256": "d1992445d8d9015a35ef081caee6eaf65acb5c2388cb3d3c518187282b1c36ff",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0214-receipt.json": {
+      "bytes": 730,
+      "sha256": "6b862b6946f7fe4e54d94f9adec0107295afef61965585c3b29218bf2cd21150",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0214-frame-1792346715171-37784-1-1048.png": {
+      "bytes": 16293,
+      "sha256": "f4eb35ebcf31ff75dcc8107cd851a72c57606f4fbed137209f181bc3bf661b5e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0223-receipt.json": {
+      "bytes": 1158,
+      "sha256": "61d16e40e2f5b926a4192868d227208e168db66ba418bed0d3da2d0d176b3a03",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0223-frame-1792346715171-37784-1-1135.png": {
+      "bytes": 57216,
+      "sha256": "3de665046b38f9a1696e8097440aae38a8e55600060931d60fd2ce2a5848f3f7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0230-receipt.json": {
+      "bytes": 4719,
+      "sha256": "707257e497e6b37bab627cc72f46aed4fa2307bb691c009e56ea69dd0397b81d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0230-frame-1792346715171-37784-1-1228.png": {
+      "bytes": 128068,
+      "sha256": "1fb54e34f99c139e88f845181a6ca5f220583bc566c561a0656ba78b716102bd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0234-receipt.json": {
+      "bytes": 4719,
+      "sha256": "aab45290eddda816f372d33762bd674829fdfaaa4b222447d252ff0db54bddc1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0234-frame-1792346715171-37784-1-1274.png": {
+      "bytes": 128623,
+      "sha256": "898c1d8d7be9dc867bf67d176fc1e161f63a006fc0cd2c1d107f3185446c3cf1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0238-receipt.json": {
+      "bytes": 743,
+      "sha256": "cc63aa42270cdc673a6d3264d2ddb41b93217e6a06f562f1ccf537a1e39f9d76",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0238-frame-1792346715171-37784-1-1320.png": {
+      "bytes": 119737,
+      "sha256": "264edb3009fc50f3feeb2e59cd88ad3d98f44e78576391860edc2d853a9b7f68",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0240-receipt.json": {
+      "bytes": 473,
+      "sha256": "aa31c29bcdf4d4722ba7f630e9bc80041da3b993f525d6da59d5bdfbbc738db9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0240-native-ui.png": {
+      "bytes": 211322,
+      "sha256": "077830c30bee4d281dfd1dfb46a752971d6b3eacf71bbc8303a72ce3fae0c726",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0241-receipt.json": {
+      "bytes": 4718,
+      "sha256": "b2701fd63dd11fbf8e9a14e22e4d5bf13ec1bbec61bc1dc7071f17abf1e02b91",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0241-frame-1792346715171-37784-1-1491.png": {
+      "bytes": 130134,
+      "sha256": "e7a6d486bdaf854974dcd143987e6d3c7ef6565950ed6f6e6a60f22fbd51f252",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0244-receipt.json": {
+      "bytes": 213,
+      "sha256": "7e28cc2b971c705aa03da86d7930e1be70f637b311fdb2fcfaec2af5244e0e7a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0245-receipt.json": {
+      "bytes": 792,
+      "sha256": "fa0f1403f3a43b6b06527ade91fbaf62de077ad37b6dea6f94718ae43c2c1fd7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/frames/0245-frame-1792348025296-37784-2-1573.png": {
+      "bytes": 12890,
+      "sha256": "e0a60be61e697b34874c292dc1b8303496fe8a49db984b152d42771db1860fb8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/first-day-rehearsal-002/0248-receipt.json": {
+      "bytes": 213,
+      "sha256": "bff91b4b15898b7169358b670f6c68b2c920f00fec2ced48182891b6b559174f",
+      "availability": "local-only; not included in Git"
+    }
+  },
+  "initial_build_binary_sha256": "9fc9dd8cc8375a2556929cb17974b7a0b67e3e38036c2e460defe3a288ff7bc0",
+  "freetype_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f"
+}
