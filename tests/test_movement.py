@@ -54,15 +54,20 @@ class MovementTests(unittest.TestCase):
                    lambda v: v["scene"].update(position=[True, 0, 0]))
         for change in changes:
             value = state()
+            timestamp = value["timestamp_ms"]
             change(value)
             with self.subTest(change=change), self.assertRaises(MovementBlocked):
                 current_guard(value, 1, 0, paused=False, frozen=False,
-                              now_timestamp_ms=state()["timestamp_ms"])
+                              now_timestamp_ms=timestamp)
+        value = state()
+        timestamp = value["timestamp_ms"]
+        self.assertEqual(current_guard(value, 1, 0, paused=False, frozen=False,
+                                       now_timestamp_ms=timestamp + 3000), (0, 0, 0))
         for changes in ({"paused": True}, {"frozen": True},
-                        {"now_timestamp_ms": state()["timestamp_ms"] + 3001}):
-            arguments = dict(paused=False, frozen=False, now_timestamp_ms=state()["timestamp_ms"])
+                        {"now_timestamp_ms": timestamp + 3001}):
+            arguments = dict(paused=False, frozen=False, now_timestamp_ms=timestamp)
             with self.subTest(changes=changes), self.assertRaises(MovementBlocked):
-                current_guard(state(), 1, 0, **(arguments | changes))
+                current_guard(value, 1, 0, **(arguments | changes))
         for dx, dy in ((0, 0), (1, 1), (True, 0)):
             with self.assertRaises(MovementBlocked):
                 current_guard(state(), dx, dy, paused=False, frozen=False,

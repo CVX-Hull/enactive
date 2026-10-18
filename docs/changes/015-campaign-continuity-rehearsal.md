@@ -80,15 +80,46 @@ Before the rehearsal is Ready, independently review and freeze its episode-bound
 procedure for intended creation entry, normal save/quit and reload. Each boundary
 stops the previous episode, retains its exact receipt/unknown and charged totals,
 and has no outstanding skill/waypoint task. Observe only after native expiry when
-needed. A distinct episode may be admitted only from new interpretable evidence
-that establishes the actual character/world and current state, with explicit
-Resume and the original cumulative limits. No old task continuation or replay.
+needed. Distinguish three admissions: ordinary creation menus; bounded identity
+inspection when the name is not yet visible; and survival decisions only after
+the actual character/world and current state are established. All preserve the
+original cumulative limits. No old task continuation or replay.
+
+After a declared creation/load transition, an inspection-only episode may use a
+fresh supported normal-play frame after reconciliation, no live pending/control
+request or lease, and explicit Resume. It permits at most **four charged inputs
+and two minutes**, within the same total envelope, solely to open the actual
+player-info view (`@` in the source default bindings), inspect its rendered name,
+and leave through its displayed Quit/ESC control. Do not modify the character,
+move, use supplies or rest. Reject unreadable, conflicting or unavailable identity,
+an unsupported/rejected input or any new unknown; do not guess a menu sequence.
+Pause after inspection. Current `PLAYER_INFO` is an explicitly supported menu;
+the initial structured scene contains no character name and cannot supply it.
+
+Match current player-info evidence with the actual selected world/save and
+creation-name evidence, with no other selection or process intervening. Use visible
+calendar/needs/inventory for restart comparisons; relative coordinates never prove
+identity. A same-name/world ambiguity stops. The lead records the matching evidence
+and its semantic limits, then obtains fresh Observe and explicitly reauthorizes
+survival input. Name inspection grants no survival progress or retrospective receipt,
+and is not cryptographic engine identity. Normal save/load must be demonstrated,
+not inferred from this source procedure.
 Unresolvable identity, unexpected unknowns, a still-live pending effect or missing
 accounting stops the rehearsal. Historical unknowns remain unknown and cannot earn
 task progress; current calendar/needs can support new observations on their own.
 If this cannot be implemented with existing controls, retain the failure and scope
 a bounded real blocker before another attempt. This is a readiness gate, not a
 silent exception added during play.
+
+Preparation review exercised six copied advisory cases against the original pilot
+ledger/receipts: valid retired history; missing ledger; truncated JSON; reset
+charges; omitted unknowns; and a duplicated command with decreasing cumulative
+accounting. Only the first is valid historical advice; none grants input permission.
+The others require stopping admission rather than silently repairing/deduplicating
+history. The lead and a clean-context reviewer checked the primary evidence.
+These are manual procedure checks, not native or mechanical enforcement tests.
+Original pilot artifacts remain unchanged. The private preparation evidence lives
+under `.runtime/campaigns/first-day-rehearsal-001/preparation/`; it is not a new tracker.
 
 ## Proposed next attempt and resource envelope
 
@@ -114,7 +145,7 @@ finite room for bounded native activity completion, without a success claim if
 needs, excursion or evidence are missing. These are provisional finite admission
 bounds, not a throughput or success forecast.
 
-The series retains pilot001's18inputs and 229.232 seconds through final receipt
+The series retains pilot001's 18 inputs and 229.232 seconds through final receipt
 capture separately; adding one 500-input/180-minute attempt allows at most 518 inputs
 and that recorded prior time plus 180 minutes of admitted play/recovery wall time.
 Non-playing design/review/publication effort is recorded separately. There is only
@@ -151,3 +182,21 @@ new bounded children when demonstrated. #81 consumes accepted #79/#80/#83 and
 sets the final campaign protocol from measurements; #82 stays blocked. Maintenance
 #26/#75 keep their existing event/date triggers. No external paid provider or
 global environment change is selected.
+
+## Publication repair before admission
+
+Both pilot PR checks passed, but its merged-main
+[CI run](https://github.com/CVX-Hull/enactive/actions/runs/39145100865) failed in
+the movement boundary fixture. It sampled one clock to construct a3,001ms-old
+case, then constructed the observation from a later sample. A one-millisecond
+advance could make its actual age3,000ms, which the contract accepts. A controlled
+one-millisecond-per-fixture probe reproduced the failure without changing the guard.
+
+Bind the test's supplied clock to the same observation; retain the3,001ms rejection
+and add the exact3,000ms acceptance check. Seven movement tests and the advancing-
+clock probe pass after the test-only repair. Production freshness, movement,
+native authority and timeouts are unchanged. The failed run and before/after probes
+remain under the pilot's private evidence directory; #75 owns the maintenance
+follow-up. This is a different defect from the earlier functional-runtime timeout.
+Do not accept publication or admit a new native attempt until the repaired exact
+candidate and merged-main checks pass. No rerun is used to erase the failed result.
