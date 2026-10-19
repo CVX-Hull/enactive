@@ -125,6 +125,14 @@ The survival campaign must not depend on user keystrokes or routine rescue.
 Verify automated control/recovery access before admission; required human help is
 a retained autonomy failure, not accepted recovery. Native UI operation still uses
 ordinary engine input and current visible evidence; it cannot relax remote guards.
+Routine admitted gameplay must use a reviewed, project-scoped command allowance
+without repeated per-action approval. Before ordinary gameplay or player replacement,
+verify effective project trust/rule loading and a harmless live call from the
+actual designated player, using its exact command entry point. A rule match alone
+does not pass this gate. Resolve recurring reviews in setup; do not normalize
+them as the gameplay loop. Preserve native freshness, single-executor and Pause
+checks. [Operator permissions](operator-permissions.md#preflight-for-every-campaign)
+owns the procedure and its limits.
 Controls: C-RUNTIME, C-PORTABLE, C-NATIVE, C-MAINTENANCE.
 
 ## S-AGENT Accountable agent-assisted work

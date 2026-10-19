@@ -30,7 +30,9 @@ recovery and bounded waypoint tasks. A second rule, requested at the paused005 c
 `.venv/bin/python .runtime/campaigns/seven-day-campaign-005/preparation/capture.py`
 with actor `lead` or `player`. Setup/server launch, GitHub publication, arbitrary
 Python, shell scripts and every other study recorder are not matched by that rule.
-No global config, user rules, OS permissions or broad network access was changed.
+Preparing these rules changed no global defaults, user rules, OS permissions or
+broad network access. The later exact-project trust correction below adds only
+this checkout's trust entry to Codex's user configuration.
 Use the ordinary command directly when applicable; do not hide disallowed work
 behind an allowed command or switch transports to evade review.
 
@@ -44,11 +46,11 @@ including invocations outside the exact recorder prefix, must be honored.
 
 Codex0.162.1's mature `codex execpolicy check` parsed the rule and its inline
 positive/negative cases. A key command matched allow; Python `-c` and server launch
-had no match. **Policy syntax/matching is verified; activation and a live command
-under these rules remain separate post-restart checks.** Official documentation requires a trusted project
-configuration and startup/reload. This session was not restarted or weakened;
-existing auto-review remains the available route. Do not make a user restart a
-routine gameplay prerequisite or claim every review disappeared.
+had no match. **Policy syntax/matching is verified; active-chat loading and absence
+of recurring review remain separate post-reload checks.** The later trust correction
+verified an enabled project layer in a fresh bundled Codex process. Official
+documentation requires a trusted project configuration and startup/reload. Do not
+repeatedly restart an unchanged verified setup or claim every review disappeared.
 
 Maintenance: lead rechecks examples with `codex execpolicy check --rules
 .codex/rules/gameplay.rules -- COMMAND` when command syntax, trust or permission
@@ -79,25 +81,71 @@ checkout deliberately; do not use the rule with unreviewed source. Retire this
 exact-study rule when005 ends or its recorder changes; a later study path needs a
 new scoped review. Do not add wildcard studies, broad Python or shell prefixes.
 
-At the requested checkpoint, the player and lead verified paused supported
+At the first requested checkpoint, the player and lead verified paused supported
 STRING_INPUT, no activity and empty live slots. Gameplay authority is suspended;
 the owned controller was stopped normally, while the native game stays paused.
 The user-authorized permission/docs change ends the old source freeze without
 reopening any input allowance. The original clocks and every cost/unknown remain.
 Restart Codex and reopen this project after publication/verification. Project
 rules load only from a trusted project configuration at startup; the inspected
-user config has no explicit trust entry for this path, so activation cannot be
-assumed. No user/global configuration was changed. If Codex asks to trust this
-project, review that project-specific prompt.
+user config then had no explicit trust entry for this path, so activation could
+not be assumed. Rule preparation changed no user/global configuration. The later
+trust correction added only the exact project entry, as documented below.
 
-After restart, verify effective rule loading/matching and a harmless permitted
-command before relying on activation. The suspended recorder refuses gameplay;
+The first restart did not establish activation; a later diagnostic proved the
+project layer was disabled for missing exact-project trust. That entry is now
+corrected, with fresh-process loading verified. After active-chat reload, verify
+live calls from the actual player before relying on no-review behavior.
+The suspended recorder refuses gameplay;
 resume needs explicit user authorization, current clean reviewed source/helper/
 native, fresh paused observations and a prospective remaining-budget decision.
 Do not silently rebind its old source hash or reset clocks. Managed restrictions
 or stricter matching rules may still require review; honor them.
 
 ## Dedicated gameplay context
+
+### Preflight for every campaign
+
+The lead owns permission readiness before ordinary input. A recorder that requires
+admitted metadata must receive only a bounded passive preflight assignment first;
+that setup assignment authorizes no keys, actions or Resume. Repeat this check when
+the checkout, command entry point, recorder, player, Codex version or permission
+configuration changes; reuse the verified setup otherwise.
+
+1. Prefer the stable reviewed harness CLI entry points. If a campaign recorder
+   wraps them, verify the exact outer recorder prefix too. A child CLI allowance
+   does not automatically allow its wrapper. Review the executable and scope once
+   during setup; do not request approval separately for each ordinary game action.
+2. Verify that this exact checkout's project layer is enabled. Codex's documented
+   `config/read` with `cwd` and `includeLayers` can show an enabled project layer;
+   an absent exact trust entry or an ancestor's trust is not activation evidence.
+   Codex stores project trust in user-level `config.toml`, under
+   `projects.<absolute-checkout-path>.trust_level`. An authorized change adds only
+   that project entry and preserves unrelated settings. Keep gameplay allowances
+   in this checkout's `.codex/rules/`, not a broad user-level Python/shell rule.
+3. Check positive and negative command examples with the installed Codex policy
+   checker. Then reload Codex when required and test two consecutive harmless live
+   status/observation calls from the actual designated player through its exact
+   entry point. Record whether either call required review; a successful approved
+   call alone proves access, not absence of per-action review.
+   Retain loading, matching, access and absence of recurring review as separate
+   evidence. A fresh diagnostic process does not prove the active chat reloaded.
+4. If every action still reaches approval review, stop permission admission and
+   diagnose trust/loading, outer shell syntax and managed restrictions. Do not
+   spend the campaign repeating reviews or disable the sandbox globally. Honor
+   any actual denial. If supported project rules cannot remove recurring review,
+   report that product/policy limit explicitly instead of claiming readiness.
+
+Existing admitted campaigns retain their original budgets and stop rules during
+a user-requested configuration interruption. This prospective setup standard
+does not retroactively invalidate their recorded gameplay or renew allowances.
+Native guards, user Pause, recovery eligibility and campaign limits still apply.
+Setup, source changes, publication and unrelated commands have separate scope.
+
+The [trust correction](changes/033-gameplay-permission-preflight.md) records the
+observed disabled project layer and the exact-project fix. Its current result is
+enabled loading in a fresh bundled Codex process; live no-review gameplay remains
+unverified until the active chat reloads and the actual player passes the check.
 
 A long-lived bounded player sub-agent is useful for keeping gameplay facts and
 observations separate from engineering discussion. It does not require a weaker
