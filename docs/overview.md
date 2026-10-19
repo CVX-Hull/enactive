@@ -35,8 +35,13 @@ The [next004 continuation](acceptance/2026-10-18-crafting-transition.md) then st
 on an unsupported crafting-filter return, with no new game advance. A later supported
 menu did not reopen investigation. A [prospective continuation](changes/031-bounded-reassessment-continuation.md)
 adds bounded passive lead reassessment while retaining all costs/clocks and native
-input rejection. It was admitted, then paused at the user's request for
-[narrow recorder permission setup](changes/032-recorder-permission-reload.md).
+input rejection. It resumed and crafted a crowbar/sling, then reached Fabrication2
+after one completed carving job. The user requested a second permission checkpoint
+because every action still reached review. The [exact-project trust correction](changes/033-gameplay-permission-preflight.md)
+verified an enabled rule layer in a fresh Codex process; active-chat no-review
+behavior still needs reload and actual-player verification. The same native game
+remains paused; [the original permission change](changes/032-recorder-permission-reload.md)
+and all historical costs remain retained.
 No daily survival outcome is accepted.
 [Work](work.md) links the active path.
 

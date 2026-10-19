@@ -148,12 +148,19 @@ and controller. The [full-campaign continuation031](changes/031-bounded-reassess
 then passed protected PR117/exact/main CI and reloaded the same character. Its
 player reverified8rations/2Lclean water but had not begun a job when the user
 requested the next paused checkpoint for [narrow recorder permissions](changes/032-recorder-permission-reload.md).
-005 is suspended at supported crafting search with285whole/260day inputs,
-97lifecycle/3816.987seconds and72v3+1archived gameplay unknowns/control2; no new
-game advance or daily survival acceptance. Controller stopped normally; game
-remains paused, all input authority relinquished. Permission/docs work is the
-explicitly requested interruption; original budgets/clocks continue. Rule activation
-and a prospective source/budget check precede any resumed assignment. #82/#100
+The first permission checkpoint retained285whole/260day inputs. After the user's
+restart/resumption, the same character crafted a crowbar/sling and completed one
+carving job: Fabrication2, Carving1%, normal5217025 / Spring61 09:10:25. Three
+unsupported filter returns used bounded passive reassessment; none was replayed.
+The user's second permission request now pauses005 at supported normal play with
+333whole/308day inputs,97lifecycle/3816.987seconds and unchanged72v3+1archived
+gameplay unknowns/control2. No daily survival outcome is accepted. The controller
+stopped normally and the native game remains alive and paused, input relinquished.
+The [trust correction and future preflight](changes/033-gameplay-permission-preflight.md)
+verified a freshly enabled project rule layer. Active-chat reload and actual-player
+no-review verification remain, followed by reviewed clean source, unchanged native/
+recorder, original-budget feasibility and explicit reassignment. This user-requested
+permission/docs interruption preserves every original clock and cost. #82/#100
 own the campaign and #75 the scoped permission/process maintenance.
 
 Pilot001's 150-input/45-minute/six-game-hour ceilings remain historical fixed limits,

@@ -302,7 +302,7 @@
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
       "limitations": "Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.",
-      "enforcement": "Required by S-PROTOCOL/S-DELIVERY and release review; manual, outside the portable gate.",
+      "enforcement": "Required by S-PROTOCOL/S-DELIVERY and release review; manual, outside the portable gate. Permission readiness before ordinary campaign input also requires S-OPS's [live permission preflight](operator-permissions.md#preflight-for-every-campaign) from the actual designated player and exact entry point. Retain enabled project-layer evidence, rule decisions and live results separately. Repeated per-action review fails permission readiness even if every request is approved; resolve it before ordinary play. This is a manual activation check; prefix matching does not prove runtime loading.",
       "status": "active",
       "rationale": null,
       "replacement": null,
