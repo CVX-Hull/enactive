@@ -31,8 +31,11 @@ comparison and work-menu navigation worked. [The remaining direction/reload gate
 also passed its real test and protected exact/merged-main CI accepted publication;
 #112 is complete. The [integrated continuation](changes/029-seven-day-integrated.md)
 was admitted and then [closed incomplete before day1](acceptance/2026-10-18-integrated-day1.md).
-Further play needs a prospective whole-day plan and allocation; neither menu
-acceptance nor a plan establishes survival.
+The [next004 continuation](acceptance/2026-10-18-crafting-transition.md) then stopped
+on an unsupported crafting-filter return, with no new game advance. A later supported
+menu did not reopen investigation. A [prospective continuation](changes/031-bounded-reassessment-continuation.md)
+adds bounded passive lead reassessment while retaining all costs/clocks and native
+input rejection; it is not yet admitted. No daily survival outcome is accepted.
 [Work](work.md) links the active path.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign
