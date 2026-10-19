@@ -30,14 +30,16 @@ verifies two days alive on normally created Ned Meyers / Belgium.
 native restart/exact saved-turn reload and genuine fresh F ordinary-input
 replacement. [021 stopped](acceptance/2026-10-19-treatment-stop.md) after confirming
 raw water and a boiling tool but no heat, and retreating from a distant hostile.
-Day four and seven-day survival remain incomplete. Ned was saved through the
-normal flow and the native game/controller shut down; final exact persistence
-was not reloaded and lifecycle acknowledgments remain unknown.
+Day four and seven-day survival remain incomplete. 022 verified exact normal
+reload of the5472870 save, then stopped at unsupported NPC dialogue. Actual native
+UI cleanup returned to normal5472871 without user keys. The one owned game and
+controller remain paused with no ordinary authority; lifecycle ACKs stay unknown.
 
 [#129](https://github.com/CVX-Hull/enactive/issues/129) owns a safe potable route
 and credible complete remaining forecast; [work](work.md) links the path. Closed
-019/020/021 grant no further input authority or renewed budget. The user approved
-a prospective three-hour time extension for [022](changes/044-remaining-campaign.md);
+019–022 grant no further input authority or renewed budget. The user approved
+a prospective three-hour time extension for044; [023](changes/045-native-ui-functional-continuation.md) proposes reuse of
+verified native UI recovery under the same ceilings;
 input ceilings and spent costs remain, and fresh reviewed admission is required. [Operator workflow](protocol.md#designated-campaign-operator)
 permits bounded passive reassessment of transient unsupported returns only when
 an admission allows it, followed by explicit reassignment at supported settled

@@ -304,7 +304,8 @@
         "docs/acceptance/2026-10-19-body-status.md",
         "docs/acceptance/2026-10-19-functional-survival.md",
         "docs/acceptance/2026-10-19-midpoint-survival.md",
-        "docs/acceptance/2026-10-19-treatment-stop.md"
+        "docs/acceptance/2026-10-19-treatment-stop.md",
+        "docs/acceptance/2026-10-19-dialogue-stop.md"
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
       "limitations": "Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.",
@@ -314,22 +315,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-19",
-        "outcome": "Day three and actual midpoint native restart/exact reload/fresh F ordinary replacement accepted; 020 closed on transient unsupported return and 021 closed for lost credible whole-route fit. Day four/seven-day incomplete; final normal save/native exit/controller shutdown observed, final exact persistence not reloaded.",
-        "scope": "019 used 83 inputs, 020 used 59 and 021 used 38, including four final cleanup inputs. Totals: 1,101 whole / 180 aggregate / 177 cumulative day-three / 161 lifecycle inputs; 7,244.978219 lifecycle seconds; 100 current-v3 plus one archived gameplay unknown, two control unknowns. Whole/aggregate clocks and reserve unchanged.",
+        "outcome": "022 verified exact normal reload5472870, then stopped at persistent unsupported NPC dialogue. Actual existing native UI cleanup returned normalpaused5472871 without user keys; no day4 or potable output. Native/controller remain ownedpaused, not finalshutdown.",
+        "scope": "10newinputs;1,111whole/190aggregate/177day3/167lifecycle inputs;7,442.818810 lifecycle seconds;101current-v3+1archived gameplayunknowns,2control. Human approved prospective+3h fixed time endpoints; original origins/spent costs/input caps/reserve/resource gate retained.",
         "evidence": [
-          "docs/acceptance/2026-10-19-midpoint-survival.md",
-          "docs/acceptance/2026-10-19-treatment-stop.md"
+          "docs/acceptance/2026-10-19-dialogue-stop.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-19",
         "effectiveness": "partially_effective",
-        "findings": "Actual day-three/midpoint progress is distinct from the failed whole outcome. No input was sent at an unsupported boundary; the admission closed on a transient return. Prospective finite passive reassessment is manual and was not newly exercised in 021. A distant threat prompted assessed retreat, not automatic combat failure; unproved heat and lost complete-route fit ended play. Final Save/Quit ACKs remain unknown and no final reload was performed.",
-        "cost": "019 used 83 inputs, 020 used 59 and 021 used 38. Cumulative lifecycle cost is recorded above; admission clocks include preparation/review and some intervals overlap, so they are not added as disjoint durations. Publication continues the unchanged aggregate/whole clocks and reserve. Model/tool/approval cost decomposition and speed superiority remain unmeasured.",
-        "follow_up": "#129 safe potable route and credible complete remaining forecast before any new decision; #102 accepted, #103/#82/#10 incomplete. #75 owns selected-row/capture errors, forecast quality and transient-boundary control burden; #128 publisher risk and #126 viewer wording remain. January 15 maintenance and October 24 research/event triggers are unchanged.",
+        "findings": "Existing owned native binding worked despite new-app lookup reporting unavailable desktop. Ordinary dialogue lacks remote support; charged actual native cleanup succeeded. Reuse mature CUA under prospective finite manual recovery rather than duplicate input tooling. Stale pre-Resume token refusal retained/reconciled; actual ACK unknowns remain. No general autonomy or seven-day pass.",
+        "cost": "022 charged7ordinary requests plus3native cleanup inputs; native cleanup lifecycle interval added before freeze. Current cumulative cost above. Existing common checks/native/evidence/review remain distinct; model/tool-speed comparisons unmeasured.",
+        "follow_up": "#129 bounded essential potable discovery and credible whole fit under human-approved extension; #103/#82/#10 incomplete. #75 owns native UI evidence/access, token and accounting findings. #126 viewer wording remains deferred. January15 maintenance/October24 research triggers unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-19-midpoint-survival.md",
-          "docs/acceptance/2026-10-19-treatment-stop.md"
+          "docs/acceptance/2026-10-19-dialogue-stop.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -456,7 +455,8 @@
         "docs/acceptance/2026-10-18-menu-gate.md",
         "docs/acceptance/2026-10-19-functional-survival.md",
         "docs/acceptance/2026-10-19-midpoint-survival.md",
-        "docs/acceptance/2026-10-19-treatment-stop.md"
+        "docs/acceptance/2026-10-19-treatment-stop.md",
+        "docs/acceptance/2026-10-19-dialogue-stop.md"
       ],
       "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process. Reuse fit and the adequacy of its rationale are semantic judgments; CI does not prove them. Identity configuration prevents inferred defaults but does not inspect file contents or prove a message, branch or remote ref contains no personal information; full-message inspection remains manual.",
@@ -466,22 +466,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-19",
-        "outcome": "Day three and actual midpoint native restart/exact reload/fresh F ordinary replacement accepted; 020 closed on transient unsupported return and 021 closed for lost credible whole-route fit. Day four/seven-day incomplete; final normal save/native exit/controller shutdown observed, final exact persistence not reloaded.",
-        "scope": "019 used 83 inputs, 020 used 59 and 021 used 38, including four final cleanup inputs. Totals: 1,101 whole / 180 aggregate / 177 cumulative day-three / 161 lifecycle inputs; 7,244.978219 lifecycle seconds; 100 current-v3 plus one archived gameplay unknown, two control unknowns. Whole/aggregate clocks and reserve unchanged.",
+        "outcome": "022 verified exact normal reload5472870, then stopped at persistent unsupported NPC dialogue. Actual existing native UI cleanup returned normalpaused5472871 without user keys; no day4 or potable output. Native/controller remain ownedpaused, not finalshutdown.",
+        "scope": "10newinputs;1,111whole/190aggregate/177day3/167lifecycle inputs;7,442.818810 lifecycle seconds;101current-v3+1archived gameplayunknowns,2control. Human approved prospective+3h fixed time endpoints; original origins/spent costs/input caps/reserve/resource gate retained.",
         "evidence": [
-          "docs/acceptance/2026-10-19-midpoint-survival.md",
-          "docs/acceptance/2026-10-19-treatment-stop.md"
+          "docs/acceptance/2026-10-19-dialogue-stop.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-19",
         "effectiveness": "partially_effective",
-        "findings": "Independent review checked closed predecessor totals, frozen artifact hashes, stop-rule closure and post-preflight fit. It refused restoring 020 after an unsupported return and rejected crediting elapsed exploration as completed treatment or inferring faster future survival from menu throughput. Capture 8 caller exit metadata was corrected; the original metadata file was overwritten while the raw native stop stayed intact. Supply reasoning and external queues remain manual.",
-        "cost": "019 used 83 inputs, 020 used 59 and 021 used 38. Cumulative lifecycle cost is recorded above; admission clocks include preparation/review and some intervals overlap, so they are not added as disjoint durations. Publication continues the unchanged aggregate/whole clocks and reserve. Model/tool/approval cost decomposition and speed superiority remain unmeasured.",
-        "follow_up": "#129 safe potable route and credible complete remaining forecast before any new decision; #102 accepted, #103/#82/#10 incomplete. #75 owns selected-row/capture errors, forecast quality and transient-boundary control burden; #128 publisher risk and #126 viewer wording remain. January 15 maintenance and October 24 research/event triggers are unchanged.",
+        "findings": "Existing owned native binding worked despite new-app lookup reporting unavailable desktop. Ordinary dialogue lacks remote support; charged actual native cleanup succeeded. Reuse mature CUA under prospective finite manual recovery rather than duplicate input tooling. Stale pre-Resume token refusal retained/reconciled; actual ACK unknowns remain. No general autonomy or seven-day pass.",
+        "cost": "022 charged7ordinary requests plus3native cleanup inputs; native cleanup lifecycle interval added before freeze. Current cumulative cost above. Existing common checks/native/evidence/review remain distinct; model/tool-speed comparisons unmeasured.",
+        "follow_up": "#129 bounded essential potable discovery and credible whole fit under human-approved extension; #103/#82/#10 incomplete. #75 owns native UI evidence/access, token and accounting findings. #126 viewer wording remains deferred. January15 maintenance/October24 research triggers unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-19-midpoint-survival.md",
-          "docs/acceptance/2026-10-19-treatment-stop.md"
+          "docs/acceptance/2026-10-19-dialogue-stop.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -689,7 +687,8 @@
         "docs/acceptance/2026-10-18-menu-gate.md",
         "docs/acceptance/2026-10-19-functional-survival.md",
         "docs/acceptance/2026-10-19-midpoint-survival.md",
-        "docs/acceptance/2026-10-19-treatment-stop.md"
+        "docs/acceptance/2026-10-19-treatment-stop.md",
+        "docs/acceptance/2026-10-19-dialogue-stop.md"
       ],
       "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",
@@ -699,22 +698,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-19",
-        "outcome": "Day three and actual midpoint native restart/exact reload/fresh F ordinary replacement accepted; 020 closed on transient unsupported return and 021 closed for lost credible whole-route fit. Day four/seven-day incomplete; final normal save/native exit/controller shutdown observed, final exact persistence not reloaded.",
-        "scope": "019 used 83 inputs, 020 used 59 and 021 used 38, including four final cleanup inputs. Totals: 1,101 whole / 180 aggregate / 177 cumulative day-three / 161 lifecycle inputs; 7,244.978219 lifecycle seconds; 100 current-v3 plus one archived gameplay unknown, two control unknowns. Whole/aggregate clocks and reserve unchanged.",
+        "outcome": "022 verified exact normal reload5472870, then stopped at persistent unsupported NPC dialogue. Actual existing native UI cleanup returned normalpaused5472871 without user keys; no day4 or potable output. Native/controller remain ownedpaused, not finalshutdown.",
+        "scope": "10newinputs;1,111whole/190aggregate/177day3/167lifecycle inputs;7,442.818810 lifecycle seconds;101current-v3+1archived gameplayunknowns,2control. Human approved prospective+3h fixed time endpoints; original origins/spent costs/input caps/reserve/resource gate retained.",
         "evidence": [
-          "docs/acceptance/2026-10-19-midpoint-survival.md",
-          "docs/acceptance/2026-10-19-treatment-stop.md"
+          "docs/acceptance/2026-10-19-dialogue-stop.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-19",
         "effectiveness": "partially_effective",
-        "findings": "Repeated one-off capture adaptation added review/copy-path burden; retain frozen evidence and retire helpers from execution. Use existing CLI/parser, Git/GitHub and procedural finite lead cleanup for the small closeout; no new framework/global permission. Resource dependencies and lifecycle costs must fit before another campaign admission.",
-        "cost": "019 used 83 inputs, 020 used 59 and 021 used 38. Cumulative lifecycle cost is recorded above; admission clocks include preparation/review and some intervals overlap, so they are not added as disjoint durations. Publication continues the unchanged aggregate/whole clocks and reserve. Model/tool/approval cost decomposition and speed superiority remain unmeasured.",
-        "follow_up": "#129 safe potable route and credible complete remaining forecast before any new decision; #102 accepted, #103/#82/#10 incomplete. #75 owns selected-row/capture errors, forecast quality and transient-boundary control burden; #128 publisher risk and #126 viewer wording remain. January 15 maintenance and October 24 research/event triggers are unchanged.",
+        "findings": "Existing owned native binding worked despite new-app lookup reporting unavailable desktop. Ordinary dialogue lacks remote support; charged actual native cleanup succeeded. Reuse mature CUA under prospective finite manual recovery rather than duplicate input tooling. Stale pre-Resume token refusal retained/reconciled; actual ACK unknowns remain. No general autonomy or seven-day pass.",
+        "cost": "022 charged7ordinary requests plus3native cleanup inputs; native cleanup lifecycle interval added before freeze. Current cumulative cost above. Existing common checks/native/evidence/review remain distinct; model/tool-speed comparisons unmeasured.",
+        "follow_up": "#129 bounded essential potable discovery and credible whole fit under human-approved extension; #103/#82/#10 incomplete. #75 owns native UI evidence/access, token and accounting findings. #126 viewer wording remains deferred. January15 maintenance/October24 research triggers unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-19-midpoint-survival.md",
-          "docs/acceptance/2026-10-19-treatment-stop.md"
+          "docs/acceptance/2026-10-19-dialogue-stop.md"
         ]
       },
       "next_review": "2027-01-15"

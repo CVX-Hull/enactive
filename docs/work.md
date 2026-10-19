@@ -22,17 +22,17 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 | Current seven-day path | [020](acceptance/2026-10-19-midpoint-survival.md) accepted days 1–3, real midpoint restart/reload and fresh F replacement. [021](acceptance/2026-10-19-treatment-stop.md) confirmed raw water/tool but no safe heat or potable output, retreated and closed for lost credible whole-route fit. Day four remains incomplete. [#129](https://github.com/CVX-Hull/enactive/issues/129) owns resources/forecast; [#103](https://github.com/CVX-Hull/enactive/issues/103), #82 and #10 stay open. |
 | Full closeout | Same-character daily evidence, normal midpoint save/restart/reload and player replacement, final normal shutdown, independent complete-campaign review, protected publication/CI, owned cleanup and current Project. #82 stays open until all are proved. |
 
-The character was saved through normal Save/Quit; native and controller processes
-and the port 8766 listener are absent. Final exact persistence was not reloaded;
-Save/Quit acknowledgments remain unknown. All actors/tool handles are terminal and
-no input is queued. Closed 019/020/021 grant no successor authority or budget reset.
-The actual last normal state is 5,472,870, Spring 64, 08:14:30, alive and Comfortable,
-with no observed damage. This is partial progress, not day-four acceptance.
+022 normally reloaded the same Ned at the exact saved5472870 turn. Its ordinary
+NPC conversation exposed persistent unsupported dialogue and stopped the attempt.
+Verified native UI cleanup returned to normal5472871, alive/Comfortable, with no
+new supplies. The single owned game/controller remain paused, all actors/tools
+terminal and actual live slots null. No queued input or ordinary authority remains.
+Closed019–022 retain failures/costs; day four is incomplete.
 
 The user approved a one-time prospective three-hour extension to the fixed whole
 and aggregate time ceilings, with all prior costs and input limits retained.
-[022's reviewed decision](changes/044-remaining-campaign.md) requires a new finite
-admission and actual preflight; no closed scope reopens. Bounded essential resource
+[023's prospective decision](changes/045-native-ui-functional-continuation.md) requires a new finite
+admission and actual preflight; no closed scope reopens. The original022 resource gate remains fixed. Bounded essential resource
 discovery may proceed under current needs, usable stock and a credible
 next-decision/retreat margin, with an explicit complete-route forecast including
 uncertainty and an early resource stop. Actual safe output/coverage gates optional

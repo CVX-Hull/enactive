@@ -1,8 +1,8 @@
 ---
 owner: lead
 date: 2026-10-19
-scope: Prospective 022 same-character remaining-campaign continuation
-status: proposed
+scope: Closed 022; exact reload verified, persistent NPC dialogue stopped play, native cleanup verified
+status: historical
 review_trigger: Admission, actual route/needs/throughput, lost fit or source changes
 ---
 
