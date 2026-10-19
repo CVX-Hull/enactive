@@ -200,3 +200,19 @@ real windowed probes and scope limits. One fault probe briefly suspended an exac
 owned native PID, then resumed it before cleanup. All native and acceptance-server
 processes were stopped after final probes. Logs/frames, unresolved admissions,
 archived incident bytes and the useful current build remain local for retention.
+
+
+## 2026-10-19 functional survival closeout
+
+Unchanged native2095b718 and clean source40e9a4e supported normal same-process
+reload, qualified day-two acceptance and the failed day-three water gate.
+The publisher recovered before force-stop; no signal, rollback, native rebuild,
+new dependency, global setting, permission expansion or fullscreen was used.
+The [report](acceptance/2026-10-19-functional-survival.md) retains exact limits,
+unknown acknowledgments and actual evidence.
+
+Normal Save/Quit and main-menu Quit/confirmation exited native53355; the owned
+controller27938 exited0 on ordinary interrupt, controller53338 and port8766 were
+absent. Final save was not reloaded. Saves, evidence, caches and prepared app remain
+project-local; no save was edited or removed. Temporary014–017 helpers/admissions
+are closed and retained only as evidence. No live player/input queue remains.

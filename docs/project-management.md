@@ -164,6 +164,15 @@ choose changes. Keep campaign-specific observed facts separate from reusable les
 candidates. Unknown identity, absent observations and uncertain delivery remain
 unknown; a review cannot reconstruct an unobserved outcome.
 
+Before banking long optional work, reconcile actual current inventory and observed
+resource dependencies with the full remaining outcome. Separate current visibility,
+remembered terrain, historical possession and generic mechanics. A replenishment
+candidate or recipe screen is not a demonstrated supply chain: require actual
+output, source/storage/fuel coverage and safe access where the outcome depends on
+it. Include required startup, midpoint and final cleanup in remaining fit. An early
+readiness failure stops the attempt; a smaller information probe needs its own
+prospective finite decision and cannot silently renew survival authority.
+
 Review at planned segment boundaries, handoffs, material failure/unknown stops and
 campaign closeout. A stopped attempt gets a review even if it cannot supply a
 successful gameplay result. Use a concise finding table in the campaign issue or

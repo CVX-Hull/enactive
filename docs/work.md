@@ -19,10 +19,15 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 | Survival pilot and findings | [Pilot report](acceptance/2026-10-18-survival-pilot.md) retains the stopped pre-spawn attempt and its dispositions; #78/#83 own acceptance. |
 | Continuity and first-day rehearsal | [Qualified first-day result](acceptance/2026-10-18-first-day-completion.md) retains actual save/restart/handoff, needs and autonomy evidence plus its failures/unknowns; #79/#80 own acceptance. |
 | Seven-day readiness | [Readiness report](acceptance/2026-10-18-seven-day-readiness.md) records the finite preparation gate and its limits; #81. Readiness does not guarantee campaign success. |
-| Current seven-day path | [Progress report](acceptance/2026-10-19-survival-progress.md): day one accepted, day two stopped incomplete. [Parent #82](https://github.com/CVX-Hull/enactive/issues/82) and daily #100–106 own current work and acceptance. The [prospective continuation](changes/039-functional-campaign-continuation.md) grants no authority before its review/publication/admission gates. |
+| Current seven-day path | [Functional progress](acceptance/2026-10-19-functional-survival.md): two days accepted; day three stopped at water readiness, then normal partial shutdown. [Parent #82](https://github.com/CVX-Hull/enactive/issues/82) and daily #100–106 own current work and acceptance. [#129](https://github.com/CVX-Hull/enactive/issues/129) owns actual water output/coverage and a viable remaining allocation before any new admission. Closed scopes grant no authority. |
 | Full closeout | Same-character daily evidence, normal midpoint save/restart/reload and player replacement, final normal shutdown, independent complete-campaign review, protected publication/CI, owned cleanup and current Project. #82 stays open until all are proved. |
 
 Actual campaign reports distinguish success, partial progress, failed attempts, unknown delivery and unexercised capabilities. Historical reports and issue revisions remain evidence; they neither grant current authority nor renew unused budgets. Cumulative charges include rejected, stale and unknown attempts. An old request is never replayed merely because a newer scene looks favorable.
+
+The current game and controller are stopped. The final normal save has not been
+reloaded. Further play requires independently reviewed supply readiness and a
+complete remaining-route allocation; the previous lifecycle plan exceeds its
+remaining hard input allowance. Investigation success is not day-three acceptance.
 
 ## Execution ownership
 

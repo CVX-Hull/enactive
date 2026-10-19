@@ -24,12 +24,13 @@ The[earlier resource discovery](acceptance/2026-10-18-daylight-practice.md) veri
 phone-off daylight and partial medical practice on Ned Meyers/Belgium, then stopped
 before a complete remaining-day fit. It remains qualified historical evidence.
 
-The [survival progress report](acceptance/2026-10-19-survival-progress.md) verifies
-one day alive on the same normally created Ned Meyers in Belgium. Day two stopped
-incomplete at Spring 63, 03:30:01 after a failed second sleep attempt and loss of
-remaining time. The character is alive and the game is paused; seven-day survival
-is unproven. GitHub [#82](https://github.com/CVX-Hull/enactive/issues/82) owns the
-remaining outcome, and [work](work.md) explains the delivery path.
+The [functional survival report](acceptance/2026-10-19-functional-survival.md)
+verifies two days alive on the same normally created Ned Meyers / Belgium.
+Day three stopped at Spring63 08:09:45 after water readiness failed; normal
+Save/Quit and native/controller shutdown followed. The final save has not been
+reloaded. Seven-day survival and midpoint player replacement remain unproved.
+[#129](https://github.com/CVX-Hull/enactive/issues/129) owns the concrete supply
+and remaining-route allocation gap; [work](work.md) links the delivery path.
 
 The [body-status correction](acceptance/2026-10-19-body-status.md) separately
 verified native menu navigation and saved-character reload. The
