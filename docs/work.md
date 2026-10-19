@@ -22,44 +22,34 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 | Current seven-day path | [020](acceptance/2026-10-19-midpoint-survival.md) accepted days1–3, midpoint restart/reload and player replacement. [024](acceptance/2026-10-19-four-day-survival.md) accepted day four. [025](acceptance/2026-10-19-first-clean-water.md) verified the first250mL clean-water output, not remaining coverage. Days5–7 remain incomplete. [#103](https://github.com/CVX-Hull/enactive/issues/103) is accepted; [#104](https://github.com/CVX-Hull/enactive/issues/104) owns day five and [#129](https://github.com/CVX-Hull/enactive/issues/129) resources/forecast. |
 | Full closeout | Same-character daily evidence, normal midpoint save/restart/reload and player replacement, final normal shutdown, independent complete-campaign review, protected publication/CI, owned cleanup and current Project. #82 stays open until all are proved. |
 
-[026](acceptance/2026-10-19-water-coverage.md) collected3Ladditional untreated water
-in six500mL bottles, preserving clean water/food. Last normal5559098 is alive/
-Comfortable with blank needs, freshly observed1.5Lclean/12rations/3.5Luntreated
-and one owned paused game/controller. Actual live
-slots are null, actors/tools terminal and no queued input. Ordinary small-fire heat,
-one250mL craft and bottle storage were independently qualified; bulk throughput and
-remaining-three-day coverage are unproved. 027’s regular deconstruction was refused for missing screwdriving.028’s four
-bench strikes damaged the crowbar without salvage, followed by an honored stop
-and lead decline of sustained smashing. No fuel/heat was qualified.
-The checkpoint is indoors in the north room; phone is off, window is last known
-open and current fire/fuel requires reassessment. Final shutdown is unproved.
-Daily outcomes1–4 stay accepted; closed019–027 and028’s stopped bench assignment grant no successor authority. The
-original resource gate was qualified met in023 as a finite cache, not renewable supplies.
+[026–028](acceptance/2026-10-19-water-coverage.md) collected3L additional raw water,
+retained the missing-tool and crowbar-damage stops, and qualified an ordinary marked
+ground-fuel stash/current heat. A3.5L recipe then warned about storage; it was declined
+before crafting. Last verified stock remains1.5L clean/3.5L raw/12 rations; no new
+potable output or remaining-three-day coverage. Latest normal5559113 was healthy/
+Comfortable at the outdoor work position. One owned game/controller is paused in
+inventory, actual live slots null, all actors/tools terminal with no queue. PhoneOFF,
+window lastOPEN; sustained heat and final shutdown unproved. Days1–4 remain accepted.
+Closed019–027 and028’s stopped assignments grant no successor authority. The original
+resource gate was qualified in023 as a finite cache, not renewable supplies.
 
-The user-approved one-time three-hour extension retained all original clocks, costs,
-input limits and final reserve. 024's [046 decision](changes/046-replan-known-nondelivery.md)
-allowed confirmed no-delivery replanning and finite transient reassessment under
-unchanged guards. Actual failure of the conditional eastern treatment site exhausted
-credible complete-route fit; no automatic northern search or further time follows.
-The user subsequently delegated time extensions to the lead, prioritizing quality
-data for future development. [047](changes/047-quality-data-continuation.md) records
-025's finite two-hour shift with costs/input limits retained. Its first-output
-phase used32/40inputs with no renewal after transient reassessment. The measured
-daily-care subtotal59–63 exceeded the prior55/day forecast.
-[049](changes/049-distinct-fuel-study.md) records the user’s clarified gameplay-related
-time/input delegation and a prospective distinct fuel study after027’s missing-tool
-failure. It adds100cumulative inputs/60minutes while retaining1665whole/744aggregate
-costs, original clocks and effective cleanup reserve. No refused deconstruction retry
-or renewed closed phase follows. No routine gameplay-budget permission is needed.
-A successor still needs source/review/checkpoint, fresh actual
-preflight and credible complete-route fit. No routine user time question, reopened
-attempt or automatic actor continuation.
-#129 owns further resources and whole forecast; #75 owns control-fit findings.
-The [operator contract](protocol.md#designated-campaign-operator) records bounded
-passive reassessment; a stricter admission stop still wins. GitHub owns current
-execution stage, estimates and dependencies. Historical reports are evidence, not
-live status or permission to continue. Consolidated protected publication remains
-a separate verification step.
+The user delegates finite prospective gameplay time/input extensions, prioritizing
+quality data. [049](changes/049-distinct-fuel-study.md) records the latest
+container-aware proposal:20more internal resource minutes inside unchanged whole
+limits, original clocks/endpoints retained as history,59spent inputs and the110-input
+resource ceiling. Current and post-consumption container capacity require distinct
+evidence before an ordinary advisory warning can be acknowledged. No routine
+budget question, refunded failure, reopened assignment or automatic continuation.
+
+A successor needs source/review/common checks/clean checkpoint, fresh actual
+preflight, explicit actor assignment and credible complete-route fit. The
+[operator contract](protocol.md#designated-campaign-operator) governs handoff,
+unknown effects and bounded recovery. [046](changes/046-replan-known-nondelivery.md)
+records confirmed non-delivery versus game refusal; [047](changes/047-quality-data-continuation.md)
+and [048](changes/048-water-coverage-budget.md) preserve earlier allocation decisions.
+#129 owns resources/forecast and #75 control-fit findings. GitHub owns current
+execution stage, estimates and dependencies; historical reports grant no authority.
+Consolidated protected publication is a separate verification step.
 
 ## Execution ownership
 

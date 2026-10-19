@@ -1,7 +1,7 @@
 ---
 owner: lead
 date: 2026-10-19
-scope: Prospective distinct fuel salvage, treatment and remaining campaign after027
+scope: Prospective fuel, container-aware treatment and remaining campaign after027
 status: active
 review_trigger: Actual fuel or treatment result, whole fit, source or authority change
 ---
@@ -141,3 +141,75 @@ At this checkpoint exact0df pushCI39324262794 and PRCI39324268075 both passed;
 normal452common checks passed. The prior a29 failure stays retained with its original
 causal uncertainty. New source changes still need common checks and a clean commit
 before input. Publication remains consolidated in draftPR135.
+
+
+## Current revision: distinguish storage warning from future capacity
+
+The ground branch qualified a marked source with five splinters at [7,-13], an
+existing small fire at [9,-13] and clear work at [8,-13]. Actual recipe69/74 showed
+BOIL1/fire/raw14 green. F stopped before crafting;31 inputs/1053.745 seconds and
+all74 ledger counters/frame hashes were independently checked. No new ignition,
+automatic stoking, sustained duration or output was proved.
+
+The separately admitted one-batch study selected14 portions/3.5L with displayed
+1h02m,21.19% minor/0.07% catastrophic failure chances. The staged2+12 proposal was
+retained but not admitted: its18m20 forecast did not fit the remaining window;
+one batch forecast14m10, with16m09 actually available after lead review/preflight.
+Actual83 presented a storage **Proceed?** warning. F declined84 and handed off,
+using7 inputs/253.140 seconds. No craft or ingredient consumption started; no
+failed craft was retried. Source interpretation must not promote this warning
+into proof that all future storage is impossible.
+
+Pinned public code checks aggregate **current** container capacity before component
+consumption (`crafting.cpp:480–531`, `crafting_gui.cpp:1893`). Creating the in-progress
+craft subsequently consumes selected liquid components while retaining their parent
+containers (`craft_command.cpp:426–467`, `item.cpp:13170–13203`). Finished liquid
+handling can fill several containers successively (`handle_liquid.cpp:115–124`,
+`character.cpp:6054–6095`). These mechanics support a future-capacity hypothesis;
+they do not prove current bottle identities/capacities or actual emptying/output.
+Answering an ordinary advisory confirmation is an engine-provided choice, not a
+source patch, debug advantage or validation bypass. It requires the specific
+container evidence and explicit prospective authority below.
+
+Lead then inspected inventory under6-input/120-second authority. Actual92 showed
+three raw-water bottles and unexpanded nested boxes;99 showed one bottle plus a
+group of two without displayed contents. These are capacity candidates, not a
+complete fresh container graph. A malformed named key93 was rejected before native
+dispatch and charged; fresh Pause/Observe/status retained the same inventory,
+then distinct registered PAGE_DOWN actions followed046. All5 inputs/110.752 seconds
+and101 ledger counters/frame hashes were independently qualified. Actual101 is
+paused INVENTORY1402/nullslots, all handles terminal/noqueue. No items changed.
+Totals are1724whole/803aggregate/410day5/167lifecycle; all unknowns remain.
+
+The next **container-aware** part is a new prospective plan after that declined
+warning, not reuse of the stopped bulk authority. Verify current containers,
+contents, capacity and access first, including relevant nested raw-water bottles.
+Use existing inventory expansion and item information. A full batch may acknowledge
+only the understood current-capacity warning if actual carried ingredients and
+retained bottle capacities support future storage after consumption. Otherwise
+choose one smaller batch within confirmed current capacity or hand back incomplete.
+No assumption that nearby ingredients release carried bottles; no pouring out,
+raw drinking, forced consumption, save edit, second craft or automatic failed-craft
+restart. Actual output, every pour and final stock still require verification.
+
+Prospectively allocate **20 more minutes to this internal resource study**, from
+the existing whole gameplay allowance: keep original clock3901716.228623708 and
+original50-minute endpoint3904716.228623708 as history; the sole new resource
+endpoint is3905916.228623708 (70minutes from that same clock). Do not reset clocks,
+refund costs or change whole/aggregate endpoints,1200 gameplay-input ceiling or
+final30-minute/100-input reserve. This replaces an internal allocation after concrete
+capacity evidence; it is not an automatic renewal after an exhausted craft.
+The new part is at most50 inputs/25minutes and must end at the earlier of that
+part's endpoint and the revised resource endpoint.59 spent+50=109≤110 resource
+inputs;197 sunk+109=306≤310 combined.397 gameplay inputs remain;289 forecast
+(50resource+189care+30contingency+20final lifecycle) leaves108. Allow130 active
+minutes for resource, care, reviews and lifecycle, separate from final reserve;
+recompute actual fit after source checks before assignment.
+
+Independent source/plan review, common checks, a clean source checkpoint, actual
+supported paused lead/F gate and a new explicit assignment precede input. Exacta582
+push/PR CI passed; new source/final-main CI remain separate. Closed bench/ground/
+old bulk assignments grant no authority. No generic container solver, history
+system or new dependency is needed; reuse CDDA's inventory, recipe and liquid UI.
+#71/#40/#75 own interpretation, monitoring and control-fit findings; #129/#104 own
+resources/dayfive. Days5–7 and final lifecycle remain incomplete.

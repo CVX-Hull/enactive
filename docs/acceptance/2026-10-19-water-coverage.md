@@ -1,19 +1,21 @@
 ---
 owner: lead
 date: 2026-10-19
-scope: Same-character026 raw-water acquisition and027 missing-tool fuel failure
+scope: Same-character026–028 raw collection, fuel setup and declined storage warning
 status: historical
 ---
 
-# Three litres collected; fuel deconstruction refused, coverage incomplete
+# Raw water collected; fuel setup qualified, storage warning declined
 
 026 used clean source8ea0c70320ef076a38b1c3b93889dad2d9d3ad4e;027 used clean
-a29bac9fa3f32ffd7aa3ff69842ec077c1c9b27e. Both used unchanged
+a29bac9fa3f32ffd7aa3ff69842ec077c1c9b27e.028 used0df4a67997abd5c23792bfd19f2634b41356aec8
+for the bench study and a582ab719fb9f0c880d547946bc967912953342f for ground setup and
+the storage-warning study. All used unchanged
 native2095b718f470fa01b5a98ae6a1a8a3b5cd62d171597c7e11d34f199f0edcd69b.
 Same normally created Ned Meyers/Belgium, originalT05212800, remained windowed with
 the project userdir. Days1–4 stay accepted; days5–7 remain incomplete. This is
 ordinary collection, not new potable output, bulk treatment or a survival-day pass.
-No engine/source patch, new provider, global setup, hidden-state/save access or
+No game-engine patch, new provider, global setup, hidden-state/save access or
 human gameplay rescue was introduced. Routine gameplay approval was unnecessary.
 
 ## Actual source, containers and conserved quantities
@@ -129,16 +131,68 @@ ordering explains why declining the chooser does not hit again; it does not repl
 the actual30/31normal result. The bench hypothesis failed to supply fuel. The next
 carried-ground-fuel hypothesis in049 remains unexecuted and requires fresh authority.
 
+## 028 marked ground fuel and declined storage warning
+
+The distinct ground branch used31/44 inputs and1053.745/1200 seconds. Actual48
+completed a five-splinter drop at[7,-13], retaining two carried. LOOK51 confirmed an
+existing small fire/wood ashes at[9,-13]; formerwork[9,-12] had smoke and was avoided.
+Clearwork[8,-13] lay between fuel and fire, with HotAir1 but Comfortable/green needs,
+Clear/LightAirSE and no observed creatures. Ordinary construction62–64 marked the
+source; LOOK66 explicitly showed **firewood source + splintered wood[5]**. No new
+ignition was needed. These are actual setup results, not proof of stoking/duration.
+
+Recipe69 used registered RIGHT to RECENT instead of repeating the earlier filter
+workflow. It showed BOIL1/fire/raw14 green,250mL/5m30,20%batch saving and21.19%minor/
+0.07%catastrophic chances. F70–71/FINAL and lead72–74 supplied a supported paused
+CRAFTING1384/nullslot handoff; all74 counters/frame hashes and unknown lists were
+independently checked. No craft started; sourcea582 normal452checks and exact push/
+PRCI39326153030/39326159184 passed separately.
+
+A reviewed single-batch proposal replaced an unexecuted two-stage proposal that
+would not fit. At admission,16m09 remained in the original50-minute resource window;
+one batch forecast14m10 rather than two stages18m20. Actual82 selected14portions/
+3.5L with1h02m native duration and the same displayed failure chances. Confirm83
+returned a supported advisory **“You don’t have anything in which to store clean
+water … Proceed?”** F declined84 and paused85/status86/FINAL, then lead87–89 fenced
+and inspected pausedCRAFTING1394/nullslots. Seven inputs/253.140 seconds were spent;
+no ingredient consumption, craft, output or observed loss occurred. All89 counters/
+frame hashes and unchanged unknowns were independently checked. This is an actual
+warning-declined result, not proof that future storage is impossible.
+
+Public consumers check current aggregate capacity before components are consumed.
+The in-progress craft later consumes liquid charges while keeping their parent
+bottles; output can be split across successive containers. Source findings justify
+only a conditional future-capacity plan. They do not establish actual emptying,
+accessible capacities, tool/fuel duration or output. No engine validation was changed.
+
+A separately bounded lead inventory inspection spent5/6 inputs in110.752/120 seconds.
+Actual92 showed three raw-water bottles plus unexpanded nested boxes. Actual99 showed
+one bottle plus a group of two without displayed contents: capacity candidates,
+not a complete fresh raw-container graph or measured individual capacities. A named
+key PAGE_DOWN at93 was malformed and rejected by controller validation before
+native admission. Its charge remains. Fresh94–96 Pause/Observe/status preserved
+inventory1399/nullslots;97Resume and distinct registered action PAGE_DOWN98/99
+followed046. No uncertain replay or item change. Actual100Pause/101Status confirms
+paused INVENTORY1402/nullslots, all lead handles terminal/noqueue. Independent review
+verified all101 counters/frame hashes and unchanged unknowns, qualifying this narrow
+result. Last normal91 is5559113/[8,-13], green/Comfortable/blank needs/SafeON.
+
+Totals now **1724whole/803aggregate/410day5/167lifecycle**,59scope inputs. Stock remains
+last qualified1.5Lclean/3.5Lraw/12rations; no new treatment or consumption. The next
+container-aware study in049 is prospective, with current capacity and post-consumption
+capacity kept separate. Its internal resource allocation changes prospectively;
+original clocks, every failed cost/unknown, whole ceilings and final reserve remain.
+
 ## Data, CI and remaining acceptance
 
 The [manifest](2026-10-19-water-coverage-manifest.json) binds selected local receipts,
-frames, ledgers, preflights, checkpoints, recorders and frozen outcomes for026/027 and the028 bench-stop snapshot.
+frames, ledgers, preflights, checkpoints, recorders and frozen outcomes for026/027 and028 bench/ground/storage/inspection snapshots.
 Local-only artifacts are not supplied on a fresh checkout; hashes bind bytes, not
 semantic truth or representativeness. This is correlated development data, not a
 held-out benchmark, model comparison, training result or causal-learning claim.
 Existing#71 owns source/route-memory extraction, #40 monitoring and#75 forecast/
-control burden; #129/#104 own resources/day five. Bashing was executed without salvage; new fuel/heat and bulk
-potable stock remain unproved.
+control burden; #129/#104 own resources/day five. Bashing yielded no salvage; ground source/current heat were qualified. Sustained
+heat, bulk output and potable coverage remain unproved.
 
 451portable tests and diagram/governance/viewer checks passed before each segment,
 including normal checkpoint hooks. An initial invalid document-status value failed

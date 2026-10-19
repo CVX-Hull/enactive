@@ -34,23 +34,23 @@ raw water and a boiling tool but no heat, and retreating from a distant hostile.
 96h00m22 after the original start, after failed floor rest, successful bench wake
 and adaptation to interrupted upstairs waiting. Days five through seven remain
 incomplete. [025 verified the first250mL clean-water batch](acceptance/2026-10-19-first-clean-water.md)
-using ordinary outdoor fire, boiling and bottle storage, after rejected sites and
-a transient unsupported-menu return. [026 collected3L additional untreated water](acceptance/2026-10-19-water-coverage.md)
-into six ordinary bottles. Fresh stock is1.5Lclean/3.5Luntreated/12rations;
-remaining-three-day potable coverage is unproved. Last normal5559098 is alive/
-Comfortable with blank needs at an indoor north-room checkpoint. One owned game/
-controller remain paused, with no ordinary actor, queued input or live slots.
-Phone is off after027’s return. Regular deconstruction was refused for missing
-screwdriving. Four later bench strikes damaged the crowbar without salvage; the
-operator stopped and lead declined automatic repeat after handoff. No fuel/heat was
-produced. Current outdoor fire/fuel must be reassessed, north window is
-last known open, and final shutdown is unproved. Lifecycle
-ACKs, failed attempts and corrections remain qualified.
+using ordinary outdoor fire, boiling and bottle storage. [026–028](acceptance/2026-10-19-water-coverage.md)
+then collected3L additional raw water, exposed a missing-tool planning error and
+stopped bench bashing after crowbar damage. A distinct ground-fuel setup qualified
+an ordinary marked stash and existing outdoor fire, but the proposed3.5L batch
+was declined at a storage warning before crafting. No new potable output or
+remaining-three-day coverage follows. Last verified carried stock is1.5L clean,
+3.5L raw and12 rations, with no later consumption or craft.
+
+The latest normal5559113 was healthy/Comfortable with blank needs at the outdoor
+work position. The game/controller remain paused in an inventory checkpoint,
+with no ordinary actor, queued input or live slots. Phone is off; north window
+last open. Current fuel duration, final shutdown and lifecycle ACKs remain qualified.
 
 [#129](https://github.com/CVX-Hull/enactive/issues/129) owns further resources/whole
 forecast; [work](work.md) links the path. Closed019–027 grant no successor authority.
-027 closes after the missing-tool result;028’s bench assignment stopped on tool damage.
-A distinct carried-ground-fuel branch needs a new explicit assignment under049.
+028’s closed assignments grant no successor authority. A container-aware plan
+requires fresh evidence and explicit assignment under049.
 Measured daily care exceeded the prior forecast; [049](changes/049-distinct-fuel-study.md)
 records the prospective distinct fuel study and finite budget revision. The user clarified that delegation
 covers gameplay-related time and input extensions, prioritizing quality data;
