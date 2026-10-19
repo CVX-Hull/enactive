@@ -43,13 +43,17 @@ on an unsupported activity-distraction question. Native and controller are stopp
 normally. [The narrow repair](changes/034-activity-distraction-menu.md) reuses
 existing menu ownership; its [real graphical test](acceptance/2026-10-18-activity-distraction.md)
 handled a feral-cop interruption through ordinary bridge Yes and fresh normal play.
-The prior save reloaded; final proof save and protected publication remain separate.
-The obsolete005 recorder allowance is retired; stable CLI calls worked without
-recurring review or another Codex restart.
-No daily survival outcome is accepted. The
-[next full-campaign proposal](changes/035-full-day-continuation.md) adds prospective
-first-day wall headroom with the original clock/costs intact and early checks of
-safe useful work and actual rest; all seven days remain the objective.
+Protected exact/main publication accepted that repair. Its final proof save then
+actually reloaded in[006](acceptance/2026-10-18-resource-feasibility.md), which
+finished the partial carving and a finite bandaging job. Routine stable-CLI inputs
+had no recurring approval observed.006 stopped at its exact40-player-input gate:
+the longer schedule still depended on unverified wood and sustained lighting.
+Normal cleanup retained419whole/394day/114lifecycle inputs and all unknowns;
+its final save still needs actual reload. No daily survival outcome is accepted.
+The[next proposal](changes/036-resource-first-campaign.md) puts bounded resource
+discovery before sustained work, retaining original clocks and all failures;
+all seven days remain the objective. The obsolete005 recorder allowance is retired;
+no new Codex restart or broad permission change is needed for the verified setup.
 [Work](work.md) links the active path.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign

@@ -177,13 +177,26 @@ every original cost/clock/cap.
 retired, stable CLI allowance retained. No new permission restart is requested.
 005 remains closed incomplete; source work follows verified normal shutdown.
 
-The [next full-campaign proposal](changes/035-full-day-continuation.md) keeps the
-seven-day target and all spent costs, while prospectively extending first-day wall
-headroom from the same clock before its existing limit expires. Whole/daily input,
-later-day and shared lifecycle ceilings stay fixed. Actual safe work, proficiency
-benefit, materials and eligible rest are checked early; this is no guarantee of
-completion or renewed005 authority. Admission still requires reviewed protected
-publication, actual actor/native preflight and a complete remaining-day forecast.
+Protected PR121 exact/main CI accepted the native repair. The
+[006 continuation](acceptance/2026-10-18-resource-feasibility.md) then reloaded that
+proof save, finished partial carving and one finite bandaging job, and verified
+ordinary stable-CLI operation without recurring review. At exactly40player inputs,
+independent review rejected the remaining-day forecast's unverified wood/light
+dependencies. No input41; normal Save/Quit/controller shutdown.419whole/394day/
+114lifecycle inputs,4232.099166lifecycle seconds and80v3+1archived/control2unknowns
+remain. Last normal5224288 is3h11m28 after originalT0; no survival day accepted.
+Final006Save requires actual reload. Existing native debug recovery and passive
+reassessment worked; no new native patch is selected from this planning failure.
+
+The[next prospective scope](changes/036-resource-first-campaign.md) retains every
+cost/clock/failure and original whole/day limits. It puts a finite resource-discovery
+stage before sustained complete-day work, within220new day1 player inputs (the
+combined006+007forecast stays260). Shared lifecycle inputs would prospectively
+be135hard/127ordinary before the old117ordinary limit expires, preserving8cleanup
+inputs and unchanged100/90minutes;114spent leaves too little for the former future
+load/midpoint plan. Source publication, independent review, actual balances/actor/
+native preflight and discovery acceptance remain required. Neither historical006
+nor this proposal grants new gameplay authority or accepts a survival day.
 
 Pilot001's 150-input/45-minute/six-game-hour ceilings remain historical fixed limits,
 not a renewable allowance. Every later attempt needs a prospective finite brief

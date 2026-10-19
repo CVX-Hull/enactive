@@ -1,10 +1,16 @@
 ---
 owner: lead
-status: proposed
-review_trigger: Campaign allocation, actual survival feasibility, actor or source changes
+status: historical
+date: 2026-10-18
+scope: Executed006 allocation and failed first40 full-day feasibility gate
 ---
 
 # Continue the same seven-day campaign with full-day headroom
+
+Executed as006 and[closed incomplete](../acceptance/2026-10-18-resource-feasibility.md).
+The first40 feasibility gate was unmet; no input41 occurred. This historical brief
+grants no remaining authority. The[next proposal](036-resource-first-campaign.md)
+puts resource discovery before sustained-work admission, retaining every cost/failure.
 
 The [ordinary activity repair](../acceptance/2026-10-18-activity-distraction.md)
 passed its real native test. Integrated005 stays closed incomplete. This proposal
