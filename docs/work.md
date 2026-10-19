@@ -19,19 +19,18 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 | Survival pilot and findings | [Pilot report](acceptance/2026-10-18-survival-pilot.md) retains the stopped pre-spawn attempt and its dispositions; #78/#83 own acceptance. |
 | Continuity and first-day rehearsal | [Qualified first-day result](acceptance/2026-10-18-first-day-completion.md) retains actual save/restart/handoff, needs and autonomy evidence plus its failures/unknowns; #79/#80 own acceptance. |
 | Seven-day readiness | [Readiness report](acceptance/2026-10-18-seven-day-readiness.md) records the finite preparation gate and its limits; #81. Readiness does not guarantee campaign success. |
-| Current seven-day path | [Functional progress](acceptance/2026-10-19-functional-survival.md): two days accepted; day three stopped at water readiness, then normal partial shutdown. [Parent #82](https://github.com/CVX-Hull/enactive/issues/82) and daily #100–106 own current work and acceptance. [#129](https://github.com/CVX-Hull/enactive/issues/129) owns resource/access work. A reviewed functional admission may permit essential exploration with current needs/retreat margin and remaining fit; actual supply gates optional work. Closed scopes grant no authority. |
+| Current seven-day path | [019 actual progress](acceptance/2026-10-19-adaptive-survival.md): two days accepted; water/food and alarmed rest verified, day three incomplete at 5,470,972. [Parent #82](https://github.com/CVX-Hull/enactive/issues/82) and daily #100–106 own outcomes. [#129](https://github.com/CVX-Hull/enactive/issues/129) owns further supplies/access. Closed 019 grants no authority. |
 | Full closeout | Same-character daily evidence, normal midpoint save/restart/reload and player replacement, final normal shutdown, independent complete-campaign review, protected publication/CI, owned cleanup and current Project. #82 stays open until all are proved. |
 
 Actual campaign reports distinguish success, partial progress, failed attempts, unknown delivery and unexercised capabilities. Historical reports and issue revisions remain evidence; they neither grant current authority nor renew unused budgets. Cumulative charges include rejected, stale and unknown attempts. An old request is never replayed merely because a newer scene looks favorable.
 
-The game and controller are stopped. [018](acceptance/2026-10-19-water-readiness.md)
-verified a same-turn normal reload and actual inventory/access findings, then failed
-water readiness and normally shut down. Latest save remains unreloaded. The
-[adaptive functional proposal](changes/041-adaptive-functional-survival.md) explicitly
-replaces internal eligibility limits while preserving failed scopes, all costs and
-the original whole ceiling. It permits bounded essential exploration under current
-needs margin; actual supply still gates optional work. No input authority follows
-from a proposal, and the seven-day outcome remains open.
+Closed, incomplete 019 left the explicitly owned game/controller paused;
+all actor/tool calls are terminal, no input is queued and actual live slots are null.
+The [remaining-budget proposal](changes/042-finish-within-existing-budget.md) retains
+the exact whole and aggregate clocks, spent inputs and cleanup/publication reserve.
+It prospectively replaces ineffective daily timers with longer bounded assignments
+and actual daily review. It grants no input authority; further supplies, actual
+admission, midpoint restart/replacement and the seven-day outcome remain unproved.
 
 ## Execution ownership
 

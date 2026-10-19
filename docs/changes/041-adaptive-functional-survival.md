@@ -1,10 +1,17 @@
 ---
 owner: lead
-status: proposed
+status: historical
+date: 2026-10-19
+scope: Closed incomplete 019 admission and preserved original limits
 review_trigger: Actual needs margin, functional admission, remaining fit, source or user guarantees change
 ---
 
 # Finish the functional campaign with adaptive essential exploration
+
+019 is closed incomplete. It reached 5,470,972, seventeen minutes and eight seconds
+short of day three. The [actual report](../acceptance/2026-10-19-adaptive-survival.md)
+retains useful acquisition/rest progress, late closeouts and the failed endpoint.
+This historical admission grants no further input authority.
 
 ## Outcome, failures and decision
 

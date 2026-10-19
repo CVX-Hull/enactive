@@ -26,17 +26,19 @@ before a complete remaining-day fit. It remains qualified historical evidence.
 
 The [functional survival report](acceptance/2026-10-19-functional-survival.md)
 verifies two days alive on the same normally created Ned Meyers / Belgium.
-[Water readiness018](acceptance/2026-10-19-water-readiness.md) later reloaded that
-save at5386185, explored indoors and stopped alive at5386210 after no supply chain
-was established. Normal shutdown followed; latest save remains unreloaded. Seven-day
-survival and midpoint replacement are unproved. [#129](https://github.com/CVX-Hull/enactive/issues/129)
+[Adaptive survival019](acceptance/2026-10-19-adaptive-survival.md) normally reloaded
+the latest save, acquired water/food and observed alarmed rest. It stopped at
+5,470,972, seventeen minutes short of day three, leaving the owned game/viewer paused.
+Closed 019 grants no successor authority. Seven-day survival and midpoint replacement remain
+unproved. [#129](https://github.com/CVX-Hull/enactive/issues/129)
 owns current resource/access work; [work](work.md) links the path.
 
-The [adaptive functional proposal](changes/041-adaptive-functional-survival.md)
-replaces poorly fitted internal study limits prospectively, preserving all failed
-outcomes/costs and original whole ceilings. It allows bounded essential exploration
-with current needs margin, while verified supply gates optional work. Independent
-review and actual admission still apply. Stable CLI worked without recurring human
+The [remaining-budget proposal](changes/042-finish-within-existing-budget.md)
+retains the exact whole and aggregate clocks, spent inputs and cleanup reserve,
+while replacing poorly fitted internal daily timers with longer bounded assignments
+and actual daily acceptance. Essential exploration uses current needs margin;
+verified supply gates optional work. Independent review and actual admission still
+apply. Stable CLI worked without recurring human
 approval; no broad permission or Codex restart is needed.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign
