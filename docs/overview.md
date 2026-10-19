@@ -33,20 +33,23 @@ raw water and a boiling tool but no heat, and retreating from a distant hostile.
 [024 accepted day four](acceptance/2026-10-19-four-day-survival.md) at5558422,
 96h00m22 after the original start, after failed floor rest, successful bench wake
 and adaptation to interrupted upstairs waiting. Days five through seven remain
-incomplete. Day-five water discovery verified a boiling tool/recipe and empty
-container, but a hostile searchlight exposed the proposed exterior treatment site.
-The player retreated, closed the window/curtains and restored safe mode. No water
-was treated. Last normal5558504 is alive/Comfortable with blank needs; accounted
-stock1.25L clean water/12rations/750mL raw is not remaining-three-day coverage.
-One owned game/controller remain paused, with no ordinary actor and actual null
-live slots. Lifecycle ACKs and earlier failures remain qualified.
+incomplete. [025 verified the first250mL clean-water batch](acceptance/2026-10-19-first-clean-water.md)
+using ordinary outdoor fire, boiling and bottle storage, after rejected sites and
+a transient unsupported-menu return. Fresh stock is1.5L clean/500mL untreated/
+12rations; remaining-three-day coverage is unproved. Last normal5559025 is alive/
+Comfortable with blank needs at the assessed outdoor worksite. One owned game/
+controller remain paused, with no ordinary actor, queued input or live slots.
+Small fire and open-window retreat remain; final shutdown is unproved. Lifecycle
+ACKs, failed attempts and corrections remain qualified.
 
 [#129](https://github.com/CVX-Hull/enactive/issues/129) owns further resources/whole
-forecast; [work](work.md) links the path. Closed019–024 grant no successor authority.
-024 closed for lost credible complete-route fit under the fixed approved ceilings;
-no clock, spent cost or input cap reset. The user then delegated prospective time
-extensions to the lead to prioritize quality data; [047](changes/047-quality-data-continuation.md)
-records the next finite continuation and its evidence/phase gates. Its [046 decision](changes/046-replan-known-nondelivery.md)
+forecast; [work](work.md) links the path. Closed019–025 grant no successor authority.
+025 closes for a source/forecast handoff after its narrow first-output result.
+Measured daily care exceeded the prior forecast; [048](changes/048-water-coverage-budget.md)
+proposes a finite budget revision, with input-budget delegation still a decision.
+The user delegated prospective time extensions to prioritize quality data;
+[047](changes/047-quality-data-continuation.md) records025's time/phase decision,
+retaining original clocks, costs and input ceilings. Its [046 decision](changes/046-replan-known-nondelivery.md)
 prospectively distinguished known non-delivery capability failures from authority
 refusals. The [operator workflow](protocol.md#designated-campaign-operator) permits
 bounded passive reassessment only when an admission allows it, then explicit

@@ -307,7 +307,8 @@
         "docs/acceptance/2026-10-19-treatment-stop.md",
         "docs/acceptance/2026-10-19-dialogue-stop.md",
         "docs/acceptance/2026-10-19-potable-cache-stop.md",
-        "docs/acceptance/2026-10-19-four-day-survival.md"
+        "docs/acceptance/2026-10-19-four-day-survival.md",
+        "docs/acceptance/2026-10-19-first-clean-water.md"
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
       "limitations": "Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.",
@@ -317,20 +318,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-19",
-        "outcome": "024 independently accepted day4 at5558422; day5 treatment site rejected after actual hostile visibility and assessed retreat; lost complete-route fit closed024 at5558504. No treated output or seven-day pass.",
-        "scope": "281newinputs=127day4+154day5;1468whole/547aggregate/167life;101current-v3+1archivedgameplay+2control unknowns retained, no new delivery unknown/native build.",
+        "outcome": "025 independently verified one250mL ordinarycleanwaterbatch and terminal5559025; rejectedsite/menuerrors/transientunsupported retained. Days1-4accepted, remainingcoverage/day5-7incomplete.",
+        "scope": "87newinputs=19failedsite+36northernexit+32firstoutput;1555whole/634aggregate/241day5/167life;101current-v3+1archivedgameplay+2control unknowns retained,no newdeliveryunknown/nativebuild.",
         "evidence": [
-          "docs/acceptance/2026-10-19-four-day-survival.md"
+          "docs/acceptance/2026-10-19-first-clean-water.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-19",
         "effectiveness": "partially_effective",
-        "findings": "Finite passive reassessment and observed-outcome site rejection worked. Lead wrong direction correction contaminated a checkpoint; explicit reread/correction retained. Conditional route is not actual threat clearance/output; phase budgets and full-route fit must retain uncertainty.",
-        "cost": "281chargedinputs plus elapsed lead/operator/review work; failed rest/search retained, no menu-throughput or model-speed claim.",
-        "follow_up": "#71 provenance/applicability/stock-vs-coverage memory cases; #75 correction and control burden; #104 day5 and #129 water/full-fit incomplete; #103 day4 accepted. Existing maintenance/research due dates unchanged.",
+        "findings": "Actualframe/stockverification and finitepassivereassessment worked withoutreplay/phase renewal. Repeatedtransientcrafting boundary retained; dailycare59-63routineinputs exceeded55/dayforecast, so currentfull-routeinputfit unproved. Sourceproposal048withholds broaderinputauthority pendinguserdecision; actualsmallbatch isnotbulkcoverage.",
+        "cost": "87chargedinputs plus elapsedlead/operator/reviewwork;32inputfirstbatch includescorrectedselection/unregisteredrequest/transienthandoff; alloldercostsretained, no generalmodel-efficiencyclaim.",
+        "follow_up": "#71 provenance/location/labeldevelopmentcases; #40/#42/#44 transientmonitoring; #75 forecast/controlburden; #104day5/#129resource/full-fit incomplete. Nextreview/researchdates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-19-four-day-survival.md"
+          "docs/acceptance/2026-10-19-first-clean-water.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -460,7 +461,8 @@
         "docs/acceptance/2026-10-19-treatment-stop.md",
         "docs/acceptance/2026-10-19-dialogue-stop.md",
         "docs/acceptance/2026-10-19-potable-cache-stop.md",
-        "docs/acceptance/2026-10-19-four-day-survival.md"
+        "docs/acceptance/2026-10-19-four-day-survival.md",
+        "docs/acceptance/2026-10-19-first-clean-water.md"
       ],
       "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process. Reuse fit and the adequacy of its rationale are semantic judgments; CI does not prove them. Identity configuration prevents inferred defaults but does not inspect file contents or prove a message, branch or remote ref contains no personal information; full-message inspection remains manual.",
@@ -470,20 +472,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-19",
-        "outcome": "024 independently accepted day4 at5558422; day5 treatment site rejected after actual hostile visibility and assessed retreat; lost complete-route fit closed024 at5558504. No treated output or seven-day pass.",
-        "scope": "281newinputs=127day4+154day5;1468whole/547aggregate/167life;101current-v3+1archivedgameplay+2control unknowns retained, no new delivery unknown/native build.",
+        "outcome": "025 independently verified one250mL ordinarycleanwaterbatch and terminal5559025; rejectedsite/menuerrors/transientunsupported retained. Days1-4accepted, remainingcoverage/day5-7incomplete.",
+        "scope": "87newinputs=19failedsite+36northernexit+32firstoutput;1555whole/634aggregate/241day5/167life;101current-v3+1archivedgameplay+2control unknowns retained,no newdeliveryunknown/nativebuild.",
         "evidence": [
-          "docs/acceptance/2026-10-19-four-day-survival.md"
+          "docs/acceptance/2026-10-19-first-clean-water.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-19",
         "effectiveness": "partially_effective",
-        "findings": "Finite passive reassessment and observed-outcome site rejection worked. Lead wrong direction correction contaminated a checkpoint; explicit reread/correction retained. Conditional route is not actual threat clearance/output; phase budgets and full-route fit must retain uncertainty.",
-        "cost": "281chargedinputs plus elapsed lead/operator/review work; failed rest/search retained, no menu-throughput or model-speed claim.",
-        "follow_up": "#71 provenance/applicability/stock-vs-coverage memory cases; #75 correction and control burden; #104 day5 and #129 water/full-fit incomplete; #103 day4 accepted. Existing maintenance/research due dates unchanged.",
+        "findings": "Actualframe/stockverification and finitepassivereassessment worked withoutreplay/phase renewal. Repeatedtransientcrafting boundary retained; dailycare59-63routineinputs exceeded55/dayforecast, so currentfull-routeinputfit unproved. Sourceproposal048withholds broaderinputauthority pendinguserdecision; actualsmallbatch isnotbulkcoverage.",
+        "cost": "87chargedinputs plus elapsedlead/operator/reviewwork;32inputfirstbatch includescorrectedselection/unregisteredrequest/transienthandoff; alloldercostsretained, no generalmodel-efficiencyclaim.",
+        "follow_up": "#71 provenance/location/labeldevelopmentcases; #40/#42/#44 transientmonitoring; #75 forecast/controlburden; #104day5/#129resource/full-fit incomplete. Nextreview/researchdates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-19-four-day-survival.md"
+          "docs/acceptance/2026-10-19-first-clean-water.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -694,7 +696,8 @@
         "docs/acceptance/2026-10-19-treatment-stop.md",
         "docs/acceptance/2026-10-19-dialogue-stop.md",
         "docs/acceptance/2026-10-19-potable-cache-stop.md",
-        "docs/acceptance/2026-10-19-four-day-survival.md"
+        "docs/acceptance/2026-10-19-four-day-survival.md",
+        "docs/acceptance/2026-10-19-first-clean-water.md"
       ],
       "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",
@@ -704,20 +707,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-19",
-        "outcome": "024 independently accepted day4 at5558422; day5 treatment site rejected after actual hostile visibility and assessed retreat; lost complete-route fit closed024 at5558504. No treated output or seven-day pass.",
-        "scope": "281newinputs=127day4+154day5;1468whole/547aggregate/167life;101current-v3+1archivedgameplay+2control unknowns retained, no new delivery unknown/native build.",
+        "outcome": "025 independently verified one250mL ordinarycleanwaterbatch and terminal5559025; rejectedsite/menuerrors/transientunsupported retained. Days1-4accepted, remainingcoverage/day5-7incomplete.",
+        "scope": "87newinputs=19failedsite+36northernexit+32firstoutput;1555whole/634aggregate/241day5/167life;101current-v3+1archivedgameplay+2control unknowns retained,no newdeliveryunknown/nativebuild.",
         "evidence": [
-          "docs/acceptance/2026-10-19-four-day-survival.md"
+          "docs/acceptance/2026-10-19-first-clean-water.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-19",
         "effectiveness": "partially_effective",
-        "findings": "Finite passive reassessment and observed-outcome site rejection worked. Lead wrong direction correction contaminated a checkpoint; explicit reread/correction retained. Conditional route is not actual threat clearance/output; phase budgets and full-route fit must retain uncertainty.",
-        "cost": "281chargedinputs plus elapsed lead/operator/review work; failed rest/search retained, no menu-throughput or model-speed claim.",
-        "follow_up": "#71 provenance/applicability/stock-vs-coverage memory cases; #75 correction and control burden; #104 day5 and #129 water/full-fit incomplete; #103 day4 accepted. Existing maintenance/research due dates unchanged.",
+        "findings": "Actualframe/stockverification and finitepassivereassessment worked withoutreplay/phase renewal. Repeatedtransientcrafting boundary retained; dailycare59-63routineinputs exceeded55/dayforecast, so currentfull-routeinputfit unproved. Sourceproposal048withholds broaderinputauthority pendinguserdecision; actualsmallbatch isnotbulkcoverage.",
+        "cost": "87chargedinputs plus elapsedlead/operator/reviewwork;32inputfirstbatch includescorrectedselection/unregisteredrequest/transienthandoff; alloldercostsretained, no generalmodel-efficiencyclaim.",
+        "follow_up": "#71 provenance/location/labeldevelopmentcases; #40/#42/#44 transientmonitoring; #75 forecast/controlburden; #104day5/#129resource/full-fit incomplete. Nextreview/researchdates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-19-four-day-survival.md"
+          "docs/acceptance/2026-10-19-first-clean-water.md"
         ]
       },
       "next_review": "2027-01-15"
