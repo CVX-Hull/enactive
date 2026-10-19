@@ -23,15 +23,17 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 | Full closeout | Same-character daily evidence, normal midpoint save/restart/reload and player replacement, final normal shutdown, independent complete-campaign review, protected publication/CI, owned cleanup and current Project. #82 stays open until all are proved. |
 
 [026](acceptance/2026-10-19-water-coverage.md) collected3Ladditional untreated water
-in six500mL bottles, preserving clean water/food. Last normal5559096 is alive/
+in six500mL bottles, preserving clean water/food. Last normal5559098 is alive/
 Comfortable with blank needs, freshly observed1.5Lclean/12rations/3.5Luntreated
 and one owned paused game/controller. Actual live
 slots are null, actors/tools terminal and no queued input. Ordinary small-fire heat,
 one250mL craft and bottle storage were independently qualified; bulk throughput and
-remaining-three-day coverage are unproved. 027’s regular deconstruction was refused for missing screwdriving, with no salvage.
+remaining-three-day coverage are unproved. 027’s regular deconstruction was refused for missing screwdriving.028’s four
+bench strikes damaged the crowbar without salvage, followed by an honored stop
+and lead decline of sustained smashing. No fuel/heat was qualified.
 The checkpoint is indoors in the north room; phone is off, window is last known
 open and current fire/fuel requires reassessment. Final shutdown is unproved.
-Daily outcomes1–4 stay accepted; closed019–027 grant no successor authority. The
+Daily outcomes1–4 stay accepted; closed019–027 and028’s stopped bench assignment grant no successor authority. The
 original resource gate was qualified met in023 as a finite cache, not renewable supplies.
 
 The user-approved one-time three-hour extension retained all original clocks, costs,

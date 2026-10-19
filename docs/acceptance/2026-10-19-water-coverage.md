@@ -98,16 +98,47 @@ new authority. [049](../changes/049-distinct-fuel-study.md) prospectively scopes
 materially different ordinary fuel-salvage study under user delegation, with all
 197resource inputs from025–027 retained and no refused deconstruction retry.
 
+## 028 bench damage: no salvage, honored stop
+
+Source0df4a67997abd5c23792bfd19f2634b41356aec8 and unchanged native2095 were
+qualified before the distinct bench study. Actual7 verified seven carried wood
+splinters, lighter93/100 and phoneOFF10/56;8 showed makeshift-crowbar BASH9, correcting
+the undamaged-data estimate10. Four individually assessed attempts targeted only
+unused bench[8,-8]; sleeping benches and other furniture were untouched.
+Actual13/16/19 showed whump×1/2/3 with intact bench, green body and no ineffective
+feedback. Public accumulation mechanics justified bounded individual trials, not
+hidden map-damage inspection or guaranteed success. Repeated-smash prompts were
+answered No; no sustained bash activity was assigned.
+
+Fourth attempt21 damaged the crowbar at a supported YESNO repeat chooser. F honored
+the tool-change stop with only Pause22/Status23 and terminal handoff,15inputs and
+481.913seconds after its original clock.23 is **paused menu**, not normal; all three
+slots were present/null. After F FINAL, lead24–26 fenced/observed the same chooser
+and actual null slots. A separately recorded120-second/two-input decision permitted
+only declining sustained smashing:27Resume,28N,29Pause,30Observe,31Status.
+Normal5559098/rev1330/[7,-8,0] then showed the fourth whump, damaged tool and intact
+bench. No second strike, salvage, firewood marker, heat or potable output followed.
+
+Independent review checked all31ledger counters/frame hashes, relevant actual
+pixels, stop compliance, terminal slots and unchanged returned unknown lists. One
+adapter invocation supplied an unsupported --expect flag to resume and failed
+parsing before ledger append or actual CLI execution; the corrected resume was
+recorded27. No native delivery or extra charge is claimed for that local error.
+Lead28 adds one charge:16total,1681whole/760aggregate/367day5/167lifecycle. Source
+ordering explains why declining the chooser does not hit again; it does not replace
+the actual30/31normal result. The bench hypothesis failed to supply fuel. The next
+carried-ground-fuel hypothesis in049 remains unexecuted and requires fresh authority.
+
 ## Data, CI and remaining acceptance
 
 The [manifest](2026-10-19-water-coverage-manifest.json) binds selected local receipts,
-frames, ledgers, preflights, checkpoints, recorders and frozen outcomes for026/027.
+frames, ledgers, preflights, checkpoints, recorders and frozen outcomes for026/027 and the028 bench-stop snapshot.
 Local-only artifacts are not supplied on a fresh checkout; hashes bind bytes, not
 semantic truth or representativeness. This is correlated development data, not a
 held-out benchmark, model comparison, training result or causal-learning claim.
 Existing#71 owns source/route-memory extraction, #40 monitoring and#75 forecast/
-control burden; #129/#104 own resources/day five. Bashing, new fuel/heat and bulk
-potable stock remain unexecuted hypotheses, not results in this report.
+control burden; #129/#104 own resources/day five. Bashing was executed without salvage; new fuel/heat and bulk
+potable stock remain unproved.
 
 451portable tests and diagram/governance/viewer checks passed before each segment,
 including normal checkpoint hooks. An initial invalid document-status value failed
@@ -116,8 +147,9 @@ Exacta29PRCI39321483681passed; pushCI39321467937failed one empty-unknown asserti
 The80ms test did not establish action delivery before expecting uncertainty; the
 log does not prove the failing request phase. A separately reviewed tests-only
 Event/controlled-clock repair passed82controller tests and focused review; it changes
-no production deadline/guard. New full checks and exactCI remain required, and the
-originalfailed CI log is retained. Native outcomes cannot substitute for CI.
+no production deadline/guard. Normal full452checks then passed before028; exact0df pushCI39324262794 and
+PRCI39324268075 passed. The original failed run and causal uncertainty are retained.
+Later source changes still require their own checks/CI. Native outcomes cannot substitute for CI.
 
 Days5–7, remaining potable coverage, final normal lifecycle, independent whole review,
 protected final publication/main CI and owned cleanup remain incomplete.

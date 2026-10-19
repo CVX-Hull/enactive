@@ -39,15 +39,15 @@ No money, provider, permission, global setup or safety change is authorized.
 | Aggregate ordinary / hard endpoints | 3912400 /3914200 | 3916000 /3917800 |
 | Whole ordinary / hard endpoints | 3914470.588570708 /3921670.588570708 | 3918070.588570708 /3925270.588570708 |
 
-Carry1665whole/744aggregate/351day5/167lifecycle, historical lifecycle7442.818810162135s,
+At the original028 admission, carry1665whole/744aggregate/351day5/167lifecycle, historical lifecycle7442.818810162135s,
 101current-v3 plus one archived gameplay/two control unknowns. Combined025–028
 resource envelope310 includes **197sunk =87+73+37**, with at most60new fuel-study
-and50bulk inputs,307total.456gameplay inputs remain;349forecast =110resource+
+and50bulk inputs,307total. The original forecast had456gameplay inputs remaining;349forecast =110resource+
 189daily care+30contingency+20final lifecycle,107margin. Allow155active minutes
 =15review/source/preflight+50resource+75care/reviews+15native lifecycle, separate
 from final reserve. Actual fit is recomputed after checks; no elapsed time is erased.
 The fresh resource study has a cumulative50-minute endpoint fixed before input;
-each separately assigned fuel/bulk part is at most25minutes and75inputs. No
+the original fuel part is at most60inputs/25minutes and bulk at most50inputs/25minutes. No
 unused closed assignment supplies authority, and no miss automatically renews.
 
 ## Distinct fuel hypothesis and actual gates
@@ -104,3 +104,40 @@ Pause and bounded transient/native recovery rules; no human rescue. Consolidate
 publication in draftPR135, then verify final exact-candidate and merged-main CI,
 protections/identities and owned cleanup. #129/#104/#82/#10 stay open. Maintenance
 and research dates are not renewed. A useful negative result is not survival success.
+
+## Observed tool damage and distinct ground-fuel revision
+
+028 stopped after four individual attempts on the one unused bench[8,-8]. Actual
+tool inspection showed BASH9, rather than the undamaged-data estimate10. The fourth
+attempt damaged the crowbar; F immediately paused at the supported repeat chooser,
+using15inputs/481.913seconds, without answering or starting sustained smashing.
+After terminal handoff, lead declined that chooser with one charged N input. Actual
+normal5559098/rev1330 confirms four whumps, intact bench and tool damage. No salvage,
+heat or output resulted. Independent review qualified the stop and normal handoff;
+all31ledger counters/frame hashes and unchanged returned unknown lists reconcile.
+Totals are1681whole/760aggregate/367day5/167lifecycle. No further bashing follows.
+440gameplay inputs remain under the unchanged aggregate1200-input ceiling.
+
+The distinct next hypothesis uses the **seven carried splinters actually inspected
+at0287**, rather than damaging more furniture. Public construction data marks a
+ground firewood source without tools; ACT_CRAFT can draw fuel from an accessible
+marked ground tile. This is not carried-inventory refueling, a guarantee of fire
+duration or proof that the old fire is still present. Reassess the outdoor site,
+weather/wind, exact fire/fuel and south-window retreat. Keep reserve fuel separated
+from the fire; do not drop an unsafe large pile onto it. No exterior search, shrub
+bashing, extra furniture destruction or new tool crafting is part of this revision.
+
+After a clean reviewed checkpoint, a new explicit ground-fuel assignment may use
+at most44inputs/20minutes for actual inventory/site/marker/fuel/heat qualification.
+The closed bench assignment is not resumed. Keep the **original resource endpoint
+3904716.228623708** and110-input total:16spent+44setup+50bulk=110. Combined025–028
+resource cost stays307maximum, including all197sunk inputs. There is no total time
+or input extension here. If review/setup consumes the remaining time or actual
+fuel/heat fails, hand off incomplete; no automatic renewal. Separately assign at
+most50bulk inputs within the same remaining endpoint, with an initial small batch
+when warranted and actual completed bottled stock before coverage or daily holding.
+
+At this checkpoint exact0df pushCI39324262794 and PRCI39324268075 both passed;
+normal452common checks passed. The prior a29 failure stays retained with its original
+causal uncertainty. New source changes still need common checks and a clean commit
+before input. Publication remains consolidated in draftPR135.
