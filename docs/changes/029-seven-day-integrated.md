@@ -1,10 +1,16 @@
 ---
 owner: lead
 review_trigger: Campaign scope, resource attribution, actor, source or authority changes
-status: proposed
+status: historical
+date: 2026-10-18
+scope: Closed integrated003; original prospective seven-day limits retained without authority
 ---
 
 # Integrated seven-day survival on preserved Ned
+
+This scope was prospectively admitted as003 and then
+[closed incomplete before day1](../acceptance/2026-10-18-integrated-day1.md).
+Its frozen limits below are historical; no unused input authority remains.
 
 [#82](https://github.com/CVX-Hull/enactive/issues/82) is the complete next outcome:
 real survival through day seven, daily evidence and actual player replacement on
