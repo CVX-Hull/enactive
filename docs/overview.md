@@ -34,9 +34,10 @@ and remaining-route allocation gap; [work](work.md) links the delivery path.
 
 The [body-status correction](acceptance/2026-10-19-body-status.md) separately
 verified native menu navigation and saved-character reload. The
-[prospective functional continuation](changes/039-functional-campaign-continuation.md)
-preserves the failed study and original cumulative accounting; it requires review,
-protected publication and actual admission before play. Stable CLI inputs worked
+[water-readiness proposal](changes/040-water-readiness.md) preserves closed
+studies and cumulative accounting, with an explicit prospective internal lifecycle
+allocation. It requires independent review, protected publication and actual
+admission; investigation alone cannot restore survival authority. Stable CLI inputs worked
 without recurring approval; no broad permission or Codex restart is needed.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign
