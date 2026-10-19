@@ -38,32 +38,30 @@ using ordinary outdoor fire, boiling and bottle storage. [026–028](acceptance/
 then collected 3 L of additional raw water, retained missing-tool and crowbar-damage
 stops, and qualified marked ground fuel. After declining a storage warning for a 3.5 L batch,
 the player verified empty bottles and completed a smaller 1.5 L batch and stored all of it.
-Fresh stock was **3 L clean water, 2 L untreated water and 12 rations**. A further
-batch then stopped when the fire went out, without output. The original clean water
-and rations were not consumed; free untreated water and craft progress need fresh
-inspection. Remaining-three-day coverage and days5–7 are incomplete.
+The second batch stopped twice when heat disappeared; it remains the SAME unfinished
+six-portion craft, now59% and wielded, with no second output. Fresh stock is
+**3 L clean water, 500 mL free raw water and 12 rations**; six raw portions remain
+committed to the craft. Days5–7 and remaining coverage are incomplete.
 
-The latest normal view (turn 5562034) shows a healthy, comfortable character with no displayed needs at the outdoor work
-position. One owned game/controller is paused, with no ordinary actor, queued input
-or live slots. The two remaining splinters were placed at the marked stash, but the fire went out
-during crafting. Current fuel and unfinished-craft state need inspection. The phone is off; the north window was last observed open.
-Final shutdown and lifecycle ACKs remain qualified.
+Latest normal5562641 shows a healthy, comfortable character with no displayed needs
+at the outdoor work position. One owned game/controller is paused, actual live slots
+null, all actors/tools terminal/noqueue. A residual stick and ashes remain on the
+unlit old fire tile; the marked source is empty. The phone is off; the north window
+is open without curtains. Final shutdown and lifecycle ACKs remain qualified.
 
-[#129](https://github.com/CVX-Hull/enactive/issues/129) owns further resources/whole
-forecast; [work](work.md) links the path. Closed019–027 grant no successor authority.
-028’s closed assignments grant no successor authority. Continuing the interrupted craft
-requires fresh evidence and explicit assignment under [050](changes/050-curtain-fuel-and-retained-craft.md).
-[049](changes/049-distinct-fuel-study.md) retains the fuel/capacity studies;
-050 records the next tool-free curtain salvage proposal and finite budget revision. The user clarified that delegation
-covers gameplay-related time and input extensions, prioritizing quality data;
-[047](changes/047-quality-data-continuation.md) records025's time/phase decision,
-retaining original clocks, costs and input ceilings. Its [046 decision](changes/046-replan-known-nondelivery.md)
-prospectively distinguished known non-delivery capability failures from authority
-refusals. The [operator workflow](protocol.md#designated-campaign-operator) permits
-bounded passive reassessment only when an admission allows it, then explicit
-reassignment at supported settled state. This manual control is not general
-monitoring. Stable literal CLI access worked without recurring human approval
-prompts; no broader permission rule or Codex restart was required.
+[#129](https://github.com/CVX-Hull/enactive/issues/129) owns resources/fit; [work](work.md)
+links the path. All028 assignments are closed. [050](changes/050-curtain-fuel-and-retained-craft.md)
+proposes ordinary CUT salvage of that residual stick into small pieces for the
+existing marked fuel source, ONE ignition and continuation of the SAME craft.
+Actual tool/target/yield/heat/capacity and complete-route fit remain gates; source
+findings do not guarantee yield or burn time. The user delegates finite gameplay
+input/time extensions for quality data.050 adds100inputs prospectively while keeping
+time endpoints, original clocks, all costs/unknowns and final reserve unchanged.
+[049](changes/049-distinct-fuel-study.md) is historical. [046](changes/046-replan-known-nondelivery.md)
+and the [operator contract](protocol.md#designated-campaign-operator) govern known
+non-delivery, bounded recovery and handoff. These manual controls are not general
+monitoring. Stable literal CLI access worked without recurring human approval;
+no broader permission rule or Codex restart was required.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign
 continuation. The [MVP completion audit](acceptance/2026-10-17-completion.md) maps

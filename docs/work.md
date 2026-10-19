@@ -22,21 +22,20 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 | Current seven-day path | [020](acceptance/2026-10-19-midpoint-survival.md) accepted days1–3, midpoint restart/reload and player replacement. [024](acceptance/2026-10-19-four-day-survival.md) accepted day four. [025](acceptance/2026-10-19-first-clean-water.md) verified the first250mL clean-water output, not remaining coverage. Days5–7 remain incomplete. [#103](https://github.com/CVX-Hull/enactive/issues/103) is accepted; [#104](https://github.com/CVX-Hull/enactive/issues/104) owns day five and [#129](https://github.com/CVX-Hull/enactive/issues/129) resources/forecast. |
 | Full closeout | Same-character daily evidence, normal midpoint save/restart/reload and player replacement, final normal shutdown, independent complete-campaign review, protected publication/CI, owned cleanup and current Project. #82 stays open until all are proved. |
 
-[026–028](acceptance/2026-10-19-water-coverage.md) collected 3 L additional untreated
-water and completed a stored 1.5 L clean batch after failed tool/fuel plans. A further
-six-portion craft stopped when the fire went out; no second output. Prior 3 L clean
-water and 12 rations were not consumed. Free raw stock, final fuel and unfinished
-progress require inspection. Latest normal5562034 is healthy/Comfortable; one owned
-game/controller is paused, actual slots null and all actors/tools terminal/noqueue.
-Days 1–4 remain accepted; days 5–7 and remaining supply coverage are incomplete.
+[026–028](acceptance/2026-10-19-water-coverage.md) collected3Lraw and stored one1.5L
+clean batch. A further six-portion craft stopped twice when heat disappeared; it
+remains SAME59%wielded, no second output. Fresh stock3Lclean/500mLfree raw/12rations;
+craft-bound water is not usable stock. Latest normal5562641 is healthy/Comfortable;
+one owned game/controller paused, actual slots null/all tools terminal/noqueue.
+Residual stick+ashes remain on old unlit[9,-13]; marked source[7,-13]empty. Days1–4
+accepted; days5–7 and remaining coverage incomplete.
 
-The user delegates finite prospective gameplay extensions for quality data.
-[050](changes/050-curtain-fuel-and-retained-craft.md) proposes one tool-free curtain
-rod for fuel and continuation of the same interrupted craft:65inputs/25minutes,
-with a prospective50-input/30-minute whole extension, original clocks/costs retained
-and final reserve unchanged. It does not authorize a replacement recipe, bush or
-bench bashing, ignition retries or automatic renewal. Actual window/menu, salvage,
-heat, retained craft, capacity and complete-route fit remain gates.
+[050](changes/050-curtain-fuel-and-retained-craft.md) now proposes ordinary CUT salvage
+of that residual stick into small fuel, existing marked-source feeding, ONE ignition
+and SAMEcraft continuation:≤65inputs/25minutes, actual yield≥5 gate. User-delegated
+prospective100input extension keeps time endpoints/original clocks/costs/reserve.
+No new curtain/search/bash/newrecipe/replacementingredients/automatic renewal.
+Actual tool/target/yield, heat, capacity and complete-route fit remain gates.
 
 A successor needs source/review/common checks/clean checkpoint, fresh actual
 preflight, explicit actor assignment and credible complete-route fit. The

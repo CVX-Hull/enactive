@@ -239,9 +239,35 @@ unchanged unknowns.21inputs/378.839seconds cost1787whole/866aggregate/473day5/
 5562034/rev1555/[8,-13], healthy/Comfortable/blankneeds/SafeON, actual null live slots,
 all handles terminal/noqueue. The immutable heat-stop snapshot binds190rows.
 Exact5f22 push39332128769 andPR39332133314 CI passed separately; no native rebuild.
-[050](../changes/050-curtain-fuel-and-retained-craft.md) proposes ordinary curtain
-fuel and inspection of this same retained craft; old assignments grant no authority.
+[050](../changes/050-curtain-fuel-and-retained-craft.md) first proposed ordinary curtain
+fuel and inspection of this same retained craft; that branch is now closed below.
 Days5–7 and remaining coverage are incomplete.
+
+## 028 curtain stick and retained craft, then residual-fuel inspection
+
+Under4179a8e, fresh194/195 matched the lead gate and196 resumed. Actual197/201
+identified the SAME six-portion ground craft24%, using water6. Fresh204 showed
+3Lclean/500mLfree raw/12rations.209 ordinary curtain teardown left the north window
+open without curtains, glass/route intact. Only its stick was wielded;215 stored the
+crowbar, leaving sheets/string/nails at[9,-11]. The stick was placed on old unlit
+[9,-13];230 was the ONE ignition,231 confirmed fire, lighter93→92.236 activated the
+SAME craft,237 picked/wielded it, and238 stopped at59% with nearby-fire-loss text.
+No new recipe, replacement components, output or liquid prompt occurred. F239Pause/
+240Status/FINAL ended40inputs/664.820seconds; independent review qualified all240
+counters/hashes/pixels/unknowns. The heat-loss cause and residual fuel were then unknown.
+
+After F FINAL, lead241–252 used a separately bounded inspection only. Actual246
+shows residual stick+wood ashes with no fire;248 shows the marked source empty.
+Residual stick rules out total consumption, not partial burn or a measured cause.
+No travel/item/fuel/craft changes occurred. Five inputs/48.082seconds stayed within
+6/120;251/252 confirm paused normal5562641/rev1652/[8,-13], healthy/Comfortable/
+blankneeds/SafeON, actual null live slots/all handles terminal/noqueue. Independent
+review verified all252 counters/frame hashes and unchanged unknown arrays. Totals
+1832whole/911aggregate/518day5/167lifecycle,167resource. Frozen curtain-stop preserves
+the ledger/admission/checkpoint/inspection/result. No second output/coverage/dayfive.
+Exact4179 push39333804418/PR39333809625 CI passed, separate from native gameplay.
+No new native build.050's revised small-piece salvage proposal is prospective;
+closed curtain/heat assignments grant no authority to reignite or continue.
 
 ## Data, CI and remaining acceptance
 
