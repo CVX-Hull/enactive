@@ -30,23 +30,29 @@ verifies two days alive on normally created Ned Meyers / Belgium.
 native restart/exact saved-turn reload and genuine fresh F ordinary-input
 replacement. [021 stopped](acceptance/2026-10-19-treatment-stop.md) after confirming
 raw water and a boiling tool but no heat, and retreating from a distant hostile.
-Day four and seven-day survival remain incomplete. 022 verified the exact saved
-reload and ordinary native UI cleanup without user keys. 023 acquired2L clean water
-and five rations, satisfying the first resource gate as a finite cache, then stopped
-on a native pre-dispatch missing-binding rejection. Accounted stock2.75L/12rations
-is not a fresh aggregate count or future-week coverage. One owned game/controller
-remain paused; no actor has ordinary authority. Lifecycle ACKs stay unknown.
+[024 accepted day four](acceptance/2026-10-19-four-day-survival.md) at5558422,
+96h00m22 after the original start, after failed floor rest, successful bench wake
+and adaptation to interrupted upstairs waiting. Days five through seven remain
+incomplete. Day-five water discovery verified a boiling tool/recipe and empty
+container, but a hostile searchlight exposed the proposed exterior treatment site.
+The player retreated, closed the window/curtains and restored safe mode. No water
+was treated. Last normal5558504 is alive/Comfortable with blank needs; accounted
+stock1.25L clean water/12rations/750mL raw is not remaining-three-day coverage.
+One owned game/controller remain paused, with no ordinary actor and actual null
+live slots. Lifecycle ACKs and earlier failures remain qualified.
 
 [#129](https://github.com/CVX-Hull/enactive/issues/129) owns further resources/whole
-forecast; [work](work.md) links the path. Closed019–023 grant no successor authority.
-The approved three-hour extension, original costs/input caps/reserve and qualified
-resource gate remain; [024](changes/046-replan-known-nondelivery.md) prospectively
-distinguishes known non-delivery capability failures from authority refusals. [Operator workflow](protocol.md#designated-campaign-operator)
-permits bounded passive reassessment of transient unsupported returns only when
-an admission allows it, followed by explicit reassignment at supported settled
-state. This is a manual control, not demonstrated general monitoring. Stable
-literal CLI access worked without recurring human approval prompts; no broader
-permission rule or Codex restart was required.
+forecast; [work](work.md) links the path. Closed019–024 grant no successor authority.
+024 closed for lost credible complete-route fit under the fixed approved ceilings;
+no clock, spent cost or input cap reset. The user then delegated prospective time
+extensions to the lead to prioritize quality data; [047](changes/047-quality-data-continuation.md)
+records the next finite continuation and its evidence/phase gates. Its [046 decision](changes/046-replan-known-nondelivery.md)
+prospectively distinguished known non-delivery capability failures from authority
+refusals. The [operator workflow](protocol.md#designated-campaign-operator) permits
+bounded passive reassessment only when an admission allows it, then explicit
+reassignment at supported settled state. This manual control is not general
+monitoring. Stable literal CLI access worked without recurring human approval
+prompts; no broader permission rule or Codex restart was required.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign
 continuation. The [MVP completion audit](acceptance/2026-10-17-completion.md) maps

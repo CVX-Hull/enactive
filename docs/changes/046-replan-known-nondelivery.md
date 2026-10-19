@@ -2,7 +2,7 @@
 owner: lead
 date: 2026-10-19
 scope: Prospective 024 functional continuation; distinguish primitive capability failure from authority denial
-status: proposed
+status: historical
 review_trigger: Actual failure classification, delivery uncertainty, resource needs or whole fit
 ---
 
@@ -99,3 +99,13 @@ Independent daily acceptance precedes successor-day input. Final normal lifecycl
 whole independent review, owned findings, current Issues/Project and protected
 candidate/main publication/CI/cleanup remain. #129 stays open for further resource/
 whole-route uncertainty; #103/#82/#10 remain incomplete, #75 owns control-fit findings.
+
+## Recorded outcome
+
+024 accepted day four at5558422 after adaptive rest/needs care and independent review.
+One transient unsupported return settled supported under finite passive reassessment;
+known no-delivery replanning did not weaken native authority. Subsequent exterior
+exposure revealed a hostile searchlight and rejected the proposed treatment site.
+No heat/output was produced. Lost complete-route fit closed024 incomplete at5558504;
+no automatic northern route or successor authority. The [day-four report](../acceptance/2026-10-19-four-day-survival.md)
+retains costs, explicit lead-annotation corrections and remaining obligations.
