@@ -22,24 +22,22 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 | Current seven-day path | [020](acceptance/2026-10-19-midpoint-survival.md) accepted days1–3, midpoint restart/reload and player replacement. [024](acceptance/2026-10-19-four-day-survival.md) accepted day four. [025](acceptance/2026-10-19-first-clean-water.md) verified the first250mL clean-water output, not remaining coverage. Days5–7 remain incomplete. [#103](https://github.com/CVX-Hull/enactive/issues/103) is accepted; [#104](https://github.com/CVX-Hull/enactive/issues/104) owns day five and [#129](https://github.com/CVX-Hull/enactive/issues/129) resources/forecast. |
 | Full closeout | Same-character daily evidence, normal midpoint save/restart/reload and player replacement, final normal shutdown, independent complete-campaign review, protected publication/CI, owned cleanup and current Project. #82 stays open until all are proved. |
 
-[026–028](acceptance/2026-10-19-water-coverage.md) collected3L additional raw water,
-retained the missing-tool and crowbar-damage stops, and qualified an ordinary marked
-ground-fuel stash/current heat. A3.5L recipe then warned about storage; it was declined
-before crafting. Last verified stock remains1.5L clean/3.5L raw/12 rations; no new
-potable output or remaining-three-day coverage. Latest normal5559113 was healthy/
-Comfortable at the outdoor work position. One owned game/controller is paused in
-inventory, actual live slots null, all actors/tools terminal with no queue. PhoneOFF,
-window lastOPEN; sustained heat and final shutdown unproved. Days1–4 remain accepted.
-Closed019–027 and028’s stopped assignments grant no successor authority. The original
-resource gate was qualified in023 as a finite cache, not renewable supplies.
+[026–028](acceptance/2026-10-19-water-coverage.md) collected 3 L of additional untreated water,
+retained missing-tool/crowbar-damage/storage-warning stops, then completed and
+bottled 1.5 L of clean water. Fresh stock is 3 L clean, 2 L untreated and 12 rations.
+The latest normal view (turn 5561448)
+is healthy/Comfortable; one owned game/controller is paused, actual live slots null,
+all actors/tools terminal/noqueue. Marked ground stash is empty, two splinters are
+carried and a small fire remains with unknown duration. Days 1–4 remain accepted;
+days 5–7 and remaining potable coverage are incomplete. Closed assignments grant no
+successor authority; the original resource gate qualified a finite cache, not renewal.
 
-The user delegates finite prospective gameplay time/input extensions, prioritizing
-quality data. [049](changes/049-distinct-fuel-study.md) records the latest
-container-aware proposal:20more internal resource minutes inside unchanged whole
-limits, original clocks/endpoints retained as history,59spent inputs and the110-input
-resource ceiling. Current and post-consumption container capacity require distinct
-evidence before an ordinary advisory warning can be acknowledged. No routine
-budget question, refunded failure, reopened assignment or automatic continuation.
+The user delegates finite prospective gameplay extensions, prioritizing quality data.
+[049](changes/049-distinct-fuel-study.md) records one further capacity-qualified
+batch proposal within unchanged whole limits: 45 inputs / 20 minutes, original clocks
+and all 101 spent resource inputs retained, no automatic retry or reserve reduction.
+Actual stock, heat, containers and complete-route fit remain gates; no routine
+budget question follows from this delegated internal allocation.
 
 A successor needs source/review/common checks/clean checkpoint, fresh actual
 preflight, explicit actor assignment and credible complete-route fit. The

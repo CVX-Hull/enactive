@@ -1,20 +1,21 @@
 ---
 owner: lead
 date: 2026-10-19
-scope: Same-character026–028 raw collection, fuel setup and declined storage warning
+scope: Same-character026–028 raw collection, failed plans, fuel setup and stored bulk output
 status: historical
 ---
 
-# Raw water collected; fuel setup qualified, storage warning declined
+# Raw water collected; first bulk treatment stored
 
 026 used clean source8ea0c70320ef076a38b1c3b93889dad2d9d3ad4e;027 used clean
 a29bac9fa3f32ffd7aa3ff69842ec077c1c9b27e.028 used0df4a67997abd5c23792bfd19f2634b41356aec8
 for the bench study and a582ab719fb9f0c880d547946bc967912953342f for ground setup and
-the storage-warning study. All used unchanged
+the storage-warning study;5e5da45808082a732ea042f93132e7b22ffe6d80
+for container inspection and the first stored bulk batch. All used unchanged
 native2095b718f470fa01b5a98ae6a1a8a3b5cd62d171597c7e11d34f199f0edcd69b.
 Same normally created Ned Meyers/Belgium, originalT05212800, remained windowed with
 the project userdir. Days1–4 stay accepted; days5–7 remain incomplete. This is
-ordinary collection, not new potable output, bulk treatment or a survival-day pass.
+ordinary collection and verified1.5L bulk treatment, not a survival-day pass.
 No game-engine patch, new provider, global setup, hidden-state/save access or
 human gameplay rescue was introduced. Routine gameplay approval was unnecessary.
 
@@ -183,6 +184,42 @@ container-aware study in049 is prospective, with current capacity and post-consu
 capacity kept separate. Its internal resource allocation changes prospectively;
 original clocks, every failed cost/unknown, whole ceilings and final reserve remain.
 
+## 028 first stored bulk batch
+
+Actual115 measured an empty watertight500mL bottle;117/118 showed a grouped pair
+and matching empty500mL item information. F chose six portions within1.5L current
+capacity rather than assuming a complete nested raw-container graph. Registered
+SHOW_HIDE_CONTENTS_ALL108 had no single-key binding; it rejected before dispatch,
+was charged, and fresh109 preceded distinct help/item inspection under046. No
+keybinding edit, uncertain replay or advisory Yes occurred.
+
+Actual130 showed6portions/1.5L,27m30, BOIL1/fire/rawgreen and21.19%minor/0.07%
+catastrophic risk. Confirm131 started an in-progress craft without a storage warning;
+132/133 placed it down to work while retaining the damaged crowbar. Actual134
+finished cleanwater(hot)(6) at08:50:44,2331calendar seconds after5559113.
+Three separately observed500mL fills136/138/140 reduced output6→4→2→normal. Fresh141
+showed **3Lclean/2Lraw/12rations**, matching+6clean/-6raw without observed loss.
+No second craft, drinking, discarded liquid or output-remainder assumption.
+
+LOOK144 found the marked source with no listed fuel;146 showed small fire/hotair1/
+ashes. Inventory148 retained two carried splinters, phoneOFF10/56 and lighter93/100.
+The automatic drop messages and stash depletion corroborate native stoking, without
+proving burn quantity or remaining duration.150 retained the three original empty
+bottle candidates; future full capacity remains conditional. F152Pause/153Status/
+FINAL then lead154Pause/155Observe/156Status established normal5561448/rev1508/
+[8,-13], green/Comfortable/blankneeds/SafeON, actual slots null, tools terminal/noqueue.
+No new observed creature; wind became LightBreezeSE. This is local evidence, not a
+global safety guarantee.
+
+Independent review checked all153 counters/frame hashes, actual output/stock/fuel
+pixels, stop compliance and unchanged unknown lists.42inputs/504.096seconds cost
+**1766whole/845aggregate/452day5/167lifecycle**,101resource inputs. Actual elapsed
+2331seconds to output exceeds the27m30 recipe estimate; neither is silently replaced.
+Source5e5 normal452checks and exact push39330554142/PR39330559904 CI passed separately.
+The immutable first-batch snapshot binds156rows and the closed assignment.
+No remaining-three-day coverage or dayfive acceptance follows;049 records the
+prospective next finite internal allocation, with all costs/clocks/reserves retained.
+
 ## Data, CI and remaining acceptance
 
 The [manifest](2026-10-19-water-coverage-manifest.json) binds selected local receipts,
@@ -191,8 +228,9 @@ Local-only artifacts are not supplied on a fresh checkout; hashes bind bytes, no
 semantic truth or representativeness. This is correlated development data, not a
 held-out benchmark, model comparison, training result or causal-learning claim.
 Existing#71 owns source/route-memory extraction, #40 monitoring and#75 forecast/
-control burden; #129/#104 own resources/day five. Bashing yielded no salvage; ground source/current heat were qualified. Sustained
-heat, bulk output and potable coverage remain unproved.
+control burden; #129/#104 own resources/day five. Bashing yielded no salvage;
+ground-source stoking and one stored1.5L batch are qualified. Further heat duration
+and remaining potable coverage are unproved.
 
 451portable tests and diagram/governance/viewer checks passed before each segment,
 including normal checkpoint hooks. An initial invalid document-status value failed

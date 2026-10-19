@@ -35,21 +35,21 @@ raw water and a boiling tool but no heat, and retreating from a distant hostile.
 and adaptation to interrupted upstairs waiting. Days five through seven remain
 incomplete. [025 verified the first250mL clean-water batch](acceptance/2026-10-19-first-clean-water.md)
 using ordinary outdoor fire, boiling and bottle storage. [026–028](acceptance/2026-10-19-water-coverage.md)
-then collected3L additional raw water, exposed a missing-tool planning error and
-stopped bench bashing after crowbar damage. A distinct ground-fuel setup qualified
-an ordinary marked stash and existing outdoor fire, but the proposed3.5L batch
-was declined at a storage warning before crafting. No new potable output or
-remaining-three-day coverage follows. Last verified carried stock is1.5L clean,
-3.5L raw and12 rations, with no later consumption or craft.
+then collected 3 L of additional raw water, retained missing-tool and crowbar-damage
+stops, and qualified marked ground fuel. After declining a storage warning for a 3.5 L batch,
+the player verified empty bottles and completed a smaller 1.5 L batch and stored all of it.
+Fresh carried stock is **3 L clean water, 2 L untreated water and 12 rations**. Remaining-three-day
+coverage and days5–7 are incomplete.
 
-The latest normal5559113 was healthy/Comfortable with blank needs at the outdoor
-work position. The game/controller remain paused in an inventory checkpoint,
-with no ordinary actor, queued input or live slots. Phone is off; north window
-last open. Current fuel duration, final shutdown and lifecycle ACKs remain qualified.
+The latest normal view (turn 5561448) shows a healthy, comfortable character with no displayed needs at the outdoor work
+position. One owned game/controller is paused, with no ordinary actor, queued input
+or live slots. The marked stash is empty, two splinters are carried and a small
+fire remains; further duration is unknown. The phone is off; the north window was last observed open.
+Final shutdown and lifecycle ACKs remain qualified.
 
 [#129](https://github.com/CVX-Hull/enactive/issues/129) owns further resources/whole
 forecast; [work](work.md) links the path. Closed019–027 grant no successor authority.
-028’s closed assignments grant no successor authority. A container-aware plan
+028’s closed assignments grant no successor authority. A further batch
 requires fresh evidence and explicit assignment under049.
 Measured daily care exceeded the prior forecast; [049](changes/049-distinct-fuel-study.md)
 records the prospective distinct fuel study and finite budget revision. The user clarified that delegation

@@ -143,7 +143,10 @@ causal uncertainty. New source changes still need common checks and a clean comm
 before input. Publication remains consolidated in draftPR135.
 
 
-## Current revision: distinguish storage warning from future capacity
+## Historical container-aware allocation (superseded)
+
+This closed allocation is retained as evidence. The final current decision below
+supersedes its limits; this section supplies no successor input authority.
 
 The ground branch qualified a marked source with five splinters at [7,-13], an
 existing small fire at [9,-13] and clear work at [8,-13]. Actual recipe69/74 showed
@@ -213,3 +216,46 @@ old bulk assignments grant no authority. No generic container solver, history
 system or new dependency is needed; reuse CDDA's inventory, recipe and liquid UI.
 #71/#40/#75 own interpretation, monitoring and control-fit findings; #129/#104 own
 resources/dayfive. Days5–7 and final lifecycle remain incomplete.
+
+## Current decision after the first stored bulk batch
+
+The container-aware part completed ONE six-portion batch within measured current
+capacity:42inputs/504.096seconds, all1.5L bottled, fresh stock3Lclean/2Lraw/12rations.
+No advisory Yes was used. Actual display27m30 contrasts with2331calendar seconds
+to finished output; retain both. Independent review qualified all153rows, relevant
+pixels and unchanged unknowns. F153/FINAL then lead154–156 established paused normal
+5561448/rev1508/nullslots, all handles terminal/noqueue. Marked stash is empty;
+small fire remains, duration unknown; two splinters are carried. Original three
+empty bottles remain applicable capacity candidates, with earlier measured1.5L.
+
+A successful batch enables a distinct next production decision, not a failed-craft
+retry. Prospectively allocate **one further batch, at most8portions/2L,45inputs and
+20minutes**, including inspection, moving at most the two carried splinters to the
+existing marked source, every liquid prompt and terminal checkpoint. No new ignition,
+bashing, exterior search, forced consumption or discarded water. Require fresh
+heat/tool/ingredients/duration/terrain/body evidence. Confirm2L only if verified
+current capacity plus specifically evidenced accessible containers freed by consuming
+all selected carried raw water supports it. Current1.5L alone permits at most six
+portions. Unproved extra capacity means choose that smaller batch or stop; a changed
+warning, missing heat, loss, failed/unknown outcome or safety change hands back.
+No second craft under this new part and no automatic restart.
+
+This is a finite INTERNAL allocation under the user's gameplay-extension delegation,
+inside unchanged whole/aggregate limits. Preserve original resource clock
+3901716.228623708 and historical50-/70-minute endpoints3904716.228623708/3905916.228623708.
+The sole next resource endpoint is3907116.228623708 (90minutes from that same clock);
+new part ends at the earlier of that endpoint or its own20minutes. Replace the
+internal110/310 input allocation prospectively with150resource/350combined:
+101spent+45max=146≤150;197sunk+146=343≤350. No total input/time extension, cost refund,
+permission/provider/global change or final reserve reduction.355gameplay inputs
+remain;284forecast (45resource+189care+30contingency+20final lifecycle) leaves71.
+Allow130active minutes for resource/care/review/lifecycle, separate from final reserve;
+recompute actual whole fit after checks before assignment. Baseline4.5L for three
+days is a forecast from day four, not guaranteed demand;5L would leave500mL margin.
+
+Source/proposal review, common checks, clean checkpoint and fresh supported lead/F
+gate precede assignment. Qualify actual final stock before dependent care. Daily
+care remains separately bounded and stops in each owned daily window for independent
+acceptance before successor-day input. Keep one consolidated PR; unchanged daily
+tactical decisions need evidence and admission, not a new source change each time.
+Days5–7 and final lifecycle remain incomplete.
