@@ -27,8 +27,11 @@ advanced work did not support the complete remaining day. No daily survival outc
 is accepted. Normal Save/Quit/controller shutdown is verified separately from the
 unknown acknowledgments; final save persistence requires actual reload.
 
-The[next bounded plan](changes/037-medical-day-plan.md) addresses practice
-cancellation and full-day resource/rest fit, retaining all clocks, costs and failures.
+The[medical continuation](changes/037-medical-day-plan.md) learned Wound Care and
+made useful advanced progress, then stopped incomplete at Spring62 03:27:03 when
+ordinary body status reached an unsupported menu. No daily outcome is accepted.
+The[body-status correction](changes/038-body-status-input.md) reuses exact-owner
+menu instrumentation; its native build/probe and continuation acceptance are pending.
 Actual stable-CLI player inputs worked without recurring approval; no new Codex
 restart or broad permission change is needed. The[work path](work.md) links the
 retained native repairs, failed attempts and remaining seven-day acceptance gates.

@@ -187,6 +187,11 @@ permission. The marker clears during return/unwinding and exports no structured
 scene. `in_game` means world lifetime, not living-character proof; visible death
 still ends an admitted survival study.
 
+The pinned `bodygraph_display::display` input wait uses the same marker with
+`BODYGRAPH`, ending before navigation or recursive body-graph callbacks. Its
+native bindings and renderer remain unchanged. Unmarked, enclosing or mismatched
+contexts gain no authority. This is menu coverage, not a structured health model.
+
 The same exact-owner marker covers the query expression in pinned
 `game::cancel_activity_or_ignore_query` with its original
 `CANCEL_ACTIVITY_OR_IGNORE_QUERY` category. It ends before cancellation, ignore

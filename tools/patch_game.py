@@ -36,7 +36,7 @@ def replace_once(path: Path, old: str, new: str) -> None:
 
 for name in ("cdda_harness.h", "cdda_harness.cpp"):
     shutil.copyfile(ROOT / "native" / name, source / "src" / name)
-for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp", "game.cpp", "action.cpp", "ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp"):
+for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp", "game.cpp", "action.cpp", "ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp"):
     path = source / "src" / name
     text = path.read_text()
     if '#include "cdda_harness.h"' not in text:
@@ -61,6 +61,19 @@ replace_once(source / "src/action.cpp",
     '            return ctxt.handle_input();\n'
     '        }();\n'
     '        if( std::optional<tripoint_rel_ms> vec = ctxt.get_direction_rel_ms( action ) ) {')
+# Body status keeps its native bindings; ownership ends before nested graphs.
+replace_once(source / "src/bodygraph.cpp",
+    '    bool done = false;\n'
+    '    while( !done ) {\n        ui_manager::redraw();\n'
+    '        std::string action = ctxt.handle_input();\n'
+    '        if( action == "QUIT" || ( action == "LEFT" && id != bodygraph_full_body ) ) {',
+    '    bool done = false;\n'
+    '    while( !done ) {\n        ui_manager::redraw();\n'
+    '        std::string action = [&]() {\n'
+    '            cdda_harness::menu_query harness_menu( "BODYGRAPH" );\n'
+    '            return ctxt.handle_input();\n'
+    '        }();\n'
+    '        if( action == "QUIT" || ( action == "LEFT" && id != bodygraph_full_body ) ) {')
 # Generic lowercase default is admitted only at these exact item-menu waits.
 # Include each owner in its unique anchor and end permission before callbacks.
 replace_once(source / "src/ui_iteminfo.cpp",

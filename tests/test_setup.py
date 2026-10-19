@@ -48,6 +48,11 @@ class SetupTests(unittest.TestCase):
             "Makefile": "-mmacosx-version-min=10.15\n-mmacosx-version-min=10.15\n",
             "src/input_context.cpp": "const std::string &input_context::handle_input( const int timeout )\n{\n        next_action = inp_mngr.get_input_event( preferred_keyboard_mode );\n}",
             "src/handle_action.cpp": "input_context game::get_player_input( std::string &action )\n{\n}",
+            "src/bodygraph.cpp": ('    bool done = false;\n'
+                '    while( !done ) {\n        ui_manager::redraw();\n'
+                '        std::string action = ctxt.handle_input();\n'
+                '        if( action == "QUIT" || ( action == "LEFT" && id != bodygraph_full_body ) ) {\n}\n}\n'
+                'void unrelated() { std::string action = ctxt.handle_input(); }\n'),
             "src/action.cpp": ('    input_context ctxt( "DEFAULTMODE", keyboard_mode::keycode );\n'
                 '        action = ctxt.handle_input();\n'
                 '        if( std::optional<tripoint_rel_ms> vec = ctxt.get_direction_rel_ms( action ) ) {\n}\n'),
@@ -114,7 +119,7 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(first.returncode, 0, first.stderr)
         expected = {path.relative_to(source): path.read_bytes()
                     for path in source.rglob("*") if path.is_file()}
-        for name in ("ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp"):
+        for name in ("ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp"):
             (source / "src" / name).write_text("stale patched contents")
         second = self.run_patch(repository, source)
         self.assertEqual(second.returncode, 0, second.stderr)
@@ -144,6 +149,12 @@ class SetupTests(unittest.TestCase):
         self.assertIn('return ctxt.handle_input();\n        }();\n'
                       '        std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );', item_info)
         self.assertIn('void unrelated() { action = ctxt.handle_input(); }', item_info)
+        body = (source / "src/bodygraph.cpp").read_text()
+        self.assertIn('#include "cdda_harness.h"', body)
+        self.assertEqual(body.count('menu_query harness_menu( "BODYGRAPH" )'), 1)
+        self.assertIn('return ctxt.handle_input();\n        }();\n'
+                      '        if( action == "QUIT" || ( action == "LEFT" && id != bodygraph_full_body ) ) {', body)
+        self.assertIn('void unrelated() { std::string action = ctxt.handle_input(); }', body)
         self.assertIn("boundary_kind::activity_poll", (source / "src/do_turn.cpp").read_text())
         self.assertIn("boundary_kind::debug_prompt", (source / "src/debug.cpp").read_text())
         activity = (source / "src/do_turn.cpp").read_text()
@@ -172,7 +183,7 @@ class SetupTests(unittest.TestCase):
         self.assertIn("Upstream source differs", result.stderr)
 
     def test_patch_rejects_changed_item_owner_hashes(self):
-        for name in ("src/ui_iteminfo.cpp", "src/game_inventory.cpp", "src/output.cpp"):
+        for name in ("src/ui_iteminfo.cpp", "src/game_inventory.cpp", "src/output.cpp", "src/bodygraph.cpp"):
             with self.subTest(owner=name), tempfile.TemporaryDirectory() as temporary:
                 self.root = Path(temporary)
                 repository, source = self.patch_fixture()
@@ -182,7 +193,7 @@ class SetupTests(unittest.TestCase):
                 self.assertIn(f"Upstream source differs from pinned release: {name}", result.stderr)
 
     def test_patch_rejects_missing_and_ambiguous_item_owner_anchors(self):
-        for name in ("src/ui_iteminfo.cpp", "src/game_inventory.cpp", "src/output.cpp"):
+        for name in ("src/ui_iteminfo.cpp", "src/game_inventory.cpp", "src/output.cpp", "src/bodygraph.cpp"):
             for change in ("missing", "duplicate"):
                 with self.subTest(owner=name, change=change), tempfile.TemporaryDirectory() as temporary:
                     self.root = Path(temporary)
