@@ -15,7 +15,7 @@ independent review and a real graphical gameplay demonstration.
 ## Active continuation: seven-day survival
 
 The user extended the goal to complete the entire
-[seven-day campaign path](work.md#path-to-seven-day-survival), outcome
+[seven-day campaign path](work.md#campaign-delivery-path), outcome
 [#10](https://github.com/CVX-Hull/enactive/issues/10): bounded pilot/review,
 continuity and first-day rehearsal, independently reviewed readiness, then a real
 normally created fresh character alive after seven elapsed in-game days with

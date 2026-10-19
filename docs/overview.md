@@ -24,16 +24,19 @@ The[earlier resource discovery](acceptance/2026-10-18-daylight-practice.md) veri
 phone-off daylight and partial medical practice on Ned Meyers/Belgium, then stopped
 before a complete remaining-day fit. It remains qualified historical evidence.
 
-The[medical continuation](changes/037-medical-day-plan.md) learned Wound Care and
-made useful advanced progress, then stopped incomplete at Spring62 03:27:03 when
-ordinary body status reached an unsupported menu. No daily outcome is accepted.
-The[body-status correction](acceptance/2026-10-19-body-status.md) passed a separate
-native build and actual menu navigation/exit probe, including verified save reload.
-The[continuation plan](changes/038-body-status-input.md) still requires fresh
-complete remaining-day fit and admission after protected publication.
-Actual stable-CLI player inputs worked without recurring approval; no new Codex
-restart or broad permission change is needed. The[work path](work.md) links the
-retained native repairs, failed attempts and remaining seven-day acceptance gates.
+The [survival progress report](acceptance/2026-10-19-survival-progress.md) verifies
+one day alive on the same normally created Ned Meyers in Belgium. Day two stopped
+incomplete at Spring 63, 03:30:01 after a failed second sleep attempt and loss of
+remaining time. The character is alive and the game is paused; seven-day survival
+is unproven. GitHub [#82](https://github.com/CVX-Hull/enactive/issues/82) owns the
+remaining outcome, and [work](work.md) explains the delivery path.
+
+The [body-status correction](acceptance/2026-10-19-body-status.md) separately
+verified native menu navigation and saved-character reload. The
+[prospective functional continuation](changes/039-functional-campaign-continuation.md)
+preserves the failed study and original cumulative accounting; it requires review,
+protected publication and actual admission before play. Stable CLI inputs worked
+without recurring approval; no broad permission or Codex restart is needed.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign
 continuation. The [MVP completion audit](acceptance/2026-10-17-completion.md) maps
@@ -126,7 +129,7 @@ The [seven-day target](https://github.com/CVX-Hull/enactive/issues/10) remains o
 a normally created fresh character, essential needs/shelter/rest and meaningful
 supply/travel choices, normal save/restart and actual player-context replacement,
 with watchable graphics and user Pause. The user must not supply routine keys or
-rescue. [Work](work.md#path-to-seven-day-survival) links the full retained lineage,
+rescue. [Work](work.md#campaign-delivery-path) links the full retained lineage,
 including failed, assisted and partial attempts.
 
 The [qualified development first day](acceptance/2026-10-18-first-day-completion.md)

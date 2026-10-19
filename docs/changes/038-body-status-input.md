@@ -1,7 +1,9 @@
 ---
 owner: lead
+date: 2026-10-19
+scope: Historical body-status repair and prospective continuation under retained limits
 review_trigger: Body-status input support or campaign continuation changes
-status: active
+status: historical
 ---
 
 # Body-status input and campaign continuation

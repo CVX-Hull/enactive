@@ -22,7 +22,7 @@ navigation entry point; exceptions are issues linked to their affected standard.
 [Enactive migration acceptance](acceptance/2026-10-18-enactive-migration.md) records
 replacement configuration and enforcement probes; the original
 [public-workflow acceptance](acceptance/2026-10-17-public-workflow.md) remains
-historical. The [campaign path](work.md#path-to-seven-day-survival) links capability
+historical. The [campaign path](work.md#campaign-delivery-path) links capability
 gates to owned Issues; this contract alone does not prove current settings.
 
 Use GitHub's issues, sub-issues, dependencies, milestones, pull requests, fields,
