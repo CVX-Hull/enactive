@@ -26,19 +26,18 @@ before a complete remaining-day fit. It remains qualified historical evidence.
 
 The [functional survival report](acceptance/2026-10-19-functional-survival.md)
 verifies two days alive on the same normally created Ned Meyers / Belgium.
-Day three stopped at Spring63 08:09:45 after water readiness failed; normal
-Save/Quit and native/controller shutdown followed. The final save has not been
-reloaded. Seven-day survival and midpoint player replacement remain unproved.
-[#129](https://github.com/CVX-Hull/enactive/issues/129) owns the concrete supply
-and remaining-route allocation gap; [work](work.md) links the delivery path.
+[Water readiness018](acceptance/2026-10-19-water-readiness.md) later reloaded that
+save at5386185, explored indoors and stopped alive at5386210 after no supply chain
+was established. Normal shutdown followed; latest save remains unreloaded. Seven-day
+survival and midpoint replacement are unproved. [#129](https://github.com/CVX-Hull/enactive/issues/129)
+owns current resource/access work; [work](work.md) links the path.
 
-The [body-status correction](acceptance/2026-10-19-body-status.md) separately
-verified native menu navigation and saved-character reload. The
-[water-readiness proposal](changes/040-water-readiness.md) preserves closed
-studies and cumulative accounting, with an explicit prospective internal lifecycle
-allocation. It requires independent review, protected publication and actual
-admission; investigation alone cannot restore survival authority. Stable CLI inputs worked
-without recurring approval; no broad permission or Codex restart is needed.
+The [adaptive functional proposal](changes/041-adaptive-functional-survival.md)
+replaces poorly fitted internal study limits prospectively, preserving all failed
+outcomes/costs and original whole ceilings. It allows bounded essential exploration
+with current needs margin, while verified supply gates optional work. Independent
+review and actual admission still apply. Stable CLI worked without recurring human
+approval; no broad permission or Codex restart is needed.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign
 continuation. The [MVP completion audit](acceptance/2026-10-17-completion.md) maps

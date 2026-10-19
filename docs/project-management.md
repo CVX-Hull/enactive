@@ -170,8 +170,24 @@ remembered terrain, historical possession and generic mechanics. A replenishment
 candidate or recipe screen is not a demonstrated supply chain: require actual
 output, source/storage/fuel coverage and safe access where the outcome depends on
 it. Include required startup, midpoint and final cleanup in remaining fit. An early
-readiness failure stops the attempt; a smaller information probe needs its own
-prospective finite decision and cannot silently renew survival authority.
+readiness failure stops its frozen attempt; another attempt needs its own
+prospective finite decision and cannot silently renew old authority. In an explicitly
+reviewed functional continuation, bounded essential exploration may proceed while
+current needs, usable stock and a next-decision/retreat margin support it. A verified
+week of supplies is not required before acquisition gameplay; actual output and
+coverage remain necessary before banking optional work on that supply.
+
+Prefer one cohesive functional admission and rolling evidence/needs review over
+serial short probe–cleanup–amendment–publication cycles. Retire redundant internal
+class limits prospectively when their measured cost no longer serves the outcome;
+retain every prior limit/result/cost and finite new total/segment/attempt ceilings.
+Never change user guarantees or original whole ceilings through an internal exception.
+For unchanged-runtime procedural admissions, review/common checks and a clean Git
+checkpoint precede native acceptance; consolidate protected publication and exact/
+main CI after the cohesive attempt. Do not require a new PR per tactical segment.
+Source/native changes and held-out assessments retain their separate verification
+and freeze requirements. C-REVIEW/C-NATIVE/C-RELEASE/C-MAINTENANCE own these manual
+checks; this is no new automated enforcement claim.
 
 Review at planned segment boundaries, handoffs, material failure/unknown stops and
 campaign closeout. A stopped attempt gets a review even if it cannot supply a
