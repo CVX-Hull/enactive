@@ -139,11 +139,16 @@ remain uncompleted with actual dependencies/estimates in GitHub. Source changes
 only follow normal native/controller shutdown. No generic memory/monitor/VLA
 framework, paid API or permission expansion is justified by this failure.
 
-The [setup and sustained-survival brief](changes/030-setup-and-sustained-survival.md)
-proposes a larger cumulative first-day allocation, smaller later-day allocations
-and an explicit full-day forecast before new admission. The original whole ceiling,
-all259inputs and the original whole/day clocks remain. Its proposed status grants
-no input authority; all seven daily outcomes and full publication remain required.
+The [setup004 continuation](acceptance/2026-10-18-crafting-transition.md) stopped
+under its strict unsupported-state rule after a crafting-filter return; later
+supported CRAFTING did not erase the failure. No recipe or game-time advance.
+37rows/18newinputs bring totals277whole/252day/93lifecycle,3654.020seconds shared
+lifecycle,71v3+1archived gameplay unknowns/control2. Normal cleanup closed native
+and controller; no operator owns input. The [prospective full-campaign continuation](changes/031-bounded-reassessment-continuation.md)
+retains original costs/clocks, revises lifecycle allocation and permits finite
+passive reassessment under lead control. Existing native guards stay unchanged;
+all seven daily outcomes still require actual acceptance. Proposed status grants
+no authority. #82/#100 own the continuation and #75 the process finding.
 
 Pilot001's 150-input/45-minute/six-game-hour ceilings remain historical fixed limits,
 not a renewable allowance. Every later attempt needs a prospective finite brief

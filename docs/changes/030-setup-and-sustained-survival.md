@@ -1,10 +1,16 @@
 ---
 owner: lead
 review_trigger: Campaign allocation, whole-day forecast, actor or source changes
-status: proposed
+status: historical
+date: 2026-10-18
+scope: Frozen004 admitted and stopped on unsupported filter transition, no new game advance
 ---
 
 # Allocate setup separately from sustained survival
+
+**Closed incomplete:** [actual004 result](../acceptance/2026-10-18-crafting-transition.md).
+The allocation and stop below are historical; no input authority remains.
+The [new continuation](031-bounded-reassessment-continuation.md) must be admitted prospectively.
 
 The [integrated003 result](../acceptance/2026-10-18-integrated-day1.md) exposed a
 planning and estimation error: many menu/navigation inputs secured useful supplies
