@@ -39,24 +39,34 @@ The previous146hard/140ordinary lifecycle allocation has8/2inputs and
 named episodes since038 have occurred:009probe/load,014normal reload and017early
 shutdown. There is no unused episode entitlement.
 
-The lead proposes **156hard/150ordinary lifecycle inputs and7200hard/6600ordinary
+The lead proposes **156hard/150ordinary lifecycle inputs and7200hard/6900ordinary
 seconds**, before either old hard cumulative limit is reached. This is a declared
 internal resource change for functional continuation, not success under the old
 allocation or an increase of the original whole-campaign ceiling. Preserve all
-138inputs/5207.076801seconds already spent. Reserve6inputs/600seconds for eligible
+138inputs/5207.076801seconds already spent. Reserve6inputs/300seconds for eligible
 final or early cleanup only. No reserve gameplay or automatic allowance transfer.
 Name at most three prospective episodes: current startup, required after-day-three
 midpoint restart/replacement, and final shutdown. Early shutdown consumes the final
-one and closes this route; another startup is not implied. Each retains15hard/
-11ordinary inputs and18hard/13ordinary minutes, with4inputs/final5minutes reserved.
+one and closes this route; another startup is not implied. Each has15hard/
+11ordinary inputs with4cleanup-only inputs. Startup has25hard/20ordinary minutes;
+midpoint/final retain18hard/13ordinary minutes, final5minutes cleanup-only.
 
 Current lifecycle preparation conservatively starts at monotonic3874800.0
 (2026-10-19 13:32:45 UTC, before this round's source-option analysis). Include ALL
 subsequent lifecycle design/review/publication/startup time once, without excluding
-unsuccessful work. Forecast startup including that preparation≤780seconds,
-midpoint≤420seconds and final≤180seconds: total≤6587.076801seconds. Startup plus
-midpoint≤6407.076801 fits6600ordinary; final fits7200hard. Inputs nominally
+unsuccessful work. Forecast startup including that preparation≤1200seconds,
+midpoint≤420seconds and final≤180seconds: total≤7007.076801seconds. Startup plus
+midpoint≤6827.076801 fits6900ordinary; final fits7200hard. Inputs nominally
 2startup +6midpoint +4final =12, ending150hard; only4may be final cleanup.
+Candidate CI actually took123–135seconds, and the required separate main run
+adds another queue/check phase. Before any admission or input, refine the proposed
+startup episode from13ordinary minutes to20, with25hard and5cleanup-only minutes,
+and ordinary cumulative seconds from6600to6900 while keeping7200hard. The original
+proposal has not been executed; its13minute startup gate would not fit the observed
+publication path. This is one explicit pre-execution design correction with the
+SAME3874800.0 preparation clock, not a new trial or a clock reset. The40/45minute
+probe, charged cutoff, all original whole/day/aggregate constraints and156hard input
+ceiling stay unchanged. No further startup reallocation after admission.
 Recheck actual headroom after publication and before each phase. No admission if
 startup's ordinary window or the complete route no longer fits.
 
