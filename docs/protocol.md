@@ -406,7 +406,8 @@ Resume or remote recovery at an unsupported boundary. Explicit bounded reassignm
 eligible only at a fresh supported interpretable boundary, with actual null live
 slots, reconciled effects and credible remaining whole-route fit. Persistent bad
 state ends the admission unless its explicit verified native UI branch below is
-eligible; denial or lost fit always ends ordinary authority. Unknown ACKs remain
+eligible; authority/permission denial or lost fit ends ordinary authority.
+Other rejection classes still follow the admission's explicit failure rules. Unknown ACKs remain
 unknown. A functional admission may separately permit the runbook's verified native UI
 recovery after terminal handoff: remote stays paused, actual owned-window evidence
 must match the prompt, and at most five charged native inputs within120seconds
@@ -436,6 +437,18 @@ Honor the actual denial and that frozen campaign's stop rules; no implicit
 continuation or rule/actor/transport change restores the stopped admission.
 
 
+
+For functional admissions that explicitly permit it, a definitive pre-dispatch
+formulation or actuation-capability failure may stop the primitive rather than the
+whole mission. Require exact receipt plus pinned implementation evidence of no
+delivered event, no authority/permission denial and no uncertain effect. Retain
+charge/error, freshly Observe/interpret and follow current Pause/Resume/token
+requirements before a distinct eligible choice within unchanged limits. No blind
+retry or alternate channel to evade guards. User Pause/takeover ends actor authority;
+no automatic Resume may override it. Unfamiliar/ambiguous rejection requires
+terminal handoff and lead adjudication. Permission/authority/lease refusal and all
+stricter admission stops still win. Registered actions are not executable-binding
+guarantees; this manual classification changes no wire shape or native guard.
 
 ## Closed-loop play and observations
 
