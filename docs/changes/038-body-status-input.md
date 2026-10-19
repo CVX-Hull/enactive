@@ -6,6 +6,10 @@ status: active
 
 # Body-status input and campaign continuation
 
+The[separate native result](../acceptance/2026-10-19-body-status.md) verifies
+BODYGRAPH navigation/exit and saved5282823 reload. It does not accept a daily
+outcome or grant continuation authority.
+
 Campaign008 stopped incomplete at Spring62 03:27:03 (turn5282823), before
 day1 target5299200. The character remained alive; one four-hour alarmed rest
 ended in an actual wake-up. Opening ordinary body status to assess Chilly reached

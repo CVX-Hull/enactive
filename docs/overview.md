@@ -20,18 +20,17 @@ player sub-agent can act as a bounded campaign operator while the lead supervise
 the waypoint planner has a separate candidate-only role.
 The service executes an explicitly started waypoint task with per-step feedback;
 without a player response it stops on a deadline. General survival is not implemented.
-The[latest resource discovery](acceptance/2026-10-18-daylight-practice.md) verified
-phone-off daylight and useful partial medical practice on Ned Meyers/Belgium, but
-stopped incomplete at3h29m53s after original creation. Wound Care39% and unverified
-advanced work did not support the complete remaining day. No daily survival outcome
-is accepted. Normal Save/Quit/controller shutdown is verified separately from the
-unknown acknowledgments; final save persistence requires actual reload.
+The[earlier resource discovery](acceptance/2026-10-18-daylight-practice.md) verified
+phone-off daylight and partial medical practice on Ned Meyers/Belgium, then stopped
+before a complete remaining-day fit. It remains qualified historical evidence.
 
 The[medical continuation](changes/037-medical-day-plan.md) learned Wound Care and
 made useful advanced progress, then stopped incomplete at Spring62 03:27:03 when
 ordinary body status reached an unsupported menu. No daily outcome is accepted.
-The[body-status correction](changes/038-body-status-input.md) reuses exact-owner
-menu instrumentation; its native build/probe and continuation acceptance are pending.
+The[body-status correction](acceptance/2026-10-19-body-status.md) passed a separate
+native build and actual menu navigation/exit probe, including verified save reload.
+The[continuation plan](changes/038-body-status-input.md) still requires fresh
+complete remaining-day fit and admission after protected publication.
 Actual stable-CLI player inputs worked without recurring approval; no new Codex
 restart or broad permission change is needed. The[work path](work.md) links the
 retained native repairs, failed attempts and remaining seven-day acceptance gates.
