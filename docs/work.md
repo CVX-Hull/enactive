@@ -29,11 +29,16 @@ no input is queued. Closed 019/020/021 grant no successor authority or budget re
 The actual last normal state is 5,472,870, Spring 64, 08:14:30, alive and Comfortable,
 with no observed damage. This is partial progress, not day-four acceptance.
 
-A new decision first needs an actual safe potable route and a credible complete
-remaining path within declared finite resources. Do not mechanically credit elapsed
-exploration as completed treatment or estimate future daily survival from menu
-throughput. Keep prior clocks, costs, stops and uncertain outcomes explicit; no
-automatic attempt follows. #129 owns that work and #75 owns the control-fit findings.
+The user approved a one-time prospective three-hour extension to the fixed whole
+and aggregate time ceilings, with all prior costs and input limits retained.
+[022's reviewed decision](changes/044-remaining-campaign.md) requires a new finite
+admission and actual preflight; no closed scope reopens. Bounded essential resource
+discovery may proceed under current needs, usable stock and a credible
+next-decision/retreat margin, with an explicit complete-route forecast including
+uncertainty and an early resource stop. Actual safe output/coverage gates optional
+holding that relies on it. Do not credit elapsed exploration as completed treatment
+or estimate future daily survival from menu throughput. #129 owns that work and
+#75 owns the control-fit findings.
 The [operator contract](protocol.md#designated-campaign-operator) records bounded
 passive reassessment; a stricter admission stop still wins. GitHub owns current
 execution stage, estimates and dependencies. Historical reports are evidence, not

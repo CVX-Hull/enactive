@@ -36,7 +36,9 @@ was not reloaded and lifecycle acknowledgments remain unknown.
 
 [#129](https://github.com/CVX-Hull/enactive/issues/129) owns a safe potable route
 and credible complete remaining forecast; [work](work.md) links the path. Closed
-019/020/021 grant no further input authority or renewed budget. [Operator workflow](protocol.md#designated-campaign-operator)
+019/020/021 grant no further input authority or renewed budget. The user approved
+a prospective three-hour time extension for [022](changes/044-remaining-campaign.md);
+input ceilings and spent costs remain, and fresh reviewed admission is required. [Operator workflow](protocol.md#designated-campaign-operator)
 permits bounded passive reassessment of transient unsupported returns only when
 an admission allows it, followed by explicit reassignment at supported settled
 state. This is a manual control, not demonstrated general monitoring. Stable
