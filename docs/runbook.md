@@ -24,8 +24,10 @@ acquiring new ownership does not prove the old task succeeded.
 
 See [the permission audit](operator-permissions.md) before requesting elevation
 or changing executor ownership. Narrow project-local CLI rules are prepared and
-matching-tested; trusted reload/live activation remains unverified. Existing
-capture wrappers do not match those rules. User keys/unlock/rescue are not the
+matching-tested; [actual-player calls and resumed play](acceptance/2026-10-18-activity-distraction-stop.md)
+verified the scoped loaded setup. A later native proof used the stable CLI without
+recurring review or another restart. Changed actors/entry points/policy need their
+own preflight; existing capture wrappers do not match the stable CLI rule. User keys/unlock/rescue are not the
 routine fallback. A waypoint planner remains candidate-only. A designated campaign
 operator needs the explicit bounded assignment and handoff below; permission rules
 do not establish actor identity or restore ownership.

@@ -187,6 +187,16 @@ permission. The marker clears during return/unwinding and exports no structured
 scene. `in_game` means world lifetime, not living-character proof; visible death
 still ends an admitted survival study.
 
+The same exact-owner marker covers the query expression in pinned
+`game::cancel_activity_or_ignore_query` with its original
+`CANCEL_ACTIVITY_OR_IGNORE_QUERY` category. It ends before cancellation, ignore
+or manager callbacks. Empty-stack/in-game/exact-category checks still apply;
+unmarked or nested instances remain unsupported. This is an ordinary event
+question, separate from the injected pause's owned YESNO recovery. The
+[real native probe](acceptance/2026-10-18-activity-distraction.md) verified an actual
+feral-cop distraction and ordinary Yes followed by fresh normal play; other choices
+and nested negative cases were not exercised natively.
+
 The finite ordinary-menu set also includes nearby `LIST_ITEMS`/`LIST_MONSTERS`,
 `CRAFTING` and `CONSTRUCTION`, with the engine retaining binding and outcome
 validation. Other unknown categories stay unsupported. Entry/exit coverage does

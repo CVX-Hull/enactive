@@ -152,16 +152,38 @@ The first permission checkpoint retained285whole/260day inputs. After the user's
 restart/resumption, the same character crafted a crowbar/sling and completed one
 carving job: Fabrication2, Carving1%, normal5217025 / Spring61 09:10:25. Three
 unsupported filter returns used bounded passive reassessment; none was replayed.
-The user's second permission request now pauses005 at supported normal play with
-333whole/308day inputs,97lifecycle/3816.987seconds and unchanged72v3+1archived
-gameplay unknowns/control2. No daily survival outcome is accepted. The controller
-stopped normally and the native game remains alive and paused, input relinquished.
-The [trust correction and future preflight](changes/033-gameplay-permission-preflight.md)
-verified a freshly enabled project rule layer. Active-chat reload and actual-player
-no-review verification remain, followed by reviewed clean source, unchanged native/
-recorder, original-budget feasibility and explicit reassignment. This user-requested
-permission/docs interruption preserves every original clock and cost. #82/#100
-own the campaign and #75 the scoped permission/process maintenance.
+The user's second permission checkpoint retained333whole/308day inputs. After
+PR119 and the user's restart, actual-player102/103 verified the loaded allowance
+without recurring review; Observe104/Resume105 resumed the same character. Wood
+was hauled to daylight, curtains opened and phone light switched off. The
+[005 result](acceptance/2026-10-18-activity-distraction-stop.md) then stopped on
+persistent unsupported CANCEL_ACTIVITY_OR_IGNORE_QUERY after a nearby shout.
+Ordinary cleanup used one native-UI cancellation, Save and application Quit;
+native/controller are stopped.362whole/337day1/102lifecycle inputs,
+4044.464lifecycle seconds and74v3+1archived gameplay unknowns/control2 remain.
+Last normal5217709 is1h21m49s after originalT0; no daily outcome is accepted.
+Inspection7's175.441seconds against120 remains a recorded deviation.
+
+[#120](https://github.com/CVX-Hull/enactive/issues/120) owns the
+[exact activity-question repair](changes/034-activity-distraction-menu.md). The
+[real native proof](acceptance/2026-10-18-activity-distraction.md) verified005save
+reload and actual ordinary Yes cancellation of a feral-cop crafting distraction.
+22rows/nine new inputs/157game seconds bring totals371whole/346day1/108lifecycle,
+4148.431lifecycle seconds and77v3+1archived/control2unknowns. Native/controller are
+stopped normally. No daily acceptance; final proof save not yet reloaded. #82/#100
+wait on protected final publication and a credible remaining whole-day plan under
+every original cost/clock/cap.
+#75 owns scoped process-cost maintenance; the obsolete exact005 recorder rule is
+retired, stable CLI allowance retained. No new permission restart is requested.
+005 remains closed incomplete; source work follows verified normal shutdown.
+
+The [next full-campaign proposal](changes/035-full-day-continuation.md) keeps the
+seven-day target and all spent costs, while prospectively extending first-day wall
+headroom from the same clock before its existing limit expires. Whole/daily input,
+later-day and shared lifecycle ceilings stay fixed. Actual safe work, proficiency
+benefit, materials and eligible rest are checked early; this is no guarantee of
+completion or renewed005 authority. Admission still requires reviewed protected
+publication, actual actor/native preflight and a complete remaining-day forecast.
 
 Pilot001's 150-input/45-minute/six-game-hour ceilings remain historical fixed limits,
 not a renewable allowance. Every later attempt needs a prospective finite brief

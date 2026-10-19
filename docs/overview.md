@@ -35,14 +35,21 @@ The [next004 continuation](acceptance/2026-10-18-crafting-transition.md) then st
 on an unsupported crafting-filter return, with no new game advance. A later supported
 menu did not reopen investigation. A [prospective continuation](changes/031-bounded-reassessment-continuation.md)
 adds bounded passive lead reassessment while retaining all costs/clocks and native
-input rejection. It resumed and crafted a crowbar/sling, then reached Fabrication2
-after one completed carving job. The user requested a second permission checkpoint
-because every action still reached review. The [exact-project trust correction](changes/033-gameplay-permission-preflight.md)
-verified an enabled rule layer in a fresh Codex process; active-chat no-review
-behavior still needs reload and actual-player verification. The same native game
-remains paused; [the original permission change](changes/032-recorder-permission-reload.md)
-and all historical costs remain retained.
-No daily survival outcome is accepted.
+input rejection. It crafted a crowbar/sling and completed a carving job. After the
+[exact-project trust correction](changes/033-gameplay-permission-preflight.md) and
+user restart, actual-player calls verified no recurring approval and play resumed.
+The [005 outcome](acceptance/2026-10-18-activity-distraction-stop.md) then stopped
+on an unsupported activity-distraction question. Native and controller are stopped
+normally. [The narrow repair](changes/034-activity-distraction-menu.md) reuses
+existing menu ownership; its [real graphical test](acceptance/2026-10-18-activity-distraction.md)
+handled a feral-cop interruption through ordinary bridge Yes and fresh normal play.
+The prior save reloaded; final proof save and protected publication remain separate.
+The obsolete005 recorder allowance is retired; stable CLI calls worked without
+recurring review or another Codex restart.
+No daily survival outcome is accepted. The
+[next full-campaign proposal](changes/035-full-day-continuation.md) adds prospective
+first-day wall headroom with the original clock/costs intact and early checks of
+safe useful work and actual rest; all seven days remain the objective.
 [Work](work.md) links the active path.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign

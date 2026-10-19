@@ -1,0 +1,361 @@
+{
+  "schema_version": 1,
+  "kind": "historical-native-acceptance",
+  "date": "2026-10-18",
+  "verified_at": "2026-10-18",
+  "upstream_pin": "native/upstream.json",
+  "platform": "macOS arm64/pinned CDDA0.I-1/wire3/windowed project userdir",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "freetype_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+  "initial_build_binary_sha256": "f11f4f397eb015ce7406a873590cefa62b7766dd446f4e42c0fec9d371b53e56",
+  "source_commit": "4f2ea830eb704b27dd506d85c74bfafa09e26e3d",
+  "report": "docs/acceptance/2026-10-18-activity-distraction.md",
+  "video": null,
+  "verification_scope": "Exact ordinary activity-distraction query supported; bridgeYes returnedfreshnormal.22rows9inputs157game seconds, no daily survival acceptance; normal cleanup andunknowns retained.",
+  "installed_binary_sha256": "a053adb0e56ccfe9a43f14595af0b0208693088adceee071d85f1295403c3e0a",
+  "identity_note": "Actual selected Ned Meyers/Belgium, reload5217709 verified005save; finalSave18 remainsunverified. Publicimage byte-identical native11.",
+  "limitations": [
+    "Native proof covers one feral-cop distraction YES; other choices/nested negative contexts not exercised natively.",
+    "Load6/Save18/Quit22 remain unknown; mainmenu/process are separate observations.",
+    "Private originals unavailable in fresh checkout; public image is original11.",
+    "Capture category metadata corrected from null using untouched raw receipts after shutdown.",
+    "No day1/seven-day survival acceptance; hostile cop remains visible; no exterior safety or heat established."
+  ],
+  "artifacts": {
+    ".runtime/campaigns/activity-distraction-probe-001/0001-capture.json": {
+      "bytes": 535,
+      "sha256": "6d3ff0af040947cde9fa365b7422c798e20faccfa1a3b5935e74c4991698c65a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0001-stdout.json": {
+      "bytes": 75583,
+      "sha256": "06be725def77c131703c18ea2e8295620c987905c0ae7fd9fcb1cc4fae86ef45",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0002-capture.json": {
+      "bytes": 535,
+      "sha256": "2d8750df6fa6e8fe2d262027fb7e384d1bd44cdece670c2b9551b26741fee1f4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0002-stdout.json": {
+      "bytes": 75584,
+      "sha256": "06849557a472122b3d888f4afa325429b22392bd593ac61e00a840a1ba7584a5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0003-capture.json": {
+      "bytes": 538,
+      "sha256": "94e1748b1cad0aeb44dc2f45e7a71ca15b9e1fdfa701a452c2bfe5dd7382100b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0003-stdout.json": {
+      "bytes": 780,
+      "sha256": "43b522ab53862c0e5aa30b5ca54205a390fbbc1b6324deb1d90bb157e18ccfbe",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0004-capture.json": {
+      "bytes": 539,
+      "sha256": "1b14287f589507d136b3b8e9cf4526264345a220c1a4214a7957d8b1a7c74ec2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0004-stdout.json": {
+      "bytes": 781,
+      "sha256": "71a39c6c02a7f2dbe60be0b774983f9f07af61815a3b847e7b128e6aafb1d5a1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0005-capture.json": {
+      "bytes": 536,
+      "sha256": "4bcc4687b50ad3352840159bbd2338fd4c0cc392fb9ca89dda5c2e957c46fcdb",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0005-stdout.json": {
+      "bytes": 774,
+      "sha256": "aa4d26230a0636e502cea93a0bc8fefa8dbc69ba7fcfc95f81d8587a21478c78",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0006-capture.json": {
+      "bytes": 116,
+      "sha256": "1eb09366bf35371d96e305356496d245ce8a1b474f35d9acfc0a74a054edb4b8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0006-stdout.json": {
+      "bytes": 213,
+      "sha256": "0b874ec5c6f6be1875e4a03290877a6c3e174ec9fd6579f76e1205888e92f410",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0007-capture.json": {
+      "bytes": 223,
+      "sha256": "64ec2665bbc0b66d37587a76d27cb55bb6ab473406dd9895202a926e68fe2010",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0007-stdout.json": {
+      "bytes": 130,
+      "sha256": "ad4d9258e695eb422c63952375e4824add4052f25bcc51994fecb94667cd5f41",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0008-capture.json": {
+      "bytes": 2077,
+      "sha256": "02555734f6a82c2815764374a564ee0102d8db5c6d88a751a0aecfd350135f46",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0008-stdout.json": {
+      "bytes": 4675,
+      "sha256": "4e34c627245b639dc18d0c32b5d56ae5926dc5b2b483b35a1d0f8e2766d23233",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0009-capture.json": {
+      "bytes": 2079,
+      "sha256": "35a11d519e23d809eab7fb341dc2f73ee63fbc14b3df42d25304902e2f7335fc",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0009-stdout.json": {
+      "bytes": 4677,
+      "sha256": "6b68bf16480f72e56c8145a0f9edd986fcf34bed143243313a066fb7c3767a9e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0010-capture.json": {
+      "bytes": 548,
+      "sha256": "62cf24a4df748a9f62a3edb1586b238b5b7c83ba441afd3425b239bc0b19aeff",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0010-stdout.json": {
+      "bytes": 1155,
+      "sha256": "6b674ad9b4a0aeef2056b5331cae6500f6ec35f21d812ac7588d756b871e47a5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0011-capture.json": {
+      "bytes": 570,
+      "sha256": "73a251fb08aa68dff12eda7c5ac86eb4bbe96a1bfa30f90c15cd031eb8326687",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0011-stdout.json": {
+      "bytes": 733,
+      "sha256": "3aefb8f538c1746d50dd285ee1366dfb813155b1a1b0775e062c093e31620a15",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0012-capture.json": {
+      "bytes": 2159,
+      "sha256": "e164f3f64f475ba4a2dadb8e665dde9f24f3d90bcc4c0c0d45401a2cfa278e99",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0012-stdout.json": {
+      "bytes": 4756,
+      "sha256": "170a5f54fb02e854e58f46ce4d53b1e9e6af8f215727453dd54d7a54f2f3d21c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0013-capture.json": {
+      "bytes": 224,
+      "sha256": "954b018ac2e0b8dbd07ace83b533bd63bd5d5c2086adebbb4c4363b82c551cab",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0013-stdout.json": {
+      "bytes": 130,
+      "sha256": "ad4d9258e695eb422c63952375e4824add4052f25bcc51994fecb94667cd5f41",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0014-capture.json": {
+      "bytes": 2158,
+      "sha256": "2b4975f675c959df2a23e51af9970d2599021d170717c45a6bb3ae7f9d270869",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0014-stdout.json": {
+      "bytes": 4755,
+      "sha256": "550fd3e862e49e2d7f314792de9844b92bbe432449c9e2d73f9a9630d5292a11",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0015-capture.json": {
+      "bytes": 2155,
+      "sha256": "6842eeb064a9c0c5e9da8b4fec582b0076b6bff547247a97e4d15ed05fd08dd8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0015-stdout.json": {
+      "bytes": 124408,
+      "sha256": "bb7edebf170b73ff4b2a9013d89b778fd9b19eb7ee71af4500a47ba831678b3e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0016-capture.json": {
+      "bytes": 2159,
+      "sha256": "51a490af5e401af87e84176632762ac651592354fa5082f332a10a46d51004ae",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0016-stdout.json": {
+      "bytes": 4756,
+      "sha256": "be2841b1227dbb433fa5eb0d0d5632f19a6bda2e34a49dafa4fc4763afaa4661",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0017-capture.json": {
+      "bytes": 544,
+      "sha256": "e70326fc3735d67279c1e514fc57b9c00cffeffb278d150b9effb384493ef4ed",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0017-stdout.json": {
+      "bytes": 678,
+      "sha256": "974387781878f37f62847837135c8128a70d4fbdf5c1c26e50927949841edaf1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0018-capture.json": {
+      "bytes": 117,
+      "sha256": "89c5493f2a3034e81816d4be3a0143bab5ad3d350e5bc876708b6a5836a8e5cf",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0018-stdout.json": {
+      "bytes": 213,
+      "sha256": "06618d7475ad0854c0e52b9eb9f79943fc6373a27199022bb4c7b1e64fc33ccb",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0019-capture.json": {
+      "bytes": 548,
+      "sha256": "5c47a8c8dd1f46f83222d134c831f79a18714c3b9415ac443f1dde30ac6c4097",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0019-stdout.json": {
+      "bytes": 789,
+      "sha256": "e2c15ec77af5eaa1a7ac1e6c8faca063fdd4e2ebcf814c32f9f5e620ed044c83",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0020-capture.json": {
+      "bytes": 549,
+      "sha256": "d5179272218e93229fadc8316c378ad95af058018d66037a3cd04f2769e530fb",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0020-stdout.json": {
+      "bytes": 790,
+      "sha256": "7b61af7ec296f8ee56cb64ca1b0edd180208ee363522b67c5dace5bb5d87029f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0021-capture.json": {
+      "bytes": 545,
+      "sha256": "45e934c7597f4d0dad7baf205ad8d4516a67e34a3f9b54069cfd1d3881174118",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0021-stdout.json": {
+      "bytes": 680,
+      "sha256": "009542ee187f10b6885e3c8cd0e4b166e32600233bd1686bba5437d46e0a4706",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0022-capture.json": {
+      "bytes": 117,
+      "sha256": "d9a79cab781d93c1a266fc95dc221f8881f6b885b78241d304f2323cc0aa3371",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/0022-stdout.json": {
+      "bytes": 213,
+      "sha256": "8a6c3bded827e7f05e761740f88055406fb49eb639cb74b24b6cbd906102766a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/brief.json": {
+      "bytes": 5174,
+      "sha256": "71b0a9371c35416fbb77bee3de7a3de462c001bff8e7ae2d2583ad8a83c41747",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/closeout.json": {
+      "bytes": 1121,
+      "sha256": "c26b6d8c131c40193f25ecd30dfd1bc0f281a27ac0a38664c9d7b272200297d3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/commands.jsonl": {
+      "bytes": 7071,
+      "sha256": "fe7e6e6342753b4a72d17e1ee77a50ea9fa0f8cc8fc3675b3644b17965e2707d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0001-frame-1792375055944-73173-31.png": {
+      "bytes": 13696,
+      "sha256": "bd01999c0a421fded104deba80b71c05b3d2ce6b6c277623ed18c214bdf508c6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0002-frame-1792375055944-73173-34.png": {
+      "bytes": 13696,
+      "sha256": "bd01999c0a421fded104deba80b71c05b3d2ce6b6c277623ed18c214bdf508c6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0003-frame-1792375055944-73173-44.png": {
+      "bytes": 13696,
+      "sha256": "bd01999c0a421fded104deba80b71c05b3d2ce6b6c277623ed18c214bdf508c6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0004-frame-1792375055944-73173-54.png": {
+      "bytes": 13696,
+      "sha256": "bd01999c0a421fded104deba80b71c05b3d2ce6b6c277623ed18c214bdf508c6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0005-frame-1792375055944-73173-59.png": {
+      "bytes": 14489,
+      "sha256": "7134c5bed03a81b6ec2bd8e36ad55b4e35fb1e417f7a86f8aeb2411a2fab94a4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0008-frame-1792375127540-73173-1-86.png": {
+      "bytes": 154945,
+      "sha256": "23e83bba6846d89cc898ea87091d4134eeda0e575e06acae1aabce5c07ef155f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0009-frame-1792375127540-73173-1-101.png": {
+      "bytes": 154945,
+      "sha256": "23e83bba6846d89cc898ea87091d4134eeda0e575e06acae1aabce5c07ef155f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0010-frame-1792375127540-73173-1-105.png": {
+      "bytes": 15125,
+      "sha256": "518d9ba2b0e577f92fbb60cf478b24b824071091764f805de485795c9e13130e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0011-frame-1792375127540-73173-1-112.png": {
+      "bytes": 147998,
+      "sha256": "80165e8f804d1ab87a8b2991393311e94964720fda8b4b7915cbf219e43dce17",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0012-frame-1792375127540-73173-1-120.png": {
+      "bytes": 155091,
+      "sha256": "d1ae89ee37a4b9264bdf778eb46e189931698e658cc0f8ef2137ebea607eb54d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0014-frame-1792375127540-73173-1-124.png": {
+      "bytes": 155090,
+      "sha256": "2092c31ea452e272c86800079feac0a1454bbd06a9fcc0a939eb79c052c73ea7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0015-frame-1792375127540-73173-1-131.png": {
+      "bytes": 155090,
+      "sha256": "b5268891f470ce078c093b204989618180bfafe77e151ab356892a6c33b412ea",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0016-frame-1792375127540-73173-1-142.png": {
+      "bytes": 155090,
+      "sha256": "91964c70afdae15bd3eda71b6f318a36dedc088dfacd4f788e1a46d215f8a8d0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0017-frame-1792375127540-73173-1-144.png": {
+      "bytes": 150365,
+      "sha256": "fe5b78a7ec4a52b1c2ee6348d89abc570b74bbe5a5fe5c4c89829b700ee321a1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0019-frame-1792375205300-73173-2-163.png": {
+      "bytes": 12923,
+      "sha256": "db509cccddeef1e2c650cd21ff4fbd4cbd3ef2e21be38f65f9f31db25d0bc7ca",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0020-frame-1792375205300-73173-2-169.png": {
+      "bytes": 12923,
+      "sha256": "db509cccddeef1e2c650cd21ff4fbd4cbd3ef2e21be38f65f9f31db25d0bc7ca",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/frames/0021-frame-1792375205300-73173-2-174.png": {
+      "bytes": 13355,
+      "sha256": "58cb8ae019f9a8a44385506f73755cff963e5dec9db0c8ebca9a5b0cd9544176",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/spectator-proof.jpg": {
+      "bytes": 255354,
+      "sha256": "48552ee94ef9d2694e30ecabb59db3fb7d68fd1e52966859228978f2d43896d2",
+      "availability": "local-only; not included in Git"
+    },
+    "docs/assets/activity-distraction-2026-10-18.png": {
+      "bytes": 147998,
+      "sha256": "80165e8f804d1ab87a8b2991393311e94964720fda8b4b7915cbf219e43dce17",
+      "availability": "retained externally"
+    },
+    ".runtime/campaigns/activity-distraction-probe-001/shutdown-verification.json": {
+      "bytes": 1424,
+      "sha256": "a703a1c0532f3a6c9b8d830748ded1a1b5e3f9a83426b474d70debbc7c855d9a",
+      "availability": "local-only; not included in Git"
+    }
+  }
+}

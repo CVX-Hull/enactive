@@ -26,10 +26,10 @@ or downloads have separate permissions; do not stamp every shell call elevated.
 
 [Project-local rules](../.codex/rules/gameplay.rules) allow only the existing
 `.venv/bin/python -m harness` command family for ordinary observation, control,
-recovery and bounded waypoint tasks. A second rule, requested at the paused005 checkpoint, matches only
-`.venv/bin/python .runtime/campaigns/seven-day-campaign-005/preparation/capture.py`
-with actor `lead` or `player`. Setup/server launch, GitHub publication, arbitrary
-Python, shell scripts and every other study recorder are not matched by that rule.
+recovery and bounded waypoint tasks. Setup/server launch, GitHub publication,
+arbitrary Python, shell scripts and study capture wrappers are not matched. The
+exact005 recorder rule was retired at its stopped closeout; it is historical, not
+a template for wildcard studies.
 Preparing these rules changed no global defaults, user rules, OS permissions or
 broad network access. The later exact-project trust correction below adds only
 this checkout's trust entry to Codex's user configuration.
@@ -63,44 +63,29 @@ Official sources checked2026-10-18: [rules](https://learn.chatgpt.com/docs/agent
 [sub-agent permissions](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 
 
-### Loading the current recorder allowance
+### Verified loading and retired recorder allowance
 
-The [scoped change](changes/032-recorder-permission-reload.md) follows the user's
-explicit request. Invoke the recorder directly with the relative path above from
-this trusted checkout, one literal command per call. Do not combine it with shell
-redirection, a heredoc, arbitrary Python post-processing or a command chain: the
-whole shell script can become the policy target instead of the recorder prefix.
-The recorder already retains its indexed receipts and frames; the calling tool
-can parse its returned JSON without another shell command. No recorder code change
-or input-guard relaxation is needed.
+The [original narrow recorder change](changes/032-recorder-permission-reload.md)
+and [exact-project trust correction](changes/033-gameplay-permission-preflight.md)
+remain historical. After the user's restart, startup reported saved gameplay
+prefixes. Two actual-player recorder status calls102/103 passed with no review
+request/error observed, followed by real Observe104/Resume105 and ordinary play.
+The [actual result](acceptance/2026-10-18-activity-distraction-stop.md) establishes
+that scoped setup, not every future invocation or managed-policy behavior. The
+[later native proof](acceptance/2026-10-18-activity-distraction.md) used two harmless
+stable-CLI calls followed by actual ordinary inputs without recurring review, a
+new recorder allowance or another Codex restart.
 
-This allowance does not pin executable bytes or enforce cwd. The ignored005
-recorder must retain its independently reviewed hash and all existing admission,
-source/native, actor, original-clock/budget, parser and frame checks. Trust the
-checkout deliberately; do not use the rule with unreviewed source. Retire this
-exact-study rule when005 ends or its recorder changes; a later study path needs a
-new scoped review. Do not add wildcard studies, broad Python or shell prefixes.
-
-At the first requested checkpoint, the player and lead verified paused supported
-STRING_INPUT, no activity and empty live slots. Gameplay authority is suspended;
-the owned controller was stopped normally, while the native game stays paused.
-The user-authorized permission/docs change ends the old source freeze without
-reopening any input allowance. The original clocks and every cost/unknown remain.
-Restart Codex and reopen this project after publication/verification. Project
-rules load only from a trusted project configuration at startup; the inspected
-user config then had no explicit trust entry for this path, so activation could
-not be assumed. Rule preparation changed no user/global configuration. The later
-trust correction added only the exact project entry, as documented below.
-
-The first restart did not establish activation; a later diagnostic proved the
-project layer was disabled for missing exact-project trust. That entry is now
-corrected, with fresh-process loading verified. After active-chat reload, verify
-live calls from the actual player before relying on no-review behavior.
-The suspended recorder refuses gameplay;
-resume needs explicit user authorization, current clean reviewed source/helper/
-native, fresh paused observations and a prospective remaining-budget decision.
-Do not silently rebind its old source hash or reset clocks. Managed restrictions
-or stricter matching rules may still require review; honor them.
+005 then ended on an unsupported native activity question, independently of
+permission. Its exact-study rule is removed from source; subsequent policy loading
+applies that removal. Cached allowances do not authorize closed005 admission.
+Keep the stable reviewed harness entry point for future play; review any necessary
+outer wrapper once during setup rather than introducing per-action review or
+restarting a verified unchanged setup. Invoke a literal command directly; shell
+chains/redirections can change the policy target. Honor actual restrictions and
+reviews; do not hide unrelated work behind allowed entry points. All original
+costs/clocks/unknowns remain. Future gameplay needs its own prospective authority
+and complete-outcome feasibility assessment, not a policy-file edit.
 
 ## Dedicated gameplay context
 
@@ -143,9 +128,10 @@ Native guards, user Pause, recovery eligibility and campaign limits still apply.
 Setup, source changes, publication and unrelated commands have separate scope.
 
 The [trust correction](changes/033-gameplay-permission-preflight.md) records the
-observed disabled project layer and the exact-project fix. Its current result is
-enabled loading in a fresh bundled Codex process; live no-review gameplay remains
-unverified until the active chat reloads and the actual player passes the check.
+observed disabled project layer and the exact-project fix. Fresh bundled loading
+was followed by the [actual-player reload/resumption](acceptance/2026-10-18-activity-distraction-stop.md)
+checks and the later stable-CLI native proof. Those scoped results now establish
+live operation without recurring review; future changed setups need new preflight.
 
 A long-lived bounded player sub-agent is useful for keeping gameplay facts and
 observations separate from engineering discussion. It does not require a weaker
@@ -172,7 +158,8 @@ use explorer/reviewer roles to send input. See the [runbook](runbook.md#designat
 [two-phase result](acceptance/2026-10-18-campaign-operator.md) records actual
 delegated consumption/conservation and paused lead takeover, following a retained
 default-sandbox invocation failure. Its approved actor preflight and explicit
-tool mode worked in this session; allow-rule activation remains unverified.
+tool mode worked in this session; allow-rule activation remained unverified at that historical checkpoint; the
+[later actual verification](acceptance/2026-10-18-activity-distraction-stop.md) supersedes that limitation.
 This is one qualified operating result, not general survival or a reliability claim.
 Missing/unquiesced player, denied approval or failed readable access stops; user
 rescue is not the fallback. Do not expand an active frozen campaign mid-run.
@@ -198,7 +185,8 @@ prospective decision; the stopped admission supplies no remaining input authorit
 The [subsequent bounded correction/probe](acceptance/2026-10-18-walk-reassessment.md)
 used existing explicitly approved CLI calls without broader rules or another actor.
 It verified stop evidence and the fresh Observe/Resume sequence; the first load
-probe remained unexercised. Narrow rule activation is still unverified, and the
+probe remained unexercised. Narrow rule activation was still unverified at that historical checkpoint;
+[later actual-player verification](acceptance/2026-10-18-activity-distraction-stop.md) established the scoped setup, and the
 original approval denial was not retried. Further survival needs its own admission.
 
 The [later functional continuation](acceptance/2026-10-18-seven-day-continuation-stop.md)

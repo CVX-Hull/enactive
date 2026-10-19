@@ -122,6 +122,25 @@ replace_once(source / "src/game.cpp",
     '        cdda_harness::interrupt_query harness_query;\n'
     '        return query_yn( "%s %s", text, u.activity.get_stop_phrase() );\n'
     '    }() ) {')
+# Ordinary event distractions use a different owner from injected keyboard pause.
+# End the exact-category marker before YES/NO/manager callbacks can open other UI.
+replace_once(source / "src/game.cpp",
+    '    const std::string &action = query_popup()\n'
+    '                                .preferred_keyboard_mode( keyboard_mode::keycode )\n'
+    '                                .context( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )',
+    '    const std::string action = [&]() {\n'
+    '        cdda_harness::menu_query harness_menu( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" );\n'
+    '        return query_popup()\n'
+    '                                .preferred_keyboard_mode( keyboard_mode::keycode )\n'
+    '                                .context( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )')
+replace_once(source / "src/game.cpp",
+    '                                .option( "IGNORE", allow_key )\n'
+    '                                .query()\n'
+    '                                .action;',
+    '                                .option( "IGNORE", allow_key )\n'
+    '                                .query()\n'
+    '                                .action;\n'
+    '    }();')
 replace_once(source / "src/debug.cpp",
     '    for( bool stop = false; !stop; ) {\n        ui_manager::redraw();',
     '    cdda_harness::scope harness_debug( cdda_harness::boundary_kind::debug_prompt );\n'
