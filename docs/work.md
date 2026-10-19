@@ -22,13 +22,15 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 | Current seven-day path | [020](acceptance/2026-10-19-midpoint-survival.md) accepted days1–3, midpoint restart/reload and player replacement. [024](acceptance/2026-10-19-four-day-survival.md) accepted day four. [025](acceptance/2026-10-19-first-clean-water.md) verified the first250mL clean-water output, not remaining coverage. Days5–7 remain incomplete. [#103](https://github.com/CVX-Hull/enactive/issues/103) is accepted; [#104](https://github.com/CVX-Hull/enactive/issues/104) owns day five and [#129](https://github.com/CVX-Hull/enactive/issues/129) resources/forecast. |
 | Full closeout | Same-character daily evidence, normal midpoint save/restart/reload and player replacement, final normal shutdown, independent complete-campaign review, protected publication/CI, owned cleanup and current Project. #82 stays open until all are proved. |
 
-025's last normal5559025 is alive/Comfortable with blank needs, freshly observed
-1.5Lclean/12rations/500mLuntreated and one owned paused game/controller. Actual live
+[026](acceptance/2026-10-19-water-coverage.md) collected3Ladditional untreated water
+in six500mL bottles, preserving clean water/food. Last normal5559069 is alive/
+Comfortable with blank needs, freshly observed1.5Lclean/12rations/3.5Luntreated
+and one owned paused game/controller. Actual live
 slots are null, actors/tools terminal and no queued input. Ordinary small-fire heat,
 one250mL craft and bottle storage were independently qualified; bulk throughput and
-remaining-three-day coverage are unproved. The assessed outdoor work checkpoint
-retains small fire/open-window retreat, not closed shelter or final shutdown.
-Daily outcomes1–4 stay accepted; closed019–025 grant no successor authority. The
+remaining-three-day coverage are unproved. The checkpoint is indoors in the basement; phone remains on, window is last known
+open and current fire/fuel requires reassessment. Final shutdown is unproved.
+Daily outcomes1–4 stay accepted; closed019–026 grant no successor authority. The
 original resource gate was qualified met in023 as a finite cache, not renewable supplies.
 
 The user-approved one-time three-hour extension retained all original clocks, costs,
@@ -43,7 +45,9 @@ phase used32/40inputs with no renewal after transient reassessment. The measured
 daily-care subtotal59–63 exceeded the prior55/day forecast.
 [048](changes/048-water-coverage-budget.md) records the user’s clarified gameplay-related
 time/input delegation and finite +200inputs/+60minutes revision, retaining all costs
-and effective cleanup reserve. No routine gameplay-budget permission is needed.
+and effective cleanup reserve. Actual026 travel exposed a treatment underestimate;
+048 prospectively allocates110treatment inputs before that phase begins, retaining
+1628whole/707aggregate costs. No routine gameplay-budget permission is needed.
 A successor still needs source/review/checkpoint, fresh actual
 preflight and credible complete-route fit. No routine user time question, reopened
 attempt or automatic actor continuation.

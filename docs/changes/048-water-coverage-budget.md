@@ -32,7 +32,7 @@ The other64of actual127 were real setup, travel, failed rest, interruption and
 inspection costs; none are refunded. Some hold requests were interrupted; selected
 intervals are not all completed intervals. Repeating the measured subtotal is a
 sensitivity comparison, not a future guarantee. Three days at63plus85resource and
-20lifecycle inputs is294, exceeding the266currently remaining. More time alone
+20lifecycle inputs is294, exceeding the then266remaining under the old limits. More time alone
 does not repair that deficit.
 
 The next finite revision is **+200 cumulative
@@ -49,7 +49,7 @@ expanded inputs and +60minutes**, preserving all original origins and costs:
 
 Hard allowance remains eligible cleanup only. Preserve the final30minutes and
 100ordinary inputs for cleanup/publication, actual daily windows and independent
-acceptance before successor-day input. Whole1555/aggregate634/day5241/lifecycle167,
+acceptance before successor-day input. At the original025-to026 decision, whole1555/aggregate634/day5241/lifecycle167,
 historical lifecycle7442.818810162135seconds and101current-v3 plus one archived
 gameplay/two control unknowns carry forward. No failed phase, original clock,
 unknown effect, cost or preserved save is reset.
@@ -64,24 +64,37 @@ container. A source reconstructed across reload is a candidate needing fresh
 player-visible source, quantity, route and threat verification. No hidden map/save
 access or assumed loot follows from a coordinate transform.
 
-The resource allocation is215total, including87already spent: at most
-75new acquisition inputs and50treatment/fuel inputs,212in total with3uncertainty.
-The earlier50/35 forecast omitted conservative travel, individual-container handling
-and fuel margin; it is superseded before admission, with no input spent against it.
-These are new allocations, not renewal of a failed phase.
-Separate assignments stay at most30minutes/75expanded inputs, including preflight
-and terminal checkpoint. Actual access, amount and capacity guide collection;
-actual heat/fuel feedback, recipe/batch, finished output and stored stock guide
-treatment. Reuse ordinary engine batch crafting and liquid handling; do not build
-a generic crafting framework or use NPC-only collection behavior.
+The initial026 allocation was215total, including87sunk025,75acquisition and
+50treatment/fuel inputs. Acquisition completed with73/75inputs and no treatment
+input. [026's report](../acceptance/2026-10-19-water-coverage.md) records actual
+partitions, guarded stops, phone activation, six500mL fills and final raw stock.
+The50-input treatment forecast proved inadequate before that phase began: return
+travel plus fuel and liquid handling plausibly takes60–85inputs before contingency.
+Independent review raised this as P2; no failed phase is renewed.
 
-Forecast364future inputs =125resource+189daily care+30contingency+20final native
-lifecycle, against466remaining,102margin. Forecast170future active
-minutes =20preparation/review+60resource+75care/reviews+15final native lifecycle;
-about222minutes would remain at the proposal's original162-minute snapshot after
-the one-hour shift. Elapsed preparation must be charged and current fit recomputed
-at admission; this snapshot never renews a deadline. Confidence remains low:
-source access, fuel duration, bulk handling and future interruptions are unproved.
+The revised resource envelope is **275total**, retaining87sunk025 and73actual026;
+treatment is **at most110new inputs**, split into provision60 and bulk50. The
+conservative allocation87+75+110=272<=275; actual160already spent leaves115under
+the resource envelope. Whole input/time ceilings above remain unchanged. Each new
+assignment is at most25minutes and75inputs; provision/bulk each at most25minutes,
+with an original cumulative50-minute treatment endpoint set before provision.
+The bulk assignment receives only remaining original time and phase inputs.
+No automatic renewal follows a miss. Separate actual fuel/site/heat qualification
+precedes bulk. Preserve known sleeping benches[8,0]/[9,0].
+
+At the026 terminal handoff, **1628whole/707aggregate/314day5/167lifecycle** carry
+forward, with all original unknowns.393gameplay inputs remain. The future forecast
+is **349inputs =110treatment+189daily care+30contingency+20final native lifecycle**,
+44margin. Before026, the conservative full forecast was424against466; unused
+acquisition capacity is not a refund of consumed work. After acquisition, allow
+**155active minutes =15review/source/preflight+50treatment+75care/reviews+15final
+native lifecycle**, separately retaining the final30-minute/100-input reserve.
+Recompute actual remaining time before admission; no elapsed review or attempt
+clock is reset. Confidence remains low: current fuel/site, actual bulk output,
+storage and future interruptions are unproved. Actual source offer was5.25L;
+3Lwas collected into six500mL bottles, leaving2.25Lsource. Carried stock is
+1.5Lclean/3.5Luntreated/12rations. Treating all raw without loss would yield5Lclean;
+this is a hypothesis, not coverage proof or an agent-learning result.
 
 Keep all046 transient/no-delivery/unknown/authority rules, windowed project-local
 setup and user Pause. No raw drinking, unsafe indoor fire, engine bypass, human
@@ -98,7 +111,7 @@ Recipe14-unit sensitivity is62.7minutes using prior display,86.46 using observed
 single-batch elapsed time; neither predicts current duration or proves fire coverage.
 The refill route/source and compatible capacity require fresh visible confirmation.
 
-Native24221/controller23606 remain intentionally paused pending actual admission;
+Native24221/controller23606 remain intentionally paused after026 acquisition;
 no ordinary actor is restored by this decision. Effective reserve checks use the
 stricter whole/aggregate endpoints and input ceilings, accounting for original921.
 Offline zero-time-gap and tighter-whole-input counterexamples reject. This is a
@@ -106,7 +119,7 @@ recorder check, not native acceptance or general automated resource assurance.
 
 Before any successor input: independently review actual fit,
 pass relevant common checks, record a clean source checkpoint and new finite
-admission bound to frozen025, and verify actual lead/player preflight. The native
+admission bound to the latest frozen predecessor, and verify actual lead/player preflight. The native
 binary is unchanged; documentation checks do not establish new native behavior.
 #129 owns resources/forecast, #104 day five, #82/#10 the full outcome and #75 the
 forecast/control lesson. Research and maintenance dates are not renewed.

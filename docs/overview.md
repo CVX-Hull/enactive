@@ -35,16 +35,18 @@ raw water and a boiling tool but no heat, and retreating from a distant hostile.
 and adaptation to interrupted upstairs waiting. Days five through seven remain
 incomplete. [025 verified the first250mL clean-water batch](acceptance/2026-10-19-first-clean-water.md)
 using ordinary outdoor fire, boiling and bottle storage, after rejected sites and
-a transient unsupported-menu return. Fresh stock is1.5L clean/500mL untreated/
-12rations; remaining-three-day coverage is unproved. Last normal5559025 is alive/
-Comfortable with blank needs at the assessed outdoor worksite. One owned game/
+a transient unsupported-menu return. [026 collected3L additional untreated water](acceptance/2026-10-19-water-coverage.md)
+into six ordinary bottles. Fresh stock is1.5Lclean/3.5Luntreated/12rations;
+remaining-three-day potable coverage is unproved. Last normal5559069 is alive/
+Comfortable with blank needs at an indoor basement checkpoint. One owned game/
 controller remain paused, with no ordinary actor, queued input or live slots.
-Small fire and open-window retreat remain; final shutdown is unproved. Lifecycle
+Phone remains on; current outdoor fire/fuel must be reassessed, north window is
+last known open, and final shutdown is unproved. Lifecycle
 ACKs, failed attempts and corrections remain qualified.
 
 [#129](https://github.com/CVX-Hull/enactive/issues/129) owns further resources/whole
-forecast; [work](work.md) links the path. Closed019–025 grant no successor authority.
-025 closes for a source/forecast handoff after its narrow first-output result.
+forecast; [work](work.md) links the path. Closed019–026 grant no successor authority.
+026 closes for a source/forecast handoff after its raw-water collection result.
 Measured daily care exceeded the prior forecast; [048](changes/048-water-coverage-budget.md)
 records a finite prospective budget revision. The user clarified that delegation
 covers gameplay-related time and input extensions, prioritizing quality data;
