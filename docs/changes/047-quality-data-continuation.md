@@ -2,11 +2,15 @@
 owner: lead
 date: 2026-10-19
 scope: Prospective025 quality-data-driven water and remaining-survival continuation
-status: proposed
+status: historical
 review_trigger: Resource outcome, evidence quality, time/input fit or safety uncertainty
 ---
 
 # Continue toward seven days while collecting useful development evidence
+
+025's [actual first-output report](../acceptance/2026-10-19-first-clean-water.md)
+records execution and costs. [048](048-water-coverage-budget.md) owns the next
+proposed budget decision; this historical decision supplies no new authority.
 
 The user delegated time extensions to the lead: **“You can extend as you see fit.”**
 The purpose is quality data for future development. The seven-day target remains;

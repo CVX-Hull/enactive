@@ -19,15 +19,17 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 | Survival pilot and findings | [Pilot report](acceptance/2026-10-18-survival-pilot.md) retains the stopped pre-spawn attempt and its dispositions; #78/#83 own acceptance. |
 | Continuity and first-day rehearsal | [Qualified first-day result](acceptance/2026-10-18-first-day-completion.md) retains actual save/restart/handoff, needs and autonomy evidence plus its failures/unknowns; #79/#80 own acceptance. |
 | Seven-day readiness | [Readiness report](acceptance/2026-10-18-seven-day-readiness.md) records the finite preparation gate and its limits; #81. Readiness does not guarantee campaign success. |
-| Current seven-day path | [020](acceptance/2026-10-19-midpoint-survival.md) accepted days1–3, real midpoint restart/reload and fresh F replacement. [024](acceptance/2026-10-19-four-day-survival.md) independently accepted day four at5558422, then rejected an exposed treatment site and closed for lost whole-route fit. Days5–7 remain incomplete. [#103](https://github.com/CVX-Hull/enactive/issues/103) is accepted; [#104](https://github.com/CVX-Hull/enactive/issues/104) owns day five and [#129](https://github.com/CVX-Hull/enactive/issues/129) resources/forecast. |
+| Current seven-day path | [020](acceptance/2026-10-19-midpoint-survival.md) accepted days1–3, midpoint restart/reload and player replacement. [024](acceptance/2026-10-19-four-day-survival.md) accepted day four. [025](acceptance/2026-10-19-first-clean-water.md) verified the first250mL clean-water output, not remaining coverage. Days5–7 remain incomplete. [#103](https://github.com/CVX-Hull/enactive/issues/103) is accepted; [#104](https://github.com/CVX-Hull/enactive/issues/104) owns day five and [#129](https://github.com/CVX-Hull/enactive/issues/129) resources/forecast. |
 | Full closeout | Same-character daily evidence, normal midpoint save/restart/reload and player replacement, final normal shutdown, independent complete-campaign review, protected publication/CI, owned cleanup and current Project. #82 stays open until all are proved. |
 
-024's last normal5558504 is alive/Comfortable with blank needs, accounted1.25Lclean/
-12rations/750mLraw and one owned paused game/controller. Actual live slots are null,
-actors/tools terminal and no queued input. No heat, treatment or remaining-three-day
-water coverage was established. Daily outcomes1–4 remain accepted; closed019–024
-remain incomplete and grant no successor authority. Resource gate3888660.474639375
-was qualified met in023 as a finite cache, not renewable supplies.
+025's last normal5559025 is alive/Comfortable with blank needs, freshly observed
+1.5Lclean/12rations/500mLuntreated and one owned paused game/controller. Actual live
+slots are null, actors/tools terminal and no queued input. Ordinary small-fire heat,
+one250mL craft and bottle storage were independently qualified; bulk throughput and
+remaining-three-day coverage are unproved. The assessed outdoor work checkpoint
+retains small fire/open-window retreat, not closed shelter or final shutdown.
+Daily outcomes1–4 stay accepted; closed019–025 grant no successor authority. The
+original resource gate was qualified met in023 as a finite cache, not renewable supplies.
 
 The user-approved one-time three-hour extension retained all original clocks, costs,
 input limits and final reserve. 024's [046 decision](changes/046-replan-known-nondelivery.md)
@@ -36,10 +38,14 @@ unchanged guards. Actual failure of the conditional eastern treatment site exhau
 credible complete-route fit; no automatic northern search or further time follows.
 The user subsequently delegated time extensions to the lead, prioritizing quality
 data for future development. [047](changes/047-quality-data-continuation.md) records
-a prospective finite two-hour shift with all spent costs/input limits retained,
-quality-evidence requirements and bounded water phases. A successor still needs
-source/review/checkpoint, fresh actual preflight and credible complete-route fit.
-No routine user time question, reopened attempt or automatic actor continuation.
+025's finite two-hour shift with costs/input limits retained. Its first-output
+phase used32/40inputs with no renewal after transient reassessment. The measured
+daily-care subtotal59–63 exceeded the prior55/day forecast.
+[048](changes/048-water-coverage-budget.md) proposes a finite revision; broader
+input-budget delegation remains a decision, not authority supplied by a source file.
+A successor still needs that decision, source/review/checkpoint, fresh actual
+preflight and credible complete-route fit. No routine user time question, reopened
+attempt or automatic actor continuation.
 #129 owns further resources and whole forecast; #75 owns control-fit findings.
 The [operator contract](protocol.md#designated-campaign-operator) records bounded
 passive reassessment; a stricter admission stop still wins. GitHub owns current
