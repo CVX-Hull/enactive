@@ -49,15 +49,22 @@ balances and completed episode counts before every phase.
 
 New007 day1 player inputs are at most **220**, including discovery. The40E inputs
 spent in006 remain: the combined006+007 player forecast stays260, not a renewed
-260-input allocation. At220×18seconds plus600review and780lifecycle allowance,
-the conservative remaining-day forecast is5340seconds. Require at least this much
+260-input allocation. The player's read-only route forecast needs3–5inputs for
+baseline checks,12–18 for daylight, up to18 for finite prerequisite jobs and9–15
+for the advanced recipe. A40input discovery cap would be optimistic again.
+Prospectively allocate60discovery inputs/25minutes before any007 input, inside220.
+Sustained day1 work has at most160additional player inputs even if discovery ends
+early; unused discovery inputs do not transfer to that stage. Combined use is at
+most220. This makes the forecast independent of discovery's input/time ratio.
+At1500discovery seconds plus160remaining inputs×18seconds,600review and780lifecycle,
+the conservative remaining-day forecast is5760seconds. Require at least this much
 actual remaining day/whole investigation time at admission after publication;
 use actual lower balances if preparation costs more. Later-day budgets stay fixed.
 
 ## Stage1: discovery, not a claim of complete-day feasibility
 
-After actual reload/identity/calendar verification, assign E at most40inputs and
-15wallminutes for discovery, inside220 and the original day/whole clocks. This is
+After actual reload/identity/calendar verification, assign E at most60inputs and
+25wallminutes for discovery, inside220 and the original day/whole clocks. This is
 a new finite stage of007, not another006 first40 or authority for180blind inputs.
 At admission, require a bounded route with explicit failure/cleanup branches;
 do not count hypothetical yield, light or unlocked recipes as acquired resources.
@@ -85,10 +92,10 @@ No long training block is the discovery objective. Inspect resources first:
    Where needed to test this branch, discovery may include at most3finite useful
    beginner bandaging jobs/3actual game hours, each individually bounded to1h with
    measured missing-proficiency benefit and eligible light. Measure after each;
-   stop upon the prerequisite/unlock or absent gain. These debit the same40inputs/
-   15minutes and actual day time. No indefinite practice or assumed unlock by job3.
+   stop upon the prerequisite/unlock or absent gain. These debit the same60inputs/
+   25minutes and actual day time. No indefinite practice or assumed unlock by job3.
 
-At40discovery inputs or15minutes, earliest, Pause/terminal/quiescent handoff and a
+At60discovery inputs or25minutes, earliest, Pause/terminal/quiescent handoff and a
 compact checkpoint. Lead plus independent review decides sustained-work admission
 from actual resources, light, productive remaining work and credible rest/needs
 coverage for the **complete** remaining day. A nominal one-hour job, static furniture
@@ -123,7 +130,7 @@ No starvation, useless capped work, unsafe indoor/trash-can fire or unsafe exter
 cooking. Keep one fuel plank and adequate food/water; diagnose actual needs.
 
 After discovery, the sole operator may execute the accepted full-day plan within
-the remaining220 total, with its own feedback after each input. Reforecast after
+160additional inputs and220combined, with its own feedback after each input. Reforecast after
 3–4productive game hours, before battery20, early proficiency completion, unavailable
 materials/recipes/light, interrupted sleep and before evening. Pause/handoff if the
 full schedule no longer fits; do not turn each key into a new lead approval. Lead
@@ -161,7 +168,7 @@ reroll/rewind, global setup or compatibility path.
 Before007 admission: independent whole-scope design review and006 evidence review,
 common checks, reviewed clean source, public full-message identities, protected
 exact/merged-main CI and empty computed closing references; unchanged native/capture
-checks, actual windowed viewer/native/actor preflights, actual remaining5340seconds
+checks, actual windowed viewer/native/actor preflights, actual remaining5760seconds
 and cumulative limits. Record exact admission/phase/actors privately.006 remains
 closed; source-only documentation changes grant no gameplay authority. Actual007
 reload, discovery acceptance and all seven daily outcomes remain unproven.
@@ -179,7 +186,7 @@ at closeout. #100 owns day1/forecast ordering; #82 owns shared budgets, consolid
 publication and full acceptance. Existing maintenance/research due dates stay unchanged.
 
 Independent clean-context review reconciled006's actual ledger and the lifecycle/
-5340-second forecasts, finite discovery authority, original clocks/reserves,
+remaining-day forecasts, finite discovery authority, original clocks/reserves,
 uncertainty stops and full seven-day/restart/replacement gates. No confirmed P1/P2.
 This accepts the prospective design, not actual admission, resource discovery or
 survival. A separate evidence reviewer verified006's270references and public image.
