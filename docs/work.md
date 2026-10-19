@@ -41,9 +41,10 @@ data for future development. [047](changes/047-quality-data-continuation.md) rec
 025's finite two-hour shift with costs/input limits retained. Its first-output
 phase used32/40inputs with no renewal after transient reassessment. The measured
 daily-care subtotal59–63 exceeded the prior55/day forecast.
-[048](changes/048-water-coverage-budget.md) proposes a finite revision; broader
-input-budget delegation remains a decision, not authority supplied by a source file.
-A successor still needs that decision, source/review/checkpoint, fresh actual
+[048](changes/048-water-coverage-budget.md) records the user’s clarified gameplay-related
+time/input delegation and finite +200inputs/+60minutes revision, retaining all costs
+and effective cleanup reserve. No routine gameplay-budget permission is needed.
+A successor still needs source/review/checkpoint, fresh actual
 preflight and credible complete-route fit. No routine user time question, reopened
 attempt or automatic actor continuation.
 #129 owns further resources and whole forecast; #75 owns control-fit findings.

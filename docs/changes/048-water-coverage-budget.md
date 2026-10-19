@@ -1,8 +1,8 @@
 ---
 owner: lead
 date: 2026-10-19
-scope: Proposed post025 water coverage and remaining survival budget
-status: proposed
+scope: Post025 water coverage and remaining survival budget
+status: active
 review_trigger: User budget delegation, acquisition or treatment result, care costs or whole fit
 ---
 
@@ -15,15 +15,15 @@ days5–7 and remaining water coverage are incomplete. The
 failed site, menu mistakes, transient unsupported return and all87new inputs.
 025 closes for this source/forecast handoff; it never reopens or supplies new authority.
 
-## Decision needed before a complete-route admission
+## Delegated prospective decision
 
-The user's extension delegation is recorded in047 as **time**, with input limits
-unchanged. A tracked proposal or reviewed source cannot supply broader user
-authorization. This proposal therefore does not increase any active ceiling or
-authorize ordinary gameplay. The lead recommends extending delegation to finite
-prospective gameplay-input budgets as well as time, with explicit review and all
-cumulative costs retained. No money, provider, permission, safety or global setup
-change is proposed.
+The user clarified: **“My delegation covers gameplay related extensions.”** This
+covers finite prospective time and input budgets. The lead applies the revision
+below with every original clock/cost retained, prioritizing authentic useful data.
+No routine gameplay-budget permission question is needed. This does not authorize
+provider spending, permission changes, relaxed safety or global environment changes.
+Source policy is not an actor lease: reviewed clean source, a new admission and
+fresh actual preflight still precede input. Closed025 never reopens.
 
 The prior165-input daily forecast averaged55/day. An audit of actual accepted024
 found63positive routine inputs:30hold selection,5successful bench-rest selection,
@@ -35,10 +35,10 @@ sensitivity comparison, not a future guarantee. Three days at63plus85resource an
 20lifecycle inputs is294, exceeding the266currently remaining. More time alone
 does not repair that deficit.
 
-If the user authorizes input extensions, the next candidate is **+200 cumulative
+The next finite revision is **+200 cumulative
 expanded inputs and +60minutes**, preserving all original origins and costs:
 
-| Limit | Existing | Proposed |
+| Limit | Previous | Revised |
 | --- | ---: | ---: |
 | Aggregate gameplay inputs after original921whole baseline | 900 | 1100 |
 | Aggregate ordinary / hard inputs | 1000 /1100 | 1200 /1300 |
@@ -64,18 +64,20 @@ container. A source reconstructed across reload is a candidate needing fresh
 player-visible source, quantity, route and threat verification. No hidden map/save
 access or assumed loot follows from a coordinate transform.
 
-The candidate resource allocation is175total, including87already spent: at most
-50new acquisition inputs and35treatment inputs,172in total with3uncertainty. These
-are proposed new allocations before admission, not renewal of a failed phase.
+The resource allocation is215total, including87already spent: at most
+75new acquisition inputs and50treatment/fuel inputs,212in total with3uncertainty.
+The earlier50/35 forecast omitted conservative travel, individual-container handling
+and fuel margin; it is superseded before admission, with no input spent against it.
+These are new allocations, not renewal of a failed phase.
 Separate assignments stay at most30minutes/75expanded inputs, including preflight
 and terminal checkpoint. Actual access, amount and capacity guide collection;
 actual heat/fuel feedback, recipe/batch, finished output and stored stock guide
 treatment. Reuse ordinary engine batch crafting and liquid handling; do not build
 a generic crafting framework or use NPC-only collection behavior.
 
-Forecast324future inputs =85resource+189daily care+30contingency+20final native
-lifecycle, against466remaining if approved,142margin. Forecast155future active
-minutes =20preparation/review+45resource+75care/reviews+15final native lifecycle;
+Forecast364future inputs =125resource+189daily care+30contingency+20final native
+lifecycle, against466remaining,102margin. Forecast170future active
+minutes =20preparation/review+60resource+75care/reviews+15final native lifecycle;
 about222minutes would remain at the proposal's original162-minute snapshot after
 the one-hour shift. Elapsed preparation must be charged and current fit recomputed
 at admission; this snapshot never renews a deadline. Confidence remains low:
@@ -88,13 +90,21 @@ or timely repeatable replenishment margin before dependent holding. A phase miss
 ends its assignment and dependent progression; a materially different experiment
 requires a prospective reviewed decision, never automatic renewal.
 
-Without broader authorization, a separately reviewed bounded partial study could
-fit existing limits, but it must remain a partial result and cannot be presented
-as a complete seven-day route. Normal cleanup remains available. Native24221 and
-controller23606 are intentionally alive paused, with no actor or queued input;
-neither is stale merely because this source decision is pending.
+Reuse the ordinary engine firewood-source marker and activity refueling if actually
+verified: public source searches accessible marked ground fuel, not carried inventory.
+The actual current menu, fuel, safety and duration remain unproved. Ordinary furniture
+deconstruction is a candidate; preserve the known sleeping bench at[8,0]/[9,0].
+Recipe14-unit sensitivity is62.7minutes using prior display,86.46 using observed
+single-batch elapsed time; neither predicts current duration or proves fire coverage.
+The refill route/source and compatible capacity require fresh visible confirmation.
 
-Before any successor input: resolve delegation, independently review actual fit,
+Native24221/controller23606 remain intentionally paused pending actual admission;
+no ordinary actor is restored by this decision. Effective reserve checks use the
+stricter whole/aggregate endpoints and input ceilings, accounting for original921.
+Offline zero-time-gap and tighter-whole-input counterexamples reject. This is a
+recorder check, not native acceptance or general automated resource assurance.
+
+Before any successor input: independently review actual fit,
 pass relevant common checks, record a clean source checkpoint and new finite
 admission bound to frozen025, and verify actual lead/player preflight. The native
 binary is unchanged; documentation checks do not establish new native behavior.

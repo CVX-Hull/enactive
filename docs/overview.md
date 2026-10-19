@@ -46,8 +46,8 @@ ACKs, failed attempts and corrections remain qualified.
 forecast; [work](work.md) links the path. Closed019–025 grant no successor authority.
 025 closes for a source/forecast handoff after its narrow first-output result.
 Measured daily care exceeded the prior forecast; [048](changes/048-water-coverage-budget.md)
-proposes a finite budget revision, with input-budget delegation still a decision.
-The user delegated prospective time extensions to prioritize quality data;
+records a finite prospective budget revision. The user clarified that delegation
+covers gameplay-related time and input extensions, prioritizing quality data;
 [047](changes/047-quality-data-continuation.md) records025's time/phase decision,
 retaining original clocks, costs and input ceilings. Its [046 decision](changes/046-replan-known-nondelivery.md)
 prospectively distinguished known non-delivery capability failures from authority
