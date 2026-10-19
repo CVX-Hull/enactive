@@ -1,0 +1,1426 @@
+{
+  "schema_version": 1,
+  "kind": "historical-native-acceptance",
+  "date": "2026-10-19",
+  "verified_at": "2026-10-19",
+  "upstream_pin": "native/upstream.json",
+  "platform": "macOS arm64/pinned CDDA0.I-1/wire3/windowed project userdir",
+  "source_sha256": "ffcdc9d4fd455ea3124082a8325027150dde8ef28a175c6d1f5f68552200404b",
+  "freetype_sha256": "36bc4f1cc413335368ee656c42afca65c5a3987e8768cc28cf11ba775e785a5f",
+  "initial_build_binary_sha256": "545c866210c487cf5c2d43625e3e9f32d90cc0fdb19dd6356dde2e4c7cb10929",
+  "installed_binary_sha256": "2095b718f470fa01b5a98ae6a1a8a3b5cd62d171597c7e11d34f199f0edcd69b",
+  "source_commit": "33897110ea3c1824ebfc0ef122646c2f4bddd962",
+  "report": "docs/acceptance/2026-10-19-midpoint-survival.md",
+  "video": null,
+  "verification_scope": "020 day3 qualifiedpass; actual midpoint native restart/exactreload/freshF ordinaryreplacement; partialday4 untreatedwater and unsupportedclosure",
+  "identity_note": "Clean3389711/native2095b718fixed; deliberatelyownedpausedruntime, nofinalshutdown",
+  "limitations": [
+    "020closedincomplete onunsupportedreturn88; day3andmidpointaccepted, day4/seven-dayincomplete.",
+    "Local-only artifact hashes identify bytes, not behavioraltruth or publicavailability.",
+    "Save/Quit/Load acknowledgments unknown; laterobservations reconcile effects withoutreplay.",
+    "Untreatedwater source/collection do not prove potableoutput or full-week coverage.",
+    "Source/tests/native/process/graphical evidence remain separate lanes."
+  ],
+  "artifacts": {
+    ".runtime/campaigns/seven-day-campaign-020/0001-capture.json": {
+      "bytes": 2083,
+      "sha256": "53fc1b114640c5238eafd374846bf134417a20eebaf7cbf73eb4356e250f808d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0001-stdout.json": {
+      "bytes": 4649,
+      "sha256": "8d90f7533f877192ab44acbf60398586670b6535c710c5eedf7008847267bb94",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0002-capture.json": {
+      "bytes": 2080,
+      "sha256": "6b11d6b46a33c69ea1ac65a330a5f3ca7acf43ae7f59df3b6872b4facb85a835",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0002-stdout.json": {
+      "bytes": 197394,
+      "sha256": "0d581e42b0e7d96e55bd754147349778dfee2cb46ead54303d62710af754e6c2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0003-capture.json": {
+      "bytes": 2083,
+      "sha256": "63e56c7927ebf6da8e3a50c3dad02c84f41a78e2f660a60360a1be908742c74a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0003-stdout.json": {
+      "bytes": 4649,
+      "sha256": "e4df04c4d1339d7556280456f31555e1b605902b8faff78921a52df1197b9374",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0004-capture.json": {
+      "bytes": 2084,
+      "sha256": "8efc6e7d4fda0c631b7b693b44d2e2438369af0c57e3784e530e57eff921740c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0004-stdout.json": {
+      "bytes": 4650,
+      "sha256": "790f74ba9888b8b24db74e348e98bfbcd91d452285df86e91db5780b1e302cbe",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0005-capture.json": {
+      "bytes": 582,
+      "sha256": "799f69d99a00b71bd99cac03c72e0bfdde7bb3cae3042364eefab7befa32bcce",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0005-stdout.json": {
+      "bytes": 1158,
+      "sha256": "9dac425809f2e6ba76bfb42dce0fdd7daba17bd4cef9403c2fddfe41c57ddfc6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0006-capture.json": {
+      "bytes": 582,
+      "sha256": "a316fc3a68c53d722703b3724bc46c9783fc5a4ca587f3e7849649e76408df69",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0006-stdout.json": {
+      "bytes": 1158,
+      "sha256": "47d9f2905880721b2b487ccd264b03381d1ab85844e996193151f15871189e8b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0007-capture.json": {
+      "bytes": 2084,
+      "sha256": "a893aee103dd85d8346dea4c69dbd14a85926402a4a8d11d749efe5592e80f99",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0007-stdout.json": {
+      "bytes": 4650,
+      "sha256": "75f9f2eeb475efa865ef0001ae77a6745bd98e2136ea89b49e4718af18f0583f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0008-capture.json": {
+      "bytes": 582,
+      "sha256": "9925f1b98f38a426a66cdaf23291ae9c8072cf7afa7f24d509924827f8847305",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0008-stdout.json": {
+      "bytes": 1158,
+      "sha256": "2e19013b91a26eaa64662d047d68ca1eac9df7e678850561c58a9eddb32d933d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0009-capture.json": {
+      "bytes": 582,
+      "sha256": "24817357b2c66493c1cabf6ac280c72d63cd1143f6e95ce695631b0b70665467",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0009-stdout.json": {
+      "bytes": 1158,
+      "sha256": "cab611d0904640691fb8e61b6352e1cb51b6e401ef9f54857493e055e4bae765",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0010-capture.json": {
+      "bytes": 625,
+      "sha256": "7f2cd4cf9b2f8ffcd801a84caee2d247fa0ca50ff4fdf47797c0e398b42aa53c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0010-stdout.json": {
+      "bytes": 3190,
+      "sha256": "9dfe43e5df9276f1078c9315a5ba6309ed4a60809b460d76849e88372d711c6c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0011-capture.json": {
+      "bytes": 583,
+      "sha256": "dfb1ac9c12b65d90cf18c7bbb9995065ef3e1dd96feaa8ec486b1d6e7e360945",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0011-stdout.json": {
+      "bytes": 1158,
+      "sha256": "c51192910fd5028395ca62d4ed1f1c732fc9d1ebc42330c323b97b46c7e42977",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0012-capture.json": {
+      "bytes": 2085,
+      "sha256": "ff9ba4f0a1404a60a8fe2fb40a582c2142e73dce565b99839daa0ed70847707e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0012-stdout.json": {
+      "bytes": 4650,
+      "sha256": "3fe37cf5aee05e70ca2872116f64183e71405255ff605246026b05c393f206b3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0013-capture.json": {
+      "bytes": 580,
+      "sha256": "f0d27e959d7a61a2cdde43ed11abeec539335c361fce6b9495399dc7cee70b41",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0013-stdout.json": {
+      "bytes": 784,
+      "sha256": "030312c85abfdb7d387421085a4654be7e8e3cca9e4c62da2bdbd03303bed4b2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0014-capture.json": {
+      "bytes": 580,
+      "sha256": "85589da0558815be569b2e91eecddccdabf7efa3eef23d0c6ada47b62bf3c884",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0014-stdout.json": {
+      "bytes": 784,
+      "sha256": "5f69ce9e95188cfba51a73294ecd507651638a5c2d95be3535d4724a6c664672",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0015-capture.json": {
+      "bytes": 625,
+      "sha256": "0fae65e2758b83c604b2f0e28946d90414b437f41015a85297cd37ca11e366ac",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0015-stdout.json": {
+      "bytes": 3190,
+      "sha256": "7cfceff6c77269ed49e1167476ca244debec275a306d94dd7406ff054f3ab31a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0016-capture.json": {
+      "bytes": 2085,
+      "sha256": "8e25023557dad4ab3ee25ffb388f9629938f3c15e355ebcf0fca67766f29bb79",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0016-stdout.json": {
+      "bytes": 4650,
+      "sha256": "21faca51e16b4b92c852f1535a0170633d0252fb915813923d0cc2630c882558",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0017-capture.json": {
+      "bytes": 224,
+      "sha256": "afac95e764d510929bfe379872b2499f2a26089193d941087b89c65548a4a638",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0017-stdout.json": {
+      "bytes": 130,
+      "sha256": "ad4d9258e695eb422c63952375e4824add4052f25bcc51994fecb94667cd5f41",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0018-capture.json": {
+      "bytes": 2081,
+      "sha256": "77a6af07b4dad7fc459ee2bafec823214aca214bcb384c50c91d071e7bfb98c7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0018-stdout.json": {
+      "bytes": 205432,
+      "sha256": "6bf64aee1cdb12b94972d269d4fac88732d28275a2fbc5628e8053661d7b84a4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0019-capture.json": {
+      "bytes": 224,
+      "sha256": "76cddb4d08ed118ee5b1c099c3fc1a822714a7bc40548780125357f149572222",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0019-stdout.json": {
+      "bytes": 130,
+      "sha256": "ad4d9258e695eb422c63952375e4824add4052f25bcc51994fecb94667cd5f41",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0020-capture.json": {
+      "bytes": 2084,
+      "sha256": "3130959a6cc3957e5c13785fd90a4bb7275fd1d4e25aba0c73811be2d0525cce",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0020-stdout.json": {
+      "bytes": 4649,
+      "sha256": "f219e1f411dac45f6b83f60eafba2bf00c5baef43b70b40ad61b9daf80901b00",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0021-capture.json": {
+      "bytes": 2081,
+      "sha256": "97db5165473664ca19e13421442aafedfc4bd3f4c21e9051c22d7b66f0d3cf3c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0021-stdout.json": {
+      "bytes": 206040,
+      "sha256": "e99714a01a51b3993865f60109e748a879ca17e13e6c025bb2dde61cf09fe49b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0022-capture.json": {
+      "bytes": 2085,
+      "sha256": "0f6a3bd786b6759160817d04754422db824437f12f0c1d31fe342f7ac67c70ac",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0022-stdout.json": {
+      "bytes": 4650,
+      "sha256": "7ce10103c67d41f4e6c5f6c2707e9192b109ba53790c987e0fcd6923eb2ca68a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0023-capture.json": {
+      "bytes": 579,
+      "sha256": "39103c3b586a740733d79a1408bb33e719d2caec1804c0c5202adf9e776c28e1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0023-stdout.json": {
+      "bytes": 681,
+      "sha256": "5b05f7767a204cb6d868883271e6c8665291b2b52c8ada20bad9c7815254a19f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0024-capture.json": {
+      "bytes": 216,
+      "sha256": "38fc109c9771fc25e7c7490abc695fb49788e4bd90180ea466b56c31d40968ad",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0024-stdout.json": {
+      "bytes": 213,
+      "sha256": "59e011b3cc9c9dc202eedb957b059206092c0756a38cc83231cff943681c452a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0025-capture.json": {
+      "bytes": 582,
+      "sha256": "e818d4f73ec92a9738915ff21e3e797a2ee83e506b96d46dbff1c30de612666c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0025-stdout.json": {
+      "bytes": 791,
+      "sha256": "a4fdd8d9e942e4746129a31aa084a1a745c2dae2c0636ed5f5f398ac72040068",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0026-capture.json": {
+      "bytes": 224,
+      "sha256": "acddc4c8001772227b33f6a0bbd588fea4d8d62d359104e822350e11c3a3edf1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0026-stdout.json": {
+      "bytes": 130,
+      "sha256": "ad4d9258e695eb422c63952375e4824add4052f25bcc51994fecb94667cd5f41",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0027-capture.json": {
+      "bytes": 582,
+      "sha256": "873debea594756316f731943bd1078428296db255f4d40a44f8a6db4c05a60b6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0027-stdout.json": {
+      "bytes": 791,
+      "sha256": "e90ccbc046e81b70bde4583522e77cb237a9c012c1cde520cf5d58c820f06ad8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0028-capture.json": {
+      "bytes": 583,
+      "sha256": "033e26534ac1802cfd190083d5bece2ed74ae0c9c6a0ff22bee14cab2772ec70",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0028-stdout.json": {
+      "bytes": 792,
+      "sha256": "af68f6b543175f2c3a01ef8e1d8abfb123b4f0a8dc09acd9481dfb1e5531795b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0029-capture.json": {
+      "bytes": 579,
+      "sha256": "ddc76e8ede842ee32eb10b71a1c1b093e78553bfe066452d28c0fc74c1627c72",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0029-stdout.json": {
+      "bytes": 682,
+      "sha256": "8d42c020e0c9904207d0cd8d01374e824ec6a49aab93c774e36a7726966ebdf7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0030-capture.json": {
+      "bytes": 216,
+      "sha256": "9c9ad6177138f1e066c1cf23f2398715aae8a21f2302129b473b7c7ef67d3e66",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0030-stdout.json": {
+      "bytes": 213,
+      "sha256": "36fd1af2d7f54ed22bf9853db07fbcbc533d503d3b5ca762c3acba4038a14e5f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0031-capture.json": {
+      "bytes": 224,
+      "sha256": "c22924519157246e98a5ee598c3c3059ee38ce467a54887a2c47e91819a723c8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0031-stdout.json": {
+      "bytes": 130,
+      "sha256": "ad4d9258e695eb422c63952375e4824add4052f25bcc51994fecb94667cd5f41",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0032-capture.json": {
+      "bytes": 570,
+      "sha256": "37d4a0e45503b4795fbfc4ef4d9f66acadb2b1a5b929a8fc419f53fa7d86d600",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0032-stdout.json": {
+      "bytes": 779,
+      "sha256": "8f7f7a56e09107b260badcaae19db4842a04876187a4216d2cacff0ff238eeb6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0033-capture.json": {
+      "bytes": 572,
+      "sha256": "d2e358a167e72e26f56ae07d82bf2eb05e0cfcc2d1e907346861d531b5a570be",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0033-stdout.json": {
+      "bytes": 781,
+      "sha256": "9f3f31a8c603fb21aead142e87a145ab2453ad2bb4986b1e63077ca010c22c59",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0034-capture.json": {
+      "bytes": 572,
+      "sha256": "2d532ea214dbd74a1eebe42d849cb95dd4697db3056bd4d358908a92fd78d698",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0034-stdout.json": {
+      "bytes": 781,
+      "sha256": "255a2c45d1d9833601cdc6bf76b992e024ddca00f46ccea5e8950566983974a0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0035-capture.json": {
+      "bytes": 586,
+      "sha256": "27d491fff619060a1e036629324393f1a7285ecce7f68cc65b2330a4d4a1d995",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0035-stdout.json": {
+      "bytes": 927,
+      "sha256": "21aff7453b5da6b0c3f787840463fa865d54ec6f0774e6c0e4d01cdba1d219aa",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0036-capture.json": {
+      "bytes": 568,
+      "sha256": "d99daee37e5ee597781c4795252827fe2b0bc7d3fe33f7d6f89c13c20faab0dd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0036-stdout.json": {
+      "bytes": 671,
+      "sha256": "271ceeaf26dbac7aced53b2a5a33ab056d7a71207ce819fc08e5f8b07b332aac",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0037-capture.json": {
+      "bytes": 572,
+      "sha256": "efd5df5d35c94bf6f57a538869ecd0bcfee7e1f8db4b3cba3d402dc0109ab7d6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0037-stdout.json": {
+      "bytes": 781,
+      "sha256": "5d45b03960abd11f11733e15bb6abc9422fba912bb465fc8a79d4340c39273d4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0038-capture.json": {
+      "bytes": 573,
+      "sha256": "5380227d0371178d8e12142ef28aa1aa8fbd5737b72b6c831301d0339c017a90",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0038-stdout.json": {
+      "bytes": 782,
+      "sha256": "07acac3da941bd14da55546dfaeba0894bb376b2fc56e027e9d7de83a0135d8f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0039-capture.json": {
+      "bytes": 570,
+      "sha256": "78d8b47109c2301de71b71b702e04aff3d58a39b7ea2c5b4a211eb6704046274",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0039-stdout.json": {
+      "bytes": 775,
+      "sha256": "6615917558c198ca5bf7142d584ac0bbf9cfd651b095482bffd8e31aca705d2f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0040-capture.json": {
+      "bytes": 216,
+      "sha256": "92251b6bd0d36b0335a229acd87739d0e999d911614677e22335be7716b9446e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0040-stdout.json": {
+      "bytes": 213,
+      "sha256": "1f0fc6361d1cb9ce4ed430d92c1e1ef44593e33a14f706001893cb20ce764961",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0041-capture.json": {
+      "bytes": 224,
+      "sha256": "927cf33cdada33d7722e802455a3d09267fdf5ee59beffd94c3f16543e350ea9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0041-stdout.json": {
+      "bytes": 130,
+      "sha256": "ad4d9258e695eb422c63952375e4824add4052f25bcc51994fecb94667cd5f41",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0042-capture.json": {
+      "bytes": 2078,
+      "sha256": "14a9f46133e077c042b9a7ddc976ecc6050fb7bc8d21f734cd628ab39d29644a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0042-stdout.json": {
+      "bytes": 4643,
+      "sha256": "259c9d1ac68f4e86e7ca350a47be3a0f393323b8d65c6ffbcd1cfb4396d54655",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0043-capture.json": {
+      "bytes": 2075,
+      "sha256": "dce9cd43ee6eb2ccc3936880daec6aadf76906d759a5400aaaa6838824279027",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0043-stdout.json": {
+      "bytes": 153564,
+      "sha256": "c5f59bc26076493adfebdc6778a828df57102a310590a38bedb647256ede47b0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0044-capture.json": {
+      "bytes": 2079,
+      "sha256": "fb44e8ffb1c14aa2753f6144894c9d35356a0e892514e354fd76b3e402f5f797",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0044-stdout.json": {
+      "bytes": 4644,
+      "sha256": "2c9a70e765f0d757150d676c4d2fb94c51b1fdd314a219de95560d8cf3f180a1",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0045-capture.json": {
+      "bytes": 2080,
+      "sha256": "69e1bbcaf7de6d5a6651b93373566d924d8cf0ccc7337c36fda17a10377fcc84",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0045-stdout.json": {
+      "bytes": 4645,
+      "sha256": "c0c09d3bf7748b7a36b82e26e2b509153389806f8b39ae5344b21e60b8e641fa",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0046-capture.json": {
+      "bytes": 2085,
+      "sha256": "5d7f03cc9a6eb39fb42a722750a824fde9cd5120a8941511d53721285cf6a542",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0046-stdout.json": {
+      "bytes": 4650,
+      "sha256": "99437d4d4672ee5f9aff58e36ef41b668565daa04a5e32c13fd3caaa6a384f34",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0047-capture.json": {
+      "bytes": 1970,
+      "sha256": "b7925587ad53faf1e180277b5b8140896debb1bf5ff17ae356d6c44c6281a0ed",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0047-stdout.json": {
+      "bytes": 4535,
+      "sha256": "ce5d5af75ff88aad3141db98c5c318a74d265e50e784c80f78797a340226b68c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0048-capture.json": {
+      "bytes": 1756,
+      "sha256": "96a20f8340a8276bc0dc5737c929ed62cc59f982e43f9a89758e0536bd4b4f07",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0048-stdout.json": {
+      "bytes": 4321,
+      "sha256": "3b65e9c0500cfeabd8466eb677676120f7966c902a375e7d8f1deef4f8ef7d80",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0049-capture.json": {
+      "bytes": 580,
+      "sha256": "6d49eec6d21af1e4ad4b039afbe13a93ce4ca4d61be30970132b022768ff9b02",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0049-stdout.json": {
+      "bytes": 1155,
+      "sha256": "2d9fbc5e8b1813b5e2cbdca9af3864f25dfd5b381302248dd2bcfe1a7c201f86",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0050-capture.json": {
+      "bytes": 580,
+      "sha256": "86e0461a85076d8fd8020c9e7ab286a319db2556da786c0d95d34e2f1b8be292",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0050-stdout.json": {
+      "bytes": 1155,
+      "sha256": "cd00b73f6e675037dfd27313c9d6d4f4578b6cc7ddfb7287be79b34e833fa99d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0051-capture.json": {
+      "bytes": 580,
+      "sha256": "bbefb26e82b50c50b1633bc4fd7b8b057540b4396a2a5209a09e6efb8947045c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0051-stdout.json": {
+      "bytes": 1155,
+      "sha256": "fc56e2105394b41387e04583f2d66baf565ed53b7139f2d7f207b8897cea81dd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0052-capture.json": {
+      "bytes": 580,
+      "sha256": "f80d21b84103fae4bb1d5c12d8cb4c76fdc6094c8d485a240f738d1384ccade9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0052-stdout.json": {
+      "bytes": 1155,
+      "sha256": "97a4c9920cb01c51102fde10733074b0a1e912236cd2c0a22a216a9658aa3699",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0053-capture.json": {
+      "bytes": 580,
+      "sha256": "e9f8b9a349651f0e85166d26746ad5b8f4b8522b0e0944d3e851b6d2047d9c84",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0053-stdout.json": {
+      "bytes": 1155,
+      "sha256": "34f0ede50ec5f9a112e1fdb0308a46cb2026598b4455d9dd33019e557f865eca",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0054-capture.json": {
+      "bytes": 577,
+      "sha256": "50d27bba4c349b709c7a9f6206a5638a23a1781d83cd41f31ad1ed97a96fba7a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0054-stdout.json": {
+      "bytes": 781,
+      "sha256": "14aedb31a1e01225b247537eb19efd674d1af11e735a2f7dd20e9377140f8250",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0055-capture.json": {
+      "bytes": 224,
+      "sha256": "b3c2c5e2a18ae6ea7e27c6aab13241c92faf361da9d9f634def6f435c3fcf91d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0055-stdout.json": {
+      "bytes": 130,
+      "sha256": "ad4d9258e695eb422c63952375e4824add4052f25bcc51994fecb94667cd5f41",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0056-capture.json": {
+      "bytes": 573,
+      "sha256": "ca6ed323368d9d887526cd477f3248daa9e92d953378ce10b066b8298b264883",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0056-stdout.json": {
+      "bytes": 159163,
+      "sha256": "2c601e71e42208ac678c4ccb7035ed2d865aeaef3bb029167d31987d272784ab",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0057-capture.json": {
+      "bytes": 224,
+      "sha256": "c8d29fa051bb11bd1aa61146595c67784c8f6efb28f838b0a79af5956cff2742",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0057-stdout.json": {
+      "bytes": 130,
+      "sha256": "ad4d9258e695eb422c63952375e4824add4052f25bcc51994fecb94667cd5f41",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0058-capture.json": {
+      "bytes": 576,
+      "sha256": "c93be72b7fefe71b95ec9f936d88cf42d155f858bc0ec7d2c8ed35a43abfb0e2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0058-stdout.json": {
+      "bytes": 780,
+      "sha256": "c173d8db9263cba1bd3e01772946e1e451a633754914caec9b9780248776a820",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0059-capture.json": {
+      "bytes": 577,
+      "sha256": "f72f0dd2707b870bba9b0554a66da72632e81ce01cb4a5d1f9c24955a8fe10f8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0059-stdout.json": {
+      "bytes": 781,
+      "sha256": "111d1cb2799e0585122d98f6dcc2a50f5464afdeec6d87a814d2c9fa1fc53056",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0060-capture.json": {
+      "bytes": 1757,
+      "sha256": "965ffa0591ee57a0a083a3e6a9bb25558fcb6f65c52f21e2975c57e9c559e424",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0060-stdout.json": {
+      "bytes": 4322,
+      "sha256": "7cd855aa04d965069ee04ab6969310892e33f815e23c3f3449c4e76f61c0514f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0061-capture.json": {
+      "bytes": 581,
+      "sha256": "6c550eb453e72ca24eb6e4d840a0221fea04bfa69a734488f75928cc32340b81",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0061-stdout.json": {
+      "bytes": 1156,
+      "sha256": "db312526d6deac4db81d99330a885c6726348f63bc07bc4325403ca04845bf00",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0062-capture.json": {
+      "bytes": 581,
+      "sha256": "53c3bfe840fcc0962e06b0e0c068a201f7e22704c7fddfd8513ad316e103009f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0062-stdout.json": {
+      "bytes": 1156,
+      "sha256": "7a88d7e33a5ab58c7462508b871cea2356ef8086a3cd16c3d720de06e29ee1c3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0063-capture.json": {
+      "bytes": 581,
+      "sha256": "a0e6b72da29c324f34aa045dedf157eb2d9581b8d969c7a85b8dc614975e21a6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0063-stdout.json": {
+      "bytes": 1156,
+      "sha256": "c384521520543d87a8ff5b72affa74d5ce68c598f3d4b426485fe4019d2d9d4a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0064-capture.json": {
+      "bytes": 581,
+      "sha256": "c7439fbd1de7592a7a2c8ff8d75dd69c03876a6266c6f5a9a4e15e899645736d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0064-stdout.json": {
+      "bytes": 1156,
+      "sha256": "16687e9df62709cf6e821e4028824f850f817496c1bbac661f7b79de04905da3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0065-capture.json": {
+      "bytes": 581,
+      "sha256": "bf669a05da92e51d066c2b55d24a655b901d48b8748bfce03e3d5e71ef208b13",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0065-stdout.json": {
+      "bytes": 1156,
+      "sha256": "0c281e23c7f76fe9f5d5f64837422b6d376f065a7788aa47aa9952a2d0c85139",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0066-capture.json": {
+      "bytes": 581,
+      "sha256": "11a394a5aa9e7c135d921f905618c639fb8ac92fd5b73fef80b541ab7dc3a6fe",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0066-stdout.json": {
+      "bytes": 1156,
+      "sha256": "17ef1ee4b3a7c3194a27fc0f0771e6c3fffb73ceef1d5d48decc2f8497fb5f72",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0067-capture.json": {
+      "bytes": 578,
+      "sha256": "fb9e95ab500f575fab8a4c0a1cd89068196fac8c2674980eddbe000b4996ec55",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0067-stdout.json": {
+      "bytes": 782,
+      "sha256": "295f542420dbaf75902d898bd7e3843fc0714a8949ab992a1a51df43cb29e335",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0068-capture.json": {
+      "bytes": 2165,
+      "sha256": "79b9eaae0cddd5b32fff3ddd70da593f80cf526b5ade7820b8a3e5fe3f120b53",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0068-stdout.json": {
+      "bytes": 4730,
+      "sha256": "a90a3892c47964941f149ae495d6584ec3053c4eaf81184f40a14670eebadd0a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0069-capture.json": {
+      "bytes": 2198,
+      "sha256": "736e6a198d139aa22839956b783fe55c28519b6d3833e539d9902d60336fb417",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0069-stdout.json": {
+      "bytes": 4763,
+      "sha256": "b3733eb3a1a5c789b36c706cb4b02b70d3a5eb3ea133fdde2d91993daa9f65e4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0070-capture.json": {
+      "bytes": 2171,
+      "sha256": "d0381002c12156cfc3eb9ef06318f54420207a55ebea28ed58bacec6841077dd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0070-stdout.json": {
+      "bytes": 4736,
+      "sha256": "caa7e807c51ade48913afaddabe25d5cbb33ecaa00e7da1402ff3c6b0d899fc7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0071-capture.json": {
+      "bytes": 2173,
+      "sha256": "3ef69ce89efd51c2d51c374ec8f77abcd719b3a55dc102e1d7b17b71c165d7cc",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0071-stdout.json": {
+      "bytes": 4738,
+      "sha256": "d9708991bc2bcda17cd7c1c9d42579ff6d6fec7a129a084caaddd967dc38e783",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0072-capture.json": {
+      "bytes": 2162,
+      "sha256": "6a0ac6d5a665c5c676c7a32c38fc685e833a28bd74db78c35f06d1266600a47c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0072-stdout.json": {
+      "bytes": 4727,
+      "sha256": "1a57a193d2a6e546ad8df131b197fbe46b98ab47adef161bf4e1c06b2e11d3e6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0073-capture.json": {
+      "bytes": 2139,
+      "sha256": "fd8be9be37f085cd5c0fd0e7d258f90eeab1f114906b688da698d7a782c93616",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0073-stdout.json": {
+      "bytes": 4704,
+      "sha256": "868a9fdbf332c9940b1d929f184c041e72171199f62e41bfc595a92dbd5f713b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0074-capture.json": {
+      "bytes": 2186,
+      "sha256": "8d0dc3c89e650c807b663898b84e2a884de0486c6e60e6c32ab2b4d93420ef78",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0074-stdout.json": {
+      "bytes": 4751,
+      "sha256": "a483dfb3bdf47cea8cf03cd97e6ca8892e0375cafe3f27e8d973bc5c17b33345",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0075-capture.json": {
+      "bytes": 578,
+      "sha256": "7c17d27c24d55b57f36f053f31ca7938561b9b62786fb2f895a61d17fe698e55",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0075-stdout.json": {
+      "bytes": 782,
+      "sha256": "e838ea60fdb0791ff2cdb0d91907daadb4d371f5a06ca50e1967e42781239494",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0076-capture.json": {
+      "bytes": 581,
+      "sha256": "82ad049c1758b16143d7f47e532a0deba2f935b4cfafafffbe6653f37884b862",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0076-stdout.json": {
+      "bytes": 1156,
+      "sha256": "0f7aa2ab4f5a44982eaeb01736a823729d2e9cf22caf9943009d07b115f937cb",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0077-capture.json": {
+      "bytes": 581,
+      "sha256": "5a85809fe877701986e13cad069201f8687a72e91321eb54f4cdc23923921083",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0077-stdout.json": {
+      "bytes": 1156,
+      "sha256": "58fafe4cc7a7410a0e3fa4dbdf79cf806a94203cba038a31ad51ad9ffccf07b4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0078-capture.json": {
+      "bytes": 581,
+      "sha256": "f0d97c55f17414e870b59441d0dc267fd7c9c5a3451ddcba54ad545c2db70efb",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0078-stdout.json": {
+      "bytes": 1156,
+      "sha256": "98197b057689737ded45c53de663b1a0f881b71c6c11e41a66459ef79e80e7d6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0079-capture.json": {
+      "bytes": 581,
+      "sha256": "0f2e23d65d18e349b8ebdc59ed6a3ddea8195fd217bc6873d8dd5029f529af7e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0079-stdout.json": {
+      "bytes": 1156,
+      "sha256": "1ac1e930ddf1e3af38a140619ed2052ecbd98b6cf6435b83228e2d0c9ac33c90",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0080-capture.json": {
+      "bytes": 2186,
+      "sha256": "d8caba4461dd095ea46a8eb54908dca6765cd3380a75e843f9eb649a106d42d9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0080-stdout.json": {
+      "bytes": 4751,
+      "sha256": "ee39781cf33c2611617aaac5ba843ae2a17d61aabddecb6f25740f67f4ed5c82",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0081-capture.json": {
+      "bytes": 580,
+      "sha256": "d4feadec604918f2259a33254c6edb0f6b28b32a27954ed10c696cd2dc47ba8b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0081-stdout.json": {
+      "bytes": 1187,
+      "sha256": "cc5e874e7a7b76c6a78d6a8a505b495af2ab7e59c3f2eb6f87408691b42126d3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0082-capture.json": {
+      "bytes": 584,
+      "sha256": "155071a10d5852732475d080c46167153c85bb984ef51fedbcf5a619d99890fe",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0082-stdout.json": {
+      "bytes": 980,
+      "sha256": "d230adc1b9920b403eda5bf357309930f3dddbc5e7f75e2229fd233fa7049592",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0083-capture.json": {
+      "bytes": 584,
+      "sha256": "5d62d923deae57ee3497a63e72f78d6cdc58ef56aa07a57e9bd5038f8741966b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0083-stdout.json": {
+      "bytes": 980,
+      "sha256": "e460c750e2ff56ba804ec34f6c927bbe20e7b6b50dd752565f2a22362bd69129",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0084-capture.json": {
+      "bytes": 584,
+      "sha256": "2a23ce122ed613e0639e491b95f2ad4e668c9295ca0846718a16186f772c725c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0084-stdout.json": {
+      "bytes": 980,
+      "sha256": "2644018c47a8e29e68a167784eb8b87a5cb0ff66c981ad546b3c4bb8d698dff5",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0085-capture.json": {
+      "bytes": 584,
+      "sha256": "d8488bea88aa1250ba1b7d5d818264aa80b7d15ca16afc6eeea0a36eac1317bc",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0085-stdout.json": {
+      "bytes": 980,
+      "sha256": "657a79eb1ff0c31fd9346ab5e055d571d5eef9d4dcfe1e7dcbb9cb1076670e0c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0086-capture.json": {
+      "bytes": 584,
+      "sha256": "38c582a9c15ccba981bd4ed5d4389549576c8a55f06c32814e287fd5bc2cd4d3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0086-stdout.json": {
+      "bytes": 980,
+      "sha256": "2f0facc60a0118a79d54bcc34fe8c4781c7069da2f1ccaf6dbef73e65269d225",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0087-capture.json": {
+      "bytes": 584,
+      "sha256": "4f133d83ae213d260a9a411e0e15bde10353ea25f3699a465129c799051489cb",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0087-stdout.json": {
+      "bytes": 980,
+      "sha256": "73b57cc238dd5b8bf244811e7d2b1d67ff16db8576bb8c9743de597391d70bff",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0088-capture.json": {
+      "bytes": 586,
+      "sha256": "5d49672b5810cdd2d122e510a0ae9ccc15113988b6d841a18925ef067c3b8ecd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0088-stdout.json": {
+      "bytes": 583,
+      "sha256": "c5682193a47bbd5d0d29fb419346ac882ceb74c336dcd9a2ae65ab5824519cf4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0089-capture.json": {
+      "bytes": 224,
+      "sha256": "043232b8c610552f8be55f3f6cca1545ccaf430cc5f58128eeaf0ee1480d0e89",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0089-stdout.json": {
+      "bytes": 130,
+      "sha256": "ad4d9258e695eb422c63952375e4824add4052f25bcc51994fecb94667cd5f41",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0090-capture.json": {
+      "bytes": 576,
+      "sha256": "a6b18424bffdaf4923c6220eb403ae43f49742c99c2b7d28f7cc6b2b11ef579b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0090-stdout.json": {
+      "bytes": 218988,
+      "sha256": "f741c53b2c738500c5a6080acb29933fb0dee9506dfc049eac916eac491ad018",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0091-capture.json": {
+      "bytes": 224,
+      "sha256": "233d4832f0a6b82595970cc887addb2f205415b6b32ebc38e4b4eef0916d1bf6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0091-stdout.json": {
+      "bytes": 130,
+      "sha256": "ad4d9258e695eb422c63952375e4824add4052f25bcc51994fecb94667cd5f41",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0092-capture.json": {
+      "bytes": 579,
+      "sha256": "51d37cf9d519d92b21080c4a70f3aa85b52d7ca68e5c259df0766bf9dc422374",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/0092-stdout.json": {
+      "bytes": 1186,
+      "sha256": "1571208e9f4b3ff168a3f3f129755d802e1e2fb7892b419f0728561e43661744",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/__pycache__/record.cpython-314.pyc": {
+      "bytes": 11280,
+      "sha256": "31346efee5e8fda2f78cb696dbea23a07257cfd75d7a93f70e6bb459d9da12bf",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/admission.json": {
+      "bytes": 5076,
+      "sha256": "47afc0476af32ca579a64a1fd5e171e054c6890a65d9427defb09321eb6e3017",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/closed-outcome.json": {
+      "bytes": 1458,
+      "sha256": "388fb218c3284dc940499146c9866b548c49f98e904e2d15322356d2db29ea8c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/commands.jsonl": {
+      "bytes": 41063,
+      "sha256": "409f72a2839edfd7e07942e0ced016e155fccddddbed81082b1392a8be7f9798",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0001-frame-1792420204477-81024-1-3896.png": {
+      "bytes": 148218,
+      "sha256": "8a4635c2dc554c5998025d740986aed0f90c846f3b154982a1f264f9854bed4b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0002-frame-1792420204477-81024-1-3902.png": {
+      "bytes": 148218,
+      "sha256": "8a4635c2dc554c5998025d740986aed0f90c846f3b154982a1f264f9854bed4b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0003-frame-1792420204477-81024-1-3975.png": {
+      "bytes": 148218,
+      "sha256": "8a4635c2dc554c5998025d740986aed0f90c846f3b154982a1f264f9854bed4b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0004-frame-1792420204477-81024-1-4100.png": {
+      "bytes": 148218,
+      "sha256": "8a4635c2dc554c5998025d740986aed0f90c846f3b154982a1f264f9854bed4b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0005-frame-1792420204477-81024-1-4125.png": {
+      "bytes": 69320,
+      "sha256": "07af43369a8d07e406cb2c7a45c814f0f288e666bc57544ff4aa74ec8f226794",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0006-frame-1792420204477-81024-1-4166.png": {
+      "bytes": 69415,
+      "sha256": "84a92c60531113f9d9e5bf6e6b68308227ec5d7543c984e5094f5fadcaf193ec",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0007-frame-1792420204477-81024-1-4188.png": {
+      "bytes": 148163,
+      "sha256": "1329dd2460ff61f44631a6c5fee0999325697ffac739526d795a0c7506f21dd2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0008-frame-1792420204477-81024-1-4210.png": {
+      "bytes": 73182,
+      "sha256": "f332b90fc013b429a7255c3b8762b34a00eb91f82f3696ebf948d3fd83411f32",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0009-frame-1792420204477-81024-1-4230.png": {
+      "bytes": 73200,
+      "sha256": "cd59bd514db2959d791e1b69409985700ce0487b85e852796f484e091fb04338",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0010-frame-1792420204477-81024-1-4254.png": {
+      "bytes": 148219,
+      "sha256": "a5071e2eb567d0f9c0dff7a6609f2a0a07d3fbef4f4048c8252f66f82b3d6401",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0011-frame-1792420204477-81024-1-4277.png": {
+      "bytes": 72991,
+      "sha256": "9ea31e3cb66234be8a88a5198dad9e60727db34bac1f00502fa14ec639fc870c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0012-frame-1792420204477-81024-1-4297.png": {
+      "bytes": 148227,
+      "sha256": "d889dbb5e7f80e47db67699bcea92b7884756206c19bc4a73fa8e65b4182b1a2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0013-frame-1792420204477-81024-1-4329.png": {
+      "bytes": 141993,
+      "sha256": "ab31dbf92a90026e721018dc41482d84e9d4393401a8af76d4693780af20c5f4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0014-frame-1792420204477-81024-1-4333.png": {
+      "bytes": 127153,
+      "sha256": "bcdc49b39bba18d5e17df7187eac91d0dd1bb4f77af85cd8c9b73e8eeaeb83c2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0015-frame-1792420204477-81024-1-4355.png": {
+      "bytes": 148253,
+      "sha256": "aa7fa50bea224130d88ea9c0d8aae7341b93a69e498720e6d5faedde5e7ca3b9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0016-frame-1792420204477-81024-1-4383.png": {
+      "bytes": 149969,
+      "sha256": "336ad695ecb805119e526d7cf6541eba48c76c533c58c401c0cf3e2856d201e4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0018-frame-1792420204477-81024-1-4411.png": {
+      "bytes": 149969,
+      "sha256": "336ad695ecb805119e526d7cf6541eba48c76c533c58c401c0cf3e2856d201e4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0020-frame-1792420204477-81024-1-4566.png": {
+      "bytes": 149969,
+      "sha256": "336ad695ecb805119e526d7cf6541eba48c76c533c58c401c0cf3e2856d201e4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0021-frame-1792420204477-81024-1-4567.png": {
+      "bytes": 149969,
+      "sha256": "336ad695ecb805119e526d7cf6541eba48c76c533c58c401c0cf3e2856d201e4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0022-frame-1792420204477-81024-1-4575.png": {
+      "bytes": 149969,
+      "sha256": "336ad695ecb805119e526d7cf6541eba48c76c533c58c401c0cf3e2856d201e4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0023-frame-1792420204477-81024-1-4583.png": {
+      "bytes": 147756,
+      "sha256": "157d8ee9211ce4c771427f45f938d88ab56515c96afc903d1b4e6141d09d393f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0025-frame-1792424674005-81024-2-4602.png": {
+      "bytes": 33256,
+      "sha256": "f0c3d19241a73f63cb4f13eb60c710e9bbf421fdee232d61518a5a7ea341dba9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0027-frame-1792424674005-81024-2-4633.png": {
+      "bytes": 33256,
+      "sha256": "f0c3d19241a73f63cb4f13eb60c710e9bbf421fdee232d61518a5a7ea341dba9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0028-frame-1792424674005-81024-2-4637.png": {
+      "bytes": 33256,
+      "sha256": "f0c3d19241a73f63cb4f13eb60c710e9bbf421fdee232d61518a5a7ea341dba9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0029-frame-1792424674005-81024-2-4798.png": {
+      "bytes": 32955,
+      "sha256": "afaeb593e97fa2da80aa591a7787086b2f3d4b9580bda24e0b976b815bf3fdd9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0032-frame-1792424908938-65691-7.png": {
+      "bytes": 33356,
+      "sha256": "e9613a78a9242491aab4d58ab4f6f6ecfe6a395df0aff8ea812d4c0d1f15d2c9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0033-frame-1792424908938-65691-13.png": {
+      "bytes": 33356,
+      "sha256": "e9613a78a9242491aab4d58ab4f6f6ecfe6a395df0aff8ea812d4c0d1f15d2c9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0034-frame-1792424908938-65691-22.png": {
+      "bytes": 32358,
+      "sha256": "48e89b144760d765dbd3fba02e6cc38d9092e66989ce69d99966280b86a15b1a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0035-frame-1792424908938-65691-28.png": {
+      "bytes": 14145,
+      "sha256": "c085354a4ec1cc7fdea335134dc03250bfbe12560c43d7c54106577139abbcc7",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0036-frame-1792424908938-65691-38.png": {
+      "bytes": 15413,
+      "sha256": "55c68db5f0114af7985e37eaf660efea7b04ddb20562fc5a0bb90fc624b01a3b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0037-frame-1792424908938-65691-46.png": {
+      "bytes": 32358,
+      "sha256": "48e89b144760d765dbd3fba02e6cc38d9092e66989ce69d99966280b86a15b1a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0038-frame-1792424908938-65691-51.png": {
+      "bytes": 33356,
+      "sha256": "e9613a78a9242491aab4d58ab4f6f6ecfe6a395df0aff8ea812d4c0d1f15d2c9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0039-frame-1792424908938-65691-60.png": {
+      "bytes": 32592,
+      "sha256": "dc92d6d74b65d3df5f13548fa12e1f8f8470df9a30f563a8a0adcbf54f5b5220",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0042-frame-1792424973929-65691-1-83.png": {
+      "bytes": 149996,
+      "sha256": "09c513b18facdb74794df357d07db95bf2f9b927a55d77a92e47fa72d76afe5a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0043-frame-1792424973929-65691-1-84.png": {
+      "bytes": 149996,
+      "sha256": "09c513b18facdb74794df357d07db95bf2f9b927a55d77a92e47fa72d76afe5a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0044-frame-1792424973929-65691-1-120.png": {
+      "bytes": 149996,
+      "sha256": "09c513b18facdb74794df357d07db95bf2f9b927a55d77a92e47fa72d76afe5a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0045-frame-1792424973929-65691-1-205.png": {
+      "bytes": 149996,
+      "sha256": "09c513b18facdb74794df357d07db95bf2f9b927a55d77a92e47fa72d76afe5a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0046-frame-1792424973929-65691-1-213.png": {
+      "bytes": 148263,
+      "sha256": "82a84167f2bc2e4b6563f392be8fa7399b9159ef77140c31351efd8368006f91",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0047-frame-1792424973929-65691-1-220.png": {
+      "bytes": 110356,
+      "sha256": "4433b9aec08615faf1ddfd4c054bab51c824b8675fc2bae68a7169092bdf63f2",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0048-frame-1792424973929-65691-1-233.png": {
+      "bytes": 109894,
+      "sha256": "25cc197ab24fb1c67da8b94d1ada72a1e73b1997852fa4a5131b2e7e28141eae",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0049-frame-1792424973929-65691-1-242.png": {
+      "bytes": 16168,
+      "sha256": "01980b8a09fb4ab424be2ef13ebe28aa8c6586d138e53b9a76278ff23faa3a1b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0050-frame-1792424973929-65691-1-263.png": {
+      "bytes": 16366,
+      "sha256": "eac4e7b3d05ccfa59fa8618231061a5817fe6914a04139bfeb1517676cabb0f9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0051-frame-1792424973929-65691-1-268.png": {
+      "bytes": 16179,
+      "sha256": "5cf7ca056748266c54666a6a1adacc6d31ae8460b5b86b3fd275cc8ee25fb60c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0052-frame-1792424973929-65691-1-272.png": {
+      "bytes": 16179,
+      "sha256": "56e77b4029963954fd7a588be0a05e9f431b8d642f6500199076738531ad2c4c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0053-frame-1792424973929-65691-1-276.png": {
+      "bytes": 16151,
+      "sha256": "8ee48fe34c7c71175258bef6d721ea4fee1ac1c32869709a60a9f4f2389c0f6b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0054-frame-1792424973929-65691-1-284.png": {
+      "bytes": 106537,
+      "sha256": "a1f3ee4e805a79ae51f2424dd08a71d90fc7e54743249a72f7d043782971736e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0056-frame-1792424973929-65691-1-301.png": {
+      "bytes": 106537,
+      "sha256": "a1f3ee4e805a79ae51f2424dd08a71d90fc7e54743249a72f7d043782971736e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0058-frame-1792424973929-65691-1-335.png": {
+      "bytes": 106537,
+      "sha256": "a1f3ee4e805a79ae51f2424dd08a71d90fc7e54743249a72f7d043782971736e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0059-frame-1792424973929-65691-1-357.png": {
+      "bytes": 106537,
+      "sha256": "a1f3ee4e805a79ae51f2424dd08a71d90fc7e54743249a72f7d043782971736e",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0060-frame-1792424973929-65691-1-366.png": {
+      "bytes": 109906,
+      "sha256": "356a85d40bae63515559f4567dd28f72b754f4df944e89805a85c86dc2220961",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0061-frame-1792424973929-65691-1-375.png": {
+      "bytes": 16168,
+      "sha256": "01980b8a09fb4ab424be2ef13ebe28aa8c6586d138e53b9a76278ff23faa3a1b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0062-frame-1792424973929-65691-1-387.png": {
+      "bytes": 16366,
+      "sha256": "eac4e7b3d05ccfa59fa8618231061a5817fe6914a04139bfeb1517676cabb0f9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0063-frame-1792424973929-65691-1-390.png": {
+      "bytes": 16179,
+      "sha256": "5cf7ca056748266c54666a6a1adacc6d31ae8460b5b86b3fd275cc8ee25fb60c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0064-frame-1792424973929-65691-1-393.png": {
+      "bytes": 16179,
+      "sha256": "56e77b4029963954fd7a588be0a05e9f431b8d642f6500199076738531ad2c4c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0065-frame-1792424973929-65691-1-396.png": {
+      "bytes": 16151,
+      "sha256": "8ee48fe34c7c71175258bef6d721ea4fee1ac1c32869709a60a9f4f2389c0f6b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0066-frame-1792424973929-65691-1-400.png": {
+      "bytes": 16131,
+      "sha256": "1a741d45f53db6cfc6bd1202d9dc89e9445bb3371f672d7b6846279f9b7ecb53",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0067-frame-1792424973929-65691-1-409.png": {
+      "bytes": 101918,
+      "sha256": "7e817c4af1e432cffaeb10993f7a0b08370b721b27f9c9c20fe6a1f61bdb74bf",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0068-frame-1792424973929-65691-1-417.png": {
+      "bytes": 111973,
+      "sha256": "2ef1b085a0eea6ce3507b4aea138382a2394a13138dfaa676bf0a159c950a0eb",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0069-frame-1792424973929-65691-1-429.png": {
+      "bytes": 112319,
+      "sha256": "0182b9897887ea577023c2592c2c1f6d61b1c630df177c8306b6a3191878492a",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0070-frame-1792424973929-65691-1-438.png": {
+      "bytes": 113926,
+      "sha256": "14105a383fa1761c1a499777ea322d8d89d791d388247e556eecd42e048831d8",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0071-frame-1792424973929-65691-1-449.png": {
+      "bytes": 115103,
+      "sha256": "5d972e6a0a1cb51809948b4b436cac9e5619f08b7e12f03ce69cd3282938aa1b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0072-frame-1792424973929-65691-1-460.png": {
+      "bytes": 114688,
+      "sha256": "58bdbfa0699219d9afd38135e8d9e1459ae8ad8029a492418952a2fcc0fee0b3",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0073-frame-1792424973929-65691-1-469.png": {
+      "bytes": 112124,
+      "sha256": "c26d2357abffb31da9d1cc982a8e8749d2be9dc2d0492739090762217ac91dad",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0074-frame-1792424973929-65691-1-476.png": {
+      "bytes": 109052,
+      "sha256": "39ac5875353d4b28e9685c4fcd8dd29574a2b751d38d8540a0181d9483a00ee6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0075-frame-1792424973929-65691-1-485.png": {
+      "bytes": 99751,
+      "sha256": "c0a17e86017c9a24f221e24cae919b08c200c34025cc6b5614543da1f2ae8755",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0076-frame-1792424973929-65691-1-494.png": {
+      "bytes": 83484,
+      "sha256": "288e6bb5b128c37374ba3b81837fbdbdbadcd3a5d26586af705be1fa0b254310",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0077-frame-1792424973929-65691-1-510.png": {
+      "bytes": 83554,
+      "sha256": "bbb0c17645c22923f32381145b5be04260376273557657c6455ea07bf23327ca",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0078-frame-1792424973929-65691-1-513.png": {
+      "bytes": 83528,
+      "sha256": "07ea54cd72d611e44b7db7f3b553a4e84b933588df02e8519657525e4c585675",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0079-frame-1792424973929-65691-1-516.png": {
+      "bytes": 83580,
+      "sha256": "f44c0020ebb41b25ff3e8fbda699e262c52066bd79ba49dbbbecb7f92f591f70",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0080-frame-1792424973929-65691-1-524.png": {
+      "bytes": 109008,
+      "sha256": "a4847ce533c989940bbe8db9d0edd928f87eda9ecfccf5f86c988634e21a7167",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0081-frame-1792424973929-65691-1-537.png": {
+      "bytes": 9028,
+      "sha256": "a6b6cc691955b38e8fbb3cc89d0df1a22f632b9925f6faccaa2941965094e6d0",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0082-frame-1792424973929-65691-1-551.png": {
+      "bytes": 24017,
+      "sha256": "01f35f730c7e242a080c47c242a9f163ad8bb4dbc46e85c957e17a9139c3bfb6",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0083-frame-1792424973929-65691-1-560.png": {
+      "bytes": 24046,
+      "sha256": "c432da997e0ade0d247d98d9b5c51b5bad7f1bcfab551c554f29f7291ca55b23",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0084-frame-1792424973929-65691-1-563.png": {
+      "bytes": 24067,
+      "sha256": "9b8edff4615bcd5ec4e7921403c8180ccf1719b105c85d74c0135802e7374478",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0085-frame-1792424973929-65691-1-567.png": {
+      "bytes": 24081,
+      "sha256": "b3264e1e462c976c6e47461cefa1400c4cbff7be750c3cea115cec19b8b4c54c",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0086-frame-1792424973929-65691-1-571.png": {
+      "bytes": 24093,
+      "sha256": "f544bed1fab68651b2ce7dc48b8c7885c97d3eacbec4d559d2fca2e943980eb4",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0087-frame-1792424973929-65691-1-575.png": {
+      "bytes": 24097,
+      "sha256": "d2aa22a0e6552499beec2088dcf42e477f28c3f052702c818c0850e614f8d308",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0088-frame-1792424973929-65691-1-579.png": {
+      "bytes": 109131,
+      "sha256": "218e1f77be68d6c3c73a532085c88f6572a41bd6c7bda03c46577ede8a62229f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0090-frame-1792424973929-65691-1-592.png": {
+      "bytes": 21408,
+      "sha256": "b21d337bea699378eb0dc98918cd54f2d8fcec208f89f70b79cb228ac288b2f9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/frames/0092-frame-1792424973929-65691-1-633.png": {
+      "bytes": 21408,
+      "sha256": "b21d337bea699378eb0dc98918cd54f2d8fcec208f89f70b79cb228ac288b2f9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/midpoint-restart.json": {
+      "bytes": 692,
+      "sha256": "0c56e0810dd954550d86d405572c3ae1b1fba74c4dcac0621562205873b0c14b",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/player-e-day3-checkpoint.json": {
+      "bytes": 3425,
+      "sha256": "302dba5c2f2246411c9b2bc037ecf6414d748eb2e26c74be0e0bb4333102eab9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/player-e-preflight-invalid.txt": {
+      "bytes": 971,
+      "sha256": "46b9df72142d43d047f8593d46f88a57a829dbc44e09db5cfa7c0a77e9bdd3ae",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/player-e-preflight.json": {
+      "bytes": 1154,
+      "sha256": "6c20aa77c4a833235fcb0b6b6d9ad4ab7c1a643e89e7b34b0d900cf522500931",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/player-f-day4-a-checkpoint.json": {
+      "bytes": 2322,
+      "sha256": "a40bc2ae2f187ef02f32973f378bc358a248cdffdfeb8f3b203f1b97d24d36a9",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/player-f-day4-b-checkpoint.json": {
+      "bytes": 3015,
+      "sha256": "339dc40d7ea8886c2d3f855b0f3b8bdc59667ca4dfdc8b7bb23ac06593d797fd",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/player-f-preflight.json": {
+      "bytes": 1212,
+      "sha256": "9592a49a0cd7d2997d1de79f5979c6f7e65d720dc948c2b7c9ae885ac97d6337",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/preparation/admission-forecast.json": {
+      "bytes": 534,
+      "sha256": "259cb86d0473b39ab0917cf3ee65f4397eb3d10b78ec29f248496647a29f7f08",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/preparation/day3-adjudication.json": {
+      "bytes": 1007,
+      "sha256": "39eba14cfe3473424e65a489443b2bc6b8931499316e7d0d0b34c80d4e6b8b2d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/preparation/day4-activation-forecast.json": {
+      "bytes": 384,
+      "sha256": "5c06702270690773d0499a416ac67fa7d4228ebeca287120f8a128f26154934d",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/preparation/recorder-fixture.json": {
+      "bytes": 588,
+      "sha256": "a94cccea8e902710c7006c6630ace063d33f73e65f31b5be7746f30df29efb0f",
+      "availability": "local-only; not included in Git"
+    },
+    ".runtime/campaigns/seven-day-campaign-020/record.py": {
+      "bytes": 6100,
+      "sha256": "049ea8a0633eaa557bd3063abba05c9a8e78b027cda7b828faf15dcc9ac9b028",
+      "availability": "local-only; not included in Git"
+    }
+  }
+}

@@ -19,8 +19,16 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 | Survival pilot and findings | [Pilot report](acceptance/2026-10-18-survival-pilot.md) retains the stopped pre-spawn attempt and its dispositions; #78/#83 own acceptance. |
 | Continuity and first-day rehearsal | [Qualified first-day result](acceptance/2026-10-18-first-day-completion.md) retains actual save/restart/handoff, needs and autonomy evidence plus its failures/unknowns; #79/#80 own acceptance. |
 | Seven-day readiness | [Readiness report](acceptance/2026-10-18-seven-day-readiness.md) records the finite preparation gate and its limits; #81. Readiness does not guarantee campaign success. |
-| Current seven-day path | [019 actual progress](acceptance/2026-10-19-adaptive-survival.md): two days accepted; water/food and alarmed rest verified, day three incomplete at 5,470,972. [Parent #82](https://github.com/CVX-Hull/enactive/issues/82) and daily #100–106 own outcomes. [#129](https://github.com/CVX-Hull/enactive/issues/129) owns further supplies/access. Closed 019 grants no authority. |
+| Current seven-day path | [020 actual result](acceptance/2026-10-19-midpoint-survival.md): days1–3 accepted; actual midpoint restart/reload and fresh F replacement verified. Day4 incomplete after untreated-water collection and unsupported-return stop. [Parent #82](https://github.com/CVX-Hull/enactive/issues/82) and daily #100–106 own outcomes; [#129](https://github.com/CVX-Hull/enactive/issues/129) owns further supplies/treatment/access. Closed019/020 grant no authority. |
 | Full closeout | Same-character daily evidence, normal midpoint save/restart/reload and player replacement, final normal shutdown, independent complete-campaign review, protected publication/CI, owned cleanup and current Project. #82 stays open until all are proved. |
+
+[020 actual result](acceptance/2026-10-19-midpoint-survival.md) subsequently accepted
+day three and verified the real midpoint restart/exact reload and fresh F ordinary
+replacement. Basement access and untreated water progressed; no potable output or
+day-four pass. A transient unsupported crafting return closed020 under its stop
+rule; all actors are terminal and the owned runtime is paused. [Prospective043](changes/043-transient-boundary-reassessment.md)
+permits finite passive reassessment only for a new reviewed admission, retaining
+all aggregate/whole costs and reserve. No automatic successor or reopened020.
 
 Actual campaign reports distinguish success, partial progress, failed attempts, unknown delivery and unexercised capabilities. Historical reports and issue revisions remain evidence; they neither grant current authority nor renew unused budgets. Cumulative charges include rejected, stale and unknown attempts. An old request is never replayed merely because a newer scene looks favorable.
 
@@ -30,7 +38,9 @@ The [remaining-budget proposal](changes/042-finish-within-existing-budget.md) re
 the exact whole and aggregate clocks, spent inputs and cleanup/publication reserve.
 It prospectively replaces ineffective daily timers with longer bounded assignments
 and actual daily review. It grants no input authority; further supplies, actual
-admission, midpoint restart/replacement and the seven-day outcome remain unproved.
+admission and the seven-day outcome remain unproved by that proposal. The subsequent
+020 report above establishes the actual midpoint result; closed020 grants no further
+ordinary authority.
 
 ## Execution ownership
 
