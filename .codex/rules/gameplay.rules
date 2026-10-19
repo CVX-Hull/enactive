@@ -3,7 +3,8 @@
 # Prefix rules permit execution outside the sandbox; they do not confine files,
 # pin source bytes or create a per-agent sandbox. Never use with an unreviewed
 # checkout. Keep source frozen during admitted play. Managed restrictions win.
-# Existing one-off campaign capture wrappers are NOT matched by this rule.
+# Capture wrappers match only the explicitly named current study rule below.
+# Other studies, arbitrary Python and shell wrappers remain outside these rules.
 prefix_rule(
     pattern = [".venv/bin/python", "-m", "harness", [
         "status", "observe", "pause", "resume", "goal", "key", "action", "walk",
@@ -25,6 +26,37 @@ prefix_rule(
         ".venv/bin/python -m harness serve --port 8766",
         ".venv/bin/python -m another_module status",
         "python -m harness status",
+        "gh pr merge 1",
+    ],
+)
+
+# User requested this exact allowance at the paused005 checkpoint.
+# Owner: lead. Retire when005 ends or the recorder changes; no wildcard studies.
+# Invoke directly from the trusted checkout, without redirection or a shell script.
+# This grants process permission, not gameplay authority; the frozen recorder
+# still validates admission, source/native hashes, actor phase and original limits.
+prefix_rule(
+    pattern = [
+        ".venv/bin/python",
+        ".runtime/campaigns/seven-day-campaign-005/preparation/capture.py",
+        ["lead", "player"],
+    ],
+    decision = "allow",
+    justification = "User-authorized exact Enactive005 campaign recorder; existing admission, actor, native authority and cumulative budget guards still apply.",
+    match = [
+        ".venv/bin/python .runtime/campaigns/seven-day-campaign-005/preparation/capture.py lead 'passive checkpoint' status",
+        ".venv/bin/python .runtime/campaigns/seven-day-campaign-005/preparation/capture.py lead 'fresh observation' observe",
+        ".venv/bin/python .runtime/campaigns/seven-day-campaign-005/preparation/capture.py player 'fresh visible menu' key ESC --expect example:1",
+    ],
+    not_match = [
+        ".venv/bin/python -c print(1)",
+        ".venv/bin/python -m harness serve --port 8766",
+        ".venv/bin/python .runtime/campaigns/seven-day-campaign-004/preparation/capture.py player reason status",
+        ".venv/bin/python .runtime/campaigns/seven-day-campaign-006/preparation/capture.py player reason status",
+        ".venv/bin/python .runtime/campaigns/seven-day-campaign-005/preparation/capture.py reviewer reason status",
+        ".venv/bin/python another.py lead reason status",
+        "python .runtime/campaigns/seven-day-campaign-005/preparation/capture.py lead reason status",
+        "sh -c 'anything'",
         "gh pr merge 1",
     ],
 )

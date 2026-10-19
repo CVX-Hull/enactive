@@ -35,7 +35,9 @@ The [next004 continuation](acceptance/2026-10-18-crafting-transition.md) then st
 on an unsupported crafting-filter return, with no new game advance. A later supported
 menu did not reopen investigation. A [prospective continuation](changes/031-bounded-reassessment-continuation.md)
 adds bounded passive lead reassessment while retaining all costs/clocks and native
-input rejection; it is not yet admitted. No daily survival outcome is accepted.
+input rejection. It was admitted, then paused at the user's request for
+[narrow recorder permission setup](changes/032-recorder-permission-reload.md).
+No daily survival outcome is accepted.
 [Work](work.md) links the active path.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign

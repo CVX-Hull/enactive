@@ -26,8 +26,10 @@ or downloads have separate permissions; do not stamp every shell call elevated.
 
 [Project-local rules](../.codex/rules/gameplay.rules) allow only the existing
 `.venv/bin/python -m harness` command family for ordinary observation, control,
-recovery and bounded waypoint tasks. Setup/server launch, GitHub publication,
-arbitrary Python, shell scripts and one-off capture wrappers are not matched.
+recovery and bounded waypoint tasks. A second rule, requested at the paused005 checkpoint, matches only
+`.venv/bin/python .runtime/campaigns/seven-day-campaign-005/preparation/capture.py`
+with actor `lead` or `player`. Setup/server launch, GitHub publication, arbitrary
+Python, shell scripts and every other study recorder are not matched by that rule.
 No global config, user rules, OS permissions or broad network access was changed.
 Use the ordinary command directly when applicable; do not hide disallowed work
 behind an allowed command or switch transports to evade review.
@@ -38,12 +40,12 @@ from the working directory: use only the reviewed trusted checkout, freeze sourc
 during admitted play and re-review on entry-point or dependency changes. The rule
 does not mechanically check cwd, source hashes, budgets or command intent. Managed
 restrictions and more restrictive matching rules still win. Remaining reviews,
-including a capture wrapper not matched by the CLI rule, must be honored.
+including invocations outside the exact recorder prefix, must be honored.
 
 Codex0.162.1's mature `codex execpolicy check` parsed the rule and its inline
 positive/negative cases. A key command matched allow; Python `-c` and server launch
 had no match. **Policy syntax/matching is verified; activation and a live command
-under the new rule are not.** Official documentation requires a trusted project
+under these rules remain separate post-restart checks.** Official documentation requires a trusted project
 configuration and startup/reload. This session was not restarted or weakened;
 existing auto-review remains the available route. Do not make a user restart a
 routine gameplay prerequisite or claim every review disappeared.
@@ -57,6 +59,43 @@ commands. Reuse these inline checks rather than building a policy parser.
 Official sources checked2026-10-18: [rules](https://learn.chatgpt.com/docs/agent-configuration/rules),
 [sandbox and approvals](https://learn.chatgpt.com/docs/agent-approvals-security),
 [sub-agent permissions](https://learn.chatgpt.com/docs/agent-configuration/subagents).
+
+
+### Loading the current recorder allowance
+
+The [scoped change](changes/032-recorder-permission-reload.md) follows the user's
+explicit request. Invoke the recorder directly with the relative path above from
+this trusted checkout, one literal command per call. Do not combine it with shell
+redirection, a heredoc, arbitrary Python post-processing or a command chain: the
+whole shell script can become the policy target instead of the recorder prefix.
+The recorder already retains its indexed receipts and frames; the calling tool
+can parse its returned JSON without another shell command. No recorder code change
+or input-guard relaxation is needed.
+
+This allowance does not pin executable bytes or enforce cwd. The ignored005
+recorder must retain its independently reviewed hash and all existing admission,
+source/native, actor, original-clock/budget, parser and frame checks. Trust the
+checkout deliberately; do not use the rule with unreviewed source. Retire this
+exact-study rule when005 ends or its recorder changes; a later study path needs a
+new scoped review. Do not add wildcard studies, broad Python or shell prefixes.
+
+At the requested checkpoint, the player and lead verified paused supported
+STRING_INPUT, no activity and empty live slots. Gameplay authority is suspended;
+the owned controller was stopped normally, while the native game stays paused.
+The user-authorized permission/docs change ends the old source freeze without
+reopening any input allowance. The original clocks and every cost/unknown remain.
+Restart Codex and reopen this project after publication/verification. Project
+rules load only from a trusted project configuration at startup; the inspected
+user config has no explicit trust entry for this path, so activation cannot be
+assumed. No user/global configuration was changed. If Codex asks to trust this
+project, review that project-specific prompt.
+
+After restart, verify effective rule loading/matching and a harmless permitted
+command before relying on activation. The suspended recorder refuses gameplay;
+resume needs explicit user authorization, current clean reviewed source/helper/
+native, fresh paused observations and a prospective remaining-budget decision.
+Do not silently rebind its old source hash or reset clocks. Managed restrictions
+or stricter matching rules may still require review; honor them.
 
 ## Dedicated gameplay context
 

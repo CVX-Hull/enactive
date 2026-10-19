@@ -143,12 +143,18 @@ The [setup004 continuation](acceptance/2026-10-18-crafting-transition.md) stoppe
 under its strict unsupported-state rule after a crafting-filter return; later
 supported CRAFTING did not erase the failure. No recipe or game-time advance.
 37rows/18newinputs bring totals277whole/252day/93lifecycle,3654.020seconds shared
-lifecycle,71v3+1archived gameplay unknowns/control2. Normal cleanup closed native
-and controller; no operator owns input. The [prospective full-campaign continuation](changes/031-bounded-reassessment-continuation.md)
-retains original costs/clocks, revises lifecycle allocation and permits finite
-passive reassessment under lead control. Existing native guards stay unchanged;
-all seven daily outcomes still require actual acceptance. Proposed status grants
-no authority. #82/#100 own the continuation and #75 the process finding.
+lifecycle,71v3+1archived gameplay unknowns/control2. Normal cleanup closed004 native
+and controller. The [full-campaign continuation031](changes/031-bounded-reassessment-continuation.md)
+then passed protected PR117/exact/main CI and reloaded the same character. Its
+player reverified8rations/2Lclean water but had not begun a job when the user
+requested the next paused checkpoint for [narrow recorder permissions](changes/032-recorder-permission-reload.md).
+005 is suspended at supported crafting search with285whole/260day inputs,
+97lifecycle/3816.987seconds and72v3+1archived gameplay unknowns/control2; no new
+game advance or daily survival acceptance. Controller stopped normally; game
+remains paused, all input authority relinquished. Permission/docs work is the
+explicitly requested interruption; original budgets/clocks continue. Rule activation
+and a prospective source/budget check precede any resumed assignment. #82/#100
+own the campaign and #75 the scoped permission/process maintenance.
 
 Pilot001's 150-input/45-minute/six-game-hour ceilings remain historical fixed limits,
 not a renewable allowance. Every later attempt needs a prospective finite brief
