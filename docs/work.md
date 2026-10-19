@@ -25,7 +25,9 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 Actual campaign reports distinguish success, partial progress, failed attempts, unknown delivery and unexercised capabilities. Historical reports and issue revisions remain evidence; they neither grant current authority nor renew unused budgets. Cumulative charges include rejected, stale and unknown attempts. An old request is never replayed merely because a newer scene looks favorable.
 
 The current game and controller are stopped. The final normal save has not been
-reloaded. Further play requires independently reviewed supply readiness and a
+reloaded. The [finite water-readiness proposal](changes/040-water-readiness.md)
+records an explicit prospective lifecycle allocation and investigation gate; it
+grants no survival authority. Further play requires independently reviewed supply readiness and a
 complete remaining-route allocation; the previous lifecycle plan exceeds its
 remaining hard input allowance. Investigation success is not day-three acceptance.
 
