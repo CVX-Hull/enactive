@@ -1,13 +1,14 @@
 ---
 owner: lead
 date: 2026-10-19
-scope: Same-character026 ordinary raw-water acquisition, costs and treatment reforecast
+scope: Same-character026 raw-water acquisition and027 missing-tool fuel failure
 status: historical
 ---
 
-# Three litres of untreated water collected; potable coverage incomplete
+# Three litres collected; fuel deconstruction refused, coverage incomplete
 
-026 used clean source8ea0c70320ef076a38b1c3b93889dad2d9d3ad4e and unchanged
+026 used clean source8ea0c70320ef076a38b1c3b93889dad2d9d3ad4e;027 used clean
+a29bac9fa3f32ffd7aa3ff69842ec077c1c9b27e. Both used unchanged
 native2095b718f470fa01b5a98ae6a1a8a3b5cd62d171597c7e11d34f199f0edcd69b.
 Same normally created Ned Meyers/Belgium, originalT05212800, remained windowed with
 the project userdir. Days1–4 stay accepted; days5–7 remain incomplete. This is
@@ -64,23 +65,59 @@ carry forward. Original clocks/baseline921, historical lifecycle7442.81881016213
 No new uncertain delivery arose. Acquisition closes qualified, campaign incomplete;
 there is no automatic treatment assignment or renewal of a failed phase.
 
-[048](../changes/048-water-coverage-budget.md) records the user's clarified gameplay
-time/input delegation and finite revision. Actual travel/fuel/handling exposed an
-underestimate in the initial50-input treatment forecast before that phase began.
-The prospective110-input treatment envelope retains all costs, whole ceilings and
-effective cleanup reserves. Fuel/source marking, ordinary salvage, batch duration,
-actual hot output and compatible storage still need live proof. Treating3.5Lraw
-would hypothetically yield5Lclean total; it does not establish supply coverage.
+## 027 missing-tool failure and research correction
+
+027 returned upstairs by the observed route. The phone was switched off35 after
+fresh inventory inspection (10/56before off), conserving battery in usable daylight.
+Normal35 showed field context without visible flame/smoke; this did not prove the
+old fire extinguished or future site safety. Sleeping benches were untouched.
+
+The ordinary construction menu37 showed fabrication0/prying1green but **screwdriving1
+red**. Selecting38 produced supported POPUP_WAIT “You can’t build that!” before
+any target, work or20-minute activity. No salvage, marker, ignition or potable
+output occurred. The planning brief had incorrectly read separate quality groups
+as PRY1 ORSCREW1. Installed data and requirements consumer confirm **AND across
+outer groups**, alternatives within each group. The lead/source review missed this
+before the actual menu; the original brief is retained, not rewritten to hide it.
+Simple deconstruction requires EASY_DECONSTRUCT, absent from f_bench, so it is not
+an automatic workaround. #71/#75 own this compound-prerequisite interpretation lesson.
+
+F39/40dismissed/exited,41Pause/42Status/FINAL and lead43–45 confirmed supported
+paused normal5559096/rev1294/[7,-8,0], green/Comfortable/clear needs/SafeON, no observed
+creatures and actualnull pending/control/run slots. All handles were terminal/noqueue.
+Actual45supplies the slot/state proof; a Pause ACK alone does not. Independent review
+verified all45ledger counters/frame hashes, selected failure/phone/terminal pixels
+and unchanged returned unknown lists. No actor stop violation was found.
+
+027 used37/60inputs and771.244seconds, retaining its original cumulative treatment
+endpoint3903452.292507958 as a closed, uncompleted decision. Whole1665/aggregate744/
+day5351/lifecycle167 carry forward; no consumption or craft changed02676stock.
+Historical lifecycle7442.818810162135s,101current-v3 plus one archived gameplay/two
+control unknowns remain.027closes incomplete; failed provision is not success or
+new authority. [049](../changes/049-distinct-fuel-study.md) prospectively scopes a
+materially different ordinary fuel-salvage study under user delegation, with all
+197resource inputs from025–027 retained and no refused deconstruction retry.
+
+## Data, CI and remaining acceptance
 
 The [manifest](2026-10-19-water-coverage-manifest.json) binds selected local receipts,
-frames, ledger, preflight, checkpoint, recorder and frozen outcome. Local-only
-artifacts are not supplied on a fresh checkout; hashes bind bytes, not semantic
-truth or representativeness. This is correlated development data, not a held-out
-benchmark, model comparison, training result or causal continuous-learning claim.
-Existing#71 owns source/route-memory extraction, #40 monitoring of conservative
-stops and#75 forecast/control burden; #129/#104 own resources/day five.
+frames, ledgers, preflights, checkpoints, recorders and frozen outcomes for026/027.
+Local-only artifacts are not supplied on a fresh checkout; hashes bind bytes, not
+semantic truth or representativeness. This is correlated development data, not a
+held-out benchmark, model comparison, training result or causal-learning claim.
+Existing#71 owns source/route-memory extraction, #40 monitoring and#75 forecast/
+control burden; #129/#104 own resources/day five. Bashing, new fuel/heat and bulk
+potable stock remain unexecuted hypotheses, not results in this report.
 
-451portable tests and diagram/governance/viewer checks passed before026, including
-the normal source checkpoint hook. An initial invalid document-status value failed
-metadata checking and was corrected before admission. No new native build occurred.
-Native collection, source checks and final publication/CI remain separate lanes.
+451portable tests and diagram/governance/viewer checks passed before each segment,
+including normal checkpoint hooks. An initial invalid document-status value failed
+metadata checking and was corrected before026admission. No new native build occurred.
+Exacta29PRCI39321483681passed; pushCI39321467937failed one empty-unknown assertion.
+The80ms test did not establish action delivery before expecting uncertainty; the
+log does not prove the failing request phase. A separately reviewed tests-only
+Event/controlled-clock repair passed82controller tests and focused review; it changes
+no production deadline/guard. New full checks and exactCI remain required, and the
+originalfailed CI log is retained. Native outcomes cannot substitute for CI.
+
+Days5–7, remaining potable coverage, final normal lifecycle, independent whole review,
+protected final publication/main CI and owned cleanup remain incomplete.

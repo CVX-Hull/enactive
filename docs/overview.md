@@ -37,18 +37,19 @@ incomplete. [025 verified the first250mL clean-water batch](acceptance/2026-10-1
 using ordinary outdoor fire, boiling and bottle storage, after rejected sites and
 a transient unsupported-menu return. [026 collected3L additional untreated water](acceptance/2026-10-19-water-coverage.md)
 into six ordinary bottles. Fresh stock is1.5Lclean/3.5Luntreated/12rations;
-remaining-three-day potable coverage is unproved. Last normal5559069 is alive/
-Comfortable with blank needs at an indoor basement checkpoint. One owned game/
+remaining-three-day potable coverage is unproved. Last normal5559096 is alive/
+Comfortable with blank needs at an indoor north-room checkpoint. One owned game/
 controller remain paused, with no ordinary actor, queued input or live slots.
-Phone remains on; current outdoor fire/fuel must be reassessed, north window is
+Phone is off after027’s return. Regular deconstruction was refused for missing
+screwdriving; no fuel/heat was produced. Current outdoor fire/fuel must be reassessed, north window is
 last known open, and final shutdown is unproved. Lifecycle
 ACKs, failed attempts and corrections remain qualified.
 
 [#129](https://github.com/CVX-Hull/enactive/issues/129) owns further resources/whole
-forecast; [work](work.md) links the path. Closed019–026 grant no successor authority.
-026 closes for a source/forecast handoff after its raw-water collection result.
-Measured daily care exceeded the prior forecast; [048](changes/048-water-coverage-budget.md)
-records a finite prospective budget revision. The user clarified that delegation
+forecast; [work](work.md) links the path. Closed019–027 grant no successor authority.
+027 closes after the missing-tool result; a distinct fuel study needs fresh admission.
+Measured daily care exceeded the prior forecast; [049](changes/049-distinct-fuel-study.md)
+records the prospective distinct fuel study and finite budget revision. The user clarified that delegation
 covers gameplay-related time and input extensions, prioritizing quality data;
 [047](changes/047-quality-data-continuation.md) records025's time/phase decision,
 retaining original clocks, costs and input ceilings. Its [046 decision](changes/046-replan-known-nondelivery.md)

@@ -2,11 +2,15 @@
 owner: lead
 date: 2026-10-19
 scope: Post025 water coverage and remaining survival budget
-status: active
+status: historical
 review_trigger: User budget delegation, acquisition or treatment result, care costs or whole fit
 ---
 
 # Reforecast from actual water output and measured care costs
+
+Historical026/027 decision. [049](049-distinct-fuel-study.md) records the later
+missing-tool result and prospective distinct fuel experiment; this file grants no
+current actor authority.
 
 025 independently verified one250mL clean-water batch and a supported paused
 checkpoint. Stock is1.5L clean/500mL untreated/12rations. Days1–4 remain accepted;

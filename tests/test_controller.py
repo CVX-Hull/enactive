@@ -1585,20 +1585,72 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertFalse(any(r["kind"] == "action" for r in fake.requests))
 
     def test_acquisition_after_explicit_timeout_reconciliation_preserves_unknown(self):
+        claimed = threading.Event()
+        monotonic = time.monotonic
+
+        def abandon(fake, request):
+            if request["kind"] == "action":
+                claimed.set()
+                return False
+            return True
+
+        # Expire only after action delivery, independently of preflight scheduling.
+        # The real one-second exchange deadline still bounds a missing claim.
+        clock = SimpleNamespace(time=lambda: time.time() + (2 if claimed.is_set() else 0), sleep=time.sleep,
+                                monotonic=lambda: monotonic() + (2 if claimed.is_set() else 0))
         with FakeBridge(self.controller) as fake:
             self.ready()
-            fake.behavior = lambda bridge, request: request["kind"] != "action"
-            self.assertEqual(self.controller.execute("action", action="UP", timeout=0.08,
-                                                     **self.expect())["status"], "timeout")
-            with self.assertRaises(ControlError):
+            fake.behavior = abandon
+            with patch("harness.controller.time", clock):
+                result = self.controller.execute("action", action="UP", timeout=1, **self.expect())
+                self.assertTrue(claimed.is_set(), "fixture did not claim the action")
+                self.assertEqual(result["status"], "timeout")
+                self.assertEqual(result["retirement"], "absent_may_be_claimed_or_dispatched")
+                actions = [request for request in fake.requests if request["kind"] == "action"]
+                self.assertEqual(len(actions), 1)
+                self.assertEqual([request for request in fake.delivered if request["kind"] == "action"], actions)
+                self.assertEqual(result["id"], actions[0]["id"])
+                uncertainty = copy.deepcopy(self.controller.unknown_outcomes)
+                self.assertEqual(len(uncertainty), 1)
+                self.assertEqual(uncertainty[0]["status"], "unknown")
+                self.assertEqual(uncertainty[0]["request"], actions[0])
+                with self.assertRaises(ControlError):
+                    self.acquire()
+                self.assertEqual(self.controller.execute("observe")["status"], "ready")
+                self.assertIsNone(self.controller.pending)
+                self.assertEqual(self.controller.execute("resume")["status"], "ready")
                 self.acquire()
-            self.assertEqual(self.controller.execute("observe")["status"], "ready")
-            self.assertIsNone(self.controller.pending)
-            self.assertEqual(self.controller.execute("resume")["status"], "ready")
-            uncertainty = copy.deepcopy(self.controller.unknown_outcomes)
-            self.assertTrue(uncertainty)
-            self.acquire()
-            self.assertEqual(self.controller.unknown_outcomes, uncertainty)
+                self.assertEqual(self.controller.unknown_outcomes, uncertainty)
+                self.assertEqual([request for request in fake.requests if request["kind"] == "action"], actions)
+                self.assertEqual([request for request in fake.delivered if request["kind"] == "action"], actions)
+
+    def test_action_preflight_timeout_does_not_create_unknown_outcome(self):
+        claimed = threading.Event()
+        monotonic = time.monotonic
+
+        def abandon(fake, request):
+            if request["kind"] == "observe":
+                claimed.set()
+                return False
+            return True
+
+        clock = SimpleNamespace(time=lambda: time.time() + (2 if claimed.is_set() else 0), sleep=time.sleep,
+                                monotonic=lambda: monotonic() + (2 if claimed.is_set() else 0))
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            before = len(fake.requests)
+            fake.behavior = abandon
+            with patch("harness.controller.time", clock):
+                result = self.controller.execute("action", action="UP", timeout=1, **self.expect())
+                self.assertTrue(claimed.is_set(), "fixture did not claim the preflight observe")
+                self.assertEqual(result["status"], "timeout")
+                self.assertEqual(result["retirement"], "absent_may_be_claimed_or_dispatched")
+                self.assertEqual([request["kind"] for request in fake.requests[before:]], ["observe"])
+                self.assertEqual(result["id"], fake.requests[-1]["id"])
+                self.assertFalse(any(request["kind"] == "action" for request in fake.delivered))
+                self.assertEqual(self.controller.unknown_outcomes, [])
+                with self.assertRaises(ControlError):
+                    self.acquire()
 
     def test_old_entry_cannot_dispatch_after_acquire_release_and_resume(self):
         entered, release = threading.Event(), threading.Event()

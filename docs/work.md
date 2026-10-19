@@ -23,14 +23,15 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 | Full closeout | Same-character daily evidence, normal midpoint save/restart/reload and player replacement, final normal shutdown, independent complete-campaign review, protected publication/CI, owned cleanup and current Project. #82 stays open until all are proved. |
 
 [026](acceptance/2026-10-19-water-coverage.md) collected3Ladditional untreated water
-in six500mL bottles, preserving clean water/food. Last normal5559069 is alive/
+in six500mL bottles, preserving clean water/food. Last normal5559096 is alive/
 Comfortable with blank needs, freshly observed1.5Lclean/12rations/3.5Luntreated
 and one owned paused game/controller. Actual live
 slots are null, actors/tools terminal and no queued input. Ordinary small-fire heat,
 one250mL craft and bottle storage were independently qualified; bulk throughput and
-remaining-three-day coverage are unproved. The checkpoint is indoors in the basement; phone remains on, window is last known
+remaining-three-day coverage are unproved. 027’s regular deconstruction was refused for missing screwdriving, with no salvage.
+The checkpoint is indoors in the north room; phone is off, window is last known
 open and current fire/fuel requires reassessment. Final shutdown is unproved.
-Daily outcomes1–4 stay accepted; closed019–026 grant no successor authority. The
+Daily outcomes1–4 stay accepted; closed019–027 grant no successor authority. The
 original resource gate was qualified met in023 as a finite cache, not renewable supplies.
 
 The user-approved one-time three-hour extension retained all original clocks, costs,
@@ -43,11 +44,11 @@ data for future development. [047](changes/047-quality-data-continuation.md) rec
 025's finite two-hour shift with costs/input limits retained. Its first-output
 phase used32/40inputs with no renewal after transient reassessment. The measured
 daily-care subtotal59–63 exceeded the prior55/day forecast.
-[048](changes/048-water-coverage-budget.md) records the user’s clarified gameplay-related
-time/input delegation and finite +200inputs/+60minutes revision, retaining all costs
-and effective cleanup reserve. Actual026 travel exposed a treatment underestimate;
-048 prospectively allocates110treatment inputs before that phase begins, retaining
-1628whole/707aggregate costs. No routine gameplay-budget permission is needed.
+[049](changes/049-distinct-fuel-study.md) records the user’s clarified gameplay-related
+time/input delegation and a prospective distinct fuel study after027’s missing-tool
+failure. It adds100cumulative inputs/60minutes while retaining1665whole/744aggregate
+costs, original clocks and effective cleanup reserve. No refused deconstruction retry
+or renewed closed phase follows. No routine gameplay-budget permission is needed.
 A successor still needs source/review/checkpoint, fresh actual
 preflight and credible complete-route fit. No routine user time question, reopened
 attempt or automatic actor continuation.
