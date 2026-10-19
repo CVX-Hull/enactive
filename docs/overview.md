@@ -20,41 +20,18 @@ player sub-agent can act as a bounded campaign operator while the lead supervise
 the waypoint planner has a separate candidate-only role.
 The service executes an explicitly started waypoint task with per-step feedback;
 without a player response it stops on a deadline. General survival is not implemented.
-A [bounded real-game probe](acceptance/2026-10-18-walk-reassessment.md) now verifies
-walk-stop evidence and required fresh Observe/Resume. The
-[stopped deciding attempt](acceptance/2026-10-18-seven-day-stop.md)
-remains failed. A [same-character functional continuation](acceptance/2026-10-18-seven-day-continuation-stop.md)
-then stopped on unsupported nearby-items UI without verified time advance;
-[ordinary-menu coverage #112](https://github.com/CVX-Hull/enactive/issues/112)
-has a [qualified native repair](acceptance/2026-10-18-ordinary-menus.md): item detail,
-comparison and work-menu navigation worked. [The remaining direction/reload gate](acceptance/2026-10-18-menu-gate.md)
-also passed its real test and protected exact/merged-main CI accepted publication;
-#112 is complete. The [integrated continuation](changes/029-seven-day-integrated.md)
-was admitted and then [closed incomplete before day1](acceptance/2026-10-18-integrated-day1.md).
-The [next004 continuation](acceptance/2026-10-18-crafting-transition.md) then stopped
-on an unsupported crafting-filter return, with no new game advance. A later supported
-menu did not reopen investigation. A [prospective continuation](changes/031-bounded-reassessment-continuation.md)
-adds bounded passive lead reassessment while retaining all costs/clocks and native
-input rejection. It crafted a crowbar/sling and completed a carving job. After the
-[exact-project trust correction](changes/033-gameplay-permission-preflight.md) and
-user restart, actual-player calls verified no recurring approval and play resumed.
-The [005 outcome](acceptance/2026-10-18-activity-distraction-stop.md) then stopped
-on an unsupported activity-distraction question. Native and controller are stopped
-normally. [The narrow repair](changes/034-activity-distraction-menu.md) reuses
-existing menu ownership; its [real graphical test](acceptance/2026-10-18-activity-distraction.md)
-handled a feral-cop interruption through ordinary bridge Yes and fresh normal play.
-Protected exact/main publication accepted that repair. Its final proof save then
-actually reloaded in[006](acceptance/2026-10-18-resource-feasibility.md), which
-finished the partial carving and a finite bandaging job. Routine stable-CLI inputs
-had no recurring approval observed.006 stopped at its exact40-player-input gate:
-the longer schedule still depended on unverified wood and sustained lighting.
-Normal cleanup retained419whole/394day/114lifecycle inputs and all unknowns;
-its final save still needs actual reload. No daily survival outcome is accepted.
-The[next proposal](changes/036-resource-first-campaign.md) puts bounded resource
-discovery before sustained work, retaining original clocks and all failures;
-all seven days remain the objective. The obsolete005 recorder allowance is retired;
-no new Codex restart or broad permission change is needed for the verified setup.
-[Work](work.md) links the active path.
+The[latest resource discovery](acceptance/2026-10-18-daylight-practice.md) verified
+phone-off daylight and useful partial medical practice on Ned Meyers/Belgium, but
+stopped incomplete at3h29m53s after original creation. Wound Care39% and unverified
+advanced work did not support the complete remaining day. No daily survival outcome
+is accepted. Normal Save/Quit/controller shutdown is verified separately from the
+unknown acknowledgments; final save persistence requires actual reload.
+
+The[next bounded plan](changes/037-medical-day-plan.md) addresses practice
+cancellation and full-day resource/rest fit, retaining all clocks, costs and failures.
+Actual stable-CLI player inputs worked without recurring approval; no new Codex
+restart or broad permission change is needed. The[work path](work.md) links the
+retained native repairs, failed attempts and remaining seven-day acceptance gates.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign
 continuation. The [MVP completion audit](acceptance/2026-10-17-completion.md) maps
