@@ -38,21 +38,23 @@ using ordinary outdoor fire, boiling and bottle storage. [026–028](acceptance/
 then collected 3 L of additional raw water, retained missing-tool and crowbar-damage
 stops, and qualified marked ground fuel. After declining a storage warning for a 3.5 L batch,
 the player verified empty bottles and completed a smaller 1.5 L batch and stored all of it.
-Fresh carried stock is **3 L clean water, 2 L untreated water and 12 rations**. Remaining-three-day
-coverage and days5–7 are incomplete.
+Fresh stock was **3 L clean water, 2 L untreated water and 12 rations**. A further
+batch then stopped when the fire went out, without output. The original clean water
+and rations were not consumed; free untreated water and craft progress need fresh
+inspection. Remaining-three-day coverage and days5–7 are incomplete.
 
-The latest normal view (turn 5561448) shows a healthy, comfortable character with no displayed needs at the outdoor work
+The latest normal view (turn 5562034) shows a healthy, comfortable character with no displayed needs at the outdoor work
 position. One owned game/controller is paused, with no ordinary actor, queued input
-or live slots. The marked stash is empty, two splinters are carried and a small
-fire remains; further duration is unknown. The phone is off; the north window was last observed open.
+or live slots. The two remaining splinters were placed at the marked stash, but the fire went out
+during crafting. Current fuel and unfinished-craft state need inspection. The phone is off; the north window was last observed open.
 Final shutdown and lifecycle ACKs remain qualified.
 
 [#129](https://github.com/CVX-Hull/enactive/issues/129) owns further resources/whole
 forecast; [work](work.md) links the path. Closed019–027 grant no successor authority.
-028’s closed assignments grant no successor authority. A further batch
-requires fresh evidence and explicit assignment under049.
-Measured daily care exceeded the prior forecast; [049](changes/049-distinct-fuel-study.md)
-records the prospective distinct fuel study and finite budget revision. The user clarified that delegation
+028’s closed assignments grant no successor authority. Continuing the interrupted craft
+requires fresh evidence and explicit assignment under [050](changes/050-curtain-fuel-and-retained-craft.md).
+[049](changes/049-distinct-fuel-study.md) retains the fuel/capacity studies;
+050 records the next tool-free curtain salvage proposal and finite budget revision. The user clarified that delegation
 covers gameplay-related time and input extensions, prioritizing quality data;
 [047](changes/047-quality-data-continuation.md) records025's time/phase decision,
 retaining original clocks, costs and input ceilings. Its [046 decision](changes/046-replan-known-nondelivery.md)

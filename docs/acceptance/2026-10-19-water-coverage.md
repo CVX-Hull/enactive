@@ -220,6 +220,29 @@ The immutable first-batch snapshot binds156rows and the closed assignment.
 No remaining-three-day coverage or dayfive acceptance follows;049 records the
 prospective next finite internal allocation, with all costs/clocks/reserves retained.
 
+## 028 further batch interrupted by heat loss
+
+Under clean5f22a76b9e9fc50e2f3603ddd25407edeaec8e81, fresh160/161 matched the
+lead gate and162 deliberately resumed. F placed the remaining two carried splinters
+at the existing marker; actual171 showed exactly two. Recipe181 showed six portions,
+1.5L,26m30, greenBOIL1/fire/raw8.182–184 started one ground craft, not a new output.
+At185, turn5562034/09:00:34, the game reported no nearby fire and stopped crafting.
+Only581calendar seconds elapsed after craft start5561453. No output/pour prompt
+occurred. F immediately186Pause/187Status/FINAL; no ignition, restart or further
+ordinary inspection followed. Final progress, free raw stock and fuel quantity are
+unverified. The prior3Lclean/12rations were not consumed; ingredients in an unfinished
+craft are not usable water or unexplained loss.
+
+Independent review verified all187counters/frame hashes, relevant actual pixels and
+unchanged unknowns.21inputs/378.839seconds cost1787whole/866aggregate/473day5/
+167lifecycle,122resource inputs. Lead188–190 confirmed supported paused normal
+5562034/rev1555/[8,-13], healthy/Comfortable/blankneeds/SafeON, actual null live slots,
+all handles terminal/noqueue. The immutable heat-stop snapshot binds190rows.
+Exact5f22 push39332128769 andPR39332133314 CI passed separately; no native rebuild.
+[050](../changes/050-curtain-fuel-and-retained-craft.md) proposes ordinary curtain
+fuel and inspection of this same retained craft; old assignments grant no authority.
+Days5–7 and remaining coverage are incomplete.
+
 ## Data, CI and remaining acceptance
 
 The [manifest](2026-10-19-water-coverage-manifest.json) binds selected local receipts,

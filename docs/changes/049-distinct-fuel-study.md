@@ -2,7 +2,7 @@
 owner: lead
 date: 2026-10-19
 scope: Prospective fuel, container-aware treatment and remaining campaign after027
-status: active
+status: historical
 review_trigger: Actual fuel or treatment result, whole fit, source or authority change
 ---
 
@@ -217,7 +217,7 @@ system or new dependency is needed; reuse CDDA's inventory, recipe and liquid UI
 #71/#40/#75 own interpretation, monitoring and control-fit findings; #129/#104 own
 resources/dayfive. Days5–7 and final lifecycle remain incomplete.
 
-## Current decision after the first stored bulk batch
+## Historical follow-up after the first stored bulk batch (closed)
 
 The container-aware part completed ONE six-portion batch within measured current
 capacity:42inputs/504.096seconds, all1.5L bottled, fresh stock3Lclean/2Lraw/12rations.
@@ -259,3 +259,17 @@ care remains separately bounded and stops in each owned daily window for indepen
 acceptance before successor-day input. Keep one consolidated PR; unchanged daily
 tactical decisions need evidence and admission, not a new source change each time.
 Days5–7 and final lifecycle remain incomplete.
+
+## Final disposition
+
+The further six-portion craft started, but nearby fire was lost after581calendar
+seconds. No additional clean output occurred. F immediately paused and handed off;
+independent review qualified21inputs/378.839seconds and all187rows. Lead188–190
+verified normal5562034/rev1555/nullslots, healthy visible needs, all tools terminal
+and no queue. Total1787whole/866aggregate/473day5/167lifecycle,122resource inputs.
+Free raw water, remaining fuel and current unfinished-craft progress were not freshly
+inspected; do not call bound ingredients lost or completed output. The prior3Lclean
+and12rations were not consumed. All assignments here are closed.
+
+[050](050-curtain-fuel-and-retained-craft.md) owns the prospective curtain-rod fuel
+and retained-craft continuation. This historical record grants no successor authority.
