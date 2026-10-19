@@ -19,17 +19,26 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 | Survival pilot and findings | [Pilot report](acceptance/2026-10-18-survival-pilot.md) retains the stopped pre-spawn attempt and its dispositions; #78/#83 own acceptance. |
 | Continuity and first-day rehearsal | [Qualified first-day result](acceptance/2026-10-18-first-day-completion.md) retains actual save/restart/handoff, needs and autonomy evidence plus its failures/unknowns; #79/#80 own acceptance. |
 | Seven-day readiness | [Readiness report](acceptance/2026-10-18-seven-day-readiness.md) records the finite preparation gate and its limits; #81. Readiness does not guarantee campaign success. |
-| Current seven-day path | [Functional progress](acceptance/2026-10-19-functional-survival.md): two days accepted; day three stopped at water readiness, then normal partial shutdown. [Parent #82](https://github.com/CVX-Hull/enactive/issues/82) and daily #100–106 own current work and acceptance. [#129](https://github.com/CVX-Hull/enactive/issues/129) owns actual water output/coverage and a viable remaining allocation before any new admission. Closed scopes grant no authority. |
+| Current seven-day path | [020](acceptance/2026-10-19-midpoint-survival.md) accepted days 1–3, real midpoint restart/reload and fresh F replacement. [021](acceptance/2026-10-19-treatment-stop.md) confirmed raw water/tool but no safe heat or potable output, retreated and closed for lost credible whole-route fit. Day four remains incomplete. [#129](https://github.com/CVX-Hull/enactive/issues/129) owns resources/forecast; [#103](https://github.com/CVX-Hull/enactive/issues/103), #82 and #10 stay open. |
 | Full closeout | Same-character daily evidence, normal midpoint save/restart/reload and player replacement, final normal shutdown, independent complete-campaign review, protected publication/CI, owned cleanup and current Project. #82 stays open until all are proved. |
 
-Actual campaign reports distinguish success, partial progress, failed attempts, unknown delivery and unexercised capabilities. Historical reports and issue revisions remain evidence; they neither grant current authority nor renew unused budgets. Cumulative charges include rejected, stale and unknown attempts. An old request is never replayed merely because a newer scene looks favorable.
+The character was saved through normal Save/Quit; native and controller processes
+and the port 8766 listener are absent. Final exact persistence was not reloaded;
+Save/Quit acknowledgments remain unknown. All actors/tool handles are terminal and
+no input is queued. Closed 019/020/021 grant no successor authority or budget reset.
+The actual last normal state is 5,472,870, Spring 64, 08:14:30, alive and Comfortable,
+with no observed damage. This is partial progress, not day-four acceptance.
 
-The current game and controller are stopped. The final normal save has not been
-reloaded. The [finite water-readiness proposal](changes/040-water-readiness.md)
-records an explicit prospective lifecycle allocation and investigation gate; it
-grants no survival authority. Further play requires independently reviewed supply readiness and a
-complete remaining-route allocation; the previous lifecycle plan exceeds its
-remaining hard input allowance. Investigation success is not day-three acceptance.
+A new decision first needs an actual safe potable route and a credible complete
+remaining path within declared finite resources. Do not mechanically credit elapsed
+exploration as completed treatment or estimate future daily survival from menu
+throughput. Keep prior clocks, costs, stops and uncertain outcomes explicit; no
+automatic attempt follows. #129 owns that work and #75 owns the control-fit findings.
+The [operator contract](protocol.md#designated-campaign-operator) records bounded
+passive reassessment; a stricter admission stop still wins. GitHub owns current
+execution stage, estimates and dependencies. Historical reports are evidence, not
+live status or permission to continue. Consolidated protected publication remains
+a separate verification step.
 
 ## Execution ownership
 

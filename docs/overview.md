@@ -25,20 +25,23 @@ phone-off daylight and partial medical practice on Ned Meyers/Belgium, then stop
 before a complete remaining-day fit. It remains qualified historical evidence.
 
 The [functional survival report](acceptance/2026-10-19-functional-survival.md)
-verifies two days alive on the same normally created Ned Meyers / Belgium.
-Day three stopped at Spring63 08:09:45 after water readiness failed; normal
-Save/Quit and native/controller shutdown followed. The final save has not been
-reloaded. Seven-day survival and midpoint player replacement remain unproved.
-[#129](https://github.com/CVX-Hull/enactive/issues/129) owns the concrete supply
-and remaining-route allocation gap; [work](work.md) links the delivery path.
+verifies two days alive on normally created Ned Meyers / Belgium.
+[020 accepted day three](acceptance/2026-10-19-midpoint-survival.md), normal midpoint
+native restart/exact saved-turn reload and genuine fresh F ordinary-input
+replacement. [021 stopped](acceptance/2026-10-19-treatment-stop.md) after confirming
+raw water and a boiling tool but no heat, and retreating from a distant hostile.
+Day four and seven-day survival remain incomplete. Ned was saved through the
+normal flow and the native game/controller shut down; final exact persistence
+was not reloaded and lifecycle acknowledgments remain unknown.
 
-The [body-status correction](acceptance/2026-10-19-body-status.md) separately
-verified native menu navigation and saved-character reload. The
-[water-readiness proposal](changes/040-water-readiness.md) preserves closed
-studies and cumulative accounting, with an explicit prospective internal lifecycle
-allocation. It requires independent review, protected publication and actual
-admission; investigation alone cannot restore survival authority. Stable CLI inputs worked
-without recurring approval; no broad permission or Codex restart is needed.
+[#129](https://github.com/CVX-Hull/enactive/issues/129) owns a safe potable route
+and credible complete remaining forecast; [work](work.md) links the path. Closed
+019/020/021 grant no further input authority or renewed budget. [Operator workflow](protocol.md#designated-campaign-operator)
+permits bounded passive reassessment of transient unsupported returns only when
+an admission allows it, followed by explicit reassignment at supported settled
+state. This is a manual control, not demonstrated general monitoring. Stable
+literal CLI access worked without recurring human approval prompts; no broader
+permission rule or Codex restart was required.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign
 continuation. The [MVP completion audit](acceptance/2026-10-17-completion.md) maps
