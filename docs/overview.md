@@ -21,8 +21,8 @@ the waypoint planner has a separate candidate-only role.
 The service executes an explicitly started waypoint task with per-step feedback;
 without a player response it stops on a deadline. General survival is not implemented.
 A [bounded real-game probe](acceptance/2026-10-18-walk-reassessment.md) now verifies
-walk-stop evidence and required fresh Observe/Resume. Seven-day play still needs
-its prospective finite admission; the [stopped deciding attempt](acceptance/2026-10-18-seven-day-stop.md)
+walk-stop evidence and required fresh Observe/Resume. The
+[stopped deciding attempt](acceptance/2026-10-18-seven-day-stop.md)
 remains failed. A [same-character functional continuation](acceptance/2026-10-18-seven-day-continuation-stop.md)
 then stopped on unsupported nearby-items UI without verified time advance;
 [ordinary-menu coverage #112](https://github.com/CVX-Hull/enactive/issues/112)
@@ -30,9 +30,9 @@ has a [qualified native repair](acceptance/2026-10-18-ordinary-menus.md): item d
 comparison and work-menu navigation worked. [The remaining direction/reload gate](acceptance/2026-10-18-menu-gate.md)
 also passed its real test and protected exact/merged-main CI accepted publication;
 #112 is complete. The [integrated continuation](changes/029-seven-day-integrated.md)
-scopes the full remaining seven-day outcome on one frozen build, with overlapping
-daily/lifecycle costs and an actual midpoint player replacement. It still needs
-prospective admission; neither menu acceptance nor a plan establishes survival.
+was admitted and then [closed incomplete before day1](acceptance/2026-10-18-integrated-day1.md).
+Further play needs a prospective whole-day plan and allocation; neither menu
+acceptance nor a plan establishes survival.
 [Work](work.md) links the active path.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign
@@ -151,6 +151,12 @@ Its native zero-step probe passed after an earlier unexercised load probe;17comb
 charges and zero game advance, with lifecycle ACKs still unknown. Broader permissions
 were unnecessary. Further campaign play requires prospective admission, not unused
 allowance from the stopped attempt.
+
+The [integrated003 partial](acceptance/2026-10-18-integrated-day1.md) secured more
+supplies and boiling/fuel materials but stopped before day1: a local heat plan did
+not fit the complete remaining day within its input allowance. Normal cleanup
+retained259whole charges,119elapsed game seconds and all unknowns. Further play
+requires a prospective complete-day plan and allocation; no seven-day result yet.
 
 Campaigns expose concrete memory, planning, monitoring and UI needs. The
 [review workflow](project-management.md#campaign-driven-improvement) routes observed

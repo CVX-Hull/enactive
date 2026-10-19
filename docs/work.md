@@ -32,7 +32,7 @@ The campaign milestone has no committed delivery date.
 | Useful survival pilot and its first review | [Pilot001](acceptance/2026-10-18-survival-pilot.md) stopped on an unknown world-selection acknowledgment before spawning; retained findings and cleanup are gap evidence, not survival success | [#78 pilot](https://github.com/CVX-Hull/enactive/issues/78), then [#83 first review](https://github.com/CVX-Hull/enactive/issues/83) |
 | Continuity and first-day rehearsal | [Rehearsal001](acceptance/2026-10-18-first-day-rehearsal.md) failed autonomy. The [direction probe](acceptance/2026-10-18-native-direction-menu.md) verified same-character reload and actual pickup selection/cancel without user keys; the [later same-character run](acceptance/2026-10-18-first-day-completion.md) reached24h14m29s without user rescue, with qualified needs/rest evidence and a retained cleanup deadline deviation | [#91 recovery](https://github.com/CVX-Hull/enactive/issues/91), [#79 continuity](https://github.com/CVX-Hull/enactive/issues/79) and [#80 first day](https://github.com/CVX-Hull/enactive/issues/80); shared execution is serialized |
 | Executable seven-day readiness | [Accepted preparation](acceptance/2026-10-18-seven-day-readiness.md) for frozen001; actual later failure/gaps remain separate | [#81 readiness](https://github.com/CVX-Hull/enactive/issues/81) |
-| Seven-day campaign | Same-character owned segments, visible calendar/needs/identity, restart/handoff and reviewed endpoint; first001 and continuation002 stopped partial; #112 is accepted, integrated029 awaits finite admission | [#82 execution](https://github.com/CVX-Hull/enactive/issues/82), [qualified menu repair](acceptance/2026-10-18-ordinary-menus.md) and daily children #100–106 |
+| Seven-day campaign | Same-character owned segments, visible calendar/needs/identity, restart/handoff and reviewed endpoint; integrated003 secured supplies but stopped before day1; first001/continuation002 also retained partial | [#82 execution](https://github.com/CVX-Hull/enactive/issues/82), [integrated003 result](acceptance/2026-10-18-integrated-day1.md) and daily children #100–106 |
 
 The first integrated pilot/review round used **18 charged inputs**, including four
 cleanup inputs, and 229.232 seconds through the final receipt capture. It stopped
@@ -125,17 +125,25 @@ main CI finished, despite a prose negation. [The maintenance control](project-ma
 now requires the computed closing-reference list to be empty before such merges;
 #75 retains the observed deviation.
 
-The [integrated next round](changes/029-seven-day-integrated.md) scopes the whole
-remaining seven-day outcome on one source/native/recorder freeze. Daily checkpoints,
-shared lifecycle/recovery reserves and actual midpoint player replacement remain
-finite, carrying122whole charges and the original clock. Lead owns admission and
-review; the player first reassesses sustainable visible resupply. Its proposed
-status is not input authority. No old budget/queue is renewed.
-Neither stopped study supplies unused authority for the next one. The seven
+The [integrated003 result](acceptance/2026-10-18-integrated-day1.md) retained actual
+food/water/medical/tool/fuel acquisition, but stopped before the first day because
+the remaining53 ordinary inputs could not support a credible whole-day plan.
+Normal cleanup brought totals to259whole/234day and last normal5212919,119seconds
+after originalT0. Shared lifecycle84inputs/3300.007seconds, three new unknown ACKs
+and two charged lead cleanup mistakes remain explicit. No day1 acceptance, treated
+water or sustainable heat is established. Study003's authority is closed; a larger
+first-day allocation needs a prospective whole-outcome forecast with every old
+cost/clock retained. No old budget/queue is renewed. The seven
 named daily children [#100–106](https://github.com/CVX-Hull/enactive/issues/82)
 remain uncompleted with actual dependencies/estimates in GitHub. Source changes
 only follow normal native/controller shutdown. No generic memory/monitor/VLA
 framework, paid API or permission expansion is justified by this failure.
+
+The [setup and sustained-survival brief](changes/030-setup-and-sustained-survival.md)
+proposes a larger cumulative first-day allocation, smaller later-day allocations
+and an explicit full-day forecast before new admission. The original whole ceiling,
+all259inputs and the original whole/day clocks remain. Its proposed status grants
+no input authority; all seven daily outcomes and full publication remain required.
 
 Pilot001's 150-input/45-minute/six-game-hour ceilings remain historical fixed limits,
 not a renewable allowance. Every later attempt needs a prospective finite brief
