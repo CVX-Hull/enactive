@@ -300,7 +300,8 @@
         "docs/acceptance/2026-10-18-ordinary-menus.md",
         "docs/acceptance/2026-10-18-menu-gate.md",
         "docs/acceptance/2026-10-18-activity-distraction-stop.md",
-        "docs/acceptance/2026-10-18-activity-distraction.md"
+        "docs/acceptance/2026-10-18-activity-distraction.md",
+        "docs/acceptance/2026-10-19-body-status.md"
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
       "limitations": "Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.",
@@ -309,24 +310,22 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-18",
-        "outcome": "Scoped ordinary distraction query and prior005 save reload passed; no daily survival accepted.",
-        "scope": "Actual category/menu11, ordinary bridgeYes12, freshpausednormal14/status15;22rows9inputs157game seconds. Load6/Save18/Quit22 ACKs remain unknown; finalSave not reloaded.",
+        "date": "2026-10-19",
+        "outcome": "Exact body-status menu navigation/exit and prior008 save reload passed; no daily survival accepted.",
+        "scope": "009labels3/normal6turn5282823/menu9/DOWN10Leftarm/ESC11/pausedempty13;5charges87.411030seconds;Load4ACKunknown.008retainedincompleteBODYGRAPHfailure.",
         "evidence": [
-          "docs/acceptance/2026-10-18-activity-distraction.md",
-          "docs/acceptance/2026-10-18-activity-distraction-stop.md"
+          "docs/acceptance/2026-10-19-body-status.md"
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-18",
-        "evidence": [
-          "docs/acceptance/2026-10-18-activity-distraction-stop.md",
-          "docs/acceptance/2026-10-18-activity-distraction.md"
-        ],
+        "date": "2026-10-19",
         "effectiveness": "partially_effective",
-        "findings": "Exact-project loading and actual-player checks resolved recurring permission review in the scoped setup. Native menu coverage missed ordinary query_popup activity distractions; source fixtures and previous menu proofs did not establish this owner. Inspection7 overran120seconds at175.441; stopped attempt remains incomplete. Exact pinned query marker then passed one real feral-cop question/Yes/fresh normal; other choices and nested negative cases remain unexercised natively. Stable CLI calls required no new recorder rule or restart; raw receipt metadata retained despite corrected derived category fields.",
-        "cost": "005 totals85new/362whole/337day1 inputs; shared lifecycle102inputs/4044.464seconds. Existing menu_query reused for the repair; no new generic framework. Development/review/publication continue original clocks, external model/approval spend unmeasured. Native proof adds9inputs/195.831seconds;371whole/346day1/108lifecycle inputs and4148.431lifecycle seconds now retained.",
-        "follow_up": "#120 protected final exact/main publication after independent actual proof review, then prospective #100/#82 only with credible complete-day plan and original costs/clocks/caps. Final proof Save needs actual reload. #75 recorder retirement/process burden; due dates unchanged. No general recovery or survival claim."
+        "findings": "BODYGRAPH cold assessment exposed another exact-menu coverage gap after useful medical work/rest. Existing menu_query solved it without global category admission, new framework or permissions. Native Head-to-Leftarm navigation and exit passed; unmarked/nested/out-of-game negatives remain source-reviewed only. Fresh labels weariness, not sleepiness. Rule checker and consecutive live calls passed without recurring review.",
+        "cost": "008added105charged inputs including7lifecycle; closed578whole553day128life/4593.386686497seconds.009probe5charges including2life in87.411030seconds;583whole558day130life/4658.841152789life seconds. Original clocks include repair/review/publication; no global environment changes.",
+        "follow_up": "#124 protected exact/main publication, then #100/#82 fresh remaining-day fit under038. Keep failed008 and all unknowns. #75 reviews menu-coverage/control burden at existing trigger; no date renewal or generic recovery claim.",
+        "evidence": [
+          "docs/acceptance/2026-10-19-body-status.md"
+        ]
       },
       "next_review": "2027-01-15"
     },

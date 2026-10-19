@@ -18,14 +18,21 @@ current capability; [project management](project-management.md) owns the workflo
 
 ## Path to seven-day survival
 
-Latest: [007 daylight/practice result](acceptance/2026-10-18-daylight-practice.md)
-closed incomplete before day1. Same Ned is alive at5225393,3h29m53s elapsed;
-Wound Care39%, verified phone-off daylight, no accepted complete-day fit. Normal
-Save/Quit/controller shutdown retained473whole/448day/121lifecycle inputs and all
-unknowns. The[next prospective plan](changes/037-medical-day-plan.md) addresses
-practice cancellation, needs and finite contextual continuation within the original
-day clock. #82/#100 remain open; later daily outcomes remain gated. No new native
-build, permission rule or Codex restart is selected. Historical sequence follows.
+Latest:008 medical continuation stopped incomplete at5282823/Spring62 03:27:03,
+alive before day1 target5299200. Wound Care learned, Expert partial progress,
+meals and one actual alarmed wake-up are qualified progress. BODYGRAPH remained
+unsupported after fresh reassessment. Separate charged native Escape enabled
+normal Save/Quit; main menu/process exit were observed, acknowledgments remain
+unknown. Cumulative578whole/553day/128lifecycle
+inputs retain all earlier costs. The[body-status correction](acceptance/2026-10-19-body-status.md)
+passed its separate native build/probe and verified saved5282823 on actual reload;
+583whole/558day/130lifecycle inputs now retain both lanes. New prospective admission
+under[038](changes/038-body-status-input.md) must fit the original clocks after
+protected publication. [#124](https://github.com/CVX-Hull/enactive/issues/124) owns
+this repair and blocks the current daily outcome until accepted.
+#82/#100 remain open; later daily outcomes remain gated. Gameplay rules passed
+installed policy checks and two live status calls without recurring approval;
+no broader rule or Codex restart is selected. Historical sequence follows.
 
 The [campaign outcome #10](https://github.com/CVX-Hull/enactive/issues/10) means a
 normally created fresh character alive after seven elapsed in-game days, with
