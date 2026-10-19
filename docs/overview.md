@@ -25,28 +25,23 @@ phone-off daylight and partial medical practice on Ned Meyers/Belgium, then stop
 before a complete remaining-day fit. It remains qualified historical evidence.
 
 The [functional survival report](acceptance/2026-10-19-functional-survival.md)
-verifies two days alive on the same normally created Ned Meyers / Belgium.
-[Adaptive survival019](acceptance/2026-10-19-adaptive-survival.md) normally reloaded
-the latest save, acquired water/food and observed alarmed rest. It stopped at
-5,470,972, seventeen minutes short of day three, leaving the owned game/viewer paused.
-Closed 019 grants no successor authority. [020](acceptance/2026-10-19-midpoint-survival.md)
-then verified day three, actual midpoint native restart/exact reload and fresh F
-ordinary-input replacement. It closed incomplete on a transient unsupported crafting
-return; day four and seven-day survival remain unproved. [#129](https://github.com/CVX-Hull/enactive/issues/129)
-owns current resource/access work; [work](work.md) links the path.
+verifies two days alive on normally created Ned Meyers / Belgium.
+[020 accepted day three](acceptance/2026-10-19-midpoint-survival.md), normal midpoint
+native restart/exact saved-turn reload and genuine fresh F ordinary-input
+replacement. [021 stopped](acceptance/2026-10-19-treatment-stop.md) after confirming
+raw water and a boiling tool but no heat, and retreating from a distant hostile.
+Day four and seven-day survival remain incomplete. Ned was saved through the
+normal flow and the native game/controller shut down; final exact persistence
+was not reloaded and lifecycle acknowledgments remain unknown.
 
-The [remaining-budget proposal](changes/042-finish-within-existing-budget.md)
-retains the exact whole and aggregate clocks, spent inputs and cleanup reserve,
-while replacing poorly fitted internal daily timers with longer bounded assignments
-and actual daily acceptance. Essential exploration uses current needs margin;
-verified supply gates optional work. Independent review and actual admission still
-apply. Stable CLI worked without recurring human
-approval; no broad permission or Codex restart is needed.
-
-[Prospective reassessment043](changes/043-transient-boundary-reassessment.md)
-retains the same clocks/costs/reserve and permits only bounded passive lead
-reassessment of transient unsupported returns before explicit reassignment at a
-settled supported boundary. It cannot reopen020 or authorize input by itself.
+[#129](https://github.com/CVX-Hull/enactive/issues/129) owns a safe potable route
+and credible complete remaining forecast; [work](work.md) links the path. Closed
+019/020/021 grant no further input authority or renewed budget. [Operator workflow](protocol.md#designated-campaign-operator)
+permits bounded passive reassessment of transient unsupported returns only when
+an admission allows it, followed by explicit reassignment at supported settled
+state. This is a manual control, not demonstrated general monitoring. Stable
+literal CLI access worked without recurring human approval prompts; no broader
+permission rule or Codex restart was required.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign
 continuation. The [MVP completion audit](acceptance/2026-10-17-completion.md) maps

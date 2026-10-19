@@ -398,6 +398,19 @@ or unquiesced operator, failed access/approval, corrupt accounting or unreadable
 state stops further play. The lead may perform bounded ordinary recovery after
 handoff using the established recovery procedure; user rescue is not the fallback.
 
+For functional campaign admissions that permit transient-boundary reassessment,
+an unsupported return stops ordinary input immediately. The actor pauses, finishes
+the call, supplies a terminal checkpoint and relinquishes authority. Lead may make
+at most three passive Observes within 120 seconds of that return, without input,
+Resume or recovery at an unsupported boundary. Explicit bounded reassignment is
+eligible only at a fresh supported interpretable boundary, with actual null live
+slots, reconciled effects and credible remaining whole-route fit. Persistent bad
+state, denial or lost fit ends the admission; unknown acknowledgments remain
+unknown. A stricter admission stop rule still wins. This is a manual workflow
+control, not a new native guarantee or automatic retry. [020/021 evidence](acceptance/2026-10-19-treatment-stop.md)
+retains the closed attempts; the prospective 021 procedure was reviewed, but no
+new unsupported recovery was exercised in 021.
+
 Actor assignment/quiescence and campaign semantic limits are workflow controls.
 They are not an exclusive external capability or a sandbox against a malicious
 cooperating agent. The native/controller authority, Pause and in-process waypoint

@@ -1,6 +1,8 @@
 ---
 owner: lead
-status: proposed
+date: 2026-10-19
+scope: Closed 021 treatment investigation; lost complete-route fit, day four incomplete
+status: historical
 review_trigger: Actual boundary recovery, complete-route fit or source changes
 ---
 
