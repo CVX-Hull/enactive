@@ -13,7 +13,7 @@ import threading
 import time
 import unittest
 
-from harness.controller import Controller
+from harness.controller import Controller, read_json
 from harness.gameplay.contracts import PlanCandidate
 from harness.server import Server
 from tests.test_controller import ControlBridge, FakeBridge, recovery_state
@@ -408,19 +408,33 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(len(control.requests), 1)
 
     def test_recovery_does_not_wait_for_ordinary_http_request(self):
-        with ThreadPoolExecutor() as pool:
-            waiting = pool.submit(self.post, {"kind": "observe", "timeout": 0.5})
-            deadline = time.monotonic() + 1
-            while not (self.controller.bridge / "request.json").exists() and time.monotonic() < deadline:
-                time.sleep(0.002)
-            self.controller.state = recovery_state()
-            original = self.controller.pending.copy()
-            with ControlBridge(self.controller):
-                code, data, _ = self.recovery(self.recovery_payload())
-                self.assertEqual((code, json.loads(data)["status"]), (200, "prompt_opened"))
-                self.assertFalse(waiting.done())
-                self.assertEqual(self.controller.pending["id"], original["id"])
-                self.assertEqual(self.post({"kind": "pause"})[0], 200)
+        entered = threading.Event()
+        release = threading.Event()
+
+        def hold_ordinary_response(path, *args, **kwargs):
+            if path == self.controller.bridge / "response.json":
+                # Publication is complete and pending is set before polling begins.
+                # Hold ordinary I/O without holding the controller's data lock.
+                entered.set()
+                self.assertTrue(release.wait(5), "ordinary response polling was not released")
+            return read_json(path, *args, **kwargs)
+
+        with patch("harness.controller.read_json", side_effect=hold_ordinary_response), ThreadPoolExecutor() as pool:
+            waiting = pool.submit(self.post, {"kind": "observe", "timeout": self.controller.timeout})
+            try:
+                self.assertTrue(entered.wait(2), "ordinary request did not reach response polling")
+                with self.controller.data_lock:
+                    self.controller.state = recovery_state()
+                    self.assertIsNotNone(self.controller.pending)
+                    original = self.controller.pending.copy()
+                with ControlBridge(self.controller):
+                    code, data, _ = self.recovery(self.recovery_payload())
+                    self.assertEqual((code, json.loads(data)["status"]), (200, "prompt_opened"))
+                    self.assertFalse(waiting.done())
+                    self.assertEqual(self.controller.pending["id"], original["id"])
+                    self.assertEqual(self.post({"kind": "pause"})[0], 200)
+            finally:
+                release.set()
             waiting.result()
 
     def test_loopback_bind_and_private_config(self):
