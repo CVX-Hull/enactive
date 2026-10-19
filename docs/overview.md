@@ -40,10 +40,16 @@ input rejection. It crafted a crowbar/sling and completed a carving job. After t
 user restart, actual-player calls verified no recurring approval and play resumed.
 The [005 outcome](acceptance/2026-10-18-activity-distraction-stop.md) then stopped
 on an unsupported activity-distraction question. Native and controller are stopped
-normally; [the narrow repair](changes/034-activity-distraction-menu.md) reuses
-existing menu ownership, with actual graphical proof still required. The obsolete005
-recorder allowance is retired; the stable CLI allowance remains.
-No daily survival outcome is accepted.
+normally. [The narrow repair](changes/034-activity-distraction-menu.md) reuses
+existing menu ownership; its [real graphical test](acceptance/2026-10-18-activity-distraction.md)
+handled a feral-cop interruption through ordinary bridge Yes and fresh normal play.
+The prior save reloaded; final proof save and protected publication remain separate.
+The obsolete005 recorder allowance is retired; stable CLI calls worked without
+recurring review or another Codex restart.
+No daily survival outcome is accepted. The
+[next full-campaign proposal](changes/035-full-day-continuation.md) adds prospective
+first-day wall headroom with the original clock/costs intact and early checks of
+safe useful work and actual rest; all seven days remain the objective.
 [Work](work.md) links the active path.
 
 The [project goal](goal.md) records the original MVP and active seven-day campaign

@@ -64,6 +64,17 @@ Mac. Existing macOS13/minimum linked-library15 warning remains; this is not
 other-host support. The corrected common lane passed451 tests plus viewer, diagram,
 architecture and governance checks. Independent review found noP1/P2 in the patch,
 recorded outcome and affected control. Protected publication and actual graphical
-proof remain separate. Initial governance checks rejected missing provenance fields and absolute local
+proof remained separate at this checkpoint. Initial governance checks rejected missing provenance fields and absolute local
 artifact references in the new historical manifest; metadata and repository-relative
-references were corrected without weakening the schema. No repaired prompt has been played.
+references were corrected without weakening the schema. No repaired prompt had been played at that checkpoint; the later proof is below.
+
+## Real native proof
+
+The [bounded native proof](../acceptance/2026-10-18-activity-distraction.md) verified
+prior005save reload and an actual feral-cop distraction with ordinary bridge Yes,
+then fresh supported normal play. Independent evidence review found noP1/P2.
+22rows/nine new inputs/195.831seconds/157game seconds;371whole346day1/108lifecycle
+and4148.431lifecycle seconds,77v3+1archived/control2unknowns remain. Both source
+candidate CI runs passed before admission. Final proof Save still needs reload.
+Protected final exact/merged-main publication remains before #120 closure; no daily
+survival acceptance or automatic campaign resumption.

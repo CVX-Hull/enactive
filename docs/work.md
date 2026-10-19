@@ -165,12 +165,25 @@ Last normal5217709 is1h21m49s after originalT0; no daily outcome is accepted.
 Inspection7's175.441seconds against120 remains a recorded deviation.
 
 [#120](https://github.com/CVX-Hull/enactive/issues/120) owns the
-[exact activity-question repair](changes/034-activity-distraction-menu.md), reuse of
-existing native ownership and actual graphical proof. #82/#100 wait on that real
-proof and a credible remaining whole-day plan under every original cost/clock/cap.
+[exact activity-question repair](changes/034-activity-distraction-menu.md). The
+[real native proof](acceptance/2026-10-18-activity-distraction.md) verified005save
+reload and actual ordinary Yes cancellation of a feral-cop crafting distraction.
+22rows/nine new inputs/157game seconds bring totals371whole/346day1/108lifecycle,
+4148.431lifecycle seconds and77v3+1archived/control2unknowns. Native/controller are
+stopped normally. No daily acceptance; final proof save not yet reloaded. #82/#100
+wait on protected final publication and a credible remaining whole-day plan under
+every original cost/clock/cap.
 #75 owns scoped process-cost maintenance; the obsolete exact005 recorder rule is
 retired, stable CLI allowance retained. No new permission restart is requested.
 005 remains closed incomplete; source work follows verified normal shutdown.
+
+The [next full-campaign proposal](changes/035-full-day-continuation.md) keeps the
+seven-day target and all spent costs, while prospectively extending first-day wall
+headroom from the same clock before its existing limit expires. Whole/daily input,
+later-day and shared lifecycle ceilings stay fixed. Actual safe work, proficiency
+benefit, materials and eligible rest are checked early; this is no guarantee of
+completion or renewed005 authority. Admission still requires reviewed protected
+publication, actual actor/native preflight and a complete remaining-day forecast.
 
 Pilot001's 150-input/45-minute/six-game-hour ceilings remain historical fixed limits,
 not a renewable allowance. Every later attempt needs a prospective finite brief

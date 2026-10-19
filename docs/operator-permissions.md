@@ -71,7 +71,10 @@ remain historical. After the user's restart, startup reported saved gameplay
 prefixes. Two actual-player recorder status calls102/103 passed with no review
 request/error observed, followed by real Observe104/Resume105 and ordinary play.
 The [actual result](acceptance/2026-10-18-activity-distraction-stop.md) establishes
-that scoped setup, not every future invocation or managed-policy behavior.
+that scoped setup, not every future invocation or managed-policy behavior. The
+[later native proof](acceptance/2026-10-18-activity-distraction.md) used two harmless
+stable-CLI calls followed by actual ordinary inputs without recurring review, a
+new recorder allowance or another Codex restart.
 
 005 then ended on an unsupported native activity question, independently of
 permission. Its exact-study rule is removed from source; subsequent policy loading
@@ -125,9 +128,10 @@ Native guards, user Pause, recovery eligibility and campaign limits still apply.
 Setup, source changes, publication and unrelated commands have separate scope.
 
 The [trust correction](changes/033-gameplay-permission-preflight.md) records the
-observed disabled project layer and the exact-project fix. Its current result is
-enabled loading in a fresh bundled Codex process; live no-review gameplay remains
-unverified until the active chat reloads and the actual player passes the check.
+observed disabled project layer and the exact-project fix. Fresh bundled loading
+was followed by the [actual-player reload/resumption](acceptance/2026-10-18-activity-distraction-stop.md)
+checks and the later stable-CLI native proof. Those scoped results now establish
+live operation without recurring review; future changed setups need new preflight.
 
 A long-lived bounded player sub-agent is useful for keeping gameplay facts and
 observations separate from engineering discussion. It does not require a weaker
@@ -154,7 +158,8 @@ use explorer/reviewer roles to send input. See the [runbook](runbook.md#designat
 [two-phase result](acceptance/2026-10-18-campaign-operator.md) records actual
 delegated consumption/conservation and paused lead takeover, following a retained
 default-sandbox invocation failure. Its approved actor preflight and explicit
-tool mode worked in this session; allow-rule activation remains unverified.
+tool mode worked in this session; allow-rule activation remained unverified at that historical checkpoint; the
+[later actual verification](acceptance/2026-10-18-activity-distraction-stop.md) supersedes that limitation.
 This is one qualified operating result, not general survival or a reliability claim.
 Missing/unquiesced player, denied approval or failed readable access stops; user
 rescue is not the fallback. Do not expand an active frozen campaign mid-run.
@@ -180,7 +185,8 @@ prospective decision; the stopped admission supplies no remaining input authorit
 The [subsequent bounded correction/probe](acceptance/2026-10-18-walk-reassessment.md)
 used existing explicitly approved CLI calls without broader rules or another actor.
 It verified stop evidence and the fresh Observe/Resume sequence; the first load
-probe remained unexercised. Narrow rule activation is still unverified, and the
+probe remained unexercised. Narrow rule activation was still unverified at that historical checkpoint;
+[later actual-player verification](acceptance/2026-10-18-activity-distraction-stop.md) established the scoped setup, and the
 original approval denial was not retried. Further survival needs its own admission.
 
 The [later functional continuation](acceptance/2026-10-18-seven-day-continuation-stop.md)
