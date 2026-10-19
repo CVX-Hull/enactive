@@ -18,6 +18,15 @@ current capability; [project management](project-management.md) owns the workflo
 
 ## Path to seven-day survival
 
+Latest: [007 daylight/practice result](acceptance/2026-10-18-daylight-practice.md)
+closed incomplete before day1. Same Ned is alive at5225393,3h29m53s elapsed;
+Wound Care39%, verified phone-off daylight, no accepted complete-day fit. Normal
+Save/Quit/controller shutdown retained473whole/448day/121lifecycle inputs and all
+unknowns. The[next prospective plan](changes/037-medical-day-plan.md) addresses
+practice cancellation, needs and finite contextual continuation within the original
+day clock. #82/#100 remain open; later daily outcomes remain gated. No new native
+build, permission rule or Codex restart is selected. Historical sequence follows.
+
 The [campaign outcome #10](https://github.com/CVX-Hull/enactive/issues/10) means a
 normally created fresh character alive after seven elapsed in-game days, with
 maintained needs, shelter/rest, meaningful supply/travel decisions, ordinary

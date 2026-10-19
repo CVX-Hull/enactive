@@ -1,10 +1,15 @@
 ---
 owner: lead
-status: proposed
-review_trigger: Campaign resource feasibility, cumulative budgets, source or actor changes
+status: historical
+date: 2026-10-18
+scope: Frozen007 discovery proposal, admitted and closed incomplete; no remaining input authority
 ---
 
 # Resource discovery before sustained survival work
+
+007was admitted and[closed incomplete](../acceptance/2026-10-18-daylight-practice.md).
+This body preserves its original proposal; it grants no current authority. The
+[next proposal](037-medical-day-plan.md) retains the actual costs and failed gate.
 
 ## Why the next admission is different
 
