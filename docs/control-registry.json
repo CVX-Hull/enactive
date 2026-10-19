@@ -298,7 +298,8 @@
         "docs/acceptance/2026-10-18-seven-day-stop.md",
         "docs/acceptance/2026-10-18-walk-reassessment.md",
         "docs/acceptance/2026-10-18-ordinary-menus.md",
-        "docs/acceptance/2026-10-18-menu-gate.md"
+        "docs/acceptance/2026-10-18-menu-gate.md",
+        "docs/acceptance/2026-10-18-activity-distraction-stop.md"
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
       "limitations": "Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.",
@@ -308,22 +309,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-18",
-        "outcome": "Actual saved-character reload and direction cancellation passed; no survival claim; publication separate.",
-        "scope": "103artifacts/25rows10charges122whole,0gameadvance; sameacceptednative297b, doc-only candidate0987. NormalSaveQuit observed, all lifecycleACKunknowns retained.",
+        "outcome": "Actual-player allowance activated and play resumed; persistent unsupported distraction correctly stopped005, no daily survival accepted.",
+        "scope": "Player102/103 without recurring review, Observe104/Resume105; unsupported145/148; normal cleanup150\u2013158 with two new unknown ACKs. Exact repaired-owner graphical proof remains unexercised.",
         "evidence": [
-          "docs/acceptance/2026-10-18-menu-gate.md"
+          "docs/acceptance/2026-10-18-activity-distraction-stop.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
-          "docs/acceptance/2026-10-18-menu-gate.md",
-          "docs/acceptance/2026-10-18-ordinary-menus.md"
+          "docs/acceptance/2026-10-18-activity-distraction-stop.md"
         ],
         "effectiveness": "partially_effective",
-        "findings": "Retain missed renderer and first failed proof; exact correction worked in tested navigation. Separate prospective gate used peek direct chooser instead of auto-selected pickup; normal saved-character reload and cancellation verified. Alternate renderer/arbitrarymenus remain unexercised; ACKs stay unknown.",
-        "cost": "Original two menu proofs36charges/1128.917seconds, then separately scoped gate10charges/269.804seconds through closeout; whole122. Existing tools/passive recorder reused; review/publication time and external model/approval usage not zero or fully instrumented.",
-        "follow_up": "#112 protected publication then prospective #100/#82 with122charges/original whole clock; #75 actual call-chain review, fixture limits, proof estimation and evidence/checkpoint burden. Existing maintenance/research due dates unchanged; no automatic learning or broader rules."
+        "findings": "Exact-project loading and actual-player checks resolved recurring permission review in the scoped setup. Native menu coverage missed ordinary query_popup activity distractions; source fixtures and previous menu proofs did not establish this owner. Inspection7 overran120seconds at175.441; stopped attempt remains incomplete.",
+        "cost": "005 totals85new/362whole/337day1 inputs; shared lifecycle102inputs/4044.464seconds. Existing menu_query reused for the repair; no new generic framework. Development/review/publication continue original clocks, external model/approval spend unmeasured.",
+        "follow_up": "#120 exact-owner repair and real graphical proof, then prospective #100/#82 only with credible complete-day plan and original costs/clocks/caps. #75 recorder retirement and process burden; due dates unchanged. No native support or survival claim from build/fixtures."
       },
       "next_review": "2027-01-15"
     },

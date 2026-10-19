@@ -70,7 +70,19 @@ class SetupTests(unittest.TestCase):
                 '        std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );\n}\n}\n'
                 'void unrelated() { action = ctxt.handle_input(); }\n'),
             "src/do_turn.cpp": 'void handle_key_blocking_activity()\n{\n    if( has_unfinished_activity || u.has_destination() ) {\n                g->cancel_activity_query( _( "Confirm:" ) );\n}\n}',
-            "src/game.cpp": '    if( query_yn( _( "%s Cancel auto move?" ), text ) )  {\n}\n    if( query_yn( "%s %s", text, u.activity.get_stop_phrase() ) ) {\n}',
+            "src/game.cpp": ('    if( query_yn( _( "%s Cancel auto move?" ), text ) )  {\n}\n'
+                '    if( query_yn( "%s %s", text, u.activity.get_stop_phrase() ) ) {\n}\n'
+                '    const std::string &action = query_popup()\n'
+                '                                .preferred_keyboard_mode( keyboard_mode::keycode )\n'
+                '                                .context( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )\n'
+                '                                .option( "YES", allow_key )\n'
+                '                                .option( "NO", allow_key )\n'
+                '                                .option( "MANAGER", allow_key )\n'
+                '                                .option( "IGNORE", allow_key )\n'
+                '                                .query()\n'
+                '                                .action;\n'
+                '    if( action == "YES" ) { u.cancel_activity(); }\n'
+                'void unrelated() { query_popup().context( "OTHER_QUERY" ).query(); }\n'),
             "src/debug.cpp": "    for( bool stop = false; !stop; ) {\n        ui_manager::redraw();\n}",
             "src/main.cpp": "        while( !do_turn() ) {}",
             "src/sdltiles.cpp": ("    while( SDL_PollEvent( &ev ) ) {\n        imclient->process_input( &ev );\n}\n"
@@ -138,6 +150,15 @@ class SetupTests(unittest.TestCase):
         self.assertIn("activity_interruptible( ( has_unfinished_activity || u.has_destination() ) &&", activity)
         self.assertIn("cdda_harness::interrupt_owner harness_interrupt;", activity)
         self.assertEqual((source / "src/game.cpp").read_text().count("interrupt_query harness_query"), 2)
+        distraction = (source / "src/game.cpp").read_text()
+        self.assertEqual(distraction.count('menu_query harness_menu( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )'), 1)
+        self.assertIn('const std::string action = [&]() {\n'
+                      '        cdda_harness::menu_query harness_menu( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" );\n'
+                      '        return query_popup()', distraction)
+        self.assertIn('.action;\n    }();\n    if( action == "YES" )', distraction)
+        for action in ("YES", "NO", "MANAGER", "IGNORE"):
+            self.assertEqual(distraction.count(f'.option( "{action}", allow_key )'), 1)
+        self.assertIn('void unrelated() { query_popup().context( "OTHER_QUERY" ).query(); }', distraction)
         sdl = (source / "src/sdltiles.cpp").read_text()
         self.assertEqual(sdl.count("cdda_harness::poll("), 3)
         self.assertLess(sdl.index("cdda_harness::capture_frame();"), sdl.index("SDL_RenderPresent("))
@@ -178,6 +199,28 @@ class SetupTests(unittest.TestCase):
                     result = self.run_patch(repository, source)
                     self.assertNotEqual(result.returncode, 0)
                     self.assertIn(f"Pinned source anchor changed: {path.resolve()}", result.stderr)
+
+    def test_patch_rejects_missing_or_duplicate_distraction_wait_anchors(self):
+        for anchor in ('CANCEL_ACTIVITY_OR_IGNORE_QUERY', '.option( "IGNORE", allow_key )'):
+            for change in ("missing", "duplicate"):
+                with self.subTest(anchor=anchor, change=change), tempfile.TemporaryDirectory() as temporary:
+                    previous = self.root
+                    self.root = Path(temporary)
+                    try:
+                        repository, source = self.patch_fixture()
+                        path = source / "src/game.cpp"
+                        original = path.read_text()
+                        altered = original.replace(anchor, "CHANGED") if change == "missing" else original * 2
+                        path.write_text(altered)
+                        pin_path = repository / "native/upstream.json"
+                        pin = json.loads(pin_path.read_text())
+                        pin["source_files"]["src/game.cpp"] = hashlib.sha256(altered.encode()).hexdigest()
+                        pin_path.write_text(json.dumps(pin))
+                        result = self.run_patch(repository, source)
+                        self.assertNotEqual(result.returncode, 0)
+                        self.assertIn(f"Pinned source anchor changed: {path.resolve()}", result.stderr)
+                    finally:
+                        self.root = previous
 
     def test_patch_rejects_ambiguous_normal_and_poll_anchors(self):
         for flags, message in (({"duplicate_normal": True}, "Pinned source anchor changed"),

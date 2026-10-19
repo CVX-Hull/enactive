@@ -26,10 +26,10 @@ or downloads have separate permissions; do not stamp every shell call elevated.
 
 [Project-local rules](../.codex/rules/gameplay.rules) allow only the existing
 `.venv/bin/python -m harness` command family for ordinary observation, control,
-recovery and bounded waypoint tasks. A second rule, requested at the paused005 checkpoint, matches only
-`.venv/bin/python .runtime/campaigns/seven-day-campaign-005/preparation/capture.py`
-with actor `lead` or `player`. Setup/server launch, GitHub publication, arbitrary
-Python, shell scripts and every other study recorder are not matched by that rule.
+recovery and bounded waypoint tasks. Setup/server launch, GitHub publication,
+arbitrary Python, shell scripts and study capture wrappers are not matched. The
+exact005 recorder rule was retired at its stopped closeout; it is historical, not
+a template for wildcard studies.
 Preparing these rules changed no global defaults, user rules, OS permissions or
 broad network access. The later exact-project trust correction below adds only
 this checkout's trust entry to Codex's user configuration.
@@ -63,44 +63,26 @@ Official sources checked2026-10-18: [rules](https://learn.chatgpt.com/docs/agent
 [sub-agent permissions](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 
 
-### Loading the current recorder allowance
+### Verified loading and retired recorder allowance
 
-The [scoped change](changes/032-recorder-permission-reload.md) follows the user's
-explicit request. Invoke the recorder directly with the relative path above from
-this trusted checkout, one literal command per call. Do not combine it with shell
-redirection, a heredoc, arbitrary Python post-processing or a command chain: the
-whole shell script can become the policy target instead of the recorder prefix.
-The recorder already retains its indexed receipts and frames; the calling tool
-can parse its returned JSON without another shell command. No recorder code change
-or input-guard relaxation is needed.
+The [original narrow recorder change](changes/032-recorder-permission-reload.md)
+and [exact-project trust correction](changes/033-gameplay-permission-preflight.md)
+remain historical. After the user's restart, startup reported saved gameplay
+prefixes. Two actual-player recorder status calls102/103 passed with no review
+request/error observed, followed by real Observe104/Resume105 and ordinary play.
+The [actual result](acceptance/2026-10-18-activity-distraction-stop.md) establishes
+that scoped setup, not every future invocation or managed-policy behavior.
 
-This allowance does not pin executable bytes or enforce cwd. The ignored005
-recorder must retain its independently reviewed hash and all existing admission,
-source/native, actor, original-clock/budget, parser and frame checks. Trust the
-checkout deliberately; do not use the rule with unreviewed source. Retire this
-exact-study rule when005 ends or its recorder changes; a later study path needs a
-new scoped review. Do not add wildcard studies, broad Python or shell prefixes.
-
-At the first requested checkpoint, the player and lead verified paused supported
-STRING_INPUT, no activity and empty live slots. Gameplay authority is suspended;
-the owned controller was stopped normally, while the native game stays paused.
-The user-authorized permission/docs change ends the old source freeze without
-reopening any input allowance. The original clocks and every cost/unknown remain.
-Restart Codex and reopen this project after publication/verification. Project
-rules load only from a trusted project configuration at startup; the inspected
-user config then had no explicit trust entry for this path, so activation could
-not be assumed. Rule preparation changed no user/global configuration. The later
-trust correction added only the exact project entry, as documented below.
-
-The first restart did not establish activation; a later diagnostic proved the
-project layer was disabled for missing exact-project trust. That entry is now
-corrected, with fresh-process loading verified. After active-chat reload, verify
-live calls from the actual player before relying on no-review behavior.
-The suspended recorder refuses gameplay;
-resume needs explicit user authorization, current clean reviewed source/helper/
-native, fresh paused observations and a prospective remaining-budget decision.
-Do not silently rebind its old source hash or reset clocks. Managed restrictions
-or stricter matching rules may still require review; honor them.
+005 then ended on an unsupported native activity question, independently of
+permission. Its exact-study rule is removed from source; subsequent policy loading
+applies that removal. Cached allowances do not authorize closed005 admission.
+Keep the stable reviewed harness entry point for future play; review any necessary
+outer wrapper once during setup rather than introducing per-action review or
+restarting a verified unchanged setup. Invoke a literal command directly; shell
+chains/redirections can change the policy target. Honor actual restrictions and
+reviews; do not hide unrelated work behind allowed entry points. All original
+costs/clocks/unknowns remain. Future gameplay needs its own prospective authority
+and complete-outcome feasibility assessment, not a policy-file edit.
 
 ## Dedicated gameplay context
 
