@@ -401,12 +401,22 @@ handoff using the established recovery procedure; user rescue is not the fallbac
 For functional campaign admissions that permit transient-boundary reassessment,
 an unsupported return stops ordinary input immediately. The actor pauses, finishes
 the call, supplies a terminal checkpoint and relinquishes authority. Lead may make
-at most three passive Observes within 120 seconds of that return, without input,
-Resume or recovery at an unsupported boundary. Explicit bounded reassignment is
+at most three passive Observes within 120 seconds of that return, without remote input,
+Resume or remote recovery at an unsupported boundary. Explicit bounded reassignment is
 eligible only at a fresh supported interpretable boundary, with actual null live
 slots, reconciled effects and credible remaining whole-route fit. Persistent bad
-state, denial or lost fit ends the admission; unknown acknowledgments remain
-unknown. A stricter admission stop rule still wins. This is a manual workflow
+state ends the admission unless its explicit verified native UI branch below is
+eligible; authority/permission denial or lost fit ends ordinary authority.
+Other rejection classes still follow the admission's explicit failure rules. Unknown ACKs remain
+unknown. A functional admission may separately permit the runbook's verified native UI
+recovery after terminal handoff: remote stays paused, actual owned-window evidence
+must match the prompt, and at most five charged native inputs within120seconds
+retain fresh evidence after each. No blind repeat, remote unsupported input or OS
+event injection; failed/unreadable access or uncertain effect ends that recovery.
+Only actual supported paused state, null live slots, reconciled effects, terminal
+tools and whole fit permit explicit reassignment. This optional branch exists only
+when the admission names it; it never relaxes a stricter stop or extends resources.
+A stricter admission stop rule still wins. This is a manual workflow
 control, not a new native guarantee or automatic retry. [020/021 evidence](acceptance/2026-10-19-treatment-stop.md)
 retains the closed attempts; the prospective 021 procedure was reviewed, but no
 new unsupported recovery was exercised in 021.
@@ -427,6 +437,18 @@ Honor the actual denial and that frozen campaign's stop rules; no implicit
 continuation or rule/actor/transport change restores the stopped admission.
 
 
+
+For functional admissions that explicitly permit it, a definitive pre-dispatch
+formulation or actuation-capability failure may stop the primitive rather than the
+whole mission. Require exact receipt plus pinned implementation evidence of no
+delivered event, no authority/permission denial and no uncertain effect. Retain
+charge/error, freshly Observe/interpret and follow current Pause/Resume/token
+requirements before a distinct eligible choice within unchanged limits. No blind
+retry or alternate channel to evade guards. User Pause/takeover ends actor authority;
+no automatic Resume may override it. Unfamiliar/ambiguous rejection requires
+terminal handoff and lead adjudication. Permission/authority/lease refusal and all
+stricter admission stops still win. Registered actions are not executable-binding
+guarantees; this manual classification changes no wire shape or native guard.
 
 ## Closed-loop play and observations
 

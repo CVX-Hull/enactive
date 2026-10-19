@@ -128,3 +128,15 @@ The [study synthesis](research-memory-representations.md) and
 this extension to primary-source review, reproducible comparisons, independent
 checks, a proposed representation/learning loop and staged follow-ups. Real-game
 memory or policy benefit remains a separate evaluation obligation.
+
+## Quality-driven campaign evidence
+
+On2026-10-19 the user delegated time extensions to the lead, emphasizing quality
+data for future development. Retain the seven-day objective while using finite
+prospective phase budgets and actual evidence: hypotheses/prerequisites, input,
+feedback, verified outcome, uncertainty, costs, corrections and applicability.
+The lead may adjust time without routine user budget questions; no reset of
+spent costs, silent input-cap expansion, automatic actor renewal, safety waiver,
+paid provider spending or global-environment changes follows. Negative results
+remain useful data and remain failures of their tested claim. Existing records
+and Issues own this work; avoid duplicate trace/tracker infrastructure.

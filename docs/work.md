@@ -19,21 +19,28 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 | Survival pilot and findings | [Pilot report](acceptance/2026-10-18-survival-pilot.md) retains the stopped pre-spawn attempt and its dispositions; #78/#83 own acceptance. |
 | Continuity and first-day rehearsal | [Qualified first-day result](acceptance/2026-10-18-first-day-completion.md) retains actual save/restart/handoff, needs and autonomy evidence plus its failures/unknowns; #79/#80 own acceptance. |
 | Seven-day readiness | [Readiness report](acceptance/2026-10-18-seven-day-readiness.md) records the finite preparation gate and its limits; #81. Readiness does not guarantee campaign success. |
-| Current seven-day path | [020](acceptance/2026-10-19-midpoint-survival.md) accepted days 1–3, real midpoint restart/reload and fresh F replacement. [021](acceptance/2026-10-19-treatment-stop.md) confirmed raw water/tool but no safe heat or potable output, retreated and closed for lost credible whole-route fit. Day four remains incomplete. [#129](https://github.com/CVX-Hull/enactive/issues/129) owns resources/forecast; [#103](https://github.com/CVX-Hull/enactive/issues/103), #82 and #10 stay open. |
+| Current seven-day path | [020](acceptance/2026-10-19-midpoint-survival.md) accepted days1–3, real midpoint restart/reload and fresh F replacement. [024](acceptance/2026-10-19-four-day-survival.md) independently accepted day four at5558422, then rejected an exposed treatment site and closed for lost whole-route fit. Days5–7 remain incomplete. [#103](https://github.com/CVX-Hull/enactive/issues/103) is accepted; [#104](https://github.com/CVX-Hull/enactive/issues/104) owns day five and [#129](https://github.com/CVX-Hull/enactive/issues/129) resources/forecast. |
 | Full closeout | Same-character daily evidence, normal midpoint save/restart/reload and player replacement, final normal shutdown, independent complete-campaign review, protected publication/CI, owned cleanup and current Project. #82 stays open until all are proved. |
 
-The character was saved through normal Save/Quit; native and controller processes
-and the port 8766 listener are absent. Final exact persistence was not reloaded;
-Save/Quit acknowledgments remain unknown. All actors/tool handles are terminal and
-no input is queued. Closed 019/020/021 grant no successor authority or budget reset.
-The actual last normal state is 5,472,870, Spring 64, 08:14:30, alive and Comfortable,
-with no observed damage. This is partial progress, not day-four acceptance.
+024's last normal5558504 is alive/Comfortable with blank needs, accounted1.25Lclean/
+12rations/750mLraw and one owned paused game/controller. Actual live slots are null,
+actors/tools terminal and no queued input. No heat, treatment or remaining-three-day
+water coverage was established. Daily outcomes1–4 remain accepted; closed019–024
+remain incomplete and grant no successor authority. Resource gate3888660.474639375
+was qualified met in023 as a finite cache, not renewable supplies.
 
-A new decision first needs an actual safe potable route and a credible complete
-remaining path within declared finite resources. Do not mechanically credit elapsed
-exploration as completed treatment or estimate future daily survival from menu
-throughput. Keep prior clocks, costs, stops and uncertain outcomes explicit; no
-automatic attempt follows. #129 owns that work and #75 owns the control-fit findings.
+The user-approved one-time three-hour extension retained all original clocks, costs,
+input limits and final reserve. 024's [046 decision](changes/046-replan-known-nondelivery.md)
+allowed confirmed no-delivery replanning and finite transient reassessment under
+unchanged guards. Actual failure of the conditional eastern treatment site exhausted
+credible complete-route fit; no automatic northern search or further time follows.
+The user subsequently delegated time extensions to the lead, prioritizing quality
+data for future development. [047](changes/047-quality-data-continuation.md) records
+a prospective finite two-hour shift with all spent costs/input limits retained,
+quality-evidence requirements and bounded water phases. A successor still needs
+source/review/checkpoint, fresh actual preflight and credible complete-route fit.
+No routine user time question, reopened attempt or automatic actor continuation.
+#129 owns further resources and whole forecast; #75 owns control-fit findings.
 The [operator contract](protocol.md#designated-campaign-operator) records bounded
 passive reassessment; a stricter admission stop still wins. GitHub owns current
 execution stage, estimates and dependencies. Historical reports are evidence, not
