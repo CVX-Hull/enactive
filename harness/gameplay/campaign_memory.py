@@ -148,8 +148,8 @@ class CampaignMemory:
         else:
             self._sources(entry)
             old = [r["entry"] for r in self.ledger.memory_records("work") if r["entry"]["id"] == entry["id"]]
-            if old and any(entry[k] != old[-1][k] for k in ("scope", "intent")):
-                raise ContractError("A work identity retains its scope and intent")
+            if old and any(entry[k] != old[-1][k] for k in ("scope", "intent", "predecessor_work_id")):
+                raise ContractError("A work identity retains its scope, intent and predecessor")
             if not entry["sources"] and (entry["available"] or entry["observed_output"] or entry["progress"] is not None or entry["status"] == "completed"):
                 raise ContractError("Observed work/available output requires retained evidence")
             primitives = {p["logical_id"]: p for p in self.ledger.primitive_records()}

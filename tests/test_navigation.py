@@ -45,7 +45,8 @@ class NavigationTests(unittest.TestCase):
 
     def request(self, before, target=(1, 0, 0), **changes):
         value = dict(schema=VERSION, kind="skill", request_id="navigate", mission_id="mission", epoch=0,
-                     skill_kind="navigate", goal={"scope": {"mission_id": "mission", "session": "world",
+                     skill_kind="navigate", work_id=None, phase_id=None, perception=None,
+                     goal={"scope": {"mission_id": "mission", "session": "world",
                          "coordinate_epoch": 0}, "target": list(target)}, sources=[before.observation_id],
                      expected_session="world", expected_revision=before.revision,
                      expected_boundary_id=self.store.observation(before)["boundary"]["id"],

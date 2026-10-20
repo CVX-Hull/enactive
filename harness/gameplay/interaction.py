@@ -52,6 +52,8 @@ class MenuSkill:
         data = validate_request(request)
         if data["kind"] != "skill" or data["skill_kind"] != "menu":
             raise ContractError("Menu policy requires an exact menu skill request")
+        if data["perception"] is not None:
+            raise ContractError("Native-row policy cannot substitute a player interpretation for native rows")
         self._request = data
         self._logical_prefix = "menu-" + hashlib.sha256(data["request_id"].encode()).hexdigest()
         self._store: EvidenceStore | None = None
@@ -124,8 +126,6 @@ class MenuSkill:
         if (state["boundary"]["kind"] != "menu" or state["category"] != "UILIST"
                 or ui is None or ui["purpose"] != "uilist" or ui["coverage"] != "rendered_rows_only"):
             raise _MenuBlocked("Capability requires native UILIST rendered rows; inventory/image adapters are unsupported")
-        if self._request["goal"]["quantity"] != 1:
-            raise _MenuBlocked("Menu quantity capability supports exactly one selection")
         rows = ui["rows"]
         selected = next((i for i, row in enumerate(rows) if row["id"] == ui["selected"] and row["enabled"]), None)
         if selected is None:
@@ -228,9 +228,12 @@ class MenuSkill:
                 self._budget(current, now_monotonic, completing=True)
                 return self._pending
             inspecting = self._request["goal"]["outcome"] == "inspected"
-            self._budget(current, now_monotonic, completing=inspecting)
+            focused = self._request["goal"]["outcome"] == "focused" and selected == target
+            self._budget(current, now_monotonic, completing=inspecting or focused)
             if inspecting:
                 return self._finish("Requested visible row inspected; no game effect asserted", inspected=True)
+            if focused:
+                return self._finish("Exact requested enabled row has native verified focus", inspected=True)
             action = "CONFIRM" if selected == target else "UILIST.DOWN" if selected < target else "UILIST.UP"
             if action not in state["actions"]:
                 raise _MenuBlocked("Required native menu action is not registered in current evidence")
@@ -305,7 +308,8 @@ class MenuSkill:
                 return self._finish("Native focus made no progress or an unexpected/unexplained row jump")
             self._selected = after["ui"]["selected"]
             self._steps += 1
-            self._budget(current, now_monotonic)
+            self._budget(current, now_monotonic,
+                         completing=self._request["goal"]["outcome"] == "focused" and actual == target)
         except EvidenceError as exc:
             return self._finish(str(exc), unknown=True)
         except _MenuBlocked as exc:

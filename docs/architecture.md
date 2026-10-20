@@ -62,7 +62,7 @@ components: [contracts](../harness/gameplay/mission_contracts.py),
 [campaign memory](../harness/gameplay/campaign_memory.py), plus the bounded
 [native-row menu policy](../harness/gameplay/interaction.py). They produce bounded data
 and record uncertainty; none owns input or replaces the live runtime below yet.
-Ledger format4 rejects prior databases. Its typed immutable request results retain
+Ledger format5 rejects prior databases. Its typed immutable request results retain
 one-use handoff issuance/consumption without restoring a lease or Resume on reopen.
 Resume is a distinct primitive with no action/key value and an admitted lifecycle
 parent. It uses the same prepublication intent, receipt reservation and input cost
@@ -83,8 +83,10 @@ controller preflight conditions. Native commit retains its existing authority,
 session/revision/boundary/takeover/frame/deadline fences; diagnostic pause origin
 is not a new native compare-and-swap field.
 The menu policy uses attested visible uilist rows and registered focus actions,
-with one final CONFIRM followed by required player verification. Inventory
-multiselect, quantities above one, text editing and fallible screenshot control
+with one final CONFIRM followed by required player verification. Native focus may
+complete without confirmation. Mission/2 carries closed fallible
+control interpretations and explicit Work/phase associations; passive editing/image
+control integration remains pending. Inventory multiselect and quantities above one
 remain unsupported by that source component. A highlighted inventory row does
 not prove a chosen item or amount, and confirmation delivery does not prove the
 player's semantic objective.

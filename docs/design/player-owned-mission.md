@@ -67,8 +67,8 @@ passive contracts/planner/supervisor logic may remain only with current consumer
 and tests. Remove unconsumed execution scaffolding rather than keep two players.
 
 Advance gameplay records together to `gameplay/2` where their shared encoding is
-used; unsupported `gameplay/1` input rejects. Introduce `mission/1` for the strict
-mission request/state envelope and `campaign-memory/1` for the durable index.
+used; unsupported `gameplay/1` input rejects. Introduce `mission/2` for the strict
+mission request/state envelope and `campaign-memory/2` for the durable index.
 Advance the evidence-store metadata to version3 and native observation to wire4
 for the visible-menu field below. Update every active producer/reader/fixture,
 source patch, build pin receipt and permission-rule example in the same integrated
@@ -94,11 +94,11 @@ not JSON. IDs are audit/binding fields, not OS isolation.
 | --- | --- |
 | Mission admission | `mission_id`, `objective`, `player_id`, `scenario`, `limits`, `cleanup_reserve`, `allowed_skills`, `allowed_lifecycle`, `update_policy`, `configuration`. Immutable prospective scope. Configuration identifies source/native/skill/lesson/model conditions and unavailable metrics. |
 | Mission state | `mission_id`, `epoch`, `phase`, `player_id`, `objective`, `subgoal`, `active_skill`, `remaining`, `pause_cause`, `unresolved_effects`, `memory_version`, `last_evidence`, `interventions`. Advisory status is never a lease. |
-| Skill request | `request_id`, `mission_id`, `epoch`, `kind`, `goal`, `sources`, `expected_session`, `expected_revision`, `limits`. Request ID deduplicates admission; it never causes a timed-out side effect to replay. |
+| Skill request | `request_id`, `mission_id`, `epoch`, `kind`, `goal`, `sources`, `expected_session`, `expected_revision`, `expected_boundary_id`, `limits`, `work_id`, `phase_id`, `perception`. Request ID deduplicates admission; it never causes a timed-out side effect to replay. |
 | Skill result | Same request/mission/epoch plus `state`, `reason`, `progress`, `before`, `after`, `primitive_receipts`, `next_observation`. States: running/completed/partial/blocked/failed/unknown/paused. Delivery and semantic completion are separate. |
 | Evidence reference | Existing session/revision/frame/hash/boundary plus canonical retained source ID. Receipt time is not observation time; missing scene/time remains null. Menu/activity evidence is not a normal-play scene. |
 | Claim | `id`, `kind`, `key`, `value`, `text`, `scope`, `observed_time`, `received_time`, `coverage`, `sources`, `supports`, `status`, `supersedes`. Native fact versus interpretation; current/last_seen/inferred/disputed/retired/unknown. |
-| Work instance | `id`, `intent`, `scope`, `stage`, `progress`, `available`, `committed`, `predicted_output`, `observed_output`, `unresolved_effects`, `sources`, `next_verification`, `status`. Association with an engine activity may be uncertain. |
+| Work instance | `id`, `intent`, `scope`, `predecessor_work_id`, `stage`, `progress`, `available`, `committed`, `predicted_output`, `observed_output`, `unresolved_effects`, `sources`, `next_verification`, `status`. Association with an engine activity may be uncertain. |
 | Decision/context packet | Explicit packet ID, query, memory version, selected claim/work/source IDs, applicable lesson IDs/counterexamples, omitted/truncated counts and original objective/remaining limits. No implicit claim that it contains everything. |
 
 `scenario` identifies an ordinary creation/load UI condition; it cannot prescribe
@@ -162,7 +162,7 @@ retaining the normal-only gate and calling external keys alongside it is rejecte
 
 ### Request shapes
 
-Every request has `schema=mission/1`, `kind` and a unique `request_id` except read-only
+Every request has `schema=mission/2`, `kind` and a unique `request_id` except read-only
 status/result/context. Mutating existing-mission operations additionally bind
 `mission_id` and `epoch`; input decisions bind the informing session/revision and
 boundary. Exact operation payloads are:
@@ -174,7 +174,7 @@ boundary. Exact operation payloads are:
 | observe / reconcile | No replacement intent. Reconcile references `unresolved_request_id` and a new observation; it cannot rewrite the old delivery disposition. |
 | context | `mission_id`, `query`, `scope`, `max_bytes` (<=32768); returns selected IDs/version and omission counts. |
 | remember / correct | Typed claim/work update; correction names retired derivation IDs, replacement interpretation/support and reason. Clients cannot insert native facts. |
-| skill | The exact skill request; kinds navigate/menu/item/activity/inspect, each with typed goal fields and bounded stop conditions. No callable, shell or arbitrary path. |
+| skill | The exact skill request; kinds navigate/menu/item/activity/inspect/edit/interact, each with typed goal fields and bounded stop conditions. No callable, shell or arbitrary path. |
 | handoff / claim | Handoff names settled checkpoint/source IDs and intended successor role; claim consumes its originating request ID with exact epoch, boundary, native Pause origin and host/native generations after reconciliation. Runtime compares its designated actor and role; IDs are audit fields. |
 | lifecycle | `operation` launch/create/save/exit/load/finish, supported observed identity/target when relevant, before-source IDs and explicit remaining limits. No player-supplied process path/PID. |
 | stop | Reason and explicit finishing-versus-immediate-pause intent; always revokes further ordinary dispatch first. |
@@ -183,7 +183,8 @@ Only request IDs known as read-only may be retried as reads. An identical retain
 mutating request returns its existing state/result and never repeats inputs;
 a conflicting payload for the same ID rejects. Skill goals are concretized in
 strict shared schemas before worker dispatch: navigate has scoped integer target;
-menu/item has purpose, exact label, quantity and outcome predicate; activity has
+menu has purpose, exact label and focused/activated/inspected outcome; item also
+has quantity and its acquired/consumed/stored/dropped outcome. Activity has
 ordinary operation, visible target/progress/time bound and interrupt policy;
 inspect has a registered UI purpose. This is a closed enum, not a policy language.
 
@@ -566,7 +567,7 @@ it does not establish implemented schemas, native fields, gameplay or efficacy.
 
 ### Passive source foundation checkpoint
 
-The first source slice defines strict `mission/1`/`campaign-memory/1` records in
+The first source slice defines strict `mission/2`/`campaign-memory/2` records in
 [mission_contracts.py](../../harness/gameplay/mission_contracts.py) and single-writer
 accounting in [mission_ledger.py](../../harness/gameplay/mission_ledger.py).
 These modules do not activate the proposed runtime or issue inputs. The coordinated
@@ -576,9 +577,9 @@ retains uncertainty/cost and clears authority, and rejected expiry checks retain
 the observed wall-clock watermark. Source-level regression and independent review
 are separate from the future integrated native/graphical acceptance.
 
-Ledger format4 reuses immutable typed handoff/claim request results for up to16
+Ledger format5 reuses immutable typed handoff/claim request results for up to16
 one-use handoffs, rather than adding a second mutable consumption store. It rejects
-formats1/2/3. Issuance requires active, settled work and atomically pauses at a new epoch;
+formats1/2/3/4. Issuance requires active, settled work and atomically pauses at a new epoch;
 claim changes the recorded actor while remaining paused. Runtime must verify actual
 quiescence, fresh native binding and deliberate readmission; the ledger sends no
 Pause/Resume. Human Pause or reopen invalidates an old issuance without erasing it,
@@ -635,11 +636,11 @@ bounded sequence of actual `UILIST.UP`/`UILIST.DOWN` actions to an exact visible
 enabled label, followed by one CONFIRM. Focus checks follow the advanced native
 boundary and one attributed archive promotion. Confirmation returns partial with
 verification required; contradictory after-state retains unknown delivery and
-its pending ID. Only native uilist rows and quantity1 are supported. Inventory
+its pending ID. Only native uilist rows are supported by this policy. Inventory
 highlight versus multiselect, text editors and fallible screenshot controls remain
 separate gaps; this component cannot substitute for them.
 
-Ledger format4 accounts Resume as a distinct primitive with null value under an
+Ledger format5 accounts Resume as a distinct primitive with null value under an
 admitted lifecycle request. Its required preflight source, reserved receipt,
 original limits and crash uncertainty use the existing accounting path. The
 controller supplies the same correlated six-field envelope for mission Resume,
@@ -652,3 +653,74 @@ tested menu presentation/preflight paths. It loaded no character and proves no
 memory or navigation benefit. Its normal process exit retained an unknown final
 ACK. The existing native boundary hook can acknowledge at a rendered activity poll;
 the first-run rest timeout does not establish that the bridge waited for wake.
+
+
+### Semantic control and scoped-work contract migration
+
+Current source uses mission/2, campaign-memory/2 and ledger5. Every caller and
+fixture migrates; missing fields and prior formats reject without mutation or a
+compatibility reader. No production mission database existed at this migration.
+Native4/gameplay2/archive3 stay unchanged. These contracts do not activate the
+mission runtime or accept independent gameplay.
+
+Skills carry required nullable work_id, phase_id and perception. Lifecycle carries
+required nullable work_id/phase_id and up to4 identity_claim_ids, with a separate
+ceiling of256 primitives/1800wall seconds; ordinary skills remain32/900. Work
+scope, intent and predecessor are immutable. A new scoped Work can name an already
+recorded predecessor in the same mission. This is fallible intent lineage, without
+copying availability, progress, output or coordinates. It is not physical activity
+identity or evidence that stock survived a reload. Existing-parent ordering makes
+links acyclic; SQLite validates the invariant on append and reopen. Git still owns
+source history; no second graph/history service is added.
+
+Menu goals distinguish focused, activated and inspected, with no menu quantity or
+old selected alias. Native-row focus can finish without CONFIRM. Activation still
+returns partial for player verification. The source-bound perception union uses
+existing JSON Schema discrimination: menu rows/control/selection, whole focused
+editor value, or a visible direction/confirmation question. Direction questions
+need no fictional rows. Every view is explicitly player_interpretation and names
+an informing source; it cannot override contradictory native rows. An edit goal
+is at most24 literal supported ASCII characters, optionally a separate commit;
+a known-empty visible field is valid. Interact selects one ordinary registered
+game verb from the closed schema and requires actual effect verification. Neither
+field accepts a script, callable, shell command or arbitrary action sequence.
+The exact closed shapes live in the linked source contract rather than a second
+hand-maintained schema.
+
+The reviewed implementation allocation for passive controls is image-menu focus,
+direction/confirmation, edit and one-input interact only. Image focus permits at
+most8 unverified arrows with actual observations and unchanged scope/actions after
+each; it never auto-confirms or earns native verified-focus credit. Text entry
+uses the existing ASCII/ImGui transport, observes each transition and stops on
+byte-identical literal no-progress. A fresh whole-value interpretation is required
+before separate TEXT.CONFIRM. Registered control/category mappings are fixed by
+pinned native source; unsupported controls stop. Native-row MenuSkill rejects
+player interpretations rather than silently treating them as native evidence.
+
+Phase IDs currently block in the unconnected runtime until the owned phase adapter
+is integrated. Required runtime work is one private live lifecycle or item/activity
+root, immutable original budgets shared with children, original root/Work association
+and exact stage/source/actor/epoch checks before publication. One root may return
+partial and release the writer while awaiting player interpretation; it leaves no
+queued input. A child never creates another root or renews the original deadline.
+Persisted receipts grant no private phase authority on reopen. An independent host
+operator-Pause generation must distinguish user Pause from expected internal session
+revocation; user Pause always prevents automatic adoption/Resume. These are remaining
+integration requirements, not claims that parsing phase IDs implements them.
+
+Before the first normal anchor, only verified root-owned launch/create menu stages
+may input with null game cost. Creation records that anchor once. Save/reload cost
+continuity connects adjacent retained normal-play sessions through verified source
+pairs and exact turns, ignoring intermediate menu sessions. It never reanchors the
+mission budget or imports old relative coordinates. Unknown transition ACK remains
+unknown; a current-epoch continuation must verify its exact effect and original
+limits before a separately recorded trusted adoption, never blind retry.
+
+Identity Claims have property=identity, unit=name and exact visible name in
+value.state, with quantity=null and kind=interpretation. World uses subject=world/
+coverage_id=visible-world-menu; character uses subject=character/
+coverage_id=visible-character-hud. Lifecycle must check actual phase source/support,
+current undisputed scope and admission names, not annotation text or any existing
+claim ID. These remain fallible identity evidence. Item selection, activity result,
+registered lifecycle, one-current ingress, observer views and the actual fresh-player
+mission remain acceptance gates in the linked Issues.

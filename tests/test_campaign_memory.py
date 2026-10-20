@@ -5,8 +5,11 @@ The actual canonical EvidenceStore and SQLite ledger exercise source integrity a
 restart behavior; no input authority or controller is involved.
 """
 from copy import deepcopy
+from contextlib import closing
 import inspect
+import json
 from pathlib import Path
+import sqlite3
 import tempfile
 import unittest
 from unittest.mock import patch
@@ -15,7 +18,7 @@ from harness.gameplay.campaign_memory import CampaignMemory
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import CapacityError, EvidenceStore
 from harness.gameplay.mission_contracts import MEMORY_VERSION, VERSION, canonical, validate_memory_entry
-from harness.gameplay.mission_ledger import MissionLedger
+from harness.gameplay.mission_ledger import LedgerError, MissionLedger
 from tests.test_gameplay_evidence import observation, png
 from tests.test_mission_contracts import admission, claim, request, scope, skill
 from tests.test_mission_ledger import intent
@@ -73,7 +76,7 @@ class CampaignMemoryTests(unittest.TestCase):
 
     def work(self, reference, **changes):
         quantity = {"subject": "water", "quantity": 6, "unit": "charges", "coverage_id": "ground-prompt"}
-        value = {"schema": MEMORY_VERSION, "record_type": "Work", "id": "water-craft",
+        value = {"schema": MEMORY_VERSION, "record_type": "Work", "predecessor_work_id": None, "id": "water-craft",
             "intent": "Treat water and verify storage", "scope": scope(), "stage": "pending-storage",
             "progress": 59, "available": [], "committed": [], "predicted_output": [quantity],
             "observed_output": [], "unresolved_effects": [], "sources": [reference.observation_id],
@@ -89,6 +92,52 @@ class CampaignMemoryTests(unittest.TestCase):
             expected_revision=reference.revision), now=1000)
         self.ledger.published("logical-1", "native-1", now=1000)
         self.ledger.settle_primitive("logical-1", state, {"delivery": state}, now=1000)
+
+    def test_reload_work_links_intent_without_inheriting_old_progress_stock_or_coordinates(self):
+        before = self.source()
+        old = self.work(before, available=[dict(subject="water", quantity=6, unit="charges", coverage_id="ground")])
+        self.remember(old)
+        after = self.source(1, session="reloaded")
+        new = self.work(after, id="verify-reloaded-work", predecessor_work_id=old["id"],
+                        scope={**scope(), "session": "reloaded", "coordinate_epoch": 1},
+                        progress=None, predicted_output=[], status="planned", stage="verify")
+        self.remember(new)
+        packet = self.memory.context(new["scope"], "water", max_bytes=32768,
+                                     now_monotonic=100, now_timestamp_ms=1_000_000)
+        current = next(w for w in packet["work"] if w["id"] == new["id"])
+        self.assertEqual(current["predecessor_work_id"], old["id"])
+        self.assertEqual((current["available"], current["observed_output"], current["progress"]), ([], [], None))
+        self.assertEqual(current["sources"], [after.observation_id])
+        self.ledger.close(); self.ledger = MissionLedger(self.root / "mission", now=1000)
+        retained = self.ledger.memory_records("work")[-1]["entry"]
+        self.assertEqual(retained, new)
+
+    def test_work_lineage_requires_existing_parent_and_immutable_scope_intent_and_link(self):
+        ref = self.source()
+        old = self.work(ref)
+        with self.assertRaisesRegex(LedgerError, "predecessor must already exist"):
+            self.remember({**old, "predecessor_work_id": "future"})
+        with self.assertRaises(ContractError): self.remember({**old, "predecessor_work_id": old["id"]})
+        self.remember(old)
+        other = {**old, "id": "child", "predecessor_work_id": old["id"]}
+        self.remember(other)
+        for change in (dict(predecessor_work_id="child"), dict(intent="Other intent"),
+                       dict(scope={**scope(), "coordinate_epoch": 2})):
+            with self.subTest(change=change), self.assertRaises(ContractError): self.remember({**old, **change})
+        with self.assertRaises(LedgerError):
+            self.ledger.append_memory("bypass", "work", {**old, "predecessor_work_id": "child"}, now=1000)
+
+    def test_reopen_rejects_tampered_work_lineage_without_restoring_authority(self):
+        ref = self.source(); old = self.work(ref)
+        self.remember(old)
+        self.remember({**old, "stage": "next"})
+        self.ledger.close()
+        with closing(sqlite3.connect(self.ledger.path)) as db, db:
+            row = db.execute("SELECT sequence,body FROM memory WHERE entry_type='work' ORDER BY sequence DESC LIMIT 1").fetchone()
+            entry = json.loads(row[1]); entry["predecessor_work_id"] = "missing"
+            db.execute("UPDATE memory SET body=? WHERE sequence=?", (canonical(entry), row[0]))
+        with self.assertRaisesRegex(LedgerError, "immutable scope, intent and predecessor"):
+            MissionLedger(self.root / "mission", now=1000)
 
     def test_delayed_older_frontier_precedes_query_and_receipt_order(self):
         old = self.source(30)

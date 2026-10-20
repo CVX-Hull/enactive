@@ -787,8 +787,18 @@ class MissionRuntime:
             return "completed", self._observe(work)
         if kind in ("remember", "correct"):
             return "completed", self._memory_request(work)
-        if kind == "skill" and work.request["skill_kind"] == "navigate":
-            return self._navigate(work)
+        if kind == "skill":
+            if work.request["phase_id"] is not None:
+                return "blocked", {"reason": "Owned phase adapter is not integrated; phase IDs grant no authority"}
+            work_id = work.request["work_id"]
+            if work_id is not None:
+                matches = [row["entry"] for row in self._ledger.memory_records("work") if row["entry"]["id"] == work_id]
+                if not matches or matches[-1]["scope"]["session"] != work.request["expected_session"]:
+                    return "blocked", {"reason": "Associated Work must exist in this mission and current session"}
+                if work.request["skill_kind"] == "navigate" and matches[-1]["scope"] != work.request["goal"]["scope"]:
+                    return "blocked", {"reason": "Navigation Work coordinate scope differs"}
+            if work.request["skill_kind"] == "navigate":
+                return self._navigate(work)
         if kind in ("handoff", "claim"):
             return self._handoff(work)
         if kind == "lifecycle":

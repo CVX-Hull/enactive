@@ -42,10 +42,10 @@ class MenuTests(unittest.TestCase):
         (self.bridge / value["frame"]).write_bytes(png())
         return self.store.ingest(value, received_monotonic=self.clocks["now_monotonic"], **self.clocks)
 
-    def request(self, before, *, label="Four", outcome="selected", **changes):
+    def request(self, before, *, label="Four", outcome="activated", **changes):
         value = dict(schema=VERSION, kind="skill", request_id="menu", mission_id="mission", epoch=0,
-                     skill_kind="menu", goal=dict(purpose="Choose a duration", label=label,
-                                                  quantity=1, outcome=outcome),
+                     skill_kind="menu", work_id=None, phase_id=None, perception=None, goal=dict(purpose="Choose a duration", label=label,
+                                                  outcome=outcome),
                      sources=[before.observation_id], expected_session="world",
                      expected_revision=before.revision,
                      expected_boundary_id=self.store.observation(before)["boundary"]["id"],
@@ -214,9 +214,8 @@ class MenuTests(unittest.TestCase):
         before = self.frame()
         request = self.request(before)
         request["goal"]["quantity"] = 2
-        outcome = self.propose(MenuSkill(request))
-        self.assertEqual(outcome.disposition, "blocked")
-        self.assertIn("quantity", outcome.reason.lower())
+        with self.assertRaises(ContractError):
+            MenuSkill(request)
         changes = [lambda v: v.update(ui=None),
                    lambda v: v["ui"].update(purpose="inventory"),
                    lambda v: v.update(category="INVENTORY"),
@@ -276,6 +275,18 @@ class MenuTests(unittest.TestCase):
         self.assertEqual((outcome.disposition, outcome.proposed_count, outcome.verified_focus_steps),
                          ("partial", 1, 1))
         self.assertEqual(outcome.evidence, (intent.before, after))
+        self.assertIs(self.propose(skill), outcome)
+
+    def test_native_focus_completes_without_confirmation_even_at_exact_input_limit(self):
+        skill = self.skill(label="Two", outcome="focused", limits=dict(primitives=1, wall_seconds=120, game_seconds=100))
+        intent = self.propose(skill)
+        self.assertEqual(intent.action, "UILIST.DOWN")
+        after = self.frame(1)
+        self.assertIsNone(self.accept(skill, intent, after))
+        outcome = self.propose(skill)
+        self.assertEqual((outcome.disposition, outcome.proposed_count, outcome.verified_focus_steps), ("completed", 1, 1))
+        self.assertFalse(outcome.verification_required)
+        self.assertIsNone(outcome.pending_logical_id)
         self.assertIs(self.propose(skill), outcome)
 
     def test_unknown_dispatched_and_bad_correlation_are_terminal_and_never_replayed(self):

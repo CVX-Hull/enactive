@@ -14,7 +14,7 @@ def admission(**changes):
     fields = dict(mission_id="mission-test", objective="Supplies and shelter",
                   player_id="player-test", scenario=Scenario("fresh", "test-world", "test-person"),
                   limits=MissionLimits(), cleanup_reserve=CleanupReserve(),
-                  allowed_skills=("navigate", "item", "activity", "inspect", "menu"),
+                  allowed_skills=("navigate", "item", "activity", "inspect", "menu", "edit", "interact"),
                   allowed_lifecycle=("launch", "create", "save", "exit", "load", "finish"),
                   update_policy="facts-and-provisional/1",
                   configuration=Configuration("a" * 40, "b" * 64, "skills-1", "none", "unreported", "unreported"))
@@ -27,7 +27,7 @@ def scope():
 
 
 def claim(**changes):
-    fields = dict(schema="campaign-memory/1", record_type="Claim", id="claim-1", kind="interpretation",
+    fields = dict(schema="campaign-memory/2", record_type="Claim", id="claim-1", kind="interpretation",
                   key={"subject": "water", "property": "supply", "unit": "charges", "coverage_id": "page-1"},
                   value={"quantity": 18, "state": None}, text="Visible clean water count",
                   scope=scope(), observed_time={"revision": 30, "turn": None}, received_time=100_000,
@@ -38,14 +38,16 @@ def claim(**changes):
 
 
 def request(kind="observe", **changes):
-    fields = dict(schema="mission/1", kind=kind, request_id="request-1", mission_id="mission-test", epoch=0)
+    fields = dict(schema="mission/2", kind=kind, request_id="request-1", mission_id="mission-test", epoch=0)
+    if kind == "lifecycle":
+        fields.update(work_id=None, phase_id=None, identity_claim_ids=[])
     fields.update(changes)
     return fields
 
 
 def skill(**changes):
     value = request("skill", skill_kind="navigate", goal={"scope": scope(), "target": [2, -3, 0]},
-                    sources=["source-1"], expected_session="native-session", expected_revision=30,
+                    work_id=None, phase_id=None, perception=None, sources=["source-1"], expected_session="native-session", expected_revision=30,
                     expected_boundary_id="boundary-1", limits={"primitives": 32, "wall_seconds": 120.0, "game_seconds": 1200})
     value.update(changes)
     return value
@@ -107,10 +109,10 @@ class MissionContractTests(unittest.TestCase):
             with self.assertRaises(ContractError): MissionLimits(wall_seconds=value)
 
     def test_closed_requests_and_scope_binding(self):
-        valid = [request(), {"schema": "mission/1", "kind": "start", "request_id": "start-1", "admission": admission().to_dict()},
-                 {"schema": "mission/1", "kind": "status", "mission_id": "mission-test"},
-                 {"schema": "mission/1", "kind": "result", "mission_id": "mission-test", "operation_id": "old-1"},
-                 {"schema": "mission/1", "kind": "context", "mission_id": "mission-test", "query": "water", "scope": scope(), "max_bytes": 32768},
+        valid = [request(), {"schema": "mission/2", "kind": "start", "request_id": "start-1", "admission": admission().to_dict()},
+                 {"schema": "mission/2", "kind": "status", "mission_id": "mission-test"},
+                 {"schema": "mission/2", "kind": "result", "mission_id": "mission-test", "operation_id": "old-1"},
+                 {"schema": "mission/2", "kind": "context", "mission_id": "mission-test", "query": "water", "scope": scope(), "max_bytes": 32768},
                  skill(), request("stop", reason="Objective verified", finish=True)]
         for value in valid:
             with self.subTest(kind=value["kind"]): self.assertEqual(validate_request(value), value)
@@ -128,7 +130,7 @@ class MissionContractTests(unittest.TestCase):
         with self.assertRaises(ContractError): validate_request(current)
 
     def test_every_skill_has_a_closed_typed_goal(self):
-        goals = {"menu": {"purpose": "alarm", "label": "8 hours", "quantity": 1, "outcome": "selected"},
+        goals = {"menu": {"purpose": "alarm", "label": "8 hours", "outcome": "activated"},
                  "item": {"purpose": "consume", "label": "clean water", "quantity": 1, "outcome": "consumed"},
                  "activity": {"operation": "rest", "target": "bench", "game_seconds": 1800, "interrupt": True},
                  "inspect": {"purpose": "inventory"}}
@@ -136,8 +138,63 @@ class MissionContractTests(unittest.TestCase):
             self.assertEqual(validate_request(skill(skill_kind=name, goal=goal, limits={"primitives": 32, "wall_seconds": 120, "game_seconds": 1800}))["goal"], goal)
             with self.assertRaises(ContractError): validate_request(skill(skill_kind=name, goal={**goal, "hidden": 1}))
 
+    def test_current_contract_rejects_missing_fields_and_old_versions(self):
+        for field in ("work_id", "phase_id", "perception"):
+            old = skill(); old.pop(field)
+            with self.subTest(field=field), self.assertRaises(ContractError): validate_request(old)
+        with self.assertRaises(ContractError): validate_request(skill(schema="mission/1"))
+        with self.assertRaises(ContractError): validate_memory_entry(claim(schema="campaign-memory/1"), "claim")
+        for goal in ({"purpose": "alarm", "label": "8 hours", "outcome": "selected"},
+                     {"purpose": "alarm", "label": "8 hours", "outcome": "activated", "quantity": 1}):
+            with self.assertRaises(ContractError): validate_request(skill(skill_kind="menu", goal=goal))
+
+    def test_control_views_are_fallible_closed_and_bound_to_informing_sources(self):
+        view = dict(kind="menu", basis="player_interpretation", source_id="source-1",
+                    control="vertical", rows=[dict(label="One", enabled=True)], selected=0, question="")
+        data = skill(skill_kind="menu", goal=dict(purpose="Choose", label="One", outcome="focused"), perception=view)
+        self.assertEqual(validate_request(data), data)
+        for change in (dict(source_id="other"), dict(selected=1), dict(selected=0.0),
+                       dict(basis="native_fact"), dict(rows=view["rows"] * 2), dict(hidden_rows=[])):
+            with self.subTest(change=change), self.assertRaises(ContractError):
+                validate_request({**data, "perception": {**view, **change}})
+        for kind, label in (("direction", "Here"), ("confirmation", "Yes")):
+            prompt = dict(kind=kind, basis="player_interpretation", source_id="source-1", question="Visible question")
+            value = {**data, "perception": prompt, "goal": dict(purpose="Prompt", label=label, outcome="activated")}
+            self.assertEqual(validate_request(value), value)
+            with self.assertRaises(ContractError): validate_request({**value, "perception": {**prompt, "rows": []}})
+            with self.assertRaises(ContractError): validate_request({**value, "goal": {**value["goal"], "label": "guessed"}})
+
+    def test_editor_accepts_known_empty_fields_but_no_arbitrary_text_or_unknown_focus_shape(self):
+        view = dict(kind="editor", basis="player_interpretation", source_id="source-1", purpose="character_name",
+                    label="Name", visible_text="", whole_value=True, focused=True)
+        value = skill(skill_kind="edit", goal=dict(purpose="character_name", text="New Survivor-2", commit=False), perception=view)
+        self.assertEqual(validate_request(value), value)
+        for text in ("", "x" * 25, "$(id)", "name\n", "é"):
+            with self.subTest(text=text), self.assertRaises(ContractError):
+                validate_request({**value, "goal": {**value["goal"], "text": text}})
+        quantity = {**value, "perception": {**view, "purpose": "quantity"},
+                    "goal": dict(purpose="quantity", text="12", commit=False)}
+        self.assertEqual(validate_request(quantity), quantity)
+        with self.assertRaises(ContractError): validate_request({**quantity, "goal": {**quantity["goal"], "text": "12x"}})
+        with self.assertRaises(ContractError): validate_request({**value, "perception": None})
+
+    def test_registered_interaction_is_a_closed_single_game_decision(self):
+        value = skill(skill_kind="interact", goal=dict(action="open_consume", intent="Inspect food", desired_outcome="Visible food choices"))
+        self.assertEqual(validate_request(value), value)
+        for action in ("shell", "quicksave", "quit", "debug", "WAIT", "open;eat"):
+            with self.subTest(action=action), self.assertRaises(ContractError):
+                validate_request({**value, "goal": {**value["goal"], "action": action}})
+
+    def test_identity_claim_has_fixed_name_fields_without_native_attestation(self):
+        value = claim(key=dict(subject="world", property="identity", unit="name", coverage_id="visible-world-menu"),
+                      value=dict(quantity=None, state="test-world"))
+        self.assertEqual(validate_memory_entry(value, "claim", player=True), value)
+        for change in (dict(subject="other"), dict(unit="charges"), dict(coverage_id="annotation")):
+            with self.assertRaises(ContractError): validate_memory_entry({**value, "key": {**value["key"], **change}}, "claim")
+        with self.assertRaises(ContractError): validate_memory_entry({**value, "kind": "native_fact"}, "claim")
+
     def test_lifecycle_launch_has_no_old_authority_other_operations_require_binding(self):
-        launch = request("lifecycle", operation="launch", world="world", character="person", sources=[],
+        launch = request("lifecycle", work_id=None, phase_id=None, identity_claim_ids=[], operation="launch", world="world", character="person", sources=[],
                          expected_session=None, expected_revision=None, expected_boundary_id=None,
                          limits={"primitives": 1, "wall_seconds": 120, "game_seconds": 1})
         self.assertEqual(validate_request(launch), launch)
@@ -165,7 +222,7 @@ class MissionContractTests(unittest.TestCase):
         with self.assertRaises(ContractError): validate_request({**value, "entry": claim()})
 
     def test_decisions_require_an_explicit_context_packet_reference(self):
-        decision = dict(schema="campaign-memory/1", record_type="Decision", id="decision-1",
+        decision = dict(schema="campaign-memory/2", record_type="Decision", id="decision-1",
                         packet_id="packet-1", scope=scope(), query="water", memory_version=3,
                         claim_ids=["claim-1"], work_ids=[], source_ids=["source-1"],
                         lesson_ids=[], omitted=0, reason="Check the last observed supply")
@@ -184,8 +241,8 @@ class MissionContractTests(unittest.TestCase):
             with self.assertRaises(ContractError): validate_visible_ui(bad)
 
     def test_duplicate_nonfinite_oversized_and_mutable_alias_inputs_reject(self):
-        for value in ['{"schema":"mission/1","kind":"observe","kind":"stop"}',
-                      '{"schema":"mission/1","kind":"observe","epoch":NaN}',
+        for value in ['{"schema":"mission/2","kind":"observe","kind":"stop"}',
+                      '{"schema":"mission/2","kind":"observe","epoch":NaN}',
                       ' ' * MAX_REQUEST_BYTES + json.dumps(request())]:
             with self.assertRaises(ContractError): validate_request(value)
         original = skill(); parsed = validate_request(original)

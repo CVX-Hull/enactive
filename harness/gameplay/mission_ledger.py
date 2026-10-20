@@ -22,7 +22,7 @@ from .mission_contracts import (
     validate_handoff_result, validate_memory_entry, validate_request,
 )
 
-DB_VERSION = 4
+DB_VERSION = 5
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
 MAX_RECEIPT_BYTES = 65_536
 MAX_EFFECT_BYTES = 4096
@@ -271,11 +271,15 @@ class MissionLedger:
                 raise LedgerError("Corrupt operation deadline")
         if self._db.execute("SELECT count(*) FROM requests").fetchone()[0] > stored.limits.requests:
             raise LedgerError("Request retention exceeded")
-        for event_id, entry_type, record_id, body in self._db.execute("SELECT event_id,entry_type,record_id,body FROM memory"):
+        work_lineage = {}
+        for event_id, entry_type, record_id, body in self._db.execute("SELECT event_id,entry_type,record_id,body FROM memory ORDER BY sequence"):
             _id(event_id)
             entry = validate_memory_entry(body, entry_type)
             if entry["id"] != record_id or entry["scope"]["mission_id"] != stored.mission_id:
                 raise LedgerError("Corrupt semantic record scope")
+            if entry_type == "work":
+                self._check_work_lineage(entry, work_lineage)
+                work_lineage[entry["id"]] = entry
         issued, consumed = self._handoffs(state=state)
         actors = [(0, stored.player_id)] + sorted((issued[identity]["epoch"], self.request(claim)["result"]["player_id"])
                                                  for identity, claim in consumed.items())
@@ -734,6 +738,15 @@ class MissionLedger:
             self._put("state", state)
         return self.snapshot(now=now)
 
+    @staticmethod
+    def _check_work_lineage(entry: dict, previous: dict[str, dict]) -> None:
+        old = previous.get(entry["id"])
+        if old is not None:
+            if any(entry[key] != old[key] for key in ("scope", "intent", "predecessor_work_id")):
+                raise LedgerError("Work retains immutable scope, intent and predecessor")
+        elif entry["predecessor_work_id"] is not None and entry["predecessor_work_id"] not in previous:
+            raise LedgerError("Work predecessor must already exist in this mission")
+
     def append_memory(self, event_id: str, entry_type: str, entry: dict, *, now: float) -> int:
         """Immutable typed storage; semantic reduction belongs to campaign memory."""
         _id(event_id)
@@ -751,6 +764,8 @@ class MissionLedger:
                 raise BudgetError("Memory event retention limit reached")
             if entry_type != "work" and self._db.execute("SELECT 1 FROM memory WHERE entry_type=? AND record_id=?", (entry_type, data["id"])).fetchone():
                 raise LedgerError("An immutable assertion/decision identity cannot be overwritten")
+            if entry_type == "work":
+                self._check_work_lineage(data, {row["entry"]["id"]: row["entry"] for row in self.memory_records("work")})
             cursor = self._db.execute("INSERT INTO memory(event_id,entry_type,record_id,body) VALUES (?,?,?,?)", (event_id, entry_type, data["id"], encoded))
             return cursor.lastrowid
 

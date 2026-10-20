@@ -1,4 +1,4 @@
-"""Strict mission/1 data. Parsing never grants a controller capability.
+"""Strict mission/2 data. Parsing never grants a controller capability.
 
 The existing JSON decoder/schema helpers own duplicate, finite-number and strict
 integer validation. Request dictionaries are decoded copies, not mutable aliases.
@@ -7,6 +7,7 @@ from __future__ import annotations
 
 from dataclasses import asdict, dataclass
 import json
+import re
 from typing import Any
 
 from .contracts import (
@@ -14,12 +15,20 @@ from .contracts import (
     json_object, validate_json,
 )
 
-VERSION = "mission/1"
-MEMORY_VERSION = "campaign-memory/1"
+VERSION = "mission/2"
+MEMORY_VERSION = "campaign-memory/2"
 MAX_REQUEST_BYTES = 65_536
 MAX_CONTEXT_BYTES = 32_768
-SKILLS = ("navigate", "menu", "item", "activity", "inspect")
+SKILLS = ("navigate", "menu", "item", "activity", "inspect", "edit", "interact")
 LIFECYCLE = ("launch", "create", "save", "exit", "load", "finish")
+INTERACTIONS = (
+    "UP", "DOWN", "LEFT", "RIGHT", "open", "close", "smash", "examine", "examine_and_pickup",
+    "apply", "apply_wielded", "wear", "take_off", "wield", "reload_item", "reload_weapon",
+    "reload_wielded", "insert", "unload", "unload_container", "read", "butcher", "construct",
+    "disassemble", "inventory", "open_consume", "eat", "pickup", "drop", "wait", "sleep",
+    "craft", "recraft", "look", "peek",
+)
+EDITOR_PURPOSES = ("character_name", "world_name", "quantity", "filter")
 _ID = {**_text(128), "pattern": r"^[A-Za-z0-9][A-Za-z0-9_-]*$"}
 _IDS = _array(_ID, 8)
 _IDS["uniqueItems"] = True
@@ -65,10 +74,25 @@ _REVALIDATION = _object({
 })
 _SKILL_LIMITS = _object({"primitives": _integer(32, 1), "wall_seconds": _number(900),
                          "game_seconds": _integer(43_200, 1)})
+_LIFECYCLE_LIMITS = _object({"primitives": _integer(256, 1), "wall_seconds": _number(1800),
+                             "game_seconds": _integer(43_200, 1)})
+_VIEW_BASE = {"source_id": _ID, "basis": {"const": "player_interpretation"}}
+_VIEWS = {
+    "menu": _object({**_VIEW_BASE, "kind": {"const": "menu"},
+        "control": _enum("vertical", "horizontal", "tabs", "columns"),
+        "rows": _array(_object({"label": _text(1024), "enabled": {"type": "boolean"}}), 32, 1),
+        "selected": _nullable(_integer(31)), "question": _text(1024, empty=True)}),
+    "editor": _object({**_VIEW_BASE, "kind": {"const": "editor"},
+        "purpose": _enum(*EDITOR_PURPOSES), "label": _text(1024),
+        "visible_text": _text(128, empty=True), "whole_value": {"type": "boolean"},
+        "focused": {"type": "boolean"}}),
+    "direction": _object({**_VIEW_BASE, "kind": {"const": "direction"}, "question": _text(1024)}),
+    "confirmation": _object({**_VIEW_BASE, "kind": {"const": "confirmation"}, "question": _text(1024)}),
+}
 _GOALS = {
     "navigate": _object({"scope": _SCOPE, "target": _VEC}),
     "menu": _object({"purpose": _text(128), "label": _text(1024),
-                       "quantity": _integer(9999, 1), "outcome": _enum("selected", "inspected")}),
+                       "outcome": _enum("focused", "activated", "inspected")}),
     "item": _object({"purpose": _enum("pickup", "consume", "drop", "store"),
                        "label": _text(1024), "quantity": _integer(9999, 1),
                        "outcome": _enum("acquired", "consumed", "stored", "dropped")}),
@@ -76,8 +100,12 @@ _GOALS = {
                            "target": _text(1024), "game_seconds": _integer(43_200, 1),
                            "interrupt": {"type": "boolean"}}),
     "inspect": _object({"purpose": _enum("inventory", "consume", "needs", "look", "messages", "map")}),
+    "edit": _object({"purpose": _enum(*EDITOR_PURPOSES),
+        "text": {**_text(24), "pattern": r"^[A-Za-z0-9 _-]+$"}, "commit": {"type": "boolean"}}),
+    "interact": _object({"action": _enum(*INTERACTIONS), "intent": _text(1024),
+        "desired_outcome": _text(1024)}),
 }
-_KEY = _object({"subject": _ID, "property": _enum("need", "supply", "place", "work"),
+_KEY = _object({"subject": _ID, "property": _enum("need", "supply", "place", "work", "identity"),
                 "unit": _text(32), "coverage_id": _ID})
 _VALUE = _object({"quantity": _nullable(_integer(2**31 - 1)),
                   "state": _nullable(_text(1024))})
@@ -97,6 +125,7 @@ _QUANTITY = _object({"subject": _ID, "quantity": _integer(2**31 - 1),
 _WORK = _object({
     "schema": {"const": MEMORY_VERSION}, "record_type": {"const": "Work"},
     "id": _ID, "intent": _text(1024), "scope": _SCOPE, "stage": _text(128),
+    "predecessor_work_id": _nullable(_ID),
     "progress": _nullable(_integer(100)),
     "available": _array(_QUANTITY, 16), "committed": _array(_QUANTITY, 16),
     "predicted_output": _array(_QUANTITY, 16), "observed_output": _array(_QUANTITY, 16),
@@ -345,6 +374,13 @@ def validate_memory_entry(value: dict | str | bytes, entry_type: str, *, player=
             raise ContractError("A value is a quantity or state, never both")
         if content["quantity"] is None and content["state"] is None and result["status"] not in ("unknown", "disputed", "retired"):
             raise ContractError("An unsupported value must remain unknown/disputed/retired")
+        if result["key"]["property"] == "identity":
+            key = result["key"]
+            coverage = {"world": "visible-world-menu", "character": "visible-character-hud"}
+            if (result["kind"] != "interpretation" or key["subject"] not in coverage
+                    or key["unit"] != "name" or key["coverage_id"] != coverage[key["subject"]]
+                    or content["quantity"] is not None):
+                raise ContractError("Identity is a fallible visible world/menu or character/HUD name")
         for support in result["supports"]:
             if not support["sources"] and not support["claims"]:
                 raise ContractError("Empty support group cannot establish a claim")
@@ -352,7 +388,19 @@ def validate_memory_entry(value: dict | str | bytes, entry_type: str, *, player=
                 raise ContractError("A claim cannot support itself")
             if not set(support["sources"]) <= set(result["sources"]):
                 raise ContractError("Support must reference declared sources")
+    elif entry_type == "work" and result["predecessor_work_id"] == result["id"]:
+        raise ContractError("Work cannot precede itself")
     return result
+
+
+def _perception_schema(data: dict) -> dict:
+    """Discriminate the closed union as for skill goals, using existing validation."""
+    view = data.get("perception")
+    if view is None:
+        return {"type": "null"}
+    if type(view) is not dict or not isinstance(view.get("kind"), str) or view["kind"] not in _VIEWS:
+        raise ContractError("Unknown visible-control interpretation")
+    return _VIEWS[view["kind"]]
 
 
 def _request_schema(kind: str, data: dict) -> dict:
@@ -379,7 +427,8 @@ def _request_schema(kind: str, data: dict) -> dict:
             if not isinstance(skill_kind, str) or skill_kind not in _GOALS: raise ContractError("Unknown skill kind")
             props.update(skill_kind={"const": skill_kind}, goal=_GOALS[skill_kind], sources=_IDS,
                          expected_session=_ID, expected_revision=_integer(), expected_boundary_id=_ID,
-                         limits=_SKILL_LIMITS)
+                         limits=_SKILL_LIMITS, work_id=_nullable(_ID), phase_id=_nullable(_ID),
+                         perception=_perception_schema(data))
         elif kind == "handoff":
             props.update(checkpoint_ids={**_array(_ID, 32), "uniqueItems": True}, successor_role=_ID)
         elif kind == "claim":
@@ -390,7 +439,8 @@ def _request_schema(kind: str, data: dict) -> dict:
             props.update(operation=_enum(*LIFECYCLE), world=_text(80), character=_text(80),
                          sources=_IDS, expected_session=_nullable(_ID),
                          expected_revision=_nullable(_integer()), expected_boundary_id=_nullable(_ID),
-                         limits=_SKILL_LIMITS)
+                         limits=_LIFECYCLE_LIMITS, work_id=_nullable(_ID), phase_id=_nullable(_ID),
+                         identity_claim_ids={**_array(_ID, 4), "uniqueItems": True})
         elif kind == "stop":
             props.update(reason=_text(1024), finish={"type": "boolean"})
         else: raise ContractError("Unknown mission operation")
@@ -430,11 +480,42 @@ def validate_request(value: dict | str | bytes) -> dict:
             expected = {"pickup": "acquired", "consume": "consumed", "drop": "dropped", "store": "stored"}
             if result["goal"]["outcome"] != expected[result["goal"]["purpose"]]:
                 raise ContractError("Item purpose and outcome disagree")
+        view = result["perception"]
+        if view is not None:
+            if view["source_id"] not in result["sources"]:
+                raise ContractError("Interpretation must name an immutable informing source")
+            if result["skill_kind"] not in ("menu", "edit"):
+                raise ContractError("Only menu/edit controls accept visible-control interpretations")
+            if view["kind"] == "menu":
+                labels = [row["label"] for row in view["rows"]]
+                if len(set(labels)) != len(labels) or (view["selected"] is not None and view["selected"] >= len(labels)):
+                    raise ContractError("Menu view requires distinct visible labels and represented selection")
+            if result["skill_kind"] == "menu":
+                if view["kind"] == "editor":
+                    raise ContractError("Menu cannot borrow an editor interpretation")
+                choices = {"direction": ("North", "South", "East", "West", "Here"),
+                           "confirmation": ("Yes", "No")}
+                if view["kind"] in choices and (result["goal"]["label"] not in choices[view["kind"]]
+                        or result["goal"]["outcome"] != "activated"):
+                    raise ContractError("Prompt requires one typed direction/confirmation activation")
+        if result["skill_kind"] == "edit":
+            if view is None or view["kind"] != "editor" or view["purpose"] != result["goal"]["purpose"]:
+                raise ContractError("Edit requires its same-purpose visible editor interpretation")
+            # Schema's $ may match before a final newline; no control character
+            # belongs in the literal typing batch.
+            if re.fullmatch(r"[A-Za-z0-9 _-]+", result["goal"]["text"]) is None:
+                raise ContractError("Editor text requires only the supported literal ASCII characters")
+            if result["goal"]["purpose"] == "quantity" and not result["goal"]["text"].isdigit():
+                raise ContractError("Quantity requires ASCII digits")
+        if result["phase_id"] == result["request_id"]:
+            raise ContractError("A phase child cannot parent itself")
     elif kind == "lifecycle":
         binding = [result[k] for k in ("expected_session", "expected_revision", "expected_boundary_id")]
-        if result["operation"] == "launch":
+        if result["operation"] == "launch" and result["phase_id"] is None:
             if any(v is not None for v in binding): raise ContractError("Launch cannot borrow old native authority")
         elif any(v is None for v in binding):
             raise ContractError("Lifecycle requires a complete informing boundary")
         if result["limits"]["wall_seconds"] <= 0: raise ContractError("Lifecycle deadline must be positive")
+        if result["phase_id"] == result["request_id"]:
+            raise ContractError("A phase child cannot parent itself")
     return result
