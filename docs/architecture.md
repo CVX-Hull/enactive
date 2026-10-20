@@ -107,6 +107,22 @@ Prepublication callbacks retain source and durable intent outside the controller
 data lock, then all authority/deadline fences are checked again. Unknown delivery
 retains its pending identity and charge; it is never blindly replayed.
 
+The selected mission game-time cap gates every input dispatch lane, including
+lifecycle, exit and readmission. Rejection settles any reserved intent before
+revoking authority; controller preflight does not revoke while its lock is held.
+Unadopted startup has no canonical game clock and retains its separate finite
+guards. Observe and user Pause remain available without input. The software
+ceiling is eight days, the default remains 12 hours, and each admission selects
+its own finite cap and ending headroom. No cap grants cleanup input once exhausted.
+
+A lifecycle question interpretation that fails local shape/exact-text validation
+returns a blocked request before refresh, rotation or dispatch. The original phase
+and deadlines remain; this result neither attests fresh pixels nor grants a lease.
+A new corrected request passes the full existing source/authority/image guards.
+Points-stage installation follows complete validation. Other errors and unknown
+delivery retain their stopping behavior. This uses the existing blocked result
+and single writer, without a second retry service or compatibility path.
+
 Start/Observe cannot seed identity or the mission clock from an unowned game.
 Unexpected normal sources stay diagnostic across reopen; one explicit adoption gate
 protects time, map and native-memory eligibility. Some core tests assume identity explicitly; the new lifecycle integration tests
@@ -172,6 +188,13 @@ and retained112charges/six unknown ACKs. Explicit #156 readiness still precedes
 the real deciding player/successor mission; scoped engineering evidence is not
 independence acceptance. Earlier setup reports
 remain linked evidence, not current implementation instructions.
+
+The [first actual deciding attempt](acceptance/2026-10-20-independent-mission-first-attempt.md)
+failed on a paraphrased world question before Yes input; its exceptional cleanup
+and 70 returned inputs stay retained. The separate actual spectator Pause test
+passed live phase/lease revocation and stale-request rejection. It qualifies no
+in-flight cancellation or post-Pause readmission. The local-validation repair
+still needs a new scoped native proof and finite deciding admission.
 
 Cached status performs no evidence or memory I/O. It can show the last explicitly
 requested context packet, including claims, Work, source IDs, omissions and

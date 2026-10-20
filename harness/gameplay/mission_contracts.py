@@ -40,7 +40,8 @@ _SHA = {"type": "string", "pattern": "^[a-f0-9]{64}$"}
 
 _LIMITS = _object({
     "inputs": _integer(8192, 1), "wall_seconds": _number(86_400),
-    "game_seconds": _integer(604_800, 1), "frames": _integer(4096, 1),
+    # Seven elapsed days is an objective, not a safe total cap for ending work.
+    "game_seconds": _integer(691_200, 1), "frames": _integer(4096, 1),
     "frame_bytes": _integer(1_073_741_824, 1),
     "requests": _integer(4096, 1), "primitive_mappings": _integer(8192, 1),
 })

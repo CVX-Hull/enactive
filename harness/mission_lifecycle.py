@@ -399,14 +399,24 @@ class RegisteredLifecycle:
         state = r._store.observation(phase.checkpoint)
         if state["category"] == "YESNO":
             view = data["perception"]
+            next_stage = phase.stage
             question = "Save and quit?" if phase.stage == "save_confirmation" else "Are you SURE you're finished?"
             if (phase.stage == "character_confirmation" and view is not None
                     and view.get("question") == _POINTS_QUESTION):
-                phase = self._install(work, replace(phase, stage="points_confirmation"), previous=phase)
-            if phase.stage == "points_confirmation":
+                next_stage = "points_confirmation"
+            if next_stage == "points_confirmation":
                 question = _POINTS_QUESTION
             if view is None or view["kind"] != "confirmation" or view["question"] != question:
-                raise ControlError("Lifecycle confirmation lacks its exact interpreted stage question")
+                # This is local request validation, before refresh, rotation or
+                # dispatch. Keep the original phase so the player can correct
+                # its interpretation; no input or new consent is granted.
+                return "blocked", {
+                    "reason": "Lifecycle confirmation lacks its exact interpreted stage question. "
+                        "Copy only the visible question exactly, omitting a separate case-sensitivity legend. "
+                        "No input was dispatched; re-read the phase and submit a new request.",
+                    "source_ids": [phase.checkpoint.observation_id], "grants_authority": False}
+            if next_stage != phase.stage:
+                phase = self._install(work, replace(phase, stage=next_stage), previous=phase)
         if state["category"] == "PLAYER_INFO" and (data["perception"] is None or data["perception"]["kind"] != "dismissal"):
             raise ControlError("Identity screen supports only an explicit owned dismissal")
         if state["boundary"]["kind"] == "normal_play":

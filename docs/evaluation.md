@@ -86,6 +86,16 @@ percentiles. Revisit targets after representative navigation/items/activities an
 fresh-context player measurements, retaining both tails and failures. Reuse CDDA
 travel/activities where qualified before adding an execution framework.
 
+The next bounded measurement should correlate existing request/dispatch IDs across
+admission, bridge publication, terminal receipt, semantic settlement, status
+response and successful image decode. Use monotonic intervals within each process;
+browser/server clocks need explicit correlation before subtraction. The controller's
+15 ms receipt polling and viewer's active 250 ms post-response poll are hypotheses
+to profile, not explanations for all delay. Prioritize removing per-key player/tool
+round trips and unnecessary captures or repeated retrieval. Keep per-primitive
+outcome/authority checks; batch decisions rather than blindly batching input.
+Do not add a broker, telemetry service or new model tier without an observed gap.
+
 ## Caller contract
 
 Use `RunRecorder(manifest)`, `record(event)`, `finish(outcome)` and `write(path)`

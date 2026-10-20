@@ -138,24 +138,30 @@ Pause, competing roots, unsupported ownership and unknown Resume cannot renew it
 A missed response stays ambiguous even if the next frame looks expected. Historical
 proof, including an orphan proof left by a crash, restores no live authority.
 
-The latest [native006 report](acceptance/2026-10-20-native-character-lifecycle.md)
-owns actual creation/identity memory, counted drop, native wait/poll and normal
-first save/exit evidence, plus failed navigation/pickup/reload and exceptional
-second-child closure. All game/server processes are stopped. Current repairs are
-one coherent batch: known non-HOSTILE movement/descriptor4 (#138), actionable
-inventory-row projection (#151), truthful reload staging and narrow Resume-only
-create/load abort (#155). Two disjoint project-local workers delivered movement
-and renderer patches; the lead integrates coupled runtime/ledger/lifecycle/docs
-and owns the sole native build/runtime. Independent reviewers verify source and
-retained outcomes. General cancellation after other setup inputs remains deferred.
+The [first actual deciding attempt](acceptance/2026-10-20-independent-mission-first-attempt.md)
+failed before world confirmation: a paraphrased question was rejected before Yes,
+then the original lifecycle stopped. Its 70 returned inputs, 18 requests, verified
+frames and exceptional setup teardown remain retained. Separate actual spectator
+Pause passed phase/lease revocation and stale-request rejection. Neither accepts
+independent gameplay. Native007 remains the scoped engineering pass; Native006
+and earlier failures remain historical. All runtime processes were closed before
+the coupled source correction.
 
-Next: common/clean committed freeze and exact CI → rebuilt native plus separately
-finite qualification → #156 explicit readiness → #157/#144 actual deciding player
-and genuine memory successor → #145 seven-day readiness/finite plan or owned
-blockers. Engineering may parallel hosted checks after reviewed common freeze;
-both exact lanes are required before deciding readiness, release or integration.
-Earlier [setup/receipt reports](acceptance/2026-10-20-native-receipt-order.md) and
-failed synthetic/hosted checks remain evidence, not renewed allowance or acceptance.
+The lead owns local no-dispatch question validation and points-stage ordering
+(#155), plus all-input game-cap enforcement and finite seven-day ending headroom
+(#159). Integration tests corrected an initial inference: registered lifecycle
+could bypass the old ordinary-input cap check. Reuse shared dispatch, existing
+blocked receipts and finite limits; no generic retry/control framework or cleanup
+exemption. Independent read-only reviewers check source and original evidence;
+no parallel writer is useful for this tightly coupled repair.
+
+Next: reviewed common/clean committed freeze and exact CI → separately finite
+native correction proof → #156 new explicit readiness → #157/#144 genuinely fresh
+deciding player and memory successor → #145 seven-day readiness/finite plan or
+owned blockers. The unchanged native binary needs no rebuild for Python-only
+changes. Both exact hosted lanes are required before deciding readiness, release
+or integration. No old failure, allowance or date resets. General setup
+cancellation remains unsupported beyond its narrow existing branch.
 
 #143 owns active observer cadence and measured presentation. The
 [latency budgets](evaluation.md#latency-budgets-for-interactive-play) separate native

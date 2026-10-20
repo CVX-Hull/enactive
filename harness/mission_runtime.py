@@ -1602,6 +1602,7 @@ class MissionRuntime:
         raw = None
         disposition, reason = "not_dispatched", "Dispatch not admitted"
         envelope_valid = False
+        game_budget_exhausted = False
         operator_mark = self._operator_mark()
         dispatch_actor = self._ledger.snapshot(now=self._wall())["player_id"]
         takeover_generation = self._store.observation(proposal.before)["takeover_generation"]
@@ -1612,6 +1613,12 @@ class MissionRuntime:
         image_informed = work.request.get("perception") is not None or lifecycle is not None or activity is not None
         rule = "exact_png_bytes" if image_informed else "native_state"
         def guard() -> None:
+            nonlocal game_budget_exhausted
+            # Check every input lane. Startup/provisional identity has no
+            # canonical game clock yet; ending adopted work needs headroom.
+            if self._game_cost is not None and self._game_cost >= self._admission.limits.game_seconds:
+                game_budget_exhausted = True
+                raise BudgetError("Mission game-time ceiling exhausted")
             if activity is not None:
                 self._registered_activity.guard(work, activity, proposal)
             elif lifecycle is None:
@@ -1744,7 +1751,11 @@ class MissionRuntime:
         if prepared:
             self._ledger.settle_primitive(proposal.logical_id, disposition, receipt, now=self._wall())
         live = self._live()
-        if disposition != "unknown" and (activity is None or disposition != "returned") and (live[3] is not self._lease or live[4]):
+        if game_budget_exhausted:
+            # Keep revocation outside controller preflight and after any
+            # reserved intent has been settled.
+            self._stop_after_failure(reason)
+        elif disposition != "unknown" and (activity is None or disposition != "returned") and (live[3] is not self._lease or live[4]):
             self._stop_after_failure(reason)
         self._last_receipt = receipt
         if disposition == "unknown":

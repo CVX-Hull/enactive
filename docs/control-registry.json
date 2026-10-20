@@ -199,7 +199,10 @@
         "docs/acceptance/2026-10-18-walk-reassessment.md",
         "docs/acceptance/2026-10-20-lifecycle-freshness.md",
         "docs/acceptance/2026-10-20-native-character-lifecycle.md",
-        "docs/acceptance/2026-10-20-native-lifecycle-qualified.md"
+        "docs/acceptance/2026-10-20-native-lifecycle-qualified.md",
+        "docs/acceptance/2026-10-20-independent-mission-first-attempt.md",
+        "tests/test_mission_confirmation_validation.py",
+        "tests/test_mission_campaign_budget.py"
       ],
       "failure_response": "Preserve failure output, fix the cause and rerun before claiming portable acceptance.",
       "limitations": "Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing.",
@@ -219,12 +222,12 @@
       "maintenance_review": {
         "date": "2026-10-20",
         "effectiveness": "partially_effective",
-        "findings": "Native006 revealed unrealistic reload and inventory fixtures and overbroad creature rejection. Repaired source and separately frozen Native007 passed their narrow actual scope; current docs now separate engineering success from independent mission acceptance. Fixture realism and end-to-end latency remain manual evidence judgments.",
-        "cost": "Preserve00670charges/exceptional cleanup plus separate007112charges and32.4minutes through terminal status. Reused engine predicate, existing controller/ledger/archive, common checks and independent review; no telemetry/control framework. Model/tool/approval/display costs remain unmeasured.",
-        "follow_up": "#156 explicit finite deciding readiness; #157/#144 actual independent player/successor supplies/shelter mission; #145 evidence-backed seven-day readiness. #138/#143/#154 retain exploration and latency findings; #75 owns fixture realism/control burden. January15 and October24 maintenance/research triggers remain unchanged.",
+        "findings": "Actual deciding001 failed before Yes after a paraphrased question; exact validation prevented input but unnecessarily revoked its setup phase. Separate actual spectator Pause revoked phase/lease and rejected stale epoch input. Budget integration fixtures disproved an overbroad inference about saving: registered lifecycle bypassed the ordinary cap check. Narrow local-validation and shared-cap repairs need a new common freeze and native proof; original failures stay retained.",
+        "cost": "Deciding001 retains 70 returned inputs, 18 requests, 156 frames and 188.201 seconds through its stopped watermark, plus one exceptional cleanup. Separate control001 retains one returned input, five frames and its own declared exceptional teardown. Existing writer, blocked result, ledger, hard caps and independent review reused; no new framework. Model/tool/display costs remain unknown.",
+        "follow_up": "#155 local interpretation/points-stage correction; #159 every-input cap and finite seven-day headroom; #156 new finite readiness/native correction proof; #157/#144 fresh independent mission/successor; #145 seven-day readiness. #138/#143/#154 own latency and semantic efficiency; #75 fixture/control maintenance. October24 and January15 dates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-20-native-lifecycle-qualified.md",
-          "docs/acceptance/2026-10-20-native-character-lifecycle.md"
+          "docs/acceptance/2026-10-20-independent-mission-first-attempt.md",
+          "docs/acceptance/2026-10-20-native-lifecycle-qualified.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -234,7 +237,7 @@
       "name": "Live authority and input guards",
       "mode": "runtime",
       "scope": "Single-controller mission dispatch and admission, original typed operation accounting, HTTP trust boundary, historical memory observer and spectator input freshness.",
-      "mechanism": "One MissionRuntime accepts strict mission/6 through authenticated HTTP and bounded JSON CLI; old mission/2, mission/3, mission/4 and mission/5 records and Stop-finish flags reject. One writer uses exact controller leases, final source/image preflight, durable intents and original root/child budgets. Controller/native fences reject stale, paused or competing input and retain unknown delivery without replay; admission counters exclude raw-command/Start races while independent Pause remains available. Registered launch retains the fixed child and paused menu. Creation/save/load requires owned transitions, provisional visible identity and canonical all-session adoption before maps, time or native memory facts. Verified normal exit retires only its exact pending input and unused capacity, preserving the unknown ACK. Normal finish uses every owned exit, retained historical source integrity and coherent objective Work as of its exact event; no native input. Its immutable report precedes terminal epoch/deadline checks, and Pause/expiry/crash cannot replay completion. Cached viewer status distinguishes historical memory, process samples, saved exit, reported completion, cleanup and actual mission phase; rendering grants no authority. Quiescent handoff/claim atomically retain actor history without input; bounded current-version successor packets cover unfinished Work. Separate linked readmission charges one Resume under original deadlines and exact source/Pause fences; history restores no consent. Typed item/count/inspection roots and one-observation activity polls share original phase/Work limits. Item quantity editing requires its exact returned count-opening transition; focus never auto-confirms. Trusted activity control captures validated terminal evidence before reconciliation persistence and checks fixed native expiry before publication. Cached SQLite aggregates distinguish retained operation requests and charged primitive dispositions from unmeasured model/tool/intervention costs. The observer separates current private activity from historical results and exposes bounded query-specific memory with explicit truncation/raw context. Known nondelivery retains costs without invalidating memory; freshness, scope and unknown effects still apply. A private unknown-dispatch candidate retains original root/actor/Pause/takeover/capacity custody. One bounded pre-Observe collection retains exact unclaimed retirement or correlated terminal evidence in existing records, without accepting it as current, clearing unknown effects or granting Resume. Delayed I/O cannot admit late evidence; collection misses remain ambiguous. Ledger8 uses one closed 32768-byte typed EffectReconciliation envelope for delivery, lifecycle and owned exit. Write/reopen correlate basis semantics with independent original dispatch receipts, actor/root/Work/epoch, source IDs and collection clocks; old ledger/effect shapes reject. Framed late results consume original reserved capacity before diagnostic Observe. Explicit reconciliation needs current fresh paused evidence and does not rewrite the unknown ACK/charge. Separate normal-play recovery readmission charges one Resume; navigation retains its original goal/Work/root, first game anchor and cumulative limits. Pending continuation fences competing roots/handoff; unknown Resume and unsupported ownership stop. Historical or orphan proof restores no private consent. Aged lifecycle Resume and owned quit confirmation refresh the exact guarded checkpoint inside the operation under original child/root/mission deadlines. Resume records source lineage before a lease exists; typed exit revalidation links the immutable interpretation to the dispatched source at write/reopen and orphan proof checks, requiring exact PNG rather than native-state equivalence.",
+      "mechanism": "One MissionRuntime accepts strict mission/6 through authenticated HTTP and bounded JSON CLI; old mission/2, mission/3, mission/4 and mission/5 records and Stop-finish flags reject. One writer uses exact controller leases, final source/image preflight, durable intents and original root/child budgets. Controller/native fences reject stale, paused or competing input and retain unknown delivery without replay; admission counters exclude raw-command/Start races while independent Pause remains available. Registered launch retains the fixed child and paused menu. Creation/save/load requires owned transitions, provisional visible identity and canonical all-session adoption before maps, time or native memory facts. Verified normal exit retires only its exact pending input and unused capacity, preserving the unknown ACK. Normal finish uses every owned exit, retained historical source integrity and coherent objective Work as of its exact event; no native input. Its immutable report precedes terminal epoch/deadline checks, and Pause/expiry/crash cannot replay completion. Cached viewer status distinguishes historical memory, process samples, saved exit, reported completion, cleanup and actual mission phase; rendering grants no authority. Quiescent handoff/claim atomically retain actor history without input; bounded current-version successor packets cover unfinished Work. Separate linked readmission charges one Resume under original deadlines and exact source/Pause fences; history restores no consent. Typed item/count/inspection roots and one-observation activity polls share original phase/Work limits. Item quantity editing requires its exact returned count-opening transition; focus never auto-confirms. Trusted activity control captures validated terminal evidence before reconciliation persistence and checks fixed native expiry before publication. Cached SQLite aggregates distinguish retained operation requests and charged primitive dispositions from unmeasured model/tool/intervention costs. The observer separates current private activity from historical results and exposes bounded query-specific memory with explicit truncation/raw context. Known nondelivery retains costs without invalidating memory; freshness, scope and unknown effects still apply. A private unknown-dispatch candidate retains original root/actor/Pause/takeover/capacity custody. One bounded pre-Observe collection retains exact unclaimed retirement or correlated terminal evidence in existing records, without accepting it as current, clearing unknown effects or granting Resume. Delayed I/O cannot admit late evidence; collection misses remain ambiguous. Ledger8 uses one closed 32768-byte typed EffectReconciliation envelope for delivery, lifecycle and owned exit. Write/reopen correlate basis semantics with independent original dispatch receipts, actor/root/Work/epoch, source IDs and collection clocks; old ledger/effect shapes reject. Framed late results consume original reserved capacity before diagnostic Observe. Explicit reconciliation needs current fresh paused evidence and does not rewrite the unknown ACK/charge. Separate normal-play recovery readmission charges one Resume; navigation retains its original goal/Work/root, first game anchor and cumulative limits. Pending continuation fences competing roots/handoff; unknown Resume and unsupported ownership stop. Historical or orphan proof restores no private consent. Aged lifecycle Resume and owned quit confirmation refresh the exact guarded checkpoint inside the operation under original child/root/mission deadlines. Resume records source lineage before a lease exists; typed exit revalidation links the immutable interpretation to the dispatched source at write/reopen and orphan proof checks, requiring exact PNG rather than native-state equivalence. Local malformed lifecycle confirmation returns blocked before dispatch without renewing the original phase; corrected requests retain full source/Pause/image/deadline checks. Known game-time exhaustion gates every input lane and revokes authority after settlement; software maximum eight days, default twelve hours, no cleanup exemption.",
       "owner": "controller and viewer maintainer",
       "trigger": "every relevant request, observation and image decode",
       "evidence": [
@@ -277,7 +280,10 @@
         "tests/test_mission_delivery_evidence.py",
         "tests/test_mission_recovery_collection.py",
         "tests/test_mission_effects.py",
-        "docs/acceptance/2026-10-20-lifecycle-freshness.md"
+        "docs/acceptance/2026-10-20-lifecycle-freshness.md",
+        "docs/acceptance/2026-10-20-independent-mission-first-attempt.md",
+        "tests/test_mission_confirmation_validation.py",
+        "tests/test_mission_campaign_budget.py"
       ],
       "failure_response": "Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.",
       "limitations": "Portable tests use fake bridges and explicitly mocked identity boundaries for core skill composition. Owned launch/untouched-menu Yes exit have bounded native qualification with failed001 retained; native No/user Pause and normal character lifecycle remain unqualified; creation/save/reload have synthetic integration coverage only; handoff/readmission, selected item/count/inspection and activity polls have synthetic coverage only; activity interruption/answer/resumption has synthetic coverage only; selected delivery reconciliation/readmission has synthetic coverage only; ambiguous delivery and unsupported semantic uncertainty stay stopped; stopped NormalFinish has bounded native untouched-menu cleanup evidence; objective-completed Finish and native normal-game/editor/context-replacement acceptance remain unqualified. Historical menu-only native4 qualification is not mission acceptance. Pause cannot undo committed input or cancel an activity; filesystem stalls can delay revocation; no general combat/damage guarantee.",
@@ -287,20 +293,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-20",
-        "outcome": "Native character qualification001 FAILED at stale creation Resume before primitive admission; first stale Yes also proposed no input. Registered owned-menu cleanup/typed unknown-ACK effect and stopped Finish succeeded; no character created.",
-        "scope": "Sourcebcf11b7, unchanged native4;3charges(2returned/1unknown),10frames331622bytes,364.984962executionwallseconds/426.067757including reopen verification. No game-time anchor or model-cost claim; game/server/slots closed, historical authority-free reopen verified.",
+        "outcome": "Actual spectator Pause revoked a live lifecycle phase and lease; staged stale epoch input was rejected without another input. Actual deciding001 blocked a malformed world question before Yes, then stopped.",
+        "scope": "Frozen32f6147/nativecd031. Control001 one returned input; deciding00170 returned. Separate exceptional teardowns, no independent mission or normal finish. Subsequent source repairs require new acceptance.",
         "evidence": [
-          "docs/acceptance/2026-10-20-lifecycle-freshness.md"
+          "docs/acceptance/2026-10-20-independent-mission-first-attempt.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-20",
         "effectiveness": "partially_effective",
-        "findings": "Native preflight exposed aged lifecycle Resume and exit-confirmation gaps missed by fast portable fixtures. Stale evidence stopped input; source repair reuses guarded exact-image refresh and validates immutable source lineage/original child deadlines. Actual character/native repair qualification remains open; failed001 and prior accepted evidence remain separate.",
-        "cost": "One frozen engineering attempt,3charges/10frames,364.984962executionseconds plus61.082795verificationseconds; lead source integration and parallel read-only reviews. Existing refresh/controller/SQLite/archive/CLI reused; model/tool costs unmeasured.",
-        "follow_up": "#155/#154 source repair, exact checks and separately finite #156 native retest, then #157/#144 actual independent mission and #145 readiness. #75 retains control burden/drift review; January15periodic and October24research/event triggers unchanged. No replay, TTL relaxation, compatibility reader, new executor or budget transfer.",
+        "findings": "Actual deciding001 failed before Yes after a paraphrased question; exact validation prevented input but unnecessarily revoked its setup phase. Separate actual spectator Pause revoked phase/lease and rejected stale epoch input. Budget integration fixtures disproved an overbroad inference about saving: registered lifecycle bypassed the ordinary cap check. Narrow local-validation and shared-cap repairs need a new common freeze and native proof; original failures stay retained.",
+        "cost": "Deciding001 retains 70 returned inputs, 18 requests, 156 frames and 188.201 seconds through its stopped watermark, plus one exceptional cleanup. Separate control001 retains one returned input, five frames and its own declared exceptional teardown. Existing writer, blocked result, ledger, hard caps and independent review reused; no new framework. Model/tool/display costs remain unknown.",
+        "follow_up": "#155 local interpretation/points-stage correction; #159 every-input cap and finite seven-day headroom; #156 new finite readiness/native correction proof; #157/#144 fresh independent mission/successor; #145 seven-day readiness. #138/#143/#154 own latency and semantic efficiency; #75 fixture/control maintenance. October24 and January15 dates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-20-lifecycle-freshness.md"
+          "docs/acceptance/2026-10-20-independent-mission-first-attempt.md",
+          "docs/acceptance/2026-10-20-native-lifecycle-qualified.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -342,7 +349,8 @@
         "docs/acceptance/2026-10-19-seven-day-survival.md",
         "docs/acceptance/2026-10-20-lifecycle-freshness.md",
         "docs/acceptance/2026-10-20-native-character-lifecycle.md",
-        "docs/acceptance/2026-10-20-native-lifecycle-qualified.md"
+        "docs/acceptance/2026-10-20-native-lifecycle-qualified.md",
+        "docs/acceptance/2026-10-20-independent-mission-first-attempt.md"
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
       "limitations": "Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.",
@@ -352,21 +360,22 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-20",
-        "outcome": "Native007 passed scoped engineering creation/identity, known two-step return, counted drop/pickup, one-minute wait, normal save/new-child exact reload/final save-quit and stopped Finish. Both children and service exited normally; no runtime remains.",
-        "scope": "Frozen5da2ea1/nativecd031f20;112charges=106returned+6unknown, zero unreconciled effects;287verified PNGs/13999031bytes;65game-seconds. No independent player/successor, meaningful supply/shelter, general cancellation or latency acceptance.",
+        "outcome": "Separate actual Pause control passed its narrow revocation/stale-request scope. Deciding001 failed before world confirmation and retained all costs. Native007 remains engineering lifecycle/known-route/pickup/wait qualification.",
+        "scope": "Frozen32f6147/nativecd031 for control/deciding001; unloaded-menu/control and failed setup only. Two separately declared exceptional teardowns; no deciding character, supplies, rest, successor or normal finish.",
         "evidence": [
+          "docs/acceptance/2026-10-20-independent-mission-first-attempt.md",
           "docs/acceptance/2026-10-20-native-lifecycle-qualified.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-20",
         "effectiveness": "partially_effective",
-        "findings": "Native006 revealed unrealistic reload and inventory fixtures and overbroad creature rejection. Repaired source and separately frozen Native007 passed their narrow actual scope; current docs now separate engineering success from independent mission acceptance. Fixture realism and end-to-end latency remain manual evidence judgments.",
-        "cost": "Preserve00670charges/exceptional cleanup plus separate007112charges and32.4minutes through terminal status. Reused engine predicate, existing controller/ledger/archive, common checks and independent review; no telemetry/control framework. Model/tool/approval/display costs remain unmeasured.",
-        "follow_up": "#156 explicit finite deciding readiness; #157/#144 actual independent player/successor supplies/shelter mission; #145 evidence-backed seven-day readiness. #138/#143/#154 retain exploration and latency findings; #75 owns fixture realism/control burden. January15 and October24 maintenance/research triggers remain unchanged.",
+        "findings": "Actual deciding001 failed before Yes after a paraphrased question; exact validation prevented input but unnecessarily revoked its setup phase. Separate actual spectator Pause revoked phase/lease and rejected stale epoch input. Budget integration fixtures disproved an overbroad inference about saving: registered lifecycle bypassed the ordinary cap check. Narrow local-validation and shared-cap repairs need a new common freeze and native proof; original failures stay retained.",
+        "cost": "Deciding001 retains 70 returned inputs, 18 requests, 156 frames and 188.201 seconds through its stopped watermark, plus one exceptional cleanup. Separate control001 retains one returned input, five frames and its own declared exceptional teardown. Existing writer, blocked result, ledger, hard caps and independent review reused; no new framework. Model/tool/display costs remain unknown.",
+        "follow_up": "#155 local interpretation/points-stage correction; #159 every-input cap and finite seven-day headroom; #156 new finite readiness/native correction proof; #157/#144 fresh independent mission/successor; #145 seven-day readiness. #138/#143/#154 own latency and semantic efficiency; #75 fixture/control maintenance. October24 and January15 dates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-20-native-lifecycle-qualified.md",
-          "docs/acceptance/2026-10-20-native-character-lifecycle.md"
+          "docs/acceptance/2026-10-20-independent-mission-first-attempt.md",
+          "docs/acceptance/2026-10-20-native-lifecycle-qualified.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -502,7 +511,8 @@
         "docs/acceptance/2026-10-19-first-clean-water.md",
         "docs/acceptance/2026-10-19-seven-day-survival.md",
         "docs/acceptance/2026-10-20-native-character-lifecycle.md",
-        "docs/acceptance/2026-10-20-native-lifecycle-qualified.md"
+        "docs/acceptance/2026-10-20-native-lifecycle-qualified.md",
+        "docs/acceptance/2026-10-20-independent-mission-first-attempt.md"
       ],
       "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process. Reuse fit and the adequacy of its rationale are semantic judgments; CI does not prove them. Identity configuration prevents inferred defaults but does not inspect file contents or prove a message, branch or remote ref contains no personal information; full-message inspection remains manual. Fixture realism is a manual source/evidence judgment; common tests cannot prove it.",
@@ -512,22 +522,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-20",
-        "outcome": "Independent source and Native007 read-only closeout reviews found no confirmed unresolved defect. Audit reproduced exports, SQLite/dispatch/frame integrity, lifecycle proofs, clocks and canonical continuity. A movement-percentile summary error was corrected to nearest-rank p95=max191.63ms before publication.",
-        "scope": "Source review plus private Native007 records, frames, read-only SQLite and journal. No reviewer sent game input. Lead retains final verification and independent mission admission.",
+        "outcome": "Independent audits reproduced actual control001 and failed deciding001 exports, dispatch/frame integrity and exceptional cleanup custody. Source review found premature points-stage mutation and cap rejection retaining authority; lead corrections remain subject to final review/common/native proof.",
+        "scope": "Read-only source/SQLite/journal/frames; no reviewer inputs. Lead retains adjudication and final acceptance.",
         "evidence": [
-          "docs/acceptance/2026-10-20-native-lifecycle-qualified.md",
-          "docs/engineering.md"
+          "docs/acceptance/2026-10-20-independent-mission-first-attempt.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-20",
         "effectiveness": "partially_effective",
-        "findings": "Native006 revealed unrealistic reload and inventory fixtures and overbroad creature rejection. Repaired source and separately frozen Native007 passed their narrow actual scope; current docs now separate engineering success from independent mission acceptance. Fixture realism and end-to-end latency remain manual evidence judgments.",
-        "cost": "Preserve00670charges/exceptional cleanup plus separate007112charges and32.4minutes through terminal status. Reused engine predicate, existing controller/ledger/archive, common checks and independent review; no telemetry/control framework. Model/tool/approval/display costs remain unmeasured.",
-        "follow_up": "#156 explicit finite deciding readiness; #157/#144 actual independent player/successor supplies/shelter mission; #145 evidence-backed seven-day readiness. #138/#143/#154 retain exploration and latency findings; #75 owns fixture realism/control burden. January15 and October24 maintenance/research triggers remain unchanged.",
+        "findings": "Actual deciding001 failed before Yes after a paraphrased question; exact validation prevented input but unnecessarily revoked its setup phase. Separate actual spectator Pause revoked phase/lease and rejected stale epoch input. Budget integration fixtures disproved an overbroad inference about saving: registered lifecycle bypassed the ordinary cap check. Narrow local-validation and shared-cap repairs need a new common freeze and native proof; original failures stay retained.",
+        "cost": "Deciding001 retains 70 returned inputs, 18 requests, 156 frames and 188.201 seconds through its stopped watermark, plus one exceptional cleanup. Separate control001 retains one returned input, five frames and its own declared exceptional teardown. Existing writer, blocked result, ledger, hard caps and independent review reused; no new framework. Model/tool/display costs remain unknown.",
+        "follow_up": "#155 local interpretation/points-stage correction; #159 every-input cap and finite seven-day headroom; #156 new finite readiness/native correction proof; #157/#144 fresh independent mission/successor; #145 seven-day readiness. #138/#143/#154 own latency and semantic efficiency; #75 fixture/control maintenance. October24 and January15 dates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-20-native-lifecycle-qualified.md",
-          "docs/acceptance/2026-10-20-native-character-lifecycle.md"
+          "docs/acceptance/2026-10-20-independent-mission-first-attempt.md",
+          "docs/acceptance/2026-10-20-native-lifecycle-qualified.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -740,7 +749,8 @@
         "docs/acceptance/2026-10-19-potable-cache-stop.md",
         "docs/acceptance/2026-10-19-four-day-survival.md",
         "docs/acceptance/2026-10-19-first-clean-water.md",
-        "docs/acceptance/2026-10-19-seven-day-survival.md"
+        "docs/acceptance/2026-10-19-seven-day-survival.md",
+        "docs/acceptance/2026-10-20-independent-mission-first-attempt.md"
       ],
       "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",
@@ -757,13 +767,14 @@
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-19",
+        "date": "2026-10-20",
         "effectiveness": "partially_effective",
-        "findings": "Actual-frame/quantity verification, terminal handoffs and deadline reconciliation supported completion. Initial source review accepted wrong sleep predicate/cadence; lead correction preceded new Sleep but not the already informed awake hold. Frozen mistakes and later adjudications remain; controls were partially effective, not uniformly correct.",
-        "cost": "Retained full trajectory costs and independent reviews; existing CLI/native activities/Git/GitHub reused, no per-care-interval source/CI checkpoint, generic monitor, new provider or global setup. Exact model usage/spend unmeasured.",
-        "follow_up": "#71 extraction/label readiness; #40 semantic monitoring; #75 source review/forecast/control burden; #126 external-operator UI. Existing research and periodic/event review dates unchanged.",
+        "findings": "Actual deciding001 failed before Yes after a paraphrased question; exact validation prevented input but unnecessarily revoked its setup phase. Separate actual spectator Pause revoked phase/lease and rejected stale epoch input. Budget integration fixtures disproved an overbroad inference about saving: registered lifecycle bypassed the ordinary cap check. Narrow local-validation and shared-cap repairs need a new common freeze and native proof; original failures stay retained.",
+        "cost": "Deciding001 retains 70 returned inputs, 18 requests, 156 frames and 188.201 seconds through its stopped watermark, plus one exceptional cleanup. Separate control001 retains one returned input, five frames and its own declared exceptional teardown. Existing writer, blocked result, ledger, hard caps and independent review reused; no new framework. Model/tool/display costs remain unknown.",
+        "follow_up": "#155 local interpretation/points-stage correction; #159 every-input cap and finite seven-day headroom; #156 new finite readiness/native correction proof; #157/#144 fresh independent mission/successor; #145 seven-day readiness. #138/#143/#154 own latency and semantic efficiency; #75 fixture/control maintenance. October24 and January15 dates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-19-seven-day-survival.md"
+          "docs/acceptance/2026-10-20-independent-mission-first-attempt.md",
+          "docs/acceptance/2026-10-20-native-lifecycle-qualified.md"
         ]
       },
       "next_review": "2027-01-15"

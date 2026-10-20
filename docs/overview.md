@@ -48,6 +48,15 @@ Independent player/successor play and meaningful supplies/shelter remain unquali
 [Native006](acceptance/2026-10-20-native-character-lifecycle.md) and earlier reports
 retain their failures, unknown ACKs and exceptional cleanup.
 
+The [first actual independent attempt](acceptance/2026-10-20-independent-mission-first-attempt.md)
+failed before world confirmation: the player paraphrased the exact question and
+included its adjacent legend. No Yes was dispatched; the stopped attempt retains
+70 returned inputs and its exceptional setup cleanup. A separate actual spectator
+Pause test revoked a live phase/lease and rejected stale input. Neither accepts
+the independent mission. The source correction preserves an original phase only
+for a local malformed-question rejection; a new corrected request must still pass
+fresh evidence and all original authority/budget checks.
+
 Current movement uses strictly known non-HOSTILE evidence. Inventory projection
 omits only the engine's non-selecting cosmetic summary. Reload follows the actual
 world→character-list transition and checks the unique enabled selected admitted
@@ -57,6 +66,8 @@ general setup cancellation remains unsupported and unqualified.
 Active observer polling now schedules250ms after each completed status response;
 actual presentation latency still needs native/browser measurement. Fast ordinary
 input samples do not measure player/model latency or accept independent play.
+Routine play should compose guarded skills without a model or approval per key;
+latency must be assessed at the whole-skill and displayed-frame boundaries too.
 [Latency budgets](evaluation.md#latency-budgets-for-interactive-play) separate native
 input, whole skills, model/tool delay, observer decode and loading.
 

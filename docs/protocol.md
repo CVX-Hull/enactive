@@ -251,6 +251,16 @@ Explicit stage commits request world FINALIZE or final character NEXT_TAB; the
 player separately interprets each confirmation, including discarded spare points.
 Save starts only from adopted normal play and its own Save and quit? confirmation.
 Each action uses the ordinary charged dispatch and original root/child ceilings.
+A confirmation's `question` contains only the exact base question; an adjacent
+case-sensitivity legend is not part of that field. Local wrong-kind/missing or
+wrong-question interpretation returns plain blocked before refresh, rotation or
+input. It consumes a semantic request but not a primitive, retains the original
+phase/lease/deadlines and creates no new authority. Repeating the same request ID
+returns its immutable blocked result. Re-read the original phase and submit a new
+corrected request; its full freshness, exact-PNG, actor, Pause and budget checks
+still apply. Points-stage changes install only after full validation. This narrow
+request rejection does not soften wrong sources, changed pixels, expiry, user
+Pause or unknown delivery, and makes no claim about the current native scene.
 A changed-session terminal ACK remains unknown. Diagnostic Observe retains the
 actual after-frame against that dispatch's exact capacity reservation; a separate
 same-root current-epoch request records LifecycleTransition and reconciles effect
@@ -270,6 +280,15 @@ can be explicitly corrected within its original phase/deadline. Reopen verifies
 history but reconstructs no process handle, phase, lineage, lease or queued input.
 Native007 qualified the selected actual creation/save/load path. Independent
 mission acceptance and actual fresh-context memory use remain pending.
+
+MissionLimits permits at most 691200 game-seconds (eight days); its default remains
+43200 seconds. Each finite admission must budget normal ending work before its
+selected cap. Every input lane checks known canonical game cost before publication,
+including lifecycle and readmission. Reaching or exceeding the cap prevents input
+and revokes authority after settlement, with no cleanup exception. Startup has no
+adopted game clock and keeps its existing independent guards. Read-only Observe
+and user Pause do not dispatch inputs. Raising the software maximum extends no
+existing admission and establishes no native survival outcome.
 
 `lifecycle(operation=finish)` is the sole normal finish route. Stop carries only
 its Pause reason; former Stop `finish` fields and mission/2, mission/3, mission/4 or mission/5 records reject. The
