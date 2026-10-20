@@ -134,44 +134,34 @@ Pause, competing roots, unsupported ownership and unknown Resume cannot renew it
 A missed response stays ambiguous even if the next frame looks expected. Historical
 proof, including an orphan proof left by a crash, restores no live authority.
 
-The preceding761f183 checkpoint passed1090 common Python tests and both
-exact hosted lanes. Earlier push failures in Pause/deadline fixtures remain
-retained in the [qualification001 report](acceptance/2026-10-20-lifecycle-freshness.md),
-with their causal test corrections and limits. Native qualification002 then
-**failed** after one returned Resume: passive capture metadata invalidated the first
-menu binding, and Resume-only startup could not enter normal cleanup. No character
-or world action occurred. One separately proposed exceptional teardown closed the
-child, without OwnedNormalExit/NormalFinish. The [native002 report](acceptance/2026-10-20-native-capture-churn.md)
-retains actual frames,419.284726seconds through the exit-status ledger watermark,
-619.288934seconds through shutdown/reopen, one charged input and one exceptional
-cleanup intervention. No failed attempt or unused allowance is transferred.
+The lead owns the coupled receipt-clock correction and active observer cadence,
+with parallel read-only authority/evidence reviews. A causal source test covers
+spectator-first receipt of the same frame; original UUID/clock/freshness/state and
+input authority remain exact. #154/#155 require the common gate and exact source
+CI, then a separately finite engineering qualification006 with explicit wait15 at
+the retained native binary. Engineering may parallel hosted checks after reviewed
+common/clean committed freeze; both exact hosted lanes remain required before
+#156 deciding readiness, release or integration. No failed allowance transfers.
 
-The bounded #154/#155 source repair reuses native-state equivalence across live
-capture churn while preserving exact ACK/UUID/preflight records and original
-receipt clocks. Runtime/store verify original pixels and expected Resume transition
-before a fresh internally paused menu can serve a separate normal cleanup root.
-Ledger write/reopen/orphan checks preserve input mapping/source lineage. User Pause,
-unknown Resume, any setup input or unsettled prior exit still rejects cleanup.
-Lead owns these coupled paths, with parallel read-only reviews; overlapping writers
-would not shorten this repair. Required common/exact hosted checks and a separately
-finite qualification003 precede #156 deciding readiness. Engineering native work
-may parallel hosted CI after reviewed common/clean committed source freeze; both
-exact CI lanes remain mandatory before deciding readiness/release/merged delivery.
-#157/#144 then require the actual player-owned memory/skills mission and genuine
-fresh-context replacement before #145's seven-day readiness decision. Optional
-features remain outside that gate. These are the same integrated iteration and
-active goal, not a new component-only outcome or renewed admission.
+Historical [qualification001](acceptance/2026-10-20-lifecycle-freshness.md) stopped
+before input and normally cleaned up. [Native002](acceptance/2026-10-20-native-capture-churn.md)
+exposed capture churn and required exceptional teardown. [Native003](acceptance/2026-10-20-native-editor-caret.md)
+accepted only controlled Resume-only abort cleanup, then failed on a blinking
+editor. [Native004/005](acceptance/2026-10-20-native-receipt-order.md) retained scoped
+steady-editor/text/world success and separate wait/ready-envelope failures; both
+needed exceptional cleanup before character commit. Native005's failure-time
+snapshot is unavailable, so its exact cause is not inferred from the source
+regression. General setup cancellation remains explicit deferred #155 contract
+work, not a consent-restoration or undocumented normal-exit guarantee.
 
-[Native003](acceptance/2026-10-20-native-editor-caret.md) accepted the separate
-controlled Resume-only abort component, then failed character setup before text
-input on a blinking ImGui caret. Both exact77d1874 hosted lanes passed; actual
-native failure and exceptional cleanup remain separate evidence. A narrow
-harness-context steady-caret setting reuses ImGui without relaxing exact-image
-validation. #155 owns this qualification and the distinct unsupported normal setup
-cancel path after revocation; #154 integrates, #156 admits a new separately finite
-native attempt and later deciding readiness. The same lead-owned coupled slice
-uses parallel read-only review, not overlapping implementation writers. Actual
-player/successor mission, #145 readiness and protected-main closeout remain required.
+#143 owns active observer cadence and measured presentation. The
+[latency budgets](evaluation.md#latency-budgets-for-interactive-play) separate native
+input, whole skills, model/tool delay and loading; targets are not passing badges
+or blanket gates for new models/frameworks. After native qualification, #156
+readiness precedes the actual #157/#144 player/successor memory-and-skills mission
+and #145's seven-day readiness decision. These are the same integrated iteration
+and active goal, with original costs and no date/admission reset. Exact outcomes,
+clock bases and interventions belong in the linked reports and GitHub Issues.
 
 The item/count/inspection and activity-poll checkpoint passed local and
 pull-request checks, but its first push CI timed out in two synthetic lifecycle

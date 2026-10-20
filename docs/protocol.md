@@ -150,6 +150,13 @@ readmission by itself. Explicit creation-stage commit, normal save and identity
 inspection use the same guarded refresh with typed exact-PNG SourceRevalidation.
 Save refresh precedes operation rotation and preserves its original normal-game
 time anchor. Changed state, Pause or expiry still stops input.
+An atomic controller snapshot keeps a frame's first-seen clock; a command reader
+can receive the same frame's matching ACK later. Terminal delivery checks validate
+both clocks independently, without imposing their ordering or renewing either.
+The original terminal clock remains fresh, after its preflight, and bound to the
+exact native UUID/state; source/PNG/authority checks remain. Snapshot mismatch
+records its actual state and valid clock for diagnosis before stopping. These
+historical receipts never restore a revoked phase or input consent.
 The harness-enabled SDL ImGui context disables only input-text cursor blinking
 through its existing library option; exact encoded PNG equivalence is unchanged.
 There is no image masking or tolerance for changed content. Other animations can

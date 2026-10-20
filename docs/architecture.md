@@ -19,9 +19,17 @@ Protocol version: 4.
 
 The harness-enabled SDL ImGui context uses the library's steady text-caret setting.
 It preserves exact image validation without treating cosmetic blink as stable
-pixels. Game options and non-harness rendering retain upstream defaults. Native
-editor behavior remains to be qualified after the rebuild; the
-[failed editor qualification](acceptance/2026-10-20-native-editor-caret.md) is retained.
+pixels. Game options and non-harness rendering retain upstream defaults.
+[Native004](acceptance/2026-10-20-native-receipt-order.md) qualified unchanged
+world-name captures and ordinary text/confirmation on its identified binary;
+normal character lifecycle and selector/activity acceptance remain open. The
+[earlier editor failure](acceptance/2026-10-20-native-editor-caret.md) is retained.
+
+The spectator's existing serialized status poll schedules250ms after a completed
+response during active play/operations,1000ms when idle or disconnected. Image
+decode/sequence and authority guards are unchanged. This improves presentation
+cadence; [latency targets](evaluation.md#latency-budgets-for-interactive-play) require
+separate native/browser measurement and do not infer model performance.
 
 ## Coordinated change
 
@@ -148,8 +156,12 @@ remain separate. A proven returned-Resume-only startup can adopt a fresh interna
 paused copy of the original menu for a separate normal cleanup root. Ledger audits
 its immutable input lineage; runtime/store verify pixels and live custody.
 [Native qualification002](acceptance/2026-10-20-native-capture-churn.md) exposed
-these defects and required exceptional teardown. Its failure stays retained;
-the source repair still needs a new native qualification.
+these defects and required exceptional teardown. Qualification003 later accepted
+only Resume-only cleanup. [Native004/005](acceptance/2026-10-20-native-receipt-order.md)
+retain later scoped editor/world success and wait/receipt failures. After the
+independent-clock correction, exact candidate checks and separately finite
+qualification006 with explicit wait15 at the retained binary precede deciding
+readiness; source tests do not accept normal character lifecycle.
 
 Cached status performs no evidence or memory I/O. It can show the last explicitly
 requested context packet, including claims, Work, source IDs, omissions and

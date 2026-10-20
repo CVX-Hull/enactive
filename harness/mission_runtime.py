@@ -1528,8 +1528,18 @@ class MissionRuntime:
                     or result["boundary"]["kind"] not in ("normal_play", "menu", "activity_poll")):
                 raise ContractError("Ready receipt lacks exact advanced same-session source")
             actual, actual_received = self.controller.observation_snapshot()
-            if (not same_native_state(actual, result) or actual_received is None or actual_received < received
-                    or actual_received > self._clock()):
+            # A spectator can first accept this same frame before the command
+            # reader sees its ACK. These are independent receipt clocks, not an
+            # ordering guarantee; neither may renew the other's original time.
+            snapshot_clock_valid = (type(actual_received) in (int, float)
+                and 0 <= actual_received <= self._clock())
+            if not same_native_state(actual, result) or not snapshot_clock_valid:
+                self._record("mission_ready_snapshot_mismatch", {
+                    "logical_action_id": proposal.logical_id, "native_request_id": request["id"],
+                    "terminal_received_monotonic": received,
+                    "snapshot_received_monotonic": actual_received if snapshot_clock_valid else None,
+                    "snapshot_clock_valid": snapshot_clock_valid, "snapshot": actual,
+                    "ready": result, "grants_authority": False})
                 raise ContractError("Ready receipt is not the exact current atomic observation")
             return "returned", "Exact terminal ready receipt; displacement requires independent verification"
         return "unknown", str(result.get("error") or "Input acknowledgment is unresolved")[:1024]

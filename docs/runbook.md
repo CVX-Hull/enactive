@@ -61,9 +61,16 @@ Do not kill an unrelated service to free a port. From this checkout,
 use an available loopback port and launch only the prepared project bundle:
 
 ```sh
-.venv/bin/python -m harness serve --port 8766
+.venv/bin/python -m harness serve --port 8766 --timeout 15
 open .runtime/Cataclysm.app
 ```
+
+The explicit15second native wait uses the existing bounded setting. Actual world
+selection exceeded the default5second wait in qualification004; ordinary replies
+still return immediately. Record the chosen value in a mission's frozen setup;
+it cannot renew original root deadlines or repair an expired/unknown input.
+[Latency accounting and proposed targets](evaluation.md#latency-budgets-for-interactive-play)
+separate loading, skill execution, observer updates and model/tool overhead.
 
 Launch the prepared app **bundle**, which executes that project's wrapper and
 explicit userdir. Direct terminal execution of the wrapper produced a game that

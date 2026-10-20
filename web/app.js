@@ -609,7 +609,14 @@ $('walk-form').addEventListener('submit', (event) => {
   try { command('walk', {direction: $('direction').value, steps: Number($('steps').value), ...authority()}); }
   catch (error) { showError(error.message); }
 });
-(async function poll() { await refresh(); setTimeout(poll, 1000); })();
+(async function poll() {
+  await refresh();
+  // Observe active play promptly without overlapping status requests or asking
+  // the player/model to poll per key. Idle/disconnected views keep the old rate.
+  const active = latest?.connection !== 'disconnected' &&
+    (latest?.mission?.active_operation || latest?.pause_requested === false);
+  setTimeout(poll, active ? 250 : 1000);
+})();
 
 (function checkFreshness() {
   updateControls();

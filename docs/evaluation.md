@@ -24,6 +24,43 @@ budgets and pilot decision thresholds for #24. No live model comparison is claim
 by this tooling. Change that protocol before collecting affected outcomes, with a
 recorded reason; do not tune thresholds after seeing results.
 
+## Latency budgets for interactive play
+
+Native input, skill execution, observer presentation and player reasoning have
+separate clocks. A timeout is a ceiling, not a fixed delay: return immediately
+when the matching acknowledgement arrives. Use one higher-level player decision
+for a bounded semantic skill; the controller observes and guards its primitives
+without a model or approval round trip per key. Retrieve memory at meaningful
+planning/correction/handoff boundaries, not automatically for every primitive.
+
+Qualification004's31 returned primitives had a62.33ms median,91.30ms nearest-rank
+p95 and95.37ms maximum **retained preflight-to-ACK interval**. This includes host
+callback/persistence, native input/frame and transport; it is not pure engine or
+end-to-end player latency. Its world-selection ready ACK arrived7.272seconds after
+journaled admission, outside the default5second wait. The matching acknowledgement
+remains historical; an explicit15second setting was chosen prospectively for later
+attempts, within the existing controller limit. Neither changing a ceiling nor
+fast ordinary samples resolves an old unknown or measures all loading cases.
+
+| Proposed next-campaign target | Measurement / limit |
+| --- | --- |
+| Ordinary movement/menu input p95 ≤250ms | Original retained preflight-to-terminal ACK intervals; report sample count, rejected/unknown inputs and tails separately |
+| Newly available frame displayed within500ms during active play | Native frame/capture to successful browser decode; the active poll now schedules250ms after the preceding status response, idle/disconnected1000ms. Cadence alone does not prove the target |
+| Small semantic batches complete within a few seconds | Whole request admission to settled outcome; report primitive count and model/approval/tool overhead separately. A20-key edit's native intervals target ≤5seconds |
+| Player makes goal/outcome decisions, rather than decisions per key | Compare actual decision boundaries and skill requests; requests are not automatically model-call counts |
+| Loading and long activities have separate finite budgets | Record visible readiness/progress and actual stop/unknowns; do not apply the250ms input target or treat a15second wait as a universal load guarantee |
+
+These are proposed operational targets, not passing badges or new blanket gates
+for optional model tiers, telemetry frameworks or paid providers. The existing
+native journals/ledger/archive and viewer provide the starting evidence; external
+model time, approval delay and total tool cost remain unmeasured. #143 owns
+observer latency, #154 integrated timing evidence and #156 prospective setup;
+#145 uses actual mission results before a full campaign. Existing S-UX/S-VERIFY
+and native acceptance enforce honest evidence; common tests do not enforce wall
+percentiles. Revisit targets after representative navigation/items/activities and
+fresh-context player measurements, retaining both tails and failures. Reuse CDDA
+travel/activities where qualified before adding an execution framework.
+
 ## Caller contract
 
 Use `RunRecorder(manifest)`, `record(event)`, `finish(outcome)` and `write(path)`

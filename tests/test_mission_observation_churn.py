@@ -1,11 +1,18 @@
 """Causal passive-capture interleavings; synthetic transport, not native play."""
 from contextlib import ExitStack
 import copy
+import json
+from pathlib import Path
+import threading
 import time
 import unittest
 from unittest.mock import patch
 
+from harness import controller as controller_module
+from harness.gameplay.contracts import ContractError
+from harness.gameplay.semantic_controls import ControlIntent
 from harness.gameplay.evidence import same_native_state
+from harness.mission_runtime import _Work
 from tests.test_mission_creation import MissionCreationFixture
 from tests import test_mission_runtime as runtime_fixtures
 
@@ -76,6 +83,119 @@ class LifecycleObservationChurnTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(primitives[-1]["state"], "unknown")
         self.assertEqual(self.runtime.status()["spent_inputs"], len(primitives))
         self.assertIsNotNone(primitives[-1]["effect"])
+
+    def test_spectator_first_receipt_of_same_frame_keeps_terminal_clock_and_uuid(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        published = threading.Event()
+        publish = self.bridge.publish
+        read_json = controller_module.read_json
+        execute = self.controller.execute_mission
+        seen, receipts = [], []
+
+        def publish_complete(value):
+            publish(value)
+            if value["category"] == "WORLDGEN_CONFIRM_DIALOG":
+                published.set()
+
+        def spectator_first(path):
+            value = read_json(path)
+            if (Path(path).name == "response.json" and value is not None
+                    and value.get("status") == "ready" and value.get("category") == "WORLDGEN_CONFIRM_DIALOG"):
+                # Fixture writes response before state; wait for the same frame's
+                # actual state publication rather than polling an old boundary.
+                self.assertTrue(published.wait(2))
+                actual = self.controller.status()["state"]
+                self.assertEqual(actual["frame"], value["frame"])
+                seen.append(self.controller.observation_snapshot()[1])
+            return value
+
+        def terminal(*args, **kwargs):
+            raw = execute(*args, **kwargs)
+            receipts.append(copy.deepcopy(raw))
+            return raw
+
+        with patch.object(self.bridge, "publish", side_effect=publish_complete), \
+                patch.object(controller_module, "read_json", side_effect=spectator_first), \
+                patch.object(self.controller, "execute_mission", side_effect=terminal):
+            result = self.run_request(self.control("world-form", "Create World"))
+        self.assertEqual(result["state"], "partial", result)
+        self.assertEqual(len(seen), 1)
+        self.assertEqual(len(receipts), 1)
+        raw = receipts[0]
+        self.assertLess(seen[0], raw["received_monotonic"])
+        primitive = self.runtime._ledger.primitive_records()[-1]
+        self.assertEqual(primitive["state"], "returned")
+        self.assertEqual(primitive["native_id"], raw["request"]["id"])
+        self.assertEqual(primitive["result"]["received_monotonic"], raw["received_monotonic"])
+        ref = next(ref for ref in self.runtime._store.historical_references
+                   if ref.observation_id == primitive["result"]["source_after"])
+        self.assertEqual(self.runtime._store.observation(ref), raw["result"])
+        self.assertEqual(ref.received_monotonic, raw["received_monotonic"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+
+    def test_independent_receipt_clocks_keep_invalid_clock_state_and_uuid_checks(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        data = self.control("world-form", "Create World")
+        receipts = []
+        execute = self.controller.execute_mission
+        def terminal(*args, **kwargs):
+            raw = execute(*args, **kwargs)
+            receipts.append(copy.deepcopy(raw))
+            return raw
+        with patch.object(self.controller, "execute_mission", side_effect=terminal):
+            result = self.run_request(data)
+        self.assertEqual(result["state"], "partial", result)
+        raw = receipts[0]
+        primitive = self.runtime._ledger.primitive_records()[-1]
+        refs = {r.observation_id: r for r in self.runtime._store.historical_references}
+        before = refs[primitive["intent"]["source_before"]]
+        preflight = refs[primitive["intent"]["preflight_source"]]
+        proposal = ControlIntent(primitive["logical_id"], "action", "CONFIRM", before,
+                                 raw["request"]["boundary_id"])
+        work = _Work(data)
+        def check(value):
+            return self.runtime._envelope(value, work, proposal, preflight, image_informed=True)
+        for bad in (None, True, -1, float("nan"), float("inf"), time.monotonic() + 100, 10**1000):
+            with self.subTest(snapshot_clock=type(bad).__name__), \
+                    patch.object(self.controller, "observation_snapshot", return_value=(raw["result"], bad)):
+                with self.assertRaisesRegex(ContractError, "current atomic"):
+                    check(raw)
+        variants = []
+        for field, value in (("session", "other"), ("revision", raw["result"]["revision"] + 1),
+                ("paused", True), ("takeover_generation", 1)):
+            state = copy.deepcopy(raw["result"])
+            state[field] = value
+            variants.append(state)
+        state = copy.deepcopy(raw["result"])
+        state["boundary"]["id"] += "-changed"
+        variants.append(state)
+        for state in variants:
+            with self.subTest(changed_snapshot=state["boundary"]["id"]), \
+                    patch.object(self.controller, "observation_snapshot",
+                                 return_value=(state, raw["received_monotonic"])):
+                with self.assertRaisesRegex(ContractError, "current atomic"):
+                    check(raw)
+        for clock in (time.monotonic() - 4, time.monotonic() + 100,
+                      preflight.received_monotonic - 0.001):
+            value = copy.deepcopy(raw)
+            value["received_monotonic"] = clock
+            with self.subTest(terminal_clock=clock), self.assertRaisesRegex(ContractError, "terminal receipt time"):
+                check(value)
+        value = copy.deepcopy(raw)
+        value["result"]["id"] = "00000000-0000-0000-0000-000000000000"
+        with self.assertRaisesRegex(ContractError, "identity differs"):
+            check(value)
+        self.assertEqual(self.runtime._ledger.primitive(primitive["logical_id"]), primitive)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        events = [json.loads(line) for line in self.controller.journal.read_text().splitlines()]
+        diagnostic = [event["outcome"] for event in events
+                      if event["request"].get("kind") == "mission_ready_snapshot_mismatch"]
+        self.assertEqual(len(diagnostic), 12)
+        self.assertTrue(all(row["native_request_id"] == raw["request"]["id"]
+                            and row["ready"] == raw["result"] for row in diagnostic))
+        self.assertFalse(diagnostic[0]["snapshot_clock_valid"])
 
     def test_binding_does_not_turn_a_changed_image_into_input_consent(self):
         self.ready()

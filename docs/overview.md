@@ -39,26 +39,27 @@ Resume and bounded continuation share the original root limits; user Pause revok
 eligibility. Missing proof stays stopped. These are source checks, not native
 recovery or independent-player acceptance.
 
-The [first native character qualification](acceptance/2026-10-20-lifecycle-freshness.md)
-stopped on an aged creation source before any primitive admission. Normal menu
-cleanup and stopped Finish succeeded. Source now refreshes the exact guarded
-checkpoint inside Resume and exit confirmation; native character retesting remains
-required. The failed attempt and its unknown final cleanup ACK stay retained.
+Native qualification has established scoped owned launch, Resume-only normal
+abort cleanup, a steady world-name editor and ordinary world creation. Actual
+normal character lifecycle and the independent player/successor mission remain
+unaccepted. The dated [first lifecycle](acceptance/2026-10-20-lifecycle-freshness.md),
+[capture-churn](acceptance/2026-10-20-native-capture-churn.md),
+[caret](acceptance/2026-10-20-native-editor-caret.md) and
+[receipt-order reports](acceptance/2026-10-20-native-receipt-order.md) retain failures,
+scoped passes, unknown acknowledgements and exceptional cleanup.
 
-[Qualification002](acceptance/2026-10-20-native-capture-churn.md) refreshed Resume
-successfully, then failed before the first menu input on passive capture metadata
-churn. Pre-character normal cleanup also blocked; one exceptional termination was
-needed, with no normal-exit acceptance. Source now distinguishes capture identity
-from native state and supports strictly verified Resume-only cleanup. Real native
-character lifecycle and independent-player acceptance remain pending.
+The latest004/005 attempts both stopped before character commit and needed
+exceptional engineering cleanup. One exceeded the default wait; the other failed
+an atomic-observation check. A causal source regression covers independent receipt
+clock ordering, but005's missing failure-time snapshot prevents exact retrospective
+attribution. The source journals snapshots on future mismatches. General setup
+cancellation after phase revocation remains an explicit owned limitation.
 
-[Qualification003](acceptance/2026-10-20-native-editor-caret.md) accepted only the
-controlled Resume-only abort component. Character setup reached the world-name
-editor, then failed before text input on its blinking caret. One exceptional
-cleanup was required. A harness-only steady ImGui caret now reuses the existing
-library setting in source; rebuilt native behavior and normal character lifecycle
-remain unqualified. General setup cancellation after phase revocation remains an
-owned limitation, separate from Resume-only cleanup.
+Active observer polling now schedules250ms after each completed status response;
+actual presentation latency still needs native/browser measurement. Fast ordinary
+input samples do not measure player/model latency or accept independent play.
+[Latency budgets](evaluation.md#latency-budgets-for-interactive-play) separate native
+input, whole skills, model/tool delay, observer decode and loading.
 
 The [seven-day functional campaign](acceptance/2026-10-19-seven-day-survival.md)
 records the same normally created Ned Meyers / Belgium, ordinary supplies and
