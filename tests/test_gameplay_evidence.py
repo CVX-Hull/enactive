@@ -1056,6 +1056,18 @@ class EvidenceTests(unittest.TestCase):
             self.store.inspect_current(now_monotonic=104, now_timestamp_ms=1_004_000)
         self.assertGreater(self.store.authority_generation(), generation)
 
+    def test_boundary_inspection_exposes_menu_without_normal_scene_eligibility(self):
+        ref = self.ingest(self.publish(self.menu()))
+        generation = self.store.authority_generation()
+        clocks = dict(now_monotonic=100, now_timestamp_ms=1_000_000)
+        self.assertEqual(self.store.inspect_current_boundary(**clocks), (ref, True))
+        self.assertEqual(self.store.inspect_current(**clocks), (None, False))
+        self.assertEqual(self.store.inspect_current_boundary(now_monotonic=104, now_timestamp_ms=1_004_000), (ref, False))
+        self.assertEqual(self.store.authority_generation(), generation)
+        Path(ref.frame_path).chmod(0o600)
+        Path(ref.frame_path).write_bytes(png(b"lost integrity"))
+        with self.assertRaises(EvidenceError): self.store.inspect_current_boundary(**clocks)
+
 
 if __name__ == "__main__":
     unittest.main()

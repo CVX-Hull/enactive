@@ -587,16 +587,22 @@ class EvidenceStore:
 
     @_serialized
     def inspect_current(self, *, now_monotonic: float, now_timestamp_ms: int) -> tuple[EvidenceRef | None, bool]:
+        """Inspect normal-play eligibility; menu retention does not grant it."""
+        reference, fresh = self.inspect_current_boundary(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
+        return (reference, fresh) if reference is not None and reference.boundary_kind == "normal_play" else (None, False)
+
+    @_serialized
+    def inspect_current_boundary(self, *, now_monotonic: float, now_timestamp_ms: int) -> tuple[EvidenceRef | None, bool]:
         """Report age without granting authority or invalidating merely old evidence.
 
-        Integrity failures still invalidate through verify; dispatch uses current().
+        Integrity failures still invalidate through verify; dispatch uses current_boundary().
+        Like current_boundary(), this includes retained menus and activity polls.
         """
         self._open()
         reference = self._current
         if reference is None:
             return None, False
         self.verify(reference)
-        if reference.boundary_kind != "normal_play": return None, False
         try:
             self._fresh(self._entries[reference.observation_id], now_monotonic, now_timestamp_ms)
         except EvidenceError:

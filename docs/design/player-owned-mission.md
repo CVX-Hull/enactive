@@ -627,7 +627,7 @@ Contradictory publication receipts remain unknown, even if movement occurred.
 
 Start and Observe never launch or Resume. A paused bootstrap needs the registered
 lifecycle adapter. Stop(false) requests Pause and leaves cleanup possible; a busy
-Stop is not admitted under the old epoch. Unsupported interaction, activity,
+Stop is not admitted under the old epoch. Unsupported item/inspection, activity,
 lifecycle, handoff and final-finish requests explicitly block in this component.
 Fresh player replacement and independent play remain separate acceptance work.
 
@@ -706,16 +706,15 @@ The passive policy additionally stops an arrow batch when available native rows
 contradict its next expected enabled focus. Unknown results retain their pending
 ID and canonical actual-after reference even when the PNG is missing or corrupt;
 that diagnostic reference cannot authorize another input. This remains synthetic
-component verification, with native editor behavior and runtime integration pending.
+component verification, with native editor behavior and live ingress pending.
 
-Phase IDs currently block in the unconnected runtime until the owned phase adapter
-is integrated. Ledger6 validates a direct earlier lifecycle or item/activity/interact root,
+Ledger6 validates a direct earlier lifecycle or item/activity/interact root,
 derives child deadlines from its original deadline, and counts direct-root and child
 inputs together through SQLite's indexed request/primitive join. It checks links,
 original ceilings and counts again on reopen. A partial root receipt remains
 immutable. This accounting is data and restores no live phase authority.
-Required runtime work is one private live lifecycle or item/activity/interact
-root, original root/Work association
+The unconnected runtime now integrates one ordinary interact prompt root and its
+menu/edit children, original root/Work association
 and exact stage/source/actor/epoch checks before publication. One root may return
 partial and release the writer while awaiting player interpretation; it leaves no
 queued input. A child never creates another root or renews the original deadline.
@@ -724,14 +723,38 @@ now distinguishes host operator-Pause generation from internal authority revocat
 trusted Resume requires the captured operator counter and controller boot in addition
 to the general generation. Internal stops still revoke and set the Pause sentinel.
 The lifecycle adapter must capture those values before an expected transition;
-user Pause always prevents automatic adoption/Resume. Phase integration remains
-required; parsing phase IDs does not implement it.
+user Pause always prevents automatic adoption/Resume. Lifecycle and item/activity
+phase integration remains required; ordinary prompt handling cannot adopt them.
 An ordinary interact root may open a private phase only from its exact correlated
 supported returned prompt. Its menu/edit/inspect children share the original
 32-input/900-second maximum. Unknown delivery cannot open it; actual return to normal
 play closes it without claiming the desired semantic effect. Another interact is
 a new deliberate normal-play root, not a nested continuation. This supports an
 ordinary open→direction question using the same accounting and controls.
+
+The shared dispatch retains an actual after-source at normal/menu/activity-poll
+boundaries, with displacement only between two same-session normal scenes. Image
+interpretations require exact-PNG preflight; native rows use native-state equality.
+After policy uncertainty, the primitive's actual delivery receipt stays intact,
+while controller authority and the private prompt are revoked. Unknown takes
+precedence over a simultaneous budget overshoot; both diagnostics are retained.
+Root and child game ceilings use separate observed normal anchors; menu time is
+unknown, never zero. Root deadlines/inputs are shared through the existing ledger.
+
+A settled owned menu may be refreshed by Observe only through an explicit retained
+exact-PNG SourceRevalidation, under unchanged actor/epoch/controller/operator/native
+ownership and no unresolved input. The relation is verified and recorded before
+the new input binding is published. No root deadline, anchor or child refresh
+allowance is renewed. Poll observations remain input-ineligible; actual normal
+return may close the prompt and record budget overshoot without semantic success.
+Malformed views, unrelated roots and wrong-phase children cannot send input.
+User Pause clears the private phase; unknown delivery cannot create or restore one.
+The closed ordinary PhaseReceipt carries only an interact operation, stage, actor/
+epoch/controller/Pause/takeover/source audit identifiers and continuity=null. New
+receipts must match both the request's recorded actor and current actor; historical
+ones are validated against the handoff chain on reopen. Nested JSON strings,
+future roots and invented lifecycle continuity reject. No persisted receipt
+restores live prompt authority. Tests are synthetic, not independent gameplay.
 
 Before the first normal anchor, only verified root-owned launch/create menu stages
 may input with null game cost. Creation records that anchor once. Save/reload cost

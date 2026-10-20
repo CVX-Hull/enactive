@@ -297,15 +297,15 @@ class MenuSkill:
                                         verification_required=True)
                 return self._finish("CONFIRM returned; player verification of the semantic effect is required",
                                     verification_required=True)
-            self._pending = None
-            self._checkpoint, self._generation = current, expected_generation
             rows, selected, target = self._menu(before)
             _, actual, _ = self._menu(after)
             direction = 1 if selected < target else -1
             next_enabled = next(i for i in range(selected + direction, target + direction, direction)
                                 if rows[i]["enabled"])
             if (after["boundary"]["id"] == pending.expected_boundary_id or actual != next_enabled):
-                return self._finish("Native focus made no progress or an unexpected/unexplained row jump")
+                return self._finish("Native focus made no progress or an unexpected/unexplained row jump", unknown=True)
+            self._pending = None
+            self._checkpoint, self._generation = current, expected_generation
             self._selected = after["ui"]["selected"]
             self._steps += 1
             self._budget(current, now_monotonic,

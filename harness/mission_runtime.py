@@ -6,7 +6,7 @@ leases and source bindings are never restored from disk or accepted from JSON.
 from __future__ import annotations
 
 import copy
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 import math
 from queue import Empty, Full, Queue
 import threading
@@ -18,11 +18,15 @@ from .controller import Controller, ControlError, MissionLease, validate_state
 from .gameplay.campaign_memory import CampaignMemory
 from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
 from .gameplay.evidence import MAX_FRAME_BYTES, CapacityError, EvidenceError, EvidenceStore
+from .gameplay.interaction import MenuIntent, MenuOutcome, MenuSkill
 from .gameplay.mission_contracts import (
-    MissionAdmission, SourceBinding, SourceRevalidation, canonical, validate_request,
+    VERSION, MissionAdmission, SourceBinding, SourceRevalidation, canonical, validate_request,
 )
 from .gameplay.mission_ledger import BudgetError, LedgerError, MissionLedger, TERMINAL
 from .gameplay.navigation import NavigationIntent, NavigationOutcome, NavigationSkill, ObservedMap
+from .gameplay.semantic_controls import ControlIntent, ControlOutcome, SemanticControlSkill
+
+MissionIntent = NavigationIntent | MenuIntent | ControlIntent
 
 
 class _Cancelled(ContractError):
@@ -35,6 +39,19 @@ class _Work:
     ready: threading.Event = field(default_factory=threading.Event)
     cancelled: threading.Event = field(default_factory=threading.Event)
     response: dict | None = None
+    game_anchor: EvidenceRef | None = None
+
+
+@dataclass(frozen=True)
+class _PromptPhase:
+    root_id: str
+    checkpoint: EvidenceRef
+    game_anchor: EvidenceRef
+    actor_id: str
+    epoch: int
+    controller_boot_id: str
+    operator_generation: int
+    takeover_generation: int
 
 
 class MissionRuntime:
@@ -64,6 +81,7 @@ class MissionRuntime:
         self._current: EvidenceRef | None = None
         self._map: ObservedMap | None = None
         self._rotation: tuple | None = None
+        self._prompt_phase: _PromptPhase | None = None
         self._mission_deadline: float | None = None
         self._game_cost: int | None = None
         self._memory_version = 0
@@ -145,6 +163,13 @@ class MissionRuntime:
             elif (kind in ("skill", "lifecycle") and any(
                     h.request["kind"] in ("skill", "lifecycle") for h in self._handles)):
                 rejection = "An unfinished input operation already owns the writer"
+            elif (self._prompt_phase is not None and kind in ("skill", "lifecycle") and
+                    (kind != "skill" or data["phase_id"] != self._prompt_phase.root_id
+                     or data["skill_kind"] not in ("menu", "edit", "inspect"))):
+                rejection = "An owned prompt requires its exact phase and supported control child"
+            elif (kind == "skill" and data["skill_kind"] == "edit"
+                    and data["goal"]["purpose"] in ("character_name", "world_name")):
+                rejection = "Creation-name editing requires the registered lifecycle adapter"
             else:
                 try:
                     self._queue.put_nowait(work)
@@ -183,9 +208,11 @@ class MissionRuntime:
             for handle in self._handles:
                 handle.cancelled.set()
             self._bindings.clear()
+            self._prompt_phase = None
             self._rotation = None
             if self._snapshot is not None:
                 self._snapshot.update(phase="paused", pause_cause=cause, reason=reason, lease_owner=None,
+                    prompt_phase=None,
                     epoch=self._snapshot["epoch"] + 1, next_needed_decision="Explicit supported readmission required")
         return result
 
@@ -208,15 +235,18 @@ class MissionRuntime:
         limits, reserve = self._admission.limits, self._admission.cleanup_reserve
         active = self._active.request if self._active is not None else None
         current_available = self._current is not None
-        if current_available and self._current.boundary_kind == "normal_play":
+        if current_available:
             try:
-                inspected, _ = self._store.inspect_current(**self._clocks())
+                inspected, _ = self._store.inspect_current_boundary(**self._clocks())
                 current_available = inspected == self._current and self._live()[0] == self._store.observation(self._current)
             except EvidenceError:
                 current_available = False
         live = self._live()
         lease_owner = asdict(self._lease) if self._lease is not None and live[3] is self._lease and not live[4] else None
         value = {**state, "lease_owner": lease_owner, "objective": self._admission.objective, "actor_id": state["player_id"],
+            "prompt_phase": None if self._prompt_phase is None else {
+                "origin_request_id": self._prompt_phase.root_id,
+                "checkpoint_id": self._prompt_phase.checkpoint.observation_id, "grants_authority": False},
             "active_operation": None if active is None else active.get("request_id", active["kind"]),
             "skill": self._skill, "progress": copy.deepcopy(self._progress),
             "last_receipt": copy.deepcopy(self._last_receipt),
@@ -270,6 +300,100 @@ class MissionRuntime:
             raise ControlError("Mission lease lost or native Pause/takeover/session changed")
         return state, generation, boot
 
+    def _operator_mark(self) -> tuple[str, int]:
+        with self.controller.data_lock:
+            return self.controller.authority["controller_boot_id"], self.controller.operator_pause_generation
+
+    def _last_normal(self) -> EvidenceRef:
+        refs = [ref for ref in self._store.historical_references if ref.boundary_kind == "normal_play"]
+        if not refs:
+            raise BudgetError("An observed normal game-time anchor is required")
+        self._store.verify(refs[-1])
+        return refs[-1]
+
+    def _game_guard(self, anchor: EvidenceRef, limit: int, *, after=False) -> None:
+        latest = self._last_normal()
+        self._store.verify(anchor)
+        if latest.session != anchor.session or latest.turn < anchor.turn:
+            raise BudgetError("Game-time anchor cannot cross an unexplained session or regression")
+        elapsed = latest.turn - anchor.turn
+        if elapsed > limit or not after and elapsed == limit:
+            raise BudgetError("Original observed root/child game-time budget exhausted")
+
+    def _prompt_guard(self, data: dict, before: EvidenceRef | None = None) -> _PromptPhase | None:
+        if data["skill_kind"] == "edit" and data["goal"]["purpose"] in ("character_name", "world_name"):
+            raise ControlError("Creation-name editing requires the registered lifecycle adapter")
+        with self._metadata:
+            phase = self._prompt_phase
+        if phase is None:
+            if data["phase_id"] is not None or data["skill_kind"] in ("menu", "edit"):
+                raise ControlError("Control requires its actual live owned prompt phase")
+            return None
+        if data["phase_id"] != phase.root_id or data["skill_kind"] not in ("menu", "edit", "inspect"):
+            raise ControlError("An owned prompt permits only its explicit control children")
+        state, _, boot = self._check_lease()
+        actor = self._ledger.snapshot(now=self._wall())["player_id"]
+        if ((boot, self._operator_mark()[1], state["takeover_generation"], data["epoch"], actor) !=
+                (phase.controller_boot_id, phase.operator_generation, phase.takeover_generation, phase.epoch, phase.actor_id)):
+            raise ControlError("Prompt crossed actor/epoch/controller/operator Pause/native takeover")
+        if before is not None and phase.checkpoint != before:
+            raise EvidenceError("Prompt checkpoint cannot rebase from an unrelated observation")
+        return phase
+
+    def _clear_prompt(self) -> None:
+        with self._metadata:
+            self._prompt_phase = None
+
+    def _prompt_receipt(self, phase: _PromptPhase, stage: str) -> dict:
+        root = self._ledger.request(phase.root_id)["request"]
+        return {"schema": VERSION, "record_type": "PhaseReceipt", "origin_request_id": phase.root_id,
+            "phase_kind": "interact", "operation": root["goal"]["action"], "stage": stage,
+            "epoch": phase.epoch, "actor_id": phase.actor_id, "controller_boot_id": phase.controller_boot_id,
+            "operator_pause_generation": phase.operator_generation, "takeover_generation": phase.takeover_generation,
+            "source_ids": list(dict.fromkeys((phase.game_anchor.observation_id, phase.checkpoint.observation_id))),
+            "continuity": None, "grants_authority": False}
+
+    def _advance_prompt(self, work: _Work, before: EvidenceRef, after: EvidenceRef) -> _PromptPhase | None:
+        phase = self._prompt_guard(work.request, before)
+        if phase is None:
+            return None
+        advanced = replace(phase, checkpoint=after)
+        with self._metadata:
+            self._check_cancelled(work)
+            if self._prompt_phase is not phase:
+                raise ControlError("Prompt revoked during checkpoint advancement")
+            self._prompt_phase = None if after.boundary_kind == "normal_play" else advanced
+        return advanced
+
+    def _open_prompt(self, work: _Work, original: EvidenceRef, after: EvidenceRef,
+                     mark: tuple[str, int]) -> _PromptPhase:
+        state, _, boot = self._check_lease()
+        ledger = self._ledger.snapshot(now=self._wall())
+        if (mark != self._operator_mark() or boot != mark[0] or ledger["epoch"] != work.request["epoch"]
+                or state["takeover_generation"] != self._store.observation(original)["takeover_generation"]
+                or original.boundary_kind != "normal_play" or after.session != original.session):
+            raise ControlError("Interaction cannot open a prompt across changed authority/session")
+        phase = _PromptPhase(work.request["request_id"], after, original, ledger["player_id"],
+            ledger["epoch"], boot, mark[1], state["takeover_generation"])
+        with self._metadata:
+            self._check_cancelled(work)
+            if self._prompt_phase is not None:
+                raise ControlError("A second prompt cannot replace its owner")
+            if after.boundary_kind in ("menu", "activity_poll"):
+                self._prompt_phase = phase
+        return phase
+
+    def _stop_unknown_policy(self) -> None:
+        # The immutable primitive may already be returned. Semantic uncertainty
+        # still revokes input; complete_request owns the ledger epoch transition.
+        try:
+            self.controller.stop_input()
+        except OSError as exc:
+            self._diagnostic = f"Unknown policy Pause persistence failed: {exc}"[:1024]
+        self._bindings.clear()
+        self._lease, self._rotation = None, None
+        self._clear_prompt()
+
     def _capacity(self, *, frames: int = 1, byte_count: int = MAX_FRAME_BYTES) -> None:
         usage = self._store.usage()
         limits, reserve = self._admission.limits, self._admission.cleanup_reserve
@@ -314,7 +438,7 @@ class MissionRuntime:
                 self._bindings.clear()
                 raise EvidenceError("New session cannot adopt old coordinate scope")
             self._map.add(reference, self._store)
-        binding = self._binding(reference) if authoritative else None
+        binding = self._binding(reference) if authoritative and reference.boundary_kind in ("normal_play", "menu") else None
         self._record("mission_source", {"source": reference.to_dict(),
             "binding": None if binding is None else binding.to_dict(), "grants_authority": False})
         if binding is not None:
@@ -368,6 +492,7 @@ class MissionRuntime:
         self._diagnostic, self._progress, self._last_receipt = None, None, None
         self._memory = CampaignMemory(ledger, store)
         self._bindings, self._map, self._lease, self._current, self._rotation = {}, None, None, None, None
+        self._clear_prompt()
         self._game_cost = None
         historical = [r for r in store.historical_references if r.boundary_kind == "normal_play"]
         if historical:
@@ -421,15 +546,57 @@ class MissionRuntime:
             self._memory_version = receipt["memory_version"]
 
     def _observe(self, work: _Work) -> dict:
+        phase = self._prompt_phase
+        prior = None if phase is None else self._bindings.get(phase.checkpoint.observation_id)
         self._capacity()
         state, received = self._observe_native(work)
         reference = self._ingest(state, received)
         live = self._live()
         authoritative = self._lease is not None and live[3] is self._lease and not live[4] and not live[5]
+        relation = None
+        if phase is not None:
+            ledger_state = self._ledger.snapshot(now=self._wall())
+            if (not authoritative or live[2] != phase.controller_boot_id
+                    or self._operator_mark()[1] != phase.operator_generation
+                    or ledger_state["epoch"] != phase.epoch or ledger_state["player_id"] != phase.actor_id
+                    or state["takeover_generation"] != phase.takeover_generation
+                    or reference.session != phase.checkpoint.session):
+                raise ControlError("Observe cannot adopt a changed prompt authority/session")
+            if reference.boundary_kind == "menu":
+                if prior is None or phase.checkpoint.boundary_kind != "menu":
+                    raise ControlError("An activity observation cannot adopt a new menu input phase")
+                if self._ledger.snapshot(now=self._wall())["unreconciled"]:
+                    raise LedgerError("Unresolved input cannot refresh a prompt checkpoint")
+                fresh_binding = self._binding(reference)
+                relation = SourceRevalidation(prior[1], fresh_binding, "exact_png_bytes")
+                if not self._store.equivalent(phase.checkpoint, reference, rule=relation.rule):
+                    raise EvidenceError("Observe changed the owned prompt; no automatic rebase")
+                self._record("mission_prompt_revalidation", relation.to_dict())
         self._publish_source(reference, authoritative=authoritative)
+        result = {"source_ids": [reference.observation_id], "lifecycle_needed": not authoritative,
+                  "grants_authority": False}
+        if phase is not None:
+            advanced = replace(phase, checkpoint=reference)
+            with self._metadata:
+                self._check_cancelled(work)
+                if self._prompt_phase is not phase:
+                    raise ControlError("Observe prompt advancement superseded by Pause")
+                if reference.boundary_kind == "normal_play":
+                    self._prompt_phase = None
+                elif relation is not None:
+                    self._prompt_phase = advanced
+            if reference.boundary_kind == "normal_play":
+                result["phase"] = self._prompt_receipt(advanced, "complete")
+                root = self._ledger.request(phase.root_id)["request"]
+                try:
+                    self._game_guard(phase.game_anchor, root["limits"]["game_seconds"], after=True)
+                except BudgetError as exc:
+                    self._stop_after_failure(str(exc))
+                    result["budget_stop"] = str(exc)
+            if relation is not None:
+                result["revalidation"] = relation.to_dict()
         self._capture_memory(reference)
-        return {"source_ids": [reference.observation_id], "lifecycle_needed": not authoritative,
-                "grants_authority": False}
+        return result
 
     def _context(self, work: _Work) -> dict:
         data = work.request
@@ -503,14 +670,15 @@ class MissionRuntime:
             raise EvidenceError("Informing source differs from exact live controller state")
         return original
 
-    def _rotate(self, work: _Work, proposal: NavigationIntent) -> None:
+    def _rotate(self, work: _Work, proposal: MissionIntent) -> None:
         state, generation, _ = self._check_lease()
         if self._store.observation(proposal.before) != state:
             raise EvidenceError("Proposal before-source is not the exact live controller state")
         self._check_cancelled(work)
         old = self._lease
         new = self.controller.acquire_mission(old.mission_id, old.epoch, old.actor_id,
-            operation="navigate", expected_session=state["session"], expected_revision=state["revision"],
+            operation="navigate" if work.request["skill_kind"] == "navigate" else "interaction",
+            expected_session=state["session"], expected_revision=state["revision"],
             expected_boundary_id=state["boundary"]["id"], replace=old)
         self._lease = new
         if new.pause_generation != generation + 1:
@@ -520,7 +688,7 @@ class MissionRuntime:
             "source_id": proposal.before.observation_id, "before": asdict(old), "after": asdict(new)})
         self._check_cancelled(work)
 
-    def _dispatch_guard(self, work: _Work, proposal: NavigationIntent) -> None:
+    def _dispatch_guard(self, work: _Work, proposal: MissionIntent) -> None:
         self._check_cancelled(work)
         state, generation, boot = self._check_lease()
         ledger = self._ledger.snapshot(now=self._wall())
@@ -544,6 +712,12 @@ class MissionRuntime:
             raise EvidenceError("Proposal store generation changed")
         if self._game_cost is None or self._game_cost >= self._admission.limits.game_seconds:
             raise BudgetError("Game time unavailable or exhausted")
+        phase = self._prompt_guard(work.request, proposal.before)
+        if phase is not None:
+            root = self._ledger.request(phase.root_id)["request"]
+            self._game_guard(phase.game_anchor, root["limits"]["game_seconds"])
+        if work.game_anchor is not None:
+            self._game_guard(work.game_anchor, work.request["limits"]["game_seconds"])
 
     def _deadline(self, work: _Work, original: EvidenceRef) -> float:
         operation = self._ledger.request(work.request["request_id"])
@@ -554,7 +728,8 @@ class MissionRuntime:
             raise BudgetError("Original navigation/mission deadline exhausted")
         return deadline
 
-    def _envelope(self, raw: dict, work: _Work, proposal: NavigationIntent, preflight: EvidenceRef | None) -> tuple[str, str]:
+    def _envelope(self, raw: dict, work: _Work, proposal: MissionIntent, preflight: EvidenceRef | None) -> tuple[str, str]:
+        image_informed = work.request["perception"] is not None
         fields = {"logical_action_id", "request", "result", "published", "received_monotonic", "preflight"}
         if type(raw) is not dict or set(raw) != fields or raw["logical_action_id"] != proposal.logical_id or type(raw["published"]) is not bool:
             raise ContractError("Malformed exact mission receipt envelope")
@@ -569,6 +744,8 @@ class MissionRuntime:
                 "revision": proposal.before.revision, "boundary_id": proposal.expected_boundary_id}
             if any(request.get(key) != value for key, value in expected.items()) or not isinstance(request.get("id"), str):
                 raise ContractError("Mission native request does not correlate with logical proposal")
+            if request.get("require_exact_frame") is not image_informed:
+                raise ContractError("Mission native request contradicts the admitted image policy")
             if str(UUID(request["id"])) != request["id"]:
                 raise ContractError("Malformed native request UUID")
             if (raw["published"] or result.get("id") is not None) and result.get("id") != request["id"]:
@@ -577,7 +754,11 @@ class MissionRuntime:
             proof = raw["preflight"]
             if type(proof) is not dict or set(proof) != {"observation", "received_monotonic", "expected_image_sha256"}:
                 raise ContractError("Malformed mission preflight receipt")
+            if proof["expected_image_sha256"] != (proposal.before.frame_sha256 if image_informed else None):
+                raise ContractError("Mission preflight hash contradicts the admitted image policy")
             validate_state(proof["observation"])
+            if request is not None and request.get("frame") != proof["observation"]["frame"]:
+                raise ContractError("Native request frame differs from its final preflight")
             proof_time = proof["received_monotonic"]
             if (type(proof_time) not in (int, float) or not math.isfinite(proof_time)
                     or proof_time < 0 or proof_time > self._clock()
@@ -609,8 +790,7 @@ class MissionRuntime:
             validate_state(result, request["id"])
             if (received is None or result["session"] != proposal.before.session
                     or result["revision"] <= proposal.before.revision
-                    or result["boundary"]["kind"] != "normal_play"
-                    or not result["in_game"] or result["scene"] is None):
+                    or result["boundary"]["kind"] not in ("normal_play", "menu", "activity_poll")):
                 raise ContractError("Ready receipt lacks exact advanced same-session source")
             actual, actual_received = self.controller.observation_snapshot()
             if (actual != result or actual_received is None or actual_received < received
@@ -619,7 +799,7 @@ class MissionRuntime:
             return "returned", "Exact terminal ready receipt; displacement requires independent verification"
         return "unknown", str(result.get("error") or "Input acknowledgment is unresolved")[:1024]
 
-    def _dispatch(self, work: _Work, proposal: NavigationIntent, original: EvidenceRef) -> PrimitiveResult:
+    def _dispatch(self, work: _Work, proposal: MissionIntent, original: EvidenceRef) -> PrimitiveResult:
         reservation = None
         preflight_source = None
         prepared = False
@@ -627,12 +807,14 @@ class MissionRuntime:
         raw = None
         disposition, reason = "not_dispatched", "Dispatch not admitted"
         envelope_valid = False
+        image_informed = work.request["perception"] is not None
+        rule = "exact_png_bytes" if image_informed else "native_state"
         def preflight(observed: dict, received: float) -> None:
             nonlocal reservation, preflight_source, prepared
             self._dispatch_guard(work, proposal)
             self._capacity(frames=2, byte_count=2 * MAX_FRAME_BYTES)
             preflight_source = self._store.retain_equivalent(observed,
-                received_monotonic=received, rule="native_state", **self._clocks())
+                received_monotonic=received, rule=rule, **self._clocks())
             if (preflight_source == proposal.before or preflight_source.received_monotonic != received
                     or self._store.observation(preflight_source) != observed):
                 raise EvidenceError("Preflight retention must attest its actual distinct source and original receipt")
@@ -658,7 +840,8 @@ class MissionRuntime:
             raw = self.controller.execute_mission(self._lease, kind=proposal.kind, value=proposal.action,
                 expected_session=proposal.before.session, expected_revision=proposal.before.revision,
                 expected_boundary_id=proposal.expected_boundary_id, logical_action_id=proposal.logical_id,
-                deadline_monotonic=deadline, preflight=preflight)
+                deadline_monotonic=deadline, preflight=preflight,
+                expected_image_sha256=proposal.before.frame_sha256 if image_informed else None)
             if not prepared:
                 prepared = any(row["logical_id"] == proposal.logical_id for row in self._ledger.primitive_records())
             disposition, reason = self._envelope(raw, work, proposal, preflight_source)
@@ -669,7 +852,8 @@ class MissionRuntime:
                 after = self._ingest(raw["result"], raw["received_monotonic"], reservation=reservation)
                 reservation = None
                 live = self._live()
-                authoritative = live[3] is self._lease and self._lease is not None and not live[4] and not work.cancelled.is_set()
+                authoritative = (live[3] is self._lease and self._lease is not None and not live[4]
+                    and not work.cancelled.is_set() and after.boundary_kind in ("normal_play", "menu"))
                 self._publish_source(after, authoritative=authoritative)
         except Exception as exc:
             disposition = "unknown" if raw is not None and (not envelope_valid or raw.get("published")) or prepared and raw is None else "not_dispatched"
@@ -704,13 +888,9 @@ class MissionRuntime:
         if disposition == "unknown":
             # Settlement owns the unknown epoch transition. Do not advance it again
             # or replace an already recorded user/takeover Pause with a late receipt.
-            try:
-                self.controller.stop_input()
-            except OSError as exc:
-                self._diagnostic = f"Unknown-input Pause persistence failed: {exc}"[:1024]
-            self._bindings.clear()
-            self._lease, self._rotation = None, None
-        displacement = None if after is None or after.session != proposal.before.session else tuple(
+            self._stop_unknown_policy()
+        displacement = None if (after is None or after.session != proposal.before.session
+            or after.boundary_kind != "normal_play" or proposal.before.boundary_kind != "normal_play") else tuple(
             b - a for a, b in zip(self._store.position(proposal.before), self._store.position(after)))
         return PrimitiveResult(proposal.logical_id, proposal.before, after, disposition, displacement, reason)
 
@@ -726,6 +906,95 @@ class MissionRuntime:
         if len(canonical(result).encode()) > 65_536:
             raise LedgerError("Semantic navigation result exceeds durable receipt ceiling")
         return result
+
+    @staticmethod
+    def _control_result(outcome: MenuOutcome | ControlOutcome) -> dict:
+        return {"disposition": outcome.disposition, "reason": outcome.reason[:1024],
+            "proposals": outcome.proposed_count, "source_ids": list(dict.fromkeys(ref.observation_id for ref in outcome.evidence)),
+            "pending_logical_id": outcome.pending_logical_id, "verification_required": outcome.verification_required,
+            "basis": "native_rows" if isinstance(outcome, MenuOutcome) else outcome.basis,
+            "verified_focus_steps": outcome.verified_focus_steps if isinstance(outcome, MenuOutcome) else None,
+            "revalidation": None if outcome.revalidation is None else outcome.revalidation.to_dict(),
+            "grants_authority": False}
+
+    def _semantic(self, work: _Work) -> tuple[str, dict]:
+        data = work.request
+        original, binding = self._informing(data)
+        phase = self._prompt_guard(data, original)
+        work.game_anchor = original if original.boundary_kind == "normal_play" else self._last_normal()
+        skill = (MenuSkill(data) if data["skill_kind"] == "menu" and data["perception"] is None
+                 else SemanticControlSkill(data))
+        self._skill = data["skill_kind"]
+        mark = self._operator_mark()
+        inspected, fresh = self._store.inspect_current_boundary(**self._clocks())
+        if inspected != original:
+            raise EvidenceError("Control informing source is no longer the exact retained checkpoint")
+        if not fresh:
+            self._store.verify(original)
+            self._capacity()
+            state, received = self._observe_native(work)
+            current = self._ingest(state, received)
+            refreshed = self._binding(current)
+            relation = SourceRevalidation(binding, refreshed, "exact_png_bytes" if data["perception"] is not None else "native_state")
+            skill.revalidate(relation, self._store, **self._clocks())
+            self._record("mission_revalidation", relation.to_dict())
+            self._publish_source(current, authoritative=True)
+            if phase is not None:
+                phase = self._advance_prompt(work, original, current)
+        self._capture_memory(self._current)
+        rotated = False
+        receipt_phase = phase
+        while True:
+            self._check_cancelled(work)
+            proposal = skill.propose(self._store, **self._clocks())
+            if isinstance(proposal, (MenuOutcome, ControlOutcome)):
+                outcome = proposal
+            else:
+                self._progress = {"pending_logical_id": proposal.logical_id, "source_before": proposal.before.observation_id}
+                if not rotated:
+                    self._rotate(work, proposal)
+                    rotated = True
+                feedback = self._dispatch(work, proposal, original)
+                if work.cancelled.is_set() or self._closed.is_set():
+                    return ("unknown" if feedback.transport_disposition == "unknown" else "paused"), {
+                        "reason": "Authority revoked; actual control receipt retained", "source_ids": [
+                            ref.observation_id for ref in (feedback.before, feedback.after) if ref is not None],
+                        "pending_logical_id": proposal.logical_id, "grants_authority": False}
+                outcome = skill.accept(feedback, self._store, **self._clocks())
+                if (feedback.transport_disposition == "returned" and feedback.after is not None and phase is not None
+                        and (outcome is None or outcome.disposition != "unknown")):
+                    receipt_phase = self._advance_prompt(work, proposal.before, feedback.after)
+                    phase = self._prompt_phase
+                if outcome is None:
+                    self._publish()
+                    continue
+                if (data["skill_kind"] == "interact" and outcome.disposition == "partial"
+                        and feedback.transport_disposition == "returned" and feedback.after is not None):
+                    receipt_phase = self._open_prompt(work, original, feedback.after, mark)
+            result = self._control_result(outcome)
+            if receipt_phase is not None:
+                stage = ("unknown" if outcome.disposition == "unknown" else "complete"
+                    if receipt_phase.checkpoint.boundary_kind == "normal_play" else "activity_poll"
+                    if receipt_phase.checkpoint.boundary_kind == "activity_poll" else "awaiting_control")
+                result["phase"] = self._prompt_receipt(receipt_phase, stage)
+            if outcome.disposition == "unknown":
+                self._stop_unknown_policy()
+            try:
+                self._game_guard(work.game_anchor, data["limits"]["game_seconds"], after=True)
+                if receipt_phase is not None:
+                    root = self._ledger.request(receipt_phase.root_id)["request"]
+                    self._game_guard(receipt_phase.game_anchor, root["limits"]["game_seconds"], after=True)
+                if self._game_cost is None or self._game_cost > self._admission.limits.game_seconds:
+                    raise BudgetError("Observed mission game time unavailable or exceeded")
+            except BudgetError as exc:
+                result["budget_stop"] = str(exc)
+                if outcome.disposition == "unknown":
+                    return "unknown", result
+                self._stop_after_failure(str(exc))
+                result.update(disposition="partial", reason=str(exc))
+                return "partial", result
+            self._capture_memory(self._current)
+            return outcome.disposition, result
 
     def _navigate(self, work: _Work) -> tuple[str, dict]:
         data = work.request
@@ -788,8 +1057,7 @@ class MissionRuntime:
         if kind in ("remember", "correct"):
             return "completed", self._memory_request(work)
         if kind == "skill":
-            if work.request["phase_id"] is not None:
-                return "blocked", {"reason": "Owned phase adapter is not integrated; phase IDs grant no authority"}
+            self._prompt_guard(work.request)
             work_id = work.request["work_id"]
             if work_id is not None:
                 matches = [row["entry"] for row in self._ledger.memory_records("work") if row["entry"]["id"] == work_id]
@@ -799,6 +1067,8 @@ class MissionRuntime:
                     return "blocked", {"reason": "Navigation Work coordinate scope differs"}
             if work.request["skill_kind"] == "navigate":
                 return self._navigate(work)
+            if work.request["skill_kind"] in ("menu", "edit", "interact"):
+                return self._semantic(work)
         if kind in ("handoff", "claim"):
             return self._handoff(work)
         if kind == "lifecycle":
@@ -859,6 +1129,8 @@ class MissionRuntime:
                 self._stop_after_failure(result["reason"])
         self._rotation = None
         self._apply_pauses()
+        if disposition == "unknown" and self._lease is not None:
+            self._stop_unknown_policy()
         operation = self._ledger.complete_request(data["request_id"], disposition, result, now=self._wall())
         self._progress = result
         self._publish()
@@ -912,6 +1184,7 @@ class MissionRuntime:
         except OSError as exc:
             self._diagnostic = f"{reason}; Pause persistence unconfirmed: {exc}"[:1024]
         self._bindings.clear()
+        self._clear_prompt()
         self._rotation = None
         self._apply_pauses()
         state = self._ledger.snapshot(now=self._wall())

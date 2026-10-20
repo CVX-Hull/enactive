@@ -26,6 +26,7 @@ class VisibleBridge(FakeBridge):
     def __init__(self, controller, **options):
         super().__init__(controller, **options)
         self.frames = 0
+        self.editor_text = None
         self.value.update(pause_origin="startup")
         self.value["scene"]["provenance"] = "player-visible input boundary"
         self.value["scene"]["neighbors"] = [
@@ -39,7 +40,10 @@ class VisibleBridge(FakeBridge):
         value["frame"] = f'frame-{value["session"]}-{self.frames}.png'
         if not value["paused"]:
             value["pause_origin"] = "none"
-        (self.bridge / value["frame"]).write_bytes(b"\x89PNG\r\n\x1a\n" + str(value["scene"]).encode())
+        # A synthetic visible-state marker, never a native or rendered PNG claim.
+        content = {key: value[key] for key in ("scene", "ui", "category", "actions")}
+        content["visible_editor"] = self.editor_text
+        (self.bridge / value["frame"]).write_bytes(b"\x89PNG\r\n\x1a\n" + canonical(content).encode())
         super().publish(value)
 
 
@@ -107,6 +111,303 @@ class MissionRuntimeTests(unittest.TestCase):
             limits={"primitives": 8, "wall_seconds": 120, "game_seconds": 1200})
         data.update(changes)
         return data
+
+    def control(self, kind, goal, *, phase_id=None, perception=None, request_id="control-1", **changes):
+        reference = self.runtime.status()["current_source"]
+        data = self.request("skill", request_id=request_id, skill_kind=kind, goal=goal,
+            phase_id=phase_id, perception=perception, sources=[reference["observation_id"]],
+            expected_session=reference["session"], expected_revision=reference["revision"],
+            expected_boundary_id=self.runtime._store.observation(self.runtime._current)["boundary"]["id"],
+            limits={"primitives": 8, "wall_seconds": 120, "game_seconds": 1200})
+        data.update(changes)
+        return data
+
+    def open_direction(self, *, prompt=None, effect=None, **changes):
+        self.bridge.value["actions"].append("open")
+        self.start()
+        normal = copy.deepcopy(self.bridge.value["scene"])
+        def direction_query(bridge, request):
+            if request.get("action") == "open":
+                bridge.value.update(scene=None, ui=None, category="DEFAULTMODE",
+                    actions=["UP", "DOWN", "LEFT", "RIGHT", "pause", "QUIT"])
+                bridge.value["boundary"].update(kind="menu", id="direction-query")
+                if prompt is not None:
+                    bridge.value.update(copy.deepcopy(prompt))
+            elif effect is not None:
+                return effect(bridge, request)
+            elif request.get("action") == "pause":
+                bridge.value.update(scene=normal, ui=None, category="DEFAULTMODE", actions=["UP", "DOWN", "LEFT", "RIGHT", "open"])
+                bridge.value["boundary"].update(kind="normal_play", id="returned-normal")
+            return True
+        self.bridge.behavior = direction_query
+        root = self.control("interact", dict(action="open", intent="Open here", desired_outcome="Inspect actual result"),
+                            request_id="open-direction", **changes)
+        self.assertEqual(self.runtime.command(root)["status"], "accepted")
+        operation = self.settled(root["request_id"])
+        self.assertEqual(operation["state"], "partial", operation)
+        return root, operation
+
+    def test_interaction_direction_and_normal_return_share_root_without_position_invention(self):
+        root, opened = self.open_direction(limits=dict(primitives=2, wall_seconds=120, game_seconds=1200))
+        self.assertEqual(opened["result"]["phase"]["stage"], "awaiting_control")
+        source = self.runtime.status()["current_source"]
+        view = dict(kind="direction", basis="player_interpretation", source_id=source["observation_id"], question="Where?")
+        child = self.control("menu", dict(purpose="Open direction", label="Here", outcome="activated"),
+                             phase_id=root["request_id"], perception=view)
+        self.assertEqual(self.runtime.command(child)["status"], "accepted")
+        operation = self.settled(child["request_id"])
+        self.assertEqual(operation["state"], "partial", operation)
+        self.assertEqual(operation["result"]["phase"]["stage"], "complete")
+        self.assertTrue(operation["result"]["verification_required"])
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertEqual([r["action"] for r in self.bridge.delivered if r["kind"] == "action"], ["open", "pause"])
+        self.assertTrue([r for r in self.bridge.delivered if r.get("action") == "pause"][0]["require_exact_frame"])
+        records = self.runtime._ledger.primitive_records()
+        self.assertEqual([r["state"] for r in records], ["returned", "returned"])
+
+    def test_contradictory_image_fence_receipt_stays_unknown_despite_actual_return(self):
+        root, _ = self.open_direction()
+        ref = self.runtime.status()["current_source"]
+        child = self.control("menu", dict(purpose="Direction", label="Here", outcome="activated"),
+            phase_id=root["request_id"], perception=dict(kind="direction", basis="player_interpretation",
+            source_id=ref["observation_id"], question="Where?"))
+        real = self.controller.execute_mission
+        def contradict(*args, **kwargs):
+            receipt = real(*args, **kwargs)
+            self.assertTrue(receipt["published"])
+            receipt["request"]["require_exact_frame"] = False
+            receipt["preflight"]["expected_image_sha256"] = None
+            return receipt
+        with patch.object(self.controller, "execute_mission", contradict):
+            self.runtime.command(child)
+            operation = self.settled(child["request_id"])
+        self.assertEqual(operation["state"], "unknown", operation)
+        self.assertIn("image policy", operation["result"]["reason"])
+        self.assertIsNotNone(operation["result"]["pending_logical_id"])
+        self.assertEqual([r["state"] for r in self.runtime._ledger.primitive_records()], ["returned", "unknown"])
+        self.assertIsNone(self.runtime._prompt_phase)
+
+    def test_equivalent_observe_refreshes_owned_prompt_without_renewing_root(self):
+        root, _ = self.open_direction()
+        original = self.runtime._prompt_phase
+        deadline = self.runtime._ledger.request(root["request_id"])["deadline"]
+        self.runtime.command(self.request("observe"))
+        observed = self.settled("observe-1")
+        self.assertEqual(observed["state"], "completed", observed)
+        self.assertEqual(observed["result"]["revalidation"]["rule"], "exact_png_bytes")
+        current = self.runtime._prompt_phase
+        self.assertEqual(current.game_anchor, original.game_anchor)
+        self.assertNotEqual(current.checkpoint, original.checkpoint)
+        self.assertEqual(self.runtime._ledger.request(root["request_id"])["deadline"], deadline)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+
+    def test_owned_prompt_blocks_unrelated_root_and_user_pause_clears_it(self):
+        self.open_direction()
+        request = self.control("interact", dict(action="open", intent="Unrelated", desired_outcome="Other"))
+        self.assertEqual(self.runtime.command(request)["status"], "rejected")
+        self.assertIsNotNone(self.runtime._prompt_phase)
+        self.runtime.pause()
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+        self.assertIsNone(self.controller._mission_lease)
+
+    def native_choices(self, *, effect=None, **changes):
+        ui = dict(purpose="uilist", title="Choices", rows=[
+            dict(id=f"row-{n}", text=text, enabled=True, hotkey=None)
+            for n, text in enumerate(("One", "Two", "Three"))],
+            selected="row-0", filter=None, count=None, coverage="rendered_rows_only")
+        def focus(bridge, request):
+            if request.get("action") == "UILIST.DOWN":
+                ui = bridge.value["ui"]
+                ui["selected"] = f'row-{int(ui["selected"].split("-")[1]) + 1}'
+                bridge.value["boundary"]["id"] = f'choice-{bridge.value["revision"]}'
+            return True
+        return self.open_direction(prompt=dict(ui=ui, category="UILIST",
+            actions=["UILIST.UP", "UILIST.DOWN", "CONFIRM", "QUIT"]),
+            effect=focus if effect is None else effect, **changes)
+
+    def test_native_menu_batches_focus_without_activation_and_keeps_owned_phase(self):
+        root, _ = self.native_choices(limits=dict(primitives=3, wall_seconds=120, game_seconds=1200))
+        child = self.control("menu", dict(purpose="Choose", label="Three", outcome="focused"),
+                             phase_id=root["request_id"])
+        self.runtime.command(child)
+        operation = self.settled(child["request_id"])
+        self.assertEqual(operation["state"], "completed", operation)
+        self.assertEqual(operation["result"]["verified_focus_steps"], 2)
+        self.assertEqual(operation["result"]["phase"]["stage"], "awaiting_control")
+        self.assertEqual(self.runtime.status()["spent_inputs"], 3)
+        self.assertEqual(self.bridge.value["ui"]["selected"], "row-2")
+        self.assertNotIn("CONFIRM", [r.get("action") for r in self.bridge.delivered])
+
+    def test_returned_native_focus_mismatch_is_policy_unknown_and_revokes_once(self):
+        root, _ = self.native_choices(effect=lambda bridge, request: True)
+        epoch = self.runtime.status()["epoch"]
+        child = self.control("menu", dict(purpose="Choose", label="Two", outcome="focused"),
+                             phase_id=root["request_id"])
+        self.runtime.command(child)
+        operation = self.settled(child["request_id"])
+        self.assertEqual(operation["state"], "unknown", operation)
+        self.assertEqual(self.runtime.status()["epoch"], epoch + 1)
+        self.assertIsNotNone(operation["result"]["pending_logical_id"])
+        self.assertEqual(operation["result"]["phase"]["stage"], "unknown")
+        self.assertEqual([r["state"] for r in self.runtime._ledger.primitive_records()], ["returned", "returned"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertIsNone(self.controller._mission_lease)
+        self.assertIsNone(self.runtime._prompt_phase)
+
+    def test_native_takeover_after_menu_input_keeps_pending_unknown_policy_receipt(self):
+        def takeover(bridge, request):
+            if request.get("action") == "UILIST.DOWN":
+                bridge.value.update(paused=True, pause_origin="human", takeover_generation=1)
+                bridge.value["boundary"]["control_generation"] += 1
+            return True
+        root, _ = self.native_choices(effect=takeover)
+        child = self.control("menu", dict(purpose="Choose", label="Two", outcome="focused"),
+                             phase_id=root["request_id"])
+        self.runtime.command(child)
+        operation = self.settled(child["request_id"])
+        self.assertEqual(operation["state"], "unknown", operation)
+        self.assertIsNotNone(operation["result"]["pending_logical_id"])
+        self.assertEqual(self.runtime.status()["pause_cause"], "takeover")
+        self.assertEqual([r["state"] for r in self.runtime._ledger.primitive_records()], ["returned", "returned"])
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertIsNone(self.controller._mission_lease)
+
+    def test_changed_image_observe_cannot_refresh_owned_prompt(self):
+        self.open_direction()
+        self.bridge.value["actions"].remove("RIGHT")
+        self.runtime.command(self.request("observe"))
+        operation = self.settled("observe-1")
+        self.assertEqual(operation["state"], "blocked", operation)
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertIsNone(self.controller._mission_lease)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+
+    def test_owned_prompt_root_input_ceiling_cannot_be_renewed_by_child(self):
+        root, _ = self.open_direction(limits=dict(primitives=1, wall_seconds=120, game_seconds=1200))
+        ref = self.runtime.status()["current_source"]
+        child = self.control("menu", dict(purpose="Direction", label="Here", outcome="activated"),
+            phase_id=root["request_id"], perception=dict(kind="direction", basis="player_interpretation",
+            source_id=ref["observation_id"], question="Where?"))
+        self.runtime.command(child)
+        operation = self.settled(child["request_id"])
+        self.assertEqual(operation["state"], "blocked", operation)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+        self.assertEqual([r["state"] for r in self.runtime._ledger.primitive_records()], ["returned"])
+
+    def test_actual_normal_return_records_root_game_time_overshoot(self):
+        root, _ = self.open_direction(limits=dict(primitives=8, wall_seconds=120, game_seconds=2))
+        anchor = self.runtime._prompt_phase.game_anchor
+        self.bridge.value.update(scene=self.runtime._store.observation(anchor)["scene"], ui=None)
+        self.bridge.value["scene"]["turn"] += 3
+        self.bridge.value["revision"] += 1
+        self.bridge.value["boundary"]["kind"] = "normal_play"
+        self.runtime.command(self.request("observe"))
+        operation = self.settled("observe-1")
+        self.assertEqual(operation["state"], "completed", operation)
+        self.assertIn("budget", operation["result"]["budget_stop"])
+        self.assertEqual(operation["result"]["phase"]["stage"], "complete")
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertIsNone(self.controller._mission_lease)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+
+    def test_interaction_without_prompt_does_not_block_following_navigation(self):
+        self.bridge.value["actions"].append("open")
+        self.start()
+        root = self.control("interact", dict(action="open", intent="Open", desired_outcome="Inspect result"))
+        self.runtime.command(root)
+        operation = self.settled(root["request_id"])
+        self.assertEqual(operation["state"], "partial", operation)
+        self.assertEqual(operation["result"]["phase"]["stage"], "complete")
+        self.assertIsNone(self.runtime._prompt_phase)
+        navigation = self.navigation()
+        self.runtime.command(navigation)
+        self.assertEqual(self.settled(navigation["request_id"])["state"], "completed")
+
+    def test_editor_batch_requires_new_whole_value_view_before_separate_commit(self):
+        self.bridge.editor_text = "Old"
+        normal = copy.deepcopy(self.bridge.value["scene"])
+        def text(bridge, request):
+            if request.get("action") == "TEXT.CLEAR": bridge.editor_text = ""
+            elif request["kind"] == "key": bridge.editor_text += request["key"]
+            elif request.get("action") == "TEXT.CONFIRM":
+                bridge.value.update(scene=normal, ui=None, category="DEFAULTMODE", actions=["UP", "DOWN", "LEFT", "RIGHT"])
+                bridge.value["boundary"]["kind"] = "normal_play"
+            if request["kind"] in ("key", "action"):
+                bridge.value["boundary"]["id"] = f'edit-{bridge.value["revision"]}'
+            return True
+        root, _ = self.open_direction(prompt=dict(category="STRING_INPUT", actions=["TEXT.CLEAR", "TEXT.CONFIRM", "QUIT"]), effect=text)
+        def editor(visible):
+            return dict(kind="editor", source_id=self.runtime.status()["current_source"]["observation_id"],
+                basis="player_interpretation", purpose="filter", label="Filter", visible_text=visible,
+                whole_value=True, focused=True)
+        child = self.control("edit", dict(purpose="filter", text="New", commit=False),
+            phase_id=root["request_id"], perception=editor("Old"))
+        self.runtime.command(child)
+        operation = self.settled(child["request_id"])
+        self.assertEqual(operation["state"], "partial", operation)
+        self.assertEqual(operation["result"]["proposals"], 4)
+        self.assertTrue(operation["result"]["verification_required"])
+        self.assertEqual(self.bridge.editor_text, "New")
+        self.assertNotIn("TEXT.CONFIRM", [r.get("action") for r in self.bridge.delivered])
+        commit = self.control("edit", dict(purpose="filter", text="New", commit=True),
+            phase_id=root["request_id"], perception=editor("New"), request_id="commit")
+        self.runtime.command(commit)
+        operation = self.settled("commit")
+        self.assertEqual(operation["state"], "partial", operation)
+        self.assertEqual(operation["result"]["phase"]["stage"], "complete")
+        self.assertEqual(self.runtime.status()["spent_inputs"], 6)
+        self.assertIsNone(self.runtime._prompt_phase)
+
+    def test_ordinary_editor_cannot_claim_creation_name_purpose(self):
+        root, _ = self.open_direction(prompt=dict(category="STRING_INPUT", actions=["TEXT.CLEAR", "TEXT.CONFIRM", "QUIT"]))
+        for purpose in ("character_name", "world_name"):
+            child = self.control("edit", dict(purpose=purpose, text="Unadmitted", commit=False),
+                phase_id=root["request_id"], request_id=purpose, perception=dict(kind="editor",
+                basis="player_interpretation", source_id=self.runtime.status()["current_source"]["observation_id"],
+                purpose=purpose, label="Name", visible_text="", whole_value=True, focused=True))
+            response = self.runtime.command(child)
+            self.assertEqual(response["status"], "rejected", response)
+            self.assertIn("lifecycle", response["reason"])
+        self.assertIsNotNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+
+    def test_interaction_unknown_delivery_cannot_open_prompt(self):
+        self.bridge.value["actions"].append("open")
+        self.start()
+        self.bridge.behavior = lambda bridge, request: request["kind"] != "action"
+        root = self.control("interact", dict(action="open", intent="Open", desired_outcome="Inspect actual result"))
+        self.runtime.command(root)
+        operation = self.settled(root["request_id"])
+        self.assertEqual(operation["state"], "unknown", operation)
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertNotIn("phase", operation["result"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+        self.assertIsNone(self.controller._mission_lease)
+
+    def test_policy_unknown_precedes_simultaneous_game_budget_overshoot(self):
+        self.bridge.value["actions"].append("open")
+        self.start()
+        epoch = self.runtime.status()["epoch"]
+        def changed_control(bridge, request):
+            if request.get("action") == "open":
+                bridge.value["scene"]["turn"] += 3
+                bridge.value["boundary"]["control_generation"] += 1
+            return True
+        self.bridge.behavior = changed_control
+        root = self.control("interact", dict(action="open", intent="Open", desired_outcome="Inspect actual result"),
+            limits=dict(primitives=8, wall_seconds=120, game_seconds=2))
+        self.runtime.command(root)
+        operation = self.settled(root["request_id"])
+        self.assertEqual(operation["state"], "unknown", operation)
+        self.assertEqual(operation["result"]["disposition"], "unknown")
+        self.assertIn("control", operation["result"]["reason"])
+        self.assertIn("budget", operation["result"]["budget_stop"])
+        self.assertIsNotNone(operation["result"]["pending_logical_id"])
+        self.assertEqual(self.runtime.status()["pause_cause"], "unknown")
+        self.assertEqual(self.runtime.status()["epoch"], epoch + 1)
+        self.assertEqual(self.runtime._ledger.primitive_records()[0]["state"], "returned")
 
     def test_unintegrated_phase_or_missing_work_cannot_be_ignored_to_dispatch_navigation(self):
         self.start()

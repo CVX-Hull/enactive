@@ -91,8 +91,15 @@ The menu policy uses attested visible uilist rows and registered focus actions,
 with one final CONFIRM followed by required player verification. Native focus may
 complete without confirmation. Mission/2 carries closed fallible
 control interpretations and explicit Work/phase associations; passive editing/image
-control [policy](../harness/gameplay/semantic_controls.py) is a reviewed source
-component, with runtime integration pending. Inventory multiselect and quantities above one
+control [policy](../harness/gameplay/semantic_controls.py) now shares the unconnected
+mission writer's dispatch with navigation and native-row controls. An ordinary
+interact request can own one private prompt; explicit menu/edit children keep its
+original input/time ceilings and live actor/epoch/Pause/checkpoint fences. Exact
+equivalent Observe can record a typed source revalidation; changed evidence stops.
+Normal return closes the prompt without proving the intended game effect. Typed
+PhaseReceipt audit data is checked on completion/reopen and restores no authority.
+Retained menu inspection does not grant normal-scene eligibility to memory or movement.
+Item/activity/lifecycle adapters and live ingress remain pending. Inventory multiselect and quantities above one
 remain unsupported by that source component. A highlighted inventory row does
 not prove a chosen item or amount, and confirmation delivery does not prove the
 player's semantic objective.

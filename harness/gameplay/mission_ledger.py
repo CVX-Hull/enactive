@@ -19,7 +19,7 @@ from typing import Any
 from .contracts import ContractError, json_object
 from .mission_contracts import (
     VERSION, MissionAdmission, SourceRevalidation, canonical, validate_handoff_binding,
-    validate_handoff_result, validate_memory_entry, validate_request,
+    validate_handoff_result, validate_memory_entry, validate_prompt_result, validate_request,
 )
 
 DB_VERSION = 6
@@ -293,6 +293,10 @@ class MissionLedger:
         issued, consumed = self._handoffs(state=state)
         actors = [(0, stored.player_id)] + sorted((issued[identity]["epoch"], self.request(claim)["result"]["player_id"])
                                                  for identity, claim in consumed.items())
+        for request_id, payload, result in self._db.execute("SELECT id,payload,result FROM requests WHERE result IS NOT NULL"):
+            data = json_object(payload)
+            actor = next(player for epoch, player in reversed(actors) if epoch <= data.get("epoch", 0))
+            self._check_prompt_result(request_id, data, json_object(result), actor_id=actor)
         count = 0
         for logical_id, request_id, intent, native_id, status, result, effect in self._db.execute(
                 "SELECT id,request_id,intent,native_id,state,result,effect FROM primitives"):
@@ -760,6 +764,26 @@ class MissionLedger:
             self._db.execute("UPDATE primitives SET effect=? WHERE id=?", (_json(effect), logical_id))
         return self.primitive(logical_id)
 
+    def _check_prompt_result(self, request_id: str, data: dict, result: dict, *, actor_id: str) -> None:
+        if "phase" not in result:
+            return
+        try:
+            if data["kind"] not in ("skill", "observe"):
+                raise LedgerError("Ordinary prompt receipt requires a skill or closing Observe")
+            if type(result["phase"]) is not dict:
+                raise LedgerError("Prompt result.phase must be a typed object")
+            phase = json_object(result["phase"])
+            root_id = phase.get("origin_request_id")
+            _id(root_id)
+            root = self.request(root_id)
+            root_row = self._db.execute("SELECT rowid FROM requests WHERE id=?", (root_id,)).fetchone()[0]
+            child_row = self._db.execute("SELECT rowid FROM requests WHERE id=?", (request_id,)).fetchone()[0]
+            if root_row > child_row or root["epoch"] > data["epoch"]:
+                raise LedgerError("Prompt result refers to a future root")
+            validate_prompt_result(phase, request=data, root=root["request"], actor_id=actor_id)
+        except ContractError as exc:
+            raise LedgerError(f"Invalid prompt result: {exc}") from exc
+
     def complete_request(self, request_id: str, disposition: str, result: dict, *, now: float) -> dict:
         if disposition not in REQUEST_STATES - {"accepted", "running"}: raise LedgerError("Invalid operation result")
         encoded = _json(result)
@@ -771,6 +795,14 @@ class MissionLedger:
             if old["result"] is not None:
                 if old["state"] == disposition and old["result"] == json_object(encoded): return old
                 raise LedgerError("Operation result cannot be rewritten")
+            if "phase" in result:
+                issued, consumed = self._handoffs()
+                actors = [(0, self.admission.player_id)] + sorted((issued[identity]["epoch"], self.request(claim)["result"]["player_id"])
+                    for identity, claim in consumed.items())
+                actor = next(player for epoch, player in reversed(actors) if epoch <= old["epoch"])
+                if actor != state["player_id"]:
+                    raise LedgerError("New prompt result cannot cross the current actor")
+            self._check_prompt_result(request_id, old["request"], json_object(encoded), actor_id=state["player_id"])
             unresolved = self._db.execute("SELECT 1 FROM primitives WHERE request_id=? AND (state IN ('prepared','published') OR (state='unknown' AND effect IS NULL))", (request_id,)).fetchone()
             if disposition == "completed" and unresolved: raise LedgerError("Unresolved effects cannot silently become completion")
             self._release(f"request:{request_id}")

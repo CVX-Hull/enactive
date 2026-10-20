@@ -99,6 +99,66 @@ class LedgerTests(unittest.TestCase):
         self.ledger.prepare_primitive(request_id, logical_id, intent(), now=now)
         self.ledger.settle_primitive(logical_id, "not_dispatched", {"reason": "Synthetic accounting probe"}, now=now)
 
+    def prompt_receipt(self, **changes):
+        value = dict(schema="mission/2", record_type="PhaseReceipt", origin_request_id="request-1",
+            phase_kind="interact", operation="open_consume", stage="awaiting_control", epoch=0,
+            actor_id="player-test", controller_boot_id="controller-test", operator_pause_generation=0,
+            takeover_generation=0, source_ids=["source-1"], continuity=None, grants_authority=False)
+        value.update(changes)
+        return value
+
+    def test_prompt_receipt_root_child_and_observe_reopen_without_authority(self):
+        self.active_request(phase_skill("interact"))
+        root = self.prompt_receipt()
+        self.ledger.complete_request("request-1", "partial", {"phase": root}, now=1002)
+        self.ledger.begin_request(phase_skill(request_id="child", phase_id="request-1"), now=1003)
+        self.ledger.complete_request("child", "partial", {"phase": root}, now=1004)
+        self.ledger.begin_request(request("observe", request_id="observe"), now=1005)
+        closed = self.prompt_receipt(stage="complete")
+        self.ledger.complete_request("observe", "completed", {"phase": closed}, now=1006)
+        state = self.reopen(now=1007).snapshot(now=1007)
+        self.assertEqual(state["phase"], "paused")
+        self.assertFalse(state["grants_authority"])
+        self.assertEqual(self.ledger.request("request-1")["result"]["phase"], root)
+        self.assertEqual(self.ledger.request("observe")["result"]["phase"], closed)
+
+    def test_prompt_receipt_rejects_nonobjects_and_malformed_correlation_transactionally(self):
+        self.active_request(phase_skill("interact"))
+        changes = (dict(actor_id="other"), dict(epoch=1), dict(operation="open"),
+            dict(origin_request_id="missing"), dict(phase_kind="lifecycle"), dict(stage="exited"),
+            dict(continuity={}), dict(grants_authority=True), dict(source_ids=[]), dict(extra=True))
+        bad = [None, json.dumps(self.prompt_receipt()), [], *[self.prompt_receipt(**v) for v in changes]]
+        before = self.ledger.snapshot(now=1002)
+        # Rejection retains the observed wall clock even when intent/result rolls back.
+        before["last_wall"] = 1002.0
+        for value in bad:
+            with self.subTest(value=value), self.assertRaises(LedgerError):
+                self.ledger.complete_request("request-1", "partial", {"phase": value}, now=1002)
+            self.assertIsNone(self.ledger.request("request-1")["result"])
+            self.assertEqual(self.ledger.snapshot(now=1002), before)
+
+    def test_prompt_receipt_corrupted_nested_string_rejects_on_reopen(self):
+        self.active_request(phase_skill("interact"))
+        self.ledger.complete_request("request-1", "partial", {"phase": self.prompt_receipt()}, now=1002)
+        self.ledger._db.execute("UPDATE requests SET result=? WHERE id='request-1'",
+            (json.dumps({"phase": json.dumps(self.prompt_receipt())}, sort_keys=True, separators=(",", ":")),))
+        with self.assertRaisesRegex(LedgerError, "typed object"): self.reopen()
+
+    def test_new_prompt_receipt_cannot_be_authored_for_previous_actor_after_handoff(self):
+        self.active_request(phase_skill("interact"))
+        self.reopen(now=1002)
+        epoch = self.ledger.snapshot(now=1002)["epoch"]
+        self.ledger.activate(epoch=epoch, player_id="player-test", now=1003)
+        self.ledger.begin_request(request("handoff", request_id="handoff-1", epoch=epoch,
+            checkpoint_ids=["source-1"], successor_role="player"), now=1003)
+        issued = self.ledger.issue_handoff("handoff-1", binding=handoff_binding(), now=1004)
+        self.ledger.begin_request(handoff_claim(issued), now=1005)
+        self.ledger.consume_handoff("claim-1", actor_id="replacement-player", actor_role="player", now=1006)
+        for actor in ("player-test", "replacement-player"):
+            with self.assertRaisesRegex(LedgerError, "actor"):
+                self.ledger.complete_request("request-1", "partial", {"phase": self.prompt_receipt(actor_id=actor)}, now=1007)
+        self.assertIsNone(self.ledger.request("request-1")["result"])
+
     def rewrite_request(self, identity, **changes):
         value = self.ledger.request(identity)["request"]
         value.update(changes)

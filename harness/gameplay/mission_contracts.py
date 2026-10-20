@@ -168,6 +168,15 @@ _CLAIMED_HANDOFF = _object({
     "handoff_id": _ID, "mission_id": _ID, "player_id": _ID, "actor_role": _ID,
     "epoch": _integer(), "grants_authority": {"const": False},
 })
+_PROMPT_RECEIPT = _object({
+    "schema": {"const": VERSION}, "record_type": {"const": "PhaseReceipt"},
+    "origin_request_id": _ID, "phase_kind": {"const": "interact"}, "operation": _enum(*INTERACTIONS),
+    "stage": _enum("awaiting_control", "activity_poll", "complete", "unknown"),
+    "epoch": _integer(), "actor_id": _ID, "controller_boot_id": _ID,
+    "operator_pause_generation": _integer(), "takeover_generation": _integer(),
+    "source_ids": {**_IDS, "minItems": 1}, "continuity": {"type": "null"},
+    "grants_authority": {"const": False},
+})
 
 
 def canonical(value: dict[str, Any]) -> str:
@@ -194,6 +203,23 @@ def validate_handoff_binding(value: dict) -> dict:
 def validate_handoff_result(value: dict, *, claimed: bool = False) -> dict:
     """Closed durable result; the ledger crosschecks its originating requests."""
     return _decode(value, _CLAIMED_HANDOFF if claimed else _HANDOFF)
+
+
+def validate_prompt_result(value: dict, *, request: dict, root: dict, actor_id: str) -> dict:
+    """Closed ordinary prompt audit data; a receipt never restores a live phase."""
+    data = _decode(value, _PROMPT_RECEIPT)
+    if (root["kind"] != "skill" or root["skill_kind"] != "interact" or root["phase_id"] is not None
+            or data["origin_request_id"] != root["request_id"] or data["operation"] != root["goal"]["action"]
+            or data["epoch"] != request["epoch"] or data["actor_id"] != actor_id
+            or root["mission_id"] != request["mission_id"]):
+        raise ContractError("Prompt receipt contradicts its immutable root, actor or epoch")
+    if request["kind"] == "observe":
+        if data["stage"] != "complete":
+            raise ContractError("Observe may only close an ordinary prompt")
+    elif request["kind"] != "skill" or (request["request_id"] != root["request_id"]
+            and request["phase_id"] != root["request_id"]):
+        raise ContractError("Prompt result lost its root/child request correlation")
+    return data
 
 
 @dataclass(frozen=True)

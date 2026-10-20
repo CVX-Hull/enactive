@@ -119,7 +119,8 @@ class MenuTests(unittest.TestCase):
                 skill = self.skill(label="Three")
                 intent = self.propose(skill)
                 outcome = self.accept(skill, intent, self.frame(selected))
-                self.assertEqual((outcome.disposition, outcome.verified_focus_steps), ("blocked", 0))
+                self.assertEqual((outcome.disposition, outcome.verified_focus_steps), ("unknown", 0))
+                self.assertEqual(outcome.pending_logical_id, intent.logical_id)
                 self.assertIs(self.propose(skill), outcome)
 
     def test_upward_focus_uses_native_action_and_next_enabled_row(self):
@@ -251,7 +252,8 @@ class MenuTests(unittest.TestCase):
                 intent = self.propose(skill)
                 after = self.frame(1, change=change)
                 outcome = self.accept(skill, intent, after)
-                self.assertEqual((outcome.disposition, outcome.verified_focus_steps), ("blocked", 0))
+                self.assertEqual((outcome.disposition, outcome.verified_focus_steps), ("unknown", 0))
+                self.assertEqual(outcome.pending_logical_id, intent.logical_id)
                 self.assertIn(after, outcome.evidence)
 
     def test_focus_requires_advanced_boundary_id_and_revision(self):
@@ -259,7 +261,9 @@ class MenuTests(unittest.TestCase):
         skill = self.skill(before)
         intent = self.propose(skill)
         after = self.frame(1, change=lambda v: v["boundary"].update(id=intent.expected_boundary_id))
-        self.assertEqual(self.accept(skill, intent, after).disposition, "blocked")
+        outcome = self.accept(skill, intent, after)
+        self.assertEqual(outcome.disposition, "unknown")
+        self.assertEqual(outcome.pending_logical_id, intent.logical_id)
         # Same-revision changed native rows are already rejected by the real store.
         skill = self.skill()
         intent = self.propose(skill)
