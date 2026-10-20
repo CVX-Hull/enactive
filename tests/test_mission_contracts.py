@@ -138,6 +138,16 @@ class MissionContractTests(unittest.TestCase):
         self.assertEqual(validate_request(value), value)
         with self.assertRaises(ContractError): validate_request({**value, "entry": claim()})
 
+    def test_decisions_require_an_explicit_context_packet_reference(self):
+        decision = dict(schema="campaign-memory/1", record_type="Decision", id="decision-1",
+                        packet_id="packet-1", scope=scope(), query="water", memory_version=3,
+                        claim_ids=["claim-1"], work_ids=[], source_ids=["source-1"],
+                        lesson_ids=[], omitted=0, reason="Check the last observed supply")
+        self.assertEqual(validate_memory_entry(decision, "decision"), decision)
+        missing = {key: value for key, value in decision.items() if key != "packet_id"}
+        for bad in [missing, {**decision, "packet_id": ""}, {**decision, "packet_id": "../packet"}]:
+            with self.assertRaises(ContractError): validate_memory_entry(bad, "decision")
+
     def test_rendered_ui_rejects_hidden_fields_and_nonvisible_selection(self):
         ui = {"purpose": "UILIST", "title": "Choose", "rows": [{"id": "row-1", "text": "Eight hours", "enabled": True, "hotkey": "8"}],
               "selected": "row-1", "filter": None, "count": None, "coverage": "rendered_rows_only"}

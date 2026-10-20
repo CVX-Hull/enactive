@@ -99,7 +99,7 @@ not JSON. IDs are audit/binding fields, not OS isolation.
 | Evidence reference | Existing session/revision/frame/hash/boundary plus canonical retained source ID. Receipt time is not observation time; missing scene/time remains null. Menu/activity evidence is not a normal-play scene. |
 | Claim | `id`, `kind`, `key`, `value`, `text`, `scope`, `observed_time`, `received_time`, `coverage`, `sources`, `supports`, `status`, `supersedes`. Native fact versus interpretation; current/last_seen/inferred/disputed/retired/unknown. |
 | Work instance | `id`, `intent`, `scope`, `stage`, `progress`, `available`, `committed`, `predicted_output`, `observed_output`, `unresolved_effects`, `sources`, `next_verification`, `status`. Association with an engine activity may be uncertain. |
-| Decision/context packet | Query, memory version, selected claim/work/source IDs, applicable lesson IDs/counterexamples, omitted/truncated counts and original objective/remaining limits. No implicit claim that it contains everything. |
+| Decision/context packet | Explicit packet ID, query, memory version, selected claim/work/source IDs, applicable lesson IDs/counterexamples, omitted/truncated counts and original objective/remaining limits. No implicit claim that it contains everything. |
 
 `scenario` identifies an ordinary creation/load UI condition; it cannot prescribe
 hidden world contents. Scope contains mission, native session and coordinate epoch;
@@ -227,6 +227,12 @@ payload hash/state/result; logical primitive/native UUID mappings and terminal o
 unknown disposition; cumulative charges/reserves; handoffs; source references;
 immutable claim/correction/work-update records and rebuildable current views;
 decision/context references. Keep source images/journal evidence in the one archive.
+Before returning a context packet, the runtime durably records its exact contents
+and packet ID through the existing canonical journal. Decisions persist that ID
+and their selected references; text rationale is not a substitute for correlation.
+The passive memory module validates decisions against a bounded issued-packet
+cache. Reopening requires a new context query rather than restoring that cache or
+input authority. Missing journal evidence remains an explicit audit gap.
 One process/file lock and one serialized writer; no concurrent restored mission.
 
 Transactionally reserve input/capacity/cumulative cost and insert semantic request

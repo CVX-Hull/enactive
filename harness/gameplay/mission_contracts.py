@@ -96,7 +96,7 @@ _WORK = _object({
 })
 _DECISION = _object({
     "schema": {"const": MEMORY_VERSION}, "record_type": {"const": "Decision"},
-    "id": _ID, "scope": _SCOPE, "query": _text(1024), "memory_version": _integer(),
+    "id": _ID, "packet_id": _ID, "scope": _SCOPE, "query": _text(1024), "memory_version": _integer(),
     "claim_ids": {**_array(_ID, 32), "uniqueItems": True},
     "work_ids": {**_array(_ID, 16), "uniqueItems": True},
     "source_ids": {**_array(_ID, 16), "uniqueItems": True},

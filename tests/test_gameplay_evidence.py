@@ -509,11 +509,13 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaises(EvidenceError):
             self.current()
         self.store.close()
-        with self.assertRaises(EvidenceError):
-            self.open_store()
+        self.store = self.open_store()
+        with self.assertRaises(EvidenceError): self.store.verify(original)
+        self.store.close()
         retained.unlink()
-        with self.assertRaises(EvidenceError):
-            self.open_store()
+        self.store = self.open_store()
+        with self.assertRaises(EvidenceError): self.store.verify(original)
+        self.assertEqual(self.store.historical_references, (original,))
 
     def test_32_distinct_frame_limit_survives_reopening_without_deletion(self):
         for number in range(1, 33):
@@ -718,15 +720,62 @@ class EvidenceTests(unittest.TestCase):
         frame.chmod(0o600)
         frame.write_bytes(png(b"corrupt"))
         self.store.close()
-        with self.assertRaises(EvidenceError):
-            self.open_store()
+        # A valid index remains inspectable for durable-memory invalidation.
+        # Corrupt bytes still cannot provide observations or input authority.
+        self.store = self.open_store()
+        with self.assertRaises(EvidenceError): self.store.observation(first)
+        with self.assertRaises(EvidenceError): self.current()
         persisted = json.loads((self.directory / "evidence.json").read_text())
         self.assertEqual(len(persisted["entries"]), 2)
         self.assertIn(first.observation_id, persisted["disputed"])
+        self.store.close()
         frame.write_bytes(original)
         self.store = self.open_store()
         self.assertEqual(self.store.source_status(first), "disputed")
         self.assertEqual(self.store.source_status(second), "retained")
+
+    def test_missing_newest_source_preserves_all_references_without_authority(self):
+        first = self.ingest()
+        newest = self.ingest(self.publish(observation(2)))
+        frame = Path(newest.frame_path)
+        original = frame.read_bytes()
+        frame.unlink()
+        self.store.close()
+        self.store = self.open_store()
+        self.assertEqual(self.store.historical_references, (first, newest))
+        self.assertEqual(self.store.source_status(first), "retained")
+        with self.assertRaises(EvidenceError): self.store.source_status(newest)
+        with self.assertRaises(EvidenceError): self.current()
+        self.store.close()
+        frame.write_bytes(original)
+        self.store = self.open_store()
+        self.assertEqual(self.store.source_status(newest), "disputed")
+        with self.assertRaises(EvidenceError): self.store.observation(newest)
+        with self.assertRaises(EvidenceError): self.current()
+
+    def test_source_loss_reopen_does_not_swallow_persistence_failure(self):
+        newest = self.ingest()
+        Path(newest.frame_path).unlink()
+        self.store.close()
+        with patch.object(EvidenceStore, "_save", side_effect=EvidenceError("No receipt capacity")):
+            with self.assertRaisesRegex(EvidenceError, "No receipt capacity"): self.open_store()
+
+    def test_missing_sources_keep_retention_slots_and_cannot_grow_manifest(self):
+        self.store.close()
+        self.store = self.open_store(max_frames=2)
+        references = (self.ingest(), self.ingest(self.publish(observation(2))))
+        for reference in references: Path(reference.frame_path).unlink()
+        self.store.close()
+        self.store = self.open_store(max_frames=2)
+        self.assertEqual(self.store.usage()["frames"], 2)
+        with self.assertRaises(CapacityError): self.ingest(self.publish(observation(3)))
+        self.assertEqual(self.store.historical_references, references)
+        self.store.close()
+        self.store = self.open_store(max_frames=2)
+        self.assertEqual(self.store.historical_references, references)
+        self.store.close()
+        (self.directory / "frames" / "orphan.png").write_bytes(png())
+        with self.assertRaises(CapacityError): self.open_store(max_frames=2)
 
     def test_inspect_current_reports_age_without_authority_but_detects_corruption(self):
         first = self.ingest()

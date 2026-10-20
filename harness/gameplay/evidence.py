@@ -229,11 +229,16 @@ class EvidenceStore:
             raise EvidenceError("Evidence store is closed")
 
     def _usage(self) -> tuple[int, int]:
-        count = size = 0
+        # Missing indexed sources retain their slots: dropping their bytes cannot
+        # admit an unbounded manifest or erase a memory frontier. Orphans consume
+        # additional slots rather than substituting for those missing sources.
+        count, size = len(self._entries), 0
+        indexed_names = {identity + ".png" for identity in self._entries}
         for path in self.frames.iterdir():
             if path.is_symlink() or not path.is_file():
                 raise EvidenceError("Unexpected non-file in retained evidence")
-            count += 1
+            if path.name not in indexed_names:
+                count += 1
             size += path.stat().st_size
         if count > self.max_frames or size > self.max_bytes:
             raise CapacityError("Existing retention exceeds cap; no evidence was deleted")
@@ -276,10 +281,18 @@ class EvidenceStore:
                     self._entries[ref.observation_id] = _Entry(ref, observation, lag)
                 if not set(self._disputed) <= self._entries.keys():
                     raise EvidenceError("Disputed source is not retained")
-                # Load all metadata before verification can persist a dispute;
-                # otherwise a bad early frame could truncate later entries.
+                # Preserve valid metadata even when an original image is lost.
+                # Memory needs the missing newest reference to avoid resurrecting
+                # older claims. No loaded source becomes current on reopen.
+                lost_source = False
                 for entry in self._entries.values():
-                    self.verify(entry.reference)
+                    try:
+                        self._verify_file(entry.reference)
+                    except EvidenceError as exc:
+                        self._invalidate(str(exc), entry.reference.observation_id)
+                        lost_source = True
+                if lost_source:
+                    self._save()
             except (OSError, ValueError, TypeError, KeyError, RecursionError) as exc:
                 if isinstance(exc, EvidenceError):
                     raise

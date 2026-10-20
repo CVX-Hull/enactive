@@ -553,9 +553,15 @@ scene revision: `paused` remains immutable within one frame but is excluded from
 cross-frame scene comparison. Actual scene/boundary conflicts still dispute peers.
 Historical references remain verifiable but cannot authorize input.
 Reopening starts without current authority or a dispatch reservation.
+Valid retained metadata remains inspectable when an original image is missing or
+corrupt. Reopening records that source as disputed; verification still rejects
+unavailable bytes and restored bytes do not clear the dispute. This preserves
+memory frontiers without reviving older claims. Invalid metadata and failed
+dispute persistence still reject reopening.
 
 Each caller-owned store has one writer and defaults to32frames/64MiB, including
-existing files on reopen. Explicit mission admission may raise retention up to
+indexed source slots (including missing originals) and orphan files on reopen.
+Explicit mission admission may raise retention up to
 4096frames/1GiB. Metadata stays bounded to34MiB with separate bookkeeping headroom;
 capacity checks reserve worst-case after metadata before dispatch. Each image is at most 32 MiB. Before
 dispatch, retain the before-frame and reserve one additional slot plus 32 MiB for
