@@ -19,7 +19,9 @@ class MissionLaunchTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
         self.addCleanup(temporary.cleanup)
-        self.controller = Controller(Path(temporary.name), timeout=0.25)
+        # Functional file exchanges need scheduling/fsync time on shared runners.
+        # Deliberately withheld ACKs still time out and remain unknown.
+        self.controller = Controller(Path(temporary.name), timeout=0.8)
         self.addCleanup(self.controller.close)
         self.bridge = VisibleBridge(self.controller)
         self.bridge.value.update(in_game=False, scene=None, ui=None, category="MAIN_MENU",

@@ -115,6 +115,14 @@ resolve and review this scope before pulling more implementation work. Publish t
 single contract only after callers, persistence validation, tests and current
 documentation agree. Component tests do not establish native acceptance.
 
+The item/count/inspection and activity-poll checkpoint passed local and
+pull-request checks, but its first push CI timed out in two synthetic lifecycle
+tests before their finish assertions. The retained failure is not native evidence.
+A controlled delayed-ACK probe reproduces that fixture limit; the functional
+fixture now uses the existing runtime suite's bounded wait, while deliberately
+withheld acknowledgments still become unknown. Exact-head common and hosted
+checks must verify this correction before the tracker calls the source green.
+
 The lead owns contracts/runtime/ledger and the sole native runtime. Existing item
 policy and activity transport workers have finished their assigned paths; further
 implementation delegation needs a new frozen, disjoint brief, with at most two
