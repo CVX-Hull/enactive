@@ -371,6 +371,10 @@ class RegisteredLifecycle:
             return self._inspect(work, phase)
         if data["skill_kind"] not in ("menu", "edit"):
             raise ControlError("Lifecycle setup permits only its menu, editor or identity inspection")
+        if data["skill_kind"] == "edit" and data["goal"]["purpose"] in ("world_name", "character_name"):
+            field = "world" if data["goal"]["purpose"] == "world_name" else "character"
+            if phase.operation != "create" or data["goal"]["text"] != getattr(r._admission.scenario, field):
+                raise ControlError("Creation name editor must use its exact admitted identity")
         state = r._store.observation(phase.checkpoint)
         if state["category"] == "YESNO":
             view = data["perception"]

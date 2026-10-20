@@ -14,7 +14,7 @@ from tests.test_gameplay_evidence import observation
 from tests.test_mission_contracts import claim
 
 
-class MissionCreationTests(unittest.TestCase):
+class MissionCreationFixture:
     setUp = launch_fixtures.MissionLaunchTests.setUp
     start = launch_fixtures.MissionLaunchTests.start
     settled = launch_fixtures.MissionLaunchTests.settled
@@ -62,6 +62,19 @@ class MissionCreationTests(unittest.TestCase):
         elif category == "WORLDGEN_CONFIRM_DIALOG" and action == "FINALIZE":
             self.stage = "world-confirmation"
             self.menu("YESNO", ["YES", "NO"])
+        elif category in ("WORLDGEN_CONFIRM_DIALOG", "NEW_CHAR_DESCRIPTION") and action == "CONFIRM":
+            self.editor_parent = category
+            self.bridge.editor_text = "Old"
+            self.menu("STRING_INPUT", ["TEXT.CLEAR", "TEXT.CONFIRM", "TEXT.QUIT"])
+        elif category == "STRING_INPUT":
+            if action == "TEXT.CLEAR":
+                self.bridge.editor_text = ""
+            elif request["kind"] == "key":
+                self.bridge.editor_text += request["key"]
+            elif action == "TEXT.CONFIRM":
+                actions = (["UP", "DOWN", "CONFIRM", "FINALIZE"] if self.editor_parent == "WORLDGEN_CONFIRM_DIALOG"
+                    else ["PREV_TAB", "NEXT_TAB", "CONFIRM"])
+                self.menu(self.editor_parent, actions)
         elif category == "NEW_CHAR_DESCRIPTION" and action == "NEXT_TAB":
             self.stage = "points-confirmation" if getattr(self, "spare_points", False) else "character-confirmation"
             self.menu("YESNO", ["YES", "NO"])
@@ -131,7 +144,7 @@ class MissionCreationTests(unittest.TestCase):
         else:
             perception.update(kind="menu", control="vertical", rows=[dict(label=label, enabled=True)], selected=0, question="")
             goal = dict(purpose=purpose or "Select visible setup option", label=label, outcome="activated")
-        return dict(schema="mission/2", kind="skill", request_id=identity, mission_id=self.a.mission_id,
+        return dict(schema="mission/3", kind="skill", request_id=identity, mission_id=self.a.mission_id,
             epoch=self.runtime.status()["epoch"], skill_kind=kind, phase_id=parent, work_id=None,
             sources=[ref.observation_id], expected_session=ref.session, expected_revision=ref.revision,
             expected_boundary_id=observed["boundary"]["id"], perception=perception, goal=goal,
@@ -144,7 +157,7 @@ class MissionCreationTests(unittest.TestCase):
             scope=dict(mission_id=self.a.mission_id, session=ref.session, coordinate_epoch=epoch),
             observed_time=dict(revision=ref.revision, turn=ref.turn), received_time=int(time.time() * 1000),
             sources=[ref.observation_id], supports=[dict(sources=[ref.observation_id], claims=[])])
-        operation = self.run_request(dict(schema="mission/2", kind="remember", request_id=f"remember-{identity}",
+        operation = self.run_request(dict(schema="mission/3", kind="remember", request_id=f"remember-{identity}",
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], entry_type="claim", entry=entry))
         self.assertEqual(operation["state"], "completed", operation)
         return entry["id"]
@@ -187,13 +200,13 @@ class MissionCreationTests(unittest.TestCase):
         self.assertEqual(entered["state"], "unknown", entered)
         self.assertIsNone(self.runtime._registered_lifecycle.phase)
         self.assertIsNotNone(self.runtime._registered_lifecycle.candidate)
-        observed = self.run_request(dict(schema="mission/2", kind="observe", request_id="create-observe",
+        observed = self.run_request(dict(schema="mission/3", kind="observe", request_id="create-observe",
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
         self.assertEqual(observed["state"], "completed", observed)
         return self.finish_identity("create", world)
 
     def observe(self, identity):
-        operation = self.run_request(dict(schema="mission/2", kind="observe", request_id=identity,
+        operation = self.run_request(dict(schema="mission/3", kind="observe", request_id=identity,
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
         self.assertEqual(operation["state"], "completed", operation)
         return operation
@@ -220,10 +233,35 @@ class MissionCreationTests(unittest.TestCase):
         self.assertEqual(finished["state"], "completed", finished)
         return finished
 
+
+class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
     def test_spare_points_is_separate_from_final_character_confirmation(self):
         self.spare_points = True
         self.create()
         self.assertEqual(sum(p.get("action") == "YES" for p in self.bridge.delivered), 3)
+
+    def test_creation_name_editor_is_admitted_only_under_its_owned_root(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        self.run_request(self.control("world-form", "Create World"))
+        self.run_request(self.control("world-name-field", "World name"))
+        def editor(identity, visible, *, commit, root="create", text=None):
+            source, _ = self.current()
+            request = self.control(identity, "World name", parent=root)
+            request.update(skill_kind="edit", goal=dict(purpose="world_name",
+                text=text or self.a.scenario.world, commit=commit),
+                perception=dict(kind="editor", source_id=source.observation_id, basis="player_interpretation",
+                    purpose="world_name", label="World name", visible_text=visible, whole_value=True, focused=True))
+            request["limits"]["primitives"] = 16
+            return request
+        rejected = self.runtime.command(editor("unowned-editor", "Old", commit=False, root="other"))
+        self.assertEqual(rejected["status"], "rejected", rejected)
+        edited = self.run_request(editor("edit-world-name", "Old", commit=False))
+        self.assertEqual(edited["state"], "partial", edited)
+        self.assertEqual(self.bridge.editor_text, self.a.scenario.world)
+        committed = self.run_request(editor("commit-world-name", self.a.scenario.world, commit=True))
+        self.assertEqual(committed["state"], "partial", committed)
+        self.assertEqual(self.runtime._store.observation(self.runtime._current)["category"], "WORLDGEN_CONFIRM_DIALOG")
 
     def test_save_exit_new_child_load_preserves_exact_time_and_identity(self):
         self.create()
@@ -300,7 +338,7 @@ class MissionCreationTests(unittest.TestCase):
         self.create()
         self.runtime.close()
         self.runtime = MissionRuntime(self.controller)
-        self.runtime.command(dict(schema="mission/2", kind="start", request_id="reopened-start", admission=self.a.to_dict()))
+        self.runtime.command(dict(schema="mission/3", kind="start", request_id="reopened-start", admission=self.a.to_dict()))
         self.assertEqual(self.settled("reopened-start")["state"], "completed")
         self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 0)
         self.assertIsNone(self.runtime._registered_lifecycle.phase)

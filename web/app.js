@@ -214,7 +214,7 @@ async function missionObserve() {
   missionError = '';
   updateControls();
   try {
-    const request = {schema: 'mission/2', kind: 'observe', request_id: crypto.randomUUID(),
+    const request = {schema: 'mission/3', kind: 'observe', request_id: crypto.randomUUID(),
       mission_id: mission.mission_id, epoch: mission.epoch};
     const response = await fetch('/api/mission', {
       method: 'POST', headers: {'Content-Type': 'application/json', 'X-CDDA-Token': token},
@@ -268,9 +268,15 @@ function renderLifecycle(mission) {
     'No usable process sample'} · ${custody} · ${connection} · current liveness unknown`;
   const result = mission?.progress;
   const proof = record(result) ? result.normal_exit : null;
+  const finish = record(result) ? result.normal_finish : null;
+  const finishRecorded = record(finish) && finish.schema === 'mission/3' && finish.record_type === 'NormalFinish' &&
+    finish.grants_authority === false && [finish.final_source_id, finish.normal_exit_result_request_id].every(recordedId) &&
+    ((finish.disposition === 'stopped' && finish.completed_work_event_id === null) ||
+     (finish.disposition === 'completed' && recordedId(finish.completed_work_event_id)));
   // Summarize the producer's recorded proof; process samples and ACKs cannot supply it.
-  const verified = record(proof) && proof.schema === 'mission/2' && proof.record_type === 'OwnedNormalExit' &&
-    proof.grants_authority === false && proof.no_save_required === true && proof.returncode === 0 &&
+  const verified = record(proof) && proof.schema === 'mission/3' && proof.record_type === 'OwnedNormalExit' &&
+    proof.grants_authority === false && proof.returncode === 0 &&
+    (proof.no_save_required === true || proof.no_save_required === false && recordedId(proof.saved_checkpoint_request_id)) &&
     [proof.origin_request_id, proof.launch_request_id, proof.launch_id,
       proof.terminal_logical_id, proof.native_request_id].every(recordedId) &&
     Array.isArray(proof.source_ids) && proof.source_ids.length > 0 && proof.source_ids.every(recordedId) &&
@@ -282,8 +288,9 @@ function renderLifecycle(mission) {
   const receipt = record(mission?.last_receipt) ? mission.last_receipt : null;
   const matchesExit = verified && receipt?.native_request_id === proof.native_request_id &&
     receipt?.logical_action_id === proof.terminal_logical_id;
-  $('mission-exit').textContent = `${verified ?
-    `Recorded verified normal exit effect · launch ${proof.launch_id} · no save required (untouched menu)` :
+  $('mission-exit').textContent = `${finishRecorded ?
+    `Recorded normal finish report · ${finish.disposition === 'completed' ? 'player-reported objective completion' : 'normal cleanup; objective completion unclaimed'} · exit result ${finish.normal_exit_result_request_id} · final source ${finish.final_source_id} · mission state ${known(mission.phase)}. This report does not establish independent campaign acceptance` : verified ?
+    `Recorded verified normal exit effect · launch ${proof.launch_id} · ${proof.no_save_required ? 'no save required (untouched menu)' : `saved checkpoint ${proof.saved_checkpoint_request_id}`}` :
     'No verified normal exit proof reported'}. Latest primitive receipt ${known(receipt?.native_request_id)} · logical ${known(receipt?.logical_action_id)} · acknowledgment ${known(receipt?.transport_disposition)}. ${matchesExit ?
     'Matches the recorded terminal exit input.' : 'Not correlated with a recorded terminal exit input.'} Acknowledgment and exit effect are separate evidence.`;
 }

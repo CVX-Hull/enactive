@@ -11,7 +11,7 @@ review_trigger: Gameplay interfaces, supported observations, model adapters, bud
 This page preserves the first-slice design and its dated implementation narrative.
 Its live waypoint/planner ingress has been retired; it is not a supported runtime
 mode. Use [current architecture](../architecture.md) and the
-[mission/2 contract](../protocol.md#integrated-mission-lifecycle) for operation.
+[current mission contract](../protocol.md#integrated-mission-lifecycle) for operation.
 Passive study components remain current-format libraries.
 
 Original design for implementation under [#17](https://github.com/CVX-Hull/enactive/issues/17).

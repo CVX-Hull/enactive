@@ -331,14 +331,15 @@ separates implemented components from remaining independent-play acceptance.
 1. Freeze the exact reviewed candidate, finite objective/scenario/limits/reserve,
    actor, native build and permission preflight before gameplay. The initial
    admission is not authority to adopt an unrelated open character.
-2. Put one current mission/2 record in project `.runtime/mission-requests/record.json`.
+2. Put one current mission/3 record in project `.runtime/mission-requests/record.json`.
    Use `.venv/bin/python -m harness mission-request --request
    .runtime/mission-requests/record.json` from this trusted checkout. The CLI accepts
    a regular bounded JSON file directly in that directory, validates it and sends
    one authenticated request. It does not run code or create an arbitrary process.
 3. Start is source-free; explicit Observe is passive. Registered owned lifecycle must establish
-   world/character identity and fresh input authority. Those production adapters
-   remain unfinished; do not substitute raw keys/Resume or a trusted unit fixture.
+   world/character identity and fresh input authority. Source lifecycle composition
+   has synthetic coverage; native character/mission acceptance remains required.
+   Do not substitute raw keys/Resume or a trusted unit fixture.
 4. Read the result by its exact operation ID. Accepted only acknowledges admission;
    wait for the settled immutable result and inspect the frame/effect. A lost response
    is not nondelivery. Never change a request body under an existing ID or blindly

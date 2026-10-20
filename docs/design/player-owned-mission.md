@@ -8,7 +8,7 @@ review_trigger: Mission interface adoption; implementation or native validation 
 
 This is the design deliverable for [#137](https://github.com/CVX-Hull/enactive/issues/137),
 with implemented component checkpoints and remaining acceptance work below; it
-is not a gameplay admission. The coordinated mission/2 ingress now replaces the
+is not a gameplay admission. The coordinated mission/3 ingress now replaces the
 waypoint runtime. [Architecture](../architecture.md) and [protocol](../protocol.md)
 own current behavior; lifecycle and independent mission acceptance remain pending.
 The [assessment](../research-memory-architecture.md) supplies the research rationale;
@@ -68,7 +68,7 @@ passive contracts/planner/supervisor logic may remain only with current consumer
 and tests. Remove unconsumed execution scaffolding rather than keep two players.
 
 Advance gameplay records together to `gameplay/2` where their shared encoding is
-used; unsupported `gameplay/1` input rejects. Introduce `mission/2` for the strict
+used; unsupported `gameplay/1` input rejects. Introduce `mission/3` for the strict
 mission request/state envelope and `campaign-memory/2` for the durable index.
 Advance the evidence-store metadata to version3 and native observation to wire4
 for the visible-menu field below. Update every active producer/reader/fixture,
@@ -163,7 +163,7 @@ retaining the normal-only gate and calling external keys alongside it is rejecte
 
 ### Request shapes
 
-Every request has `schema=mission/2`, `kind` and a unique `request_id` except read-only
+Every request has `schema=mission/3`, `kind` and a unique `request_id` except read-only
 status/result/context. Mutating existing-mission operations additionally bind
 `mission_id` and `epoch`; input decisions bind the informing session/revision and
 boundary. Exact operation payloads are:
@@ -178,7 +178,7 @@ boundary. Exact operation payloads are:
 | skill | The exact skill request; kinds navigate/menu/item/activity/inspect/edit/interact, each with typed goal fields and bounded stop conditions. No callable, shell or arbitrary path. |
 | handoff / claim | Handoff names settled checkpoint/source IDs and intended successor role; claim consumes its originating request ID with exact epoch, boundary, native Pause origin and host/native generations after reconciliation. Runtime compares its designated actor and role; IDs are audit fields. |
 | lifecycle | `operation` launch/create/save/exit/load/finish, supported observed identity/target when relevant, before-source IDs and explicit remaining limits. No player-supplied process path/PID. |
-| stop | Reason and explicit finishing-versus-immediate-pause intent; always revokes further ordinary dispatch first. |
+| stop | Pause reason only; normal finish uses lifecycle(operation=finish). Former finish flags reject. |
 
 Only request IDs known as read-only may be retried as reads. An identical retained
 mutating request returns its existing state/result and never repeats inputs;
@@ -568,7 +568,7 @@ it does not establish implemented schemas, native fields, gameplay or efficacy.
 
 ### Passive source foundation checkpoint
 
-The first source slice defines strict `mission/2`/`campaign-memory/2` records in
+The first source slice defines strict `mission/3`/`campaign-memory/2` records in
 [mission_contracts.py](../../harness/gameplay/mission_contracts.py) and single-writer
 accounting in [mission_ledger.py](../../harness/gameplay/mission_ledger.py).
 These modules do not activate the proposed runtime or issue inputs. The coordinated
@@ -636,7 +636,9 @@ tests, including normal exit/new child/reload and exact saved-turn continuity.
 The [current protocol](../protocol.md#integrated-mission-lifecycle) specifies typed
 transition/adoption/checkpoint proofs, diagnostic unknown reconciliation, canonical
 all-session validation and non-restoration of authority. Native character lifecycle,
-item/activity/ordinary inspection, handoff/readmission and finish remain required;
+item/activity/ordinary inspection and handoff/readmission remain required; normal
+finish has source coverage after verified owned exit, with separate player-reported
+objective evidence and no native input. Actual mission acceptance remains open;
 there is no accepted independent mission or fresh player-context demonstration.
 
 The [native-row menu policy](../../harness/gameplay/interaction.py) can propose a
@@ -671,7 +673,9 @@ ground-versus-carried water corrections motivate explicit Work and effect eviden
 its lifecycle overhead motivates composed controls. Those totals are development
 evidence, not model latency or an efficiency baseline for a different scenario.
 
-Current source uses mission/2, campaign-memory/2 and ledger6. Every caller and
+Current source uses mission/3, campaign-memory/2 and ledger6. Mission/3 removes
+the competing Stop-finish flag and adds the strict NormalFinish result; prior
+mission/2 requests/admissions reject without mutation or a compatibility path. Every caller and
 fixture migrates; missing fields and prior formats reject without mutation or a
 compatibility reader. No production mission database existed at this migration.
 Native4/gameplay2/archive3 stay unchanged. These contracts do not accept independent gameplay; the current single ingress
@@ -786,7 +790,7 @@ session scope. The lifecycle proof must explicitly connect them rather than copy
 world source into a different session. Lifecycle must check actual phase source/support,
 current undisputed scope and admission names, not annotation text or any existing
 claim ID. These remain fallible identity evidence. One-current ingress and cached observer
-views are connected. Item/activity outcomes, remaining handoff/readmission/finish adapters, native
+views are connected. Item/activity outcomes, remaining handoff/readmission adapters, native
 character lifecycle and the actual fresh-player mission remain acceptance gates.
 
 

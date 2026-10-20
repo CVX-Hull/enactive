@@ -81,7 +81,7 @@ def command_parser() -> argparse.ArgumentParser:
             recovery.add_argument("--choice", choices=("YES", "NO"), required=True)
     mission = commands.add_parser("mission-request", help="Submit one current typed mission record; admission is not effect completion")
     mission.add_argument("--request", type=Path, required=True,
-                         help="One mission/2 JSON file directly in this project's .runtime/mission-requests")
+                         help="One mission/3 JSON file directly in this project's .runtime/mission-requests")
     return parser
 
 

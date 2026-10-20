@@ -44,7 +44,7 @@ ownership and observer visibility feed one [supply-and-shelter acceptance #144](
 then a [fresh seven-day assessment #145](https://github.com/CVX-Hull/enactive/issues/145)
 with the engineering lead outside gameplay. Reviewed component readiness permits
 shared native validation; the mission does not wait for component issue closure.
-The sole live ingress is now mission/2. Start/Observe remain read-only until the
+The sole live ingress is now mission/3. Start/Observe remain read-only until the
 registered lifecycle proves owned world/character; no unrelated running game can
 seed identity or mission time. Owned launch and untouched-menu normal exit are now
 qualified for the bounded untouched-menu Yes path, retaining the first failure,

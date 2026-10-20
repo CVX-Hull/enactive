@@ -111,7 +111,7 @@ planner and supervisor components below remain source/study tools, not another
 execution ingress. The [mission design](design/player-owned-mission.md) owns the
 chosen records, lifecycle requirements and separate native acceptance.
 
-Authenticated `POST /api/mission` accepts one strict mission/2 record, at most65536
+Authenticated `POST /api/mission` accepts one strict mission/3 record, at most65536
 UTF-8 bytes. It reuses host/origin/token and finite/duplicate-key JSON validation;
 operator command/recovery bodies keep4096-byte limits. Required fields and closed
 variants live in [mission_contracts.py](../harness/gameplay/mission_contracts.py),
@@ -124,7 +124,8 @@ remains passive. Even already-unpaused normal play does not prove the named worl
 anchor. Registered creation/load must establish those facts after owned launch.
 Registered creation/save/load and provisional character inspection now compose in
 source tests through the real controller, ledger and evidence archive. Item/activity,
-ordinary inspection, handoff/readmission and normal finish still need adapters.
+ordinary inspection and handoff/readmission still need adapters; normal finish now
+has source integration coverage, with native acceptance pending.
 Neither synthetic UI tests nor tests assuming identity accept an independent mission. Observe likewise cannot adopt
 an unexplained normal session. Reopening restores neither phase nor input authority.
 Interpreted tab focus excludes WORLDGEN_CONFIRM_DIALOG. NEW_CHAR_DESCRIPTION may
@@ -191,6 +192,34 @@ new coordinates never inherit old relative vectors. A rejected candidate adoptio
 can be explicitly corrected within its original phase/deadline. Reopen verifies
 history but reconstructs no process handle, phase, lineage, lease or queued input.
 Actual native creation/save/load and independent mission acceptance remain pending.
+
+`lifecycle(operation=finish)` is the sole normal finish route. Stop carries only
+its Pause reason; former Stop `finish` fields and mission/2 records reject. The
+current mission/3 contract migrates CLI, viewer, requests, results and fixtures
+without an alias or automatic old-admission import. Native wire4, gameplay/2,
+campaign-memory/2 and archive3 remain unchanged. Prior accepted reports and raw
+mission/2 artifacts remain historical evidence, not current request inputs.
+
+Finish sends no Observe, Resume or game input. It requires empty writer/controller/
+native slots, no live phase or unresolved effect, every owned launch's unique
+committed normal exit, and its exact retained final source. Source age alone does
+not invalidate this historical proof; missing/disputed bytes do. No objective Work
+means stopped cleanup. Player-reported completion requires the exact latest Work
+event matching the admission objective, coherent observed progress, retained
+sources and the last adopted coordinate scope. That interpretation is separate
+from independent campaign acceptance. Historical finish validation uses Work as of
+that report; a later legitimate update cannot rewrite its history.
+
+The immutable NormalFinish report precedes terminal mission persistence. The
+terminal transaction checks the exact epoch, original operation/mission deadline
+and matching report; the final cancellation/operator fence gives an earlier Pause
+precedence. Cancellation, expiry or crash between those writes preserves the
+report without automatic terminal replay. Reopen remains paused unless terminal
+persistence had actually completed. Successful terminal persistence releases the
+exited child handle/owner while retaining sampled facts and receipts, permitting
+a new explicit mission. The observer distinguishes reported completion, cleanup,
+current mission phase and independent acceptance. Synthetic tests do not qualify
+native final shutdown or the independent mission.
 
 Trusted Python `observe_mission(deadline_monotonic, timeout)` uses the original
 absolute deadline through command-lock admission and native publication. It grants
@@ -462,7 +491,7 @@ and journal evidence, granting no authority, replay or inferred resolution.
 
 The lead designates one general-purpose player for a finite mission. It chooses
 plans, interprets evidence, retrieves/updates memory and requests semantic skills
-and registered normal lifecycle through mission/2. The lead owns source/release
+and registered normal lifecycle through mission/3. The lead owns source/release
 acceptance, finite admission, shared runtime custody, escalation and final
 verification. It supplies no ordinary gameplay rescue in the deciding mission.
 Explorers/reviewers never send inputs. Actor names and instructions are workflow

@@ -20,7 +20,7 @@ from .contracts import ContractError, json_object
 from .mission_contracts import (
     VERSION, MissionAdmission, SourceRevalidation, canonical, validate_handoff_binding,
     validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption,
-    validate_normal_exit, validate_prompt_result, validate_request, validate_saved_checkpoint,
+    validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint,
 )
 
 DB_VERSION = 6
@@ -298,6 +298,11 @@ class MissionLedger:
             data = json_object(payload)
             actor = next(player for epoch, player in reversed(actors) if epoch <= data.get("epoch", 0))
             self._check_prompt_result(request_id, data, json_object(result), actor_id=actor, request_state=status)
+        if state["phase"] == "completed":
+            rows = self.request_records()
+            if (not rows or rows[-1]["state"] != "completed" or rows[-1]["result"] is None
+                    or rows[-1]["result"].get("normal_finish", {}).get("disposition") != "completed"):
+                raise LedgerError("Completed mission lost its final immutable NormalFinish report")
         count = 0
         for logical_id, request_id, intent, native_id, status, result, effect in self._db.execute(
                 "SELECT id,request_id,intent,native_id,state,result,effect FROM primitives"):
@@ -774,6 +779,10 @@ class MissionLedger:
 
     def _check_prompt_result(self, request_id: str, data: dict, result: dict, *, actor_id: str,
                              request_state: str) -> None:
+        if "normal_finish" in result:
+            if request_state != "completed":
+                raise LedgerError("Normal finish requires a completed immutable result")
+            self._check_normal_finish(request_id, data, result["normal_finish"])
         self._check_lifecycle_records(request_id, data, result, actor_id=actor_id, request_state=request_state)
         if "normal_exit" in result:
             if request_state != "completed":
@@ -1100,12 +1109,74 @@ class MissionLedger:
                 self._put("state", state)
         return self.request(request_id)
 
-    def finish_mission(self, disposition: str, *, reason: str, now: float) -> dict:
+    def _check_normal_finish(self, request_id: str, data: dict, value: dict) -> None:
+        proof = validate_normal_finish(value)
+        exit_row = self._earlier_request(request_id, proof["normal_exit_result_request_id"])
+        result = exit_row["result"]
+        if (data["kind"] != "lifecycle" or data["operation"] != "finish" or data["phase_id"] is not None
+                or data["identity_claim_ids"] or exit_row["state"] != "completed" or result is None
+                or "normal_exit" not in result or proof["final_source_id"] not in data["sources"]):
+            raise LedgerError("Normal finish requires its exact prior exit and retained informing source")
+        exit_proof = validate_normal_exit(result["normal_exit"])
+        if proof["final_source_id"] not in exit_proof["source_ids"]:
+            raise LedgerError("Final source does not belong to the normal exit")
+        prior = []
+        for row in self.request_records():
+            if row["request"]["request_id"] == request_id:
+                break
+            prior.append(row)
+        launched = {row["request"]["request_id"] for row in prior
+            if row["request"].get("operation") == "launch" and (row["result"] is None
+                or row["state"] in ("accepted", "running", "unknown") or row["result"].get("launch_attempted", False))}
+        exited = [row for row in prior if row["state"] == "completed" and row["result"] is not None
+            and "normal_exit" in row["result"]]
+        closed = [validate_normal_exit(row["result"]["normal_exit"])["launch_request_id"] for row in exited]
+        if (not launched or set(closed) != launched or len(closed) != len(set(closed))
+                or not exited or exited[-1]["request"]["request_id"] != proof["normal_exit_result_request_id"]):
+            raise LedgerError("Normal finish requires every owned launch's unique committed exit")
+        event = proof["completed_work_event_id"]
+        if event is None:
+            if data["work_id"] is not None:
+                raise LedgerError("Stopped cleanup cannot claim objective Work completion")
+            return
+        prior_ids = {row["request"]["request_id"] for row in prior}
+        # A historical report is an as-of statement. Later legitimate Work
+        # updates may change a future finish, never poison its earlier ledger.
+        entries = tuple(row for row in self.memory_records("work") if row["event_id"] in prior_ids)
+        selected = [row for row in entries if row["event_id"] == event]
+        if len(selected) != 1:
+            raise LedgerError("Objective finish requires its exact retained Work event")
+        entry = selected[0]["entry"]
+        memory_request = self._earlier_request(request_id, event)["request"]
+        _, saved = self._lifecycle_record(request_id, exit_proof.get("saved_checkpoint_request_id", ""), "saved_checkpoint")
+        _, adoption = self._lifecycle_record(request_id, saved["adoption_result_request_id"], "normal_adoption")
+        if (memory_request["kind"] != "remember" or memory_request["entry_type"] != "work"
+                or memory_request["entry"] != entry or entry["id"] != data["work_id"]
+                or entry["intent"] != self._get("admission")["objective"] or entry["status"] != "completed"
+                or entry["unresolved_effects"] or not entry["sources"] or entry["scope"] != adoption["scope"]
+                or any(row["entry"]["id"] == entry["id"] for row in entries[entries.index(selected[0]) + 1:])):
+            raise LedgerError("Objective finish lost its latest completed, supported and scoped Work report")
+
+    def finish_mission(self, disposition: str, *, epoch: int, request_id: str | None, reason: str, now: float) -> dict:
         """Record runtime-verified ending; operational evidence stays in its journal."""
         if disposition not in TERMINAL or not isinstance(reason, str) or not 1 <= len(reason) <= 1024:
             raise LedgerError("Invalid mission ending")
         with self._transaction():
             state = self._touch(now)
+            if type(epoch) is not int or state["epoch"] != epoch:
+                raise LedgerError("Mission ending lost its exact epoch")
+            if request_id is not None:
+                operation = self.request(request_id)
+                result = operation["result"] or {}
+                if (operation["state"] != "completed" or "normal_finish" not in result
+                        or result["normal_finish"]["disposition"] != disposition
+                        or self.request_records()[-1]["request"]["request_id"] != request_id):
+                    raise LedgerError("Normal terminal transition requires its exact latest committed finish report")
+                self._check_normal_finish(request_id, operation["request"], result["normal_finish"])
+                if now >= min(operation["deadline"], state["deadline"]):
+                    raise BudgetError("Original normal-finish deadline expired before terminal persistence")
+            elif disposition == "completed":
+                raise LedgerError("Completion requires its exact normal-finish operation")
             if state["phase"] in TERMINAL:
                 if state["phase"] == disposition and state["reason"] == reason:
                     return self.snapshot(now=now)
@@ -1117,6 +1188,12 @@ class MissionLedger:
                     raise LedgerError("Completion still has unresolved inputs")
                 if self._db.execute("SELECT 1 FROM requests WHERE state IN ('accepted','running')").fetchone():
                     raise LedgerError("Complete operation results before mission completion")
+                completed = [row for row in self.request_records() if row["state"] == "completed"
+                    and row["result"] is not None and row["result"].get("normal_finish", {}).get("disposition") == "completed"]
+                if not completed:
+                    raise LedgerError("Mission completion requires its immutable NormalFinish report")
+                if completed[-1]["request"]["request_id"] != self.request_records()[-1]["request"]["request_id"]:
+                    raise LedgerError("Mission completion cannot reuse an older finish report")
             state.update(phase=disposition, reason=reason)
             self._put("state", state)
         return self.snapshot(now=now)

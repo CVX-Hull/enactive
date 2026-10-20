@@ -9,6 +9,7 @@ import copy
 from dataclasses import asdict, dataclass, field, replace
 import hashlib
 import math
+import os
 from queue import Empty, Full, Queue
 import threading
 import time
@@ -44,6 +45,8 @@ class _Work:
     cancelled: threading.Event = field(default_factory=threading.Event)
     response: dict | None = None
     game_anchor: EvidenceRef | None = None
+    finish_epoch: int | None = None
+    finish_mark: tuple[str, int] | None = None
 
 
 @dataclass(frozen=True)
@@ -200,7 +203,7 @@ class MissionRuntime:
                 work = duplicate
             elif self._closed.is_set():
                 rejection = "Mission runtime is closed"
-            elif kind == "stop" and not data["finish"] and self._handles:
+            elif kind == "stop" and self._handles:
                 rejection = "Pause requested; Stop not admitted while writer busy. Read settled state and submit a new Stop ID/current epoch"
                 busy_stop = True
             elif (kind in ("skill", "lifecycle") and any(
@@ -214,7 +217,10 @@ class MissionRuntime:
                     (kind != "skill" or data["phase_id"] != self._exit_phase.root_id or data["skill_kind"] != "menu")):
                 rejection = "Owned exit permits only its exact interpreted confirmation child"
             elif (kind == "skill" and data["skill_kind"] == "edit"
-                    and data["goal"]["purpose"] in ("character_name", "world_name")):
+                    and data["goal"]["purpose"] in ("character_name", "world_name")
+                    and (self._registered_lifecycle.phase is None
+                         or self._registered_lifecycle.phase.operation != "create"
+                         or self._registered_lifecycle.phase.root_id != data["phase_id"])):
                 rejection = "Creation-name editing requires the registered lifecycle adapter"
             else:
                 try:
@@ -741,7 +747,7 @@ class MissionRuntime:
                     or self.controller._command_work or self.controller.command_lock.locked()
                     or self.controller.control_lock.locked() or not self.controller.pause_requested):
                 raise ControlError("Owned launch requires paused empty controller slots")
-        if any((self.controller.bridge / name).exists() for name in
+        if any(os.path.lexists(self.controller.bridge / name) for name in
                ("request.json", "claimed.json", "control.json", "control-claimed.json")):
             raise ControlError("Owned launch requires empty native inboxes")
 
@@ -835,7 +841,101 @@ class MissionRuntime:
             return self._exit(work)
         if work.request["operation"] in ("create", "save", "load"):
             return self._registered_lifecycle.command(work)
+        if work.request["operation"] == "finish":
+            return self._finish(work)
         return self._unsupported("Registered create/save/exit/load/finish adapter and identity/effect evidence required")
+
+    def _finish_guard(self, work: _Work) -> None:
+        self._check_cancelled(work)
+        operation = self._ledger.request(work.request["request_id"])
+        if self._wall() >= min(operation["deadline"], self._mission_deadline):
+            raise BudgetError("Original finish/mission wall deadline expired")
+        if self._operator_mark() != work.finish_mark:
+            raise ControlError("Finish superseded by operator Pause or controller restart")
+        with self._metadata:
+            self._check_cancelled(work)
+            if any(handle is not work for handle in self._handles) or not self._queue.empty():
+                raise ControlError("Finish requires settled other runtime handles and queue")
+        with self.controller.data_lock:
+            if (self.controller.pending is not None or self.controller.control_pending is not None
+                    or self.controller._mission_lease is not None or self.controller._command_work
+                    or self.controller.command_lock.locked() or self.controller.control_lock.locked()
+                    or not self.controller.pause_requested):
+                raise ControlError("Finish requires paused empty controller slots")
+        if any(os.path.lexists(self.controller.bridge / name) for name in
+                ("request.json", "claimed.json", "control.json", "control-claimed.json")):
+            raise ControlError("Finish requires empty native inboxes")
+        if self._native is not None:
+            self._native_facts = self._native.status()
+            if self._native_facts["running"] or self._native_facts["returncode"] != 0:
+                raise ControlError("Finish requires its retained child's normal exit")
+
+    def _finish(self, work: _Work) -> tuple[str, dict]:
+        data = work.request
+        work.finish_mark = self._operator_mark()
+        self._finish_guard(work)
+        if (self._lost_process_custody or self._lease is not None or self._prompt_phase is not None
+                or self._exit_phase is not None or self._registered_lifecycle.phase is not None
+                or self._registered_lifecycle.candidate is not None or data["phase_id"] is not None
+                or data["identity_claim_ids"] or self._current is None):
+            raise ControlError("Finish requires settled lifecycle and owned custody")
+        reference = self._current
+        state = self._store.observation(reference)
+        if (reference.observation_id not in data["sources"]
+                or (data["expected_session"], data["expected_revision"], data["expected_boundary_id"]) !=
+                   (reference.session, reference.revision, state["boundary"]["id"])
+                or self._store.source_status(reference) != "retained"):
+            raise EvidenceError("Finish requires its exact retained final source; age alone is not failure")
+        exits = [row for row in self._ledger.request_records() if row["state"] == "completed"
+            and row["result"] is not None and "normal_exit" in row["result"]]
+        if not exits:
+            raise ControlError("Normal finish requires a committed owned exit, not process absence")
+        event = None
+        if data["work_id"] is not None:
+            records = self._ledger.memory_records("work")
+            matches = [row for row in records if row["entry"]["id"] == data["work_id"]]
+            if not matches:
+                raise EvidenceError("Objective finish requires retained Work")
+            entry = matches[-1]["entry"]
+            refs = {ref.observation_id: ref for ref in self._store.historical_references}
+            views, reasons = CampaignMemory._work_views(records, refs)
+            if data["work_id"] in reasons or views[data["work_id"]]["status"] != "completed":
+                raise EvidenceError("Objective Work has incomplete or conflicting observed progress")
+            for identity in views[data["work_id"]]["sources"]:
+                if identity not in refs or self._store.source_status(refs[identity]) != "retained":
+                    raise EvidenceError("Objective Work source is lost or disputed")
+            normals = [ref for ref in refs.values() if ref.boundary_kind == "normal_play"]
+            if not normals or entry["scope"] != self._coordinate_scope(normals[-1]):
+                raise EvidenceError("Objective Work must be revalidated in the last adopted normal session")
+            event = matches[-1]["event_id"]
+        proof = {"schema": VERSION, "record_type": "NormalFinish", "final_source_id": reference.observation_id,
+            "normal_exit_result_request_id": exits[-1]["request"]["request_id"],
+            "completed_work_event_id": event, "disposition": "stopped" if event is None else "completed",
+            "grants_authority": False}
+        self._ledger._check_normal_finish(data["request_id"], data, proof)
+        self._finish_guard(work)
+        self.controller.stop_input()
+        self._lease, self._map = None, None
+        self._bindings.clear()
+        state = self._ledger.begin_finishing(epoch=data["epoch"], reason="Normal exit verified; recording mission outcome", now=self._wall())
+        work.finish_epoch = state["epoch"]
+        self._finish_guard(work)
+        return "completed", {"normal_finish": proof, "grants_authority": False}
+
+    def _commit_finish(self, work: _Work, result: dict) -> None:
+        """Pause before this final fence wins; later Pause cannot rewrite history."""
+        self._apply_pauses()
+        self._finish_guard(work)
+        state = self._ledger.snapshot(now=self._wall())
+        if state["epoch"] != work.finish_epoch or state["phase"] != "finishing":
+            raise ControlError("Finishing epoch changed before terminal persistence")
+        disposition = result["normal_finish"]["disposition"]
+        self._ledger.finish_mission(disposition, epoch=work.finish_epoch,
+            request_id=work.request["request_id"],
+            reason="Player-reported objective completion" if disposition == "completed" else "Normal cleanup; objective completion unclaimed",
+            now=self._wall())
+        self._record("mission_normal_finish", result)
+        self._native, self._native_owner, self._owned_launch = None, None, None
 
     def _owned_menu(self) -> _OwnedLaunch:
         launch = self._owned_launch
@@ -1539,7 +1639,7 @@ class MissionRuntime:
             return self._handoff(work)
         if kind == "lifecycle":
             return self._lifecycle(work)
-        if kind == "stop" and not work.request["finish"]:
+        if kind == "stop":
             self.pause(work.request["reason"], cause="user")
             self._apply_pauses()
             return "completed", {"reason": work.request["reason"], "paused": True, "grants_authority": False}
@@ -1600,6 +1700,8 @@ class MissionRuntime:
         operation = self._ledger.complete_request(data["request_id"], disposition, result, now=self._wall())
         try:
             self._registered_lifecycle.after_commit(work, disposition, result)
+            if disposition == "completed" and "normal_finish" in result:
+                self._commit_finish(work, result)
         except _Cancelled:
             # The immutable result remains historical evidence. A concurrent
             # operator Pause cancels publication, not the entire mission writer.
@@ -1607,6 +1709,11 @@ class MissionRuntime:
             self._map = None
             self._registered_lifecycle.revoke()
             self._apply_pauses()
+        except (ContractError, ControlError) as exc:
+            if "normal_finish" not in result:
+                raise
+            self._diagnostic = f"Finish report retained; terminal transition withheld: {exc}"[:1024]
+            self._stop_after_failure(self._diagnostic)
         self._progress = result
         self._publish()
         self._cache_operation(operation)

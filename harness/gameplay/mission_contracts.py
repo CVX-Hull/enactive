@@ -1,4 +1,4 @@
-"""Strict mission/2 data. Parsing never grants a controller capability.
+"""Strict mission/3 data. Parsing never grants a controller capability.
 
 The existing JSON decoder/schema helpers own duplicate, finite-number and strict
 integer validation. Request dictionaries are decoded copies, not mutable aliases.
@@ -15,7 +15,7 @@ from .contracts import (
     json_object, validate_json,
 )
 
-VERSION = "mission/2"
+VERSION = "mission/3"
 MEMORY_VERSION = "campaign-memory/2"
 MAX_REQUEST_BYTES = 65_536
 MAX_CONTEXT_BYTES = 32_768
@@ -235,6 +235,12 @@ _SAVED_CHECKPOINT = _object({
     "adoption_result_request_id": _ID, "normal_endpoint_source_id": _ID,
     "menu_source_id": _ID, "grants_authority": {"const": False},
 })
+_NORMAL_FINISH = _object({
+    "schema": {"const": VERSION}, "record_type": {"const": "NormalFinish"},
+    "final_source_id": _ID, "normal_exit_result_request_id": _ID,
+    "completed_work_event_id": _nullable(_ID), "disposition": _enum("stopped", "completed"),
+    "grants_authority": {"const": False},
+})
 
 
 def canonical(value: dict[str, Any]) -> str:
@@ -315,6 +321,16 @@ def validate_saved_checkpoint(value: dict) -> dict:
     data = _decode(value, _SAVED_CHECKPOINT)
     if data["normal_endpoint_source_id"] == data["menu_source_id"]:
         raise ContractError("A save checkpoint needs distinct normal and menu endpoints")
+    return data
+
+
+def validate_normal_finish(value: dict) -> dict:
+    """Historical cleanup and player-reported objective outcome, not acceptance."""
+    if type(value) is not dict:
+        raise ContractError("Normal finish requires a typed object")
+    data = _decode(value, _NORMAL_FINISH)
+    if (data["disposition"] == "completed") != (data["completed_work_event_id"] is not None):
+        raise ContractError("Player-reported completion requires its exact objective Work event")
     return data
 
 
@@ -578,7 +594,7 @@ def _request_schema(kind: str, data: dict) -> dict:
                          limits=_LIFECYCLE_LIMITS, work_id=_nullable(_ID), phase_id=_nullable(_ID),
                          identity_claim_ids={**_array(_ID, 4), "uniqueItems": True})
         elif kind == "stop":
-            props.update(reason=_text(1024), finish={"type": "boolean"})
+            props.update(reason=_text(1024))
         else: raise ContractError("Unknown mission operation")
     return _object(props)
 

@@ -99,7 +99,7 @@ class MissionCliTests(unittest.TestCase):
         self.directory = self.root / ".runtime" / "mission-requests"
         self.directory.mkdir(parents=True)
         self.path = self.directory / "request.json"
-        self.record = dict(schema="mission/2", kind="observe", request_id="observe-1", mission_id="mission-1", epoch=0)
+        self.record = dict(schema="mission/3", kind="observe", request_id="observe-1", mission_id="mission-1", epoch=0)
         self.path.write_text(json.dumps(self.record))
         root_patch = patch.object(cli, "ROOT", self.root)
         root_patch.start()
@@ -119,7 +119,7 @@ class MissionCliTests(unittest.TestCase):
 
     def test_malformed_old_contract_script_and_oversized_records_never_contact_service(self):
         for value in (json.dumps({**self.record, "schema":"mission/1"}), json.dumps({**self.record, "extra":1}),
-                '{"schema":"mission/2","schema":"mission/2"}', '[]', 'NaN', 'x'*65537,
+                '{"schema":"mission/3","schema":"mission/3"}', '[]', 'NaN', 'x'*65537,
                 'import os; os.system("false")'):
             self.path.write_text(value)
             code, _, opener = self.submit()
