@@ -223,8 +223,11 @@ before authority is relinquished, and Work writes freeze until readmission.
 Current source migrates every active caller to mission/7, campaign-memory/3 and
 ledger9. Tests/source review do not accept native successor play. #166 owns the
 user's explicit zero routine approval-review requirement; literal allow matching
-and an approved passive call do not prove it. #164 owns automated request/result/
-image handling with that requirement. These are actual owned next steps before
+and an approved passive call do not prove it. #164 now has a thin structured-client
+implementation using the official MCP SDK, existing ingress, ledger and exact
+retained images. Request staging and bounded collection replace the player's
+manual file/helper/polling loop. Actual-host loading, review-free operation and
+new native mission acceptance remain pending. These are actual owned steps before
 #156 readiness, a genuinely new #157/#144 mission and #145's finite seven-day plan
 or blockers. Never resume or relabel a failed attempt. Changed host validation
 needs actual scoped acceptance; the unchanged native binary needs no rebuild

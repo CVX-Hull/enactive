@@ -725,6 +725,21 @@ def _request_schema(kind: str, data: dict) -> dict:
     return _object(props)
 
 
+def request_schema(kind: str, **selectors: Any) -> dict:
+    """Copy the receiver's current shape for a selected tagged operation.
+
+    Tool adapters may remove generated headers from this description, but must
+    still validate their completed record through validate_request. This is a
+    schema description, never evidence, admission or a second validator.
+    """
+    return json_object(_request_schema(kind, selectors))
+
+
+def perception_schema() -> dict:
+    """The current closed interpretation union, for structured client tools."""
+    return json_object({"anyOf": [{"type": "null"}, *_VIEWS.values()]})
+
+
 def validate_request(value: dict | str | bytes) -> dict:
     """Validate and copy one closed operation. No controller/process reference."""
     if isinstance(value, (str, bytes)) and len(value.encode() if isinstance(value, str) else value) > MAX_REQUEST_BYTES:

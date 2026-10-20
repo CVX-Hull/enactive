@@ -11,3 +11,5 @@ __pycache__/
 .DS_Store
 dist/
 *.egg-info/
+# Generated machine-local MCP launch paths; portable recipe is tracked.
+.codex/config.toml

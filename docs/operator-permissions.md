@@ -160,6 +160,34 @@ silently route a denied action through another tool, override managed policy or
 use a broad Python/shell allowance. Keep local deterministic protocol validation,
 finite accounting and user Pause/control; these require no reviewer model.
 
+The [structured player adapter](changes/051-structured-player-tools.md) now has
+source/fixture support for typed submission, result collection and actual retained
+images. Its [project setup recipe](setup.md#configure-the-structured-player-tools)
+configures only the named MCP tools with per-server `approve` behavior. The official
+SDK owns stdio framing; the same mission ingress still owns execution. Active
+desktop loading, actual designated-player calls and absence of human/automatic
+review remain unverified. This is an explicitly configured integration under the
+standing authorization, after the old denial was resolved on its original path;
+it is not an alternate route for a pending denied action. Source checks or a CLI
+configuration read cannot close #166.
+
+On2026-10-20 the generated project table was installed and the supported CLI
+recognized its fifteen named tools. A separate Codex0.162.1 `--strict-config`
+diagnostic returned the enabled project layer, exact stdio command/cwd, explicit
+tool list and `default_tools_approval_mode:"approve"`. The inherited global
+on-request/auto_review values stayed unchanged. Diagnostic SQLite/log paths were
+project-local; no model thread was started and the owned process exited0. The
+first diagnostic rejected an incorrect state-path key before startup; the corrected
+restricted run failed EPERM, then the authorized corrected run passed. These are
+configuration evidence, not active-host/no-review evidence. The tools subsequently
+appeared through the host's supported refresh without a user restart. The parent
+and a fresh general-purpose agent both saw all fifteen tools; one parent and two
+agent snapshot calls reached the real MCP server and returned the expected
+no-controller error. This proves catalogue loading/dispatch, not live loopback or
+zero-review gameplay. No review event was visible; that alone is not proof of its
+absence. The daemon socket was absent and Computer Use refused the Codex app;
+neither was worked around. Actual-player live-service verification remains required.
+
 The [trust correction](changes/033-gameplay-permission-preflight.md) records the
 observed disabled project layer and the exact-project fix. Fresh bundled loading
 was followed by the [actual-player reload/resumption](acceptance/2026-10-18-activity-distraction-stop.md)

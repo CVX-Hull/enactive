@@ -33,6 +33,15 @@ forbidden_modules = [
 ]
 
 [[tool.importlinter.contracts]]
+name = "Player tools use ingress and cannot instantiate an executor"
+type = "forbidden"
+source_modules = ["harness.mission_client", "harness.player_tools", "harness.player_mcp"]
+forbidden_modules = [
+    "harness.controller", "harness.server", "harness.mission_runtime",
+    "harness.native_process", "harness.__main__",
+]
+
+[[tool.importlinter.contracts]]
 name = "Movement policy remains pure and shared"
 type = "forbidden"
 source_modules = ["harness.movement"]

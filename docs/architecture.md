@@ -57,8 +57,17 @@ unchanged; real authority/evidence faults still stop. The
 case and programmatic request construction. It adds no executor or alternate API.
 The pure client producer combines selected retained context with semantic intent
 into that same contract. It owns no live state or source selection; receiver guards
-remain authoritative. This small composition gap does not justify another service,
-schema framework, history layer or dependency.
+remain authoritative. A project-local stdio MCP adapter now exposes structured
+intent, bounded result collection and actual images over this same HTTP ingress.
+The official SDK owns MCP framing; no new executor, schema framework or history
+store is added. Current receiver schemas describe tool arguments. Disposable
+snapshot/source handles retain explicit choices; stable request files fence a
+second submission and the existing ledger owns results. Exact indexed archive
+readers keep historical images available after bridge eviction without observing
+or refreshing authority. [The integration brief](changes/051-structured-player-tools.md)
+records the reuse choice, bounds, maintenance and separate host/native gates.
+The [source/setup report](acceptance/2026-10-20-structured-player-tools.md) records
+the synthetic/SDK checks and actual active-host limitation.
 
 Memory assertions and their combined views have separate bounds. A `WorkView`
 retains all coherent premises, including conflicts, rather than forcing history
@@ -72,6 +81,7 @@ owns the exact source/byte bounds and later evidence-loss limits.
 | --- | --- | --- |
 | Lead / active Codex chat | Objective → frozen admission, reviewed source and acceptance | Owns shared runtime and integration; no ordinary gameplay rescue in the deciding mission |
 | Designated player / general-purpose agent | Visible evidence and memory → typed mission requests, plans and verification | One bounded actor; fresh-context handoff needs quiescence and one-use accounting; no authority from a summary |
+| Structured player adapter / harness maintainer | Explicit semantic arguments and returned handles → existing ingress, settled result and exact PNG | No capability, source refresh, replay, automatic Resume or new ledger; actual host review-free proof remains separate |
 | Mission runtime / harness maintainer | mission/7 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
 | Controller / harness maintainer | State-bound command → native request and correlated receipt | Serialized ordinary/control writers, exact process-local lease, Pause revocation and native fences; never edits saves |
 | Native bridge / integration maintainer | Bounded request → actual input, visible metadata and rendered frame | Engine validates outcomes on its game thread; unsupported boundaries cannot claim success |

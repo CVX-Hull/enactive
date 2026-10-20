@@ -112,6 +112,27 @@ tracked; these controller capabilities alone do not make a player autonomous.
 
 ## Integrated mission lifecycle
 
+The project-local structured player adapter describes current semantic arguments
+from these same schemas and submits to the same authenticated ingress. It supplies
+common headers from an explicitly selected returned snapshot, derives ordinary
+bindings with the pure producer and retains the exact stable request before the
+first POST. Repeating a staged identity collects only its original result; a lost
+reply never permits another action POST. Bounded process-local handles grant no
+authority and are not persisted history. `enactive_start` belongs to the lead's
+frozen admission; player skill, memory and lifecycle choices remain explicit.
+
+Authenticated `GET /api/mission/source?mission_id=ID&source_id=ID` and
+`GET /api/mission/frame` with the same exact query expose one indexed original
+archive entry/PNG. Both require the local token, exact query keys and the atomically
+published mission/store binding. Metadata includes reference, observation,
+retained/disputed disposition and `grants_authority:false`; image reads verify the
+original bounded PNG hash. They use neither an arbitrary path nor a newer bridge
+frame and do not renew evidence clocks, Observe or mutate a lease. Missing/changed
+bytes fail. Runtime input validation still owns sticky invalidation and freshness.
+Storage replacement retires the presentation binding before closing the old store.
+The [adapter brief](changes/051-structured-player-tools.md) separates source/SDK,
+actual host zero-review and native acceptance.
+
 The service constructs one [MissionRuntime](../harness/mission_runtime.py), with
 one bounded writer, one queue slot and no automatic admission, launch or Resume.
 The old waypoint runtime and its live API/CLI are removed. Passive movement,

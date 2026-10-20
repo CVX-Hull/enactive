@@ -10,9 +10,10 @@ import tempfile
 import threading
 import time
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 from urllib.error import HTTPError
 from urllib.request import Request, build_opener, ProxyHandler
+from urllib.parse import urlencode
 
 from harness.controller import Controller
 from harness.server import Server
@@ -81,6 +82,61 @@ class MissionHTTPTests(unittest.TestCase):
         with patch.object(runtime, "_bootstrap", side_effect=lambda work: bootstrap_core_fixture(runtime, work)):
             self.submit(dict(schema="mission/7", kind="start", request_id="start-1", admission=self.a.to_dict()))
             self.assertEqual(self.settled("start-1")["state"], "completed")
+
+    def test_indexed_source_is_exact_after_bridge_eviction_and_never_refreshes(self):
+        self.start()
+        ref = self.server.mission._current
+        archive = self.server.mission._store
+        original = archive.observation(ref)
+        (self.controller.bridge / original["frame"]).unlink()
+        before = (self.server.mission.status(), archive.authority_generation, len(self.bridge.delivered))
+        query = urlencode(dict(mission_id=self.a.mission_id, source_id=ref.observation_id))
+        source = self.request("/api/mission/source?" + query)
+        self.assertEqual(source["reference"], ref.to_dict())
+        self.assertEqual(source["observation"], original)
+        self.assertEqual(source["disposition"], "retained")
+        self.assertFalse(source["grants_authority"])
+        request = Request(self.base + "/api/mission/frame?" + query,
+                          headers={"X-CDDA-Token": self.controller.token})
+        with self.opener.open(request) as response:
+            self.assertEqual(response.read(), Path(ref.frame_path).read_bytes())
+        self.assertEqual(self.server.mission.status()["current_source"], before[0]["current_source"])
+        self.assertEqual(archive.authority_generation, before[1])
+        self.assertEqual(len(self.bridge.delivered), before[2])
+
+    def test_source_reader_requires_token_exact_scope_and_original_hash(self):
+        self.start()
+        ref = self.server.mission._current
+        query = urlencode(dict(mission_id=self.a.mission_id, source_id=ref.observation_id))
+        with self.assertRaises(HTTPError) as error:
+            self.opener.open(self.base + "/api/mission/source?" + query)
+        self.assertEqual(error.exception.code, 403)
+        error.exception.close()
+        for suffix in (query + "&source_id=" + ref.observation_id,
+                       query.replace(self.a.mission_id, "another-mission"),
+                       "mission_id=" + self.a.mission_id + "&source_id=../outside"):
+            with self.subTest(suffix=suffix):
+                self.assertIn("error", self.request("/api/mission/source?" + suffix))
+        Path(ref.frame_path).unlink()  # Deliberately replace this read-only synthetic fixture.
+        Path(ref.frame_path).write_bytes(b"changed")
+        self.assertIn("error", self.request("/api/mission/source?" + query))
+        self.assertIn("error", self.request("/api/mission/frame?" + query))
+
+    def test_source_reader_keeps_atomic_mission_store_binding_during_replacement(self):
+        self.start()
+        runtime = self.server.mission
+        ref = runtime._current
+        next_store = Mock()
+        # This is the real _start transition window: storage has switched while
+        # the published observer snapshot still names the previous mission.
+        with patch.object(runtime, "_store", next_store):
+            metadata, _ = runtime.source(self.a.mission_id, ref.observation_id)
+            self.assertEqual(metadata["reference"], ref.to_dict())
+            with self.assertRaisesRegex(ValueError, "No matching"):
+                runtime.source("next-mission", "next-source")
+            with self.assertRaisesRegex(ValueError, "Unknown retained"):
+                runtime.source(self.a.mission_id, "next-source")
+            next_store.export_source.assert_not_called()
 
     def test_production_start_cannot_adopt_unowned_normal_play_or_dispatch(self):
         delivered = deepcopy(self.bridge.delivered)

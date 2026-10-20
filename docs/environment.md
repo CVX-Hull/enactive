@@ -8,6 +8,19 @@ status: active
 
 Installation history through 2026-10-17; this is not live environment status.
 
+## Structured player SDK, 2026-10-20
+
+Added official MCP Python SDK 2.3.0 for the optional local stdio adapter. The shared
+hashed lock resolves 37 packages; all pre-existing pins stayed unchanged and 21
+new distributions were installed only in this checkout's `.venv`, using the
+existing uv with `.cache/uv`, explicit PyPI index and Python downloads disabled.
+The initial restricted-network resolution failed DNS; the authorized network
+resolution/install succeeded. No global packages, shell profiles, global approval
+defaults or network policy changed. The adapter disables optional SDK telemetry
+middleware and installs no exporter. [Notices](../NOTICE.md#structured-player-tool-dependencies)
+record the reviewed licenses. Project MCP configuration and active-host acceptance
+are separate setup steps; these installations started no CDDA or controller.
+
 ## Project isolation
 
 Game installations live in `.runtime/`; Python dependencies live in `.venv/`.

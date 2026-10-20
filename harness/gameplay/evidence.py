@@ -359,7 +359,7 @@ class EvidenceStore:
         self._current = None
         self.invalid_reason = reason
 
-    def _verify_file(self, reference: EvidenceRef) -> None:
+    def _frame_bytes(self, reference: EvidenceRef) -> bytes:
         path = Path(reference.frame_path)
         expected = self.frames / (reference.observation_id + ".png")
         if path != expected or path.is_symlink() or path.resolve() != expected:
@@ -372,6 +372,28 @@ class EvidenceStore:
         _check_frame_bytes(data)
         if hashlib.sha256(data).hexdigest() != reference.frame_sha256:
             raise EvidenceError("Retained source hash mismatch")
+        return data
+
+    def _verify_file(self, reference: EvidenceRef) -> None:
+        self._frame_bytes(reference)
+
+    @_serialized
+    def export_source(self, identity: str) -> tuple[dict, bytes]:
+        """Read one exact retained source; no refresh or authority mutation.
+
+        This reader is independent of the evictable bridge and does not scan the
+        manifest. Missing/changed bytes fail instead of returning a later image.
+        Runtime validation remains responsible for sticky evidence invalidation.
+        """
+        self._open()
+        entry = self._entries.get(identity)
+        if entry is None:
+            raise EvidenceError("Unknown retained source")
+        data = self._frame_bytes(entry.reference)
+        return {"reference": entry.reference.to_dict(),
+                "observation": json_object(entry.observation),
+                "disposition": "disputed" if identity in self._disputed else "retained",
+                "grants_authority": False}, data
 
     @_serialized
     def verify(self, reference: EvidenceRef) -> None:

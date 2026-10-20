@@ -97,7 +97,8 @@ class _ResumeIntent:
 class MissionRuntime:
     """One serialized worker and one bounded queue; constructor sends no input.
 
-    Only the worker touches mission storage. The metadata lock protects copied
+    Only the worker mutates mission storage; indexed presentation reads use the
+    store's own lock. The metadata lock protects copied
     responses and cancellation handles, never file/native/SQLite operations.
     Controller Pause itself can wait on controller-owned durable critical sections.
     """
@@ -114,6 +115,7 @@ class MissionRuntime:
         self._active: _Work | None = None
         self._ledger: MissionLedger | None = None
         self._store: EvidenceStore | None = None
+        self._presentation_store: tuple[str, EvidenceStore] | None = None
         self._memory: CampaignMemory | None = None
         self._admission: MissionAdmission | None = None
         self._lease: MissionLease | None = None
@@ -171,6 +173,15 @@ class MissionRuntime:
 
     def _response(self, status: str, **fields: Any) -> dict:
         return {"status": status, "mission": self.status(), **copy.deepcopy(fields)}
+
+    def source(self, mission_id: str, source_id: str) -> tuple[dict, bytes]:
+        """Indexed historical presentation only; never Observe, reconcile or resume."""
+        with self._metadata:
+            binding = self._presentation_store
+            if self._closed.is_set() or binding is None or binding[0] != mission_id:
+                raise EvidenceError("No matching admitted evidence store")
+            store = binding[1]
+        return store.export_source(source_id)
 
     def command(self, request: dict | str | bytes) -> dict:
         try:
@@ -350,6 +361,7 @@ class MissionRuntime:
                             "lease_owner", "prompt_phase", "lifecycle_phase", "activity_phase"):
                     value[key] = self._snapshot[key]
             self._snapshot = value
+            self._presentation_store = (self._admission.mission_id, self._store)
 
     def _apply_pauses(self) -> bool:
         with self._metadata:
@@ -2251,6 +2263,8 @@ class MissionRuntime:
                 self._handles = [handle for handle in self._handles if handle is not work]
 
     def _close_storage(self) -> None:
+        with self._metadata:
+            self._presentation_store = None
         try:
             if self._store is not None:
                 self._store.close()

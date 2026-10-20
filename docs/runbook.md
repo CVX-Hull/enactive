@@ -358,11 +358,15 @@ separates implemented components from remaining independent-play acceptance.
    load identities. Budget TEXT.CLEAR plus typing and a separately interpreted
    commit. This pure feasibility check is not native acceptance; recheck when
    editor/schema/scenario changes. Never shorten an immutable admitted identity.
-2. Put one current mission/7 record in project `.runtime/mission-requests/record.json`.
-   Use `.venv/bin/python -m harness mission-request --request
-   .runtime/mission-requests/record.json` from this trusted checkout. The CLI accepts
-   a regular bounded JSON file directly in that directory, validates it and sends
-   one authenticated request. It does not run code or create an arbitrary process.
+2. Configure and verify the [structured player tools](setup.md#configure-the-structured-player-tools).
+   The designated player uses `enactive_snapshot` and explicitly selects the
+   returned snapshot/source IDs for `enactive_skill` or `enactive_lifecycle`.
+   Software constructs and retains the current mission/7 request before submission,
+   collects its bounded result and returns the actual retained PNG in the same call.
+   The lead uses `enactive_start` for the explicit frozen source-free admission;
+   it does not launch or adopt a character. Raw engineering contract diagnostics
+   retain the validated `mission-request` CLI. They are not a second player or a
+   per-action file-writing recipe.
 3. Start is source-free; explicit Observe is passive. Registered owned lifecycle must establish
    world/character identity and fresh input authority. Source lifecycle composition
    has synthetic coverage; native character/mission acceptance remains required.
@@ -372,10 +376,19 @@ separates implemented components from remaining independent-play acceptance.
    is not nondelivery. Never change a request body under an existing ID or blindly
    replay an uncertain input. Busy admission is a visible rejection, not a queued
    future action.
+   The structured tool returns pending/uncertain delivery explicitly; use
+   `enactive_result` with the original ID. Do not generate another ID to retry.
+   Identical previously staged requests collect only; a changed body under that
+   identity refuses. Descriptive handles expire with the adapter or bounded cache;
+   explicitly read a new snapshot/source instead of reconstructing authority.
 5. The player requests bounded context, reads needed retained sources, records
    fallible claims/corrections/Work and chooses semantic goals. The observer's last
    context packet is historical, query-specific and possibly incomplete. Its labels
    are as-of that packet; use a new explicit query to judge current knowledge.
+   Use `enactive_context`, `enactive_remember` and `enactive_correct`; memory content
+   and truthful support/read declarations remain the player's responsibility.
+   Handoff, claim and separately charged readmission are explicit tools. A client
+   process replacement is not evidence that a fresh model context read the memory.
 6. Owned menus support bounded focusing, literal text and direction/confirmation
    handling. Dismissal uses its exact registered context action (TEXT.QUIT,
    UILIST.QUIT, WORLDGEN_CONFIRM.QUIT or ordinary QUIT), returns partial for effect

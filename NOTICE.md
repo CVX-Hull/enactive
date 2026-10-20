@@ -52,6 +52,21 @@ reviewed on 2026-10-17; original license files remain in their distributions.
 Preserve upstream license files when redistributing these packages. Tool choice
 and primary project links are recorded in [ADR 003](docs/decisions/003-development-controls.md).
 
+## Structured player tool dependencies
+
+The optional project-local MCP process uses the official [MCP Python SDK](https://github.com/modelcontextprotocol/python-sdk),
+version 2.3.0, under MIT. Its exact runtime requirements and all transitive artifact
+hashes are in [requirements.in](requirements.in) and [the shared lock](requirements-dev.lock).
+No third-party package is vendored in Git. Installed distribution metadata was
+checked on 2026-10-20; preserve the original notices when redistributing packages.
+New resolved dependency licenses: MCP/MCP-types, AnyIO, annotated-types, h11,
+Pydantic/Pydantic-core, PyJWT, Truststore and typing-inspection are MIT; CFFI is
+MIT-0; HTTPX2/HTTPCore2, IDNA, pycparser, Starlette, SSE-Starlette and Uvicorn are
+BSD-3-Clause; OpenTelemetry API and python-multipart are Apache-2.0; cryptography
+offers Apache-2.0 OR BSD-3-Clause. The local adapter installs no telemetry exporter
+and disables the SDK's optional telemetry middleware. The existing dependency
+pins were retained; the SDK's transitive packages stay in the project `.venv`.
+
 ## Documentation assets and tools
 
 python-frontmatter and PyYAML are MIT licensed; their exact versions and hashes

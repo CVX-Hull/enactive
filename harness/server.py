@@ -122,6 +122,25 @@ class Handler(BaseHTTPRequestHandler):
             return
         path = urlsplit(self.path).path
         controller = self.server.controller
+        if path in {"/api/mission/source", "/api/mission/frame"}:
+            supplied = self.headers.get("X-CDDA-Token", "")
+            if not hmac.compare_digest(supplied.encode("utf-8"), controller.token.encode("ascii")):
+                self._json(403, {"error": "Valid local controller token required"})
+                return
+            try:
+                query = parse_qs(urlsplit(self.path).query, strict_parsing=True)
+                if (set(query) != {"mission_id", "source_id"}
+                        or any(len(values) != 1 or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", values[0])
+                               for values in query.values())):
+                    raise ValueError("Select one exact mission and retained source ID")
+                metadata, data = self.server.mission.source(query["mission_id"][0], query["source_id"][0])
+                if path == "/api/mission/source":
+                    self._json(200, metadata)
+                else:
+                    self._send(200, data, "image/png")
+            except (OSError, ValueError) as exc:
+                self._json(409, {"error": str(exc)[:1024]})
+            return
         if path == "/api/status":
             self._json(200, {**controller.status(), "mission": self.server.mission.status()})
             return

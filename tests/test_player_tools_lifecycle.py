@@ -1,0 +1,134 @@
+"""Structured tools over one real HTTP/runtime/controller/ledger, synthetic CDDA UI.
+
+The fixture injects only the owned fake native process and rendered UI. It does
+not bypass creation, adoption, handoff, source, claim or normal-ending guards.
+Replacing PlayerTools tests disposable client context, not a fresh model agent.
+"""
+from copy import deepcopy
+import threading
+import unittest
+from unittest.mock import patch
+
+from harness.mission_client import MissionClient
+from harness.player_tools import PlayerTools
+from harness.server import Server
+from tests import test_mission_creation as creation
+from tests import test_mission_handoff as handoff
+from tests import test_mission_request_producer_integration as produced
+
+
+class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCase):
+    operation = handoff.MissionHandoffTests.operation
+    remember_work = handoff.MissionHandoffTests.remember_work
+    save_final = produced.ProducerLifecycleIntegrationTests.save_final
+
+    def setUp(self):
+        super().setUp()
+        # Reuse the fixture's one actual runtime in the HTTP boundary. This is
+        # constructor injection only, not a second runtime or mocked operation.
+        with patch("harness.mission_runtime.MissionRuntime", return_value=self.runtime):
+            self.server = Server(self.controller, 0)
+        self.addCleanup(self.server.server_close)
+        thread = threading.Thread(target=self.server.serve_forever, kwargs=dict(poll_interval=.01), daemon=True)
+        thread.start()
+        self.addCleanup(thread.join, 2)
+        self.addCleanup(self.server.shutdown)
+        self.player = PlayerTools(MissionClient(self.controller.root))
+
+    def launch(self, **changes):
+        return self.run_request(self.request(**changes))
+
+    def lifecycle(self, identity, operation="create", *, parent=None, claims=None, supports=()):
+        value = super().lifecycle(identity, operation, parent=parent, claims=claims)
+        value["sources"].extend(supports)
+        return value
+
+    def run_request(self, raw):
+        selected, _ = self.player.call("enactive_snapshot", {})
+        kind = raw["kind"]
+        data = dict(snapshot_id=selected["snapshot_id"], request_id=raw["request_id"], wait_seconds=3)
+        intent = deepcopy(raw)
+        for field in ("schema", "kind", "mission_id", "epoch", "request_id"):
+            intent.pop(field, None)
+        if kind in ("skill", "lifecycle"):
+            source_id = next(iter(raw["sources"]), None)
+            if source_id is not None:
+                self.player.call("enactive_source", dict(mission_id=self.a.mission_id, source_id=source_id))
+            scope = "new_root"
+            if raw["phase_id"] is not None:
+                scope = next(name for name in ("prompt", "lifecycle", "activity")
+                    if selected["mission"][name + "_phase"] is not None
+                    and selected["mission"][name + "_phase"]["origin_request_id"] == raw["phase_id"])
+            if intent.get("perception") is not None:
+                intent["perception"].pop("source_id")
+                intent["perception"].pop("basis")
+            for field in ("sources", "expected_session", "expected_revision", "expected_boundary_id", "limits", "phase_id"):
+                intent.pop(field)
+            data.update(scope=scope, source_id=source_id, supporting_source_ids=raw["sources"][1:],
+                        limits=raw["limits"], intent=intent)
+        elif kind == "claim":
+            for field in ("pause_generation", "takeover_generation", "expected_session", "expected_revision",
+                          "expected_boundary_id", "expected_pause_origin"):
+                intent.pop(field)
+            data["intent"] = intent
+        elif kind == "readmit":
+            data["source_id"] = raw["sources"][0]
+            self.player.call("enactive_source", dict(mission_id=self.a.mission_id, source_id=data["source_id"]))
+            for field in ("sources", "expected_session", "expected_revision", "expected_boundary_id"):
+                intent.pop(field)
+            data["intent"] = intent
+        elif kind != "observe":
+            data["intent"] = intent
+        result, _ = self.player.call("enactive_" + kind, data)
+        self.assertEqual(result["transport"], "delivered", result)
+        self.assertTrue(result["settled"], result)
+        return result["response"]["operation"]
+
+    def test_creation_successor_readmission_save_new_child_reload_and_normal_finish(self):
+        self.create()
+        original_unknown = deepcopy(self.runtime._ledger.request("character-yes"))
+        self.remember_work()
+        before = self.runtime.status()["spent_inputs"]
+        checkpoint = self.runtime._current.observation_id
+        issued = self.run_request(self.operation("handoff", "handoff", checkpoint_ids=[checkpoint],
+            unfinished_work_ids=["pending"], successor_role="player"))
+        self.assertEqual(issued["state"], "completed", issued)
+        self.player = PlayerTools(MissionClient(self.controller.root))
+        selected, _ = self.player.call("enactive_snapshot", {})
+        ref = selected["source"]["reference"]
+        context, _ = self.player.call("enactive_context", dict(snapshot_id=selected["snapshot_id"],
+            intent=dict(scope=dict(session=ref["session"], coordinate_epoch=0), query="unfinished",
+                max_bytes=131072, handoff=dict(handoff_id="handoff", prospective_player_id="successor", actor_role="player"))))
+        packet = context["response"]["context"]["packet"]
+        self.assertIn("pending", [work["id"] for work in packet["work"]])
+        declared = set(issued["result"]["checkpoint_ids"] + [issued["result"]["post_pause_source_id"]])
+        for source_id in declared:
+            self.player.call("enactive_source", dict(mission_id=self.a.mission_id, source_id=source_id))
+        claimed = self.run_request(handoff.MissionHandoffTests.claim(self, packet))
+        self.assertEqual(claimed["state"], "completed", claimed)
+        self.assertIsNone(self.runtime._lease)
+        resumed = self.run_request(handoff.MissionHandoffTests.readmit(self))
+        self.assertEqual(resumed["state"], "completed", resumed)
+        self.assertEqual(self.runtime.status()["spent_inputs"], before + 1)
+        self.assertEqual(self.runtime._lease.actor_id, "successor")
+        self.remember_work(status="completed", event="pending-completed")
+        self.save()
+        self.exit()
+        self.assertEqual(self.launch(identity="second-launch")["state"], "completed")
+        self.stage = "load-world"
+        self.assertEqual(self.run_request(self.lifecycle("load", "load"))["state"], "partial")
+        world = self.runtime._current
+        self.run_request(self.control("load-world", f"{self.a.scenario.world} (1)", parent="load"))
+        selection = self.control("load-entry", self.a.scenario.character, parent="load")
+        selection["perception"] = None
+        self.assertEqual(self.run_request(selection)["state"], "unknown")
+        self.observe("load-observe")
+        adopted = self.finish_identity("load", world, 1)
+        self.assertEqual(adopted["result"]["normal_adoption"]["saved_checkpoint_request_id"], "save-reconcile")
+        self.save_final()
+        self.exit("final-exit")
+        finished = self.run_request(self.lifecycle("finish", "finish"))
+        self.assertEqual(finished["state"], "completed", finished)
+        self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
+        self.assertEqual(self.runtime._ledger.request("character-yes"), original_unknown)
+        self.runtime._ledger._verify(self.a)

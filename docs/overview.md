@@ -84,11 +84,14 @@ All failures are closed with their costs and exceptional cleanup retained.
 
 Current source distinguishes raw assertions from combined Work views and checks
 complete handoff retrieval capacity before giving up the active player's control.
-This source change has no new native or independent acceptance yet. Review-free
-gameplay execution and automated request/result/image handling remain owned setup
-work in [#166](https://github.com/CVX-Hull/enactive/issues/166) and
-[#164](https://github.com/CVX-Hull/enactive/issues/164); rule matching alone does
-not prove that automatic reviews are absent.
+This source change has no new native or independent acceptance yet. A thin
+structured player adapter now handles request retention, submission, result
+collection and exact-image presentation over the existing runtime. The official
+MCP SDK supplies the tool protocol. Its fixture/SDK evidence does not prove actual
+Codex loading or review-free gameplay; those remain owned setup work in
+[#166](https://github.com/CVX-Hull/enactive/issues/166) and
+[#164](https://github.com/CVX-Hull/enactive/issues/164). Rule matching or a successful
+approved call cannot establish absence of automatic reviews.
 
 Current movement uses strictly known non-HOSTILE evidence. Inventory projection
 omits only the engine's non-selecting cosmetic summary. Reload follows the actual

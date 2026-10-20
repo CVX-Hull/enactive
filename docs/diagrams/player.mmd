@@ -3,17 +3,19 @@ title: One player, retained memory and bounded semantic execution
 ---
 flowchart TD
   accTitle: Player decisions, historical memory and one mission writer
-  accDescr: The user sets objectives and can Pause. The lead freezes admission and source, reviews evidence and verifies acceptance. One designated player plans, interprets visible evidence and requests semantic operations through MissionRuntime. Retained campaign memory supports decisions but grants no authority. The writer checks original limits and exact controller and native fences before the real windowed game. Actual frames and operation receipts return to the player and observer. Owned lifecycle and fresh-context continuity are pending acceptance gates; the lead supplies no ordinary gameplay rescue in the deciding mission.
+  accDescr: The user sets objectives and can Pause independently. The lead freezes admission and source, reviews evidence and verifies acceptance. One designated player plans, interprets visible evidence and uses structured player tools. The adapter retains exact requests and collects results and images through the existing ingress; it is not another executor. Retained campaign memory supports decisions but grants no authority. One MissionRuntime writer checks original limits and exact controller and native fences before the real windowed game. Actual frames and operation receipts return to the player and observer. Actual host loading without routine review and a full independent mission with a fresh player remain acceptance gates; the lead supplies no ordinary gameplay rescue.
   User["You: objective and boundaries"] --> Lead["Lead: admission and engineering<br/>Review and final verification"]
   Lead -->|"One finite assignment"| Player["Designated player<br/>Plan, interpret, remember, verify"]
   Memory["Evidence-linked campaign memory<br/>Claims, corrections and unfinished Work<br/>Historical, never input authority"] --> Player
-  Player -->|"Typed semantic request"| Runtime["One MissionRuntime writer<br/>Original root and child limits"]
+  Player -->|"Choose intent, source and limits"| Tools["Structured player tools<br/>Retain request, collect result and exact image<br/>Official MCP SDK; no executor"]
+  Tools -->|"Existing authenticated ingress"| Runtime["One MissionRuntime writer<br/>Original root and child limits"]
   Runtime --> Controller["Controller and native fences<br/>Exact lease, source and deadlines"]
   Controller --> Game["Real windowed CDDA"]
   Game --> Evidence["Visible frames and receipts<br/>Actual effects and uncertainty"]
-  Evidence --> Player
+  Evidence --> Tools
+  Tools -->|"Result, image and uncertainty"| Player
   Runtime --> Memory
   Evidence --> Viewer["Observer: objective and progress<br/>Historical context and unknown costs"]
   Runtime --> Viewer
   User -->|"Pause stops new dispatch"| Controller
-  Runtime -.-> Gate["Pending acceptance<br/>Owned lifecycle and exact reload<br/>Actual fresh player context"]
+  Runtime -.-> Gate["Pending acceptance<br/>Actual host with zero routine review<br/>Independent mission and fresh player"]

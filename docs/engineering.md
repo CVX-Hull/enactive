@@ -162,12 +162,14 @@ limit only after recording evidence and updating this standard. Verify returned 
 primary sources. After two unsuccessful repair attempts or ownership drift, the
 lead takes work back. Reports never substitute for inspecting a diff or result.
 
-For gameplay requests, derive opaque source/session/revision/boundary fields
-programmatically from one chosen returned source and its retained observation,
-using the protocol's pure canonical producer and existing JSON tooling for ordinary
-skill/lifecycle requests. Choose scope and primary context explicitly; use bounded
-support IDs when needed. Specialized memory/handoff/recovery records retain their
-current typed ingress. Never carry individual fields across a focus change.
+For gameplay requests, use the structured player tools over the current typed
+ingress. The adapter derives opaque source/session/revision/boundary fields from
+one explicitly chosen returned snapshot/source using the pure canonical producer.
+Choose intent, finite limits, scope and support IDs explicitly. Specialized memory,
+handoff and recovery use their same current receiver schemas. Request retention,
+serialization, bounded result collection and actual-image presentation belong to
+software; routine player-authored files/private scripts are not the operating path.
+Never carry individual fields across a focus change or replay an uncertain action.
 The protocol's binding checks and portable/native evidence enforce consistency;
 review still checks that the chosen source supports the player's interpretation.
 

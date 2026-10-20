@@ -24,6 +24,11 @@ class DevToolTests(unittest.TestCase):
         self.write("movement.py", "import typing\n")
         self.write("server.py", "from . import controller\nimport http.server\n")
         self.write("__main__.py", "from . import controller, server\n")
+        self.write("mission_runtime.py", "")
+        self.write("native_process.py", "")
+        self.write("mission_client.py", "import urllib.request\n")
+        self.write("player_tools.py", "from . import mission_client\n")
+        self.write("player_mcp.py", "from . import player_tools\n")
         (self.root / "harness/gameplay").mkdir()
         self.write("gameplay/__init__.py", "")
         self.write("gameplay/evidence.py", "import json\n")
@@ -49,7 +54,20 @@ class DevToolTests(unittest.TestCase):
     def test_composition_root_and_http_adapter_are_allowed(self):
         result = self.lint_imports()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("4 kept, 0 broken", result.stdout)
+        self.assertIn("5 kept, 0 broken", result.stdout)
+
+    def test_player_adapters_cannot_import_an_executor_directly_or_indirectly(self):
+        for source in ("mission_client", "player_tools", "player_mcp"):
+            for target in ("controller", "server", "mission_runtime", "native_process", "__main__"):
+                with self.subTest(source=source, target=target):
+                    self.write(source + ".py", f"from . import {target}\n")
+                    try:
+                        self.assert_broken(self.lint_imports(), "harness." + source, "harness." + target)
+                    finally:
+                        self.write(source + ".py", "")
+        self.write("mission_client.py", "from . import helper\n")
+        self.write("helper.py", "from . import mission_runtime\n")
+        self.assert_broken(self.lint_imports(), "harness.mission_client", "harness.helper")
 
     def test_movement_policy_cannot_acquire_io_or_gameplay_dependencies(self):
         for module in ("harness.controller", "harness.gameplay.evidence", "time", "pathlib", "os"):
