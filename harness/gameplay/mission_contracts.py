@@ -100,7 +100,7 @@ _GOALS = {
     "activity": _object({"operation": _enum("wait", "rest", "craft"),
                            "target": _text(1024), "game_seconds": _integer(43_200, 1),
                            "interrupt": {"type": "boolean"}}),
-    "inspect": _object({"purpose": _enum("inventory", "consume", "needs", "look", "messages", "map")}),
+    "inspect": _object({"purpose": _enum("inventory", "consume", "needs", "look", "messages", "map", "character_identity")}),
     "edit": _object({"purpose": _enum(*EDITOR_PURPOSES),
         "text": {**_text(24), "pattern": r"^[A-Za-z0-9 _-]+$"}, "commit": {"type": "boolean"}}),
     "interact": _object({"action": _enum(*INTERACTIONS), "intent": _text(1024),
@@ -183,6 +183,16 @@ _EXIT_PHASE_RECEIPT = _object({
     "operation": {"const": "exit"}, "stage": _enum("awaiting_control", "complete", "unknown"),
     "launch_request_id": _ID, "launch_id": _ID, "no_save_required": {"const": True},
 })
+_SAVED_EXIT_PHASE = _object({
+    **_EXIT_PHASE_RECEIPT["properties"], "no_save_required": {"const": False},
+    "saved_checkpoint_request_id": _ID,
+})
+_NORMAL_LIFECYCLE_PHASE = _object({
+    **_PROMPT_RECEIPT["properties"], "phase_kind": {"const": "lifecycle"},
+    "operation": _enum("create", "save", "load"),
+    "stage": _enum("awaiting_control", "awaiting_transition", "awaiting_identity", "awaiting_adoption", "complete", "unknown"),
+    "launch_request_id": _ID, "launch_id": _ID,
+})
 _EXIT_RETIREMENT = _object({
     "launch_id": _ID, "exit_request_id": _ID, "native_request_id": _nullable(_ID),
     "returncode": {"const": 0}, "retired_pending": {"type": "boolean"},
@@ -195,6 +205,35 @@ _NORMAL_EXIT = _object({
     "source_ids": {**_IDS, "minItems": 1}, "no_save_required": {"const": True},
     "returncode": {"const": 0}, "retirement": _EXIT_RETIREMENT,
     "grants_authority": {"const": False},
+})
+_SAVED_NORMAL_EXIT = _object({
+    **_NORMAL_EXIT["properties"], "no_save_required": {"const": False},
+    "saved_checkpoint_request_id": _ID,
+})
+_TRANSITION = _object({
+    "schema": {"const": VERSION}, "record_type": {"const": "LifecycleTransition"},
+    "operation": _enum("create", "save", "load"), "origin_request_id": _ID,
+    "terminal_request_id": _ID, "terminal_logical_id": _ID, "native_request_id": _ID,
+    "launch_request_id": _ID, "launch_id": _ID,
+    "before_source_id": _ID, "after_source_id": _ID,
+    "origin_epoch": _integer(), "reconciled_epoch": _integer(), "actor_id": _ID,
+    "controller_boot_id": _ID, "operator_pause_generation": _integer(),
+    "before_takeover_generation": _integer(), "after_takeover_generation": _integer(),
+    "grants_authority": {"const": False},
+})
+_ADOPTION = _object({
+    "schema": {"const": VERSION}, "record_type": {"const": "NormalSessionAdoption"},
+    "origin_request_id": _ID, "transition_result_request_id": _ID,
+    "first_normal_source_id": _ID, "world_claim_id": _ID, "character_claim_id": _ID,
+    "identity_inspect_request_id": _ID, "checkpoint_source_id": _ID,
+    "saved_checkpoint_request_id": _nullable(_ID), "scope": _SCOPE,
+    "grants_authority": {"const": False},
+})
+_SAVED_CHECKPOINT = _object({
+    "schema": {"const": VERSION}, "record_type": {"const": "SavedCheckpoint"},
+    "origin_request_id": _ID, "transition_result_request_id": _ID,
+    "adoption_result_request_id": _ID, "normal_endpoint_source_id": _ID,
+    "menu_source_id": _ID, "grants_authority": {"const": False},
 })
 
 
@@ -227,8 +266,10 @@ def validate_handoff_result(value: dict, *, claimed: bool = False) -> dict:
 def validate_prompt_result(value: dict, *, request: dict, root: dict, actor_id: str) -> dict:
     """Closed ordinary/lifecycle audit data; never restore a live phase."""
     lifecycle = type(value) is dict and value.get("phase_kind") == "lifecycle"
-    data = _decode(value, _EXIT_PHASE_RECEIPT if lifecycle else _PROMPT_RECEIPT)
-    valid_root = (root["kind"] == "lifecycle" and root["operation"] == "exit" if lifecycle else
+    exit_schema = _SAVED_EXIT_PHASE if lifecycle and value.get("no_save_required") is False else _EXIT_PHASE_RECEIPT
+    schema = (exit_schema if value.get("operation") == "exit" else _NORMAL_LIFECYCLE_PHASE) if lifecycle else _PROMPT_RECEIPT
+    data = _decode(value, schema)
+    valid_root = (root["kind"] == "lifecycle" and root["operation"] in ("exit", "create", "save", "load") if lifecycle else
                   root["kind"] == "skill" and root["skill_kind"] == "interact")
     operation = root.get("operation") if lifecycle else root.get("goal", {}).get("action")
     if (not valid_root or root["phase_id"] is not None
@@ -237,7 +278,7 @@ def validate_prompt_result(value: dict, *, request: dict, root: dict, actor_id: 
             or root["mission_id"] != request["mission_id"]):
         raise ContractError("Prompt receipt contradicts its immutable root, actor or epoch")
     if request["kind"] == "observe":
-        if data["stage"] != ("awaiting_control" if lifecycle else "complete"):
+        if (lifecycle and data["stage"] == "complete" or not lifecycle and data["stage"] != "complete"):
             raise ContractError("Observe may only close an ordinary prompt")
     elif request["kind"] not in (("skill", "lifecycle") if lifecycle else ("skill",)) or (
             request["request_id"] != root["request_id"] and request["phase_id"] != root["request_id"]):
@@ -245,11 +286,43 @@ def validate_prompt_result(value: dict, *, request: dict, root: dict, actor_id: 
     return data
 
 
+def validate_lifecycle_transition(value: dict) -> dict:
+    """Closed observed-effect record; the ledger authenticates its input chain."""
+    if type(value) is not dict:
+        raise ContractError("Lifecycle transition requires a typed object")
+    data = _decode(value, _TRANSITION)
+    if (data["origin_epoch"] > data["reconciled_epoch"]
+            or data["before_source_id"] == data["after_source_id"]
+            or data["before_takeover_generation"] != data["after_takeover_generation"]):
+        raise ContractError("Lifecycle transition cannot reverse epochs, reuse its source or absorb takeover")
+    return data
+
+
+def validate_normal_adoption(value: dict) -> dict:
+    """Identity/chronology audit data, never a live admission or map."""
+    if type(value) is not dict:
+        raise ContractError("Normal-session adoption requires a typed object")
+    data = _decode(value, _ADOPTION)
+    if data["world_claim_id"] == data["character_claim_id"]:
+        raise ContractError("World and character identity require distinct claims")
+    return data
+
+
+def validate_saved_checkpoint(value: dict) -> dict:
+    """Exact observed save endpoints; no save-file inspection or input authority."""
+    if type(value) is not dict:
+        raise ContractError("Saved checkpoint requires a typed object")
+    data = _decode(value, _SAVED_CHECKPOINT)
+    if data["normal_endpoint_source_id"] == data["menu_source_id"]:
+        raise ContractError("A save checkpoint needs distinct normal and menu endpoints")
+    return data
+
+
 def validate_normal_exit(value: dict) -> dict:
     """Process/effect audit data, distinct from a positive input acknowledgment."""
     if type(value) is not dict:
         raise ContractError("Normal exit must be a typed nested object")
-    data = _decode(value, _NORMAL_EXIT)
+    data = _decode(value, _SAVED_NORMAL_EXIT if value.get("no_save_required") is False else _NORMAL_EXIT)
     retirement = data["retirement"]
     if (type(data["returncode"]) is not int or type(retirement["returncode"]) is not int
             or retirement["launch_id"] != data["launch_id"]

@@ -18,7 +18,7 @@ from .mission_contracts import SourceRevalidation, validate_request
 _CHARACTER = frozenset({"NEW_CHAR_POINTS", "NEW_CHAR_STATS", "NEW_CHAR_TRAITS", "NEW_CHAR_PROFESSIONS",
                         "NEW_CHAR_SKILLS", "NEW_CHAR_SCENARIOS", "NEW_CHAR_DESCRIPTION"})
 _VERTICAL = _CHARACTER | {"MAIN_MENU", "INVENTORY", "INVENTORY_SELECTOR", "CRAFTING", "CONSTRUCTION",
-                          "PICK_WORLD_DIALOG"}
+                          "PICK_WORLD_DIALOG", "WORLDGEN_CONFIRM_DIALOG"}
 _TABS = _CHARACTER | {"MODMANAGER_DIALOG"}
 _COLUMNS = frozenset({"INVENTORY", "INVENTORY_SELECTOR"})
 

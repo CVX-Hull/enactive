@@ -122,9 +122,10 @@ JSON and status contain no executable lease.
 Start records source-free admission and sends no native request; explicit Observe
 remains passive. Even already-unpaused normal play does not prove the named world/character, receive a lease or seed the mission's game-time
 anchor. Registered creation/load must establish those facts after owned launch.
-Creation/save/character-exit/load, item/activity/inspection, handoff and normal finish remain
-required adapters: source fixtures that assume trusted identity do not implement them.
-No independent mission is accepted from those tests. Observe likewise cannot adopt
+Registered creation/save/load and provisional character inspection now compose in
+source tests through the real controller, ledger and evidence archive. Item/activity,
+ordinary inspection, handoff/readmission and normal finish still need adapters.
+Neither synthetic UI tests nor tests assuming identity accept an independent mission. Observe likewise cannot adopt
 an unexplained normal session. Reopening restores neither phase nor input authority.
 Interpreted tab focus excludes WORLDGEN_CONFIRM_DIALOG. NEW_CHAR_DESCRIPTION may
 return through PREV_TAB, but NEXT_TAB starts character completion and requires an
@@ -147,8 +148,10 @@ validated committed OwnedNormalExit resolves that launch's historical custody.
 Otherwise attempted/uncertain launches remain unavailable, with no PID adoption.
 Process absence or exit code alone cannot prove a normal save/exit.
 
-Registered `exit` currently covers only the same owned untouched MAIN_MENU, before
-creation, load or normal activity. It retains the launch's original operator mark.
+Registered `exit` covers the same owned untouched MAIN_MENU or a menu reached by
+this child's validated SavedCheckpoint. The saved branch requires the exact final
+normal endpoint and its original first menu source, even after later observations.
+It retains the launch's original operator mark.
 A source-bound root charges distinct Resume and QUIT primitives, then awaits an
 explicit interpreted Really quit? Yes/No child. Exact-PNG refreshes preserve
 checkpoint provenance; root/child ceilings and original deadlines never renew.
@@ -162,8 +165,32 @@ state after durable recording, stays paused/frozen and sends no input or signals
 Lifecycle PhaseReceipt/exit proof are historical data, never restored permissions.
 Any unexpected normal frame remains diagnostic: registered identity/adoption is
 required before time cost, maps, native memory facts or ordinary dispatch, including
-after reopening. Creation/save/reload/character-exit still need their adapters;
+after reopening. The source saved-exit branch has synthetic integration coverage only; qualified
 untouched-menu cleanup proves neither a save nor independent normal-game play.
+
+Registered create/load starts only from the retained launch's paused main menu.
+Explicit stage commits request world FINALIZE or final character NEXT_TAB; the
+player separately interprets each confirmation, including discarded spare points.
+Save starts only from adopted normal play and its own Save and quit? confirmation.
+Each action uses the ordinary charged dispatch and original root/child ceilings.
+A changed-session terminal ACK remains unknown. Diagnostic Observe retains the
+actual after-frame against that dispatch's exact capacity reservation; a separate
+same-root current-epoch request records LifecycleTransition and reconciles effect
+without relabeling the ACK. Only then may explicit provisional readmission inspect
+PLAYER_INFO; only QUIT may return from that screen. Inventory or movement cannot
+use provisional normal evidence.
+
+NormalSessionAdoption requires directly supported, undisputed admitted world and
+character Claims, the exact identity inspection, owned transition and current
+normal checkpoint. The [historical reader](../harness/gameplay/lifecycle.py) validates
+all retained normal sessions, corrections, canonical order and exact saved endpoint
+links before establishing time, coordinate epoch, native facts or a normal binding.
+It grants no authority and may quarantine corrupt sources through EvidenceStore.
+Save/reload preserves the initial time anchor, cumulative costs and unknowns;
+new coordinates never inherit old relative vectors. A rejected candidate adoption
+can be explicitly corrected within its original phase/deadline. Reopen verifies
+history but reconstructs no process handle, phase, lineage, lease or queued input.
+Actual native creation/save/load and independent mission acceptance remain pending.
 
 Trusted Python `observe_mission(deadline_monotonic, timeout)` uses the original
 absolute deadline through command-lock admission and native publication. It grants

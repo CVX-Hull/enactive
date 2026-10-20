@@ -19,8 +19,9 @@ It needs an active Codex player to choose plans and interpret scenes. A dedicate
 player sub-agent owns planning, memory use and typed semantic requests within a
 finite mission. The lead owns source integration and acceptance. The live service
 uses one MissionRuntime. Owned windowed launch/untouched-menu exit passed a bounded
-native retest with the first failure retained; character lifecycle and independent
-normal-game acceptance are still pending. Passive waypoint/planner components remain offline study tools.
+native retest with the first failure retained. Character creation/save/reload now
+compose in source tests; native character lifecycle and independent normal-game
+acceptance are still pending. Passive waypoint/planner components remain offline study tools.
 
 The [seven-day functional campaign](acceptance/2026-10-19-seven-day-survival.md)
 records the same normally created Ned Meyers / Belgium, ordinary supplies and

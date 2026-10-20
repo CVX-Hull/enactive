@@ -17,9 +17,10 @@ from uuid import UUID
 
 from .controller import Controller, ControlError, MissionLease, validate_state
 from .native_process import NativeProcess
+from .mission_lifecycle import NormalPhase, RegisteredLifecycle
 from .gameplay.campaign_memory import CampaignMemory
 from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
-from .gameplay.evidence import MAX_FRAME_BYTES, CapacityError, EvidenceError, EvidenceStore
+from .gameplay.evidence import MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore
 from .gameplay.interaction import MenuIntent, MenuOutcome, MenuSkill
 from .gameplay.mission_contracts import (
     VERSION, MissionAdmission, SourceBinding, SourceRevalidation, canonical, validate_request,
@@ -73,6 +74,7 @@ class _ExitPhase:
     launch: _OwnedLaunch
     actor_id: str
     epoch: int
+    saved_checkpoint: str | None = None
 
 
 @dataclass(frozen=True)
@@ -122,7 +124,7 @@ class MissionRuntime:
         self._lost_process_custody: tuple[str, ...] = ()
         self._owned_launch: _OwnedLaunch | None = None
         self._exit_phase: _ExitPhase | None = None
-        self._exit_candidate: tuple[_ExitPhase, str, dict] | None = None
+        self._exit_candidate: tuple[_ExitPhase, str, dict, CapacityReservation | None] | None = None
         self._memory_version = 0
         self._last_context_id: str | None = None
         self._last_memory_context: dict | None = None
@@ -131,6 +133,7 @@ class MissionRuntime:
         self._progress: dict | None = None
         self._skill: str | None = None
         self._diagnostic: str | None = None
+        self._registered_lifecycle = RegisteredLifecycle(self)
         self._thread = threading.Thread(target=self._work, name="mission-runtime", daemon=True)
         self._thread.start()
 
@@ -253,6 +256,7 @@ class MissionRuntime:
             self._bindings.clear()
             self._prompt_phase = None
             self._exit_phase = None
+            self._registered_lifecycle.revoke()
             self._rotation = None
             if self._snapshot is not None and self._snapshot["phase"] not in TERMINAL:
                 self._snapshot.update(phase="paused", pause_cause=cause, reason=reason, lease_owner=None,
@@ -291,7 +295,7 @@ class MissionRuntime:
             "prompt_phase": None if self._prompt_phase is None else {
                 "origin_request_id": self._prompt_phase.root_id,
                 "checkpoint_id": self._prompt_phase.checkpoint.observation_id, "grants_authority": False},
-            "lifecycle_phase": None if self._exit_phase is None else {
+            "lifecycle_phase": self._registered_lifecycle.summary() if self._exit_phase is None else {
                 "origin_request_id": self._exit_phase.root_id, "operation": "exit",
                 "checkpoint_id": self._exit_phase.checkpoint.observation_id, "grants_authority": False},
             "active_operation": None if active is None else active.get("request_id", active["kind"]),
@@ -364,14 +368,24 @@ class MissionRuntime:
         return refs[-1]
 
     def _require_normal_adoption(self, reference: EvidenceRef) -> None:
-        """No normal adapter can yet produce the required durable identity proof.
+        """Validate every normal segment; one reference cannot select a subset."""
+        from .gameplay.lifecycle import adopted_timeline
+        self._store.observation(reference)
+        timeline = adopted_timeline(self._ledger, self._store)
+        if timeline is None or not any(first.session == reference.session for first, _ in timeline.segments):
+            raise EvidenceError("Registered normal-session identity/adoption proof is required")
+        self._timeline_links = tuple(SessionContinuity(before[1], after[0])
+            for before, after in zip(timeline.segments, timeline.segments[1:]))
 
-        Keep this gate independent of retained process handles: reopening must
-        not promote an unexpected diagnostic session into a new zero-cost game.
-        Registered creation/reload will supply the typed chronological producer.
-        """
-        self._store.verify(reference)
-        raise EvidenceError("Registered normal-session identity/adoption proof is required")
+    def _coordinate_scope(self, reference: EvidenceRef) -> dict:
+        self._require_normal_adoption(reference)
+        timeline = game_timeline(self._store, self._timeline_links)
+        epoch = next(index for index, pair in enumerate(timeline.segments) if pair[0].session == reference.session)
+        return {"mission_id": self._admission.mission_id, "session": reference.session, "coordinate_epoch": epoch}
+
+    def _resume_intent(self, request_id: str, source: EvidenceRef) -> _ResumeIntent:
+        return _ResumeIntent("resume-" + hashlib.sha256(request_id.encode()).hexdigest(), source,
+            self._store.observation(source)["boundary"]["id"])
 
     def _game_guard(self, anchor: EvidenceRef, limit: int, *, after=False) -> None:
         latest = self._last_normal()
@@ -456,6 +470,7 @@ class MissionRuntime:
         self._lease, self._rotation = None, None
         self._clear_prompt()
         self._exit_phase = None
+        self._registered_lifecycle.revoke()
 
     def _capacity(self, *, frames: int = 1, byte_count: int = MAX_FRAME_BYTES) -> None:
         usage = self._store.usage()
@@ -466,11 +481,9 @@ class MissionRuntime:
 
     def _update_game_time(self) -> None:
         try:
-            sessions = set()
-            for ref in self._store.historical_references:
-                if ref.boundary_kind == "normal_play" and ref.session not in sessions:
-                    self._require_normal_adoption(ref)
-                    sessions.add(ref.session)
+            first = next((ref for ref in self._store.historical_references if ref.boundary_kind == "normal_play"), None)
+            if first is not None:
+                self._require_normal_adoption(first)
             timeline = game_timeline(self._store, self._timeline_links)
         except EvidenceError:
             self._game_cost = None
@@ -492,7 +505,7 @@ class MissionRuntime:
         self._current = reference
         self._update_game_time()
         if reference.boundary_kind == "normal_play":
-            scope = {"mission_id": self._admission.mission_id, "session": reference.session, "coordinate_epoch": 0}
+            scope = self._coordinate_scope(reference)
             if self._map is None:
                 self._map = ObservedMap(**scope)
             if self._map.scope != (scope["mission_id"], scope["session"], scope["coordinate_epoch"]):
@@ -570,6 +583,7 @@ class MissionRuntime:
         self._bindings, self._map, self._lease, self._current, self._rotation = {}, None, None, None, None
         self._clear_prompt()
         self._owned_launch, self._exit_phase, self._exit_candidate = None, None, None
+        self._registered_lifecycle.reset()
         self._game_cost = None
         self._timeline_links = ()
         historical = [r for r in store.historical_references if r.boundary_kind == "normal_play"]
@@ -597,13 +611,13 @@ class MissionRuntime:
 
     def _capture_memory(self, reference: EvidenceRef) -> None:
         if reference.boundary_kind == "normal_play":
-            self._require_normal_adoption(reference)
-            receipt = self._memory.capture_native(reference, {"mission_id": self._admission.mission_id,
-                "session": reference.session, "coordinate_epoch": 0}, now=self._wall())
+            receipt = self._memory.capture_native(reference, self._coordinate_scope(reference), now=self._wall())
             self._record("mission_native_memory", receipt)
             self._memory_version = receipt["memory_version"]
 
     def _observe(self, work: _Work) -> dict:
+        if self._registered_lifecycle.phase is not None or self._registered_lifecycle.candidate is not None:
+            return self._registered_lifecycle.observe(work)
         if self._exit_phase is not None:
             phase = self._refresh_exit(work, self._exit_phase)
             return {"source_ids": [phase.checkpoint.observation_id], "phase": self._exit_receipt(phase, "awaiting_control"),
@@ -740,6 +754,7 @@ class MissionRuntime:
         if self._lost_process_custody:
             raise ControlError("Previous launch custody is unavailable; no handle restore, PID adoption or replay")
         mark = self._operator_mark()
+        self._registered_lifecycle.launch_mark(mark, data["request_id"])
         self._launch_guard(work, mark)
         owner = (self._admission.mission_id, self._admission.configuration.native_sha256)
         if self._native is not None:
@@ -818,6 +833,8 @@ class MissionRuntime:
             return self._launch(work)
         if work.request["operation"] == "exit":
             return self._exit(work)
+        if work.request["operation"] in ("create", "save", "load"):
+            return self._registered_lifecycle.command(work)
         return self._unsupported("Registered create/save/exit/load/finish adapter and identity/effect evidence required")
 
     def _owned_menu(self) -> _OwnedLaunch:
@@ -829,13 +846,14 @@ class MissionRuntime:
                 or self._operator_mark() != launch.operator_mark):
             raise ControlError("Owned menu custody or original operator mark changed")
         rows = self._ledger.request_records()
+        start = next(index for index, row in enumerate(rows) if row["request"]["request_id"] == launch.request_id)
         primitive_requests = {p["request_id"] for p in self._ledger.primitive_records()}
-        if (any(ref.boundary_kind == "normal_play" for ref in self._store.historical_references)
+        if (self._registered_lifecycle.normal_after_launch()
                 or any(row["request"]["kind"] == "lifecycle" and row["request"]["operation"] in
                        ("create", "load", "save") and (row["state"] in ("accepted", "running") or
                         row["request"]["request_id"] in primitive_requests)
-                       for row in rows)):
-            raise ControlError("No-save exit cannot follow creation/load/normal gameplay")
+                       for row in rows[start:])) and self._registered_lifecycle.saved_exit_checkpoint() is None:
+            raise ControlError("Normal gameplay requires its own verified saved checkpoint before menu exit")
         return launch
 
     def _exit_guard(self, work: _Work, phase: _ExitPhase,
@@ -870,14 +888,18 @@ class MissionRuntime:
                     raise ControlError("Owned exit admits only its registered Quit/confirmation action")
 
     def _exit_receipt(self, phase: _ExitPhase, stage: str) -> dict:
+        saved_sources = () if phase.saved_checkpoint is None else (
+            self._ledger.request(phase.saved_checkpoint)["result"]["saved_checkpoint"]["menu_source_id"],)
         return {"schema": VERSION, "record_type": "PhaseReceipt", "phase_kind": "lifecycle", "operation": "exit",
             "origin_request_id": phase.root_id, "stage": stage, "epoch": phase.epoch, "actor_id": phase.actor_id,
             "controller_boot_id": phase.launch.operator_mark[0], "operator_pause_generation": phase.launch.operator_mark[1],
             "takeover_generation": phase.launch.takeover_generation,
             "source_ids": list(dict.fromkeys((*self._ledger.request(phase.launch.request_id)["result"]["source_ids"],
-                phase.launch.checkpoint.observation_id, phase.checkpoint.observation_id))),
+                *saved_sources, phase.launch.checkpoint.observation_id, phase.checkpoint.observation_id))),
             "continuity": None, "launch_request_id": phase.launch.request_id, "launch_id": phase.launch.launch_id,
-            "no_save_required": True, "grants_authority": False}
+            "no_save_required": phase.saved_checkpoint is None,
+            **({"saved_checkpoint_request_id": phase.saved_checkpoint} if phase.saved_checkpoint is not None else {}),
+            "grants_authority": False}
 
     def _refresh_exit(self, work: _Work, phase: _ExitPhase) -> _ExitPhase:
         self._exit_guard(work, phase)
@@ -911,8 +933,9 @@ class MissionRuntime:
                    (state["session"], state["revision"], state["boundary"]["id"])):
             raise ControlError("Untouched exit requires its exact paused main-menu binding")
         ledger = self._ledger.snapshot(now=self._wall())
+        saved = self._registered_lifecycle.saved_exit_checkpoint()
         self._exit_phase = phase = _ExitPhase(data["request_id"], launch.checkpoint, launch,
-            ledger["player_id"], ledger["epoch"])
+            ledger["player_id"], ledger["epoch"], saved)
         phase = self._refresh_exit(work, phase)
         self._ledger.activate(epoch=phase.epoch, player_id=phase.actor_id, now=self._wall())
         logical = "resume-" + hashlib.sha256(data["request_id"].encode()).hexdigest()
@@ -1011,15 +1034,20 @@ class MissionRuntime:
         if primitive["state"] == "unknown":
             self._ledger.reconcile_effect(proposal.logical_id, sources=tuple(receipt["source_ids"]),
                 note=f"Owned normal exit {phase.launch.launch_id} after published YES; ACK remains unknown", now=self._wall())
+        if candidate[3] is not None:
+            # This exact child exited normally and its pending input/effect is
+            # retired. No after-frame can arrive; keep the unknown ACK/charge.
+            self._store.release(candidate[3])
         proof = {"schema": VERSION, "record_type": "OwnedNormalExit", "origin_request_id": phase.root_id,
             "launch_request_id": phase.launch.request_id, "launch_id": phase.launch.launch_id,
             "terminal_logical_id": proposal.logical_id, "native_request_id": candidate[2]["id"],
-            "source_ids": receipt["source_ids"], "no_save_required": True, "returncode": 0,
+            "source_ids": receipt["source_ids"], "no_save_required": phase.saved_checkpoint is None, "returncode": 0,
+            **({"saved_checkpoint_request_id": phase.saved_checkpoint} if phase.saved_checkpoint is not None else {}),
             "retirement": retirement, "grants_authority": False}
         self._exit_phase = None
         self._exit_candidate = None
         self._bindings.clear()
-        return "completed", {"reason": "Owned untouched-menu normal exit verified; input ACK retained separately",
+        return "completed", {"reason": "Owned main-menu normal exit verified; input ACK retained separately",
             "phase": receipt, "normal_exit": proof, "grants_authority": False}
 
     def _exit_effect_guard(self, work: _Work, phase: _ExitPhase) -> None:
@@ -1031,7 +1059,8 @@ class MissionRuntime:
                 or state["session"] != phase.checkpoint.session or state["pause_origin"] == "human"
                 or state["in_game"] or state["scene"] is not None or state["error"]
                 or state["boundary"]["kind"] != "menu" or state["category"] != "YESNO"
-                or any(ref.boundary_kind == "normal_play" for ref in self._store.historical_references)
+                or phase.saved_checkpoint is None and self._registered_lifecycle.normal_after_launch()
+                or phase.saved_checkpoint is not None and self._registered_lifecycle.saved_exit_checkpoint() != phase.saved_checkpoint
                 or state["takeover_generation"] != phase.launch.takeover_generation
                 or state["boundary"]["control_generation"] != before["boundary"]["control_generation"]):
             raise ControlError("Expected exit effect superseded by controller/native Pause or takeover")
@@ -1072,7 +1101,8 @@ class MissionRuntime:
         self._check_cancelled(work)
         old = self._lease
         new = self.controller.acquire_mission(old.mission_id, old.epoch, old.actor_id,
-            operation="navigate" if work.request["skill_kind"] == "navigate" else "interaction",
+            operation="lifecycle" if work.request["kind"] == "lifecycle" else (
+                "navigate" if work.request["skill_kind"] == "navigate" else "interaction"),
             expected_session=state["session"], expected_revision=state["revision"],
             expected_boundary_id=state["boundary"]["id"], replace=old)
         self._lease = new
@@ -1124,8 +1154,7 @@ class MissionRuntime:
         return deadline
 
     def _envelope(self, raw: dict, work: _Work, proposal: MissionIntent | _ResumeIntent,
-                  preflight: EvidenceRef | None) -> tuple[str, str]:
-        image_informed = work.request.get("perception") is not None or work.request["kind"] == "lifecycle"
+                  preflight: EvidenceRef | None, *, image_informed: bool) -> tuple[str, str]:
         fields = {"logical_action_id", "request", "result", "published", "received_monotonic", "preflight"}
         if type(raw) is not dict or set(raw) != fields or raw["logical_action_id"] != proposal.logical_id or type(raw["published"]) is not bool:
             raise ContractError("Malformed exact mission receipt envelope")
@@ -1200,7 +1229,7 @@ class MissionRuntime:
         return "unknown", str(result.get("error") or "Input acknowledgment is unresolved")[:1024]
 
     def _dispatch(self, work: _Work, proposal: MissionIntent | _ResumeIntent, original: EvidenceRef,
-                  *, lifecycle: _ExitPhase | None = None) -> PrimitiveResult:
+                  *, lifecycle: _ExitPhase | NormalPhase | None = None) -> PrimitiveResult:
         reservation = None
         preflight_source = None
         prepared = False
@@ -1213,6 +1242,8 @@ class MissionRuntime:
         def guard() -> None:
             if lifecycle is None:
                 self._dispatch_guard(work, proposal)
+            elif isinstance(lifecycle, NormalPhase):
+                self._registered_lifecycle.guard(work, lifecycle, proposal)
             else:
                 self._exit_guard(work, lifecycle, proposal)
         def preflight(observed: dict, received: float) -> None:
@@ -1263,19 +1294,29 @@ class MissionRuntime:
                     expected_image_sha256=proposal.before.frame_sha256 if image_informed else None)
             if not prepared:
                 prepared = any(row["logical_id"] == proposal.logical_id for row in self._ledger.primitive_records())
-            disposition, reason = self._envelope(raw, work, proposal, preflight_source)
+            disposition, reason = self._envelope(raw, work, proposal, preflight_source, image_informed=image_informed)
             envelope_valid = True
             if raw["published"]:
                 self._ledger.published(proposal.logical_id, raw["request"]["id"], now=self._wall())
-                if lifecycle is not None and proposal.kind == "action" and proposal.action == "YES":
-                    self._exit_candidate = (lifecycle, proposal.logical_id, copy.deepcopy(raw["request"]))
+                if isinstance(lifecycle, NormalPhase):
+                    self._registered_lifecycle.published(lifecycle, proposal, raw["request"], reservation)
+                elif lifecycle is not None and proposal.kind == "action" and proposal.action == "YES":
+                    self._exit_candidate = (lifecycle, proposal.logical_id, copy.deepcopy(raw["request"]), reservation)
             if disposition == "returned":
                 after = self._ingest(raw["result"], raw["received_monotonic"], reservation=reservation)
                 reservation = None
+                if self._exit_candidate is not None and self._exit_candidate[1] == proposal.logical_id:
+                    self._exit_candidate = (*self._exit_candidate[:3], None)
+                candidate = self._registered_lifecycle.candidate
+                if candidate is not None and candidate.logical_id == proposal.logical_id:
+                    self._registered_lifecycle.candidate = replace(candidate, reservation=None)
                 live = self._live()
                 authoritative = (live[3] is self._lease and self._lease is not None and not live[4]
                     and not work.cancelled.is_set() and after.boundary_kind in ("normal_play", "menu"))
-                self._publish_source(after, authoritative=authoritative)
+                if isinstance(lifecycle, NormalPhase):
+                    self._registered_lifecycle.retain_after(after)
+                else:
+                    self._publish_source(after, authoritative=authoritative)
         except Exception as exc:
             disposition = "unknown" if raw is not None and (not envelope_valid or raw.get("published")) or prepared and raw is None else "not_dispatched"
             reason = f"{type(exc).__name__}: {exc}"[:1024]
@@ -1478,6 +1519,8 @@ class MissionRuntime:
         if kind in ("remember", "correct"):
             return "completed", self._memory_request(work)
         if kind == "skill":
+            if self._registered_lifecycle.phase is not None:
+                return self._registered_lifecycle.control(work)
             if self._exit_phase is not None:
                 return self._exit_control(work)
             self._prompt_guard(work.request)
@@ -1555,6 +1598,15 @@ class MissionRuntime:
         if disposition == "unknown" and self._lease is not None:
             self._stop_unknown_policy()
         operation = self._ledger.complete_request(data["request_id"], disposition, result, now=self._wall())
+        try:
+            self._registered_lifecycle.after_commit(work, disposition, result)
+        except _Cancelled:
+            # The immutable result remains historical evidence. A concurrent
+            # operator Pause cancels publication, not the entire mission writer.
+            self._bindings.clear()
+            self._map = None
+            self._registered_lifecycle.revoke()
+            self._apply_pauses()
         self._progress = result
         self._publish()
         self._cache_operation(operation)
@@ -1616,6 +1668,7 @@ class MissionRuntime:
         self._bindings.clear()
         self._clear_prompt()
         self._exit_phase = None
+        self._registered_lifecycle.revoke()
         self._rotation = None
         self._apply_pauses()
         state = self._ledger.snapshot(now=self._wall())

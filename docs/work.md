@@ -49,10 +49,26 @@ registered lifecycle proves owned world/character; no unrelated running game can
 seed identity or mission time. Owned launch and untouched-menu normal exit are now
 qualified for the bounded untouched-menu Yes path, retaining the first failure,
 unknown acknowledgments and finite costs. [The native report](acceptance/2026-10-20-owned-launch.md)
-separates execution/verification costs and reopened historical proof. This cleanup
-branch does not provide character creation, save/reload or mission acceptance. The [mission design](design/player-owned-mission.md)
+separates execution/verification costs and reopened historical proof. This native
+qualification provides no character creation, save/reload or mission acceptance.
+Current source adds registered creation/identity adoption and normal save/new-child
+reload through synthetic integration tests, with exact canonical continuity and
+unknown ACKs retained. Native character lifecycle remains unqualified. The [mission design](design/player-owned-mission.md)
 defines the remaining lifecycle, fresh-context and bounded acceptance work; the [trace pilot](acceptance/2026-10-19-memory-trace-pilot.md)
 records actual source/interpretation limits. Neither page claims runtime delivery.
+
+The selected iteration is the complete #144 mission outcome, rather than isolated
+component demonstrations. The first run's2109inputs (171lifecycle) motivate semantic
+composition; its ground/carried-water corrections and interrupted craft motivate
+source-linked Claims and unfinished Work. Those totals do not establish measured
+speedup or memory efficacy. Finish the lifecycle source boundary, then compose
+item/activity/outcome handling and one-use fresh-context retrieval, deliberate
+readmission and normal finish. Freeze #156 only after integrated checks and native
+preflight; #157 supplies actual mission evidence before #145 readiness. The lead
+owns coupled runtime/ledger integration and the single native runtime. Disjoint
+passive policies may use at most two worktree workers after interface freeze;
+read-only source/evidence reviews can run alongside them. No budget, due date or
+closed attempt renews through this delivery sequence.
 
 An [optional read-only curator #146](https://github.com/CVX-Hull/enactive/issues/146)
 and broader memory/monitor/model efficacy studies remain separate candidates.

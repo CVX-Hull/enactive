@@ -627,21 +627,17 @@ and exact final preflight precedes durable intent and input publication.
 Contradictory publication receipts remain unknown, even if movement occurred.
 
 Start and Observe never launch or Resume. Neither paused menus nor unowned normal
-play can establish world/character or the game-time anchor. Production Start stays
-read-only until the registered owned lifecycle verifies those facts. Core tests
-explicitly mock that boundary; they are not lifecycle acceptance. Stop(false) requests Pause and leaves cleanup possible; a busy
-Stop is not admitted under the old epoch. Registered launch now verifies owned child/fresh paused main-menu readiness in
-portable fixtures, retaining custody and original deadlines with no Resume or
-identity/time adoption. Registered untouched-menu exit now composes charged Resume,
-Quit and an explicit interpreted confirmation with normal process/effect proof;
-unknown ACK/history survives narrow pending retirement. No character save is claimed.
-Source-free Start publishes no native Observe before owned launch. Normal adoption
-remains unavailable even after reopening diagnostic frames. Other lifecycle,
-item/inspection, activity, handoff and final-finish requests explicitly block.
-The [bounded composed native retest](../acceptance/2026-10-20-owned-launch.md#native-qualification002-accepted-owned-menu-component)
-qualified owned untouched-menu launch/Yes/normal-exit while retaining the first
-failed attempt. Native No and normal character lifecycle remain unqualified.
-Fresh player replacement and independent play remain separate acceptance work.
+play establish world/character or the game-time anchor. Stop(false) requests Pause
+and leaves cleanup possible. Registered launch and untouched-menu exit have bounded
+[native qualification](../acceptance/2026-10-20-owned-launch.md), with the first
+failure and unknown ACKs retained. Character creation/save/load and provisional
+identity inspection now compose through the real controller/ledger in synthetic UI
+tests, including normal exit/new child/reload and exact saved-turn continuity.
+The [current protocol](../protocol.md#integrated-mission-lifecycle) specifies typed
+transition/adoption/checkpoint proofs, diagnostic unknown reconciliation, canonical
+all-session validation and non-restoration of authority. Native character lifecycle,
+item/activity/ordinary inspection, handoff/readmission and finish remain required;
+there is no accepted independent mission or fresh player-context demonstration.
 
 The [native-row menu policy](../../harness/gameplay/interaction.py) can propose a
 bounded sequence of actual `UILIST.UP`/`UILIST.DOWN` actions to an exact visible
@@ -657,8 +653,8 @@ admitted lifecycle request. Its required preflight source, reserved receipt,
 original limits and crash uncertainty use the existing accounting path. The
 controller supplies the same correlated six-field envelope for mission Resume,
 requires an actual paused frame and keeps the unchanged Pause sentinel through
-preflight. A newer touch/rewrite/removal or host Pause stops publication. These
-components do not yet implement the registered lifecycle policy or its admission.
+preflight. A newer touch/rewrite/removal or host Pause stops publication. The registered lifecycle component uses these checks; native character lifecycle
+acceptance remains separate.
 
 The [windowed wire4 probe](../acceptance/2026-10-20-native-presentation.md) qualifies
 tested menu presentation/preflight paths. It loaded no character and proves no
@@ -716,8 +712,8 @@ pinned native source; unsupported controls stop. Native-row MenuSkill rejects
 player interpretations rather than silently treating them as native evidence.
 World-generation forms use their registered form controls, without a tab-focus
 mapping. NEXT_TAB on the final character-description screen begins completion;
-ordinary focus blocks it. The pending lifecycle adapter must request world
-FINALIZE and character finish as explicit stage commits, separate from focus.
+ordinary focus blocks it. The registered lifecycle adapter requests world FINALIZE and character finish
+as explicit stage commits, separate from focus.
 The passive policy additionally stops an arrow batch when available native rows
 contradict its next expected enabled focus. Unknown results retain their pending
 ID and canonical actual-after reference even when the PNG is missing or corrupt;
@@ -740,8 +736,8 @@ now distinguishes host operator-Pause generation from internal authority revocat
 trusted Resume requires the captured operator counter and controller boot in addition
 to the general generation. Internal stops still revoke and set the Pause sentinel.
 The lifecycle adapter must capture those values before an expected transition;
-user Pause always prevents automatic adoption/Resume. Lifecycle and item/activity
-phase integration remains required; ordinary prompt handling cannot adopt them.
+user Pause always prevents automatic adoption/Resume. Registered lifecycle phases are separate; item/activity integration remains
+required. Ordinary prompt handling cannot adopt unrelated lifecycle phases.
 An ordinary interact root may open a private phase only from its exact correlated
 supported returned prompt. Its menu/edit/inspect children share the original
 32-input/900-second maximum. Unknown delivery cannot open it; actual return to normal
@@ -790,8 +786,8 @@ session scope. The lifecycle proof must explicitly connect them rather than copy
 world source into a different session. Lifecycle must check actual phase source/support,
 current undisputed scope and admission names, not annotation text or any existing
 claim ID. These remain fallible identity evidence. One-current ingress and cached observer
-views are connected. Item/activity outcomes, the rest of registered lifecycle,
-actual observer behavior and the fresh-player mission remain acceptance gates.
+views are connected. Item/activity outcomes, remaining handoff/readmission/finish adapters, native
+character lifecycle and the actual fresh-player mission remain acceptance gates.
 
 
 ### Cached observer and continuity reducer
@@ -808,7 +804,6 @@ with Cancel/dismissed. One registered QUIT, or TEXT.QUIT in STRING_INPUT, is del
 the result is partial for verification. It cannot alias NO or answer a later prompt.
 
 The timeline reducer validates archive chronology and exact adjacent normal-session
-endpoint links, rejects disputed/lost sources and sums session durations. Runtime
-currently supplies no lifecycle links, so a second session makes cost unknown.
-A future validated identity transition must produce the link and a new coordinate
-epoch. Equal turns alone never prove same-character identity or restore authority.
+endpoint links, rejects disputed/lost sources and sums session durations. The historical lifecycle reader now derives links only from validated transitions,
+identity adoption and exact saved endpoints across all retained normal sessions;
+missing proof makes cost unknown. Each adopted session gets a new coordinate epoch. Equal turns alone never prove same-character identity or restore authority.

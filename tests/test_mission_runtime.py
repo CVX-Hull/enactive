@@ -1175,16 +1175,17 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.runtime.status()["spent_inputs"], 0)
         self.assertIsNone(self.controller._mission_lease)
 
-    def test_no_fake_handoff_unimplemented_load_or_finish_and_stop_revokes(self):
+    def test_handoff_unowned_load_and_finish_cannot_claim_success_and_stop_revokes(self):
         self.start()
         source = self.runtime.status()["current_source"]
-        for req in [self.request("handoff", checkpoint_ids=[], successor_role="player"),
-                    self.request("lifecycle", operation="load", world=self.a.scenario.world,
+        for kind, fields in [("handoff", dict(checkpoint_ids=[], successor_role="player")),
+                    ("lifecycle", dict(operation="load", world=self.a.scenario.world,
                                  character=self.a.scenario.character, sources=[source["observation_id"]],
                                  expected_session=source["session"], expected_revision=source["revision"],
                                  expected_boundary_id=self.runtime._store.observation(self.runtime._current)["boundary"]["id"],
-                                 limits={"primitives": 1, "wall_seconds": 60, "game_seconds": 1}),
-                    self.request("stop", finish=True, reason="claimed success")]:
+                                 limits={"primitives": 1, "wall_seconds": 60, "game_seconds": 1})),
+                    ("stop", dict(finish=True, reason="claimed success"))]:
+            req = self.request(kind, **fields)
             self.assertEqual(self.runtime.command(req)["status"], "accepted")
             self.assertEqual(self.settled(req["request_id"])["state"], "blocked")
         req = self.request("stop", request_id="stop-real", finish=False, reason="Stop now")

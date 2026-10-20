@@ -1,0 +1,330 @@
+"""Real mission writer/SQLite/transport with synthetic UI; not CDDA acceptance.
+
+These tests never patch identity adoption, lifecycle guards or receipt validation.
+The fake bridge supplies controlled visible boundaries and expected session loss.
+"""
+import copy
+import time
+import unittest
+from unittest.mock import patch
+
+from harness.mission_runtime import MissionRuntime
+from tests import test_mission_launch as launch_fixtures
+from tests.test_gameplay_evidence import observation
+from tests.test_mission_contracts import claim
+
+
+class MissionCreationTests(unittest.TestCase):
+    setUp = launch_fixtures.MissionLaunchTests.setUp
+    start = launch_fixtures.MissionLaunchTests.start
+    settled = launch_fixtures.MissionLaunchTests.settled
+    launch = launch_fixtures.MissionLaunchTests.launch
+    request = launch_fixtures.MissionLaunchTests.request
+
+    def fake_launch(self, *, deadline_monotonic, cancelled):
+        self.assertFalse(cancelled())
+        self.assertGreater(deadline_monotonic, time.monotonic())
+        self.launch_count = getattr(self, "launch_count", 0) + 1
+        self.process_state.update(launch_id=f"owned-launch-{self.launch_count}", pid=1234,
+            running=True, returncode=None, outcome="running")
+        self.bridge.value.update(session=f"menu-{self.launch_count}", paused=True, pause_origin="startup")
+        self.menu("MAIN_MENU", ["CONFIRM", "QUIT"])
+        return copy.deepcopy(self.process_state)
+
+    def menu(self, category, actions, *, in_game=False):
+        self.bridge.value.update(category=category, actions=actions, scene=None, ui=None, in_game=in_game)
+        self.bridge.value["boundary"]["kind"] = "menu"
+        self.bridge.value["boundary"]["id"] = f'{category}-{self.bridge.value["revision"]}'
+
+    def normal(self, session, *, paused=False):
+        scene = observation()["scene"]
+        scene.update(turn=self.turn, provenance="player-visible input boundary")
+        self.bridge.value.update(session=session, category="DEFAULTMODE", scene=scene, in_game=True,
+            paused=paused, pause_origin="world_change" if paused else "none",
+            actions=["player_data", "save", "UP", "DOWN", "LEFT", "RIGHT"])
+        self.bridge.value["boundary"].update(kind="normal_play", id=f'normal-{self.bridge.value["revision"]}')
+
+    def behavior(self, bridge, request):
+        action, category = request.get("action"), bridge.value["category"]
+        if request["kind"] in ("observe", "resume"):
+            return True
+        if category == "MAIN_MENU" and action == "QUIT":
+            self.stage = "exit"
+            self.menu("YESNO", ["YES", "NO"])
+        elif category == "MAIN_MENU" and action == "CONFIRM":
+            if self.stage == "world":
+                self.menu("WORLDGEN_CONFIRM_DIALOG", ["UP", "DOWN", "CONFIRM", "FINALIZE"])
+            elif self.stage == "load":
+                self.normal(f"normal-{self.launch_count}", paused=True)
+                return False
+            else:
+                self.menu("NEW_CHAR_DESCRIPTION", ["PREV_TAB", "NEXT_TAB", "CONFIRM"])
+        elif category == "WORLDGEN_CONFIRM_DIALOG" and action == "FINALIZE":
+            self.stage = "world-confirmation"
+            self.menu("YESNO", ["YES", "NO"])
+        elif category == "NEW_CHAR_DESCRIPTION" and action == "NEXT_TAB":
+            self.stage = "points-confirmation" if getattr(self, "spare_points", False) else "character-confirmation"
+            self.menu("YESNO", ["YES", "NO"])
+        elif category == "YESNO" and action == "YES":
+            if self.stage == "points-confirmation":
+                self.stage = "character-confirmation"
+                self.menu("YESNO", ["YES", "NO"])
+            elif self.stage == "world-confirmation":
+                self.stage = "character"
+                self.menu("MAIN_MENU", ["CONFIRM", "QUIT"])
+            elif self.stage == "character-confirmation":
+                self.normal(f"normal-{self.launch_count}", paused=True)
+                return False
+            elif self.stage == "save":
+                bridge.value.update(session=f"saved-menu-{self.launch_count}", paused=True, pause_origin="world_change")
+                self.menu("MAIN_MENU", ["CONFIRM", "QUIT"])
+                return False
+            elif self.stage == "exit":
+                self.process_state.update(running=False, returncode=0, outcome="exited")
+                return False
+        elif category == "DEFAULTMODE" and action == "player_data":
+            self.menu("PLAYER_INFO", ["QUIT", "CONFIRM"], in_game=True)
+        elif category == "PLAYER_INFO" and action == "QUIT":
+            self.normal(f"normal-{self.launch_count}")
+        elif category == "DEFAULTMODE" and action == "save":
+            self.stage = "save"
+            self.menu("YESNO", ["YES", "NO"], in_game=True)
+        elif category == "YESNO" and action == "NO" and self.stage == "save":
+            self.normal(f"normal-{self.launch_count}")
+        return True
+
+    def ready(self):
+        self.turn, self.stage = 10, "world"
+        self.bridge.behavior = self.behavior
+        self.process.wait_exit.side_effect = lambda **_: copy.deepcopy(self.process_state)
+        self.start()
+        self.assertEqual(self.launch()["state"], "completed")
+
+    def run_request(self, data):
+        response = self.runtime.command(data)
+        self.assertEqual(response["status"], "accepted", response)
+        return self.settled(data["request_id"])
+
+    def current(self):
+        reference = self.runtime._current
+        return reference, self.runtime._store.observation(reference)
+
+    def lifecycle(self, identity, operation="create", *, parent=None, claims=None):
+        ref, observed = self.current()
+        return self.request(identity=identity, operation=operation, phase_id=parent,
+            sources=[ref.observation_id], expected_session=ref.session, expected_revision=ref.revision,
+            expected_boundary_id=observed["boundary"]["id"], identity_claim_ids=claims or [],
+            limits=dict(primitives=32, wall_seconds=120, game_seconds=1000))
+
+    def control(self, identity, label, *, parent="create", kind="menu", question=None, purpose=None):
+        ref, observed = self.current()
+        perception = dict(source_id=ref.observation_id, basis="player_interpretation")
+        if kind == "inspect":
+            perception = None
+            goal = dict(purpose="character_identity")
+        elif question is not None:
+            perception.update(kind="confirmation", question=question)
+            goal = dict(purpose=purpose or "Answer actual lifecycle confirmation", label=label, outcome="activated")
+        elif label == "Cancel":
+            perception.update(kind="dismissal", question="Return from character information")
+            goal = dict(purpose="Return", label="Cancel", outcome="dismissed")
+        else:
+            perception.update(kind="menu", control="vertical", rows=[dict(label=label, enabled=True)], selected=0, question="")
+            goal = dict(purpose=purpose or "Select visible setup option", label=label, outcome="activated")
+        return dict(schema="mission/2", kind="skill", request_id=identity, mission_id=self.a.mission_id,
+            epoch=self.runtime.status()["epoch"], skill_kind=kind, phase_id=parent, work_id=None,
+            sources=[ref.observation_id], expected_session=ref.session, expected_revision=ref.revision,
+            expected_boundary_id=observed["boundary"]["id"], perception=perception, goal=goal,
+            limits=dict(primitives=8, wall_seconds=30, game_seconds=100))
+
+    def remember_identity(self, identity, subject, ref, epoch, *, value=None):
+        entry = claim(id=identity, key=dict(subject=subject, property="identity", unit="name",
+            coverage_id="visible-world-menu" if subject == "world" else "visible-character-screen"),
+            value=dict(quantity=None, state=value or getattr(self.a.scenario, subject)),
+            scope=dict(mission_id=self.a.mission_id, session=ref.session, coordinate_epoch=epoch),
+            observed_time=dict(revision=ref.revision, turn=ref.turn), received_time=int(time.time() * 1000),
+            sources=[ref.observation_id], supports=[dict(sources=[ref.observation_id], claims=[])])
+        operation = self.run_request(dict(schema="mission/2", kind="remember", request_id=f"remember-{identity}",
+            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], entry_type="claim", entry=entry))
+        self.assertEqual(operation["state"], "completed", operation)
+        return entry["id"]
+
+    def finish_identity(self, root, world_source, epoch=0):
+        operation = self.run_request(self.lifecycle(f"{root}-reconcile", "create" if epoch == 0 else "load", parent=root))
+        self.assertEqual(operation["state"], "completed", operation)
+        self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
+        self.assertIsNone(self.runtime._map)
+        self.assertEqual(self.runtime._bindings, {})
+        readmit = self.run_request(self.lifecycle(f"{root}-readmit", "create" if epoch == 0 else "load", parent=root))
+        self.assertEqual(readmit["state"], "completed", readmit)
+        inspection = self.run_request(self.control(f"{root}-inspect", "Character", kind="inspect", parent=root))
+        self.assertEqual(inspection["state"], "completed", inspection)
+        screen = self.runtime._current
+        world_id = self.remember_identity(f"{root}-world", "world", world_source, epoch)
+        character_id = self.remember_identity(f"{root}-character", "character", screen, epoch)
+        returned = self.run_request(self.control(f"{root}-return", "Cancel", parent=root))
+        self.assertEqual(returned["state"], "partial", returned)
+        adopted = self.run_request(self.lifecycle(f"{root}-adopt", "create" if epoch == 0 else "load", parent=root,
+            claims=[world_id, character_id]))
+        self.assertEqual(adopted["state"], "completed", adopted)
+        return adopted
+
+    def create(self):
+        self.ready()
+        self.assertEqual(self.run_request(self.lifecycle("create"))["state"], "partial")
+        self.assertEqual(self.run_request(self.control("world-form", "Create World"))["state"], "partial")
+        world = self.runtime._current
+        self.assertEqual(self.run_request(self.lifecycle("world-finalize", parent="create"))["state"], "partial")
+        self.assertEqual(self.run_request(self.control("world-yes", "Yes", question="Are you SURE you're finished?"))["state"], "partial")
+        self.assertEqual(self.run_request(self.control("character-menu", "Custom Character"))["state"], "partial")
+        self.assertEqual(self.run_request(self.lifecycle("character-finish", parent="create"))["state"], "partial")
+        if getattr(self, "spare_points", False):
+            points = self.run_request(self.control("points-yes", "Yes",
+                question="Remaining points will be discarded, are you sure you want to proceed?"))
+            self.assertEqual(points["state"], "partial", points)
+            self.assertIsNone(self.runtime._registered_lifecycle.candidate)
+        entered = self.run_request(self.control("character-yes", "Yes", question="Are you SURE you're finished?"))
+        self.assertEqual(entered["state"], "unknown", entered)
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNotNone(self.runtime._registered_lifecycle.candidate)
+        observed = self.run_request(dict(schema="mission/2", kind="observe", request_id="create-observe",
+            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
+        self.assertEqual(observed["state"], "completed", observed)
+        return self.finish_identity("create", world)
+
+    def observe(self, identity):
+        operation = self.run_request(dict(schema="mission/2", kind="observe", request_id=identity,
+            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
+        self.assertEqual(operation["state"], "completed", operation)
+        return operation
+
+    def save(self):
+        begun = self.run_request(self.lifecycle("save", "save"))
+        self.assertEqual(begun["state"], "partial", begun)
+        answered = self.run_request(self.control("save-yes", "Yes", parent="save", question="Save and quit?"))
+        self.assertEqual(answered["state"], "unknown", answered)
+        self.observe("save-observe-first")
+        first = self.runtime._current
+        self.observe("save-observe-second")
+        self.assertNotEqual(first, self.runtime._current)
+        request = self.lifecycle("save-reconcile", "save", parent="save")
+        request["sources"].append(first.observation_id)
+        operation = self.run_request(request)
+        self.assertEqual(operation["state"], "completed", operation)
+        return operation
+
+    def exit(self, root="exit"):
+        begun = self.run_request(self.lifecycle(root, "exit"))
+        self.assertEqual(begun["state"], "partial", begun)
+        finished = self.run_request(self.control(f"{root}-yes", "Yes", parent=root, question="Really quit?"))
+        self.assertEqual(finished["state"], "completed", finished)
+        return finished
+
+    def test_spare_points_is_separate_from_final_character_confirmation(self):
+        self.spare_points = True
+        self.create()
+        self.assertEqual(sum(p.get("action") == "YES" for p in self.bridge.delivered), 3)
+
+    def test_save_exit_new_child_load_preserves_exact_time_and_identity(self):
+        self.create()
+        saved = self.save()["result"]["saved_checkpoint"]
+        finished = self.exit()["result"]["normal_exit"]
+        self.assertFalse(finished["no_save_required"])
+        self.assertIn(saved["menu_source_id"], finished["source_ids"])
+        self.assertIsNone(self.controller.pending)
+        self.assertFalse(self.process_state["running"])
+        self.assertEqual(self.launch(identity="second-launch")["state"], "completed")
+        self.stage = "load"
+        begun = self.run_request(self.lifecycle("load", "load"))
+        self.assertEqual(begun["state"], "partial", begun)
+        # Selecting Load Game first enters its registered selection phase.
+        # The fake UI stays on MAIN_MENU until the following saved entry.
+        self.stage = "load-menu"
+        original = self.bridge.behavior
+        def load_menu(bridge, request):
+            if self.stage == "load-menu" and request.get("action") == "CONFIRM":
+                self.stage = "load"
+                self.menu("MAIN_MENU", ["CONFIRM", "QUIT"])
+                return True
+            return original(bridge, request)
+        self.bridge.behavior = load_menu
+        selected = self.run_request(self.control("load-menu", "Load Game", parent="load"))
+        self.assertEqual(selected["state"], "partial", selected)
+        world = self.runtime._current
+        entered = self.run_request(self.control("load-entry", self.a.scenario.character, parent="load"))
+        self.assertEqual(entered["state"], "unknown", entered)
+        self.observe("load-observe")
+        adopted = self.finish_identity("load", world, 1)
+        self.assertEqual(adopted["result"]["normal_adoption"]["saved_checkpoint_request_id"], "save-reconcile")
+        self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 0)
+        self.runtime._ledger._verify(self.a)
+
+    def test_creation_uses_durable_identity_without_a_gate_mock(self):
+        adopted = self.create()
+        self.assertEqual(adopted["result"]["normal_adoption"]["scope"]["coordinate_epoch"], 0)
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNotNone(self.runtime._map)
+        self.assertTrue(self.runtime._bindings)
+        self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 0)
+        unknown = [p for p in self.runtime._ledger.primitive_records() if p["state"] == "unknown"]
+        self.assertEqual(len(unknown), 1)
+        self.assertIsNotNone(unknown[0]["effect"])
+        self.assertEqual(sum(p.get("action") == "YES" for p in self.bridge.delivered), 2)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 10)
+
+    def test_provisional_normal_rejects_inventory_before_identity(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        request = self.control("invalid-inventory", "Inventory", kind="inspect")
+        request["goal"]["purpose"] = "inventory"
+        count = len(self.bridge.delivered)
+        operation = self.run_request(request)
+        self.assertEqual(operation["state"], "blocked", operation)
+        self.assertEqual(len(self.bridge.delivered), count)
+        self.assertIsNone(self.runtime._map)
+        self.assertEqual(self.runtime._bindings, {})
+
+    def test_user_pause_revokes_creation_phase_without_reacquiring_consent(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        self.runtime.pause()
+        count = len(self.bridge.delivered)
+        response = self.runtime.command(self.lifecycle("try-create", parent="create"))
+        self.assertIn(response["status"], ("accepted", "rejected"), response)
+        if response["status"] == "accepted":
+            self.assertEqual(self.settled("try-create")["state"], "blocked")
+        self.assertEqual(len(self.bridge.delivered), count)
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+
+    def test_reopen_restores_historical_game_time_without_live_handles(self):
+        self.create()
+        self.runtime.close()
+        self.runtime = MissionRuntime(self.controller)
+        self.runtime.command(dict(schema="mission/2", kind="start", request_id="reopened-start", admission=self.a.to_dict()))
+        self.assertEqual(self.settled("reopened-start")["state"], "completed")
+        self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 0)
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNone(self.runtime._registered_lifecycle.lineage)
+        self.assertIsNone(self.runtime._native)
+        self.assertEqual(self.runtime._bindings, {})
+        self.assertIsNone(self.runtime._map)
+        self.assertIsNone(self.controller._mission_lease)
+
+    def test_pause_after_adoption_commit_preserves_result_without_closing_writer(self):
+        original = self.runtime._registered_lifecycle.after_commit
+        def pause_at_publication(work, disposition, result):
+            if "normal_adoption" in result:
+                self.runtime.pause()
+            return original(work, disposition, result)
+        with patch.object(self.runtime._registered_lifecycle, "after_commit", side_effect=pause_at_publication):
+            self.create()
+        self.assertFalse(self.runtime._closed.is_set())
+        self.assertEqual(self.runtime._ledger.request("create-adopt")["state"], "completed")
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNone(self.runtime._map)
+        self.assertEqual(self.runtime._bindings, {})
+        self.assertTrue(self.controller.pause_requested)
+
+
+if __name__ == "__main__":
+    unittest.main()

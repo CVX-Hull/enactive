@@ -19,7 +19,8 @@ from typing import Any
 from .contracts import ContractError, json_object
 from .mission_contracts import (
     VERSION, MissionAdmission, SourceRevalidation, canonical, validate_handoff_binding,
-    validate_handoff_result, validate_memory_entry, validate_normal_exit, validate_prompt_result, validate_request,
+    validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption,
+    validate_normal_exit, validate_prompt_result, validate_request, validate_saved_checkpoint,
 )
 
 DB_VERSION = 6
@@ -773,6 +774,7 @@ class MissionLedger:
 
     def _check_prompt_result(self, request_id: str, data: dict, result: dict, *, actor_id: str,
                              request_state: str) -> None:
+        self._check_lifecycle_records(request_id, data, result, actor_id=actor_id, request_state=request_state)
         if "normal_exit" in result:
             if request_state != "completed":
                 raise LedgerError("Normal exit requires a completed operation result")
@@ -810,6 +812,212 @@ class MissionLedger:
         except ContractError as exc:
             raise LedgerError(f"Invalid prompt result: {exc}") from exc
 
+    def _earlier_request(self, request_id: str, referenced_id: str, *, inclusive: bool = False) -> dict:
+        _id(referenced_id)
+        current = self._db.execute("SELECT rowid FROM requests WHERE id=?", (request_id,)).fetchone()
+        previous = self._db.execute("SELECT rowid FROM requests WHERE id=?", (referenced_id,)).fetchone()
+        if current is None or previous is None or previous[0] > current[0] or previous == current and not inclusive:
+            raise LedgerError("Lifecycle proof refers to a missing, self or future request")
+        return self.request(referenced_id)
+
+    def _lifecycle_record(self, request_id: str, referenced_id: str, key: str,
+                          *, current_result: dict | None = None) -> tuple[dict, dict]:
+        row = self._earlier_request(request_id, referenced_id, inclusive=current_result is not None)
+        result = current_result if referenced_id == request_id else row["result"]
+        if (referenced_id != request_id and row["state"] != "completed"
+                or result is None or type(result.get(key)) is not dict):
+            raise LedgerError(f"Lifecycle proof requires a completed typed {key} result")
+        return row, result[key]
+
+    def _check_lifecycle_records(self, request_id: str, data: dict, result: dict, *, actor_id: str,
+                                  request_state: str) -> None:
+        keys = {"lifecycle_transition", "normal_adoption", "saved_checkpoint"} & result.keys()
+        if not keys:
+            return
+        if request_state != "completed" or data["kind"] != "lifecycle":
+            raise LedgerError("Durable lifecycle proofs require a completed lifecycle operation")
+        try:
+            phase = result.get("phase")
+            expected_stage = "complete" if keys & {"normal_adoption", "saved_checkpoint"} else (
+                "awaiting_identity" if data["operation"] in ("create", "load") else "awaiting_control")
+            if (type(phase) is not dict or phase.get("phase_kind") != "lifecycle"
+                    or phase.get("operation") != data["operation"] or phase.get("stage") != expected_stage):
+                raise LedgerError("Lifecycle proof lost its typed operation/stage receipt")
+            for key in keys:
+                if type(result[key]) is not dict:
+                    raise LedgerError("Lifecycle proofs require typed nested objects")
+            if "lifecycle_transition" in keys:
+                self._check_lifecycle_transition(request_id, data, result["lifecycle_transition"], actor_id)
+                transition = result["lifecycle_transition"]
+                if any(phase.get(key) != transition[value] for key, value in {
+                        "origin_request_id": "origin_request_id", "launch_request_id": "launch_request_id",
+                        "launch_id": "launch_id", "controller_boot_id": "controller_boot_id",
+                        "operator_pause_generation": "operator_pause_generation",
+                        "takeover_generation": "after_takeover_generation",
+                }.items()) or not {transition["before_source_id"], transition["after_source_id"]} <= set(phase["source_ids"]):
+                    raise LedgerError("Transition differs from its exact lifecycle phase receipt")
+            if "normal_adoption" in keys:
+                self._check_normal_adoption(request_id, data, result["normal_adoption"])
+                _, transition = self._lifecycle_record(request_id,
+                    result["normal_adoption"]["transition_result_request_id"], "lifecycle_transition")
+                if any(phase[key] != transition[value] for key, value in {
+                        "launch_request_id": "launch_request_id", "launch_id": "launch_id", "actor_id": "actor_id",
+                        "controller_boot_id": "controller_boot_id", "operator_pause_generation": "operator_pause_generation",
+                        "takeover_generation": "after_takeover_generation"}.items()):
+                    raise LedgerError("Adoption differs from its exact lifecycle transition audit")
+            if "saved_checkpoint" in keys:
+                self._check_saved_checkpoint(request_id, data, result)
+        except ContractError as exc:
+            raise LedgerError(f"Invalid lifecycle proof: {exc}") from exc
+
+    def _check_lifecycle_transition(self, request_id: str, data: dict, value: dict, actor_id: str) -> None:
+        proof = validate_lifecycle_transition(value)
+        root = self._earlier_request(request_id, proof["origin_request_id"])
+        terminal = self._earlier_request(request_id, proof["terminal_request_id"])
+        launched = self._earlier_request(root["request"]["request_id"], proof["launch_request_id"])
+        root_data, terminal_data = root["request"], terminal["request"]
+        launch_result = launched["result"]
+        primitive = self.primitive(proof["terminal_logical_id"])
+        refreshed = primitive["intent"]["revalidation"]
+        informing = proof["before_source_id"] in terminal_data.get("sources", []) or (
+            refreshed is not None and refreshed["current"]["source_id"] == proof["before_source_id"]
+            and refreshed["original"]["source_id"] in terminal_data.get("sources", []))
+        if (root_data["kind"] != "lifecycle" or root_data["phase_id"] is not None
+                or data["phase_id"] != root_data["request_id"]
+                or any(row.get("operation") != proof["operation"] for row in (data, root_data))
+                or root["epoch"] != proof["origin_epoch"] or terminal["epoch"] != root["epoch"]
+                or proof["reconciled_epoch"] != data["epoch"] or proof["actor_id"] != actor_id
+                or terminal_data.get("phase_id") != root_data["request_id"]
+                   and terminal_data["request_id"] != root_data["request_id"]
+                or not informing
+                or proof["after_source_id"] not in data["sources"]
+                or launched["request"].get("operation") != "launch" or launched["state"] != "completed"
+                or launch_result is None or launch_result.get("native_ready") is not True
+                or type(launch_result.get("process")) is not dict
+                or launch_result["process"].get("launch_id") != proof["launch_id"]):
+            raise LedgerError("Lifecycle transition lost its root, actor, epoch, source or owned launch")
+        receipt = primitive["result"]
+        if (primitive["request_id"] != proof["terminal_request_id"]
+                or primitive["native_id"] != proof["native_request_id"]
+                or primitive["state"] not in ("returned", "unknown")
+                or primitive["intent"]["source_before"] != proof["before_source_id"]
+                or primitive["intent"]["kind"] != "action" or receipt is None
+                or receipt.get("published") is not True
+                or any(receipt.get(key) != value for key, value in {
+                    "logical_action_id": proof["terminal_logical_id"], "native_request_id": proof["native_request_id"],
+                    "kind": "action", "value": primitive["intent"]["value"],
+                    "expected_session": primitive["intent"]["expected_session"],
+                    "expected_revision": primitive["intent"]["expected_revision"],
+                    "expected_boundary_id": primitive["intent"]["expected_boundary_id"],
+                    "source_before": proof["before_source_id"], "preflight_source": primitive["intent"]["preflight_source"],
+                    "transport_disposition": primitive["state"],
+                }.items())):
+            raise LedgerError("Lifecycle transition lacks its exact charged published terminal input")
+        if proof["operation"] in ("create", "save"):
+            question = "Are you SURE you're finished?" if proof["operation"] == "create" else "Save and quit?"
+            perception = terminal_data.get("perception")
+            if (primitive["intent"]["value"] != "YES" or terminal_data.get("skill_kind") != "menu"
+                    or perception is None or perception.get("kind") != "confirmation"
+                    or perception.get("question") != question or terminal_data["goal"]["label"] != "Yes"):
+                raise LedgerError("Creation/save transition requires its explicit exact confirmation")
+        elif primitive["intent"]["value"] not in ("CONFIRM", "UILIST.CONFIRM"):
+            raise LedgerError("Load transition requires its registered selection confirmation")
+        if primitive["state"] == "unknown" and primitive["effect"] != {
+                "sources": [proof["before_source_id"], proof["after_source_id"]],
+                "note": f"Observed lifecycle {proof['operation']} transition after {proof['native_request_id']}; original ACK remains unknown"}:
+            raise LedgerError("Lifecycle transition lost its exact independently reconciled effect")
+        if primitive["state"] == "returned" and receipt.get("source_after") != proof["after_source_id"]:
+            raise LedgerError("Returned lifecycle transition lost its exact after-source")
+
+    def _check_normal_adoption(self, request_id: str, data: dict, value: dict) -> None:
+        proof = validate_normal_adoption(value)
+        transition_row, transition = self._lifecycle_record(request_id, proof["transition_result_request_id"], "lifecycle_transition")
+        transition = validate_lifecycle_transition(transition)
+        inspect = self._earlier_request(request_id, proof["identity_inspect_request_id"])
+        inspect_data, inspect_result = inspect["request"], inspect["result"]
+        self._earlier_request(proof["identity_inspect_request_id"], proof["transition_result_request_id"])
+        if (data["operation"] not in ("create", "load") or transition["operation"] != data["operation"]
+                or data["phase_id"] != proof["origin_request_id"]
+                or transition["origin_request_id"] != proof["origin_request_id"]
+                or transition_row["request"].get("phase_id") != proof["origin_request_id"]
+                or transition["reconciled_epoch"] != data["epoch"]
+                or proof["first_normal_source_id"] != transition["after_source_id"]
+                or proof["scope"]["mission_id"] != self._get("admission")["mission_id"]
+                or inspect["state"] != "completed" or inspect_data["kind"] != "skill"
+                or inspect_data["skill_kind"] != "inspect" or inspect_data["goal"]["purpose"] != "character_identity"
+                or inspect_data["phase_id"] != proof["origin_request_id"] or inspect["epoch"] != data["epoch"]
+                or inspect_result is None or type(inspect_result.get("identity_screen_source_id")) is not str
+                or proof["checkpoint_source_id"] not in data["sources"]
+                or set(data["identity_claim_ids"]) != {proof["world_claim_id"], proof["character_claim_id"]}
+                or (data["operation"] == "create") != (proof["saved_checkpoint_request_id"] is None)):
+            raise LedgerError("Normal adoption lost its transition, inspection, scope or identity claims")
+        claims = {row["entry"]["id"]: row for row in self.memory_records("claim")}
+        inspection_inputs = [p for p in self.primitive_records()
+            if p["request_id"] == proof["identity_inspect_request_id"]]
+        if len(inspection_inputs) != 1:
+            raise LedgerError("Identity inspection requires its unique charged player_data primitive")
+        primitive = inspection_inputs[0]
+        intent, receipt = primitive["intent"], primitive["result"] or {}
+        expected = {"logical_action_id": primitive["logical_id"], "native_request_id": primitive["native_id"],
+            "transport_disposition": "returned", "published": True,
+            "source_after": inspect_result["identity_screen_source_id"],
+            **{key: intent[key] for key in ("kind", "value", "expected_session", "expected_revision",
+                "expected_boundary_id", "source_before", "preflight_source")}}
+        if (intent["kind"] != "action" or intent["value"] != "player_data"
+                or intent["expected_session"] != proof["scope"]["session"]
+                or primitive["state"] != "returned" or primitive["native_id"] is None
+                or any(receipt.get(key) != value for key, value in expected.items())):
+            raise LedgerError("Identity inspection lacks its exact returned published player_data receipt")
+        scenario = self._get("admission")["scenario"]
+        for subject, name in (("world", scenario["world"]), ("character", scenario["character"])):
+            selected = claims.get(proof[f"{subject}_claim_id"])
+            if selected is None:
+                raise LedgerError("Normal adoption references a missing identity Claim")
+            entry = selected["entry"]
+            memory_request = self._earlier_request(request_id, selected["event_id"])["request"]
+            if (memory_request["kind"] not in ("remember", "correct") or memory_request["entry_type"] != "claim"
+                    or memory_request["entry"] != entry or entry["key"]["property"] != "identity"
+                    or entry["key"]["subject"] != subject or entry["value"] != {"quantity": None, "state": name}
+                    or entry["status"] not in ("current", "last_seen")
+                    or any(group["claims"] for group in entry["supports"])):
+                raise LedgerError("Normal adoption requires directly supported admitted identity Claims")
+            if subject == "character" and (entry["scope"] != proof["scope"]
+                    or entry["sources"] != [inspect_result["identity_screen_source_id"]]):
+                raise LedgerError("Character identity lost its exact inspected source/scope")
+        if proof["saved_checkpoint_request_id"] is not None:
+            _, saved = self._lifecycle_record(request_id, proof["saved_checkpoint_request_id"], "saved_checkpoint")
+            validate_saved_checkpoint(saved)
+
+    def _check_saved_checkpoint(self, request_id: str, data: dict, result: dict) -> None:
+        proof = validate_saved_checkpoint(result["saved_checkpoint"])
+        _, transition = self._lifecycle_record(request_id, proof["transition_result_request_id"], "lifecycle_transition",
+            current_result=result)
+        transition = validate_lifecycle_transition(transition)
+        _, adoption = self._lifecycle_record(proof["origin_request_id"], proof["adoption_result_request_id"], "normal_adoption")
+        validate_normal_adoption(adoption)
+        _, entry = self._lifecycle_record(proof["origin_request_id"], adoption["transition_result_request_id"], "lifecycle_transition")
+        entry = validate_lifecycle_transition(entry)
+        if (data["operation"] != "save" or data["phase_id"] != proof["origin_request_id"]
+                or transition["operation"] != "save" or transition["origin_request_id"] != proof["origin_request_id"]
+                or transition["reconciled_epoch"] != data["epoch"]
+                or any(transition[key] != entry[key] for key in ("launch_request_id", "launch_id"))
+                or proof["menu_source_id"] != transition["after_source_id"]):
+            raise LedgerError("Saved checkpoint lost its exact save transition or prior adoption")
+        primitives = [p for p in self.primitive_records() if self.request(p["request_id"])["request"].get("phase_id") == proof["origin_request_id"]
+            or p["request_id"] == proof["origin_request_id"]]
+        def saved_action(p: dict) -> bool:
+            intent, receipt = p["intent"], p["result"] or {}
+            expected = {"logical_action_id": p["logical_id"], "native_request_id": p["native_id"],
+                "transport_disposition": "returned", "published": True,
+                **{key: intent[key] for key in ("kind", "value", "expected_session", "expected_revision",
+                    "expected_boundary_id", "source_before", "preflight_source")}}
+            return (intent["kind"] == "action" and intent["value"] == "save"
+                and intent["preflight_source"] == proof["normal_endpoint_source_id"]
+                and p["state"] == "returned" and p["native_id"] is not None
+                and all(receipt.get(key) == value for key, value in expected.items()))
+        if not any(saved_action(p) for p in primitives):
+            raise LedgerError("Saved checkpoint lacks its exact normal save-action preflight")
+
     def _check_normal_exit(self, request_id: str, data: dict, result: dict) -> None:
         proof = validate_normal_exit(result["normal_exit"])
         phase = result.get("phase", {})
@@ -846,6 +1054,19 @@ class MissionLedger:
                 "sources": proof["source_ids"],
                 "note": f"Owned normal exit {proof['launch_id']} after published YES; ACK remains unknown"}:
             raise LedgerError("Normal exit effect evidence differs from the exact owned phase")
+        if not proof["no_save_required"]:
+            _, saved = self._lifecycle_record(root["request_id"], proof["saved_checkpoint_request_id"], "saved_checkpoint")
+            saved = validate_saved_checkpoint(saved)
+            _, transition = self._lifecycle_record(proof["saved_checkpoint_request_id"], saved["transition_result_request_id"],
+                "lifecycle_transition", current_result=self.request(proof["saved_checkpoint_request_id"])["result"])
+            if (phase.get("no_save_required") is not False
+                    or phase.get("saved_checkpoint_request_id") != proof["saved_checkpoint_request_id"]
+                    or transition["launch_id"] != proof["launch_id"]
+                    or transition["launch_request_id"] != proof["launch_request_id"]
+                    or saved["menu_source_id"] not in proof["source_ids"]):
+                raise LedgerError("Saved-character exit lost its same-child saved checkpoint")
+        elif phase.get("no_save_required") is not True:
+            raise LedgerError("Untouched-menu exit cannot borrow a saved-character phase")
 
     def complete_request(self, request_id: str, disposition: str, result: dict, *, now: float) -> dict:
         if disposition not in REQUEST_STATES - {"accepted", "running"}: raise LedgerError("Invalid operation result")
