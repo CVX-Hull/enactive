@@ -1,10 +1,16 @@
 """Owned no-save menu cleanup composition; synthetic transport, no native acceptance."""
 import copy
+from contextlib import closing
+import json
+import sqlite3
 from unittest.mock import patch
 import time
 import unittest
 
 from harness.mission_runtime import MissionRuntime
+from harness.gameplay.contracts import ContractError
+from harness.gameplay.mission_contracts import canonical
+from harness.gameplay.mission_ledger import MissionLedger
 from tests import test_mission_launch as launch_fixtures
 
 
@@ -104,6 +110,96 @@ class MissionExitTests(unittest.TestCase):
         self.assertIsNone(self.controller._mission_lease)
         self.assertIsNone(self.runtime.status()["lifecycle_phase"])
         self.assertEqual([r.get("action") for r in self.bridge.delivered if r["kind"] == "action"], ["QUIT", "YES"])
+
+    def test_aged_confirmation_refreshes_exact_image_before_one_yes(self):
+        self.ready()
+        root = self.begin_exit()
+        data = self.confirmation()
+        original = copy.deepcopy(data)
+        before = self.runtime._current
+        operator_mark = self.controller.operator_pause_generation
+        time.sleep(3.05)
+        operation = self.run_request(data)
+        self.assertEqual(operation["state"], "completed", operation)
+        self.assertEqual(operation["request"], original)
+        self.assertEqual(self.runtime._ledger.request("exit")["deadline"], root["deadline"])
+        primitive = self.runtime._ledger.primitive(operation["result"]["normal_exit"]["terminal_logical_id"])
+        relation = primitive["intent"]["revalidation"]
+        self.assertEqual(relation["original"]["source_id"], before.observation_id)
+        self.assertEqual(relation["rule"], "exact_png_bytes")
+        self.assertEqual(len({before.observation_id, primitive["intent"]["source_before"],
+                              primitive["intent"]["preflight_source"]}), 3)
+        self.assertEqual(primitive["state"], "unknown")
+        self.assertEqual(primitive["effect"]["basis"], "OwnedNormalExit")
+        self.assertEqual(self.runtime.status()["spent_inputs"], 3)
+        self.assertEqual(self.controller.operator_pause_generation, operator_mark)
+        self.assertEqual(sum(r.get("action") == "YES" for r in self.bridge.delivered), 1)
+        retained = copy.deepcopy(primitive)
+        self.runtime.close()
+        self.runtime = MissionRuntime(self.controller)
+        self.start()
+        self.assertEqual(self.runtime._ledger.primitive(retained["logical_id"]), retained)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 3)
+        self.assertIsNone(self.runtime._exit_phase)
+        self.assertIsNone(self.controller._mission_lease)
+
+    def test_confirmation_refresh_rejects_changed_pixels_without_yes(self):
+        self.ready()
+        self.begin_exit()
+        data, before = self.confirmation(), self.runtime._current
+        self.bridge.editor_text = "Changed visible confirmation"
+        with patch.object(self.runtime._store, "inspect_current_boundary", return_value=(before, False)):
+            operation = self.run_request(data)
+        self.assertEqual(operation["state"], "blocked", operation)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertFalse(any(row.get("action") == "YES" for row in self.bridge.delivered))
+
+    def test_user_pause_during_confirmation_refresh_sends_no_yes(self):
+        self.ready()
+        self.begin_exit()
+        data, before = self.confirmation(), self.runtime._current
+        observe = self.runtime._observe_native
+        def pause_after_observation(*args, **kwargs):
+            result = observe(*args, **kwargs)
+            self.runtime.pause("User Pause during confirmation refresh")
+            return result
+        with patch.object(self.runtime._store, "inspect_current_boundary", return_value=(before, False)), \
+                patch.object(self.runtime, "_observe_native", side_effect=pause_after_observation):
+            operation = self.run_request(data)
+        self.assertEqual(operation["state"], "paused", operation)
+        self.assertEqual(self.runtime.status()["pause_cause"], "user")
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertFalse(any(row.get("action") == "YES" for row in self.bridge.delivered))
+
+    def test_expired_exit_root_cannot_be_renewed_by_confirmation_refresh(self):
+        self.ready()
+        root = self.begin_exit()
+        data = self.confirmation()
+        with patch.object(self.runtime, "_wall", return_value=root["deadline"] + 0.001):
+            response = self.runtime.command(data)
+        self.assertEqual(response["status"], "rejected", response)
+        self.assertEqual(self.runtime._ledger.request("exit")["deadline"], root["deadline"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertFalse(any(row.get("action") == "YES" for row in self.bridge.delivered))
+
+    def test_reopen_rejects_exit_refresh_that_no_longer_attests_exact_pixels(self):
+        self.ready()
+        self.begin_exit()
+        data, before = self.confirmation(), self.runtime._current
+        with patch.object(self.runtime._store, "inspect_current_boundary", return_value=(before, False)):
+            operation = self.run_request(data)
+        self.assertEqual(operation["state"], "completed", operation)
+        identity = operation["result"]["normal_exit"]["terminal_logical_id"]
+        path, directory = self.runtime._ledger.path, self.runtime._ledger.directory
+        self.runtime.close()
+        with closing(sqlite3.connect(path)) as db, db:
+            intent = json.loads(db.execute("SELECT intent FROM primitives WHERE id=?", (identity,)).fetchone()[0])
+            intent["revalidation"]["rule"] = "native_state"
+            db.execute("UPDATE primitives SET intent=? WHERE id=?", (canonical(intent), identity))
+        original = path.read_bytes()
+        with self.assertRaisesRegex(ContractError, "normal-exit confirmation|charged terminal"):
+            MissionLedger(directory, now=time.time())
+        self.assertEqual(path.read_bytes(), original)
 
     def test_committed_exit_resolves_history_but_reopen_restores_no_handle_phase_or_input(self):
         self.ready()

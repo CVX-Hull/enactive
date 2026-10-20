@@ -250,6 +250,17 @@ class RegisteredLifecycle:
 
     def _resume(self, work: _Work, phase: NormalPhase) -> NormalPhase:
         r = self.runtime
+        inspected, fresh = r._store.inspect_current_boundary(**r._clocks())
+        if inspected != phase.checkpoint:
+            raise EvidenceError("Lifecycle Resume lost its exact retained checkpoint")
+        if not fresh:
+            original = phase.checkpoint
+            phase = self._refresh(work, phase)
+            # Resume has no lease yet. Retain the exact source relation without
+            # constructing a lease-bound SourceBinding or granting authority.
+            r._record("mission_lifecycle_resume_checkpoint", {"request_id": work.request["request_id"],
+                "before_source_id": original.observation_id, "refreshed_source_id": phase.checkpoint.observation_id,
+                "rule": "exact_png_bytes", "grants_authority": False})
         # Constructor is private to the runtime, not serialized player data.
         proposal = r._resume_intent(work.request["request_id"], phase.checkpoint)
         feedback = r._dispatch(work, proposal, phase.checkpoint, lifecycle=phase)
@@ -285,10 +296,12 @@ class RegisteredLifecycle:
             "NEXT_TAB" if state["category"] == "NEW_CHAR_DESCRIPTION" else None)
         if phase.operation != "create" or phase.stage != "awaiting_control" or action is None:
             raise ControlError("Create stage commit requires the owned world form or final character screen")
+        phase, relation = self._action_checkpoint(work, phase)
+        state = self.runtime._store.observation(phase.checkpoint)
         phase = replace(phase, stage="world_confirmation" if action == "FINALIZE" else "character_confirmation")
         phase = self._install(work, phase)
         proposal = ControlIntent("stage-" + hashlib.sha256(data["request_id"].encode()).hexdigest(),
-            "action", action, phase.checkpoint, state["boundary"]["id"])
+            "action", action, phase.checkpoint, state["boundary"]["id"], relation)
         feedback = self.runtime._dispatch(work, proposal, phase.checkpoint, lifecycle=phase)
         self.runtime._check_cancelled(work)
         if feedback.transport_disposition != "returned" or feedback.after is None:
@@ -320,7 +333,6 @@ class RegisteredLifecycle:
             r._require_normal_adoption(source)
             if source.boundary_kind != "normal_play":
                 raise ControlError("Normal save starts from admitted normal play")
-            r._rotate(work, ControlIntent("save-rotation", "action", "save", source, state["boundary"]["id"]))
         else:
             if (source.boundary_kind != "menu" or state["category"] != "MAIN_MENU" or not state["paused"]
                     or state["session"] != launch.checkpoint.session):
@@ -347,9 +359,12 @@ class RegisteredLifecycle:
             return "partial", {"reason": "Owned lifecycle setup awaits player menu/field decisions",
                 "next_coordinate_epoch": next_epoch,
                 "phase": self.receipt(phase, "awaiting_control"), "grants_authority": False}
+        phase, relation = self._action_checkpoint(work, phase)
+        state = r._store.observation(phase.checkpoint)
+        r._rotate(work, ControlIntent("save-rotation", "action", "save", phase.checkpoint, state["boundary"]["id"]))
         proposal = ControlIntent("save-" + hashlib.sha256(data["request_id"].encode()).hexdigest(),
-            "action", "save", source, state["boundary"]["id"])
-        feedback = r._dispatch(work, proposal, source, lifecycle=phase)
+            "action", "save", phase.checkpoint, state["boundary"]["id"], relation)
+        feedback = r._dispatch(work, proposal, phase.checkpoint, lifecycle=phase)
         r._check_cancelled(work)
         if feedback.transport_disposition != "returned" or feedback.after is None:
             return "unknown" if feedback.transport_disposition == "unknown" else "blocked", {
@@ -445,7 +460,8 @@ class RegisteredLifecycle:
         r = self.runtime
         self.guard(work, phase)
         r._capacity()
-        deadline = r._clock() + min(r._ledger.request(phase.root_id)["deadline"],
+        deadline = r._clock() + min(r._ledger.request(work.request["request_id"])["deadline"],
+            r._ledger.request(phase.root_id)["deadline"],
             r._mission_deadline - r._admission.cleanup_reserve.wall_seconds) - r._wall()
         state, received = r._observe_native(work, deadline_monotonic=deadline)
         reference = r._ingest(state, received)
@@ -455,6 +471,20 @@ class RegisteredLifecycle:
         phase = self._install(work, replace(phase, checkpoint=reference), previous=phase)
         self.guard(work, phase)
         return phase
+
+    def _action_checkpoint(self, work: _Work, phase: NormalPhase) -> tuple[NormalPhase, SourceRevalidation | None]:
+        """Refresh one already-decided action without changing its consent or anchor."""
+        r = self.runtime
+        inspected, fresh = r._store.inspect_current_boundary(**r._clocks())
+        if inspected != phase.checkpoint:
+            raise EvidenceError("Lifecycle action lost its current owned checkpoint")
+        if fresh:
+            return phase, None
+        binding = r._binding(phase.checkpoint)
+        phase = self._refresh(work, phase)
+        relation = SourceRevalidation(binding, r._binding(phase.checkpoint), "exact_png_bytes")
+        r._record("mission_lifecycle_revalidation", relation.to_dict())
+        return phase, relation
 
     def _readmit(self, work: _Work, phase: NormalPhase) -> tuple[str, dict]:
         r, data = self.runtime, work.request
@@ -586,16 +616,8 @@ class RegisteredLifecycle:
         state = r._store.observation(phase.checkpoint)
         if state["paused"]:
             raise ControlError("Explicit same-root lifecycle readmission is required before identity inspection")
-        relation = None
-        inspected, fresh = r._store.inspect_current_boundary(**r._clocks())
-        if inspected != phase.checkpoint:
-            raise EvidenceError("Identity inspection lost its current normal checkpoint")
-        if not fresh:
-            binding = r._binding(phase.checkpoint)
-            phase = self._refresh(work, phase)
-            relation = SourceRevalidation(binding, r._binding(phase.checkpoint), "exact_png_bytes")
-            r._record("mission_lifecycle_revalidation", relation.to_dict())
-            state = r._store.observation(phase.checkpoint)
+        phase, relation = self._action_checkpoint(work, phase)
+        state = r._store.observation(phase.checkpoint)
         proposal = ControlIntent("identity-" + hashlib.sha256(data["request_id"].encode()).hexdigest(),
             "action", "player_data", phase.checkpoint, state["boundary"]["id"], relation)
         feedback = r._dispatch(work, proposal, phase.checkpoint, lifecycle=phase)

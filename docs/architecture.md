@@ -124,6 +124,17 @@ then verifies the committed history before publishing a normal binding/map. Reop
 can recover historical cost but no live phase, process or lease.
 Missing continuity makes cost unknown instead of silently resetting it.
 
+Lifecycle Resume, explicit creation-stage commit, normal save, identity inspection
+and owned exit confirmation refresh an aged checkpoint inside
+the operation, comparing exact retained native state and PNG bytes under the
+original actor/Pause and root/child deadlines. Resume journals source lineage before
+acquiring a lease; it cannot construct authority from an old binding. Exit's typed
+revalidation links the immutable interpretation to the actual dispatch source at
+write, orphan-proof validation and reopen. Save refresh precedes operation rotation
+and preserves the original normal-game time anchor. [Native qualification001](acceptance/2026-10-20-lifecycle-freshness.md)
+retains the timing failures and successful normal stopped cleanup; the source
+repair is not a character-lifecycle or independent-mission pass.
+
 Cached status performs no evidence or memory I/O. It can show the last explicitly
 requested context packet, including claims, Work, source IDs, omissions and
 dispositions. That packet is historical as of its ID; rendering neither recomputes

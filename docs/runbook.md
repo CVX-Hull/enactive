@@ -23,6 +23,12 @@ A source/packet omission must be corrected within original limits; it is not
 permission to resume through another endpoint. Historical receipts cannot restore
 a phase after user Pause or service restart. This path has synthetic coverage;
 actual clean-context/native acceptance remains required.
+Eligible lifecycle Resume, stage commit, save, identity inspection and owned quit
+confirmation refresh an aged checkpoint
+inside the operation under exact-state/image and original authority/deadline
+checks. The player need not race a three-second window between model/tool calls.
+A changed image, Pause or expired root still stops input; do not retry an unknown
+delivery. [Native timing failure and retained cleanup](acceptance/2026-10-20-lifecycle-freshness.md).
 Before admission, ordinary controller commands retain their documented guards.
 Registered launch can only verify a retained child and paused main-menu readiness;
 other lifecycle gaps below prevent independent production gameplay. A launch receipt

@@ -1,0 +1,94 @@
+{
+  "source_commit": "bcf11b7eeb26328569a93a9553b161b20b74c547",
+  "qualification": "FAILED at stale creation Resume before primitive admission",
+  "creation_source_age_seconds": 27.76,
+  "first_yes_source_age_seconds": 3.739,
+  "charged_inputs": 3,
+  "dispositions": {
+    "returned": 2,
+    "unknown": 1
+  },
+  "execution_wall_seconds": 364.98496174812317,
+  "including_reopen_wall_seconds": 426.0677568912506,
+  "extra_verification_wall_seconds": 61.08279514312744,
+  "frames": 10,
+  "png_bytes": 331622,
+  "game_seconds": null,
+  "model_tool_costs": "unmeasured",
+  "character_created": false,
+  "world_created": false,
+  "normal_cleanup": "owned child0, typed unknown-ACK effect, NormalFinish stopped",
+  "no_user_keys": true,
+  "no_raw_rescue": true,
+  "source_frozen": true,
+  "no_game_server_or_slots": true,
+  "review": "reconciliation_ledger_review confirmed receipts/frame hashes/costs/typed proof/authority-free reopen; no input or source changes",
+  "native_sha256": "c65778e2912230f34b67340a4f2caacd0d5874af24ab964526c436bd686f7720",
+  "proof": {
+    "schema": "mission/6",
+    "record_type": "OwnedNormalExit",
+    "origin_request_id": "native-qual-cleanup-exit-001",
+    "launch_request_id": "native-qual-launch-001",
+    "launch_id": "365f0297943d4709a71be96d334ea8d2",
+    "terminal_logical_id": "control-0c8020aceac8c9d42f951593bbedcc4046a9a8a1ba6debd2e0905f9d03c9a93b-1",
+    "native_request_id": "986b19c1-40c1-4d83-bd18-d66c4dcc0b40",
+    "source_ids": [
+      "bf3130af6a828d5d378929bff991a13f134fb504e3f594a3fdb44d7976fbd32f",
+      "919c345012be5764ccbe7f6451ac19136efc3fe9bfee23d24a165a6c0601cf02",
+      "043372297da6fc533fe0a4a42428736d7f46ca05d52bb9614ef0e58b30909068"
+    ],
+    "no_save_required": true,
+    "returncode": 0,
+    "retirement": {
+      "launch_id": "365f0297943d4709a71be96d334ea8d2",
+      "exit_request_id": "native-qual-cleanup-exit-001",
+      "native_request_id": "986b19c1-40c1-4d83-bd18-d66c4dcc0b40",
+      "returncode": 0,
+      "retired_pending": true,
+      "grants_authority": false
+    },
+    "grants_authority": false
+  },
+  "normal_finish": {
+    "schema": "mission/6",
+    "record_type": "NormalFinish",
+    "final_source_id": "043372297da6fc533fe0a4a42428736d7f46ca05d52bb9614ef0e58b30909068",
+    "normal_exit_result_request_id": "native-qual-cleanup-yes-002",
+    "completed_work_event_id": null,
+    "disposition": "stopped",
+    "grants_authority": false
+  },
+  "assets": [
+    {
+      "path": "main-menu.png",
+      "source_id": "bf3130af6a828d5d378929bff991a13f134fb504e3f594a3fdb44d7976fbd32f",
+      "sha256": "eb5bad241cdc1507a9fb551668db700ad7dabc32f5d7e6972e0af50c8c966932"
+    },
+    {
+      "path": "quit-confirmation.png",
+      "source_id": "043372297da6fc533fe0a4a42428736d7f46ca05d52bb9614ef0e58b30909068",
+      "sha256": "98cbd0e151d0cb51714b8d0569bca8cc340c7d79830fe251730d6079629ea24e"
+    }
+  ],
+  "original_limits": {
+    "inputs": 800,
+    "wall_seconds": 7200,
+    "game_seconds": 43200,
+    "frames": 4096,
+    "frame_bytes": 1073741824
+  },
+  "original_cleanup_reserve": {
+    "inputs": 100,
+    "wall_seconds": 900,
+    "frames": 256,
+    "frame_bytes": 134217728
+  },
+  "protected_reserve_input_access": false,
+  "early_ordinary_cleanup_headroom": {
+    "inputs": 200,
+    "wall_seconds": 1800,
+    "frames": 1040,
+    "frame_bytes": 268435456
+  },
+  "passive_player_access": "two actual status calls, exit0, no user permission prompts observed; no input authority or handoff acceptance"
+}

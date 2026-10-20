@@ -235,6 +235,147 @@ class MissionCreationFixture:
 
 
 class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
+    def test_aged_explicit_world_commit_refreshes_before_finalize(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        self.run_request(self.control("world-form", "Create World"))
+        data = self.lifecycle("world-finalize", parent="create")
+        original, before = copy.deepcopy(data), self.runtime._current
+        root_deadline = self.runtime._ledger.request("create")["deadline"]
+        time.sleep(3.05)
+        operation = self.run_request(data)
+        self.assertEqual(operation["state"], "partial", operation)
+        self.assertEqual(operation["request"], original)
+        primitive = self.runtime._ledger.primitive_records()[-1]
+        relation = primitive["intent"]["revalidation"]
+        self.assertEqual((primitive["intent"]["value"], primitive["state"]), ("FINALIZE", "returned"))
+        self.assertEqual(relation["original"]["source_id"], before.observation_id)
+        self.assertEqual(relation["current"]["source_id"], primitive["intent"]["source_before"])
+        self.assertEqual(relation["rule"], "exact_png_bytes")
+        self.assertEqual(self.runtime._ledger.request("create")["deadline"], root_deadline)
+        self.assertEqual(sum(r.get("action") == "FINALIZE" for r in self.bridge.delivered), 1)
+
+    def test_aged_normal_save_refreshes_without_replacing_original_time_anchor(self):
+        self.create()
+        data = self.lifecycle("save", "save")
+        original, before = copy.deepcopy(data), self.runtime._current
+        time.sleep(3.05)
+        operation = self.run_request(data)
+        self.assertEqual(operation["state"], "partial", operation)
+        self.assertEqual(operation["request"], original)
+        primitive = self.runtime._ledger.primitive_records()[-1]
+        relation = primitive["intent"]["revalidation"]
+        self.assertEqual((primitive["intent"]["value"], primitive["state"]), ("save", "returned"))
+        self.assertEqual(relation["original"]["source_id"], before.observation_id)
+        self.assertEqual(relation["current"]["source_id"], primitive["intent"]["source_before"])
+        self.assertEqual(relation["rule"], "exact_png_bytes")
+        self.assertEqual(self.runtime._registered_lifecycle.phase.first_normal, before)
+        self.assertEqual(sum(r.get("action") == "save" for r in self.bridge.delivered), 1)
+
+    def test_explicit_commit_refresh_rejects_changed_pixels_without_finalize(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        self.run_request(self.control("world-form", "Create World"))
+        data, before = self.lifecycle("world-finalize", parent="create"), self.runtime._current
+        spent = self.runtime.status()["spent_inputs"]
+        self.bridge.editor_text = "Changed visible world configuration"
+        with patch.object(self.runtime._store, "inspect_current_boundary", return_value=(before, False)):
+            operation = self.run_request(data)
+        self.assertEqual(operation["state"], "blocked", operation)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertFalse(any(r.get("action") == "FINALIZE" for r in self.bridge.delivered))
+
+    def test_user_pause_during_save_refresh_prevents_rotation_and_save(self):
+        self.create()
+        data, before = self.lifecycle("save", "save"), self.runtime._current
+        spent, observe = self.runtime.status()["spent_inputs"], self.runtime._observe_native
+        def pause_after_observation(*args, **kwargs):
+            result = observe(*args, **kwargs)
+            self.runtime.pause("User Pause during normal save refresh")
+            return result
+        with patch.object(self.runtime._store, "inspect_current_boundary", return_value=(before, False)), \
+                patch.object(self.runtime, "_observe_native", side_effect=pause_after_observation), \
+                patch.object(self.runtime, "_rotate", wraps=self.runtime._rotate) as rotate:
+            operation = self.run_request(data)
+        self.assertEqual(operation["state"], "paused", operation)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        rotate.assert_not_called()
+        self.assertIsNone(self.controller._mission_lease)
+        self.assertFalse(any(r.get("action") == "save" for r in self.bridge.delivered))
+
+    def test_aged_creation_source_refreshes_before_resume_without_manual_observe(self):
+        self.ready()
+        data = self.lifecycle("create")
+        original = copy.deepcopy(data)
+        before = self.runtime._current
+        operator_mark = self.controller.operator_pause_generation
+        mission_deadline = self.runtime._mission_deadline
+        time.sleep(3.05)
+        operation = self.run_request(data)
+        self.assertEqual(operation["state"], "partial", operation)
+        self.assertEqual(operation["request"], original)
+        primitive, = self.runtime._ledger.primitive_records()
+        self.assertEqual((primitive["intent"]["kind"], primitive["state"]), ("resume", "returned"))
+        self.assertEqual(len({before.observation_id, primitive["intent"]["source_before"],
+                              primitive["intent"]["preflight_source"]}), 3)
+        self.assertEqual(self.controller.operator_pause_generation, operator_mark)
+        self.assertEqual(self.runtime._mission_deadline, mission_deadline)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+        self.assertIsNone(self.runtime._map)
+        self.assertEqual(self.runtime._ledger.memory_records("claim"), ())
+
+    def test_resume_refresh_cannot_adopt_changed_pixels(self):
+        self.ready()
+        data = self.lifecycle("create")
+        before = self.runtime._current
+        self.bridge.editor_text = "Changed visible content without a changed action list"
+        # Force the refresh branch for fault probes; real aging is exercised above.
+        with patch.object(self.runtime._store, "inspect_current_boundary", return_value=(before, False)):
+            operation = self.run_request(data)
+        self.assertEqual(operation["state"], "blocked", operation)
+        self.assertEqual(self.runtime._ledger.primitive_records(), ())
+        self.assertFalse(any(row["kind"] == "resume" for row in self.bridge.delivered))
+        self.assertIsNone(self.controller._mission_lease)
+
+    def test_user_pause_during_resume_refresh_sends_no_input(self):
+        self.ready()
+        data, before = self.lifecycle("create"), self.runtime._current
+        observe = self.runtime._observe_native
+        def pause_after_observation(*args, **kwargs):
+            result = observe(*args, **kwargs)
+            self.runtime.pause("User Pause during initial lifecycle refresh")
+            return result
+        with patch.object(self.runtime._store, "inspect_current_boundary", return_value=(before, False)), \
+                patch.object(self.runtime, "_observe_native", side_effect=pause_after_observation):
+            operation = self.run_request(data)
+        self.assertEqual(operation["state"], "paused", operation)
+        self.assertEqual(self.runtime.status()["pause_cause"], "user")
+        self.assertEqual(self.controller.operator_pause_generation, 1)
+        self.assertEqual(self.runtime._ledger.primitive_records(), ())
+        self.assertFalse(any(row["kind"] == "resume" for row in self.bridge.delivered))
+
+    def test_lifecycle_child_refresh_is_bounded_by_its_original_child_deadline(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        root_deadline = self.runtime._ledger.request("create")["deadline"]
+        data, before = self.control("world-form", "Create World"), self.runtime._current
+        data["limits"]["wall_seconds"] = 5
+        observe = self.runtime._observe_native
+        deadlines = []
+        def bounded_observe(work, *, deadline_monotonic=None):
+            child = self.runtime._ledger.request(work.request["request_id"])
+            remaining = child["deadline"] - self.runtime._wall()
+            self.assertLessEqual(deadline_monotonic, self.runtime._clock() + remaining + 0.005)
+            deadlines.append(child["deadline"])
+            return observe(work, deadline_monotonic=deadline_monotonic)
+        with patch.object(self.runtime._store, "inspect_current_boundary", return_value=(before, False)), \
+                patch.object(self.runtime, "_observe_native", side_effect=bounded_observe):
+            operation = self.run_request(data)
+        self.assertEqual(operation["state"], "partial", operation)
+        self.assertEqual(deadlines, [operation["deadline"]])
+        self.assertLess(operation["deadline"], root_deadline)
+        self.assertEqual(self.runtime._ledger.request("create")["deadline"], root_deadline)
+
     def test_spare_points_is_separate_from_final_character_confirmation(self):
         self.spare_points = True
         self.create()

@@ -986,7 +986,7 @@ class MissionLedger:
                         raise LedgerError("Orphan lifecycle effect lacks its actual exact confirmation")
                 elif intent["value"] not in ("CONFIRM", "UILIST.CONFIRM"):
                     raise LedgerError("Orphan load effect lacks its registered selection confirmation")
-            elif intent["value"] != "YES" or (parent["request"].get("perception") or {}).get("question") != "Really quit?":
+            elif intent["value"] != "YES" or not self._exit_confirmation(intent, parent["request"]):
                 raise LedgerError("Orphan exit effect lacks its exact normal-exit confirmation")
             return
         owner = self._earlier_request(proof["reconciliation_request_id"], proof["original_request_id"])
@@ -1362,6 +1362,20 @@ class MissionLedger:
         if not any(saved_action(p) for p in primitives):
             raise LedgerError("Saved checkpoint lacks its exact normal save-action preflight")
 
+    @staticmethod
+    def _exit_confirmation(intent: dict, data: dict) -> bool:
+        view, goal = data.get("perception") or {}, data.get("goal") or {}
+        if (data.get("kind") != "skill" or data.get("skill_kind") != "menu"
+                or view.get("kind") != "confirmation" or view.get("question") != "Really quit?"
+                or goal.get("label") != "Yes" or goal.get("outcome") != "activated"):
+            return False
+        relation = intent["revalidation"]
+        if relation is None:
+            return intent["source_before"] == view.get("source_id")
+        refreshed = SourceRevalidation.from_dict(relation)
+        return (refreshed.rule == "exact_png_bytes" and refreshed.original.source_id == view.get("source_id")
+                and refreshed.current.source_id == intent["source_before"])
+
     def _check_normal_exit(self, request_id: str, data: dict, result: dict) -> None:
         proof = validate_normal_exit(result["normal_exit"])
         phase = result.get("phase", {})
@@ -1382,7 +1396,7 @@ class MissionLedger:
                 or primitive["intent"]["value"] != "YES" or primitive["native_id"] != proof["native_request_id"]
                 or primitive["state"] not in ("unknown", "returned")
                 or primitive["intent"]["source_before"] not in proof["source_ids"]
-                or primitive["intent"]["source_before"] != data["perception"]["source_id"]
+                or not self._exit_confirmation(primitive["intent"], data)
                 or primitive["result"] is None or primitive["result"].get("published") is not True
                 or primitive["result"].get("native_request_id") != proof["native_request_id"]
                 or any(primitive["result"].get(key) != value for key, value in {

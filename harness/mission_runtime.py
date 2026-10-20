@@ -1228,6 +1228,15 @@ class MissionRuntime:
             raise ControlError("Owned exit requires its exact interpreted Really quit? Yes/No child")
         self._exit_guard(work, phase)
         skill = SemanticControlSkill(data)
+        inspected, fresh = self._store.inspect_current_boundary(**self._clocks())
+        if inspected != phase.checkpoint:
+            raise EvidenceError("Exit confirmation lost its exact retained checkpoint")
+        if not fresh:
+            binding = self._binding(phase.checkpoint)
+            phase = self._refresh_exit(work, phase)
+            relation = SourceRevalidation(binding, self._binding(phase.checkpoint), "exact_png_bytes")
+            skill.revalidate(relation, self._store, **self._clocks())
+            self._record("mission_exit_revalidation", relation.to_dict())
         proposal = skill.propose(self._store, **self._clocks())
         if not isinstance(proposal, ControlIntent):
             return proposal.disposition, self._control_result(proposal)

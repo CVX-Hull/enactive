@@ -39,6 +39,12 @@ Resume and bounded continuation share the original root limits; user Pause revok
 eligibility. Missing proof stays stopped. These are source checks, not native
 recovery or independent-player acceptance.
 
+The [first native character qualification](acceptance/2026-10-20-lifecycle-freshness.md)
+stopped on an aged creation source before any primitive admission. Normal menu
+cleanup and stopped Finish succeeded. Source now refreshes the exact guarded
+checkpoint inside Resume and exit confirmation; native character retesting remains
+required. The failed attempt and its unknown final cleanup ACK stay retained.
+
 The [seven-day functional campaign](acceptance/2026-10-19-seven-day-survival.md)
 records the same normally created Ned Meyers / Belgium, ordinary supplies and
 water treatment, shelter/rest, midpoint save/restart/exact reload, a genuine

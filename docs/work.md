@@ -136,6 +136,16 @@ proof, including an orphan proof left by a crash, restores no live authority.
 
 The next gate is one reviewed common-check checkpoint, then exact native
 character/item/activity/control/access preflight and #156's finite admission.
+The [first character qualification](acceptance/2026-10-20-lifecycle-freshness.md)
+failed before primitive admission on an aged creation checkpoint; first quit
+confirmation also stopped on staleness. Registered normal cleanup and stopped
+Finish succeeded. #155/#154's bounded source repair now reuses guarded refresh
+inside Resume, explicit stage commit, save and exit confirmation, preserving
+the save time anchor and validating persisted source lineage. It needs exact
+checks and a separate prospective native retest; the failed admission and original
+costs remain. The lead owns this tight coupled repair with read-only reviews,
+without a new executor, TTL relaxation, source patch during play or overlapping
+implementation workers.
 #157/#144 require actual player-owned mission and clean-context memory use before
 #145's readiness decision. Source/fixture review is distinct from that acceptance;
 #144 owns exact checkpoint results and retained failures. Do not pull optional

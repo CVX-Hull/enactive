@@ -133,6 +133,15 @@ remains stopped rather than being passed through unknown-delivery reconciliation
 Native acceptance remains pending.
 Neither synthetic UI tests nor tests assuming identity accept an independent mission. Observe likewise cannot adopt
 an unexplained normal session. Reopening restores neither phase nor input authority.
+An aged lifecycle Resume checkpoint is refreshed inside the registered operation
+before proposal/publication. The existing guarded Observe must preserve exact
+native state and PNG bytes, original actor/operator/takeover and root/child/mission
+deadlines. Its journal links old and fresh source IDs without constructing a
+lease-bound SourceBinding before a lease exists. It sends no input or grants
+readmission by itself. Explicit creation-stage commit, normal save and identity
+inspection use the same guarded refresh with typed exact-PNG SourceRevalidation.
+Save refresh precedes operation rotation and preserves its original normal-game
+time anchor. Changed state, Pause or expiry still stops input.
 Interpreted tab focus excludes WORLDGEN_CONFIRM_DIALOG. NEW_CHAR_DESCRIPTION may
 return through PREV_TAB, but NEXT_TAB starts character completion and requires an
 explicit lifecycle stage commit; a focused menu outcome cannot authorize it.
@@ -161,6 +170,10 @@ It retains the launch's original operator mark.
 A source-bound root charges distinct Resume and QUIT primitives, then awaits an
 explicit interpreted Really quit? Yes/No child. Exact-PNG refreshes preserve
 checkpoint provenance; root/child ceilings and original deadlines never renew.
+An aged confirmation refreshes inside the operation before proposal. Its typed
+exact-PNG SourceRevalidation must link the immutable interpreted source to the
+actual dispatched before-source. Normal result and orphan-effect validation enforce
+that relation at write and reopen; native-state equivalence alone is insufficient.
 This branch uses ordinary budgets and preserves the cleanup reserve. A verified
 No returns the owned paused main menu without claiming exit. Only published Yes,
 unchanged controller/native authority, the retained child's normal code0 exit,
