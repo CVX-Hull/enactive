@@ -20,7 +20,7 @@ from .contracts import ContractError, json_object
 from .mission_contracts import (
     VERSION, MissionAdmission, SourceRevalidation, canonical, validate_handoff_binding,
     validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption,
-    validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint,
+    validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission,
 )
 
 DB_VERSION = 6
@@ -273,6 +273,13 @@ class MissionLedger:
             if deadline < admitted_at or (deadline > state["deadline"] and data["kind"] not in ("observe", "reconcile", "stop")):
                 raise LedgerError("Corrupt operation deadline")
             root = self._phase_parent(data, before_rowid=rowid)
+            if data["kind"] == "readmit":
+                if deadline != self._readmit_deadline(data, admitted_at=admitted_at):
+                    raise LedgerError("Original handoff readmission deadline was altered")
+                for linked in (data["handoff_id"], data["claim_request_id"]):
+                    self._earlier_request(request_id, linked)
+            if data["kind"] in ("handoff", "claim") and deadline != state["deadline"]:
+                raise LedgerError("Original handoff/claim deadline was altered")
             if data["kind"] in ("skill", "lifecycle"):
                 expected_deadline = min(state["deadline"], admitted_at + data["limits"]["wall_seconds"])
                 if root is not None:
@@ -312,10 +319,12 @@ class MissionLedger:
             data = _intent(intent)
             if intent != _json(data): raise LedgerError("Noncanonical primitive intent")
             parent = self.request(request_id)
-            if parent["request"]["kind"] not in ("skill", "lifecycle"):
+            if parent["request"]["kind"] not in ("skill", "lifecycle", "readmit"):
                 raise LedgerError("Primitive lost its executable parent")
-            if data["kind"] == "resume" and parent["request"]["kind"] != "lifecycle":
+            if data["kind"] == "resume" and parent["request"]["kind"] not in ("lifecycle", "readmit"):
                 raise LedgerError("Resume requires an admitted lifecycle parent")
+            if parent["request"]["kind"] == "readmit" and data["kind"] != "resume":
+                raise LedgerError("Readmission permits only its charged Resume")
             actor = next(player for epoch, player in reversed(actors) if epoch <= parent["epoch"])
             self._check_revalidation(data, parent["epoch"], stored.mission_id,
                                      informing_sources=parent["request"]["sources"], actor_id=actor)
@@ -369,6 +378,7 @@ class MissionLedger:
                         or receipt["original_player_id"] != player
                         or receipt["successor_role"] != data["successor_role"]
                         or receipt["checkpoint_ids"] != data["checkpoint_ids"]
+                        or receipt["unfinished_work_ids"] != data["unfinished_work_ids"]
                         or receipt["pause_origin"] in ("human", "fault")):
                     raise LedgerError("Handoff issuance contradicts request/actor chain")
                 issued[identity] = receipt
@@ -400,10 +410,13 @@ class MissionLedger:
     def _claim_receipt(data: dict, role: str) -> dict:
         return {"schema": VERSION, "record_type": "ClaimedHandoff", "handoff_id": data["handoff_id"],
                 "mission_id": data["mission_id"], "player_id": data["player_id"],
-                "actor_role": role, "epoch": data["epoch"], "grants_authority": False}
+                "actor_role": role, "epoch": data["epoch"], "packet_ids": data["packet_ids"],
+                "read_source_ids": data["read_source_ids"], "grants_authority": False}
 
     @staticmethod
     def _claim_binding(data: dict, handoff: dict) -> None:
+        if data["actor_role"] != handoff["successor_role"] or handoff["post_pause_source_id"] not in data["read_source_ids"]:
+            raise LedgerError("Claim lacks its successor role/post-Pause source declaration")
         for requested, issued in (("expected_session", "session"), ("expected_revision", "revision"),
                                   ("expected_boundary_id", "boundary_id"), ("expected_pause_origin", "pause_origin"),
                                   ("pause_generation", "pause_generation"), ("takeover_generation", "takeover_generation")):
@@ -447,7 +460,8 @@ class MissionLedger:
             result = validate_handoff_result({**binding, "schema": VERSION, "record_type": "Handoff",
                 "mission_id": self.admission.mission_id, "handoff_id": request_id,
                 "original_player_id": state["player_id"], "successor_role": data["successor_role"],
-                "epoch": state["epoch"] + 1, "checkpoint_ids": data["checkpoint_ids"], "grants_authority": False})
+                "epoch": state["epoch"] + 1, "checkpoint_ids": data["checkpoint_ids"],
+                "unfinished_work_ids": data["unfinished_work_ids"], "grants_authority": False})
             self._settled_transition(request_id, result)
             state.update(phase="handoff", epoch=result["epoch"], pause_cause="internal_handoff",
                          reason="Runtime attested quiescent internal handoff; no input authority")
@@ -464,7 +478,7 @@ class MissionLedger:
                 raise LedgerError("Claim differs from designated runtime actor")
             issued, consumed = self._handoffs()
             handoff = issued.get(data["handoff_id"])
-            if handoff is None or handoff["successor_role"] != actor_role:
+            if handoff is None or handoff["successor_role"] != actor_role or data["actor_role"] != actor_role:
                 raise LedgerError("Claim differs from issued successor role")
             self._claim_binding(data, handoff)
             if consumed.get(data["handoff_id"]) == request_id:
@@ -585,10 +599,31 @@ class MissionLedger:
             if root is not None:
                 if now >= root["deadline"]: raise BudgetError("Original phase deadline expired")
                 deadline = min(deadline, root["deadline"])
+            if data["kind"] == "readmit":
+                deadline = self._readmit_deadline(data, admitted_at=now)
+                if now >= deadline:
+                    raise BudgetError("Readmission cannot renew issuance/claim/ordinary deadlines")
             self._db.execute("INSERT INTO requests(id,payload,digest,epoch,state,admitted_at,deadline) VALUES (?,?,?,?,'accepted',?,?)",
                              (data["request_id"], encoded, digest, state["epoch"], now, deadline))
             self._reserve(f"request:{data['request_id']}", RESULT_RESERVE)
         return {"created": True, "operation": self.request(data["request_id"])}
+
+    def _readmit_deadline(self, data: dict, *, admitted_at: float) -> float:
+        issued = self.request(data["handoff_id"])
+        claim = self.request(data["claim_request_id"])
+        if (issued["request"]["kind"] != "handoff" or issued["state"] != "completed"
+                or claim["request"]["kind"] != "claim" or claim["state"] != "completed"
+                or claim["request"]["handoff_id"] != data["handoff_id"]
+                or claim["epoch"] != data["epoch"] or issued["result"]["epoch"] != data["epoch"]
+                or admitted_at < claim["admitted_at"]):
+            raise LedgerError("Readmission requires its exact prior completed handoff/claim")
+        handoff = issued["result"]
+        if (handoff["post_pause_source_id"] not in data["sources"] or any(data[a] != handoff[b] for a, b in
+                (("expected_session", "session"), ("expected_revision", "revision"), ("expected_boundary_id", "boundary_id")))):
+            raise LedgerError("Readmission lost its exact issued post-Pause source")
+        admission = MissionAdmission.from_dict(self._get("admission"))
+        return min(issued["deadline"], claim["deadline"], self._get("state")["deadline"] - admission.cleanup_reserve.wall_seconds,
+                   admitted_at + data["limits"]["wall_seconds"])
 
     @staticmethod
     def _is_phase_root(data: dict) -> bool:
@@ -666,10 +701,12 @@ class MissionLedger:
                 return {"created": False, "primitive": self.primitive(logical_id)}
             state = self._touch(now, dispatch=True, cleanup=cleanup)
             request = self.request(request_id)
-            if request["request"]["kind"] not in ("skill", "lifecycle"):
+            if request["request"]["kind"] not in ("skill", "lifecycle", "readmit"):
                 raise LedgerError("Only an admitted skill/lifecycle can propose input")
-            if data["kind"] == "resume" and request["request"]["kind"] != "lifecycle":
+            if data["kind"] == "resume" and request["request"]["kind"] not in ("lifecycle", "readmit"):
                 raise LedgerError("Resume requires an admitted lifecycle parent")
+            if request["request"]["kind"] == "readmit" and data["kind"] != "resume":
+                raise LedgerError("Readmission permits only its charged Resume")
             if now >= request["deadline"]:
                 raise BudgetError("Original operation deadline expired")
             count = self._db.execute("SELECT count(*) FROM primitives WHERE request_id=?", (request_id,)).fetchone()[0]
@@ -779,6 +816,29 @@ class MissionLedger:
 
     def _check_prompt_result(self, request_id: str, data: dict, result: dict, *, actor_id: str,
                              request_state: str) -> None:
+        if "readmission" in result or data["kind"] == "readmit" and request_state == "completed":
+            if data["kind"] != "readmit" or request_state != "completed":
+                raise LedgerError("Readmission proof requires its completed readmit request")
+            proof = validate_readmission(result.get("readmission"))
+            issued = self._earlier_request(request_id, data["handoff_id"])["result"]
+            claim = self._earlier_request(request_id, data["claim_request_id"])["result"]
+            primitive = self.primitive(proof["logical_id"])
+            if (data["kind"] != "readmit" or request_state != "completed" or proof["epoch"] != data["epoch"]
+                    or proof["player_id"] != actor_id or proof["player_id"] != claim["player_id"]
+                    or proof["handoff_id"] != data["handoff_id"] or proof["claim_request_id"] != data["claim_request_id"]
+                    or proof["post_pause_source_id"] != issued["post_pause_source_id"]
+                    or primitive["request_id"] != request_id or primitive["intent"]["kind"] != "resume"
+                    or primitive["intent"]["source_before"] != proof["revalidated_source_id"]
+                    or primitive["state"] != "returned" or primitive["result"] is None
+                    or primitive["result"].get("published") is not True
+                    or primitive["result"].get("native_request_id") != primitive["native_id"]
+                    or primitive["result"].get("logical_action_id") != proof["logical_id"]
+                    or any(primitive["intent"][a] != data[b] for a, b in
+                        (("expected_session", "expected_session"), ("expected_revision", "expected_revision"),
+                         ("expected_boundary_id", "expected_boundary_id")))
+                    or primitive["result"].get("source_after") != proof["after_source_id"]
+                    or result.get("source_ids") != [proof["revalidated_source_id"], proof["after_source_id"]]):
+                raise LedgerError("Readmission lost its exact handoff/claim/charged Resume correlation")
         if "normal_finish" in result:
             if request_state != "completed":
                 raise LedgerError("Normal finish requires a completed immutable result")

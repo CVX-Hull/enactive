@@ -44,7 +44,7 @@ ownership and observer visibility feed one [supply-and-shelter acceptance #144](
 then a [fresh seven-day assessment #145](https://github.com/CVX-Hull/enactive/issues/145)
 with the engineering lead outside gameplay. Reviewed component readiness permits
 shared native validation; the mission does not wait for component issue closure.
-The sole live ingress is now mission/3. Start/Observe remain read-only until the
+The sole live ingress is now mission/4. Start/Observe remain read-only until the
 registered lifecycle proves owned world/character; no unrelated running game can
 seed identity or mission time. Owned launch and untouched-menu normal exit are now
 qualified for the bounded untouched-menu Yes path, retaining the first failure,
@@ -61,9 +61,10 @@ The selected iteration is the complete #144 mission outcome, rather than isolate
 component demonstrations. The first run's2109inputs (171lifecycle) motivate semantic
 composition; its ground/carried-water corrections and interrupted craft motivate
 source-linked Claims and unfinished Work. Those totals do not establish measured
-speedup or memory efficacy. Finish the lifecycle source boundary, then compose
-item/activity/outcome handling and one-use fresh-context retrieval, deliberate
-readmission and normal finish. Freeze #156 only after integrated checks and native
+speedup or memory efficacy. Lifecycle, normal finish and one-use bound successor retrieval/claim with separately
+charged deliberate readmission now compose in source. Next compose selected
+item/activity/outcome handling, then qualify actual native lifecycle and a real
+fresh player-context replacement. Freeze #156 only after integrated checks and native
 preflight; #157 supplies actual mission evidence before #145 readiness. The lead
 owns coupled runtime/ledger integration and the single native runtime. Disjoint
 passive policies may use at most two worktree workers after interface freeze;

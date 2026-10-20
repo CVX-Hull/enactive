@@ -1,4 +1,4 @@
-"""Strict mission/3 data. Parsing never grants a controller capability.
+"""Strict mission/4 data. Parsing never grants a controller capability.
 
 The existing JSON decoder/schema helpers own duplicate, finite-number and strict
 integer validation. Request dictionaries are decoded copies, not mutable aliases.
@@ -15,7 +15,7 @@ from .contracts import (
     json_object, validate_json,
 )
 
-VERSION = "mission/3"
+VERSION = "mission/4"
 MEMORY_VERSION = "campaign-memory/2"
 MAX_REQUEST_BYTES = 65_536
 MAX_CONTEXT_BYTES = 32_768
@@ -156,18 +156,29 @@ _HANDOFF_BINDING = _object({
     "session": _ID, "revision": _integer(), "boundary_id": _ID,
     "pause_generation": _integer(), "takeover_generation": _integer(),
     "pause_origin": _enum(*PAUSE_ORIGINS),
+    "post_pause_source_id": _ID, "controller_boot_id": _ID,
+    "operator_pause_generation": _integer(),
 })
 _HANDOFF = _object({
     **_HANDOFF_BINDING["properties"], "schema": {"const": VERSION},
     "record_type": {"const": "Handoff"}, "handoff_id": _ID, "mission_id": _ID,
     "original_player_id": _ID, "successor_role": _ID, "epoch": _integer(),
     "checkpoint_ids": {**_array(_ID, 32), "uniqueItems": True},
+    "unfinished_work_ids": {**_array(_ID, 16), "uniqueItems": True},
     "grants_authority": {"const": False},
 })
 _CLAIMED_HANDOFF = _object({
     "schema": {"const": VERSION}, "record_type": {"const": "ClaimedHandoff"},
     "handoff_id": _ID, "mission_id": _ID, "player_id": _ID, "actor_role": _ID,
     "epoch": _integer(), "grants_authority": {"const": False},
+    "packet_ids": {**_array(_ID, 4, 1), "uniqueItems": True},
+    "read_source_ids": {**_array(_ID, 128), "uniqueItems": True},
+})
+_READMISSION = _object({
+    "schema": {"const": VERSION}, "record_type": {"const": "Readmission"},
+    "handoff_id": _ID, "claim_request_id": _ID, "player_id": _ID, "epoch": _integer(),
+    "post_pause_source_id": _ID, "revalidated_source_id": _ID, "after_source_id": _ID,
+    "logical_id": _ID, "grants_authority": {"const": False},
 })
 _PROMPT_RECEIPT = _object({
     "schema": {"const": VERSION}, "record_type": {"const": "PhaseReceipt"},
@@ -267,6 +278,10 @@ def validate_handoff_binding(value: dict) -> dict:
 def validate_handoff_result(value: dict, *, claimed: bool = False) -> dict:
     """Closed durable result; the ledger crosschecks its originating requests."""
     return _decode(value, _CLAIMED_HANDOFF if claimed else _HANDOFF)
+
+
+def validate_readmission(value: dict) -> dict:
+    return _decode(value, _READMISSION)
 
 
 def validate_prompt_result(value: dict, *, request: dict, root: dict, actor_id: str) -> dict:
@@ -561,7 +576,8 @@ def _request_schema(kind: str, data: dict) -> dict:
         props["mission_id"] = _ID
         if kind == "result": props["operation_id"] = _ID
         if kind == "context": props.update(query=_text(1024), scope=_SCOPE,
-                                            max_bytes=_integer(MAX_CONTEXT_BYTES, 512))
+            max_bytes=_integer(MAX_CONTEXT_BYTES, 512), handoff=_nullable(_object({
+                "handoff_id": _ID, "prospective_player_id": _ID, "actor_role": _ID})))
     elif kind == "start":
         props.update(request_id=_ID, admission=_ADMISSION)
     else:
@@ -582,11 +598,18 @@ def _request_schema(kind: str, data: dict) -> dict:
                          limits=_SKILL_LIMITS, work_id=_nullable(_ID), phase_id=_nullable(_ID),
                          perception=_perception_schema(data))
         elif kind == "handoff":
-            props.update(checkpoint_ids={**_array(_ID, 32), "uniqueItems": True}, successor_role=_ID)
+            props.update(checkpoint_ids={**_array(_ID, 32), "uniqueItems": True}, successor_role=_ID,
+                         unfinished_work_ids={**_array(_ID, 16), "uniqueItems": True})
         elif kind == "claim":
             props.update(handoff_id=_ID, player_id=_ID, pause_generation=_integer(),
                          takeover_generation=_integer(), expected_session=_ID, expected_revision=_integer(),
-                         expected_boundary_id=_ID, expected_pause_origin=_enum(*PAUSE_ORIGINS))
+                         expected_boundary_id=_ID, expected_pause_origin=_enum(*PAUSE_ORIGINS), actor_role=_ID,
+                         packet_ids={**_array(_ID, 4, 1), "uniqueItems": True},
+                         read_source_ids={**_array(_ID, 128), "uniqueItems": True})
+        elif kind == "readmit":
+            props.update(handoff_id=_ID, claim_request_id=_ID, sources={**_IDS, "minItems": 1},
+                         expected_session=_ID, expected_revision=_integer(), expected_boundary_id=_ID,
+                         limits=_object({**_SKILL_LIMITS["properties"], "primitives": {"const": 1}}))
         elif kind == "lifecycle":
             props.update(operation=_enum(*LIFECYCLE), world=_text(80), character=_text(80),
                          sources=_IDS, expected_session=_nullable(_ID),
@@ -619,6 +642,9 @@ def validate_request(value: dict | str | bytes) -> dict:
         if kind == "correct":
             if result["entry_type"] != "claim" or entry["id"] in result["retired_ids"]:
                 raise ContractError("A correction must introduce a new claim identity")
+    elif kind == "readmit":
+        if result["limits"]["wall_seconds"] <= 0:
+            raise ContractError("Readmission deadline must be positive")
     elif kind == "skill":
         if not result["sources"]: raise ContractError("A skill requires informing evidence")
         if result["limits"]["wall_seconds"] <= 0: raise ContractError("Skill deadline must be positive")

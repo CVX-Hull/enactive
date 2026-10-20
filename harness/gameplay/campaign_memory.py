@@ -71,7 +71,7 @@ class CampaignMemory:
         self._packets: list[dict] = []
 
     def _scope(self, scope: dict) -> dict:
-        scope = validate_request({"schema": VERSION, "kind": "context",
+        scope = validate_request({"schema": VERSION, "kind": "context", "handoff": None,
             "mission_id": self.ledger.admission.mission_id, "scope": scope,
             "query": "scope validation", "max_bytes": MAX_CONTEXT_BYTES})["scope"]
         return scope
@@ -289,7 +289,7 @@ class CampaignMemory:
         matching sentence. Historical scope hints remain explicitly last_seen.
         """
         scope = self._scope(scope)
-        validate_request({"schema": VERSION, "kind": "context", "mission_id": scope["mission_id"],
+        validate_request({"schema": VERSION, "kind": "context", "handoff": None, "mission_id": scope["mission_id"],
                           "scope": scope, "query": query, "max_bytes": max_bytes})
         _clock(now_monotonic)
         _wall_clock(now_timestamp_ms)

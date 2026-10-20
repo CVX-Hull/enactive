@@ -27,14 +27,16 @@ def intent(**changes):
 
 def handoff_binding(**changes):
     values = dict(session="native-session", revision=30, boundary_id="boundary-1",
-                  pause_generation=4, takeover_generation=0, pause_origin="host")
+                  pause_generation=4, takeover_generation=0, pause_origin="host",
+                  post_pause_source_id="post-pause", controller_boot_id="controller-test", operator_pause_generation=0)
     values.update(changes)
     return values
 
 
 def handoff_claim(issuance, **changes):
     values = request("claim", request_id="claim-1", epoch=issuance["epoch"],
-        handoff_id=issuance["handoff_id"], player_id="replacement-player",
+        handoff_id=issuance["handoff_id"], player_id="replacement-player", actor_role="player",
+        packet_ids=["packet-1"], read_source_ids=[issuance["post_pause_source_id"]],
         expected_session=issuance["session"], expected_revision=issuance["revision"],
         expected_boundary_id=issuance["boundary_id"], expected_pause_origin=issuance["pause_origin"],
         pause_generation=issuance["pause_generation"], takeover_generation=issuance["takeover_generation"])
@@ -95,12 +97,50 @@ class LedgerTests(unittest.TestCase):
         self.active_request(request("handoff", request_id="handoff-1", checkpoint_ids=["source-1"], successor_role="player"))
         return self.ledger.issue_handoff("handoff-1", binding=handoff_binding(), now=1002)
 
+    def readmit_request(self, **changes):
+        issued = self.issue_handoff()
+        self.ledger.begin_request(handoff_claim(issued), now=1003)
+        self.ledger.consume_handoff("claim-1", actor_id="replacement-player", actor_role="player", now=1004)
+        values = request("readmit", request_id="readmit-1", epoch=issued["epoch"], handoff_id="handoff-1",
+            claim_request_id="claim-1", sources=[issued["post_pause_source_id"]], expected_session=issued["session"],
+            expected_revision=issued["revision"], expected_boundary_id=issued["boundary_id"],
+            limits=dict(primitives=1, wall_seconds=10, game_seconds=10))
+        values.update(changes)
+        return values
+
+    def test_readmission_charges_only_one_resume_and_preserves_original_deadlines(self):
+        value = self.readmit_request()
+        operation = self.ledger.begin_request(value, now=1005)["operation"]
+        self.assertEqual(operation["deadline"], 1015)
+        self.ledger.activate(epoch=value["epoch"], player_id="replacement-player", now=1005)
+        with self.assertRaisesRegex(LedgerError, "only its charged Resume"):
+            self.ledger.prepare_primitive("readmit-1", "wrong-action", intent(), now=1006)
+        self.ledger.prepare_primitive("readmit-1", "readmit-resume", intent(kind="resume", value=None), now=1006)
+        self.ledger.settle_primitive("readmit-resume", "not_dispatched", {"reason": "Explicit nonpublication"}, now=1007)
+        with self.assertRaises(BudgetError):
+            self.ledger.prepare_primitive("readmit-1", "second-resume", intent(kind="resume", value=None), now=1008)
+        self.assertEqual(self.ledger.snapshot(now=1008)["spent_inputs"], 1)
+        self.ledger.complete_request("readmit-1", "blocked", {"reason": "Synthetic accounting probe"}, now=1008)
+        self.assertEqual(self.reopen(now=1009).snapshot(now=1009)["phase"], "paused")
+
+    def test_readmission_deadline_tamper_rejects_on_reopen(self):
+        self.ledger.begin_request(self.readmit_request(), now=1005)
+        self.ledger._db.execute("UPDATE requests SET deadline=1016 WHERE id='readmit-1'")
+        with self.assertRaisesRegex(LedgerError, "deadline was altered"):
+            self.reopen(now=1006)
+
+    def test_readmission_cannot_claim_completion_without_its_charged_returned_proof(self):
+        self.ledger.begin_request(self.readmit_request(), now=1005)
+        with self.assertRaises(ContractError):
+            self.ledger.complete_request("readmit-1", "completed", {"grants_authority": False}, now=1006)
+        self.assertIsNone(self.ledger.request("readmit-1")["result"])
+
     def phase_input(self, request_id, logical_id, now=1002):
         self.ledger.prepare_primitive(request_id, logical_id, intent(), now=now)
         self.ledger.settle_primitive(logical_id, "not_dispatched", {"reason": "Synthetic accounting probe"}, now=now)
 
     def prompt_receipt(self, **changes):
-        value = dict(schema="mission/3", record_type="PhaseReceipt", origin_request_id="request-1",
+        value = dict(schema="mission/4", record_type="PhaseReceipt", origin_request_id="request-1",
             phase_kind="interact", operation="open_consume", stage="awaiting_control", epoch=0,
             actor_id="player-test", controller_boot_id="controller-test", operator_pause_generation=0,
             takeover_generation=0, source_ids=["source-1"], continuity=None, grants_authority=False)
@@ -820,7 +860,7 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(LedgerError):
             self.ledger.prepare_primitive("observe-only", "bad-input", intent(), now=1003)
         with self.assertRaises(LedgerError):
-            self.ledger.begin_request({"schema": "mission/3", "kind": "status", "mission_id": "mission-test"}, now=1003)
+            self.ledger.begin_request({"schema": "mission/4", "kind": "status", "mission_id": "mission-test"}, now=1003)
         with self.assertRaises(LedgerError):
             self.ledger.begin_request(skill(mission_id="other", goal={"scope": {"mission_id": "other", "session": "native-session", "coordinate_epoch": 0}, "target": [2, -3, 0]}), now=1003)
         self.ledger.close()

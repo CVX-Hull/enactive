@@ -16,6 +16,13 @@ lease. The spectator shows objective, actor, epoch, skill, costs and source deta
 Observe uses the typed mission path and Pause stays independent. Native window
 input can take over. Resume cannot restore a mission lease, identity or private
 phase. Unknown delivery stays unknown; a new owner does not prove success.
+Player replacement uses the [typed handoff procedure](protocol.md#quiescent-player-replacement):
+settle tools, request internal handoff, retrieve successor-bound memory, declare
+needed source reads and claim while paused, then deliberately request readmission.
+A source/packet omission must be corrected within original limits; it is not
+permission to resume through another endpoint. Historical receipts cannot restore
+a phase after user Pause or service restart. This path has synthetic coverage;
+actual clean-context/native acceptance remains required.
 Before admission, ordinary controller commands retain their documented guards.
 Registered launch can only verify a retained child and paused main-menu readiness;
 other lifecycle gaps below prevent independent production gameplay. A launch receipt
@@ -331,7 +338,7 @@ separates implemented components from remaining independent-play acceptance.
 1. Freeze the exact reviewed candidate, finite objective/scenario/limits/reserve,
    actor, native build and permission preflight before gameplay. The initial
    admission is not authority to adopt an unrelated open character.
-2. Put one current mission/3 record in project `.runtime/mission-requests/record.json`.
+2. Put one current mission/4 record in project `.runtime/mission-requests/record.json`.
    Use `.venv/bin/python -m harness mission-request --request
    .runtime/mission-requests/record.json` from this trusted checkout. The CLI accepts
    a regular bounded JSON file directly in that directory, validates it and sends

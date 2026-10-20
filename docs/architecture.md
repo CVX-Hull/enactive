@@ -6,7 +6,7 @@ status: active
 
 # Current architecture
 
-Current source contracts are native4, mission/3, campaign-memory/2, gameplay/2,
+Current source contracts are native4, mission/4, campaign-memory/2, gameplay/2,
 evidence archive3 and mission ledger6. One MissionRuntime owns the live mission API.
 The wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.
@@ -40,7 +40,7 @@ Pause and native takeover. Role assignment is procedural, not operating-system i
 | --- | --- | --- |
 | Lead / active Codex chat | Objective → frozen admission, reviewed source and acceptance | Owns shared runtime and integration; no ordinary gameplay rescue in the deciding mission |
 | Designated player / general-purpose agent | Visible evidence and memory → typed mission requests, plans and verification | One bounded actor; fresh-context handoff needs quiescence and one-use accounting; no authority from a summary |
-| Mission runtime / harness maintainer | mission/3 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
+| Mission runtime / harness maintainer | mission/4 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
 | Controller / harness maintainer | State-bound command → native request and correlated receipt | Serialized ordinary/control writers, exact process-local lease, Pause revocation and native fences; never edits saves |
 | Native bridge / integration maintainer | Bounded request → actual input, visible metadata and rendered frame | Engine validates outcomes on its game thread; unsupported boundaries cannot claim success |
 | Spectator / viewer maintainer | Frame and mission snapshot → inspectable progress, uncertainty and Pause | Mission Observe uses typed ingress; raw input/Resume/recovery disabled while nonterminal; malformed state stays locked |
@@ -84,8 +84,10 @@ Start/Observe cannot seed identity or the mission clock from an unowned game.
 Unexpected normal sources stay diagnostic across reopen; one explicit adoption gate
 protects time, map and native-memory eligibility. Some core tests assume identity explicitly; the new lifecycle integration tests
 exercise the real adoption reader without that mock. Registered creation/save/load
-and provisional character inspection are composed in source. Item/activity, ordinary
-inspection and handoff/readmission adapters still block. Normal finish now
+and provisional character inspection are composed in source. Quiescent handoff, bound
+successor context retrieval/claim and separately charged readmission also compose in
+source; historical receipts restore no live consent. Item/activity and ordinary
+inspection adapters still block. Normal finish now
 composes in source after committed normal exit, preserving historical evidence
 and distinguishing cleanup from player-reported objective completion. Native
 mission acceptance remains required. Registered launch now composes the fixed process adapter

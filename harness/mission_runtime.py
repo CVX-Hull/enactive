@@ -19,6 +19,7 @@ from uuid import UUID
 from .controller import Controller, ControlError, MissionLease, validate_state
 from .native_process import NativeProcess
 from .mission_lifecycle import NormalPhase, RegisteredLifecycle
+from .mission_handoff import HandoffEvidenceError, HandoffPhase, RegisteredHandoff
 from .gameplay.campaign_memory import CampaignMemory
 from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
 from .gameplay.evidence import MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore
@@ -131,12 +132,13 @@ class MissionRuntime:
         self._memory_version = 0
         self._last_context_id: str | None = None
         self._last_memory_context: dict | None = None
-        self._issued_packets: list[str] = []
+        self._issued_packets: dict[str, dict] = {}
         self._last_receipt: dict | None = None
         self._progress: dict | None = None
         self._skill: str | None = None
         self._diagnostic: str | None = None
         self._registered_lifecycle = RegisteredLifecycle(self)
+        self._registered_handoff = RegisteredHandoff(self)
         self._thread = threading.Thread(target=self._work, name="mission-runtime", daemon=True)
         self._thread.start()
 
@@ -206,6 +208,9 @@ class MissionRuntime:
             elif kind == "stop" and self._handles:
                 rejection = "Pause requested; Stop not admitted while writer busy. Read settled state and submit a new Stop ID/current epoch"
                 busy_stop = True
+            elif (any(h.request["kind"] in ("handoff", "claim", "readmit") for h in self._handles)
+                    or kind in ("handoff", "claim", "readmit") and self._handles):
+                rejection = "Quiescent player transition requires its sole writer handle; retry only after settled work"
             elif (kind in ("skill", "lifecycle") and any(
                     h.request["kind"] in ("skill", "lifecycle") for h in self._handles)):
                 rejection = "An unfinished input operation already owns the writer"
@@ -263,6 +268,7 @@ class MissionRuntime:
             self._prompt_phase = None
             self._exit_phase = None
             self._registered_lifecycle.revoke()
+            self._registered_handoff.revoke()
             self._rotation = None
             if self._snapshot is not None and self._snapshot["phase"] not in TERMINAL:
                 self._snapshot.update(phase="paused", pause_cause=cause, reason=reason, lease_owner=None,
@@ -341,6 +347,7 @@ class MissionRuntime:
             self._bindings.clear()
             self._rotation = None
             self._lease = None
+            self._registered_handoff.revoke()
         if self._ledger is not None:
             for cause, reason in events:
                 self._ledger.pause(cause=cause, reason=reason, now=self._wall())
@@ -477,6 +484,7 @@ class MissionRuntime:
         self._clear_prompt()
         self._exit_phase = None
         self._registered_lifecycle.revoke()
+        self._registered_handoff.revoke()
 
     def _capacity(self, *, frames: int = 1, byte_count: int = MAX_FRAME_BYTES) -> None:
         usage = self._store.usage()
@@ -603,7 +611,8 @@ class MissionRuntime:
                                    for r in ledger.memory_records(k)), default=0)
         self._last_context_id = None
         self._last_memory_context = None
-        self._issued_packets = []
+        self._issued_packets = {}
+        self._registered_handoff.revoke()
         self._mission_deadline = ledger.snapshot(now=self._wall())["deadline"]
         return ledger.snapshot(now=self._wall())["phase"] == "admitted"
 
@@ -695,7 +704,9 @@ class MissionRuntime:
         data = work.request
         self._check_cancelled(work)
         state = self._ledger.snapshot(now=self._wall())
+        handoff = self._registered_handoff.context_binding(work)
         wrapper = {"objective": self._admission.objective, "mission_id": state["mission_id"],
+            "handoff": handoff,
             "epoch": state["epoch"], "actor_id": state["player_id"], "phase": state["phase"],
             "pause_cause": state["pause_cause"], "reason": state["reason"],
             "remaining_limits": self.status()["remaining_limits"],
@@ -715,7 +726,9 @@ class MissionRuntime:
         self._check_cancelled(work)
         self._record("mission_context", {"context": wrapper})
         self._check_cancelled(work)
-        self._issued_packets = (self._issued_packets + [packet["packet_id"]])[-32:]
+        self._issued_packets[packet["packet_id"]] = copy.deepcopy(wrapper)
+        while len(self._issued_packets) > 32:
+            del self._issued_packets[next(iter(self._issued_packets))]
         self._last_context_id = packet["packet_id"]
         # Observer preview of the exact journaled packet, never a fresh projection.
         self._last_memory_context = copy.deepcopy(packet)
@@ -731,7 +744,11 @@ class MissionRuntime:
         return result
 
     def _handoff(self, work: _Work) -> tuple[str, dict]:
-        return self._unsupported("Registered quiescent handoff/claim adapter required")
+        if work.request["kind"] == "handoff":
+            return self._registered_handoff.issue(work)
+        if work.request["kind"] == "claim":
+            return self._registered_handoff.claim(work)
+        return self._registered_handoff.readmit(work)
 
     def _launch_guard(self, work: _Work, mark: tuple[str, int]) -> None:
         self._check_cancelled(work)
@@ -1336,7 +1353,7 @@ class MissionRuntime:
         return "unknown", str(result.get("error") or "Input acknowledgment is unresolved")[:1024]
 
     def _dispatch(self, work: _Work, proposal: MissionIntent | _ResumeIntent, original: EvidenceRef,
-                  *, lifecycle: _ExitPhase | NormalPhase | None = None) -> PrimitiveResult:
+                  *, lifecycle: _ExitPhase | NormalPhase | HandoffPhase | None = None) -> PrimitiveResult:
         reservation = None
         preflight_source = None
         prepared = False
@@ -1351,6 +1368,8 @@ class MissionRuntime:
                 self._dispatch_guard(work, proposal)
             elif isinstance(lifecycle, NormalPhase):
                 self._registered_lifecycle.guard(work, lifecycle, proposal)
+            elif isinstance(lifecycle, HandoffPhase):
+                self._registered_handoff.guard(work, lifecycle, proposal)
             else:
                 self._exit_guard(work, lifecycle, proposal)
         def preflight(observed: dict, received: float) -> None:
@@ -1385,10 +1404,12 @@ class MissionRuntime:
                 with self.controller.data_lock:
                     generation = self.controller.pause_generation
                 observed = self._store.observation(proposal.before)
+                mark = lifecycle.operator_mark if isinstance(lifecycle, HandoffPhase) else lifecycle.launch.operator_mark
+                takeover = lifecycle.takeover_generation if isinstance(lifecycle, HandoffPhase) else lifecycle.launch.takeover_generation
                 raw = self.controller.resume_mission(expected_generation=generation,
-                    expected_operator_generation=lifecycle.launch.operator_mark[1],
-                    expected_controller_boot_id=lifecycle.launch.operator_mark[0],
-                    expected_takeover_generation=lifecycle.launch.takeover_generation,
+                    expected_operator_generation=mark[1],
+                    expected_controller_boot_id=mark[0],
+                    expected_takeover_generation=takeover,
                     expected_pause_origin=observed["pause_origin"], expected_session=proposal.before.session,
                     expected_revision=proposal.before.revision, expected_boundary_id=proposal.expected_boundary_id,
                     logical_action_id=proposal.logical_id, deadline_monotonic=deadline, preflight=preflight,
@@ -1642,7 +1663,7 @@ class MissionRuntime:
                 return self._navigate(work)
             if work.request["skill_kind"] in ("menu", "edit", "interact"):
                 return self._semantic(work)
-        if kind in ("handoff", "claim"):
+        if kind in ("handoff", "claim", "readmit"):
             return self._handoff(work)
         if kind == "lifecycle":
             return self._lifecycle(work)
@@ -1698,13 +1719,21 @@ class MissionRuntime:
             disposition, result = "blocked", {"reason": f"{type(exc).__name__}: {exc}"[:1024], "grants_authority": False}
             result["source_ids"] = [] if self._current is None else [self._current.observation_id]
             self._diagnostic = result["reason"]
-            if data["kind"] not in ("remember", "correct") or isinstance(exc, (OSError, LedgerError)):
+            if (data["kind"] not in ("remember", "correct") and not isinstance(exc, HandoffEvidenceError)
+                    or isinstance(exc, (OSError, LedgerError))):
                 self._stop_after_failure(result["reason"])
         self._rotation = None
         self._apply_pauses()
         if disposition == "unknown" and self._lease is not None:
             self._stop_unknown_policy()
-        operation = self._ledger.complete_request(data["request_id"], disposition, result, now=self._wall())
+        committed = self._ledger.request(data["request_id"])
+        if data["kind"] in ("handoff", "claim") and committed["state"] == "completed":
+            # Issuance/consumption commit receipt + actor epoch atomically. A
+            # later Pause may revoke continuation, never rewrite that history.
+            operation = committed
+            disposition, result = operation["state"], operation["result"]
+        else:
+            operation = self._ledger.complete_request(data["request_id"], disposition, result, now=self._wall())
         try:
             self._registered_lifecycle.after_commit(work, disposition, result)
             if disposition == "completed" and "normal_finish" in result:
@@ -1783,6 +1812,7 @@ class MissionRuntime:
         self._clear_prompt()
         self._exit_phase = None
         self._registered_lifecycle.revoke()
+        self._registered_handoff.revoke()
         self._rotation = None
         self._apply_pauses()
         state = self._ledger.snapshot(now=self._wall())

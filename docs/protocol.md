@@ -111,7 +111,7 @@ planner and supervisor components below remain source/study tools, not another
 execution ingress. The [mission design](design/player-owned-mission.md) owns the
 chosen records, lifecycle requirements and separate native acceptance.
 
-Authenticated `POST /api/mission` accepts one strict mission/3 record, at most65536
+Authenticated `POST /api/mission` accepts one strict mission/4 record, at most65536
 UTF-8 bytes. It reuses host/origin/token and finite/duplicate-key JSON validation;
 operator command/recovery bodies keep4096-byte limits. Required fields and closed
 variants live in [mission_contracts.py](../harness/gameplay/mission_contracts.py),
@@ -123,8 +123,9 @@ Start records source-free admission and sends no native request; explicit Observ
 remains passive. Even already-unpaused normal play does not prove the named world/character, receive a lease or seed the mission's game-time
 anchor. Registered creation/load must establish those facts after owned launch.
 Registered creation/save/load and provisional character inspection now compose in
-source tests through the real controller, ledger and evidence archive. Item/activity,
-ordinary inspection and handoff/readmission still need adapters; normal finish now
+source tests through the real controller, ledger and evidence archive. Quiescent
+successor handoff and deliberately charged readmission also compose in source.
+Item/activity and ordinary inspection still need adapters; normal finish now
 has source integration coverage, with native acceptance pending.
 Neither synthetic UI tests nor tests assuming identity accept an independent mission. Observe likewise cannot adopt
 an unexplained normal session. Reopening restores neither phase nor input authority.
@@ -194,11 +195,11 @@ history but reconstructs no process handle, phase, lineage, lease or queued inpu
 Actual native creation/save/load and independent mission acceptance remain pending.
 
 `lifecycle(operation=finish)` is the sole normal finish route. Stop carries only
-its Pause reason; former Stop `finish` fields and mission/2 records reject. The
-current mission/3 contract migrates CLI, viewer, requests, results and fixtures
+its Pause reason; former Stop `finish` fields and mission/2 or mission/3 records reject. The
+current mission/4 contract migrates CLI, viewer, requests, results and fixtures
 without an alias or automatic old-admission import. Native wire4, gameplay/2,
 campaign-memory/2 and archive3 remain unchanged. Prior accepted reports and raw
-mission/2 artifacts remain historical evidence, not current request inputs.
+mission/2 and mission/3 artifacts remain historical evidence, not current request inputs.
 
 Finish sends no Observe, Resume or game input. It requires empty writer/controller/
 native slots, no live phase or unresolved effect, every owned launch's unique
@@ -220,6 +221,56 @@ exited child handle/owner while retaining sampled facts and receipts, permitting
 a new explicit mission. The observer distinguishes reported completion, cleanup,
 current mission phase and independent acceptance. Synthetic tests do not qualify
 native final shutdown or the independent mission.
+
+### Quiescent player replacement
+
+`handoff` requires settled adopted normal play, the retained owned child, sole
+runtime handle/empty queue and reconciled effects. It identifies up to32 retained
+checkpoints and every unfinished Work item (up to16); completed/failed Work with
+lost supporting bytes also needs attention. Classification uses the coherent Work
+projection and at most128 distinct source checks, without truncation. The runtime
+internally stops input, clears the lease/bindings/map, captures the post-Pause normal
+source and checks empty controller/native slots. Atomic issuance records that source,
+controller boot, original operator Pause counter, host/native generations and a new
+epoch. This is not a public user Pause or restored input authority.
+
+Every `context` request has a required nullable `handoff` field. A successor sets
+`{handoff_id, prospective_player_id, actor_role}` while the issuance is live and
+unconsumed. Its exact wrapper is journaled and cached (last32), with the packet's
+memory version. Ordinary predecessor retrieval uses null. A claim references one
+to four such packets at the current memory version, covering the issued and current
+unfinished Work set. Corrections or new memory require fresh retrieval. Packets
+retain explicit omissions/unknowns; unavailable old Work evidence is never upgraded
+to current progress. A claim may declare up to128 retained sources from those
+packets and issuance, including every checkpoint, the post-Pause source and retained support for required
+Work. Source loss after retrieval requires a new packet with an explicit unknown
+disposition; declaring a nonexistent source read cannot repair it.
+
+`claim` records the successor role and source-read declarations, changes the actor
+atomically, and remains paused. IDs and declarations are audit statements, not
+authentication or proof that an actual fresh agent read an image. The real context
+replacement and source inspection require campaign/transcript evidence. A correctable
+packet omission/version error sends no input and leaves the original handoff eligible
+for another explicit request within unchanged limits. Other authority failures stop.
+
+`readmit` is a separate executable request linked to the exact completed claim and
+issuance, with one primitive and finite wall/game limits. Its deadline is the minimum
+of issuance, claim, ordinary mission allowance and its own cap. It freshly observes
+and compares exact paused native state/encoded pixels, retains that new source,
+bounds the initial Observe command-lock/native wait by that same deadline (and
+the controller's existing15-second ceiling), charges one Resume before publication,
+then obtains a fresh successor lease only
+from the verified same normal session. Its typed Readmission correlates the claim,
+original and refreshed sources and returned charged primitive. It inherits cumulative
+costs/time and cannot borrow create/load authority. Unknown Resume retains its charge
+and identity; no automatic replay follows. User Pause, controller/native takeover,
+close or reopen revoke the private phase. The intake fence refuses competing queued work while a handoff/claim/readmit
+handle is unfinished; cached reads/idempotent receipts and independent Pause remain
+available. Atomic receipts survive later cancellation;
+reopen validates history but restores no phase, process, lease or Resume.
+
+These boundaries have synthetic controller/ledger/archive coverage. Actual clean-context
+player replacement, native gameplay and independent mission acceptance remain open.
 
 Trusted Python `observe_mission(deadline_monotonic, timeout)` uses the original
 absolute deadline through command-lock admission and native publication. It grants
@@ -491,7 +542,7 @@ and journal evidence, granting no authority, replay or inferred resolution.
 
 The lead designates one general-purpose player for a finite mission. It chooses
 plans, interprets evidence, retrieves/updates memory and requests semantic skills
-and registered normal lifecycle through mission/3. The lead owns source/release
+and registered normal lifecycle through mission/4. The lead owns source/release
 acceptance, finite admission, shared runtime custody, escalation and final
 verification. It supplies no ordinary gameplay rescue in the deciding mission.
 Explorers/reviewers never send inputs. Actor names and instructions are workflow

@@ -75,7 +75,7 @@ class ObservedMap:
     """
     def __init__(self, mission_id: str, session: str, coordinate_epoch: int, *, max_nodes: int = 512):
         scope = {"mission_id": mission_id, "session": session, "coordinate_epoch": coordinate_epoch}
-        validate_request({"schema": VERSION, "kind": "context", "mission_id": mission_id,
+        validate_request({"schema": VERSION, "kind": "context", "handoff": None, "mission_id": mission_id,
                           "scope": scope, "query": "Validate navigation scope", "max_bytes": 512})
         if type(max_nodes) is not int or not 1 <= max_nodes <= 512:
             raise ContractError("Observed-map node limit must be between one and 512")
