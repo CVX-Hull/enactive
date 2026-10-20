@@ -17,6 +17,12 @@ accepted autonomous survival service. Earlier [foundation](acceptance/2026-10-17
 and [MVP](acceptance/2026-10-17-mvp.md) reports retain their dated contract scopes.
 Protocol version: 4.
 
+The harness-enabled SDL ImGui context uses the library's steady text-caret setting.
+It preserves exact image validation without treating cosmetic blink as stable
+pixels. Game options and non-harness rendering retain upstream defaults. Native
+editor behavior remains to be qualified after the rebuild; the
+[failed editor qualification](acceptance/2026-10-20-native-editor-caret.md) is retained.
+
 ## Coordinated change
 
 All project-controlled boundaries follow

@@ -52,6 +52,14 @@ needed, with no normal-exit acceptance. Source now distinguishes capture identit
 from native state and supports strictly verified Resume-only cleanup. Real native
 character lifecycle and independent-player acceptance remain pending.
 
+[Qualification003](acceptance/2026-10-20-native-editor-caret.md) accepted only the
+controlled Resume-only abort component. Character setup reached the world-name
+editor, then failed before text input on its blinking caret. One exceptional
+cleanup was required. A harness-only steady ImGui caret now reuses the existing
+library setting in source; rebuilt native behavior and normal character lifecycle
+remain unqualified. General setup cancellation after phase revocation remains an
+owned limitation, separate from Resume-only cleanup.
+
 The [seven-day functional campaign](acceptance/2026-10-19-seven-day-survival.md)
 records the same normally created Ned Meyers / Belgium, ordinary supplies and
 water treatment, shelter/rest, midpoint save/restart/exact reload, a genuine

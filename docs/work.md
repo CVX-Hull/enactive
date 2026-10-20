@@ -162,6 +162,17 @@ fresh-context replacement before #145's seven-day readiness decision. Optional
 features remain outside that gate. These are the same integrated iteration and
 active goal, not a new component-only outcome or renewed admission.
 
+[Native003](acceptance/2026-10-20-native-editor-caret.md) accepted the separate
+controlled Resume-only abort component, then failed character setup before text
+input on a blinking ImGui caret. Both exact77d1874 hosted lanes passed; actual
+native failure and exceptional cleanup remain separate evidence. A narrow
+harness-context steady-caret setting reuses ImGui without relaxing exact-image
+validation. #155 owns this qualification and the distinct unsupported normal setup
+cancel path after revocation; #154 integrates, #156 admits a new separately finite
+native attempt and later deciding readiness. The same lead-owned coupled slice
+uses parallel read-only review, not overlapping implementation writers. Actual
+player/successor mission, #145 readiness and protected-main closeout remain required.
+
 The item/count/inspection and activity-poll checkpoint passed local and
 pull-request checks, but its first push CI timed out in two synthetic lifecycle
 tests before their finish assertions. The retained failure is not native evidence.

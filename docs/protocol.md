@@ -150,6 +150,11 @@ readmission by itself. Explicit creation-stage commit, normal save and identity
 inspection use the same guarded refresh with typed exact-PNG SourceRevalidation.
 Save refresh precedes operation rotation and preserves its original normal-game
 time anchor. Changed state, Pause or expiry still stops input.
+The harness-enabled SDL ImGui context disables only input-text cursor blinking
+through its existing library option; exact encoded PNG equivalence is unchanged.
+There is no image masking or tolerance for changed content. Other animations can
+still invalidate an old interpreted decision. General setup cancellation after
+phase revocation is unsupported; Resume-only cleanup below does not cover it.
 Interpreted tab focus excludes WORLDGEN_CONFIRM_DIALOG. NEW_CHAR_DESCRIPTION may
 return through PREV_TAB, but NEXT_TAB starts character completion and requires an
 explicit lifecycle stage commit; a focused menu outcome cannot authorize it.

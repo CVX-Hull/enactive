@@ -1,0 +1,84 @@
+{
+  "source_commit": "77d1874954887b1a8c3d0bbef40ae4d891be476b",
+  "native_sha256": "c65778e2912230f34b67340a4f2caacd0d5874af24ab964526c436bd686f7720",
+  "character": {
+    "outcome": "FAILED editor exact-image refresh before text admission; exceptional cleanup, no normal exit/Finish",
+    "source_commit": "77d1874954887b1a8c3d0bbef40ae4d891be476b",
+    "native_sha256": "c65778e2912230f34b67340a4f2caacd0d5874af24ab964526c436bd686f7720",
+    "charged_inputs": 4,
+    "returned_primitives": 4,
+    "unknown_primitives": 0,
+    "text_inputs": 0,
+    "world_character_commit_inputs": 0,
+    "frames": 15,
+    "png_bytes": 386514,
+    "wall_seconds_through_owner_exit_watermark": 408.72916412353516,
+    "wall_seconds_through_owner_exit_status": 408.73111605644226,
+    "wall_seconds_including_shutdown_reopen_record": 526.8064420223236,
+    "timing_basis": "019 mission.last_wall,019 remaining_wall sample,020 recorded_at; same originalStart",
+    "game_seconds": null,
+    "model_tool_usage": null,
+    "exceptional_cleanup_interventions": 1,
+    "signals": 1,
+    "user_keys": 0,
+    "source_patches": 0,
+    "normal_exit_proof": false,
+    "normal_finish": false,
+    "known_gap": "ExactPNG treats blinking editor caret as changed evidence; revoked lifecycle cannot cancel setup/editor.",
+    "pixel_difference": {
+      "changed_pixels": 42,
+      "bbox": [
+        491,
+        323,
+        494,
+        337
+      ]
+    },
+    "resource_state": "no game/listener/liveinboxes; reopened historical failure/custody/costs with no live authority"
+  },
+  "abort": {
+    "outcome": "SCOPED native Resume-only abort accepted after independent readback; not character lifecycle or mission acceptance",
+    "source_commit": "77d1874954887b1a8c3d0bbef40ae4d891be476b",
+    "charged_inputs": 4,
+    "returned_primitives": 3,
+    "unknown_ack": 1,
+    "unknown_ack_native_id": "40b35d4a-b30f-46f0-8641-639e732426e1",
+    "normal_exit_proof": true,
+    "normal_finish": "stopped",
+    "frame_count": 12,
+    "png_bytes": 397137,
+    "wall_seconds_through_finish_ledger_watermark": 125.03887486457825,
+    "wall_seconds_through_status_sample": 125.04124402999878,
+    "wall_seconds_including_shutdown_reopen_record": 168.66029977798462,
+    "timing_basis": "015 mission.last_wall for Finish watermark;015 remaining_wall for status sampling;016 recorded_at for verification; same original Start",
+    "game_seconds": null,
+    "model_tool_usage": null,
+    "controlled_preinput_faults": 1,
+    "external_cleanup_interventions": 0,
+    "user_keys": 0,
+    "no_source_patch": true,
+    "no_signal": true,
+    "resource_state": "no game/listener/live slots; ledger stopped and evidence reopen without authority",
+    "finish_staging_error": "local initial script assumed live current_source after terminal unknown; no request was staged/submitted; corrected retained proof source"
+  },
+  "pixel_difference": {
+    "before_source": "752877b31a2b5243f3fadd955b5bd249f11d425758b5ec6523e6777567b10ed7",
+    "after_source": "eee145d2b987e3dc4bf2949add0c5696d54e0c0ced18ec0df9a42238ac3e643c",
+    "size": [
+      960,
+      640
+    ],
+    "changed_pixels": 42,
+    "changed_bbox": [
+      491,
+      323,
+      494,
+      337
+    ],
+    "interpretation": "Actual raster difference confined to editor caret/end-of-text area; state otherwise compared separately. Not proof that all future PNG changes are harmless."
+  },
+  "images": {
+    "editor-before.png": "db857bd17c7d7c7b902701f748d7c68b5bc6b84d54dce68505aeaf36300c8544",
+    "editor-after.png": "f8956cb5d93f50840ec00688339bef1fd80f63d351278cafdb919b5ad91fe106"
+  }
+}

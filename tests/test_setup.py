@@ -46,6 +46,8 @@ class SetupTests(unittest.TestCase):
         shutil.copyfile(actual / "tools/patch_game.py", repository / "tools/patch_game.py")
         originals = {
             "Makefile": "-mmacosx-version-min=10.15\n-mmacosx-version-min=10.15\n",
+            "src/cata_imgui.cpp": ('    ImGuiIO &io = ImGui::GetIO();\n'
+                '    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls\n'),
             "src/ui_manager.cpp": ('                    if( ui.redraw_cb ) {\n'
                 '                        ui.default_cursor();\n'
                 '                        ui.redraw_cb( ui );\n}\n'),
@@ -135,12 +137,16 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(first.returncode, 0, first.stderr)
         expected = {path.relative_to(source): path.read_bytes()
                     for path in source.rglob("*") if path.is_file()}
-        for name in ("ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp"):
+        for name in ("ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp", "cata_imgui.cpp"):
             (source / "src" / name).write_text("stale patched contents")
         second = self.run_patch(repository, source)
         self.assertEqual(second.returncode, 0, second.stderr)
         self.assertEqual(expected, {path.relative_to(source): path.read_bytes()
                                     for path in source.rglob("*") if path.is_file()})
+        imgui = (source / "src/cata_imgui.cpp").read_text()
+        self.assertIn('#include "cdda_harness.h"', imgui)
+        self.assertEqual(imgui.count('if( cdda_harness::enabled() ) { io.ConfigInputTextCursorBlink = false; }'), 1)
+        self.assertLess(imgui.index('ImGuiIO &io = ImGui::GetIO();'), imgui.index('io.ConfigInputTextCursorBlink = false;'))
         self.assertIn("harness_input( category, registered_actions )", (source / "src/input_context.cpp").read_text())
         self.assertIn("harness_player( uquit == QUIT_WATCH", (source / "src/handle_action.cpp").read_text())
         direction = (source / "src/action.cpp").read_text()
@@ -303,7 +309,7 @@ class SetupTests(unittest.TestCase):
         self.assertLess(poll.index('ordinary_commit_gate( request, false );'), poll.index('++revision;\n        pending = id;'))
 
     def test_patch_rejects_changed_render_owner_hashes_and_anchors(self):
-        for name in ("src/uilist.cpp", "src/inventory_ui.cpp", "src/ui_manager.cpp"):
+        for name in ("src/uilist.cpp", "src/inventory_ui.cpp", "src/ui_manager.cpp", "src/cata_imgui.cpp"):
             for change in ("hash", "missing", "duplicate"):
                 with self.subTest(owner=name, change=change), tempfile.TemporaryDirectory() as temporary:
                     self.root = Path(temporary)

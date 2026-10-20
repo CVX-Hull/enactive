@@ -36,11 +36,21 @@ def replace_once(path: Path, old: str, new: str) -> None:
 
 for name in ("cdda_harness.h", "cdda_harness.cpp"):
     shutil.copyfile(ROOT / "native" / name, source / "src" / name)
-for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp", "game.cpp", "action.cpp", "ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp", "uilist.cpp", "inventory_ui.cpp", "ui_manager.cpp"):
+for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp", "game.cpp", "action.cpp", "ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp", "uilist.cpp", "inventory_ui.cpp", "ui_manager.cpp", "cata_imgui.cpp"):
     path = source / "src" / name
     text = path.read_text()
     if '#include "cdda_harness.h"' not in text:
         path.write_text('#include "cdda_harness.h"\n' + text)
+
+# Reuse ImGui's steady-caret setting only in this harness-owned SDL context.
+# Cosmetic blinking must not invalidate unchanged exact-PNG editor decisions.
+# Input behavior, game options and non-harness rendering retain upstream defaults.
+replace_once(source / "src/cata_imgui.cpp",
+    '    ImGuiIO &io = ImGui::GetIO();\n'
+    '    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls',
+    '    ImGuiIO &io = ImGui::GetIO();\n'
+    '    if( cdda_harness::enabled() ) { io.ConfigInputTextCursorBlink = false; }\n'
+    '    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls')
 
 # Only the last/topmost redraw callback may attest UI. An unsupported overlay
 # clears a lower supported menu even when the overlay has no harness hooks.
