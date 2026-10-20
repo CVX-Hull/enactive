@@ -22,9 +22,11 @@ See [coordinated migration](runbook.md#coordinated-migration).
 ## Controller run ownership
 
 The in-process controller API exposes `acquire_mission(mission_id, epoch,
-actor_id, *, operation, expected_session, expected_revision, expected_boundary_id)`,
+actor_id, *, operation, expected_session, expected_revision, expected_boundary_id,
+replace=None)`,
 `execute_mission(lease, *, kind, value, expected_session, expected_revision,
-expected_boundary_id, logical_action_id, deadline_monotonic, timeout=None)` and
+expected_boundary_id, logical_action_id, deadline_monotonic, timeout=None,
+expected_image_sha256=None, preflight=None)` and
 `release_mission(lease)`. Operation is navigate, interaction or lifecycle.
 A frozen MissionLease belongs to one controller; only the exact returned Python
 object authorizes input. Status `mission_lease` contains descriptive mission/actor/
@@ -39,6 +41,11 @@ reconciled, unpaused, fresh successful operation-eligible evidence matching the
 supplied session/revision/boundary. It rotates native authority and admission generation without
 observing, resuming or dispatching. Historical unknowns remain historical unknowns;
 new ownership cannot establish the outcome or continuation of an older task.
+Deliberate operation rotation supplies the exact live capability as `replace`.
+It preserves mission/epoch/actor/session and requires the same empty writer slots
+and unchanged Pause/takeover state. Rotation revokes the old capability and advances
+host generation under the admission locks, without Pause or an input gap for an
+external writer. A serialized lease description cannot request replacement.
 
 Ordinary external key/action/walk/resume reject while leased. Existing HTTP/CLI
 input reaches this same controller gate; it cannot supply or obtain a capability.
@@ -61,12 +68,24 @@ observation, transport failure and shutdown invalidate ownership. Resume does no
 restore a lease. Startup restores no task or capability. Native token validation
 remains the final input commit gate; an already committed action cannot be undone.
 `execute_mission` returns an envelope containing the logical action ID, exact native
-`request` or null, `result`, `published`, and original terminal
-`received_monotonic` or null. Preflight Observe is not an action receipt. The
+`request` or null, `result`, `published`, original terminal
+`received_monotonic` or null, and nullable `preflight`. The latter contains the
+copied final Observe, its original `received_monotonic`, and
+`expected_image_sha256` or null. Preflight Observe is not an action receipt. The
 absolute monotonic intent/task deadline is checked after queueing/preflight and
 under the publication lock; it bounds both exchanges and the native deadline.
 `observation_snapshot()` returns a copied current observation and original first
 receipt clock. Reading a snapshot does not renew its freshness.
+
+The trusted Python-only `preflight` callback receives that copied Observe and
+actual receipt after boundary/lease/image checks, inside the command lock but
+outside the data lock. Runtime may retain the exact source, reserve after-frame
+capacity and commit a durable intent before publication. The controller rechecks
+owner, Pause, recovery, boundary, freshness and the original deadline afterward.
+An ordinary callback exception stops before input publication and freezes/revokes
+the owner; secondary persistence failures remain explicit diagnostics. A crash is
+not converted into proof of nondelivery. Callback and expected-image arguments
+are never accepted from public command JSON.
 
 
 `resume_mission` accepts the exact recorded host generation and native session,
@@ -250,6 +269,16 @@ PNG names are immutable session/frame-counter identities, with metadata
 published after the corresponding atomic file rename. The viewer grants input
 authority only after that image decodes and matches the latest session/revision;
 old asynchronous decodes cannot restore a fresh label or authorize an old choice.
+Every ordinary action/key/resume wire envelope requires the exact generated
+`frame` and a strict boolean `require_exact_frame`; prior field sets reject.
+When true, host preflight verifies the retained encoded PNG hash and native commit
+encodes the latest cached presented surface through the existing PNG encoder,
+compares bounded bytes exactly, then rechecks authority/deadline/boundary/Pause.
+False still requires matching saved-frame provenance and the native boundary.
+This source path assumes the one trusted bridge writer owns the comparison
+temporary file; it does not claim exclusion of arbitrary same-user filesystem
+mutation or physical events queued during synchronous encoding. Real encoder
+repeatability, changed-image rejection and latency require native qualification.
 A command is dispatched at
 most once within the live session; the next input boundary acknowledges that
 the engine has returned to input, not that the intended gameplay objective

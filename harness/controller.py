@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import secrets
+import stat
 import threading
 import time
 import uuid
@@ -32,6 +33,10 @@ INPUT_BOUNDARIES = frozenset({"normal_play", "menu"})
 
 class ControlError(Exception):
     """A visible controller failure; never evidence of game success."""
+
+
+class _MissionPreflightFailure(ControlError):
+    """A stopped mission preparation, before any native input admission."""
 
 
 @dataclass(frozen=True)
@@ -494,11 +499,13 @@ class Controller:
         if not isinstance(kind, str) or kind not in {"observe", "pause", "resume", "key", "action"}:
             raise ControlError("Unsupported stored request kind; migrate or archive offline")
         if kind in {"resume", "key", "action"}:
-            fields |= {"session", "revision", "boundary_id", "takeover_generation", "authority"}
+            fields |= {"session", "revision", "boundary_id", "takeover_generation", "authority", "frame", "require_exact_frame"}
             authority = request.get("authority")
             if (not isinstance(request.get("session"), str) or not request["session"]
                     or type(request.get("revision")) is not int or request["revision"] < 0
                     or not isinstance(request.get("boundary_id"), str) or not request["boundary_id"]
+                    or not isinstance(request.get("frame"), str) or not request["frame"]
+                    or type(request.get("require_exact_frame")) is not bool
                     or type(request.get("takeover_generation")) is not int or request["takeover_generation"] < 0
                     or not isinstance(authority, dict) or set(authority) != {"controller_boot_id", "counter"}
                     or not isinstance(authority["controller_boot_id"], str) or not authority["controller_boot_id"]
@@ -612,7 +619,8 @@ class Controller:
 
     def _exchange(self, kind: str, timeout: float, *, generation: int | None = None,
                   lease: MissionLease | None = None, deadline_monotonic: float | None = None,
-                  receipt: dict[str, Any] | None = None, **payload: Any) -> dict[str, Any]:
+                  receipt: dict[str, Any] | None = None,
+                  observation_receipt: dict[str, float] | None = None, **payload: Any) -> dict[str, Any]:
         request_id = str(uuid.uuid4())
         started = time.monotonic()
         if deadline_monotonic is not None:
@@ -628,6 +636,8 @@ class Controller:
             request.setdefault("revision", self.state["revision"])
             request.setdefault("boundary_id", self.state["boundary"]["id"])
             request.setdefault("takeover_generation", self.state["takeover_generation"])
+            request.setdefault("frame", self.state["frame"])
+            request.setdefault("require_exact_frame", False)
         if len(json.dumps(request).encode()) > MAX_REQUEST:
             raise ControlError("Request exceeds 4096 bytes")
         terminal_received = False
@@ -681,9 +691,12 @@ class Controller:
                 response = read_json(self.bridge / "response.json")
                 # Prior responses are expected; only the exact UUID can finish this command.
                 if response is not None and response.get("id") == request_id:
+                    received_monotonic = time.monotonic()
                     if receipt is not None and response.get("status") != "dispatched" and receipt["received_monotonic"] is None:
-                        receipt["received_monotonic"] = time.monotonic()
+                        receipt["received_monotonic"] = received_monotonic
                     validate_state(response, request_id)
+                    if observation_receipt is not None and response["status"] != "dispatched":
+                        observation_receipt["received_monotonic"] = received_monotonic
                     terminal_received = response["status"] != "dispatched"
                     if (response["status"] == "ready" and kind in {"key", "action", "resume"}
                             and (response["session"] != request["session"]
@@ -746,7 +759,7 @@ class Controller:
 
     def acquire_mission(self, mission_id: str, epoch: int, actor_id: str, *, operation: str,
                         expected_session: str, expected_revision: int,
-                        expected_boundary_id: str) -> MissionLease:
+                        expected_boundary_id: str, replace: MissionLease | None = None) -> MissionLease:
         """Claim one admitted operation at a supported boundary; sends no input."""
         if operation not in ("navigate", "interaction", "lifecycle"):
             raise ControlError("Unknown mission operation")
@@ -764,7 +777,12 @@ class Controller:
                 with self.data_lock:
                     if self._command_work:
                         raise ControlError("Command work is active or queued")
-                    if self._mission_lease is not None:
+                    if replace is not None:
+                        self._check_owner(replace, self.pause_generation)
+                        if (replace.mission_id, replace.epoch, replace.actor_id, replace.session) != (
+                                mission_id, epoch, actor_id, expected_session):
+                            raise ControlError("Operation replacement requires the same mission, epoch, actor and session")
+                    elif self._mission_lease is not None:
                         raise ControlError("A run already owns this controller")
                     if self.closed or self.frozen or self.pause_requested or (self.bridge / "pause").exists():
                         raise ControlError("Run acquisition requires a reconciled, resumed controller")
@@ -813,21 +831,46 @@ class Controller:
 
     def execute_mission(self, lease: MissionLease, *, kind: str, value: str, expected_session: str,
                         expected_revision: int, expected_boundary_id: str, logical_action_id: str,
-                        deadline_monotonic: float, timeout: float | None = None) -> dict[str, Any]:
+                        deadline_monotonic: float, timeout: float | None = None,
+                        expected_image_sha256: str | None = None,
+                        preflight: Callable[[dict[str, Any], float], None] | None = None) -> dict[str, Any]:
         """One registered action/key with its exact logical/native receipt."""
         receipt = {"logical_action_id": logical_action_id, "request": None, "result": None,
-                   "published": False, "received_monotonic": None}
+                   "published": False, "received_monotonic": None, "preflight": None}
+        preflight_failed = False
         if (type(logical_action_id) is not str or not 1 <= len(logical_action_id) <= 128
                 or type(deadline_monotonic) not in (int, float)
                 or not 0 <= deadline_monotonic <= 1e12 or lease is None or kind not in ("action", "key")):
             receipt["result"] = {"status": "controller_error", "error": "Invalid mission identity, kind, deadline or lease"}
         else:
-            receipt["result"] = self._execute(kind, timeout,
-                {kind: value, "expected_session": expected_session,
-                 "expected_revision": expected_revision, "expected_boundary_id": expected_boundary_id}, lease,
-                deadline_monotonic=deadline_monotonic, receipt=receipt)
+            try:
+                receipt["result"] = self._execute(kind, timeout,
+                    {kind: value, "expected_session": expected_session,
+                     "expected_revision": expected_revision, "expected_boundary_id": expected_boundary_id}, lease,
+                    deadline_monotonic=deadline_monotonic, receipt=receipt,
+                    expected_image_sha256=expected_image_sha256, preflight=preflight)
+            except _MissionPreflightFailure as exc:
+                preflight_failed = True
+                receipt["result"] = {"status": "controller_error", "error": str(exc)}
+                # Memory authority was stopped under the command lock. Each
+                # durable stop is independent: disk failure cannot skip Pause.
+                with self.data_lock:
+                    for label, operation in (("authority revocation", self._revoke), ("Pause sentinel", self._pause_file)):
+                        try:
+                            operation()
+                        except OSError as persistence_error:
+                            receipt["result"]["error"] += f"; {label} failed: {persistence_error}"
         if type(logical_action_id) is str:
-            self._record({"kind": "mission_receipt", "logical_action_id": logical_action_id}, receipt)
+            try:
+                self._record({"kind": "mission_receipt", "logical_action_id": logical_action_id}, receipt)
+            except OSError as exc:
+                if not preflight_failed:
+                    raise
+                receipt["result"]["error"] += f"; mission receipt persistence failed: {exc}"
+        if preflight_failed:
+            with self.data_lock:
+                self.last_result = receipt["result"]
+                self.transport_error = receipt["result"]["error"]
         return receipt
 
     def release_mission(self, lease: MissionLease) -> dict[str, Any]:
@@ -865,12 +908,19 @@ class Controller:
     def _execute(self, kind: str, timeout: float | None, payload: dict[str, Any],
                  lease: MissionLease | None, *, deadline_monotonic: float | None = None,
                  receipt: dict[str, Any] | None = None, expected_generation: int | None = None,
-                 resume_binding: dict[str, Any] | None = None) -> dict[str, Any]:
+                 resume_binding: dict[str, Any] | None = None,
+                 expected_image_sha256: str | None = None,
+                 preflight: Callable[[dict[str, Any], float], None] | None = None) -> dict[str, Any]:
         wait = self.timeout if timeout is None else timeout
         admitted = False
         with self.data_lock:
             admitted_generation = self.pause_generation
         try:
+            if expected_image_sha256 is not None and (type(expected_image_sha256) is not str
+                    or re.fullmatch(r"[0-9a-f]{64}", expected_image_sha256) is None):
+                raise ControlError("Expected image hash must be exactly 64 lowercase hexadecimal characters")
+            if preflight is not None and not callable(preflight):
+                raise ControlError("Mission preflight must be a trusted Python callback")
             if expected_generation is not None and expected_generation != admitted_generation:
                 raise ControlError("Mission continuation superseded by host Pause or takeover")
             if self.closed:
@@ -919,10 +969,15 @@ class Controller:
                                         admitted_generation)
                 else:
                     result = self._command(kind, wait, payload, admitted_generation, lease,
-                                           deadline_monotonic=deadline_monotonic, receipt=receipt, resume_binding=resume_binding)
+                                           deadline_monotonic=deadline_monotonic, receipt=receipt, resume_binding=resume_binding,
+                                           expected_image_sha256=expected_image_sha256, preflight=preflight)
                 with self.data_lock:
                     self.last_result = result
                 return result
+        except _MissionPreflightFailure:
+            # The mission boundary preserves its determinate unpublished receipt
+            # even when persisting this diagnostic would fail again.
+            raise
         except (ControlError, OSError) as exc:
             result = {"status": "controller_error", "error": str(exc)}
             with self.data_lock:
@@ -939,7 +994,9 @@ class Controller:
     def _command(self, kind: str, timeout: float, payload: dict[str, Any], generation: int,
                  lease: MissionLease | None = None, *, deadline_monotonic: float | None = None,
                  receipt: dict[str, Any] | None = None,
-                 resume_binding: dict[str, Any] | None = None) -> dict[str, Any]:
+                 resume_binding: dict[str, Any] | None = None,
+                 expected_image_sha256: str | None = None,
+                 preflight: Callable[[dict[str, Any], float], None] | None = None) -> dict[str, Any]:
         with self.data_lock:
             if kind != "observe":
                 self._check_owner(lease, generation)
@@ -970,7 +1027,9 @@ class Controller:
                              "detail": "Fresh observe returned at an eligible native input boundary"})
             return result
         # Observe verifies authority; it must never silently refresh a planner decision.
-        observed = self._exchange("observe", timeout, deadline_monotonic=deadline_monotonic)
+        observation_receipt: dict[str, float] = {}
+        observed = self._exchange("observe", timeout, deadline_monotonic=deadline_monotonic,
+                                  observation_receipt=observation_receipt)
         if observed["status"] != "ready":
             return observed
         with self.data_lock:
@@ -1001,10 +1060,46 @@ class Controller:
                 self._walk_guard(observed, dx, dy)
         if kind == "action" and payload["action"] not in observed["actions"]:
             raise ControlError("Action is not registered in the current input context")
+        if lease is not None:
+            try:
+                if expected_image_sha256 is not None and self._frame_sha256(observed) != expected_image_sha256:
+                    raise ControlError("Final preflight image differs from the informing image")
+                received = observation_receipt["received_monotonic"]
+                if receipt is not None:
+                    receipt["preflight"] = {"observation": copy.deepcopy(observed),
+                        "received_monotonic": received, "expected_image_sha256": expected_image_sha256}
+                if preflight is not None:
+                    try:
+                        preflight(copy.deepcopy(observed), received)
+                    except Exception as exc:
+                        # A normal storage/capacity/contract failure proves no input
+                        # publication. Crashes/BaseException retain durable unknowns.
+                        raise ControlError(f"Mission preflight failed: {type(exc).__name__}: {exc}") from exc
+                with self.data_lock:
+                    self._check_owner(lease, generation)
+                    if (self.control_lock.locked() or self.control_pending is not None
+                            or self.pending is not None or any((self.bridge / name).exists() for name in
+                            ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
+                        raise ControlError("Native or recovery work appeared during preflight")
+                    if (self.state != observed or (self.bridge / "pause").exists()):
+                        raise ControlError("Native boundary or frame changed during preflight")
+                    self._mission_frame(observed, lease.operation)
+                    if not 0 <= time.monotonic() - received <= 3:
+                        raise ControlError("Final preflight observation expired")
+                    if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:
+                        raise ControlError("Original dispatch deadline expired during preflight")
+            except (ControlError, OSError) as exc:
+                with self.data_lock:
+                    self.frozen = True
+                    self.pause_requested = True
+                    self._mission_lease = None
+                    self.transport_error = str(exc)
+                raise _MissionPreflightFailure(str(exc)) from exc
         primitive = {kind: payload[kind]} if kind in {"key", "action"} else {}
         result = self._exchange(kind, timeout, generation=generation, lease=lease, session=observed["session"],
                                 revision=observed["revision"], boundary_id=observed["boundary"]["id"],
                                 takeover_generation=observed["takeover_generation"], deadline_monotonic=deadline_monotonic,
+                                frame=observed["frame"], require_exact_frame=expected_image_sha256 is not None,
                                 receipt=receipt, **primitive)
         if kind == "resume" and result["status"] == "ready":
             with self.data_lock:
@@ -1015,6 +1110,23 @@ class Controller:
                 else:
                     self.pause_requested = result["paused"]
         return result
+
+    def _frame_sha256(self, observed: dict[str, Any]) -> str:
+        """Hash only the actual native immutable frame, outside the data lock."""
+        frame = observed["frame"]
+        if (Path(frame).name != frame or re.fullmatch(
+                r"frame-" + re.escape(observed["session"]) + r"-[1-9][0-9]{0,19}\.png", frame) is None):
+            raise ControlError("Final preflight frame must be a native session-scoped basename")
+        limit = 32 * 1024 * 1024
+        fd = os.open(self.bridge / frame, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK)
+        with os.fdopen(fd, "rb") as stream:
+            metadata = os.fstat(stream.fileno())
+            if not stat.S_ISREG(metadata.st_mode) or not 0 < metadata.st_size <= limit:
+                raise ControlError("Final preflight frame must be a nonempty regular file of at most 32 MiB")
+            data = stream.read(limit + 1)
+        if not data or len(data) > limit:
+            raise ControlError("Final preflight frame exceeds the bounded image size")
+        return hashlib.sha256(data).hexdigest()
 
     @staticmethod
     def _expect(state: dict[str, Any], session: Any, revision: Any) -> None:
@@ -1078,6 +1190,7 @@ class Controller:
                     raise ControlError("Walk stopped: movement action is not registered")
                 after = exchange("post_step", "action", generation=generation, action=action,
                                  session=before["session"], revision=before["revision"],
+                                 frame=before["frame"], require_exact_frame=False,
                                  boundary_id=before["boundary"]["id"], takeover_generation=before["takeover_generation"])
                 if after["status"] != "ready":
                     raise ControlError(after.get("error") or "Walk stopped: action failed")

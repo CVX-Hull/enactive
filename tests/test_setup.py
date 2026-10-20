@@ -190,6 +190,10 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(sdl.count("cdda_harness::poll("), 3)
         self.assertLess(sdl.index("cdda_harness::capture_frame();"), sdl.index("SDL_RenderPresent("))
         self.assertIn("frame_presented( static_cast<bool>( harness_presented_frame ) )", sdl)
+        encoder = sdl[sdl.index('bool cdda_harness::write_frame('):sdl.index('void cdda_harness::feed_imgui(')]
+        self.assertIn('IMG_SavePNG( harness_presented_frame.get(), filename.c_str() )', encoder)
+        self.assertNotIn('capture_frame(', encoder)
+        self.assertNotIn('SDL_RenderReadPixels(', encoder)
 
     def test_visible_ui_hooks_are_at_actual_clipped_and_paged_renderers(self):
         repository, source = self.patch_fixture()
@@ -221,8 +225,8 @@ class SetupTests(unittest.TestCase):
         self.assertIn('request.get_string( "boundary_id" ) != boundary_id', native)
         self.assertIn('integer_member( request, "takeover_generation" ) != takeover_generation', native)
         poll = native[native.index('bool poll( keyboard_mode'):]
-        self.assertEqual(poll.count('ordinary_gate( request );'), 3)
-        self.assertLess(poll.rindex('ordinary_gate( request );'), poll.index('pending = id;'))
+        self.assertEqual(poll.count('ordinary_gate( request );'), 1)
+        self.assertLess(poll.rindex('ordinary_commit_gate( request, false );'), poll.index('pending = id;'))
         human = native[native.index('void human_input()'):native.index('void boundary()')]
         self.assertIn('++takeover_generation;', human)
         world = native[native.index('void playing('):native.index('void frame_presented(')]
@@ -232,6 +236,71 @@ class SetupTests(unittest.TestCase):
         self.assertIn('ui_boundary == boundary_id && ui_session == session && ui_revision == revision', native)
         self.assertIn('if( next_ui != presented_ui )', native)
         self.assertIn('if( !ui_top || !staged_ui || staged_ui->rows.size() >= 32 )', native)
+
+    def test_ordinary_requests_require_saved_frame_and_exact_flag(self):
+        # These source checks do not establish native PNG or input behavior.
+        native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
+        poll = native[native.index('bool poll( keyboard_mode'):]
+        self.assertIn('kind == "resume" ? 11 : 12', poll)
+        self.assertIn('kind == "observe" || kind == "pause" ? 4', poll)
+        gate = native[native.index('void ordinary_gate('):native.index('input_event action_event(')]
+        for guard in ('request.get_string( "frame" ) != frame_name', 'frame_name.empty()',
+                      '!saved_frame_ok', 'frame_boundary != boundary_id', 'frame_session != session',
+                      'frame_revision != revision', 'now_ms() - frame_ms > 3000',
+                      'presented_boundary != boundary_id', 'presented_session != session',
+                      'presented_revision != revision', 'now_ms() - presented_ms > 3000',
+                      'integer_member( request, "deadline_ms" ) < now_ms()', 'authority_gate( request );'):
+            self.assertIn(guard, gate)
+        self.assertIn('request.get_bool( "require_exact_frame" )', gate)
+        self.assertNotIn('request.get_bool( "require_exact_frame",', gate)
+
+    def test_exact_png_comparison_is_bounded_and_preserves_owned_files(self):
+        native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
+        comparison = native[native.index('bool same_frame_png('):native.index('void ordinary_commit_gate(')]
+        self.assertIn('maximum_frame_bytes = 32 * 1024 * 1024', comparison)
+        self.assertIn('std::array<char, 32 * 1024>', comparison)
+        self.assertEqual(comparison.count('O_RDONLY | O_NOFOLLOW | O_NONBLOCK'), 2)
+        for guard in ('S_ISREG( saved_info.st_mode )', 'S_ISREG( latest_info.st_mode )',
+                      'saved_info.st_size > 0', 'saved_info.st_size <= maximum_frame_bytes',
+                      'saved_info.st_size == latest_info.st_size', 'latest_info.st_dev == owned.st_dev',
+                      'latest_info.st_ino == owned.st_ino', 'saved_read == amount', 'latest_read == amount',
+                      'std::equal(', 'read( saved_fd, &trailing, 1 ) == 0',
+                      'read( latest_fd, &trailing, 1 ) == 0', 'close( saved_fd )', 'close( latest_fd )'):
+            self.assertIn(guard, comparison)
+        temporary = comparison[comparison.index('void exact_frame_gate('):]
+        self.assertIn('const std::string saved = path( frame_name );', temporary)
+        self.assertIn('O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0600', temporary)
+        self.assertLess(temporary.index('if( descriptor < 0 )'), temporary.index('write_frame( latest )'))
+        for guard in ('fstat( descriptor, &owned ) == 0', 'current.st_dev == owned.st_dev',
+                      'current.st_ino == owned.st_ino', 'unlink( latest.c_str() ) == 0',
+                      'close( descriptor ) == 0', 'if( !removed )', 'if( !same || !closed )'):
+            self.assertIn(guard, temporary)
+        self.assertNotIn('unlink( saved', temporary)
+        for forbidden in ('capture_frame(', 'refresh_display(', 'ui_manager::redraw(', 'sync_scope('):
+            self.assertNotIn(forbidden, comparison)
+
+    def test_exact_png_comparison_runs_once_at_final_commit_with_revocation_checks(self):
+        native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
+        gate = native[native.index('void ordinary_commit_gate('):native.index('input_event action_event(')]
+        self.assertEqual(gate.count('exact_frame_gate();'), 1)
+        self.assertEqual(gate.count('ordinary_gate( request );'), 2)
+        self.assertEqual(gate.count('!resuming && ( paused || fs::exists( path( "pause" ) ) )'), 2)
+        self.assertLess(gate.index('ordinary_gate( request );'), gate.index('exact_frame_gate();'))
+        self.assertLess(gate.index('request.get_bool( "require_exact_frame" )'), gate.index('exact_frame_gate();'))
+        self.assertLess(gate.index('exact_frame_gate();'), gate.rindex('ordinary_gate( request );'))
+        self.assertLess(gate.index('exact_frame_gate();'), gate.rindex('fs::exists( path( "pause" ) )'))
+        for guard in ('!waiting_interrupt.empty()', 'fs::exists( path( "control.json" ) )',
+                      'fs::exists( path( "control-claimed.json" ) )',
+                      'integer_member( request, "deadline_ms" ) < now_ms()'):
+            self.assertLess(gate.index('exact_frame_gate();'), gate.index(guard))
+        self.assertLess(gate.rindex('ordinary_gate( request );'), gate.rindex('fs::exists( path( "pause" ) )'))
+        poll = native[native.index('bool poll( keyboard_mode'):]
+        resume = poll[poll.index('if( kind == "resume" )'):poll.index('if( paused ||')]
+        self.assertLess(resume.index('ordinary_commit_gate( request, true );'),
+                        resume.index('fs::remove( path( "pause" ) );'))
+        self.assertLess(resume.index('fs::remove( path( "pause" ) );'), resume.index('paused = false;'))
+        self.assertLess(poll.index('event = *binding;'), poll.index('ordinary_commit_gate( request, false );'))
+        self.assertLess(poll.index('ordinary_commit_gate( request, false );'), poll.index('++revision;\n        pending = id;'))
 
     def test_patch_rejects_changed_render_owner_hashes_and_anchors(self):
         for name in ("src/uilist.cpp", "src/inventory_ui.cpp", "src/ui_manager.cpp"):

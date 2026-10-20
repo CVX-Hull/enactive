@@ -398,6 +398,33 @@ class EvidenceStore:
         if elapsed < 0 or wall_age < -1000 or wall_age > 3000 or entry.initial_lag_seconds + elapsed > MAX_AGE_SECONDS:
             raise EvidenceError("Observation is stale or clock continuity is unknown")
 
+    @staticmethod
+    def _equivalence_rule(rule: str) -> None:
+        if rule not in ("native_state", "exact_png_bytes"):
+            raise ContractError("Unsupported evidence equivalence rule")
+
+    @_serialized
+    def equivalent(self, before: EvidenceRef, after: EvidenceRef, *, rule: str) -> bool:
+        """Compare verified historical sources without freshness or authority promotion.
+
+        Native-state equality attests only the retained normal scene or rendered
+        menu data. Exact-PNG equality additionally compares encoded canonical
+        bytes. Neither rule proves host or store generation continuity.
+        """
+        self._equivalence_rule(rule)
+        original, actual = self.observation(before), self.observation(after)
+        if any(value["status"] != "ready" or value["error"] != "" for value in (original, actual)):
+            return False
+        fields = ("session", "revision", "boundary", "category", "actions", "scene", "ui",
+                  "paused", "pause_origin", "takeover_generation", "in_game")
+        if any(original[key] != actual[key] for key in fields):
+            return False
+        if rule == "native_state":
+            return all((value["boundary"]["kind"] == "normal_play" and value["scene"] is not None)
+                       or (value["boundary"]["kind"] == "menu" and value["ui"] is not None)
+                       for value in (original, actual))
+        return before.frame_sha256 == after.frame_sha256
+
     @_serialized
     def ingest(self, value: dict[str, Any] | str | bytes, *, received_monotonic: float,
                now_monotonic: float, now_timestamp_ms: int,
@@ -408,11 +435,38 @@ class EvidenceStore:
         source; bridge-cache eviction is harmless after initial retention. Altered
         metadata for that identity is a contradiction, never a fresh observation.
         """
+        return self._ingest(value, received_monotonic=received_monotonic, now_monotonic=now_monotonic,
+                            now_timestamp_ms=now_timestamp_ms, reservation=reservation, promote_current=True)
+
+    @_serialized
+    def retain_equivalent(self, value: dict[str, Any] | str | bytes, *, received_monotonic: float,
+                          now_monotonic: float, now_timestamp_ms: int, rule: str) -> EvidenceRef:
+        """Archive final preflight with its actual receipt, preserving current attribution.
+
+        Requires fresh current evidence and no outstanding after-frame reservation.
+        A successful result is historical evidence only; any failed retention
+        invalidates current authority and preserves available diagnostics.
+        """
+        return self._ingest(value, received_monotonic=received_monotonic, now_monotonic=now_monotonic,
+                            now_timestamp_ms=now_timestamp_ms, reservation=None, promote_current=False, rule=rule)
+
+    def _ingest(self, value: dict[str, Any] | str | bytes, *, received_monotonic: float,
+                now_monotonic: float, now_timestamp_ms: int, reservation: CapacityReservation | None,
+                promote_current: bool, rule: str = "native_state") -> EvidenceRef:
         self._open()
         try:
+            before = None
+            if not promote_current:
+                self._equivalence_rule(rule)
+                before = self.current_boundary(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
+                self.observation(before)  # A disputed current source cannot support equivalence.
+                if self._reservation is not None:
+                    raise CapacityError("An unresolved dispatch already reserves after evidence")
             observation = json_object(value)
             validate_json(observation, _OBSERVATION)
             session = observation["session"]
+            if not promote_current and session != before.session:
+                raise EvidenceError("Equivalent preflight cannot adopt another world session")
             if session in self._retired_sessions:
                 raise EvidenceError("An old world session cannot become current again")
             if self._session is not None and session != self._session:
@@ -422,6 +476,8 @@ class EvidenceStore:
                 self._retired_sessions.append(self._session)
             self._session = session
             observation = _validate_observation(observation)
+            if not promote_current and (observation["status"] != "ready" or observation["error"] != ""):
+                raise EvidenceError("Equivalent preflight requires ready evidence without an error")
             if type(received_monotonic) not in (int, float) or not math.isfinite(received_monotonic) or received_monotonic < 0:
                 raise EvidenceError("Invalid actual receipt time")
             identity = _identity(observation)
@@ -478,13 +534,16 @@ class EvidenceStore:
                     os.fsync(stream.fileno())
                 destination.chmod(0o444)
                 self._entries[identity] = entry
+            if not promote_current and not self.equivalent(before, entry.reference, rule=rule):
+                raise EvidenceError("Final preflight is not equivalent to current retained evidence")
             if reservation is not None:
                 self._check_reservation(reservation)
                 self._reservation = None
-            if self._current != entry.reference:
-                self._authority_generation += 1
-            self._current = entry.reference
-            self.invalid_reason = ""
+            if promote_current:
+                if self._current != entry.reference:
+                    self._authority_generation += 1
+                self._current = entry.reference
+                self.invalid_reason = ""
             self._save()
             return entry.reference
         except (ContractError, OSError) as exc:

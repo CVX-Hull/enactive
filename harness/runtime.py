@@ -332,7 +332,7 @@ class GameplayRuntime:
         execution_started = False
         envelope = {"logical_action_id": intent.proposal.action_id, "request": None,
                     "result": {"status": "controller_error", "error": "Dispatch not admitted"},
-                    "published": False, "received_monotonic": None}
+                    "published": False, "received_monotonic": None, "preflight": None}
         try:
             self._check_lease()
             reservation = self._store.reserve_dispatch(intent.proposal.before, **self._clocks())
@@ -351,7 +351,7 @@ class GameplayRuntime:
             envelope["published"] = execution_started
             envelope["result"] = {"status": "controller_error", "error": str(exc)}
         valid_envelope = (type(envelope) is dict and set(envelope) == {"logical_action_id", "request", "result",
-            "published", "received_monotonic"} and envelope["logical_action_id"] == intent.proposal.action_id
+            "published", "received_monotonic", "preflight"} and envelope["logical_action_id"] == intent.proposal.action_id
             and type(envelope["published"]) is bool and type(envelope["result"]) is dict
             and (envelope["request"] is None or type(envelope["request"]) is dict)
             and (envelope["received_monotonic"] is None or
@@ -362,7 +362,7 @@ class GameplayRuntime:
             raw = envelope
             envelope = {"logical_action_id": intent.proposal.action_id, "request": None,
                         "result": {"status": "controller_error", "error": "Malformed or unattributable action envelope"},
-                        "published": True, "received_monotonic": None}
+                        "published": True, "received_monotonic": None, "preflight": None}
             self.controller._record({"kind": "malformed_gameplay_receipt", "run_id": self._run_id}, {"raw": raw})
         result, request = envelope["result"], envelope["request"]
         exact = (envelope["logical_action_id"] == intent.proposal.action_id and request is not None

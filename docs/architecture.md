@@ -67,6 +67,10 @@ Typed source revalidation distinguishes the original request evidence, a deliber
 refreshed proposal source and the actual final-preflight source required by a
 prepared intent. These records remain data; runtime must verify live actor/lease
 and generation bindings before input.
+The canonical evidence archive can retain an equivalent final preflight without
+promoting it to current or changing navigation's generation. Native-state equality
+requires positively attested scene/menu content; exact-PNG equality also checks
+verified encoded bytes. Neither historical comparison grants freshness or a lease.
 Runtime/native and actual fresh-player acceptance remain separate delivery gates.
 
 Only one execution arrangement is active at a time: an external campaign operator

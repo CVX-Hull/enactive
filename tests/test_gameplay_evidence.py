@@ -24,6 +24,11 @@ def png(marker=b"synthetic"):
     return data if marker == b"synthetic" else data + marker
 
 
+def black_png():
+    # Opaque black RGBA pixel, distinct from png()'s opaque white grayscale pixel.
+    return base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAX+XDSwAAAABJRU5ErkJggg==")
+
+
 def observation(number=1, *, session="synthetic-world", timestamp_ms=1_000_000):
     return {"protocol": 4, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "", "session": session, "revision": number,
             "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT"],
@@ -70,6 +75,241 @@ class EvidenceTests(unittest.TestCase):
         arguments = dict(now_monotonic=100.0, now_timestamp_ms=1_000_000)
         arguments.update(changes)
         return self.store.current(**arguments)
+
+    def retain(self, value, *, store=None, rule="native_state", **changes):
+        arguments = dict(received_monotonic=100.25, now_monotonic=100.5, now_timestamp_ms=1_000_500)
+        arguments.update(changes)
+        return (self.store if store is None else store).retain_equivalent(value, rule=rule, **arguments)
+
+    def recapture(self, value, number=2):
+        copied = deepcopy(value)
+        copied.update(frame=f"frame-{value['session']}-{number}.png", timestamp_ms=1_000_000,
+                      id="final-preflight")
+        return copied
+
+    def menu(self):
+        value = observation()
+        value.update(category="UILIST", scene=None, ui={"purpose": "UILIST", "title": "Alarm",
+            "rows": [{"id": "rendered-1", "text": "8 hours", "enabled": True, "hotkey": "8"},
+                     {"id": "rendered-2", "text": "4 hours", "enabled": True, "hotkey": "4"}],
+            "selected": "rendered-1", "filter": None, "count": None, "coverage": "rendered_rows_only"})
+        value["boundary"]["kind"] = "menu"
+        return value
+
+    def test_equivalent_preflight_preserves_current_generation_clocks_and_canonical_bytes(self):
+        value = self.publish(observation(timestamp_ms=999_900))
+        before = self.ingest(value)
+        generation = self.store.authority_generation()
+        incoming = self.publish(self.recapture(value), black_png())
+        retained = self.retain(incoming)
+        self.assertNotEqual(retained, before)
+        self.assertEqual(retained.received_monotonic, 100.25)
+        self.assertEqual(self.current(), before)
+        self.assertEqual(self.store.authority_generation(), generation)
+        incoming["scene"]["position"][0] = 99
+        self.assertEqual(self.store.position(retained), (0, 0, 0))
+        self.assertTrue(self.store.equivalent(before, retained, rule="native_state"))
+        self.assertFalse(self.store.equivalent(before, retained, rule="exact_png_bytes"))
+        self.assertEqual(self.store.authority_generation(), generation)
+        manifest = json.loads((self.directory / "evidence.json").read_bytes())
+        after_entry = next(item for item in manifest["entries"] if item["reference"]["observation_id"] == retained.observation_id)
+        self.assertEqual(after_entry["initial_lag_seconds"], 0.5)
+        for path in self.bridge.iterdir(): path.unlink()
+        self.assertEqual(self.retain(self.store.observation(retained), received_monotonic=101,
+                                     now_monotonic=101, now_timestamp_ms=1_001_000), retained)
+        self.assertEqual(self.current(), before)
+        # Normal ingestion explicitly promotes the source, preserving first receipt.
+        self.assertEqual(self.ingest(self.store.observation(retained), received_monotonic=101,
+                                     now_monotonic=101, now_timestamp_ms=1_001_000), retained)
+        self.assertEqual(self.current(now_monotonic=101, now_timestamp_ms=1_001_000), retained)
+        self.assertGreater(self.store.authority_generation(), generation)
+        self.store.close(); self.store = self.open_store()
+        self.assertEqual(Path(retained.frame_path).read_bytes(), black_png())
+        self.assertTrue(self.store.equivalent(before, retained, rule="native_state"))
+        with self.assertRaises(EvidenceError): self.current()
+        # The original lag plus elapsed time still applies after reopen.
+        with self.assertRaises(EvidenceError):
+            self.ingest(self.store.observation(retained), received_monotonic=102.8,
+                        now_monotonic=102.8, now_timestamp_ms=1_002_800)
+
+    def test_menu_native_equivalence_attests_rows_but_not_pixels(self):
+        before_value = self.publish(self.menu())
+        before = self.ingest(before_value)
+        after = self.retain(self.publish(self.recapture(before_value), black_png()))
+        self.assertTrue(self.store.equivalent(before, after, rule="native_state"))
+        self.assertFalse(self.store.equivalent(before, after, rule="exact_png_bytes"))
+        self.assertEqual(self.store.current_boundary(now_monotonic=100.5, now_timestamp_ms=1_000_500), before)
+
+    def test_historical_inequality_checks_both_statuses_and_never_changes_current(self):
+        changes = ({"paused": True}, {"pause_origin": "human"}, {"status": "rejected"},
+                   {"error": "diagnostic"}, {"revision": 2},
+                   {"session": "other-world", "frame": "frame-other-world-2.png"})
+        for number, change in enumerate(changes):
+            with self.subTest(change=change), EvidenceStore(self.bridge, self.root / f"historical-{number}") as store:
+                value = self.publish()
+                before = store.ingest(value, received_monotonic=100, now_monotonic=100, now_timestamp_ms=1_000_000)
+                incoming = self.recapture(value); incoming.update(change)
+                after = store.ingest(self.publish(incoming), received_monotonic=100.25,
+                                     now_monotonic=100.5, now_timestamp_ms=1_000_500)
+                generation = store.authority_generation()
+                for rule in ("native_state", "exact_png_bytes"):
+                    self.assertFalse(store.equivalent(before, after, rule=rule))
+                    self.assertFalse(store.equivalent(after, before, rule=rule))
+                self.assertEqual(store.authority_generation(), generation)
+                self.assertEqual(store.current_boundary(now_monotonic=100.5, now_timestamp_ms=1_000_500), after)
+
+    def test_null_content_requires_exact_png_and_metadata_equality(self):
+        for rule, same_bytes, accepted in (("native_state", True, False),
+                                           ("exact_png_bytes", True, True),
+                                           ("exact_png_bytes", False, False)):
+            with self.subTest(rule=rule, same_bytes=same_bytes):
+                directory = self.root / f"null-{rule}-{same_bytes}"
+                with EvidenceStore(self.bridge, directory) as store:
+                    value = self.menu(); value["ui"] = None
+                    before = store.ingest(self.publish(value), received_monotonic=100,
+                                          now_monotonic=100, now_timestamp_ms=1_000_000)
+                    after_value = self.publish(self.recapture(value), png() if same_bytes else black_png())
+                    if accepted:
+                        after = self.retain(after_value, store=store, rule=rule)
+                        self.assertTrue(store.equivalent(before, after, rule=rule))
+                        self.assertFalse(store.equivalent(before, after, rule="native_state"))
+                    else:
+                        with self.assertRaises(EvidenceError): self.retain(after_value, store=store, rule=rule)
+                        with self.assertRaises(EvidenceError): store.current_boundary(now_monotonic=100, now_timestamp_ms=1_000_000)
+
+    def test_preflight_native_changes_fail_closed_without_adopting_session(self):
+        mutations = {
+            "session": lambda v: v.update(session="another-world", frame="frame-another-world-2.png"),
+            "revision": lambda v: v.update(revision=2),
+            "boundary": lambda v: v["boundary"].update(id="other-boundary"),
+            "control": lambda v: v["boundary"].update(control_generation=1),
+            "position": lambda v: v["scene"].update(position=[1, 0, 0]),
+            "turn": lambda v: v["scene"].update(turn=5),
+            "neighbor": lambda v: v["scene"]["neighbors"][0].update(terrain="t_wall"),
+            "actions": lambda v: v.update(actions=["UP"]),
+            "category": lambda v: v.update(category="other"),
+            "paused": lambda v: v.update(paused=True),
+            "origin": lambda v: v.update(pause_origin="human"),
+            "takeover": lambda v: v.update(takeover_generation=1),
+            "status": lambda v: v.update(status="rejected"),
+            "error": lambda v: v.update(error="capture diagnostic"),
+            "unfinished": lambda v: v.update(status="dispatched"),
+            "capture": lambda v: v.update(frame_ok=False),
+            "in_game": lambda v: v.update(in_game=False),
+        }
+        for name, mutate in mutations.items():
+            with self.subTest(field=name), EvidenceStore(self.bridge, self.root / f"mismatch-{name}") as store:
+                value = self.publish()
+                before = store.ingest(value, received_monotonic=100, now_monotonic=100, now_timestamp_ms=1_000_000)
+                generation = store.authority_generation()
+                incoming = self.recapture(value); mutate(incoming)
+                with self.assertRaises(EvidenceError): self.retain(self.publish(incoming), store=store)
+                self.assertGreater(store.authority_generation(), generation)
+                with self.assertRaises(EvidenceError): store.current_boundary(now_monotonic=100, now_timestamp_ms=1_000_000)
+                manifest = json.loads((store.directory / "evidence.json").read_bytes())
+                self.assertIn(before.observation_id, manifest["blocked"])
+                self.assertEqual(manifest["session"], before.session)
+                self.assertEqual(manifest["retired_sessions"], [])
+
+    def test_changed_menu_content_or_selection_rejects_even_with_identical_png(self):
+        for field in ("rows", "selected", "title", "filter"):
+            with self.subTest(field=field), EvidenceStore(self.bridge, self.root / field) as store:
+                value = self.publish(self.menu())
+                before = store.ingest(value, received_monotonic=100, now_monotonic=100, now_timestamp_ms=1_000_000)
+                incoming = self.recapture(value)
+                if field == "rows": incoming["ui"]["rows"][0]["text"] = "9 hours"
+                elif field == "selected": incoming["ui"][field] = "rendered-2"
+                else: incoming["ui"][field] = "changed"
+                with self.assertRaises(EvidenceError): self.retain(self.publish(incoming), store=store, rule="exact_png_bytes")
+                self.assertEqual(store.source_status(before), "disputed")
+
+    def test_exact_png_mismatch_retains_diagnostic_without_promoting_it(self):
+        value = self.publish()
+        before = self.ingest(value)
+        with self.assertRaises(EvidenceError):
+            self.retain(self.publish(self.recapture(value), black_png()), rule="exact_png_bytes")
+        self.assertEqual(len(self.store.historical_references), 2)
+        after = self.store.historical_references[-1]
+        self.assertEqual(after.received_monotonic, 100.25)
+        self.assertEqual(Path(after.frame_path).read_bytes(), black_png())
+        self.assertFalse(self.store.equivalent(before, after, rule="exact_png_bytes"))
+        with self.assertRaises(EvidenceError): self.current()
+        self.store.close(); self.store = self.open_store()
+        self.assertFalse(self.store.equivalent(before, after, rule="exact_png_bytes"))
+        with self.assertRaises(EvidenceError): self.current()
+
+    def test_unknown_equivalence_rule_is_rejected_and_retention_invalidates(self):
+        before = self.ingest()
+        generation = self.store.authority_generation()
+        with self.assertRaises(ContractError): self.store.equivalent(before, before, rule="pixel_similarity")
+        self.assertEqual(self.store.authority_generation(), generation)
+        with self.assertRaises(ContractError): self.retain(self.publish(self.recapture(observation())), rule="pixel_similarity")
+        with self.assertRaises(EvidenceError): self.current()
+        self.assertEqual(self.store.historical_references, (before,))
+
+    def test_preflight_requires_fresh_current_and_preserves_existing_reservation(self):
+        value = self.publish()
+        before = self.ingest(value)
+        token = self.store.reserve_dispatch(before, now_monotonic=100, now_timestamp_ms=1_000_000)
+        with self.assertRaises(CapacityError): self.retain(self.publish(self.recapture(value)))
+        self.store.release(token)  # Retention cannot consume the after reservation.
+        self.assertEqual(self.store.historical_references, (before,))
+        with self.assertRaises(EvidenceError): self.current()
+        # Fresh Observe is required after any failed preflight, including expiry.
+        value = self.publish(observation(3, timestamp_ms=1_004_000))
+        before = self.ingest(value, received_monotonic=104, now_monotonic=104, now_timestamp_ms=1_004_000)
+        incoming = self.recapture(value, 4); incoming["timestamp_ms"] = 1_007_100
+        with self.assertRaises(EvidenceError): self.retain(self.publish(incoming), received_monotonic=107.1,
+                                                         now_monotonic=107.1, now_timestamp_ms=1_007_100)
+        self.assertEqual(self.store.historical_references[-1], before)
+        with self.assertRaises(EvidenceError): self.current(now_monotonic=107.1, now_timestamp_ms=1_007_100)
+
+    def test_preflight_integrity_and_disputes_survive_reopen(self):
+        for damage in ("missing", "corrupt", "disputed"):
+            with self.subTest(damage=damage), EvidenceStore(self.bridge, self.root / damage) as store:
+                value = self.publish()
+                before = store.ingest(value, received_monotonic=100, now_monotonic=100, now_timestamp_ms=1_000_000)
+                after = self.retain(self.publish(self.recapture(value)), store=store)
+                if damage == "missing": Path(after.frame_path).unlink()
+                elif damage == "corrupt":
+                    Path(after.frame_path).chmod(0o600); Path(after.frame_path).write_bytes(png(b"corrupt"))
+                else:
+                    conflict = deepcopy(value); conflict["scene"]["position"][0] = 2
+                    with self.assertRaises(EvidenceError):
+                        store.ingest(conflict, received_monotonic=100, now_monotonic=100, now_timestamp_ms=1_000_000)
+                with self.assertRaises(EvidenceError): store.equivalent(before, after, rule="exact_png_bytes")
+                with self.assertRaises(EvidenceError): self.retain(self.publish(self.recapture(value, 3)), store=store)
+                store.close()
+                with EvidenceStore(self.bridge, self.root / damage) as reopened:
+                    with self.assertRaises(EvidenceError): reopened.equivalent(before, after, rule="native_state")
+                    with self.assertRaises(EvidenceError): reopened.current_boundary(now_monotonic=100, now_timestamp_ms=1_000_000)
+
+    def test_preflight_capacity_and_write_failures_invalidate_and_preserve_sources(self):
+        for failure in ("frames", "bytes", "metadata", "frame_write", "manifest_write"):
+            with self.subTest(failure=failure), EvidenceStore(self.bridge, self.root / failure) as store:
+                value = self.publish()
+                before = store.ingest(value, received_monotonic=100, now_monotonic=100, now_timestamp_ms=1_000_000)
+                incoming = self.publish(self.recapture(value))
+                if failure == "frames": store.max_frames = 1
+                elif failure == "bytes": store.max_bytes = len(png())
+                target = "harness.gameplay.evidence.MAX_METADATA_BYTES"
+                if failure == "metadata": context = patch(target, store.usage()["metadata_bytes"] + 2 * 1024 * 1024)
+                elif failure in ("frame_write", "manifest_write"):
+                    original_open = Path.open
+                    def failing_open(path, *args, **kwargs):
+                        mode = args[0] if args else kwargs.get("mode", "r")
+                        if mode == "xb" and (path.suffix == ".png" if failure == "frame_write" else path.suffix == ".tmp"):
+                            raise OSError("synthetic write failure")
+                        return original_open(path, *args, **kwargs)
+                    context = patch.object(Path, "open", failing_open)
+                else: context = patch(target, 34 * 1024 * 1024)
+                with context, self.assertRaises(EvidenceError): self.retain(incoming, store=store)
+                with self.assertRaises(EvidenceError): store.current_boundary(now_monotonic=100, now_timestamp_ms=1_000_000)
+                self.assertEqual(Path(before.frame_path).read_bytes(), png())
+                # A persistent manifest-write fault cannot promise a durable diagnostic.
+                if failure != "manifest_write":
+                    manifest = json.loads((store.directory / "evidence.json").read_bytes())
+                    self.assertIn(before.observation_id, manifest["blocked"])
 
     def test_menu_is_retained_without_scene_time_or_movement_permission(self):
         value = observation()

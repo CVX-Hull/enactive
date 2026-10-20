@@ -1,6 +1,7 @@
 #include "cdda_harness.h"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -484,12 +485,107 @@ void ordinary_gate( const TextJsonObject &request )
         integer_member( request, "takeover_generation" ) != takeover_generation ) {
         throw std::runtime_error( "stale session, revision, boundary or human generation; observe again" );
     }
-    if( presented_boundary != boundary_id || presented_session != session ||
+    if( request.get_string( "frame" ) != frame_name || frame_name.empty() || !saved_frame_ok ||
+        frame_boundary != boundary_id || frame_session != session || frame_revision != revision ||
+        now_ms() - frame_ms > 3000 ||
+        presented_boundary != boundary_id || presented_session != session ||
         presented_revision != revision || now_ms() - presented_ms > 3000 ||
         integer_member( request, "deadline_ms" ) < now_ms() ) {
         throw std::runtime_error( "fresh matching rendered boundary and deadline required" );
     }
     authority_gate( request );
+}
+bool same_frame_png( const std::string &saved, const std::string &latest, const struct stat &owned )
+{
+    constexpr off_t maximum_frame_bytes = 32 * 1024 * 1024;
+    // Nonblocking opens cannot hang on a substituted FIFO; fstat rejects every
+    // nonregular file and O_NOFOLLOW rejects symlinks before reading anything.
+    const int saved_fd = open( saved.c_str(), O_RDONLY | O_NOFOLLOW | O_NONBLOCK );
+    const int latest_fd = open( latest.c_str(), O_RDONLY | O_NOFOLLOW | O_NONBLOCK );
+    struct stat saved_info = {};
+    struct stat latest_info = {};
+    bool same = saved_fd >= 0 && latest_fd >= 0 &&
+                fstat( saved_fd, &saved_info ) == 0 && fstat( latest_fd, &latest_info ) == 0 &&
+                S_ISREG( saved_info.st_mode ) && S_ISREG( latest_info.st_mode ) &&
+                saved_info.st_size > 0 && saved_info.st_size <= maximum_frame_bytes &&
+                saved_info.st_size == latest_info.st_size &&
+                latest_info.st_dev == owned.st_dev && latest_info.st_ino == owned.st_ino;
+    std::array<char, 32 * 1024> saved_chunk;
+    std::array<char, 32 * 1024> latest_chunk;
+    off_t remaining = saved_info.st_size;
+    while( same && remaining > 0 ) {
+        const off_t amount = std::min( remaining, static_cast<off_t>( saved_chunk.size() ) );
+        const ssize_t saved_read = read( saved_fd, saved_chunk.data(), static_cast<size_t>( amount ) );
+        const ssize_t latest_read = read( latest_fd, latest_chunk.data(), static_cast<size_t>( amount ) );
+        // A short read or error (including EINTR) rejects without retrying work
+        // beyond the request's original deadline.
+        same = saved_read == amount && latest_read == amount &&
+               std::equal( saved_chunk.begin(), saved_chunk.begin() + amount, latest_chunk.begin() );
+        remaining -= amount;
+    }
+    char trailing;
+    same = same && read( saved_fd, &trailing, 1 ) == 0 && read( latest_fd, &trailing, 1 ) == 0;
+    if( saved_fd >= 0 && close( saved_fd ) != 0 ) { same = false; }
+    if( latest_fd >= 0 && close( latest_fd ) != 0 ) { same = false; }
+    return same;
+}
+void exact_frame_gate()
+{
+    // ordinary_gate has already matched the generated basename. Never capture
+    // here: refresh_display has restored a different renderer target. The
+    // existing encoder writes only the cached last-presented surface.
+    const std::string saved = path( frame_name );
+    const std::string latest = path( "frame.compare.tmp.png" );
+    const int descriptor = open( latest.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0600 );
+    if( descriptor < 0 ) {
+        throw std::runtime_error( "cannot exclusively create exact frame temporary file" );
+    }
+    struct stat owned = {};
+    const bool identified = fstat( descriptor, &owned ) == 0;
+    struct stat current = {};
+    // One trusted bridge writer owns this pathname for the operation. The
+    // existing encoder reopens it by name; concurrent external filesystem
+    // mutation is outside this contract, not defeated by an inode check.
+    const bool same = identified && lstat( latest.c_str(), &current ) == 0 &&
+                      current.st_dev == owned.st_dev && current.st_ino == owned.st_ino &&
+                      write_frame( latest ) && same_frame_png( saved, latest, owned );
+    const bool closed = close( descriptor ) == 0;
+    // Reject observed replacement. This pathname check/unlink is not atomic
+    // protection against concurrent mutation by another same-user process.
+    const bool removed = identified && lstat( latest.c_str(), &current ) == 0 &&
+                         current.st_dev == owned.st_dev && current.st_ino == owned.st_ino &&
+                         unlink( latest.c_str() ) == 0;
+    if( !removed ) {
+        throw std::runtime_error( "exact frame temporary file cleanup failed" );
+    }
+    if( !same || !closed ) {
+        throw std::runtime_error( "latest presented PNG does not exactly match the saved frame or file I/O failed" );
+    }
+}
+void ordinary_commit_gate( const TextJsonObject &request, bool resuming )
+{
+    ordinary_gate( request );
+    if( !resuming && ( paused || fs::exists( path( "pause" ) ) ) ) {
+        throw std::runtime_error( "pause interrupted dispatch" );
+    }
+    if( request.get_bool( "require_exact_frame" ) ) {
+        exact_frame_gate();
+    }
+    // The encoder/comparison can be slow. No game-thread input processing or
+    // redraw interleaves it; queued physical input is handled by CheckMessages.
+    // Host Pause still revokes the durable authority token, including Resume,
+    // whose existing sentinel is intentionally consumed only after this gate.
+    ordinary_gate( request );
+    if( !waiting_interrupt.empty() || fs::exists( path( "control.json" ) ) ||
+        fs::exists( path( "control-claimed.json" ) ) ) {
+        throw std::runtime_error( "recovery is pending" );
+    }
+    if( integer_member( request, "deadline_ms" ) < now_ms() ) {
+        throw std::runtime_error( "request expired before input commit" );
+    }
+    if( !resuming && ( paused || fs::exists( path( "pause" ) ) ) ) {
+        throw std::runtime_error( "pause interrupted dispatch" );
+    }
 }
 input_event action_event( const std::string &action, keyboard_mode mode, bool confirmation = false )
 {
@@ -968,7 +1064,7 @@ bool poll( keyboard_mode mode, input_event &event )
         if( integer_member( request, "deadline_ms" ) < now_ms() ) {
             throw std::runtime_error( "expired request" );
         }
-        const size_t fields = kind == "observe" || kind == "pause" ? 4 : kind == "resume" ? 9 : 10;
+        const size_t fields = kind == "observe" || kind == "pause" ? 4 : kind == "resume" ? 11 : 12;
         if( request.size() != fields ) {
             throw std::runtime_error( "unsupported request envelope" );
         }
@@ -994,7 +1090,7 @@ bool poll( keyboard_mode mode, input_event &event )
             if( current_kind != boundary_kind::normal_play && current_kind != boundary_kind::menu ) {
                 throw std::runtime_error( "unsupported boundary for resume" );
             }
-            ordinary_gate( request );
+            ordinary_commit_gate( request, true );
             fs::remove( path( "pause" ) );
             paused = false;
             pause_origin = "none";
@@ -1029,10 +1125,7 @@ bool poll( keyboard_mode mode, input_event &event )
         } else {
             throw std::runtime_error( "unsupported command" );
         }
-        if( fs::exists( path( "pause" ) ) ) {
-            throw std::runtime_error( "pause interrupted dispatch" );
-        }
-        ordinary_gate( request );
+        ordinary_commit_gate( request, false );
         ++revision;
         pending = id;
         publish( id, "dispatched", "", false );

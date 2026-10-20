@@ -124,8 +124,8 @@ execution path.
 
 ### Dispatch capability and boundary matrix
 
-The current `Controller.acquire_run`/`execute_run` are normal-play/action-only;
-this design **replaces that capability API**, not merely its metadata. One
+The design replaces the base revision's normal-play/action-only run capability;
+the passive source checkpoint below records the implemented mission API. One
 `MissionLease` object is created only inside the controller. It binds mission ID,
 mission epoch, actor assignment, native session and pause generation. Only the
 mission runtime receives it; JSON/player names never recreate the object.
@@ -583,6 +583,14 @@ and required actual `preflight_source` remain separate. A prepared intent can
 include the typed refresh relation only when it connects the original request to
 that proposal source; subsequent verified steps keep their own before/preflight
 references. Never encode the relationship only in rationale text.
+
+The source controller supports exact live capability rotation between registered
+operations and a trusted final-preflight callback before publication. The canonical
+archive retains that final frame without promoting navigation's current source.
+Every ordinary native envelope now carries the generated frame identity and a
+strict exact-presentation flag; true compares encoded presented PNG bytes at commit.
+These source mechanisms still require native qualification and runtime integration.
+They do not make a fallible screenshot interpretation native-attested UI metadata.
 
 The passive [navigation skill](../../harness/gameplay/navigation.py) projects only
 observed cardinal cells, retains route support and validates each settled step.
