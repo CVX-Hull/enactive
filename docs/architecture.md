@@ -87,7 +87,9 @@ Registered untouched-menu exit composes charged Resume/QUIT with an explicit
 player-interpreted confirmation, original operator mark and shared root/child limits.
 Published Yes plus exact owned normal exit and narrow durable pending retirement
 can resolve process custody while retaining an unknown ACK and all charges. No
-normal save is claimed. This source composition still needs actual native qualification.
+normal save is claimed. The [bounded native retest](acceptance/2026-10-20-owned-launch.md#native-qualification002-accepted-owned-menu-component)
+qualified the Yes/normal-exit path while retaining its failed first attempt. It
+created, loaded and saved no character and did not exercise native No or user Pause.
 The remaining lifecycle must establish
 actual native readiness,
 admitted identity and normal exit evidence before those claims are accepted.

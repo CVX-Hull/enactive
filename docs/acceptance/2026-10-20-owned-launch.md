@@ -7,15 +7,15 @@ scope: Registered owned launch/exit source and windowed native qualification; fa
 
 # Owned launch and normal menu exit
 
-The mission runtime now implements lifecycle `launch` through the existing fixed
-NativeProcess adapter. It accepts only a source-free root and the admission's
-world/character and binary hash. This source increment precedes creation, identity,
-charged Resume, save/reload and independent gameplay; it does not complete #155,
-#144 or seven-day readiness. [Protocol](../protocol.md#integrated-mission-lifecycle)
+The bounded native retest002 accepted owned windowed launch and normal untouched-menu
+exit; attempt001 remains failed. The final input ACK remains unknown in both.
+Neither attempt created, loaded or saved a character. They do not complete #155,
+#144 or seven-day readiness. This report retains the earlier source checkpoints,
+repair and separate native evidence below. [Protocol](../protocol.md#integrated-mission-lifecycle)
 owns current behavior; the [earlier ingress report](2026-10-20-mission-ingress.md)
-retains the previous checkpoint's scope.
+retains the preceding checkpoint's scope.
 
-## Qualified source behavior
+## Initial launch-only source checkpoint
 
 - Preparation, existing-process guard, exec and readiness share the original
   root/mission wall deadline and preserve the cleanup reserve. Process launch
@@ -155,3 +155,61 @@ preflight time/correlation at late terminal return. Independent review also rera
 both takeover regressions. This is a source repair, not a retrospective pass or
 freshness renewal. Any native retest needs a separate frozen candidate, prospective
 attempt and retained cumulative failure/cost accounting.
+
+## Native qualification002: accepted owned-menu component
+
+A separate prospective attempt froze corrected source
+b055ab44a5678691eeb9ae5a14091d38d0ff5951, the same native binary, identical
+finite limits/reserves and the actual3second transport timeout.001 was not repaired,
+replayed or granted new allowance. The corrected source passed860 Python tests and
+all required common checks before this native retest.
+
+The fixed prepared wrapper launched one retained windowed child. Fresh MAIN_MENU
+readiness, charged Resume/Quit, inspected Really quit? pixels, an explicitly awaited
+equivalent Observe and one interpreted Yes all passed. Native Yes
+a1906950-72dd-4318-89bb-ee4e740d7824 again timed out at3021ms: its original
+primitive remains **unknown** with its charge, native admission and history intact.
+This time the historical preflight remained correlated. Exact child normal code0,
+original operator/takeover counters0 and matching pending retirement established a
+separate completed OwnedNormalExit with immutable effect evidence. No acknowledgement
+was relabeled ready.
+
+![Actual spectator at1100px with the owned confirmation, mission state and available Pause](assets/owned-menu-qualification-002/spectator-1100.png)
+
+The real viewer had no horizontal overflow at1100×850, Pause enabled, Resume
+disabled and zero browser POST requests during capture. It displayed actual native
+pixels and this engineering objective; no fixture response was substituted. This
+checks presentation/locking, not actual user-Pause interruption or normal-game UI.
+The [full native confirmation](assets/owned-menu-qualification-002/quit-confirmation.png)
+retains readable original960×640 pixels.
+
+At graceful close the runtime journal recorded this exact owned child stopped at0
+and normal_exit_verified=true. Read-only operating-system checks found no game,
+8765/8766listener or native inbox/claim. A separately recorded runtime reopen then
+validated the committed proof and preserved3spent inputs/unknown ACK/effect/admission,
+without restoring a source, phase, process handle, lease or unresolved custody. No
+second game was launched for that verification. The persisted admission remains
+paused; normal mission finish is unimplemented, and no continuing input authority
+is implied. No world/character was created, loaded or saved in either attempt.
+
+| Accounting scope | Inputs | Wall seconds | Native frames | PNG bytes |
+| --- | ---: | ---: | ---: | ---: |
+| Failed001 through controller close |3|208.733202|9|298856|
+| Accepted002 through first controller close |3|111.976184|9|298497|
+| Both native executions |6|320.709386|18|597353|
+
+Later reopen/close advances002's retained elapsed watermark to152.027751seconds,
+adding40.051567seconds of verification. The combined retained mission wall including
+that verification is360.760923seconds; original deadlines remain unchanged while
+paused. Inspection, client orchestration and verification are not model-inference
+latency. External tokens remain unknown and game time remains unanchored.
+[Sanitized typed result, separate costs and image hashes](assets/owned-menu-qualification-002/result.json).
+
+A clean-context independent reviewer checked both SQLite files in read-only mode,
+canonical request digests, original journals, all18native PNG hashes/pixels, bounded
+Resume/Quit/Yes inputs without replay/raw rescue, source/native/prospective hashes,
+operator/takeover counters, both closeouts and the authority-free reopen. It accepted
+only002's owned-menu component, preserving001's failure. Creation, provisional
+visible identity/adoption, character save/restart/exact reload, fresh player/memory
+continuity, normal finish, actual Pause/control and the independent mission remain
+open. These two engineering menu attempts establish no memory or model benefit.

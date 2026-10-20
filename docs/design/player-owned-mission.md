@@ -638,7 +638,9 @@ unknown ACK/history survives narrow pending retirement. No character save is cla
 Source-free Start publishes no native Observe before owned launch. Normal adoption
 remains unavailable even after reopening diagnostic frames. Other lifecycle,
 item/inspection, activity, handoff and final-finish requests explicitly block.
-Actual composed native launch/exit qualification remains pending.
+The [bounded composed native retest](../acceptance/2026-10-20-owned-launch.md#native-qualification002-accepted-owned-menu-component)
+qualified owned untouched-menu launch/Yes/normal-exit while retaining the first
+failed attempt. Native No and normal character lifecycle remain unqualified.
 Fresh player replacement and independent play remain separate acceptance work.
 
 The [native-row menu policy](../../harness/gameplay/interaction.py) can propose a
