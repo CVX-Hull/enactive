@@ -125,6 +125,8 @@ and the bounded trace/label pilot #71 prepare an integrated supply-and-shelter
 mission, then a fresh seven-day assessment. This is a delivery roadmap, not a
 change to current runtime authority. An optional read-only curator and broader
 efficacy studies remain separate candidates; [work](work.md) links their owners.
+The [architecture assessment](research-memory-architecture.md) explains what to keep,
+what needs to change and which recent memory results transfer to this project.
 
 The next memory and [monitoring design](design/outcome-monitoring.md) must use
 actual trajectories while distinguishing observations, fallible judgments and

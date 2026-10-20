@@ -12,6 +12,10 @@ not an implemented contract or a commitment to training. The current
 weight training, model service, database installation or paid API experiment was
 performed for this review.
 
+The [October 19 architecture assessment](research-memory-architecture.md) revisits
+this proposal against implemented callers, recent primary evidence and the first
+seven-day run; its scoped changes remain proposed.
+
 ## Recommendation and decision boundary
 
 Build toward an agent that **remembers evidence, revises its understanding, and

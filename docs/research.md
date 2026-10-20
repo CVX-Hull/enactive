@@ -41,6 +41,11 @@ maintenance question rather than expanding bibliography for its own sake.
 
 ## Embodied control / VLA
 
+The [October 19 architecture assessment](research-memory-architecture.md) checks the
+implemented paths against the actual seven-day run and revisits recent primary
+memory evidence. It proposes player-owned mission integration, durable campaign
+views and semantic revision; it does not change current execution authority.
+
 The [cross-disciplinary representation study](research-memory-representations.md)
 compares mathematical, database, control and statistical views of memory. Its
 [simulation protocol](design/memory-study-protocol.md) was independently reviewed

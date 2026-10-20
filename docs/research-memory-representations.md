@@ -27,6 +27,10 @@ real visible traces before adding a persistent memory architecture. These are
 research decisions, not a new runtime feature or a universally best memory system.
 GitHub [#59](https://github.com/CVX-Hull/enactive/issues/59) owns the study outcome.
 
+The [October 19 architecture assessment](research-memory-architecture.md) revisits
+this proposal against implemented callers, recent primary evidence and the first
+seven-day run; its scoped changes remain proposed.
+
 ## One problem, six useful views
 
 | View | The question it makes precise | What it does not supply |
