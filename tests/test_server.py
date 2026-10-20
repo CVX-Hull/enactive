@@ -541,18 +541,37 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.request(path="/frame.png?name=../controller.json")[0], 400)
 
     def test_pause_endpoint_does_not_wait_for_native_exchange(self):
-        with ThreadPoolExecutor() as pool:
-            waiting = pool.submit(self.post, {"kind": "observe", "timeout": 0.4})
-            deadline = time.monotonic() + 1
-            while not (self.controller.bridge / "request.json").exists() and time.monotonic() < deadline:
-                time.sleep(0.002)
-            started = time.monotonic()
-            code, data, _ = self.post({"kind": "pause"})
-            self.assertEqual(code, 200)
-            self.assertEqual(json.loads(data)["status"], "pause_requested")
-            self.assertLess(time.monotonic() - started, 0.15)
-            self.assertFalse(waiting.done())
-            waiting.result()
+        entered, release = threading.Event(), threading.Event()
+        response_path = self.controller.bridge / "response.json"
+        def held_native_response(path):
+            if path == response_path:
+                entered.set()
+                if not release.wait(5):
+                    raise AssertionError("Native response fixture was not released")
+            return read_json(path)
+        # Hold the actual exchange after publication and outside data_lock.
+        # Completion before release proves independence; a 150ms scheduler/fsync
+        # threshold did not. The outer timeout is only a deadlock watchdog.
+        with patch("harness.controller.read_json", side_effect=held_native_response), \
+                ThreadPoolExecutor(max_workers=2) as pool:
+            waiting = pool.submit(self.post, {"kind": "observe", "timeout": 2.0})
+            try:
+                self.assertTrue(entered.wait(2))
+                self.assertTrue(self.controller.command_lock.locked())
+                self.assertTrue((self.controller.bridge / "request.json").exists())
+                generation = self.controller.operator_pause_generation
+                paused = pool.submit(self.post, {"kind": "pause"})
+                code, data, _ = paused.result(timeout=2)
+                self.assertEqual(code, 200)
+                self.assertEqual(json.loads(data)["status"], "pause_requested")
+                self.assertEqual(self.controller.operator_pause_generation, generation + 1)
+                self.assertTrue(self.controller.pause_requested)
+                self.assertTrue((self.controller.bridge / "pause").exists())
+                self.assertFalse(release.is_set())
+                self.assertFalse(waiting.done())
+            finally:
+                release.set()
+            waiting.result(timeout=3)
 
     def test_goal_is_saved_without_game(self):
         self.assertEqual(self.post({"kind": "goal", "text": "Explore"})[0], 200)

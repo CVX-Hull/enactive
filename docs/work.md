@@ -146,6 +146,13 @@ checks and a separate prospective native retest; the failed admission and origin
 costs remain. The lead owns this tight coupled repair with read-only reviews,
 without a new executor, TTL relaxation, source patch during play or overlapping
 implementation workers.
+The lifecycle repair's local1090tests and PR CI passed; its [push CI failed](https://github.com/CVX-Hull/enactive/actions/runs/39437020947)
+on an existing Pause HTTP test's150ms threshold (177ms observed). #154 owns the
+test correction: hold the actual native exchange and require real HTTP Pause to
+revoke control before release, with a bounded deadlock watchdog. This verifies
+independence without treating scheduler/fsync timing as a latency guarantee.
+Production Pause is unchanged. Retain that failed CI; qualification002 remains
+unadmitted until the corrected candidate's common and exact hosted checks pass.
 #157/#144 require actual player-owned mission and clean-context memory use before
 #145's readiness decision. Source/fixture review is distinct from that acceptance;
 #144 owns exact checkpoint results and retained failures. Do not pull optional
