@@ -1274,7 +1274,9 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
 
     def mission_resume_binding(self):
         snapshot = self.controller.status(); state = snapshot["state"]
-        return {"expected_generation": snapshot["pause_generation"], "expected_session": state["session"],
+        return {"expected_generation": snapshot["pause_generation"],
+                "expected_controller_boot_id": self.controller.authority["controller_boot_id"],
+                "expected_operator_generation": snapshot["operator_pause_generation"], "expected_session": state["session"],
                 "expected_revision": state["revision"], "expected_boundary_id": state["boundary"]["id"],
                 "expected_takeover_generation": state["takeover_generation"], "expected_pause_origin": state["pause_origin"],
                 "logical_action_id": "mission-resume", "deadline_monotonic": time.monotonic() + 2}
@@ -1345,10 +1347,55 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
     def mission_resume(self, **changes):
         return self.controller.resume_mission(**{**self.mission_resume_binding(), **changes})
 
+    def test_internal_stop_revokes_authority_without_inventing_operator_pause(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready(); lease = self.acquire()
+            counter = self.controller.operator_pause_generation
+            generation = self.controller.pause_generation
+            self.controller.release_mission(lease)
+            self.assertEqual(self.controller.operator_pause_generation, counter)
+            self.assertGreater(self.controller.pause_generation, generation)
+            self.assertTrue(self.controller.pause_requested)
+            self.assertIsNone(self.controller._mission_lease)
+            self.controller.execute("observe")
+            envelope = self.mission_resume(expected_operator_generation=counter)
+            self.assertTrue(envelope["published"])
+            self.assertEqual(envelope["result"]["status"], "ready")
+            self.assertEqual([r["kind"] for r in fake.delivered if r["kind"] == "resume"], ["resume", "resume"])
+
+    def test_operator_pause_cannot_be_hidden_by_refreshing_general_generation(self):
+        with FakeBridge(self.controller) as fake:
+            self.controller.execute("observe")
+            binding = self.mission_resume_binding()
+            self.controller.pause()
+            # A lifecycle transition can legitimately refresh the general revoke
+            # counter; it cannot refresh the operator's original intent capture.
+            binding["expected_generation"] = self.controller.pause_generation
+            envelope = self.controller.resume_mission(**binding)
+            self.assertFalse(envelope["published"])
+            self.assertEqual(self.controller.operator_pause_generation, binding["expected_operator_generation"] + 1)
+            self.assertFalse(any(r["kind"] == "resume" for r in fake.requests))
+
+    def test_mission_resume_rejects_counter_from_other_controller_boot(self):
+        with FakeBridge(self.controller) as fake:
+            self.controller.execute("observe")
+            calls = []
+            envelope = self.mission_resume(expected_controller_boot_id="old-controller-boot", preflight=lambda *args: calls.append(args))
+            self.assertFalse(envelope["published"])
+            self.assertEqual(calls, [])
+            self.assertFalse(any(r["kind"] == "resume" for r in fake.requests))
+
+    def test_public_pause_cannot_select_internal_origin(self):
+        counter = self.controller.operator_pause_generation
+        self.assertEqual(self.controller.execute("pause", operator=False)["status"], "controller_error")
+        self.assertEqual(self.controller.operator_pause_generation, counter)
+        self.assertEqual(self.controller.execute("pause")["status"], "pause_requested")
+        self.assertEqual(self.controller.status()["operator_pause_generation"], counter + 1)
+
     def test_mission_resume_requires_logical_identity_and_original_deadline(self):
         with FakeBridge(self.controller) as fake:
             self.controller.execute("observe")
-            for missing in ("logical_action_id", "deadline_monotonic"):
+            for missing in ("logical_action_id", "deadline_monotonic", "expected_operator_generation", "expected_controller_boot_id"):
                 binding = self.mission_resume_binding()
                 del binding[missing]
                 with self.subTest(missing=missing), self.assertRaises(TypeError):
@@ -1358,6 +1405,8 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                             {"deadline_monotonic": float("nan")}, {"deadline_monotonic": float("inf")},
                             {"deadline_monotonic": -1}, {"deadline_monotonic": 0},
                             {"expected_generation": True}, {"expected_revision": True},
+                            {"expected_operator_generation": True}, {"expected_operator_generation": -1},
+                            {"expected_controller_boot_id": ""}, {"expected_controller_boot_id": 1},
                             {"expected_takeover_generation": -1}, {"expected_session": ""},
                             {"expected_boundary_id": ""}, {"expected_pause_origin": []}, {"expected_image_sha256": "A" * 64},
                             {"preflight": 1}):

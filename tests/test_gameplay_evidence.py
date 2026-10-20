@@ -1017,6 +1017,30 @@ class EvidenceTests(unittest.TestCase):
         (self.directory / "frames" / "orphan.png").write_bytes(png())
         with self.assertRaises(CapacityError): self.open_store(max_frames=2)
 
+    def test_usage_tolerates_indexed_source_loss_after_directory_listing_without_releasing_slot(self):
+        reference = self.ingest()
+        target = Path(reference.frame_path)
+        original = Path.iterdir
+        def lose_after_listing(path):
+            entries = list(original(path))
+            if path == self.store.frames:
+                target.unlink()
+            return iter(entries)
+        with patch.object(Path, "iterdir", lose_after_listing):
+            measured = self.store.usage()
+        self.assertEqual((measured["frames"], measured["bytes"]), (1, 0))
+        self.assertEqual(self.store.historical_references, (reference,))
+        with self.assertRaises(EvidenceError): self.store.source_status(reference)
+        with self.assertRaises(EvidenceError): self.current()
+
+    def test_usage_still_rejects_directory_and_dangling_symlink(self):
+        unexpected = self.store.frames / "unexpected"
+        unexpected.mkdir()
+        with self.assertRaisesRegex(EvidenceError, "non-file"): self.store.usage()
+        unexpected.rmdir()
+        unexpected.symlink_to(self.root / "missing")
+        with self.assertRaisesRegex(EvidenceError, "non-file"): self.store.usage()
+
     def test_inspect_current_reports_age_without_authority_but_detects_corruption(self):
         first = self.ingest()
         generation = self.store.authority_generation()

@@ -42,6 +42,31 @@ def handoff_claim(issuance, **changes):
     return values
 
 
+def phase_lifecycle(**changes):
+    values = request("lifecycle", operation="create", world="test-world", character="test-person",
+                     sources=["source-1"], expected_session="native-session", expected_revision=30,
+                     expected_boundary_id="boundary-1", limits={"primitives": 3, "wall_seconds": 120, "game_seconds": 1200})
+    values.update(changes)
+    return values
+
+
+def phase_skill(kind="menu", **changes):
+    goals = {
+        "menu": {"purpose": "Choose", "label": "One", "outcome": "activated"},
+        "item": {"purpose": "consume", "label": "water", "quantity": 1, "outcome": "consumed"},
+        "activity": {"operation": "rest", "target": "bench", "game_seconds": 10, "interrupt": True},
+        "inspect": {"purpose": "inventory"},
+        "interact": {"action": "open_consume", "intent": "Inspect food", "desired_outcome": "Food choices"},
+        "edit": {"purpose": "character_name", "text": "Survivor", "commit": False},
+    }
+    values = skill(skill_kind=kind, goal=goals[kind])
+    if kind == "edit":
+        values["perception"] = dict(kind="editor", basis="player_interpretation", source_id="source-1",
+            purpose="character_name", label="Name", visible_text="", whole_value=True, focused=True)
+    values.update(changes)
+    return values
+
+
 class LedgerTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -69,6 +94,212 @@ class LedgerTests(unittest.TestCase):
     def issue_handoff(self):
         self.active_request(request("handoff", request_id="handoff-1", checkpoint_ids=["source-1"], successor_role="player"))
         return self.ledger.issue_handoff("handoff-1", binding=handoff_binding(), now=1002)
+
+    def phase_input(self, request_id, logical_id, now=1002):
+        self.ledger.prepare_primitive(request_id, logical_id, intent(), now=now)
+        self.ledger.settle_primitive(logical_id, "not_dispatched", {"reason": "Synthetic accounting probe"}, now=now)
+
+    def rewrite_request(self, identity, **changes):
+        value = self.ledger.request(identity)["request"]
+        value.update(changes)
+        payload = json.dumps(value, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+        self.ledger._db.execute("UPDATE requests SET payload=?,digest=? WHERE id=?",
+            (payload, hashlib.sha256(payload.encode()).hexdigest(), identity))
+
+    def test_phase_root_and_children_share_original_cap_exactly_once(self):
+        root = phase_lifecycle()
+        self.active_request(root)
+        self.phase_input("request-1", "root-input")
+        self.ledger.complete_request("request-1", "partial", {"awaiting": "player choice"}, now=1002)
+        original = self.ledger.request("request-1")
+        child = phase_skill(request_id="menu-child", phase_id="request-1")
+        self.ledger.begin_request(child, now=1003)
+        self.phase_input("menu-child", "menu-input", now=1003)
+        self.assertFalse(self.ledger.prepare_primitive("menu-child", "menu-input", intent(), now=1004)["created"])
+        self.ledger.complete_request("menu-child", "completed", {"choice": "One"}, now=1004)
+        continuation = phase_lifecycle(request_id="continuation", phase_id="request-1")
+        self.ledger.begin_request(continuation, now=1004)
+        self.phase_input("continuation", "continuation-input", now=1004)
+        self.assertFalse(self.ledger.begin_request(root, now=1005)["created"])
+        with self.assertRaisesRegex(BudgetError, "[Pp]hase"):
+            self.ledger.prepare_primitive("continuation", "fourth", intent(), now=1005)
+        self.assertEqual(self.ledger.request("request-1"), original)
+        self.assertEqual(self.ledger.snapshot(now=1005)["spent_inputs"], 3)
+        self.reopen()
+        self.assertEqual(self.ledger.request("request-1"), original)
+        self.assertEqual(self.ledger.snapshot(now=1010)["spent_inputs"], 3)
+
+    def test_item_and_activity_roots_accept_only_direct_control_children(self):
+        self.ledger.activate(epoch=0, player_id="player-test", now=1001)
+        for root_kind in ("item", "activity"):
+            root_id = f"root-{root_kind}"
+            self.ledger.begin_request(phase_skill(root_kind, request_id=root_id), now=1001)
+            for child_kind in ("menu", "edit", "interact", "inspect"):
+                child_id = f"{root_kind}-{child_kind}"
+                self.ledger.begin_request(phase_skill(child_kind, request_id=child_id, phase_id=root_id), now=1001)
+                self.phase_input(child_id, f"input-{child_id}", now=1001)
+        self.assertEqual(self.reopen().snapshot(now=1010)["spent_inputs"], 8)
+
+    def test_invalid_phase_links_roll_back_request_and_reservation(self):
+        self.active_request(phase_lifecycle())
+        for kind in ("menu", "edit", "interact", "inspect"):
+            self.ledger.begin_request(phase_skill(kind, request_id=f"root-{kind}"), now=1001)
+        self.ledger.begin_request(skill(request_id="root-navigate"), now=1001)
+        self.ledger.begin_request(request(request_id="observe-only"), now=1001)
+        self.ledger.begin_request(phase_skill(request_id="nested", phase_id="request-1"), now=1001)
+        self.ledger.begin_request(phase_skill("item", request_id="root-item"), now=1001)
+        bad = [phase_skill(request_id="bad", phase_id=parent) for parent in
+               ("missing", "bad", "nested", "root-menu", "root-edit", "root-inspect", "root-navigate", "observe-only")]
+        bad += [phase_skill(kind, request_id="bad", phase_id="request-1") for kind in ("item", "activity")]
+        bad += [skill(request_id="bad", phase_id="request-1"),
+                phase_skill("interact", request_id="bad", phase_id="root-interact"),
+                phase_lifecycle(request_id="bad", phase_id="request-1", operation="load"),
+                phase_lifecycle(request_id="bad", phase_id="root-item"),
+                phase_lifecycle(request_id="bad", phase_id="request-1", world="other"),
+                phase_lifecycle(request_id="bad", phase_id="request-1", character="other"),
+                phase_skill(request_id="bad", phase_id="request-1", mission_id="other")]
+        before = tuple(self.ledger._db.execute("SELECT (SELECT count(*) FROM requests),(SELECT count(*) FROM reservations)"))
+        for value in bad:
+            with self.subTest(value=value), self.assertRaises(ContractError):
+                self.ledger.begin_request(value, now=1002)
+            self.assertEqual(tuple(self.ledger._db.execute("SELECT (SELECT count(*) FROM requests),(SELECT count(*) FROM reservations)")), before)
+
+    def test_ordinary_interaction_prompt_reuses_original_root_budget_without_nested_interaction(self):
+        root = phase_skill("interact", request_id="open-direction",
+                           limits={"primitives": 2, "wall_seconds": 60, "game_seconds": 120})
+        self.active_request(root)
+        self.phase_input(root["request_id"], "open", now=1002)
+        self.ledger.complete_request(root["request_id"], "partial", {"awaiting": "direction"}, now=1002)
+        child = phase_skill(request_id="direction", phase_id=root["request_id"])
+        self.assertEqual(self.ledger.begin_request(child, now=1003)["operation"]["deadline"], 1061)
+        self.phase_input("direction", "east", now=1003)
+        with self.assertRaisesRegex(BudgetError, "Phase"):
+            self.ledger.prepare_primitive("direction", "extra", intent(), now=1004)
+        with self.assertRaisesRegex(LedgerError, "before another interaction root"):
+            self.ledger.begin_request(phase_skill("interact", request_id="nested-interaction", phase_id=root["request_id"]), now=1004)
+        self.assertEqual(self.reopen().snapshot(now=1010)["spent_inputs"], 2)
+
+    def test_phase_deadline_cannot_be_renewed_by_new_children(self):
+        self.active_request(phase_lifecycle(limits={"primitives": 3, "wall_seconds": 10, "game_seconds": 1200}))
+        long = phase_skill(request_id="long", phase_id="request-1")
+        self.assertEqual(self.ledger.begin_request(long, now=1005)["operation"]["deadline"], 1011)
+        short = phase_skill(request_id="short", phase_id="request-1",
+                            limits={"primitives": 2, "wall_seconds": 2, "game_seconds": 10})
+        self.assertEqual(self.ledger.begin_request(short, now=1005)["operation"]["deadline"], 1007)
+        self.phase_input("long", "before-expiry", now=1010)
+        with self.assertRaises(BudgetError): self.ledger.prepare_primitive("long", "at-expiry", intent(), now=1011)
+        before = self.ledger._db.execute("SELECT count(*) FROM reservations").fetchone()
+        with self.assertRaises(BudgetError):
+            self.ledger.begin_request(phase_skill(request_id="late", phase_id="request-1"), now=1011)
+        self.assertEqual(self.ledger._db.execute("SELECT count(*) FROM reservations").fetchone(), before)
+        with self.assertRaises(LedgerError): self.ledger.request("late")
+        self.assertEqual(self.reopen(now=1012).request("long")["deadline"], 1011)
+
+    def test_phase_direct_root_input_cannot_bypass_child_costs(self):
+        self.active_request(phase_lifecycle())
+        self.ledger.begin_request(phase_skill(request_id="child", phase_id="request-1"), now=1001)
+        self.phase_input("child", "child-input")
+        self.phase_input("request-1", "root-one")
+        self.phase_input("request-1", "root-two")
+        with self.assertRaisesRegex(BudgetError, "Phase"):
+            self.ledger.prepare_primitive("request-1", "over-cap", intent(), now=1003)
+        self.assertEqual(len(self.ledger.primitive_records()), 3)
+
+    def test_phase_deadline_still_obeys_original_mission_ceiling(self):
+        self.active_request(phase_lifecycle(limits={"primitives": 3, "wall_seconds": 1800, "game_seconds": 1200}), now=7200)
+        value = phase_lifecycle(request_id="continuation", phase_id="request-1",
+                                limits={"primitives": 3, "wall_seconds": 1800, "game_seconds": 1200})
+        self.assertEqual(self.ledger.begin_request(value, now=7250)["operation"]["deadline"], 8200)
+        self.assertEqual(self.reopen(now=7251).request("request-1")["deadline"], 8200)
+
+    def test_phase_admission_rejects_altered_root_deadline_or_noncanonical_payload(self):
+        self.active_request(phase_lifecycle())
+        original = self.ledger.request("request-1")
+        self.ledger._db.execute("UPDATE requests SET deadline=deadline+1 WHERE id='request-1'")
+        with self.assertRaises(LedgerError):
+            self.ledger.begin_request(phase_skill(request_id="child", phase_id="request-1"), now=1002)
+        self.ledger._db.execute("UPDATE requests SET deadline=? WHERE id='request-1'", (original["deadline"],))
+        payload = json.dumps(original["request"])
+        self.ledger._db.execute("UPDATE requests SET payload=?,digest=? WHERE id='request-1'",
+            (payload, hashlib.sha256(payload.encode()).hexdigest()))
+        with self.assertRaises(LedgerError):
+            self.ledger.begin_request(phase_skill(request_id="child", phase_id="request-1"), now=1002)
+        self.assertEqual(self.ledger._db.execute("SELECT count(*) FROM requests").fetchone()[0], 1)
+        self.assertEqual(self.ledger._db.execute("SELECT count(*) FROM reservations").fetchone()[0], 1)
+
+    def test_phase_keeps_child_own_limit_state_and_current_epoch(self):
+        self.active_request(phase_lifecycle())
+        self.ledger.complete_request("request-1", "partial", {"awaiting": "transition"}, now=1002)
+        self.ledger.pause(cause="internal_lifecycle", reason="Verified lifecycle transition", now=1002)
+        value = phase_skill(request_id="child", phase_id="request-1", epoch=1,
+                            limits={"primitives": 1, "wall_seconds": 30, "game_seconds": 10})
+        self.ledger.begin_request(value, now=1003)
+        with self.assertRaises(LedgerError): self.ledger.prepare_primitive("child", "paused", intent(), now=1003)
+        self.ledger.activate(epoch=1, player_id="player-test", now=1003)
+        self.phase_input("child", "one", now=1003)
+        with self.assertRaisesRegex(BudgetError, "Per-operation"):
+            self.ledger.prepare_primitive("child", "two", intent(), now=1004)
+        self.ledger.complete_request("child", "completed", {"done": True}, now=1004)
+        self.ledger.begin_request(phase_skill(request_id="terminal", phase_id="request-1", epoch=1), now=1004)
+        self.ledger.complete_request("terminal", "partial", {"done": False}, now=1004)
+        with self.assertRaises(LedgerError): self.ledger.prepare_primitive("terminal", "terminal-input", intent(), now=1004)
+        self.ledger.begin_request(phase_skill(request_id="stale", phase_id="request-1", epoch=1), now=1004)
+        self.ledger.pause(cause="user", reason="User pause", now=1004)
+        self.ledger.activate(epoch=2, player_id="player-test", now=1004)
+        with self.assertRaises(LedgerError): self.ledger.prepare_primitive("stale", "stale-input", intent(), now=1004)
+        self.assertEqual(self.reopen().snapshot(now=1010)["spent_inputs"], 1)
+
+    def test_phase_crash_preserves_unknown_cost_and_does_not_restore_authority(self):
+        self.active_request(phase_lifecycle())
+        self.phase_input("request-1", "direct")
+        self.ledger.complete_request("request-1", "partial", {"awaiting": "menu"}, now=1002)
+        self.ledger.begin_request(phase_skill(request_id="child", phase_id="request-1"), now=1002)
+        self.ledger.prepare_primitive("child", "uncertain", intent(), now=1003)
+        self.ledger.published("uncertain", "native-uncertain", now=1003)
+        snapshot = self.reopen().snapshot(now=1010)
+        self.assertEqual((snapshot["spent_inputs"], snapshot["phase"], snapshot["epoch"]), (2, "paused", 1))
+        self.assertFalse(snapshot["grants_authority"])
+        self.assertEqual(self.ledger.primitive("uncertain")["state"], "unknown")
+        self.assertEqual(self.ledger.request("child")["state"], "unknown")
+        self.assertFalse(self.ledger.prepare_primitive("child", "uncertain", intent(), now=1011)["created"])
+        with self.assertRaises(LedgerError): self.ledger.activate(epoch=1, player_id="player-test", now=1011)
+
+    def test_phase_corrupt_parent_relationships_reject_on_reopen(self):
+        for corruption in ("missing", "self", "nested", "future", "wrong-operation", "wrong-kind", "older-epoch"):
+            with self.subTest(corruption=corruption):
+                self.ledger.close()
+                self.directory = Path(self.tmp.name) / corruption
+                self.ledger = MissionLedger(self.directory, admission=self.a, now=1000)
+                self.active_request(phase_lifecycle())
+                self.ledger.begin_request(phase_skill(request_id="child", phase_id="request-1"), now=1002)
+                self.ledger.begin_request(phase_lifecycle(request_id="future"), now=1002)
+                if corruption in ("missing", "self", "future"):
+                    self.rewrite_request("child", phase_id={"missing": "missing", "self": "child", "future": "future"}[corruption])
+                elif corruption == "nested": self.rewrite_request("future", phase_id="child")
+                elif corruption == "wrong-operation": self.rewrite_request("future", phase_id="request-1", operation="load")
+                elif corruption == "wrong-kind": self.rewrite_request("request-1", **phase_skill(request_id="request-1"))
+                else:
+                    self.rewrite_request("request-1", epoch=1)
+                    self.ledger._db.execute("UPDATE requests SET epoch=1 WHERE id='request-1'")
+                    self.ledger.pause(cause="internal_lifecycle", reason="Transition", now=1002)
+                self.ledger.close()
+                with self.assertRaises(ContractError): MissionLedger(self.directory, now=1010)
+
+    def test_phase_corrupt_deadline_or_cumulative_ceiling_reject_on_reopen(self):
+        for corruption in ("child-deadline", "root-deadline", "cumulative-cap"):
+            with self.subTest(corruption=corruption):
+                self.ledger.close()
+                self.directory = Path(self.tmp.name) / corruption
+                self.ledger = MissionLedger(self.directory, admission=self.a, now=1000)
+                self.active_request(phase_lifecycle(limits={"primitives": 3, "wall_seconds": 10, "game_seconds": 1200}))
+                self.phase_input("request-1", "direct")
+                self.ledger.begin_request(phase_skill(request_id="child", phase_id="request-1"), now=1002)
+                self.phase_input("child", "child-input")
+                if corruption == "cumulative-cap": self.rewrite_request("request-1", limits={"primitives": 1, "wall_seconds": 10, "game_seconds": 1200})
+                else: self.ledger._db.execute("UPDATE requests SET deadline=deadline+1 WHERE id=?",
+                    ("child" if corruption == "child-deadline" else "request-1",))
+                self.ledger.close()
+                with self.assertRaises(LedgerError): MissionLedger(self.directory, now=1010)
 
     def test_handoff_claim_is_durable_one_use_and_still_requires_readmission(self):
         before = self.ledger.snapshot(now=1000)
@@ -251,7 +482,7 @@ class LedgerTests(unittest.TestCase):
 
     def test_earlier_ledger_format_is_rejected_without_conversion(self):
         self.ledger.close()
-        for version in (1, 2, 3, 4):
+        for version in (1, 2, 3, 4, 5):
             with self.subTest(version=version):
                 with closing(sqlite3.connect(self.ledger.path)) as connection, connection:
                     connection.execute(f"PRAGMA user_version={version}")

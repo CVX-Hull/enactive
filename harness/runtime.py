@@ -276,9 +276,9 @@ class GameplayRuntime:
     def _provide(self, snapshot, cancelled):
         return self._inbox.invoke(snapshot, cancelled, self._supervisor.planner.active_deadline())
 
-    def pause(self, reason: str = "Operator Pause") -> dict:
+    def pause(self, reason: str = "Operator Pause", *, operator: bool = True) -> dict:
         try:
-            result = self.controller.pause()
+            result = self.controller.pause() if operator else self.controller.stop_input()
         except OSError as exc:
             # Controller revokes in-process authority before filesystem writes.
             # Still cancel the player and publish stopped state if logging fails.
@@ -394,7 +394,7 @@ class GameplayRuntime:
             reason = f"Receipt persistence failed: {exc}"[:1024]
             if envelope["published"]:
                 disposition = "unknown"
-            self.pause(reason)
+            self.pause(reason, operator=False)
         self._last_receipt = {"logical_action_id": intent.proposal.action_id,
                               "native_request_id": None if request is None else request.get("id"),
                               "disposition": disposition, "reason": reason}
@@ -478,7 +478,7 @@ class GameplayRuntime:
     def close(self) -> None:
         if self._closed.is_set():
             return
-        self.pause("Runtime shutdown")
+        self.pause("Runtime shutdown", operator=False)
         self._closed.set()
         self._wake.set()
         if self._thread is not None:

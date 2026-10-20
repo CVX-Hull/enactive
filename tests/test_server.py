@@ -37,9 +37,9 @@ class StubRuntime:
     def status(self):
         return self.snapshot
 
-    def pause(self, reason):
+    def pause(self, reason, *, operator=True):
         self.calls.append(("pause", {"reason": reason}))
-        return self.controller.pause()
+        return self.controller.pause() if operator else self.controller.stop_input()
 
     def close(self):
         self.closed = True
@@ -211,7 +211,9 @@ class ServerTests(unittest.TestCase):
             self.assertEqual((code, json.loads(body)), (409, result))
 
     def test_shutdown_pauses_and_closes_runtime(self):
+        counter = self.controller.operator_pause_generation
         self.server.server_close()
+        self.assertEqual(self.controller.operator_pause_generation, counter)
         self.assertEqual(self.server.gameplay.calls[-1][0], "pause")
         self.assertTrue(self.server.gameplay.closed)
 

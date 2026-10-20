@@ -174,7 +174,7 @@ class MissionRuntime:
         reason = str(reason)[:1024] or "Operator Pause"
         # Controller first; no runtime storage or metadata lock can delay revocation.
         try:
-            result = self.controller.pause()
+            result = self.controller.pause() if cause == "user" else self.controller.stop_input()
         except OSError as exc:
             result = {"status": "pause_requested", "error": f"Pause persistence unconfirmed: {exc}"[:1024]}
         with self._metadata:
@@ -705,7 +705,7 @@ class MissionRuntime:
             # Settlement owns the unknown epoch transition. Do not advance it again
             # or replace an already recorded user/takeover Pause with a late receipt.
             try:
-                self.controller.pause()
+                self.controller.stop_input()
             except OSError as exc:
                 self._diagnostic = f"Unknown-input Pause persistence failed: {exc}"[:1024]
             self._bindings.clear()
@@ -908,7 +908,7 @@ class MissionRuntime:
 
     def _stop_after_failure(self, reason: str) -> None:
         try:
-            self.controller.pause()
+            self.controller.stop_input()
         except OSError as exc:
             self._diagnostic = f"{reason}; Pause persistence unconfirmed: {exc}"[:1024]
         self._bindings.clear()

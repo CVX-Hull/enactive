@@ -217,6 +217,9 @@ class Controller:
         self.closed = False
         self.pause_requested = True
         self.pause_generation = 0
+        # Host-local user intent survives ordinary internal authority revocations.
+        # A new controller boot cannot reuse a captured counter from the old boot.
+        self.operator_pause_generation = 0
         self._mission_lease: MissionLease | None = None
         self._command_work = 0
         self.authority = {"controller_boot_id": uuid.uuid4().hex, "counter": 0}
@@ -746,15 +749,25 @@ class Controller:
             return outcome
 
     def pause(self) -> dict[str, Any]:
+        """Public operator Pause; no request field can select an internal origin."""
+        return self._pause_input(operator=True)
+
+    def stop_input(self) -> dict[str, Any]:
+        """Trusted runtime stop, never evidence that the operator requested Pause."""
+        return self._pause_input(operator=False)
+
+    def _pause_input(self, *, operator: bool) -> dict[str, Any]:
         # This path deliberately never waits for the command lock or the game.
         with self.data_lock:
+            if operator:
+                self.operator_pause_generation += 1
             self.pause_requested = True
             self._revoke()
             self._pause_file()
             result = {"status": "pause_requested", "error": "",
                       "detail": "Pause sentinel set; an already dispatched action cannot be undone"}
             self.last_result = result
-        self._record({"kind": "pause"}, result)
+        self._record({"kind": "pause" if operator else "runtime_stop"}, result)
         return result
 
     def acquire_mission(self, mission_id: str, epoch: int, actor_id: str, *, operation: str,
@@ -884,9 +897,10 @@ class Controller:
         with self.data_lock:
             if lease is None or lease is not self._mission_lease:
                 raise ControlError("Run lease is stale; cannot release another owner")
-            return self.pause()
+            return self.stop_input()
 
-    def resume_mission(self, *, expected_generation: int, expected_session: str,
+    def resume_mission(self, *, expected_generation: int, expected_operator_generation: int,
+                       expected_controller_boot_id: str, expected_session: str,
                        expected_revision: int, expected_boundary_id: str,
                        expected_takeover_generation: int, expected_pause_origin: str,
                        logical_action_id: str, deadline_monotonic: float, timeout: float | None = None,
@@ -900,7 +914,8 @@ class Controller:
         """
         binding = {"session": expected_session, "revision": expected_revision,
                    "boundary_id": expected_boundary_id, "takeover_generation": expected_takeover_generation,
-                   "pause_origin": expected_pause_origin}
+                   "pause_origin": expected_pause_origin, "operator_pause_generation": expected_operator_generation,
+                   "controller_boot_id": expected_controller_boot_id}
         receipt = {"logical_action_id": logical_action_id, "request": None, "result": None,
                    "published": False, "received_monotonic": None, "preflight": None}
         preflight_failed = False
@@ -908,6 +923,8 @@ class Controller:
                 or type(deadline_monotonic) not in (int, float) or not 0 <= deadline_monotonic <= 1e12):
             receipt["result"] = {"status": "controller_error", "error": "Invalid mission identity or deadline"}
         elif (type(expected_generation) is not int or expected_generation < 0
+                or type(expected_operator_generation) is not int or expected_operator_generation < 0
+                or type(expected_controller_boot_id) is not str or not expected_controller_boot_id
                 or type(expected_revision) is not int or expected_revision < 0
                 or type(expected_takeover_generation) is not int or expected_takeover_generation < 0
                 or not isinstance(expected_session, str) or not expected_session
@@ -928,7 +945,9 @@ class Controller:
                               binding: dict[str, Any], generation: int) -> None:
         """Trusted host CAS under data_lock; native keeps its existing commit fences."""
         self._check_owner(None, generation)
-        if self.closed or generation != self.pause_generation:
+        if (self.closed or generation != self.pause_generation
+                or binding["operator_pause_generation"] != self.operator_pause_generation
+                or binding["controller_boot_id"] != self.authority["controller_boot_id"]):
             raise ControlError("Mission continuation superseded by host Pause or takeover")
         if (self.control_lock.locked() or self.control_pending is not None or self.pending is not None
                 or any((self.bridge / name).exists() for name in
@@ -1301,6 +1320,7 @@ class Controller:
             connection = "disconnected" if age is None or age > 15000 else "stale" if age > 3000 else "fresh"
             return {"state": self.state, "frozen": self.frozen, "pause_requested": self.pause_requested,
                     "pause_generation": self.pause_generation,
+                    "operator_pause_generation": self.operator_pause_generation,
                     "goal": self.goal, "events": list(self.events), "last_result": self.last_result,
                     "latency_ms": self.latency_ms, "age_ms": age, "connection": connection,
                     "error": self.transport_error, "pending": self.pending,

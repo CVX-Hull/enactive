@@ -15,6 +15,7 @@ import math
 import os
 from pathlib import Path
 import re
+import stat
 import threading
 import uuid
 from typing import Any, Callable
@@ -235,11 +236,18 @@ class EvidenceStore:
         count, size = len(self._entries), 0
         indexed_names = {identity + ".png" for identity in self._entries}
         for path in self.frames.iterdir():
-            if path.is_symlink() or not path.is_file():
+            try:
+                metadata = path.lstat()
+            except FileNotFoundError:
+                # A source may disappear after listing. Indexed slots already
+                # remain counted above; integrity checks retain the loss, not an
+                # older source or permission to dispatch. Other I/O errors stop.
+                continue
+            if not stat.S_ISREG(metadata.st_mode):
                 raise EvidenceError("Unexpected non-file in retained evidence")
             if path.name not in indexed_names:
                 count += 1
-            size += path.stat().st_size
+            size += metadata.st_size
         if count > self.max_frames or size > self.max_bytes:
             raise CapacityError("Existing retention exceeds cap; no evidence was deleted")
         return count, size

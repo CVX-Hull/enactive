@@ -94,7 +94,7 @@ class Server(ThreadingHTTPServer):
             self._gameplay_closed = True
             # The immediate path revokes authority before waiting for worker cleanup.
             try:
-                self.gameplay.pause("Service shutdown")
+                self.gameplay.pause("Service shutdown", operator=False)
             finally:
                 self.gameplay.close()
 

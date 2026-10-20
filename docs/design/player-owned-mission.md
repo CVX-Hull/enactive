@@ -577,9 +577,9 @@ retains uncertainty/cost and clears authority, and rejected expiry checks retain
 the observed wall-clock watermark. Source-level regression and independent review
 are separate from the future integrated native/graphical acceptance.
 
-Ledger format5 reuses immutable typed handoff/claim request results for up to16
+Ledger format6 reuses immutable typed handoff/claim request results for up to16
 one-use handoffs, rather than adding a second mutable consumption store. It rejects
-formats1/2/3/4. Issuance requires active, settled work and atomically pauses at a new epoch;
+formats1/2/3/4/5. Issuance requires active, settled work and atomically pauses at a new epoch;
 claim changes the recorded actor while remaining paused. Runtime must verify actual
 quiescence, fresh native binding and deliberate readmission; the ledger sends no
 Pause/Resume. Human Pause or reopen invalidates an old issuance without erasing it,
@@ -640,7 +640,7 @@ its pending ID. Only native uilist rows are supported by this policy. Inventory
 highlight versus multiselect, text editors and fallible screenshot controls remain
 separate gaps; this component cannot substitute for them.
 
-Ledger format5 accounts Resume as a distinct primitive with null value under an
+Ledger format6 accounts Resume as a distinct primitive with null value under an
 admitted lifecycle request. Its required preflight source, reserved receipt,
 original limits and crash uncertainty use the existing accounting path. The
 controller supplies the same correlated six-field envelope for mission Resume,
@@ -657,7 +657,13 @@ the first-run rest timeout does not establish that the bridge waited for wake.
 
 ### Semantic control and scoped-work contract migration
 
-Current source uses mission/2, campaign-memory/2 and ledger5. Every caller and
+The [first campaign](../acceptance/2026-10-19-seven-day-survival.md) recorded2109
+whole-campaign inputs, including171 lifecycle inputs. Its interrupted craft and
+ground-versus-carried water corrections motivate explicit Work and effect evidence;
+its lifecycle overhead motivates composed controls. Those totals are development
+evidence, not model latency or an efficiency baseline for a different scenario.
+
+Current source uses mission/2, campaign-memory/2 and ledger6. Every caller and
 fixture migrates; missing fields and prior formats reject without mutation or a
 compatibility reader. No production mission database existed at this migration.
 Native4/gameplay2/archive3 stay unchanged. These contracts do not activate the
@@ -687,7 +693,7 @@ field accepts a script, callable, shell command or arbitrary action sequence.
 The exact closed shapes live in the linked source contract rather than a second
 hand-maintained schema.
 
-The reviewed implementation allocation for passive controls is image-menu focus,
+The reviewed passive [control source](../../harness/gameplay/semantic_controls.py) supports image-menu focus,
 direction/confirmation, edit and one-input interact only. Image focus permits at
 most8 unverified arrows with actual observations and unchanged scope/actions after
 each; it never auto-confirms or earns native verified-focus credit. Text entry
@@ -696,17 +702,36 @@ byte-identical literal no-progress. A fresh whole-value interpretation is requir
 before separate TEXT.CONFIRM. Registered control/category mappings are fixed by
 pinned native source; unsupported controls stop. Native-row MenuSkill rejects
 player interpretations rather than silently treating them as native evidence.
+The passive policy additionally stops an arrow batch when available native rows
+contradict its next expected enabled focus. Unknown results retain their pending
+ID and canonical actual-after reference even when the PNG is missing or corrupt;
+that diagnostic reference cannot authorize another input. This remains synthetic
+component verification, with native editor behavior and runtime integration pending.
 
 Phase IDs currently block in the unconnected runtime until the owned phase adapter
-is integrated. Required runtime work is one private live lifecycle or item/activity
-root, immutable original budgets shared with children, original root/Work association
+is integrated. Ledger6 validates a direct earlier lifecycle or item/activity/interact root,
+derives child deadlines from its original deadline, and counts direct-root and child
+inputs together through SQLite's indexed request/primitive join. It checks links,
+original ceilings and counts again on reopen. A partial root receipt remains
+immutable. This accounting is data and restores no live phase authority.
+Required runtime work is one private live lifecycle or item/activity/interact
+root, original root/Work association
 and exact stage/source/actor/epoch checks before publication. One root may return
 partial and release the writer while awaiting player interpretation; it leaves no
 queued input. A child never creates another root or renews the original deadline.
-Persisted receipts grant no private phase authority on reopen. An independent host
-operator-Pause generation must distinguish user Pause from expected internal session
-revocation; user Pause always prevents automatic adoption/Resume. These are remaining
-integration requirements, not claims that parsing phase IDs implements them.
+Persisted receipts grant no private phase authority on reopen. The source controller
+now distinguishes host operator-Pause generation from internal authority revocation;
+trusted Resume requires the captured operator counter and controller boot in addition
+to the general generation. Internal stops still revoke and set the Pause sentinel.
+The lifecycle adapter must capture those values before an expected transition;
+user Pause always prevents automatic adoption/Resume. Phase integration remains
+required; parsing phase IDs does not implement it.
+An ordinary interact root may open a private phase only from its exact correlated
+supported returned prompt. Its menu/edit/inspect children share the original
+32-input/900-second maximum. Unknown delivery cannot open it; actual return to normal
+play closes it without claiming the desired semantic effect. Another interact is
+a new deliberate normal-play root, not a nested continuation. This supports an
+ordinary open→direction question using the same accounting and controls.
 
 Before the first normal anchor, only verified root-owned launch/create menu stages
 may input with null game cost. Creation records that anchor once. Save/reload cost

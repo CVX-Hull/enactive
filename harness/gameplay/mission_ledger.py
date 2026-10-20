@@ -22,7 +22,7 @@ from .mission_contracts import (
     validate_handoff_result, validate_memory_entry, validate_request,
 )
 
-DB_VERSION = 5
+DB_VERSION = 6
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
 MAX_RECEIPT_BYTES = 65_536
 MAX_EFFECT_BYTES = 4096
@@ -39,6 +39,7 @@ CAUSES = frozenset({"user", "takeover", "unknown", "internal_bootstrap", "intern
 _DDL = (
     "CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL)",
     "CREATE TABLE requests (id TEXT PRIMARY KEY, payload TEXT NOT NULL, digest TEXT NOT NULL, epoch INTEGER NOT NULL, state TEXT NOT NULL, result TEXT, admitted_at REAL NOT NULL, deadline REAL NOT NULL)",
+    "CREATE INDEX requests_phase ON requests (json_extract(payload, '$.phase_id'))",
     "CREATE TABLE primitives (id TEXT PRIMARY KEY, request_id TEXT NOT NULL REFERENCES requests(id), intent TEXT NOT NULL, native_id TEXT UNIQUE, state TEXT NOT NULL, result TEXT, effect TEXT)",
     "CREATE TABLE memory (sequence INTEGER PRIMARY KEY, event_id TEXT UNIQUE NOT NULL, entry_type TEXT NOT NULL, record_id TEXT NOT NULL, body TEXT NOT NULL)",
     "CREATE INDEX memory_record ON memory (entry_type, record_id, sequence)",
@@ -254,7 +255,8 @@ class MissionLedger:
         if state["deadline"] != state["started_at"] + stored.limits.wall_seconds or state["last_wall"] < state["started_at"]:
             raise LedgerError("Original mission clock was altered")
         expected_reservations = {}
-        for request_id, payload, digest, epoch, status, result, admitted_at, deadline in self._db.execute("SELECT id,payload,digest,epoch,state,result,admitted_at,deadline FROM requests"):
+        phase_roots = {}
+        for rowid, request_id, payload, digest, epoch, status, result, admitted_at, deadline in self._db.execute("SELECT rowid,id,payload,digest,epoch,state,result,admitted_at,deadline FROM requests ORDER BY rowid"):
             data = validate_request(payload)
             if (data.get("request_id") != request_id or hashlib.sha256(payload.encode()).hexdigest() != digest
                     or payload != _json(data) or status not in REQUEST_STATES or type(epoch) is not int or epoch < 0
@@ -269,6 +271,14 @@ class MissionLedger:
                 raise LedgerError("Corrupt operation admission time")
             if deadline < admitted_at or (deadline > state["deadline"] and data["kind"] not in ("observe", "reconcile", "stop")):
                 raise LedgerError("Corrupt operation deadline")
+            root = self._phase_parent(data, before_rowid=rowid)
+            if data["kind"] in ("skill", "lifecycle"):
+                expected_deadline = min(state["deadline"], admitted_at + data["limits"]["wall_seconds"])
+                if root is not None:
+                    expected_deadline = min(expected_deadline, root["deadline"])
+                if deadline != expected_deadline:
+                    raise LedgerError("Original operation/phase deadline was altered")
+                if self._is_phase_root(data): phase_roots[request_id] = data["limits"]["primitives"]
         if self._db.execute("SELECT count(*) FROM requests").fetchone()[0] > stored.limits.requests:
             raise LedgerError("Request retention exceeded")
         work_lineage = {}
@@ -318,6 +328,9 @@ class MissionLedger:
         for payload, count_per_request in self._db.execute("SELECT r.payload,count(p.id) FROM requests r JOIN primitives p ON p.request_id=r.id GROUP BY r.id"):
             if count_per_request > json_object(payload)["limits"]["primitives"]:
                 raise LedgerError("Operation primitive ceiling was exceeded")
+        for root_id, limit in phase_roots.items():
+            if self._phase_primitive_count(root_id) > limit:
+                raise LedgerError("Phase primitive ceiling was exceeded")
         if type(state["spent_inputs"]) is not int or state["spent_inputs"] != count or count > stored.limits.inputs:
             raise LedgerError("Spent inputs differ from immutable primitive mappings")
         if self._db.execute("PRAGMA foreign_key_check").fetchone() is not None:
@@ -558,10 +571,55 @@ class MissionLedger:
                 raise BudgetError("Semantic request count exhausted")
             deadline = (now + 15 if data["kind"] in ("observe", "reconcile", "stop")
                         else min(state["deadline"], now + data.get("limits", {}).get("wall_seconds", self.admission.limits.wall_seconds)))
+            root = self._phase_parent(data)
+            if root is not None:
+                if now >= root["deadline"]: raise BudgetError("Original phase deadline expired")
+                deadline = min(deadline, root["deadline"])
             self._db.execute("INSERT INTO requests(id,payload,digest,epoch,state,admitted_at,deadline) VALUES (?,?,?,?,'accepted',?,?)",
                              (data["request_id"], encoded, digest, state["epoch"], now, deadline))
             self._reserve(f"request:{data['request_id']}", RESULT_RESERVE)
         return {"created": True, "operation": self.request(data["request_id"])}
+
+    @staticmethod
+    def _is_phase_root(data: dict) -> bool:
+        return data.get("phase_id") is None and (data["kind"] == "lifecycle"
+            or data["kind"] == "skill" and data["skill_kind"] in ("item", "activity", "interact"))
+
+    def _phase_parent(self, data: dict, *, before_rowid: int | None = None) -> dict | None:
+        """Validate a direct immutable accounting link, never live input authority."""
+        parent_id = data.get("phase_id")
+        if parent_id is None: return None
+        row = self._db.execute("SELECT rowid,payload,digest,epoch,admitted_at,deadline FROM requests WHERE id=?", (parent_id,)).fetchone()
+        if row is None or parent_id == data["request_id"] or (before_rowid is not None and row[0] >= before_rowid):
+            raise LedgerError("Phase parent must be an earlier existing direct root")
+        root = validate_request(row[1])
+        if (root.get("request_id") != parent_id or row[1] != _json(root)
+                or hashlib.sha256(row[1].encode()).hexdigest() != row[2]
+                or root.get("epoch") != row[3] or not self._is_phase_root(root)
+                or root["mission_id"] != data["mission_id"] or data["epoch"] < root["epoch"]):
+            raise LedgerError("Phase parent identity, kind or epoch differs")
+        if data["kind"] == "skill":
+            if data["skill_kind"] not in ("menu", "edit", "interact", "inspect"):
+                raise LedgerError("Phase skill child must be a direct control operation")
+            if root.get("skill_kind") == "interact" and data["skill_kind"] == "interact":
+                raise LedgerError("Ordinary interaction returns to normal play before another interaction root")
+        elif data["kind"] == "lifecycle":
+            if root["kind"] != "lifecycle" or any(data[key] != root[key] for key in ("operation", "world", "character")):
+                raise LedgerError("Lifecycle child differs from its phase root")
+        else:
+            raise LedgerError("Phase child must be executable work")
+        admitted_at, deadline = _clock(row[4]), _clock(row[5])
+        mission_deadline = self._get("state")["deadline"]
+        if deadline != min(mission_deadline, admitted_at + root["limits"]["wall_seconds"]):
+            raise LedgerError("Original phase deadline was altered")
+        return {"request": root, "deadline": deadline}
+
+    def _phase_primitive_count(self, root_id: str) -> int:
+        # The indexed direct-root selection includes each request once. Existing
+        # primitive rows retain rejected/unknown costs without another counter.
+        return self._db.execute("SELECT count(*) FROM primitives WHERE request_id IN "
+            "(SELECT id FROM requests WHERE id=? OR json_extract(payload, '$.phase_id')=?)",
+            (root_id, root_id)).fetchone()[0]
 
     def request(self, request_id: str) -> dict:
         _id(request_id)
@@ -602,6 +660,12 @@ class MissionLedger:
                 raise BudgetError("Per-operation primitive limit exhausted")
             if request["epoch"] != state["epoch"] or request["state"] not in ("accepted", "running"):
                 raise LedgerError("Request is stale or no longer dispatchable")
+            root = self._phase_parent(request["request"])
+            if root is None and self._is_phase_root(request["request"]): root = request
+            if root is not None:
+                if now >= root["deadline"]: raise BudgetError("Original phase deadline expired")
+                if self._phase_primitive_count(root["request"]["request_id"]) >= root["request"]["limits"]["primitives"]:
+                    raise BudgetError("Phase primitive limit exhausted")
             self._check_revalidation(data, request["epoch"], self.admission.mission_id,
                                      informing_sources=request["request"]["sources"], actor_id=state["player_id"])
             reserve = 0 if cleanup else self.admission.cleanup_reserve.inputs

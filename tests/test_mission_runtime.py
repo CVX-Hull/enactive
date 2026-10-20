@@ -112,7 +112,11 @@ class MissionRuntimeTests(unittest.TestCase):
         self.start()
         for n, change in enumerate((dict(phase_id="guessed-phase"), dict(work_id="missing-work"))):
             request = self.navigation(request_id=f"blocked-association-{n}", **change)
-            self.assertEqual(self.runtime.command(request)["status"], "accepted")
+            response = self.runtime.command(request)
+            if "phase_id" in change:
+                self.assertEqual(response["status"], "rejected", response)
+                continue
+            self.assertEqual(response["status"], "accepted")
             operation = self.settled(request["request_id"])
             self.assertEqual(operation["state"], "blocked", operation)
         self.assertFalse([r for r in self.bridge.delivered if r["kind"] == "action"])
@@ -300,6 +304,7 @@ class MissionRuntimeTests(unittest.TestCase):
 
     def test_malformed_correlated_receipt_keeps_unknown_without_replay(self):
         self.start()
+        operator_counter = self.controller.operator_pause_generation
         request = self.navigation()
         real = self.controller.execute_mission
         def corrupt(*args, **kwargs):
@@ -314,6 +319,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.runtime.command(request)
         self.assertEqual(len([r for r in self.bridge.delivered if r["kind"] == "action"]), 1)
         self.assertEqual(self.runtime.status()["epoch"], 1)
+        self.assertEqual(self.controller.operator_pause_generation, operator_counter)
 
     def test_unknown_receipt_after_user_pause_preserves_original_pause_cause_epoch(self):
         self.start()
@@ -329,12 +335,14 @@ class MissionRuntimeTests(unittest.TestCase):
         self.runtime.command(request)
         self.assertTrue(entered.wait(2))
         self.runtime.pause("User Pause before lost ACK")
+        operator_counter = self.controller.operator_pause_generation
         release.set()
         op = self.settled(request["request_id"])
         self.assertEqual(op["state"], "unknown", op)
         self.assertEqual(self.runtime.status()["epoch"], 1)
         self.assertEqual(self.runtime.status()["pause_cause"], "user")
         self.assertEqual(self.runtime.status()["reason"], "User Pause before lost ACK")
+        self.assertEqual(self.controller.operator_pause_generation, operator_counter)
 
     def test_new_controller_boot_opens_same_stable_mission_without_restored_authority(self):
         self.start()

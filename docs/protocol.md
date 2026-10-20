@@ -93,7 +93,8 @@ not converted into proof of nondelivery. Callback and expected-image arguments
 are never accepted from public command JSON.
 
 
-`resume_mission` accepts the exact recorded host generation and native session,
+`resume_mission` accepts the exact recorded controller boot, host operator-Pause
+counter, general authority generation and native session,
 revision, boundary, takeover count and diagnostic origin for a runtime-admitted
 transition. It rechecks after queueing/observation; a newer Pause/takeover wins.
 It does not establish an admitted phase itself. Public command JSON cannot call
