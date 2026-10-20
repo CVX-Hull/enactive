@@ -212,6 +212,7 @@ class Controller:
         self.command_lock = threading.Lock()
         self.control_lock = threading.Lock()
         self.data_lock = threading.RLock()
+        self._journal_lock = threading.RLock()
         self.state: dict[str, Any] | None = None
         self._state_received_monotonic: float | None = None
         self.frozen = True
@@ -345,37 +346,49 @@ class Controller:
         self.control_unknown_outcomes = self.control_unknown_outcomes[-60:]
         self._record({"kind": "control_unresolved", "id": request["id"]}, outcome)
 
+    def _validate_admitted_control_response(self, response: dict[str, Any]) -> dict[str, Any] | None:
+        """Pure correlation under data_lock; no acceptance, revocation or I/O."""
+        validate_control_response(response)
+        request = self.control_admitted.get(response["id"])
+        if request is None:
+            return None
+        status, native = response["status"], response["state"]
+        allowed = {"request_interrupt": {"prompt_opened", "not_applicable"},
+                   "answer_interrupt": {"answer_delivered"},
+                   "continue_debug_once": {"dismissal_delivered"}}[request["kind"]] | {"dispatched", "rejected"}
+        if status not in allowed:
+            raise ControlError("Control result does not match admitted operation")
+        if status not in {"rejected", "not_applicable"} and (native["session"] != request["session"]
+                or native["boundary"]["control_generation"] <= request["control_generation"] or not native["paused"]):
+            raise ControlError("Control result has stale session/generation or resumed gameplay")
+        return request
+
     def _reconcile_control(self, response: dict[str, Any] | None = None, *, retire: bool = True) -> dict[str, Any] | None:
         with self.data_lock:
             response = read_json(self.bridge / "control-response.json") if response is None else response
             if response is None:
                 return None
-            validate_control_response(response)
-            request = self.control_admitted.get(response["id"])
+            request = self._validate_admitted_control_response(response)
             if request is None:
                 return None
             status = response["status"]
-            allowed = {"request_interrupt": {"prompt_opened", "not_applicable"},
-                       "answer_interrupt": {"answer_delivered"},
-                       "continue_debug_once": {"dismissal_delivered"}}[request["kind"]] | {"dispatched", "rejected"}
-            if status not in allowed:
-                raise ControlError("Control result does not match admitted operation")
             native = response["state"]
-            if status not in {"rejected", "not_applicable"} and (native["session"] != request["session"]
-                    or native["boundary"]["control_generation"] <= request["control_generation"] or not native["paused"]):
-                raise ControlError("Control result has stale session/generation or resumed gameplay")
             if self.state is None or native["timestamp_ms"] >= self.state["timestamp_ms"]:
-                self._accept(native)
+                # Correlated dispatched progress still owns the live slot; it
+                # is neither a takeover nor an acknowledgment timeout. Only an
+                # actual unknown path records uncertainty for this same input.
+                self._accept(native, known_control_id=request["id"])
             if retire and status in CONTROL_TERMINAL:
                 if self.control_pending is not None and self.control_pending["id"] == request["id"]:
                     self.control_pending = None
                 self.control_admitted.pop(request["id"])
-                (self.control_admissions / f'{request["id"]}.json').unlink(missing_ok=True)
                 for outcome in self.control_unknown_outcomes:
                     if outcome["request"]["id"] == request["id"]:
                         outcome["transport_result"] = status
-                self._record(request, response)
-            return response
+        if retire and status in CONTROL_TERMINAL:
+            (self.control_admissions / f'{request["id"]}.json').unlink(missing_ok=True)
+            self._record(request, response)
+        return response
 
     def _reconcile_expired_control(self, observed: dict[str, Any]) -> None:
         # Only an explicit successful fresh observe can retire the live slot. The
@@ -496,6 +509,245 @@ class Controller:
             if acquired:
                 self.control_lock.release()
 
+    def recover_mission(self, kind: str, *, expected_generation: int, expected_operator_generation: int,
+                        expected_controller_boot_id: str, expected_session: str, expected_revision: int,
+                        expected_boundary_id: str, expected_takeover_generation: int,
+                        expected_pause_origin: str, expected_control_generation: int,
+                        logical_action_id: str, deadline_monotonic: float, timeout: float | None = None,
+                        expected_image_sha256: str | None = None,
+                        preflight: Callable[[dict[str, Any], float], None] | None = None,
+                        interrupt_request_id: str | None = None, choice: str | None = None) -> dict[str, Any]:
+        """Trusted paused activity control, retaining the mission's original consent.
+
+        The runtime deliberately stops input and supplies its original operator
+        mark. This API grants neither a lease nor Resume and is absent from JSON
+        ingress. Native recovery requests/admissions keep their existing format.
+        """
+        receipt = {"logical_action_id": logical_action_id, "request": None, "result": None,
+                   "published": False, "received_monotonic": None, "preflight": None}
+        binding = {"session": expected_session, "revision": expected_revision,
+                   "boundary_id": expected_boundary_id, "takeover_generation": expected_takeover_generation,
+                   "pause_origin": expected_pause_origin, "control_generation": expected_control_generation,
+                   "operator_pause_generation": expected_operator_generation,
+                   "controller_boot_id": expected_controller_boot_id}
+        wait = self.timeout if timeout is None else timeout
+        request = None
+        active = False
+        acquired = False
+        failed = False
+        try:
+            if (type(logical_action_id) is not str or not 1 <= len(logical_action_id) <= 128
+                    or type(deadline_monotonic) not in (int, float) or not 0 <= deadline_monotonic <= 1e12):
+                raise ControlError("Invalid mission identity or deadline")
+            if (any(type(value) is not int or value < 0 for value in
+                    (expected_generation, expected_operator_generation, expected_revision,
+                     expected_takeover_generation, expected_control_generation))
+                    or any(type(value) is not str or not value for value in
+                           (expected_controller_boot_id, expected_session, expected_boundary_id))
+                    or type(expected_pause_origin) is not str or expected_pause_origin not in PAUSE_ORIGINS):
+                raise ControlError("Malformed mission recovery binding")
+            if isinstance(wait, bool) or not isinstance(wait, (int, float)) or not 0 < wait <= MAX_WAIT:
+                raise ControlError("Timeout must be greater than 0 and at most 15 seconds")
+            if type(kind) is not str or kind not in {"request_interrupt", "answer_interrupt"}:
+                raise ControlError("Unsupported mission recovery operation")
+            if (kind == "request_interrupt" and (interrupt_request_id is not None or choice is not None)
+                    or kind == "answer_interrupt" and (type(interrupt_request_id) is not str
+                        or not interrupt_request_id or type(choice) is not str or choice not in {"YES", "NO"})):
+                raise ControlError("Mission recovery requires an exact interrupt owner and YES/NO answer")
+            if expected_image_sha256 is not None and (type(expected_image_sha256) is not str
+                    or re.fullmatch(r"[0-9a-f]{64}", expected_image_sha256) is None):
+                raise ControlError("Expected image hash must be exactly 64 lowercase hexadecimal characters")
+            if preflight is not None and not callable(preflight):
+                raise ControlError("Mission preflight must be a trusted Python callback")
+            with self._command_slot(deadline_monotonic):
+                acquired = self.control_lock.acquire(blocking=False)
+                if not acquired:
+                    raise ControlError("Recovery writer is active")
+                try:
+                    with self.data_lock:
+                        if self._command_work:
+                            raise ControlError("Command work is pending for mission recovery")
+                        self._command_work += 1
+                        active = True
+                        self._check_mission_recovery(self.state, binding, expected_generation, kind,
+                                                     interrupt_request_id)
+                        pause_snapshot = self._pause_snapshot()
+                    observation_receipt: dict[str, float] = {}
+                    observed = self._exchange("observe", wait, deadline_monotonic=deadline_monotonic,
+                                              observation_receipt=observation_receipt)
+                    with self.data_lock:
+                        self._check_mission_recovery(observed, binding, expected_generation, kind,
+                                                     interrupt_request_id)
+                    received = observation_receipt["received_monotonic"]
+
+                    def check_preflight() -> None:
+                        self._check_mission_recovery(observed, binding, expected_generation, kind,
+                                                     interrupt_request_id)
+                        if self.state != observed or self._pause_snapshot() != pause_snapshot:
+                            raise ControlError("Native boundary, frame or Pause changed during recovery preflight")
+                        if not 0 <= time.monotonic() - received <= 3:
+                            raise ControlError("Final preflight observation expired")
+                        if time.monotonic() >= deadline_monotonic:
+                            raise ControlError("Original dispatch deadline expired before control publication")
+                        if request is not None and int(time.time() * 1000) >= request["deadline_ms"]:
+                            raise ControlError("Original native control deadline expired before publication")
+
+                    if expected_image_sha256 is not None and self._frame_sha256(observed) != expected_image_sha256:
+                        raise ControlError("Final preflight image differs from the informing image")
+                    receipt["preflight"] = {"observation": copy.deepcopy(observed),
+                        "received_monotonic": received, "expected_image_sha256": expected_image_sha256}
+                    if preflight is not None:
+                        try:
+                            preflight(copy.deepcopy(observed), received)
+                        except Exception as exc:
+                            raise ControlError(f"Mission preflight failed: {type(exc).__name__}: {exc}") from exc
+                    # Retention and image I/O cannot hold up operator Pause.
+                    if expected_image_sha256 is not None and self._frame_sha256(observed) != expected_image_sha256:
+                        raise ControlError("Final preflight image changed during recovery preflight")
+                    with self.data_lock:
+                        check_preflight()
+                        authority = self.authority.copy()
+                    created = int(time.time() * 1000)
+                    request = {"protocol": 4, "id": str(uuid.uuid4()), "kind": kind,
+                               "session": observed["session"], "control_generation": expected_control_generation,
+                               "authority": authority, "created_ms": created, "deadline_ms": created + 2000}
+                    if kind == "answer_interrupt":
+                        request.update(boundary_id=expected_boundary_id, revision=expected_revision,
+                                       frame=observed["frame"], interrupt_request_id=interrupt_request_id, choice=choice)
+                    validate_control_request(request)
+                    receipt["request"] = copy.deepcopy(request)
+                    atomic_json(self.control_admissions / f'{request["id"]}.json', request)
+                    self._record({"kind": "mission_admission", "logical_action_id": logical_action_id},
+                                 {"request": copy.deepcopy(request)})
+                    with self.data_lock:
+                        self.control_admitted[request["id"]] = request.copy()
+                    publication_locked = False
+
+                    def before_publish() -> None:
+                        nonlocal publication_locked
+                        # Stage/fsync the file outside data_lock; serialize only
+                        # its final authority check and atomic visibility with Pause.
+                        self.data_lock.acquire()
+                        publication_locked = True
+                        check_preflight()
+                        if self.authority != authority:
+                            raise ControlError("Control authority changed before publication")
+
+                    def on_publish() -> None:
+                        nonlocal publication_locked
+                        receipt["published"] = True
+                        self.control_pending = request.copy()
+                        self.data_lock.release()
+                        publication_locked = False
+
+                    try:
+                        atomic_json(self.bridge / "control.json", request,
+                                    before_publish=before_publish, on_publish=on_publish)
+                    finally:
+                        if publication_locked:
+                            self.data_lock.release()
+                    end = min(deadline_monotonic, time.monotonic() + wait,
+                              time.monotonic() + max(0, (request["deadline_ms"] - time.time() * 1000) / 1000))
+                    while time.monotonic() < end:
+                        if self.closed:
+                            raise ControlError("Controller stopped during recovery; never replay")
+                        response = read_json(self.bridge / "control-response.json")
+                        terminal_received = time.monotonic()
+                        if response is not None and response.get("id") == request["id"]:
+                            with self.data_lock:
+                                admitted = self._validate_admitted_control_response(response)
+                                terminal = admitted is not None and response["status"] in CONTROL_TERMINAL
+                                if terminal:
+                                    receipt["received_monotonic"] = terminal_received
+                                    receipt["result"] = copy.deepcopy(response)
+                            if terminal:
+                                self._reconcile_control(response)
+                                break
+                            self._reconcile_control(response)
+                        time.sleep(min(0.015, max(0, end - time.monotonic())))
+                    else:
+                        with self.data_lock:
+                            self._revoke()
+                            self._pause_file()
+                            self.frozen = True
+                            self.transport_error = "Recovery outcome unknown; explicitly observe after expiry to reconcile"
+                        self._control_unknown(request, "control wait reached; delivery is unknown")
+                        retirement = self._retire("timeout", control=True)
+                        receipt["result"] = {"status": "unknown", "id": request["id"],
+                                             "error": self.transport_error, "retirement": retirement}
+                finally:
+                    if active:
+                        with self.data_lock:
+                            self._command_work -= 1
+                        active = False
+                    self.control_lock.release()
+                    acquired = False
+        except (ControlError, OSError) as exc:
+            failed = True
+            known_terminal = receipt["received_monotonic"] is not None
+            if not known_terminal:
+                receipt["result"] = {"status": "controller_error", "error": str(exc)}
+            with self.data_lock:
+                self.transport_error = str(exc)
+            if request is not None:
+                receipt["result"]["id"] = request["id"]
+                if receipt["published"]:
+                    with self.data_lock:
+                        self._revoke()
+                        self._pause_file()
+                        self.frozen = True
+                    if not known_terminal:
+                        self._control_unknown(request, str(exc))
+                else:
+                    with self.data_lock:
+                        self.control_admitted.pop(request["id"], None)
+                    (self.control_admissions / f'{request["id"]}.json').unlink(missing_ok=True)
+        known_terminal = receipt["received_monotonic"] is not None
+        try:
+            return self._finish_mission_receipt(receipt, failed and not known_terminal)
+        except OSError as exc:
+            if not known_terminal:
+                raise
+            # A retained terminal ACK is actual transport evidence even when
+            # later receipt persistence fails. Stop input without rewriting it.
+            with self.data_lock:
+                self._revoke()
+                self.frozen = True
+                self.pause_requested = True
+                self.transport_error = f"Mission control receipt persistence failed: {exc}"
+            self._pause_file()
+            return receipt
+
+    def _check_mission_recovery(self, observed: dict[str, Any] | None, binding: dict[str, Any],
+                                generation: int, kind: str, interrupt_request_id: str | None) -> None:
+        """Under data_lock, excluding only this operation's command/control slots."""
+        if (self.closed or generation != self.pause_generation
+                or binding["operator_pause_generation"] != self.operator_pause_generation
+                or binding["controller_boot_id"] != self.authority["controller_boot_id"]):
+            raise ControlError("Mission recovery superseded by host Pause or takeover")
+        if (not self.pause_requested or self._pause_snapshot() is None or self._mission_lease is not None
+                or self._command_work != 1 or self.pending is not None or self.control_pending is not None
+                or any((self.bridge / name).exists() for name in
+                       ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
+            raise ControlError("Mission recovery requires paused empty command/control slots and no lease")
+        if observed is None:
+            raise ControlError("Mission recovery requires a current paused observation")
+        validate_state(observed)
+        self._expect(observed, binding["session"], binding["revision"])
+        self._expect_boundary(observed, binding["boundary_id"])
+        boundary = observed["boundary"]
+        if (observed["takeover_generation"] != binding["takeover_generation"]
+                or observed["pause_origin"] != binding["pause_origin"]
+                or boundary["control_generation"] != binding["control_generation"]):
+            raise ControlError("Mission recovery superseded by native pause/takeover or control generation")
+        age = int(time.time() * 1000) - observed["timestamp_ms"]
+        if (observed["status"] != "ready" or observed["error"] or not observed["paused"]
+                or not observed["frame_ok"] or not observed["frame"] or not -1000 <= age <= 3000
+                or kind not in boundary["recovery_operations"]):
+            raise ControlError("Mission recovery requires a fresh paused advertised activity boundary")
+        if kind == "answer_interrupt" and interrupt_request_id != boundary["interrupt_request_id"]:
+            raise ControlError("Interrupt owner does not match")
+
     def _restore_request(self, request: dict[str, Any], reason: str) -> None:
         """Restore only current-format uncertainty; never translate older records."""
         self._validate_stored_request(request)
@@ -589,12 +841,13 @@ class Controller:
         with self.data_lock:
             self.events.append(event)
             self.events = self.events[-60:]
+        with self._journal_lock:
             with self.journal.open("a", encoding="utf-8") as stream:
                 stream.write(json.dumps(event, ensure_ascii=True) + "\n")
                 stream.flush()
                 os.fsync(stream.fileno())
 
-    def _accept(self, response: dict[str, Any]) -> None:
+    def _accept(self, response: dict[str, Any], *, known_control_id: str | None = None) -> None:
         with self.data_lock:
             changed_session = self.state is not None and response["session"] != self.state["session"]
             takeover = self.state is not None and (
@@ -611,7 +864,7 @@ class Controller:
                     self._pause_file()
                     if self.pending is not None:
                         self._unknown(self.pending, "native session changed; old-world outcome remains unknown")
-                    if self.control_pending is not None:
+                    if self.control_pending is not None and self.control_pending["id"] != known_control_id:
                         self._control_unknown(self.control_pending, "native session changed")
             if (self.state is None or (self.state["session"], self.state["frame"]) !=
                     (response["session"], response["frame"])):

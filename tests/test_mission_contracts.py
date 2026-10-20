@@ -38,7 +38,7 @@ def claim(**changes):
 
 
 def request(kind="observe", **changes):
-    fields = dict(schema="mission/4", kind=kind, request_id="request-1", mission_id="mission-test", epoch=0)
+    fields = dict(schema="mission/5", kind=kind, request_id="request-1", mission_id="mission-test", epoch=0)
     if kind == "handoff":
         fields.update(unfinished_work_ids=[])
     if kind == "lifecycle":
@@ -123,10 +123,10 @@ class MissionContractTests(unittest.TestCase):
             with self.assertRaises(ContractError): MissionLimits(wall_seconds=value)
 
     def test_closed_requests_and_scope_binding(self):
-        valid = [request(), {"schema": "mission/4", "kind": "start", "request_id": "start-1", "admission": admission().to_dict()},
-                 {"schema": "mission/4", "kind": "status", "mission_id": "mission-test"},
-                 {"schema": "mission/4", "kind": "result", "mission_id": "mission-test", "operation_id": "old-1"},
-                 {"schema": "mission/4", "kind": "context", "handoff": None, "mission_id": "mission-test", "query": "water", "scope": scope(), "max_bytes": 32768},
+        valid = [request(), {"schema": "mission/5", "kind": "start", "request_id": "start-1", "admission": admission().to_dict()},
+                 {"schema": "mission/5", "kind": "status", "mission_id": "mission-test"},
+                 {"schema": "mission/5", "kind": "result", "mission_id": "mission-test", "operation_id": "old-1"},
+                 {"schema": "mission/5", "kind": "context", "handoff": None, "mission_id": "mission-test", "query": "water", "scope": scope(), "max_bytes": 32768},
                  skill(), request("stop", reason="Pause")]
         for value in valid:
             with self.subTest(kind=value["kind"]): self.assertEqual(validate_request(value), value)
@@ -138,7 +138,8 @@ class MissionContractTests(unittest.TestCase):
         value = request("stop", reason="Pause now")
         self.assertEqual(validate_request(value), value)
         for changed in ({**value, "finish": False}, {**value, "finish": True},
-                        {**value, "schema": "mission/2"}, {**value, "schema": "mission/3"}):
+                        {**value, "schema": "mission/2"}, {**value, "schema": "mission/3"},
+                        {**value, "schema": "mission/4"}):
             with self.subTest(changed=changed), self.assertRaises(ContractError):
                 validate_request(changed)
 
@@ -153,8 +154,8 @@ class MissionContractTests(unittest.TestCase):
 
     def test_every_skill_has_a_closed_typed_goal(self):
         goals = {"menu": {"purpose": "alarm", "label": "8 hours", "outcome": "activated"},
-                 "item": {"purpose": "consume", "label": "clean water", "quantity": 1, "outcome": "consumed"},
-                 "activity": {"operation": "rest", "target": "bench", "game_seconds": 1800, "interrupt": True},
+                 "item": {"purpose": "consume", "label": "clean water", "quantity": 1, "quantity_unit": "charges", "step": "start", "outcome": "consumed"},
+                 "activity": {"operation": "rest", "target": "bench", "game_seconds": 1800, "interrupt_allowed": True, "step": "start", "answer": None, "interrupt_request_id": None},
                  "inspect": {"purpose": "inventory"}}
         for name, goal in goals.items():
             self.assertEqual(validate_request(skill(skill_kind=name, goal=goal, limits={"primitives": 32, "wall_seconds": 120, "game_seconds": 1800}))["goal"], goal)
@@ -166,9 +167,33 @@ class MissionContractTests(unittest.TestCase):
             with self.subTest(field=field), self.assertRaises(ContractError): validate_request(old)
         with self.assertRaises(ContractError): validate_request(skill(schema="mission/1"))
         with self.assertRaises(ContractError): validate_memory_entry(claim(schema="campaign-memory/1"), "claim")
+        with self.assertRaises(ContractError): MissionAdmission.from_dict({**admission().to_dict(), "schema": "mission/4"})
         for goal in ({"purpose": "alarm", "label": "8 hours", "outcome": "selected"},
                      {"purpose": "alarm", "label": "8 hours", "outcome": "activated", "quantity": 1}):
             with self.assertRaises(ContractError): validate_request(skill(skill_kind="menu", goal=goal))
+
+    def test_item_goals_require_explicit_current_units_and_phase_steps(self):
+        goal = dict(purpose="pickup", label="clean water", quantity=2, quantity_unit="charges",
+                    step="start", outcome="acquired")
+        value = skill(skill_kind="item", goal=goal)
+        self.assertEqual(validate_request(value), value)
+        for change in (dict(quantity_unit="bottles"), dict(quantity_unit=""), dict(step="select"), dict(outcome="stored")):
+            with self.subTest(change=change), self.assertRaises(ContractError):
+                validate_request({**value, "goal": {**goal, **change}})
+        for removed in ("step", "quantity_unit"):
+            with self.assertRaises(ContractError):
+                validate_request({**value, "goal": {k: v for k, v in goal.items() if k != removed}})
+
+    def test_activity_answer_has_exact_owner_and_old_interrupt_flag_rejects(self):
+        goal = dict(operation="rest", target="shelter", game_seconds=60, interrupt_allowed=True,
+                    step="start", answer=None, interrupt_request_id=None)
+        value = skill(skill_kind="activity", goal=goal)
+        self.assertEqual(validate_request(value), value)
+        old = {k: v for k, v in goal.items() if k != "interrupt_allowed"}
+        with self.assertRaises(ContractError): validate_request({**value, "goal": {**old, "interrupt": True}})
+        for change in (dict(answer="YES"), dict(step="answer_interrupt"), dict(interrupt_request_id="owner")):
+            with self.subTest(change=change), self.assertRaises(ContractError):
+                validate_request({**value, "goal": {**goal, **change}})
 
     def test_control_views_are_fallible_closed_and_bound_to_informing_sources(self):
         view = dict(kind="menu", basis="player_interpretation", source_id="source-1",
@@ -271,8 +296,8 @@ class MissionContractTests(unittest.TestCase):
             with self.assertRaises(ContractError): validate_visible_ui(bad)
 
     def test_duplicate_nonfinite_oversized_and_mutable_alias_inputs_reject(self):
-        for value in ['{"schema":"mission/4","kind":"observe","kind":"stop"}',
-                      '{"schema":"mission/4","kind":"observe","epoch":NaN}',
+        for value in ['{"schema":"mission/5","kind":"observe","kind":"stop"}',
+                      '{"schema":"mission/5","kind":"observe","epoch":NaN}',
                       ' ' * MAX_REQUEST_BYTES + json.dumps(request())]:
             with self.assertRaises(ContractError): validate_request(value)
         original = skill(); parsed = validate_request(original)

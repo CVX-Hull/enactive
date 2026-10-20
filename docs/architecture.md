@@ -6,7 +6,7 @@ status: active
 
 # Current architecture
 
-Current source contracts are native4, mission/4, campaign-memory/2, gameplay/2,
+Current source contracts are native4, mission/5, campaign-memory/2, gameplay/2,
 evidence archive3 and mission ledger6. One MissionRuntime owns the live mission API.
 The wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.
@@ -40,7 +40,7 @@ Pause and native takeover. Role assignment is procedural, not operating-system i
 | --- | --- | --- |
 | Lead / active Codex chat | Objective → frozen admission, reviewed source and acceptance | Owns shared runtime and integration; no ordinary gameplay rescue in the deciding mission |
 | Designated player / general-purpose agent | Visible evidence and memory → typed mission requests, plans and verification | One bounded actor; fresh-context handoff needs quiescence and one-use accounting; no authority from a summary |
-| Mission runtime / harness maintainer | mission/4 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
+| Mission runtime / harness maintainer | mission/5 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
 | Controller / harness maintainer | State-bound command → native request and correlated receipt | Serialized ordinary/control writers, exact process-local lease, Pause revocation and native fences; never edits saves |
 | Native bridge / integration maintainer | Bounded request → actual input, visible metadata and rendered frame | Engine validates outcomes on its game thread; unsupported boundaries cannot claim success |
 | Spectator / viewer maintainer | Frame and mission snapshot → inspectable progress, uncertainty and Pause | Mission Observe uses typed ingress; raw input/Resume/recovery disabled while nonterminal; malformed state stays locked |
@@ -53,19 +53,26 @@ Implementation: [mission runtime](../harness/mission_runtime.py),
 [campaign memory](../harness/gameplay/campaign_memory.py),
 [navigation](../harness/gameplay/navigation.py), [native-row menus](../harness/gameplay/interaction.py),
 [interpreted controls](../harness/gameplay/semantic_controls.py),
+[item selection](../harness/gameplay/interactions.py),
 [controller](../harness/controller.py), [server](../harness/server.py),
 [native bridge](../native/cdda_harness.cpp), [viewer](../web/app.js),
 [evidence store](../harness/gameplay/evidence.py), [owned process](../harness/native_process.py).
 
 Navigation, native-row focus and fallible image controls share the same mission
-writer. One ordinary interact root may own a returned prompt. Explicit menu/edit
+writer. An ordinary interaction, item, activity or inspection root may own a returned prompt. Explicit control
 children retain its original scope, actor/epoch, deadlines and cumulative input
 ceiling. A settled owned menu may be refreshed only through retained exact-PNG
 source revalidation. Typed PhaseReceipt audit data restores no private phase on
 reopen. A normal return closes the prompt without proving the desired effect.
 Cancellation uses one actually registered QUIT, or TEXT.QUIT for a string editor;
 it returns partial for verification and never answers a later question implicitly.
-Inventory multiselect, quantity semantics and native editor qualification remain gaps.
+Typed item selection/count/commit and registered inspection have synthetic runtime
+coverage. Quantity editing belongs only to the item phase whose returned
+MARK_WITH_COUNT opened it. Native editor/selector qualification remains pending.
+An owned activity poll advances through one bounded observation, including native
+output menus or normal return; no poll sends input or certifies sleep/output.
+Activity control transport preserves terminal ACKs before persistence and sends no
+Resume. Its runtime interruption/resumption and shared semantic recovery remain gaps.
 World-generation forms have no tab-focus mapping. On the final character-description
 screen, NEXT_TAB begins character completion and is blocked as ordinary focus;
 returning to a previous tab remains available. World FINALIZE and character finish

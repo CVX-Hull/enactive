@@ -55,8 +55,8 @@ def phase_lifecycle(**changes):
 def phase_skill(kind="menu", **changes):
     goals = {
         "menu": {"purpose": "Choose", "label": "One", "outcome": "activated"},
-        "item": {"purpose": "consume", "label": "water", "quantity": 1, "outcome": "consumed"},
-        "activity": {"operation": "rest", "target": "bench", "game_seconds": 10, "interrupt": True},
+        "item": {"purpose": "consume", "label": "water", "quantity": 1, "quantity_unit": "charges", "step": "start", "outcome": "consumed"},
+        "activity": {"operation": "rest", "target": "bench", "game_seconds": 10, "interrupt_allowed": True, "step": "start", "answer": None, "interrupt_request_id": None},
         "inspect": {"purpose": "inventory"},
         "interact": {"action": "open_consume", "intent": "Inspect food", "desired_outcome": "Food choices"},
         "edit": {"purpose": "character_name", "text": "Survivor", "commit": False},
@@ -140,7 +140,7 @@ class LedgerTests(unittest.TestCase):
         self.ledger.settle_primitive(logical_id, "not_dispatched", {"reason": "Synthetic accounting probe"}, now=now)
 
     def prompt_receipt(self, **changes):
-        value = dict(schema="mission/4", record_type="PhaseReceipt", origin_request_id="request-1",
+        value = dict(schema="mission/5", record_type="PhaseReceipt", origin_request_id="request-1",
             phase_kind="interact", operation="open_consume", stage="awaiting_control", epoch=0,
             actor_id="player-test", controller_boot_id="controller-test", operator_pause_generation=0,
             takeover_generation=0, source_ids=["source-1"], continuity=None, grants_authority=False)
@@ -249,7 +249,7 @@ class LedgerTests(unittest.TestCase):
         self.ledger.begin_request(phase_skill(request_id="nested", phase_id="request-1"), now=1001)
         self.ledger.begin_request(phase_skill("item", request_id="root-item"), now=1001)
         bad = [phase_skill(request_id="bad", phase_id=parent) for parent in
-               ("missing", "bad", "nested", "root-menu", "root-edit", "root-inspect", "root-navigate", "observe-only")]
+               ("missing", "bad", "nested", "root-menu", "root-edit", "root-navigate", "observe-only")]
         bad += [phase_skill(kind, request_id="bad", phase_id="request-1") for kind in ("item", "activity")]
         bad += [skill(request_id="bad", phase_id="request-1"),
                 phase_skill("interact", request_id="bad", phase_id="root-interact"),
@@ -257,12 +257,35 @@ class LedgerTests(unittest.TestCase):
                 phase_lifecycle(request_id="bad", phase_id="root-item"),
                 phase_lifecycle(request_id="bad", phase_id="request-1", world="other"),
                 phase_lifecycle(request_id="bad", phase_id="request-1", character="other"),
+                phase_skill(request_id="bad", phase_id="request-1", work_id="different-work"),
                 phase_skill(request_id="bad", phase_id="request-1", mission_id="other")]
         before = tuple(self.ledger._db.execute("SELECT (SELECT count(*) FROM requests),(SELECT count(*) FROM reservations)"))
         for value in bad:
             with self.subTest(value=value), self.assertRaises(ContractError):
                 self.ledger.begin_request(value, now=1002)
             self.assertEqual(tuple(self.ledger._db.execute("SELECT (SELECT count(*) FROM requests),(SELECT count(*) FROM reservations)")), before)
+
+    def test_inspection_root_owns_direct_prompt_children_with_original_limits(self):
+        root = phase_skill("inspect", request_id="inspect-root",
+                           limits=dict(primitives=1, wall_seconds=60, game_seconds=120))
+        self.active_request(root)
+        self.ledger.complete_request("inspect-root", "partial", {"verification_required": True}, now=1002)
+        child = phase_skill(request_id="inspect-dismiss", phase_id="inspect-root")
+        admitted = self.ledger.begin_request(child, now=1003)
+        self.assertEqual(admitted["operation"]["deadline"], 1061)
+        self.phase_input("inspect-dismiss", "dismiss", now=1003)
+        with self.assertRaisesRegex(BudgetError, "Phase primitive"):
+            self.phase_input("inspect-dismiss", "extra", now=1004)
+        self.assertEqual(self.reopen().snapshot(now=1010)["spent_inputs"], 1)
+
+    def test_previous_mission_admission_rejects_reopen_without_migrating_database(self):
+        self.ledger._put("admission", {**self.a.to_dict(), "schema": "mission/4"})
+        path = self.ledger.path
+        self.ledger.close()
+        before = path.read_bytes()
+        with self.assertRaises(ContractError):
+            MissionLedger(self.directory, now=1010)
+        self.assertEqual(path.read_bytes(), before)
 
     def test_ordinary_interaction_prompt_reuses_original_root_budget_without_nested_interaction(self):
         root = phase_skill("interact", request_id="open-direction",
@@ -860,7 +883,7 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(LedgerError):
             self.ledger.prepare_primitive("observe-only", "bad-input", intent(), now=1003)
         with self.assertRaises(LedgerError):
-            self.ledger.begin_request({"schema": "mission/4", "kind": "status", "mission_id": "mission-test"}, now=1003)
+            self.ledger.begin_request({"schema": "mission/5", "kind": "status", "mission_id": "mission-test"}, now=1003)
         with self.assertRaises(LedgerError):
             self.ledger.begin_request(skill(mission_id="other", goal={"scope": {"mission_id": "other", "session": "native-session", "coordinate_epoch": 0}, "target": [2, -3, 0]}), now=1003)
         self.ledger.close()

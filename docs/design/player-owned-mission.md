@@ -8,7 +8,7 @@ review_trigger: Mission interface adoption; implementation or native validation 
 
 This is the design deliverable for [#137](https://github.com/CVX-Hull/enactive/issues/137),
 with implemented component checkpoints and remaining acceptance work below; it
-is not a gameplay admission. The coordinated mission/4 ingress now replaces the
+is not a gameplay admission. The coordinated mission/5 ingress now replaces the
 waypoint runtime. [Architecture](../architecture.md) and [protocol](../protocol.md)
 own current behavior; lifecycle and independent mission acceptance remain pending.
 The [assessment](../research-memory-architecture.md) supplies the research rationale;
@@ -68,7 +68,7 @@ passive contracts/planner/supervisor logic may remain only with current consumer
 and tests. Remove unconsumed execution scaffolding rather than keep two players.
 
 Advance gameplay records together to `gameplay/2` where their shared encoding is
-used; unsupported `gameplay/1` input rejects. Introduce `mission/4` for the strict
+used; unsupported `gameplay/1` input rejects. Introduce `mission/5` for the strict
 mission request/state envelope and `campaign-memory/2` for the durable index.
 Advance the evidence-store metadata to version3 and native observation to wire4
 for the visible-menu field below. Update every active producer/reader/fixture,
@@ -163,7 +163,7 @@ retaining the normal-only gate and calling external keys alongside it is rejecte
 
 ### Request shapes
 
-Every request has `schema=mission/4`, `kind` and a unique `request_id` except read-only
+Every request has `schema=mission/5`, `kind` and a unique `request_id` except read-only
 status/result/context. Mutating existing-mission operations additionally bind
 `mission_id` and `epoch`; input decisions bind the informing session/revision and
 boundary. Exact operation payloads are:
@@ -568,7 +568,7 @@ it does not establish implemented schemas, native fields, gameplay or efficacy.
 
 ### Passive source foundation checkpoint
 
-The first source slice defines strict `mission/4`/`campaign-memory/2` records in
+The first source slice defines strict `mission/5`/`campaign-memory/2` records in
 [mission_contracts.py](../../harness/gameplay/mission_contracts.py) and single-writer
 accounting in [mission_ledger.py](../../harness/gameplay/mission_ledger.py).
 The ledger and records send no input; MissionRuntime composes the registered
@@ -637,7 +637,7 @@ tests, including normal exit/new child/reload and exact saved-turn continuity.
 The [current protocol](../protocol.md#integrated-mission-lifecycle) specifies typed
 transition/adoption/checkpoint proofs, diagnostic unknown reconciliation, canonical
 all-session validation and non-restoration of authority. Native character lifecycle,
-item/activity/ordinary inspection remain required. Quiescent bound-memory handoff
+native item/activity/ordinary-inspection qualification remains required. Quiescent bound-memory handoff
 and charged readmission have synthetic coverage. Normal finish has source coverage
 after verified owned exit, with separate player-reported objective evidence and no
 native input. Actual mission acceptance remains open;
@@ -675,10 +675,10 @@ ground-versus-carried water corrections motivate explicit Work and effect eviden
 its lifecycle overhead motivates composed controls. Those totals are development
 evidence, not model latency or an efficiency baseline for a different scenario.
 
-Current source uses mission/4, campaign-memory/2 and ledger6. Stop has only a Pause
-reason; NormalFinish is separate. Mission/4 adds bound successor context, unfinished
-Work declarations and separately charged readmission. All current callers, results
-and fixtures migrate; mission/2 and mission/3 requests/admissions reject without
+Current source uses mission/5, campaign-memory/2 and ledger6. Stop has only a Pause
+reason; NormalFinish is separate. Mission/5 retains bound successor context and
+readmission, adding typed item/activity/inspection phase records and explicit units.
+All current callers, results and fixtures migrate; mission/2, mission/3 and mission/4 requests/admissions reject without
 mutation or a compatibility reader. Historical admissions remain evidence; there
 is no automatic import. Native4/gameplay2/archive3 stay unchanged. These contracts
 do not accept independent gameplay; the [protocol](../protocol.md#quiescent-player-replacement)
@@ -709,7 +709,7 @@ The exact closed shapes live in the linked source contract rather than a second
 hand-maintained schema.
 
 The reviewed passive [control source](../../harness/gameplay/semantic_controls.py) supports image-menu focus,
-direction/confirmation, edit and one-input interact only. Image focus permits at
+direction/confirmation, edit, typed item selection and registered normal roots. Image focus permits at
 most8 unverified arrows with actual observations and unchanged scope/actions after
 each; it never auto-confirms or earns native verified-focus credit. Text entry
 uses the existing ASCII/ImGui transport, observes each transition and stops on
@@ -728,13 +728,13 @@ that diagnostic reference cannot authorize another input. This remains synthetic
 component verification, with native editor behavior pending. The current mission
 HTTP ingress is connected; owned lifecycle acceptance is not.
 
-Ledger6 validates a direct earlier lifecycle or item/activity/interact root,
+Ledger6 validates a direct earlier lifecycle or item/activity/interact/inspect root,
 derives child deadlines from its original deadline, and counts direct-root and child
 inputs together through SQLite's indexed request/primitive join. It checks links,
 original ceilings and counts again on reopen. A partial root receipt remains
 immutable. This accounting is data and restores no live phase authority.
-The sole live runtime integrates one ordinary interact prompt root and its
-menu/edit children, original root/Work association
+The sole live runtime integrates returned interaction/item/activity/inspection
+prompts and direct controls, immutable root/Work association
 and exact stage/source/actor/epoch checks before publication. One root may return
 partial and release the writer while awaiting player interpretation; it leaves no
 queued input. A child never creates another root or renews the original deadline.
@@ -743,8 +743,9 @@ now distinguishes host operator-Pause generation from internal authority revocat
 trusted Resume requires the captured operator counter and controller boot in addition
 to the general generation. Internal stops still revoke and set the Pause sentinel.
 The lifecycle adapter must capture those values before an expected transition;
-user Pause always prevents automatic adoption/Resume. Registered lifecycle phases are separate; item/activity integration remains
-required. Ordinary prompt handling cannot adopt unrelated lifecycle phases.
+user Pause always prevents automatic adoption/Resume. Registered lifecycle phases
+are separate; runtime activity interruption/resumption and common outcome recovery
+remain required. Ordinary prompt handling cannot adopt unrelated lifecycle phases.
 An ordinary interact root may open a private phase only from its exact correlated
 supported returned prompt. Its menu/edit/inspect children share the original
 32-input/900-second maximum. Unknown delivery cannot open it; actual return to normal
@@ -769,7 +770,8 @@ allowance is renewed. Poll observations remain input-ineligible; actual normal
 return may close the prompt and record budget overshoot without semantic success.
 Malformed views, unrelated roots and wrong-phase children cannot send input.
 User Pause clears the private phase; unknown delivery cannot create or restore one.
-The closed ordinary PhaseReceipt carries only an interact operation, stage, actor/
+The closed semantic PhaseReceipt names its interaction/item/activity/inspection
+operation, stage, actor/
 epoch/controller/Pause/takeover/source audit identifiers and continuity=null. New
 receipts must match both the request's recorded actor and current actor; historical
 ones are validated against the handoff chain on reopen. Nested JSON strings,
@@ -793,7 +795,7 @@ session scope. The lifecycle proof must explicitly connect them rather than copy
 world source into a different session. Lifecycle must check actual phase source/support,
 current undisputed scope and admission names, not annotation text or any existing
 claim ID. These remain fallible identity evidence. One-current ingress and cached observer
-views are connected. Item/activity outcomes, actual handoff/readmission, native
+views are connected. Native item/activity outcomes, actual handoff/readmission, native
 character lifecycle and the actual fresh-player mission remain acceptance gates.
 
 
@@ -814,3 +816,11 @@ The timeline reducer validates archive chronology and exact adjacent normal-sess
 endpoint links, rejects disputed/lost sources and sums session durations. The historical lifecycle reader now derives links only from validated transitions,
 identity adoption and exact saved endpoints across all retained normal sessions;
 missing proof makes cost unknown. Each adopted session gets a new coordinate epoch. Equal turns alone never prove same-character identity or restore authority.
+
+Selected item/count/inspection and one-observation activity polls now compose in
+source under the same writer. Quantity-editor ownership follows the exact returned
+MARK_WITH_COUNT transition, not its shared filter-popup identifier. Polls preserve
+original authority/limits and require semantic verification after native return.
+The [protocol](../protocol.md#selected-item-inspection-and-activity-composition)
+owns current details and the remaining activity-control/runtime gaps. No source
+checkpoint accepts independent gameplay or causal memory/efficiency benefit.

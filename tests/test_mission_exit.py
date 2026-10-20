@@ -59,7 +59,7 @@ class MissionExitTests(unittest.TestCase):
     def confirmation(self, label="Yes", identity="confirmation", **changes):
         state = self.runtime._store.observation(self.runtime._current)
         reference = self.runtime._current
-        request = dict(schema="mission/4", kind="skill", request_id=identity, mission_id=self.a.mission_id,
+        request = dict(schema="mission/5", kind="skill", request_id=identity, mission_id=self.a.mission_id,
             epoch=self.runtime.status()["epoch"], skill_kind="menu", phase_id="exit", work_id=None,
             goal=dict(purpose="Answer owned Quit confirmation", label=label, outcome="activated"),
             sources=[reference.observation_id], expected_session=reference.session, expected_revision=reference.revision,
@@ -195,7 +195,7 @@ class MissionExitTests(unittest.TestCase):
         self.ready()
         self.begin_exit()
         self.bridge.value["actions"].append("CHANGED")
-        operation = self.run_request(dict(schema="mission/4", kind="observe", request_id="changed-observe",
+        operation = self.run_request(dict(schema="mission/5", kind="observe", request_id="changed-observe",
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
         self.assertEqual(operation["state"], "blocked", operation)
         self.assertIn("Contradictory", operation["result"]["reason"])
@@ -221,7 +221,7 @@ class MissionExitTests(unittest.TestCase):
     def test_routine_owned_menu_and_prompt_observe_preserve_exact_checkpoint_lineage(self):
         self.ready()
         before = self.runtime._owned_launch.checkpoint
-        observe = lambda identity: self.run_request(dict(schema="mission/4", kind="observe", request_id=identity,
+        observe = lambda identity: self.run_request(dict(schema="mission/5", kind="observe", request_id=identity,
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
         self.assertEqual(observe("owned-menu-observe")["state"], "completed")
         self.assertNotEqual(self.runtime._owned_launch.checkpoint, before)
@@ -235,7 +235,7 @@ class MissionExitTests(unittest.TestCase):
         root = self.begin_exit()
         root_deadline = root["deadline"]
         time.sleep(1.05)
-        self.run_request(dict(schema="mission/4", kind="observe", request_id="fresh-prompt",
+        self.run_request(dict(schema="mission/5", kind="observe", request_id="fresh-prompt",
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
         operation = self.run_request(self.confirmation("No", limits=dict(primitives=1, wall_seconds=1, game_seconds=1)))
         self.assertEqual(operation["state"], "partial", operation)
@@ -304,7 +304,7 @@ class MissionExitTests(unittest.TestCase):
         self.start()
         self.assertEqual(self.runtime.status()["native_process"]["unresolved_custody_requests"], ["launch"])
         self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
-        operation = self.run_request(dict(schema="mission/4", kind="observe", request_id="diagnostic-observe",
+        operation = self.run_request(dict(schema="mission/5", kind="observe", request_id="diagnostic-observe",
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
         self.assertEqual(operation["state"], "blocked", operation)
         self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
@@ -388,7 +388,7 @@ class MissionExitTests(unittest.TestCase):
         self.assertEqual(response["status"], "accepted", response)
         end = time.monotonic() + 5
         while time.monotonic() < end:
-            result = self.runtime.command(dict(schema="mission/4", kind="result", mission_id=self.a.mission_id,
+            result = self.runtime.command(dict(schema="mission/5", kind="result", mission_id=self.a.mission_id,
                 operation_id=request["request_id"]))["operation"]
             if result["result"] is not None:
                 break

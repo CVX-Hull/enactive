@@ -1,0 +1,185 @@
+"""Synthetic item/inspection composition; no native inventory acceptance claim."""
+import copy
+import unittest
+
+from tests import test_mission_runtime as runtime_fixtures
+
+
+class MissionItemTests(unittest.TestCase):
+    setUp = runtime_fixtures.MissionRuntimeTests.setUp
+    wait = runtime_fixtures.MissionRuntimeTests.wait
+    request = runtime_fixtures.MissionRuntimeTests.request
+    result = runtime_fixtures.MissionRuntimeTests.result
+    settled = runtime_fixtures.MissionRuntimeTests.settled
+    start = runtime_fixtures.MissionRuntimeTests.start
+    control = runtime_fixtures.MissionRuntimeTests.control
+
+    def open_items(self, *, direct_editor=False, primitives=16):
+        self.bridge.value["actions"].extend(["pickup", "inventory"])
+        self.start()
+        self.normal = copy.deepcopy(self.bridge.value["scene"])
+        self.chosen = 0
+        def behavior(bridge, request):
+            action = request.get("action")
+            if action in ("pickup", "inventory"):
+                self.inventory()
+                if direct_editor:
+                    self.editor()
+            elif action == "MARK_WITH_COUNT":
+                self.editor()
+            elif action == "TEXT.CLEAR":
+                bridge.editor_text = ""
+            elif request["kind"] == "key":
+                bridge.editor_text += request["key"]
+            elif action == "TEXT.CONFIRM":
+                self.chosen = int(bridge.editor_text)
+                self.inventory()
+            elif action in ("CONFIRM", "QUIT"):
+                bridge.value.update(category="DEFAULTMODE", scene=self.normal, ui=None, actions=["pickup", "inventory"])
+                bridge.value["boundary"].update(kind="normal_play", id="item-return")
+            return True
+        self.bridge.behavior = behavior
+        goal = dict(purpose="pickup", label="clean water", quantity=2, quantity_unit="charges",
+                    step="start", outcome="acquired")
+        root = self.control("item", goal, request_id="water-root",
+                            limits=dict(primitives=primitives, wall_seconds=120, game_seconds=1200))
+        self.assertEqual(self.runtime.command(root)["status"], "accepted")
+        opened = self.settled(root["request_id"])
+        self.assertEqual(opened["state"], "partial", opened)
+        self.assertEqual(opened["result"]["phase"]["phase_kind"], "item")
+        self.root = root
+        return opened
+
+    def inventory(self):
+        self.bridge.editor_text = None
+        self.bridge.value.update(category="INVENTORY", scene=None, ui=None,
+                                 actions=["UP", "DOWN", "MARK_WITH_COUNT", "CONFIRM", "QUIT"])
+        self.bridge.value["boundary"].update(kind="menu", id="water-selector")
+
+    def editor(self):
+        self.bridge.editor_text = "0"
+        self.bridge.value.update(category="STRING_INPUT", scene=None, ui=None,
+                                 actions=["TEXT.CLEAR", "TEXT.CONFIRM", "TEXT.QUIT"])
+        self.bridge.value["boundary"].update(kind="menu", id="quantity-editor")
+
+    def send(self, request):
+        self.assertEqual(self.runtime.command(request)["status"], "accepted")
+        return self.settled(request["request_id"])
+
+    def select(self, *, step="select", **changes):
+        source = self.runtime.status()["current_source"]["observation_id"]
+        view = dict(kind="item_selection", basis="player_interpretation", source_id=source,
+            control="vertical", mode="multi", rows=[dict(label="clean water", enabled=True,
+            available_quantity=6, quantity_unit="charges", chosen_quantity=self.chosen)], selected=0,
+            selection_coverage="all_selected", selected_items=[] if not self.chosen else [dict(
+                label="clean water", quantity=self.chosen, quantity_unit="charges")])
+        goal = {**self.root["goal"], "step": step}
+        return self.control("item", goal, phase_id="water-root", perception=view,
+                            request_id="item-" + step, **changes)
+
+    def edit(self, *, text="2", commit=False, purpose="quantity", request_id="edit-count"):
+        source = self.runtime.status()["current_source"]["observation_id"]
+        view = dict(kind="editor", basis="player_interpretation", source_id=source,
+            purpose=purpose, label="Count", visible_text=self.bridge.editor_text, whole_value=True, focused=True)
+        return self.control("edit", dict(purpose=purpose, text=text, commit=commit),
+            phase_id="water-root", perception=view, request_id=request_id)
+
+    def test_pickup_count_edit_fresh_commit_and_effect_verification_share_root(self):
+        self.open_items()
+        selected = self.send(self.select())
+        self.assertEqual(selected["state"], "partial", selected)
+        self.assertTrue(self.runtime._prompt_phase.quantity_editor)
+        typed = self.send(self.edit())
+        self.assertEqual(typed["state"], "partial", typed)
+        self.assertEqual(self.bridge.editor_text, "2")
+        edited = self.send(self.edit(commit=True, request_id="commit-count"))
+        self.assertEqual(edited["state"], "partial", edited)
+        self.assertFalse(self.runtime._prompt_phase.quantity_editor)
+        result = self.send(self.select(step="commit"))
+        self.assertEqual(result["state"], "partial", result)
+        self.assertTrue(result["result"]["verification_required"])
+        self.assertEqual(result["result"]["phase"]["stage"], "complete")
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 6)
+        records = self.runtime._ledger.primitive_records()
+        self.assertEqual([r["intent"]["value"] for r in records],
+                         ["pickup", "MARK_WITH_COUNT", "TEXT.CLEAR", "2", "TEXT.CONFIRM", "CONFIRM"])
+        self.assertTrue(all(r["state"] == "returned" for r in records))
+        self.assertFalse([r for r in self.runtime._ledger.memory_records("claim")
+                          if r["entry"]["key"]["property"] == "supply"])
+        self.runtime._ledger._verify(self.a)
+
+    def test_quantity_claim_cannot_borrow_an_unopened_editor(self):
+        self.open_items(direct_editor=True)
+        before = len(self.bridge.delivered)
+        result = self.send(self.edit())
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertIn("MARK_WITH_COUNT", result["result"]["reason"])
+        self.assertEqual(len(self.bridge.delivered), before)
+
+    def test_root_count_cannot_be_changed_by_an_editor_interpretation(self):
+        self.open_items()
+        self.send(self.select())
+        before = len(self.bridge.delivered)
+        result = self.send(self.edit(text="3"))
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertEqual(len(self.bridge.delivered), before)
+
+    def test_item_phase_cannot_relabel_count_editor_as_filter(self):
+        self.open_items()
+        self.send(self.select())
+        before = len(self.bridge.delivered)
+        result = self.send(self.edit(purpose="filter"))
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertEqual(len(self.bridge.delivered), before)
+
+    def test_fresh_editor_commit_remains_a_separate_charged_operation(self):
+        self.open_items(primitives=3)
+        self.send(self.select())
+        result = self.send(self.edit())
+        self.assertEqual(result["state"], "partial", result)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 3)
+        self.assertEqual(self.bridge.editor_text, "")
+        self.assertNotIn("TEXT.CONFIRM", [r.get("action") for r in self.bridge.delivered])
+
+    def test_item_commit_cannot_use_an_ordinary_menu_confirmation(self):
+        self.open_items()
+        source = self.runtime.status()["current_source"]["observation_id"]
+        request = self.control("menu", dict(purpose="select water", label="clean water", outcome="activated"),
+            phase_id="water-root", perception=dict(kind="menu", basis="player_interpretation", source_id=source,
+                control="vertical", rows=[dict(label="clean water", enabled=True)], selected=0, question=""))
+        before = len(self.bridge.delivered)
+        result = self.send(request)
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertEqual(len(self.bridge.delivered), before)
+
+    def test_inspection_root_opens_and_dismisses_without_claiming_inventory(self):
+        self.bridge.value["actions"].append("inventory")
+        self.start()
+        normal = copy.deepcopy(self.bridge.value["scene"])
+        def behavior(bridge, request):
+            if request.get("action") == "inventory":
+                self.inventory()
+            elif request.get("action") == "QUIT":
+                bridge.value.update(category="DEFAULTMODE", scene=normal, ui=None, actions=["inventory"])
+                bridge.value["boundary"].update(kind="normal_play", id="inspection-return")
+            return True
+        self.bridge.behavior = behavior
+        root = self.control("inspect", dict(purpose="inventory"), request_id="inspect-inventory")
+        opened = self.send(root)
+        self.assertEqual(opened["state"], "partial", opened)
+        self.assertEqual(opened["result"]["phase"]["phase_kind"], "inspect")
+        source = self.runtime.status()["current_source"]["observation_id"]
+        child = self.control("menu", dict(purpose="Close inventory", label="Cancel", outcome="dismissed"),
+            phase_id=root["request_id"], perception=dict(kind="dismissal", basis="player_interpretation",
+                source_id=source, question="Visible inventory"), request_id="close-inventory")
+        closed = self.send(child)
+        self.assertEqual(closed["state"], "partial", closed)
+        self.assertEqual(closed["result"]["phase"]["stage"], "complete")
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.runtime._ledger._verify(self.a)
+
+
+if __name__ == "__main__":
+    unittest.main()

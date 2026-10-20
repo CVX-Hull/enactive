@@ -60,6 +60,7 @@ class _PromptPhase:
     controller_boot_id: str
     operator_generation: int
     takeover_generation: int
+    quantity_editor: bool = False
 
 
 @dataclass(frozen=True)
@@ -216,7 +217,7 @@ class MissionRuntime:
                 rejection = "An unfinished input operation already owns the writer"
             elif (self._prompt_phase is not None and kind in ("skill", "lifecycle") and
                     (kind != "skill" or data["phase_id"] != self._prompt_phase.root_id
-                     or data["skill_kind"] not in ("menu", "edit", "inspect"))):
+                     or data["skill_kind"] not in ("menu", "edit", "inspect", "item", "activity"))):
                 rejection = "An owned prompt requires its exact phase and supported control child"
             elif (self._exit_phase is not None and kind in ("skill", "lifecycle") and
                     (kind != "skill" or data["phase_id"] != self._exit_phase.root_id or data["skill_kind"] != "menu")):
@@ -418,8 +419,20 @@ class MissionRuntime:
             if data["phase_id"] is not None or data["skill_kind"] in ("menu", "edit"):
                 raise ControlError("Control requires its actual live owned prompt phase")
             return None
-        if data["phase_id"] != phase.root_id or data["skill_kind"] not in ("menu", "edit", "inspect"):
+        if data["phase_id"] != phase.root_id or data["skill_kind"] not in ("menu", "edit", "inspect", "item", "activity"):
             raise ControlError("An owned prompt permits only its explicit control children")
+        root = self._ledger.request(phase.root_id)["request"]
+        if data["skill_kind"] in ("item", "activity") and data["skill_kind"] != root["skill_kind"]:
+            raise ControlError("Semantic control cannot borrow another root kind")
+        if root["skill_kind"] == "item":
+            if data["skill_kind"] == "edit" and (not phase.quantity_editor
+                    or data["goal"]["purpose"] != "quantity"
+                    or data["goal"]["text"] != str(root["goal"]["quantity"])):
+                raise ControlError("Quantity editor requires its returned MARK_WITH_COUNT and exact immutable count")
+            if data["skill_kind"] == "menu" and data["goal"]["outcome"] == "activated":
+                category = self._store.observation(phase.checkpoint)["category"]
+                if category in ("INVENTORY", "INVENTORY_SELECTOR", "STRING_INPUT"):
+                    raise ControlError("Item selector confirmation requires its typed quantity/selection step")
         state, _, boot = self._check_lease()
         actor = self._ledger.snapshot(now=self._wall())["player_id"]
         if ((boot, self._operator_mark()[1], state["takeover_generation"], data["epoch"], actor) !=
@@ -435,18 +448,32 @@ class MissionRuntime:
 
     def _prompt_receipt(self, phase: _PromptPhase, stage: str) -> dict:
         root = self._ledger.request(phase.root_id)["request"]
+        kind = root["skill_kind"]
         return {"schema": VERSION, "record_type": "PhaseReceipt", "origin_request_id": phase.root_id,
-            "phase_kind": "interact", "operation": root["goal"]["action"], "stage": stage,
+            "phase_kind": kind, "operation": root["goal"][
+                "action" if kind == "interact" else "operation" if kind == "activity" else "purpose"], "stage": stage,
             "epoch": phase.epoch, "actor_id": phase.actor_id, "controller_boot_id": phase.controller_boot_id,
             "operator_pause_generation": phase.operator_generation, "takeover_generation": phase.takeover_generation,
             "source_ids": list(dict.fromkeys((phase.game_anchor.observation_id, phase.checkpoint.observation_id))),
             "continuity": None, "grants_authority": False}
 
-    def _advance_prompt(self, work: _Work, before: EvidenceRef, after: EvidenceRef) -> _PromptPhase | None:
+    def _advance_prompt(self, work: _Work, before: EvidenceRef, after: EvidenceRef,
+                        *, action: str | None = None) -> _PromptPhase | None:
         phase = self._prompt_guard(work.request, before)
         if phase is None:
             return None
-        advanced = replace(phase, checkpoint=after)
+        quantity_editor = phase.quantity_editor
+        if self._ledger.request(phase.root_id)["request"].get("skill_kind") == "item":
+            entering_editor = (self._store.observation(before)["category"] != "STRING_INPUT"
+                               and self._store.observation(after)["category"] == "STRING_INPUT")
+            if entering_editor:
+                if (work.request["skill_kind"] != "item" or work.request["goal"]["step"] != "select"
+                        or action != "MARK_WITH_COUNT"):
+                    raise ControlError("Item quantity editor lacks its exact returned count-opening input")
+                quantity_editor = True
+            elif self._store.observation(after)["category"] != "STRING_INPUT":
+                quantity_editor = False
+        advanced = replace(phase, checkpoint=after, quantity_editor=quantity_editor)
         with self._metadata:
             self._check_cancelled(work)
             if self._prompt_phase is not phase:
@@ -638,9 +665,17 @@ class MissionRuntime:
             return {"source_ids": [phase.checkpoint.observation_id], "phase": self._exit_receipt(phase, "awaiting_control"),
                 "lifecycle_needed": True, "grants_authority": False}
         phase = self._prompt_phase
+        if (phase is not None and phase.checkpoint.boundary_kind == "activity_poll"
+                and self._ledger.request(phase.root_id)["request"].get("skill_kind") == "activity"):
+            return self._poll_activity(work)[1]
         prior = None if phase is None else self._bindings.get(phase.checkpoint.observation_id)
         self._capacity()
-        state, received = self._observe_native(work)
+        deadline = None
+        if phase is not None:
+            root = self._ledger.request(phase.root_id)
+            deadline = self._clock() + min(root["deadline"],
+                self._mission_deadline - self._admission.cleanup_reserve.wall_seconds) - self._wall()
+        state, received = self._observe_native(work, deadline_monotonic=deadline)
         normals = [r for r in self._store.historical_references if r.boundary_kind == "normal_play"]
         if state["boundary"]["kind"] == "normal_play" and (not normals or normals[-1].session != state["session"]):
             return {"source_ids": [], "lifecycle_needed": True,
@@ -699,6 +734,79 @@ class MissionRuntime:
                 result["revalidation"] = relation.to_dict()
         self._capture_memory(reference)
         return result
+
+    def _poll_activity(self, work: _Work) -> tuple[str, dict]:
+        """One bounded observation of an owned activity, never an input loop.
+
+        Ordinary native activities can continue while the model is thinking.
+        Same-session/takeover/control fences attribute fresh observations to the
+        existing root; a poll neither resumes nor certifies its semantic effect.
+        """
+        data = work.request
+        phase = self._prompt_phase
+        if phase is None:
+            raise ControlError("Activity poll requires its live root phase")
+        root = self._ledger.request(phase.root_id)
+        if root["request"].get("skill_kind") != "activity" or phase.checkpoint.boundary_kind != "activity_poll":
+            raise ControlError("Activity poll requires its actual owned activity boundary")
+        if data["kind"] == "skill":
+            self._prompt_guard(data, phase.checkpoint)
+            observed = self._store.observation(phase.checkpoint)
+            if (phase.checkpoint != self._current or phase.checkpoint.observation_id not in data["sources"]
+                    or (data["expected_session"], data["expected_revision"], data["expected_boundary_id"]) !=
+                       (phase.checkpoint.session, phase.checkpoint.revision, observed["boundary"]["id"])):
+                raise EvidenceError("Activity poll lost its exact informing checkpoint")
+        def guard() -> None:
+            self._check_cancelled(work)
+            ledger = self._ledger.snapshot(now=self._wall())
+            state, _, boot = self._check_lease()
+            if (self._prompt_phase is not phase or ledger["phase"] != "active" or ledger["unreconciled"]
+                    or (boot, self._operator_mark()[1], state["takeover_generation"], ledger["epoch"], ledger["player_id"]) !=
+                       (phase.controller_boot_id, phase.operator_generation, phase.takeover_generation, phase.epoch, phase.actor_id)):
+                raise ControlError("Activity poll crossed actor/epoch/controller/operator/native authority")
+        guard()
+        self._store.verify(phase.checkpoint)
+        deadline_wall = min(root["deadline"], self._ledger.request(data["request_id"])["deadline"],
+                            self._mission_deadline - self._admission.cleanup_reserve.wall_seconds)
+        deadline = self._clock() + deadline_wall - self._wall()
+        if deadline <= self._clock():
+            raise BudgetError("Original activity/root observation deadline exhausted")
+        self._capacity()
+        observed, received = self._observe_native(work, deadline_monotonic=deadline)
+        guard()
+        before = self._store.observation(phase.checkpoint)
+        if (observed["session"] != before["session"] or observed["paused"]
+                or observed["takeover_generation"] != phase.takeover_generation
+                or observed["boundary"]["control_generation"] != before["boundary"]["control_generation"]
+                or observed["boundary"]["kind"] not in ("activity_poll", "menu", "normal_play")):
+            raise ControlError("Activity observation changed session/Pause/control or unsupported boundary")
+        reference = self._ingest(observed, received)
+        self._publish_source(reference, authoritative=reference.boundary_kind in ("menu", "normal_play"))
+        advanced = replace(phase, checkpoint=reference)
+        with self._metadata:
+            self._check_cancelled(work)
+            if self._prompt_phase is not phase:
+                raise ControlError("Activity poll superseded by Pause")
+            self._prompt_phase = None if reference.boundary_kind == "normal_play" else advanced
+        stage = ("complete" if reference.boundary_kind == "normal_play" else "activity_poll"
+                 if reference.boundary_kind == "activity_poll" else "awaiting_control")
+        result = {"source_ids": [reference.observation_id], "phase": self._prompt_receipt(advanced, stage),
+            "proposals": 0, "pending_logical_id": None, "verification_required": True,
+            "basis": "registered_action", "grants_authority": False,
+            "reason": "Owned activity observed; actual progress/output/rest requires player interpretation"}
+        self._record("mission_activity_observation", {"root_id": phase.root_id,
+            "before": phase.checkpoint.observation_id, "after": reference.observation_id, "grants_authority": False})
+        try:
+            self._game_guard(phase.game_anchor, root["request"]["limits"]["game_seconds"], after=True)
+            if data["kind"] == "skill":
+                self._game_guard(phase.game_anchor, data["limits"]["game_seconds"], after=True)
+            if self._game_cost is None or self._game_cost > self._admission.limits.game_seconds:
+                raise BudgetError("Observed mission game time unavailable or exceeded")
+        except BudgetError as exc:
+            result["budget_stop"] = str(exc)
+            self._stop_after_failure(str(exc))
+        self._capture_memory(reference)
+        return "partial", result
 
     def _context(self, work: _Work) -> dict:
         data = work.request
@@ -1522,7 +1630,7 @@ class MissionRuntime:
         if not fresh:
             self._store.verify(original)
             self._capacity()
-            state, received = self._observe_native(work)
+            state, received = self._observe_native(work, deadline_monotonic=self._deadline(work, original))
             current = self._ingest(state, received)
             refreshed = self._binding(current)
             relation = SourceRevalidation(binding, refreshed, "exact_png_bytes" if data["perception"] is not None else "native_state")
@@ -1553,12 +1661,12 @@ class MissionRuntime:
                 outcome = skill.accept(feedback, self._store, **self._clocks())
                 if (feedback.transport_disposition == "returned" and feedback.after is not None and phase is not None
                         and (outcome is None or outcome.disposition != "unknown")):
-                    receipt_phase = self._advance_prompt(work, proposal.before, feedback.after)
+                    receipt_phase = self._advance_prompt(work, proposal.before, feedback.after, action=proposal.action)
                     phase = self._prompt_phase
                 if outcome is None:
                     self._publish()
                     continue
-                if (data["skill_kind"] == "interact" and outcome.disposition == "partial"
+                if (data["phase_id"] is None and data["skill_kind"] in ("interact", "item", "activity", "inspect") and outcome.disposition == "partial"
                         and feedback.transport_disposition == "returned" and feedback.after is not None):
                     receipt_phase = self._open_prompt(work, original, feedback.after, mark)
             result = self._control_result(outcome)
@@ -1661,7 +1769,9 @@ class MissionRuntime:
                     return "blocked", {"reason": "Navigation Work coordinate scope differs"}
             if work.request["skill_kind"] == "navigate":
                 return self._navigate(work)
-            if work.request["skill_kind"] in ("menu", "edit", "interact"):
+            if work.request["skill_kind"] == "activity" and work.request["goal"]["step"] == "poll":
+                return self._poll_activity(work)
+            if work.request["skill_kind"] in ("menu", "edit", "interact", "item", "activity", "inspect"):
                 return self._semantic(work)
         if kind in ("handoff", "claim", "readmit"):
             return self._handoff(work)

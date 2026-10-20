@@ -44,7 +44,10 @@ ownership and observer visibility feed one [supply-and-shelter acceptance #144](
 then a [fresh seven-day assessment #145](https://github.com/CVX-Hull/enactive/issues/145)
 with the engineering lead outside gameplay. Reviewed component readiness permits
 shared native validation; the mission does not wait for component issue closure.
-The sole live ingress is now mission/4. Start/Observe remain read-only until the
+The current source ingress is mission/5, with coordinated item/activity/inspection
+records and rejection of prior contracts. Native capability qualification remains
+separate from source integration.
+Start/Observe remain read-only until the
 registered lifecycle proves owned world/character; no unrelated running game can
 seed identity or mission time. Owned launch and untouched-menu normal exit are now
 qualified for the bounded untouched-menu Yes path, retaining the first failure,
@@ -78,6 +81,53 @@ architecture or model comparisons. #75 owns finite workflow/control maintenance;
 #40 retains broader monitoring scope. Research review remains October24,2026 and
 control maintenance keeps January15,2027 and earlier event triggers. The public
 Project owns changing estimates and Status/Horizon, not this evidence map.
+
+## Selected independent-player iteration
+
+Deliver one integrated supply-and-shelter mission (#144), followed by #145's
+readiness decision and prospective fresh seven-day plan. Keep the existing active
+goal and original costs; do not restart design, add another tracker or turn each
+component into a separate demonstration. GitHub Issues own the current briefs and
+estimates. This sequence explains the dependencies rather than duplicating status:
+
+| Sequence | Outcome and owner |
+| --- | --- |
+| Compose selected skills (#151/#152/#141) | Lead integrates typed item counts/units and quantity editing, bounded activity polling/interruption/resumption, inspection and source-linked assessment. Confirming a selection is delivery, not acquired stock or completed rest. |
+| Exercise memory and lifecycle (#140/#142/#155) | Player records corrections and unfinished Work, retrieves relevant evidence, normally saves/reloads and hands off to an actual fresh context. Source mechanics already exist; real use remains unqualified. |
+| Make progress reviewable (#143/#154) | Observer exposes objective, active skill, memory provenance, uncertainty, interventions and measured costs without becoming another executor. |
+| Freeze readiness (#156) | Lead verifies one coherent reviewed candidate, native character lifecycle/control, permission access and finite deciding/cleanup limits. Components need not close before shared validation. |
+| Demonstrate independence (#157/#144) | One designated player owns meaningful travel/replanning, supplies, shelter/rest and normal lifecycle. Lead observes; independent review checks intervention and outcome evidence. |
+| Decide the next campaign (#145) | Use actual mission throughput and failures to prepare a bounded fresh seven-day run, or name concrete owned blockers. A short mission does not accept seven-day independence. |
+
+The first run's 2,109 whole inputs, including 171 lifecycle inputs, motivate composed
+skills; they are not model-call counts or a measured speedup baseline. Its water
+and craft corrections require distinguishing produced, pending storage, carried,
+consumed and historical stock. Its rest timeout requires keeping unknown delivery
+separate from later observed effects. Retrieve memory at planning, changed-state,
+correction and handoff boundaries; do not introduce a critic or retrieval call per
+key. Retained facts cannot authorize an input. General lesson promotion or training
+is separate from campaign fact correction.
+
+Activity interruption/resumption and common outcome/recovery remain unfinished.
+Selected item/count/inspection and one-observation activity polls compose in source.
+#144 records the exact source/test checkpoint, including outstanding failures;
+resolve and review this scope before pulling more implementation work. Publish the
+single contract only after callers, persistence validation, tests and current
+documentation agree. Component tests do not establish native acceptance.
+
+The lead owns contracts/runtime/ledger and the sole native runtime. Existing item
+policy and activity transport workers have finished their assigned paths; further
+implementation delegation needs a new frozen, disjoint brief, with at most two
+isolated worktree writers. Read-only memory/backlog/skill audits can run in parallel;
+independent reviewers challenge authority and semantic outcomes. During deciding
+play, one player and a later clean-context successor own inputs; any curator stays
+read-only and optional. No worker changes the shared game, saves or build.
+
+Keep the aggregate L/Low and its bounded children; original effort ranges are
+planning assumptions, not evidence of remaining duration. Reforecast at the next
+coherent source checkpoint and again from native preflight, including review,
+rework and cleanup. No credible calendar or whole-run latency estimate exists yet.
+The public Project carries that uncertainty, current stages and next actions.
 
 ## Execution ownership
 

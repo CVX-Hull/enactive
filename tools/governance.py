@@ -286,7 +286,9 @@ def check_protocol(root: Path) -> list[str]:
              "server advertisement": dict_protocols(server), "CLI discovery validator": discovery_versions,
              "stored request validator": stored_versions, "viewer validator": viewer_versions,
              "evidence validator": evidence_versions, "docs/protocol.md": docs}
-    expected_counts = {"native integer validators": 2, "controller send": 2, "controller validator": 2, "stored request validator": 2, "viewer validator": 2}
+    # Ordinary exchange, operator recovery and trusted mission recovery each
+    # construct the same current native envelope; none is a fallback transport.
+    expected_counts = {"native integer validators": 2, "controller send": 3, "controller validator": 2, "stored request validator": 2, "viewer validator": 2}
     errors = []
     if validator:
         errors.append("native protocol uses the removed coercive get_int form; review integer validator")

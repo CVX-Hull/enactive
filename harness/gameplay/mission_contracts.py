@@ -1,4 +1,4 @@
-"""Strict mission/4 data. Parsing never grants a controller capability.
+"""Strict mission/5 data. Parsing never grants a controller capability.
 
 The existing JSON decoder/schema helpers own duplicate, finite-number and strict
 integer validation. Request dictionaries are decoded copies, not mutable aliases.
@@ -15,7 +15,7 @@ from .contracts import (
     json_object, validate_json,
 )
 
-VERSION = "mission/4"
+VERSION = "mission/5"
 MEMORY_VERSION = "campaign-memory/2"
 MAX_REQUEST_BYTES = 65_536
 MAX_CONTEXT_BYTES = 32_768
@@ -77,7 +77,16 @@ _SKILL_LIMITS = _object({"primitives": _integer(32, 1), "wall_seconds": _number(
 _LIFECYCLE_LIMITS = _object({"primitives": _integer(256, 1), "wall_seconds": _number(1800),
                              "game_seconds": _integer(43_200, 1)})
 _VIEW_BASE = {"source_id": _ID, "basis": {"const": "player_interpretation"}}
+_ITEM_UNIT = _enum("items", "charges")
 _VIEWS = {
+    "item_selection": _object({**_VIEW_BASE, "kind": {"const": "item_selection"},
+        "control": {"const": "vertical"}, "mode": _enum("single", "multi"),
+        "rows": _array(_object({"label": _text(1024), "enabled": {"type": "boolean"},
+            "available_quantity": _nullable(_integer(9999)), "quantity_unit": _ITEM_UNIT,
+            "chosen_quantity": _nullable(_integer(9999))}), 32, 1),
+        "selected": _nullable(_integer(31)), "selection_coverage": _enum("all_selected", "visible_only"),
+        "selected_items": _array(_object({"label": _text(1024), "quantity": _integer(9999, 1),
+                                          "quantity_unit": _ITEM_UNIT}), 32)}),
     "menu": _object({**_VIEW_BASE, "kind": {"const": "menu"},
         "control": _enum("vertical", "horizontal", "tabs", "columns"),
         "rows": _array(_object({"label": _text(1024), "enabled": {"type": "boolean"}}), 32, 1),
@@ -96,10 +105,13 @@ _GOALS = {
                        "outcome": _enum("focused", "activated", "inspected", "dismissed")}),
     "item": _object({"purpose": _enum("pickup", "consume", "drop", "store"),
                        "label": _text(1024), "quantity": _integer(9999, 1),
+                       "quantity_unit": _ITEM_UNIT, "step": _enum("start", "select", "commit"),
                        "outcome": _enum("acquired", "consumed", "stored", "dropped")}),
     "activity": _object({"operation": _enum("wait", "rest", "craft"),
                            "target": _text(1024), "game_seconds": _integer(43_200, 1),
-                           "interrupt": {"type": "boolean"}}),
+                           "interrupt_allowed": {"type": "boolean"},
+                           "step": _enum("start", "poll", "interrupt", "answer_interrupt", "resume"),
+                           "answer": _nullable(_enum("YES", "NO")), "interrupt_request_id": _nullable(_ID)}),
     "inspect": _object({"purpose": _enum("inventory", "consume", "needs", "look", "messages", "map", "character_identity")}),
     "edit": _object({"purpose": _enum(*EDITOR_PURPOSES),
         "text": {**_text(24), "pattern": r"^[A-Za-z0-9 _-]+$"}, "commit": {"type": "boolean"}}),
@@ -188,6 +200,11 @@ _PROMPT_RECEIPT = _object({
     "operator_pause_generation": _integer(), "takeover_generation": _integer(),
     "source_ids": {**_IDS, "minItems": 1}, "continuity": {"type": "null"},
     "grants_authority": {"const": False},
+})
+_SEMANTIC_PHASE_RECEIPT = _object({
+    **_PROMPT_RECEIPT["properties"], "phase_kind": _enum("item", "activity", "inspect"),
+    "operation": _text(128),
+    "stage": _enum("awaiting_control", "activity_poll", "interrupt_confirmation", "awaiting_readmission", "complete", "unknown"),
 })
 _EXIT_PHASE_RECEIPT = _object({
     **_PROMPT_RECEIPT["properties"], "phase_kind": {"const": "lifecycle"},
@@ -288,18 +305,23 @@ def validate_prompt_result(value: dict, *, request: dict, root: dict, actor_id: 
     """Closed ordinary/lifecycle audit data; never restore a live phase."""
     lifecycle = type(value) is dict and value.get("phase_kind") == "lifecycle"
     exit_schema = _SAVED_EXIT_PHASE if lifecycle and value.get("no_save_required") is False else _EXIT_PHASE_RECEIPT
-    schema = (exit_schema if value.get("operation") == "exit" else _NORMAL_LIFECYCLE_PHASE) if lifecycle else _PROMPT_RECEIPT
+    schema = ((exit_schema if value.get("operation") == "exit" else _NORMAL_LIFECYCLE_PHASE) if lifecycle else
+              _PROMPT_RECEIPT if value.get("phase_kind") == "interact" else _SEMANTIC_PHASE_RECEIPT)
     data = _decode(value, schema)
     valid_root = (root["kind"] == "lifecycle" and root["operation"] in ("exit", "create", "save", "load") if lifecycle else
-                  root["kind"] == "skill" and root["skill_kind"] == "interact")
-    operation = root.get("operation") if lifecycle else root.get("goal", {}).get("action")
+                  root["kind"] == "skill" and root["skill_kind"] == data["phase_kind"])
+    operation = root.get("operation") if lifecycle else root.get("goal", {}).get(
+        "action" if data["phase_kind"] == "interact" else "operation" if data["phase_kind"] == "activity" else "purpose")
     if (not valid_root or root["phase_id"] is not None
             or data["origin_request_id"] != root["request_id"] or data["operation"] != operation
             or data["epoch"] != request["epoch"] or data["actor_id"] != actor_id
             or root["mission_id"] != request["mission_id"]):
         raise ContractError("Prompt receipt contradicts its immutable root, actor or epoch")
     if request["kind"] == "observe":
-        if (lifecycle and data["stage"] == "complete" or not lifecycle and data["stage"] != "complete"):
+        activity_observation = (not lifecycle and data["phase_kind"] == "activity"
+                                and data["stage"] in ("activity_poll", "awaiting_control", "complete"))
+        if (lifecycle and data["stage"] == "complete"
+                or not lifecycle and not activity_observation and data["stage"] != "complete"):
             raise ContractError("Observe may only close an ordinary prompt")
     elif request["kind"] not in (("skill", "lifecycle") if lifecycle else ("skill",)) or (
             request["request_id"] != root["request_id"] and request["phase_id"] != root["request_id"]):
@@ -654,11 +676,23 @@ def validate_request(value: dict | str | bytes) -> dict:
                 raise ContractError("Navigation scope differs from informing evidence")
         if result["skill_kind"] == "activity" and result["goal"]["game_seconds"] > result["limits"]["game_seconds"]:
             raise ContractError("Activity target exceeds admitted skill time")
+        if result["skill_kind"] in ("item", "activity"):
+            step = result["goal"]["step"]
+            if (step == "start") != (result["phase_id"] is None):
+                raise ContractError("Semantic start requires a root; later steps require its exact phase")
+        if result["skill_kind"] == "activity":
+            answer = result["goal"]["step"] == "answer_interrupt"
+            if (answer != (result["goal"]["answer"] is not None)
+                    or answer != (result["goal"]["interrupt_request_id"] is not None)):
+                raise ContractError("Only explicit interrupt answers carry a choice and exact prompt owner")
         if result["skill_kind"] == "item":
             expected = {"pickup": "acquired", "consume": "consumed", "drop": "dropped", "store": "stored"}
             if result["goal"]["outcome"] != expected[result["goal"]["purpose"]]:
                 raise ContractError("Item purpose and outcome disagree")
         view = result["perception"]
+        if result["skill_kind"] == "item" and result["goal"]["step"] != "start" and (
+                view is None or view["kind"] != "item_selection"):
+            raise ContractError("Item selection/commit requires its exact visible selector interpretation")
         dismissing = result["skill_kind"] == "menu" and result["goal"]["outcome"] == "dismissed"
         if dismissing and (view is None or view["kind"] != "dismissal" or result["goal"]["label"] != "Cancel"):
             raise ContractError("Dismissal requires exact Cancel and its source-bound dismissal question")
@@ -667,15 +701,17 @@ def validate_request(value: dict | str | bytes) -> dict:
         if view is not None:
             if view["source_id"] not in result["sources"]:
                 raise ContractError("Interpretation must name an immutable informing source")
-            if result["skill_kind"] not in ("menu", "edit"):
-                raise ContractError("Only menu/edit controls accept visible-control interpretations")
-            if view["kind"] == "menu":
+            if result["skill_kind"] not in ("menu", "edit", "item"):
+                raise ContractError("Only menu/edit/item controls accept visible-control interpretations")
+            if view["kind"] in ("menu", "item_selection"):
                 labels = [row["label"] for row in view["rows"]]
                 if len(set(labels)) != len(labels) or (view["selected"] is not None and view["selected"] >= len(labels)):
                     raise ContractError("Menu view requires distinct visible labels and represented selection")
+            if result["skill_kind"] == "item" and (view["kind"] != "item_selection" or result["goal"]["step"] == "start"):
+                raise ContractError("Item controls require their own selector interpretation, not a start interpretation")
             if result["skill_kind"] == "menu":
-                if view["kind"] == "editor":
-                    raise ContractError("Menu cannot borrow an editor interpretation")
+                if view["kind"] not in ("menu", "direction", "confirmation", "dismissal"):
+                    raise ContractError("Menu cannot borrow another control interpretation")
                 choices = {"direction": ("North", "South", "East", "West", "Here"),
                            "confirmation": ("Yes", "No")}
                 if view["kind"] in choices and (result["goal"]["label"] not in choices[view["kind"]]

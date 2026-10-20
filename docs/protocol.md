@@ -111,7 +111,7 @@ planner and supervisor components below remain source/study tools, not another
 execution ingress. The [mission design](design/player-owned-mission.md) owns the
 chosen records, lifecycle requirements and separate native acceptance.
 
-Authenticated `POST /api/mission` accepts one strict mission/4 record, at most65536
+Authenticated `POST /api/mission` accepts one strict mission/5 record, at most65536
 UTF-8 bytes. It reuses host/origin/token and finite/duplicate-key JSON validation;
 operator command/recovery bodies keep4096-byte limits. Required fields and closed
 variants live in [mission_contracts.py](../harness/gameplay/mission_contracts.py),
@@ -125,8 +125,10 @@ anchor. Registered creation/load must establish those facts after owned launch.
 Registered creation/save/load and provisional character inspection now compose in
 source tests through the real controller, ledger and evidence archive. Quiescent
 successor handoff and deliberately charged readmission also compose in source.
-Item/activity and ordinary inspection still need adapters; normal finish now
-has source integration coverage, with native acceptance pending.
+Selected item/inspection roots, owned quantity editing and one-observation activity
+polls now compose in source. Activity interruption/resumption and common semantic
+outcome/recovery still need runtime integration; normal finish has source coverage.
+Native acceptance remains pending.
 Neither synthetic UI tests nor tests assuming identity accept an independent mission. Observe likewise cannot adopt
 an unexplained normal session. Reopening restores neither phase nor input authority.
 Interpreted tab focus excludes WORLDGEN_CONFIRM_DIALOG. NEW_CHAR_DESCRIPTION may
@@ -195,11 +197,11 @@ history but reconstructs no process handle, phase, lineage, lease or queued inpu
 Actual native creation/save/load and independent mission acceptance remain pending.
 
 `lifecycle(operation=finish)` is the sole normal finish route. Stop carries only
-its Pause reason; former Stop `finish` fields and mission/2 or mission/3 records reject. The
-current mission/4 contract migrates CLI, viewer, requests, results and fixtures
+its Pause reason; former Stop `finish` fields and mission/2, mission/3 or mission/4 records reject. The
+current mission/5 contract migrates CLI, viewer, requests, results and fixtures
 without an alias or automatic old-admission import. Native wire4, gameplay/2,
 campaign-memory/2 and archive3 remain unchanged. Prior accepted reports and raw
-mission/2 and mission/3 artifacts remain historical evidence, not current request inputs.
+mission/2, mission/3 and mission/4 artifacts remain historical evidence, not current request inputs.
 
 Finish sends no Observe, Resume or game input. It requires empty writer/controller/
 native slots, no live phase or unresolved effect, every owned launch's unique
@@ -221,6 +223,49 @@ exited child handle/owner while retaining sampled facts and receipts, permitting
 a new explicit mission. The observer distinguishes reported completion, cleanup,
 current mission phase and independent acceptance. Synthetic tests do not qualify
 native final shutdown or the independent mission.
+
+### Selected item, inspection and activity composition
+
+Mission/5 adds explicit item units (`items` or `charges`) and root/select/commit
+steps. The pure [item policy](../harness/gameplay/interactions.py) checks exact
+represented target, native row contradictions, known availability and chosen
+count. A focus batch sends at most eight observed arrows and never confirms.
+Multi-selection opens the native count field with one `MARK_WITH_COUNT`; only its
+exact returned transition gives that private item phase quantity-editor ownership.
+The pinned engine uses the same string-popup implementation for count and filter,
+so interpreting the field as a count is insufficient. Its edit must use the
+immutable root quantity; filter relabeling and ordinary menu confirmation cannot
+bypass this path. Literal editing and fresh whole-value commit are separate.
+Returning to the selector still requires fresh interpreted count/unit and complete
+selection coverage before a distinct commit. Known extra selected rows contradict
+a summary omitting them and stop confirmation. Single-selection consume supports
+one native unit. Actual acquisition, consumption or storage is not inferred.
+
+Inspection opens one registered inventory/consume/needs/look/messages/map/identity
+screen and owns its returned controls. Item, activity, inspection and interaction
+children retain the original root Work association, deadlines and cumulative input
+ceiling. Phase receipts name their actual kind/operation and restore no authority.
+A refused later proposal cannot erase an earlier delivered edit; partial effects
+still need interpretation.
+
+An activity root opens ordinary wait/sleep/craft controls. At an owned activity
+poll, a typed poll or Observe performs one deadline-bounded observation without
+input or Resume. Session, actor, epoch, operator, takeover and control generations
+must remain unchanged. Fresh progress, a native output menu or normal return may
+advance its checkpoint; ordinary input is still unavailable at a poll. Normal
+return closes the phase but proves neither sleep duration nor completed Work.
+Retain observed root/child/mission budget overshoot and actual effects. No polling
+call renews original deadlines or claims unseen elapsed game time.
+
+Trusted Python `recover_mission` supplies exact six-field transport receipts for
+paused activity interruption and its owned answer, without operator-Pause renewal,
+a lease or Resume. Native fixed expiry is checked immediately before publication;
+pure correlation captures a terminal ACK/time before acceptance or retention I/O.
+A later persistence failure stops authority without rewriting that ACK as unknown.
+Genuinely unknown delivery retains its identity and cannot be replayed. The ordinary
+operator recovery API remains separate. This transport's runtime charging/phase/
+interruption/resumption composition is still required; it is not available through
+public JSON as an alternate executor. Source tests do not qualify native gameplay.
 
 ### Quiescent player replacement
 
@@ -542,7 +587,7 @@ and journal evidence, granting no authority, replay or inferred resolution.
 
 The lead designates one general-purpose player for a finite mission. It chooses
 plans, interprets evidence, retrieves/updates memory and requests semantic skills
-and registered normal lifecycle through mission/4. The lead owns source/release
+and registered normal lifecycle through mission/5. The lead owns source/release
 acceptance, finite admission, shared runtime custody, escalation and final
 verification. It supplies no ordinary gameplay rescue in the deciding mission.
 Explorers/reviewers never send inputs. Actor names and instructions are workflow

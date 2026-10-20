@@ -22,6 +22,9 @@ uses one MissionRuntime. Owned windowed launch/untouched-menu exit passed a boun
 native retest with the first failure retained. Character creation/save/reload, quiescent retained-memory handoff, deliberate
 readmission and normal finish now compose in source tests; native character lifecycle and independent normal-game
 acceptance are still pending. Passive waypoint/planner components remain offline study tools.
+Selected item/count/inspection and bounded activity observations now compose in
+source. Native selector/editor acceptance, activity interruption/resumption and
+common semantic outcome/recovery are still required before independent play.
 
 The [seven-day functional campaign](acceptance/2026-10-19-seven-day-survival.md)
 records the same normally created Ned Meyers / Belgium, ordinary supplies and

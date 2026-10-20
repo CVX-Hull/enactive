@@ -57,7 +57,7 @@ class MissionHTTPTests(unittest.TestCase):
         return self.request("/api/status")["mission"]
 
     def record(self, kind, **changes):
-        result = dict(schema="mission/4", kind=kind, request_id=kind + "-1",
+        result = dict(schema="mission/5", kind=kind, request_id=kind + "-1",
             mission_id=self.a.mission_id, epoch=self.status()["epoch"])
         return result | changes
 
@@ -69,7 +69,7 @@ class MissionHTTPTests(unittest.TestCase):
     def settled(self, identity):
         deadline = time.monotonic() + 5
         while time.monotonic() < deadline:
-            result = self.submit(dict(schema="mission/4", kind="result", mission_id=self.a.mission_id,
+            result = self.submit(dict(schema="mission/5", kind="result", mission_id=self.a.mission_id,
                                      operation_id=identity))["operation"]
             if result["result"] is not None: return result
             threading.Event().wait(.01)
@@ -79,12 +79,12 @@ class MissionHTTPTests(unittest.TestCase):
         self.assertIsNone(self.status())
         runtime = self.server.mission
         with patch.object(runtime, "_bootstrap", side_effect=lambda work: bootstrap_core_fixture(runtime, work)):
-            self.submit(dict(schema="mission/4", kind="start", request_id="start-1", admission=self.a.to_dict()))
+            self.submit(dict(schema="mission/5", kind="start", request_id="start-1", admission=self.a.to_dict()))
             self.assertEqual(self.settled("start-1")["state"], "completed")
 
     def test_production_start_cannot_adopt_unowned_normal_play_or_dispatch(self):
         delivered = deepcopy(self.bridge.delivered)
-        self.submit(dict(schema="mission/4", kind="start", request_id="start-1", admission=self.a.to_dict()))
+        self.submit(dict(schema="mission/5", kind="start", request_id="start-1", admission=self.a.to_dict()))
         operation = self.settled("start-1")
         self.assertTrue(operation["result"]["lifecycle_needed"])
         self.assertEqual(self.status()["phase"], "admitted")
@@ -120,7 +120,7 @@ class MissionHTTPTests(unittest.TestCase):
             observed_time=dict(revision=before["revision"], turn=before["turn"]))
         self.submit(self.record("remember", entry_type="claim", entry=entry))
         self.assertEqual(self.settled("remember-1")["state"], "completed")
-        context = self.submit(dict(schema="mission/4", kind="context", handoff=None, mission_id=self.a.mission_id,
+        context = self.submit(dict(schema="mission/5", kind="context", handoff=None, mission_id=self.a.mission_id,
             scope=scope, query="water", max_bytes=32768))["context"]
         self.assertEqual(context["packet"]["claims"][0]["id"], entry["id"])
         self.assertEqual(self.status()["memory_context"], context["packet"])

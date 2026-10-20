@@ -628,7 +628,7 @@ class MissionLedger:
     @staticmethod
     def _is_phase_root(data: dict) -> bool:
         return data.get("phase_id") is None and (data["kind"] == "lifecycle"
-            or data["kind"] == "skill" and data["skill_kind"] in ("item", "activity", "interact"))
+            or data["kind"] == "skill" and data["skill_kind"] in ("item", "activity", "interact", "inspect"))
 
     def _phase_parent(self, data: dict, *, before_rowid: int | None = None) -> dict | None:
         """Validate a direct immutable accounting link, never live input authority."""
@@ -643,9 +643,17 @@ class MissionLedger:
                 or root.get("epoch") != row[3] or not self._is_phase_root(root)
                 or root["mission_id"] != data["mission_id"] or data["epoch"] < root["epoch"]):
             raise LedgerError("Phase parent identity, kind or epoch differs")
+        if data.get("work_id") != root.get("work_id"):
+            raise LedgerError("Phase child cannot replace its immutable root Work association")
         if data["kind"] == "skill":
-            if data["skill_kind"] not in ("menu", "edit", "interact", "inspect"):
+            if data["skill_kind"] not in ("menu", "edit", "interact", "inspect", "item", "activity"):
                 raise LedgerError("Phase skill child must be a direct control operation")
+            if data["skill_kind"] in ("item", "activity"):
+                kind = data["skill_kind"]
+                keys = ("purpose", "label", "quantity", "quantity_unit", "outcome") if kind == "item" else (
+                    "operation", "target", "game_seconds", "interrupt_allowed")
+                if root.get("skill_kind") != kind or any(data["goal"][key] != root["goal"][key] for key in keys):
+                    raise LedgerError("Semantic child differs from its exact immutable root goal")
             if root.get("skill_kind") == "interact" and data["skill_kind"] == "interact":
                 raise LedgerError("Ordinary interaction returns to normal play before another interaction root")
         elif data["kind"] == "lifecycle":

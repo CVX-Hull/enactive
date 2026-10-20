@@ -97,7 +97,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.fail(f"Timed out; status={self.runtime.status()}")
 
     def request(self, kind, **changes):
-        data = dict(schema="mission/4", kind=kind, request_id=kind + "-1",
+        data = dict(schema="mission/5", kind=kind, request_id=kind + "-1",
                     mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"])
         if kind == "handoff":
             data.update(unfinished_work_ids=[])
@@ -109,7 +109,7 @@ class MissionRuntimeTests(unittest.TestCase):
         return data
 
     def result(self, identity):
-        out = self.runtime.command(dict(schema="mission/4", kind="result",
+        out = self.runtime.command(dict(schema="mission/5", kind="result",
             mission_id=self.a.mission_id, operation_id=identity))
         self.assertEqual(out["status"], "accepted", out)
         return out["operation"]
@@ -122,7 +122,7 @@ class MissionRuntimeTests(unittest.TestCase):
             self.assertEqual(self.controller.execute("observe")["status"], "ready")
             self.assertEqual(self.controller.execute("resume")["status"], "ready")
             self._prepared_native = True
-        req = dict(schema="mission/4", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/5", kind="start", request_id="start-1", admission=self.a.to_dict())
         with patch.object(self.runtime, "_bootstrap", side_effect=lambda work: bootstrap_core_fixture(self.runtime, work)):
             response = self.runtime.command(req)
             self.assertEqual(response["status"], "accepted", response)
@@ -426,7 +426,7 @@ class MissionRuntimeTests(unittest.TestCase):
         initial = self.start()
         self.assertIsNone(initial["memory_context"])
         scope = dict(mission_id=self.a.mission_id, session=initial["current_source"]["session"], coordinate_epoch=0)
-        response = self.runtime.command(dict(schema="mission/4", kind="context", handoff=None, mission_id=self.a.mission_id,
+        response = self.runtime.command(dict(schema="mission/5", kind="context", handoff=None, mission_id=self.a.mission_id,
             scope=scope, query="position", max_bytes=32768))
         packet = copy.deepcopy(response["context"]["packet"])
         response["context"]["packet"]["query"] = "Modified caller copy"
@@ -565,7 +565,7 @@ class MissionRuntimeTests(unittest.TestCase):
             release.set()
             self.assertEqual(self.settled(request["request_id"])["state"], "paused")
         self.wait(lambda: self.runtime.status()["active_operation"] is None)
-        absent = self.runtime.command(dict(schema="mission/4", kind="result", mission_id=self.a.mission_id,
+        absent = self.runtime.command(dict(schema="mission/5", kind="result", mission_id=self.a.mission_id,
                                            operation_id=stop["request_id"]))
         self.assertEqual(absent["status"], "rejected")
         retry = self.request("stop", request_id="stop-new-epoch", reason=stop["reason"])
@@ -608,7 +608,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.runtime.command(req)
         self.assertEqual(self.settled("pending-work")["state"], "completed")
         Path(second["frame_path"]).unlink()
-        context_request = dict(schema="mission/4", kind="context", handoff=None, mission_id=self.a.mission_id,
+        context_request = dict(schema="mission/5", kind="context", handoff=None, mission_id=self.a.mission_id,
                                scope=scope, query="water", max_bytes=32768)
         out = self.runtime.command(context_request)
         self.assertEqual(out["status"], "accepted", out)
@@ -627,7 +627,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.start()
         source = self.runtime.status()["current_source"]
         scope = dict(mission_id=self.a.mission_id, session=source["session"], coordinate_epoch=0)
-        out = self.runtime.command(dict(schema="mission/4", kind="context", handoff=None, mission_id=self.a.mission_id,
+        out = self.runtime.command(dict(schema="mission/5", kind="context", handoff=None, mission_id=self.a.mission_id,
             scope=scope, query="water", max_bytes=32768))
         packet = out["context"]["packet"]
         decision = dict(schema="campaign-memory/2", record_type="Decision", id="decision-1",
@@ -759,7 +759,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.bridge.delivered, [])
 
     def test_paused_start_admits_without_native_resume_or_planning_binding(self):
-        req = dict(schema="mission/4", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/5", kind="start", request_id="start-1", admission=self.a.to_dict())
         self.assertEqual(self.runtime.command(req)["status"], "accepted")
         op = self.settled("start-1")
         self.assertTrue(op["result"]["lifecycle_needed"])
@@ -778,7 +778,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.controller.execute("observe")["status"], "ready")
         self.assertEqual(self.controller.execute("resume")["status"], "ready")
         delivered = copy.deepcopy(self.bridge.delivered)
-        req = dict(schema="mission/4", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/5", kind="start", request_id="start-1", admission=self.a.to_dict())
         with patch.object(self.controller, "acquire_mission", side_effect=AssertionError("Start cannot adopt identity")):
             self.assertEqual(self.runtime.command(req)["status"], "accepted")
             self.assertTrue(self.settled("start-1")["result"]["lifecycle_needed"])
@@ -793,7 +793,7 @@ class MissionRuntimeTests(unittest.TestCase):
 
     def test_missing_native_start_stays_admitted_without_launch(self):
         self.bridge.__exit__(None, None, None)
-        req = dict(schema="mission/4", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/5", kind="start", request_id="start-1", admission=self.a.to_dict())
         self.runtime.command(req)
         op = self.settled("start-1")
         self.assertTrue(op["result"]["lifecycle_needed"])
@@ -870,7 +870,7 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_crash_prepared_reopen_keeps_unknown_effect_and_no_authority(self):
         directory = self.controller.root / ".runtime" / "missions" / self.a.mission_id
         with MissionLedger(directory, admission=self.a, now=time.time()) as ledger:
-            start = dict(schema="mission/4", kind="start", request_id="start-1", admission=self.a.to_dict())
+            start = dict(schema="mission/5", kind="start", request_id="start-1", admission=self.a.to_dict())
             ledger.begin_request(start, now=time.time())
             ledger.complete_request("start-1", "completed", {"admitted": True}, now=time.time())
             ledger.activate(epoch=0, player_id=self.a.player_id, now=time.time())
@@ -977,7 +977,7 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_context_journal_failure_never_issues_a_packet_or_allows_more_work(self):
         self.start()
         source = self.runtime.status()["current_source"]
-        request = dict(schema="mission/4", kind="context", handoff=None, mission_id=self.a.mission_id,
+        request = dict(schema="mission/5", kind="context", handoff=None, mission_id=self.a.mission_id,
             scope=dict(mission_id=self.a.mission_id, session=source["session"], coordinate_epoch=0),
             query="water", max_bytes=8192)
         record = self.controller._record
@@ -1142,7 +1142,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.start()
         source = self.runtime.status()["current_source"]
         scope = dict(mission_id=self.a.mission_id, session=source["session"], coordinate_epoch=0)
-        req = dict(schema="mission/4", kind="context", handoff=None, mission_id=self.a.mission_id,
+        req = dict(schema="mission/5", kind="context", handoff=None, mission_id=self.a.mission_id,
                    scope=scope, query="water and pending work", max_bytes=8192)
         response = self.runtime.command(req)
         self.assertEqual(response["status"], "accepted", response)
@@ -1207,7 +1207,7 @@ class MissionRuntimeTests(unittest.TestCase):
         with closing(sqlite3.connect(path)) as db:
             db.execute("PRAGMA user_version=2")
         before = path.read_bytes()
-        response = self.runtime.command(dict(schema="mission/4", kind="start", request_id="start-1", admission=self.a.to_dict()))
+        response = self.runtime.command(dict(schema="mission/5", kind="start", request_id="start-1", admission=self.a.to_dict()))
         self.assertEqual(response["status"], "rejected", response)
         self.assertEqual(path.read_bytes(), before)
         self.assertEqual(self.bridge.delivered, [])
