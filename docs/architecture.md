@@ -63,6 +63,8 @@ components: [contracts](../harness/gameplay/mission_contracts.py),
 and record uncertainty; none owns input or replaces the live runtime below yet.
 Ledger format3 rejects prior databases. Its typed immutable request results retain
 one-use handoff issuance/consumption without restoring a lease or Resume on reopen.
+Unknown primitive and operation receipts share one revocation transition; a late
+receipt preserves an already recorded user/takeover Pause cause and epoch.
 Typed source revalidation distinguishes the original request evidence, a deliberately
 refreshed proposal source and the actual final-preflight source required by a
 prepared intent. These records remain data; runtime must verify live actor/lease

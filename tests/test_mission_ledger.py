@@ -534,6 +534,38 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual((state["phase"], state["epoch"]), ("paused", 1))
         with self.assertRaises(LedgerError): self.ledger.begin_request(skill(request_id="next"), now=1003)
 
+    def test_unknown_primitive_and_operation_share_one_revocation_epoch(self):
+        self.prepared(native=True)
+        self.ledger.settle_primitive("logical-1", "unknown", {"status": "timeout"}, now=1004)
+        first = self.ledger.snapshot(now=1004)
+        self.ledger.complete_request("request-1", "unknown", {"reason": "Delivery remains unknown"}, now=1005)
+        final = self.ledger.snapshot(now=1005)
+        for key in ("epoch", "phase", "pause_cause", "reason", "spent_inputs"):
+            self.assertEqual(final[key], first[key])
+        self.assertEqual(final["epoch"], 1)
+        self.assertEqual(self.ledger.request("request-1")["state"], "unknown")
+        self.assertEqual(self.ledger.primitive("logical-1")["state"], "unknown")
+        self.assertEqual(self.reopen().request("request-1")["result"], {"reason": "Delivery remains unknown"})
+
+    def test_late_unknown_receipt_preserves_user_pause_cause_and_epoch(self):
+        self.prepared(native=True)
+        paused = self.ledger.pause(cause="user", reason="User chose Pause", now=1004)
+        self.ledger.settle_primitive("logical-1", "unknown", {"status": "timeout"}, now=1005)
+        self.ledger.complete_request("request-1", "unknown", {"reason": "Unknown after Pause"}, now=1006)
+        state = self.ledger.snapshot(now=1006)
+        for key in ("epoch", "phase", "pause_cause", "reason"):
+            self.assertEqual(state[key], paused[key])
+        self.assertEqual(state["unreconciled"], 1)
+        self.assertEqual(state["spent_inputs"], 1)
+
+    def test_paused_operation_result_preserves_explicit_takeover(self):
+        self.active_request()
+        paused = self.ledger.pause(cause="takeover", reason="Native human input", now=1002)
+        self.ledger.complete_request("request-1", "paused", {"reason": "Canceled by takeover"}, now=1003)
+        state = self.ledger.snapshot(now=1003)
+        for key in ("epoch", "phase", "pause_cause", "reason"):
+            self.assertEqual(state[key], paused[key])
+
     def test_reopen_rejects_corrupt_intent_effect_result_or_reservation(self):
         self.prepared(native=True)
         self.ledger.settle_primitive("logical-1", "unknown", {"status": "timeout"}, now=1004)

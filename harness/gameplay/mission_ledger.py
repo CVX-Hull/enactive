@@ -663,7 +663,7 @@ class MissionLedger:
                 self._release(f"effect:{logical_id}")
             self._db.execute("UPDATE primitives SET state=?,result=? WHERE id=?", (disposition, encoded, logical_id))
             if disposition == "unknown":
-                if state["phase"] not in TERMINAL:
+                if state["phase"] not in TERMINAL | {"paused"}:
                     state.update(phase="paused", epoch=state["epoch"] + 1, pause_cause="unknown", reason="Unknown input; observe without replay")
                     self._put("state", state)
                 self._db.execute("UPDATE requests SET state='unknown' WHERE id=?", (p["request_id"],))
@@ -699,7 +699,7 @@ class MissionLedger:
             if disposition == "completed" and unresolved: raise LedgerError("Unresolved effects cannot silently become completion")
             self._release(f"request:{request_id}")
             self._db.execute("UPDATE requests SET state=?,result=? WHERE id=?", (disposition, encoded, request_id))
-            if disposition in ("unknown", "paused") and state["phase"] not in TERMINAL:
+            if disposition in ("unknown", "paused") and state["phase"] not in TERMINAL | {"paused"}:
                 state.update(phase="paused", epoch=state["epoch"] + 1, pause_cause="unknown",
                              reason="Operation stopped without input authority")
                 self._put("state", state)

@@ -67,6 +67,11 @@ and also pauses. Recovery, native takeover/session change, a paused native
 observation, transport failure and shutdown invalidate ownership. Resume does not
 restore a lease. Startup restores no task or capability. Native token validation
 remains the final input commit gate; an already committed action cannot be undone.
+The controller serializes durable publication, revocation and some journal writes
+under its data lock. A filesystem stall in that critical section can delay Pause;
+there is no hard response-time guarantee under disk failure. Runtime memory/model
+work must add no lock that delays revocation, and native activity cancellation
+remains separate from revoking further harness inputs.
 `execute_mission` returns an envelope containing the logical action ID, exact native
 `request` or null, `result`, `published`, original terminal
 `received_monotonic` or null, and nullable `preflight`. The latter contains the
