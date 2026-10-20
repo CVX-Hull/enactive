@@ -8,6 +8,7 @@ import threading
 import time
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 from harness.controller import Controller, atomic_json, read_json, validate_control_request
@@ -200,7 +201,9 @@ class MissionActivityControlTests(unittest.TestCase):
     def test_unknown_delivery_keeps_pending_identity_and_cannot_replay(self):
         with FakeBridge(self.controller) as fake, ControlBridge(self.controller, publish=False) as control:
             binding = self.prepare(fake)
-            receipt = self.call(binding, timeout=0.06)
+            # This scenario tests a published input with no ACK, not fast expiry.
+            # The explicit deadline test below controls short expiry separately.
+            receipt = self.call(binding)
             self.assertTrue(receipt["published"], receipt)
             self.assertEqual(receipt["result"]["status"], "unknown")
             self.assertIsNone(receipt["received_monotonic"])
@@ -217,20 +220,28 @@ class MissionActivityControlTests(unittest.TestCase):
         release = threading.Event()
         def hold_claim(*args):
             claimed.set()
-            if not release.wait(2):
+            if not release.wait(5):
                 raise AssertionError("test failed to release native claim")
         with FakeBridge(self.controller) as fake, ControlBridge(self.controller, before_gate=hold_claim) as control:
             binding = self.prepare(fake)
-            with ThreadPoolExecutor(1) as pool:
-                future = pool.submit(self.call, binding, timeout=1,
-                                     deadline_monotonic=time.monotonic() + 0.1)
+            now = [time.monotonic()]
+            deadline = now[0] + 0.1
+            clock = SimpleNamespace(monotonic=lambda: now[0], time=time.time,
+                                    sleep=time.sleep, strftime=time.strftime)
+            # Reach a known claimed boundary before advancing the controller's
+            # monotonic clock past the original deadline. Thread/watchdog clocks
+            # remain real; fsync/scheduler latency cannot consume setup time.
+            with patch("harness.controller.time", clock), ThreadPoolExecutor(1) as pool:
+                future = pool.submit(self.call, binding, timeout=1, deadline_monotonic=deadline)
                 try:
-                    self.assertTrue(claimed.wait(0.5))
-                    receipt = future.result(timeout=0.5)
+                    self.assertTrue(claimed.wait(2))
+                    now[0] = deadline + 0.001
+                    receipt = future.result(timeout=2)
                     self.assertFalse(release.is_set())
                     self.assertTrue(receipt["published"], receipt)
                     self.assertEqual(receipt["result"]["status"], "unknown")
                     self.assertEqual(self.controller.control_pending, receipt["request"])
+                    self.assertIsNone(receipt["received_monotonic"])
                 except TimeoutError:
                     self.fail("native wait renewed the original mission deadline")
                 finally:

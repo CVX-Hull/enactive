@@ -329,7 +329,8 @@ handle, retain the checkpoint, verify no queued/scheduled action and obtain expl
 quiescence. Cached status alone cannot prove the agent's queue is empty. User
 Pause/native takeover prevents automatic continuation. The registered one-use
 handoff and real fresh context must preserve original costs and retrieve retained
-memory; these adapters remain pending. Do not substitute raw inputs or lead-written
+memory; their source adapters compose, while actual fresh-context/native acceptance
+remains required. Do not substitute raw inputs or lead-written
 reconstruction to make acceptance pass. Historical operator reports remain evidence,
 not standing admissions or a second runtime mode.
 
@@ -367,8 +368,9 @@ separates implemented components from remaining independent-play acceptance.
    for effect verification and never automatically answers a new prompt. Original
    root/child limits and unknowns stay recorded. Untouched-menu exit uses its owned
    lifecycle root and an explicit interpreted confirmation child. It is not a
-   character save/exit path. Item/activity, creation/save/reload and handoff still
-   need their adapters and separate native qualification.
+   character save/exit path. Item/activity, creation/save/reload and handoff adapters
+   compose in source; actual native outcomes and independent-player qualification
+   remain required.
 7. Pause prevents further admission, without undoing an input or native activity.
    Honor user Pause/takeover; do not auto-Resume or restore a phase from disk. A
    stopped deciding attempt remains stopped. Normal cleanup, actual fresh-context

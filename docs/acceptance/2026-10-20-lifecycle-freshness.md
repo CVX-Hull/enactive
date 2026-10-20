@@ -90,3 +90,24 @@ Portable repair/review/common CI remain distinct from a new native retest. This
 failed admission is not repaired retrospectively. Actual character creation,
 save/restart/exact reload, selected item/activity outcomes, clean-context memory
 use and the independent mission remain open under their original acceptance scope.
+
+## Portable control maintenance, separate from native acceptance
+
+Two later local1090-test runs and their PR checks passed, while separate push
+checks exposed fixture timing defects: [ead8ac9 push](https://github.com/CVX-Hull/enactive/actions/runs/39437020947)
+measured177ms against an existing150ms Pause proxy; [fcf6cea push](https://github.com/CVX-Hull/enactive/actions/runs/39439412837)
+failed to reach an activity claim within its100ms deadline. These failures remain
+retained. Neither is a new native result or proof of an inspected production fault.
+
+The Pause regression now holds the actual exchange and requires HTTP Pause to
+revoke control before release. The activity regression reaches an actual held
+claim, then advances only the controller's monotonic clock past the original
+deadline; real watchdog/thread clocks remain unchanged. Independent negative
+controls deliberately serialize Pause or renew the deadline and correctly fail.
+An80ms delayed-publication probe also reproduced a60ms unknown-ACK fixture failure
+before input existed. That functional identity/no-replay test uses its existing
+ordinary timeout, with explicit short expiry tested separately. No production
+deadline, Pause fence, receipt, unknown replay rule or native binary was changed.
+The following corrected checkpoint still needs its common/exact hosted checks
+before qualification002 admission. C-PORTABLE's triggered maintenance records this
+partial effectiveness; January15 and October24 review dates are unchanged.

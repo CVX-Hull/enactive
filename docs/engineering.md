@@ -90,6 +90,10 @@ to the remaining project rules. [ADR003](decisions/003-development-controls.md) 
 [ADR004](decisions/004-documentation-controls.md) record the existing choices.
 
 Test observable contracts, adversarial transitions and meaningful regressions.
+Separate causal concurrency/deadline assertions from measured performance targets.
+Use synchronization or an isolated controlled clock so fixture setup cannot consume
+the short deadline under test; keep real bounded watchdogs and adversarial checks.
+Review these choices through C-REVIEW; C-PORTABLE executes the resulting regressions.
 Changed expectations require a contract-grounded reason, not agreement with
 newly generated output. Do not weaken a check to conceal a failure. Syntax and
 behavior checks are automated; style, typing completeness and decomposition

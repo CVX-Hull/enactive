@@ -153,6 +153,14 @@ revoke control before release, with a bounded deadlock watchdog. This verifies
 independence without treating scheduler/fsync timing as a latency guarantee.
 Production Pause is unchanged. Retain that failed CI; qualification002 remains
 unadmitted until the corrected candidate's common and exact hosted checks pass.
+That correction passed local1090tests and PR CI; its [push CI then failed](https://github.com/CVX-Hull/enactive/actions/runs/39439412837)
+before an activity fixture could claim input within100ms. The deadline regression
+now reaches an actual held claim before advancing an isolated controller clock
+past the original deadline; a renewal negative control must fail. A separate80ms
+delay probe also exposed the same setup race in the unknown-ACK fixture's60ms
+functional timeout. That identity/no-replay case uses the existing functional
+timeout while short expiry stays independently controlled. Production clocks,
+deadlines and input guards are unchanged. Both failures remain retained.
 #157/#144 require actual player-owned mission and clean-context memory use before
 #145's readiness decision. Source/fixture review is distinct from that acceptance;
 #144 owns exact checkpoint results and retained failures. Do not pull optional

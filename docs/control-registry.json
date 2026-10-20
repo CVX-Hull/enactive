@@ -196,7 +196,8 @@
         "docs/acceptance/2026-10-18-integrated-player.md",
         "docs/acceptance/2026-10-18-enactive-migration.md",
         "docs/acceptance/2026-10-18-seven-day-readiness.md",
-        "docs/acceptance/2026-10-18-walk-reassessment.md"
+        "docs/acceptance/2026-10-18-walk-reassessment.md",
+        "docs/acceptance/2026-10-20-lifecycle-freshness.md"
       ],
       "failure_response": "Preserve failure output, fix the cause and rerun before claiming portable acceptance.",
       "limitations": "Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing.",
@@ -205,22 +206,22 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-18",
-        "outcome": "Passed448 tests and common checks on32bbae6/e8840c6; retained fixture/HTTP placement failures were corrected.",
-        "scope": "Controller/HTTP stop-envelope/fresh-reassessment regressions and existing portable suite; separate native evidence is C-NATIVE.",
+        "date": "2026-10-20",
+        "outcome": "Local1090tests/common gate and PR checks passed for ead8ac9/fcf6cea; push39437020947 failed a150ms Pause timing proxy at177ms, and push39439412837 failed preclaim setup inside a100ms activity deadline. Corrections require a new exact checkpoint; failed runs remain.",
+        "scope": "Portable fixtures, not CDDA: causal HTTP Pause independence, held-claim original-deadline expiry, unknown receipt identity/no replay and existing common lane.",
         "evidence": [
-          "docs/acceptance/2026-10-18-walk-reassessment.md"
+          "docs/acceptance/2026-10-20-lifecycle-freshness.md"
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-18",
+        "date": "2026-10-20",
         "evidence": [
-          "docs/acceptance/2026-10-18-walk-reassessment.md"
+          "docs/acceptance/2026-10-20-lifecycle-freshness.md"
         ],
-        "effectiveness": "unassessed",
-        "findings": "Portable tests cover complete/zero/partial/final-step, stale/malformed/unknown evidence and Pause/queue races. Meaningful HTTP test preserves prior lease coverage; no production deadlines or guard weakening.",
-        "cost": "Existing project-local tools and one serialized runtime; one worker plus independent reviews. Two probes total17charges and856.281seconds through native closeout; review/publication continues original45-minute envelope. Model/approval spend and sustained benefit unmeasured.",
-        "follow_up": "#108 publication, then prospective #100/#82 finite campaign admission. #75 reviews restrictive wording/capture duplication at existing triggers; keep January15maintenance and October24research dates unchanged. No old attempt revival, compatibility path, broader permissions or automatic learning."
+        "effectiveness": "partially_effective",
+        "findings": "Hosted failures exposed real-time fixture setup races rather than proving production faults. Reuse threading Events and a controller-local clock namespace: Pause must finish before held exchange release; advance original activity deadline only after actual claim. Serialized-Pause/deadline-renewal negative controls reject. A separate80ms delay reproduced prepublication failure in a60ms unknown-ACK fixture; use its existing functional timeout and keep short expiry separate. C-REVIEW challenges causal versus performance assertions; no new generic test framework or weakened production guard.",
+        "cost": "Two failed hosted Python suites took331.820s and349.434s on separate runs; local suites took242.577s and247.318s. These are individual test durations, not summed delivery latency or model usage. Independent focused fault probes and source/document review; external model/tool costs unmeasured.",
+        "follow_up": "#154 owns coherent fixture/doc correction, required common/exact hosted checks and retained failures; #156 owns separate prospective native qualification002, #144 actual integrated mission, #75 control upkeep. No old attempt/cost reset or source-only native claim. January15maintenance and October24research dates unchanged."
       },
       "next_review": "2027-01-15"
     },
