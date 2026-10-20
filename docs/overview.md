@@ -16,11 +16,10 @@ explains preserved work, historical PR records and the limits of metadata remova
 An agent plays real Cataclysm: Dark Days Ahead while you watch the graphical game
 and retain control. The harness makes observations, actions and uncertainty visible.
 It needs an active Codex player to choose plans and interpret scenes. A dedicated
-player sub-agent can act as a bounded campaign operator while the lead supervises;
-the waypoint planner has a separate candidate-only role.
-The service executes an explicitly started waypoint task with per-step feedback;
-without a player response it stops on a deadline. General survival planning comes
-from the active Codex player.
+player sub-agent owns planning, memory use and typed semantic requests within a
+finite mission. The lead owns source integration and acceptance. The live service
+uses one MissionRuntime; owned lifecycle and independent normal-game acceptance
+are still pending. Passive waypoint/planner components remain offline study tools.
 
 The [seven-day functional campaign](acceptance/2026-10-19-seven-day-survival.md)
 records the same normally created Ned Meyers / Belgium, ordinary supplies and
@@ -56,15 +55,16 @@ defines the rule and its enforcement.
 
 Current system context: **who decides, what you see, and where you retain control**.
 
-![Player responsibilities: one campaign operator or the leased waypoint service sends input, with explicit handoff and user Pause.](diagrams/player.svg)
+![One designated player uses memory and semantic skills through the mission writer; the user retains Pause.](diagrams/player.svg)
 
-Boxes show responsibilities, not separate model tiers. The harness contains the
-run service, controller and spectator; the native bridge runs inside CDDA. A player
-sub-agent keeps gameplay context separate from engineering work. A designated
-operator uses ordinary input checked by the controller under a finite brief; a waypoint planner
-submits candidate data for the leased service to execute. Only one arrangement
-owns input at a time. Actor assignment is procedural; it does not isolate inherited
-tools. [Editable diagram](diagrams/player.mmd), [handoff contract](protocol.md#designated-campaign-operator).
+Boxes show responsibilities, not separate model tiers. The player interprets
+visible evidence and requests semantic operations. The mission writer accounts
+for their original limits and checks live authority through the controller and
+native bridge. Historical memory supports decisions but cannot authorize input.
+The lead reviews engineering and admission; it is not the deciding player's
+ordinary gameplay fallback. Owned lifecycle and actual fresh-context continuity
+remain acceptance gates. [Editable diagram](diagrams/player.mmd),
+[actor contract](protocol.md#designated-campaign-operator).
 
 CDDA decides game outcomes. The controller checks whether a requested input is
 allowed in the observed state. The viewer shows actual game frames and control
@@ -82,11 +82,11 @@ explain why native integration was selected and when we would reconsider it.
 | Planner round trips | One real three-tile comparison used three individual decisions versus one guarded request, retaining per-step checks; not a general speed or safety result | [Timing trial](acceptance/2026-10-17-completion.md#fresh-real-game-timing-probe) |
 | Input authority and takeover | The accepted native-v3 baseline distinguishes ordinary play, menus, activity polls and debug prompts; revoked tokens and old worlds are rejected. Already-committed actions and activities cannot be undone by Pause | [Recovery acceptance](acceptance/2026-10-17-recovery-memory.md) |
 | Retained gameplay evidence and memory | First-campaign traces and reviewed source underpin the new memory/navigation components. Wire4 menu preflight is exercised; independent memory continuity and normal-game wire4 validation remain pending | [Component probe](acceptance/2026-10-20-native-presentation.md), [current evidence contract](protocol.md#passive-gameplay-records-and-evidence) |
-| Mission skill composition | Source integration shares navigation, native menu focus, interpreted controls and bounded text entry through one writer; ordinary prompts preserve original limits. Live ingress, lifecycle and independent mission acceptance remain pending | [Architecture](architecture.md), [mission design](design/player-owned-mission.md#unconnected-runtime-core) |
+| Mission skill composition | Source integration shares navigation, native menu focus, interpreted controls and bounded text entry through one writer; ordinary prompts preserve original limits. One typed ingress and cached historical memory observer are connected; lifecycle and independent mission acceptance remain pending | [Architecture](architecture.md), [mission design](design/player-owned-mission.md#integrated-runtime-and-admission-gate) |
 | Passive movement skills | One proposed step at a time with cumulative route history; version 3 separates reached-target verification from eligibility for another step | [Skill contract](protocol.md#passive-bounded-movement-skills) |
-| Run input ownership | Explicit task owns input; competing remote inputs reject; Pause revokes further dispatch, with controller disk-stall limits | [Ownership contract](protocol.md#controller-run-ownership) |
-| Waypoint task supervision | Explicit start, fresh stage planning, verified steps, visible stops and continuation with original history/budgets | [Supervisor contract](protocol.md#passive-waypoint-supervision) |
-| Player planning handoff | Active-chat player returns bounded candidates; slow decisions require fresh evidence revalidation. Missing/stale replies stop; chat usage remains unmeasured | [Planner contract](protocol.md#bounded-injected-planner) |
+| Mission input ownership | Nonterminal mission owns HTTP observation/input; exact controller lease gates dispatch; Pause remains available, with disk-stall limits | [Ownership contract](protocol.md#controller-run-ownership) |
+| Passive waypoint supervision | Retained offline library and historical probes; no live task endpoint | [Supervisor contract](protocol.md#passive-waypoint-supervision) |
+| Passive planner handoff | Candidate-only study component; current mission player chooses typed operations and interprets outcomes; chat usage remains unmeasured | [Planner contract](protocol.md#bounded-injected-planner) |
 | Dedicated gameplay operator | Bounded ordinary campaign play with lead admission, corrections and terminal handoffs; no general survival guarantee | [Campaign evidence](acceptance/2026-10-19-seven-day-survival.md) |
 | Evaluation records | Passive versioned outcome/cost recorder and offline summaries; external planning and future adapters are not automatically measured | [Evaluation guide](evaluation.md) |
 | Unattended survival service | Not implemented; an active Codex player remains the planner | [Current scope](architecture.md#scope-and-responsibilities) |

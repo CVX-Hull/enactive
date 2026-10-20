@@ -13,7 +13,7 @@ task admission, shared runtime and acceptance. This delivers the bounded runtime
 [#52](https://github.com/CVX-Hull/enactive/issues/52) and spectator
 [#23](https://github.com/CVX-Hull/enactive/issues/23) together under
 [the brief](../changes/012-integrated-player.md). The
-[current protocol](../protocol.md#integrated-gameplay-lifecycle) owns behavior;
+[current protocol](../protocol.md#integrated-mission-lifecycle) owns behavior;
 [this manifest](2026-10-18-integrated-player-manifest.json) identifies local evidence.
 
 ## Source and independent review

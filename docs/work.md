@@ -44,9 +44,10 @@ ownership and observer visibility feed one [supply-and-shelter acceptance #144](
 then a [fresh seven-day assessment #145](https://github.com/CVX-Hull/enactive/issues/145)
 with the engineering lead outside gameplay. Reviewed component readiness permits
 shared native validation; the mission does not wait for component issue closure.
-The current execution contract below remains in force until a reviewed migration.
-The [proposed mission design](design/player-owned-mission.md) defines that migration
-and bounded acceptance; the [trace pilot](acceptance/2026-10-19-memory-trace-pilot.md)
+The sole live ingress is now mission/2. Start/Observe remain read-only until the
+registered lifecycle proves owned world/character; no unrelated running game can
+seed identity or mission time. The [mission design](design/player-owned-mission.md)
+defines the remaining lifecycle, fresh-context and bounded acceptance work; the [trace pilot](acceptance/2026-10-19-memory-trace-pilot.md)
 records actual source/interpretation limits. Neither page claims runtime delivery.
 
 An [optional read-only curator #146](https://github.com/CVX-Hull/enactive/issues/146)
@@ -59,7 +60,7 @@ Project owns changing estimates and Status/Horizon, not this evidence map.
 
 ## Execution ownership
 
-The lead owns design, finite admission, the shared runtime/save/port, lifecycle, escalation, finding adjudication and final verification. A designated general-purpose campaign operator may own ordinary input under the [bounded actor/handoff contract](protocol.md#designated-campaign-operator). The leased waypoint planner remains candidate-only. A recorded objective or a running chat is not an execution lease.
+The lead owns design, finite admission, the shared runtime/save/port, source integration, escalation, finding adjudication and final verification. One designated general-purpose player requests semantic skills, memory and normal lifecycle under the [bounded actor/handoff contract](protocol.md#designated-campaign-operator). The passive waypoint planner remains candidate-only and has no live ingress. A recorded objective or a running chat is not an execution lease.
 
 One actor owns input at a time. Handoff requires Pause, completion of every tool handle, a referenced checkpoint, no queued/scheduled input and empty live slots. The next actor receives explicit bounded authority, fresh interpreted evidence and deliberate Resume. Status alone cannot prove an empty external tool queue. Read-only source/evidence review can run alongside gameplay; competing executors and changes to the admitted runtime cannot.
 

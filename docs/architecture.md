@@ -6,14 +6,15 @@ status: active
 
 # Current architecture
 
-Current source contract: native-v4 recovery, bounded gameplay and passive mission
-foundations. Native-v4 build/graphical validation remains an explicit separate gate
-in #153/#150/#144; the installed wire3 binary must be rebuilt before using this
-source candidate. Mission ownership, campaign memory and semantic skills are still
-tracked implementation work, not accepted autonomous gameplay. The
-[foundation acceptance](acceptance/2026-10-17-foundation-implementation.md) records
-fresh windowed native-v2 probes and separately scoped portable evidence tests.
-[MVP acceptance](acceptance/2026-10-17-mvp.md) remains historical v1 evidence.
+Current source contracts are native4, mission/2, campaign-memory/2, gameplay/2,
+evidence archive3 and mission ledger6. One MissionRuntime owns the live mission API.
+The wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
+normal-game lifecycle and independent mission acceptance remain separate gates.
+Start is read-only and cannot adopt an unrelated already-running character. The
+registered lifecycle must verify owned launch and admitted world/character before
+normal-play authority or a game-time anchor can be established. This is not yet an
+accepted autonomous survival service. Earlier [foundation](acceptance/2026-10-17-foundation-implementation.md)
+and [MVP](acceptance/2026-10-17-mvp.md) reports retain their dated contract scopes.
 Protocol version: 4.
 
 ## Coordinated change
@@ -29,103 +30,76 @@ Historical artifacts are retained as evidence without being accepted as runtime 
 ## Scope and responsibilities
 
 The [overview](overview.md) provides the user-facing system picture. One local
-macOS game and one controller are supported. Codex in an active chat is the
-planner, with a designated campaign operator or a waypoint planning sub-agent under
-the [single-executor procedure](protocol.md#designated-campaign-operator). The service executes
-explicitly admitted waypoint tasks with feedback; general autonomous survival and
-other hosts remain unverified. Normal
-windowed operation and project isolation are [charter constraints](charter.md).
+macOS game and one controller are supported. The designated active Codex player
+chooses plans, interprets visible outcomes and requests bounded semantic operations.
+It uses the single [mission ingress](protocol.md#integrated-mission-lifecycle).
+The lead owns admission, source integration and final verification. The user retains
+Pause and native takeover. Role assignment is procedural, not operating-system isolation.
 
 | Boundary / owner | Input and output | Authority and failure behavior |
 | --- | --- | --- |
-| Lead / active Codex chat | User objective → bounded admission, supervision and deliberate takeover | Owns source/game/service and verification; schedules one executor; Pause/quiescent handoff before inspection; no automatic restart |
-| Campaign operator / designated general-purpose sub-agent | Visible evidence → ordinary operator commands and assessed outcomes | Explicit finite segment only, no waypoint lease; existing CLI/controller checks; cooperative actor assignment is not an exclusive external capability or OS isolation |
-| Waypoint planner / dedicated sub-agent | Bounded retained visible evidence → stage candidate | Candidate data only; no raw input, task start or lifecycle ownership; missing/late planner stops; roles need not be different model tiers |
-| Gameplay runtime / harness maintainer | Task and candidate → verified skill progress and public status | Sole run worker; exact controller lease and native receipt mapping; fresh revalidation after planning; original budgets and unknown effects preserved |
-| Controller / harness maintainer | Observed-state-bound commands → validated bridge requests, results and journal | One process with separate serialized gameplay and recovery writers; explicit mission lease; process lock; deadlines; pause revokes ownership and freezes dispatch; never mutates saves or game state |
-| Native bridge / integration maintainer | Bounded requests → actual input events, metadata and rendered frames | Game thread only; engine validates outcomes; session/revision/expiry checks; unsupported input boundaries cannot claim success |
-| Spectator / viewer maintainer | Frames and state → display and operator controls | Input authority only after matching current image decodes; stale state stays visible; browser controls require origin/token validation |
-| Gameplay evidence and memory / harness maintainer | Native observations → retained original frames and bounded typed task views | Passive only; validates provenance, freshness, source disputes and invalidation generations; never dispatches or promotes historical facts into current authority |
-| Setup / build maintainer | Pinned sources and existing toolchain → isolated app and manifest | Explicit stages, checksums and ownership; failures stop the stage; no global installation or automatic launch |
+| Lead / active Codex chat | Objective → frozen admission, reviewed source and acceptance | Owns shared runtime and integration; no ordinary gameplay rescue in the deciding mission |
+| Designated player / general-purpose agent | Visible evidence and memory → typed mission requests, plans and verification | One bounded actor; fresh-context handoff needs quiescence and one-use accounting; no authority from a summary |
+| Mission runtime / harness maintainer | mission/2 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
+| Controller / harness maintainer | State-bound command → native request and correlated receipt | Serialized ordinary/control writers, exact process-local lease, Pause revocation and native fences; never edits saves |
+| Native bridge / integration maintainer | Bounded request → actual input, visible metadata and rendered frame | Engine validates outcomes on its game thread; unsupported boundaries cannot claim success |
+| Spectator / viewer maintainer | Frame and mission snapshot → inspectable progress, uncertainty and Pause | Mission Observe uses typed ingress; raw input/Resume/recovery disabled while nonterminal; malformed state stays locked |
+| Campaign evidence and memory / harness maintainer | Original sources → bounded claims, unfinished Work and context packet | SQLite journal and retained frames; corrections/loss prevent resurrection; historical facts never become current input authority |
+| Owned-process adapter / harness maintainer | Fixed prepared wrapper → retained child and process facts | No arbitrary command, PID adoption or signal interface; process exit alone proves neither save nor identity |
+| Setup / build maintainer | Pinned sources/toolchain → isolated app and manifest | Windowed, explicit project userdir; no global installs or automatic game launch |
 
-These roles may be held by one maintainer. Ownership names describe accountability,
-not extra services or a requirement for additional people. Implementation paths:
+Implementation: [mission runtime](../harness/mission_runtime.py),
+[contracts](../harness/gameplay/mission_contracts.py), [ledger](../harness/gameplay/mission_ledger.py),
+[campaign memory](../harness/gameplay/campaign_memory.py),
+[navigation](../harness/gameplay/navigation.py), [native-row menus](../harness/gameplay/interaction.py),
+[interpreted controls](../harness/gameplay/semantic_controls.py),
 [controller](../harness/controller.py), [server](../harness/server.py),
 [native bridge](../native/cdda_harness.cpp), [viewer](../web/app.js),
-[gameplay records](../harness/gameplay/contracts.py),
-[evidence store](../harness/gameplay/evidence.py), [task memory](../harness/gameplay/memory.py), [setup](../tools/setup.py).
+[evidence store](../harness/gameplay/evidence.py), [owned process](../harness/native_process.py).
 
-The [mission design](design/player-owned-mission.md) also has passive source
-components: [contracts](../harness/gameplay/mission_contracts.py),
-[SQLite accounting](../harness/gameplay/mission_ledger.py),
-[observed navigation](../harness/gameplay/navigation.py) and
-[campaign memory](../harness/gameplay/campaign_memory.py), plus the bounded
-[native-row menu policy](../harness/gameplay/interaction.py). They produce bounded data
-and record uncertainty; none owns input or replaces the live runtime below yet.
-Ledger format6 rejects prior databases. Its typed immutable request results retain
-one-use handoff issuance/consumption without restoring a lease or Resume on reopen.
-Resume is a distinct primitive with no action/key value and an admitted lifecycle
-parent. It uses the same prepublication intent, receipt reservation and input cost
-as ordinary inputs. A crash preserves its uncertainty and charge without replay.
-Unknown primitive and operation receipts share one revocation transition; a late
-receipt preserves an already recorded user/takeover Pause cause and epoch.
-Typed source revalidation distinguishes the original request evidence, a deliberately
-refreshed proposal source and the actual final-preflight source required by a
-prepared intent. These records remain data; runtime must verify live actor/lease
-and generation bindings before input.
-The unconnected [mission runtime core](../harness/mission_runtime.py) composes
-these components but has no live server ingress yet. Start/Observe never launch
-or Resume; missing semantic/lifecycle adapters block explicitly. The controller's
-trusted mission Resume boundary returns the same correlated receipt as ordinary
-mission inputs, with an original deadline and final-preflight callback before
-publication. Its paused-frame, pause-origin and unchanged-sentinel checks are
-controller preflight conditions. Native commit retains its existing authority,
-session/revision/boundary/takeover/frame/deadline fences; diagnostic pause origin
-is not a new native compare-and-swap field.
-The host separately counts operator Pause and internal authority revocations.
-Trusted mission Resume compares the captured operator counter and controller boot
-as well as the current general generation. An expected lifecycle revocation cannot
-silently erase an intervening user Pause. Internal stops revoke just as promptly;
-the distinction is not a new native field or JSON-selectable Pause origin.
-The menu policy uses attested visible uilist rows and registered focus actions,
-with one final CONFIRM followed by required player verification. Native focus may
-complete without confirmation. Mission/2 carries closed fallible
-control interpretations and explicit Work/phase associations; passive editing/image
-control [policy](../harness/gameplay/semantic_controls.py) now shares the unconnected
-mission writer's dispatch with navigation and native-row controls. An ordinary
-interact request can own one private prompt; explicit menu/edit children keep its
-original input/time ceilings and live actor/epoch/Pause/checkpoint fences. Exact
-equivalent Observe can record a typed source revalidation; changed evidence stops.
-Normal return closes the prompt without proving the intended game effect. Typed
-PhaseReceipt audit data is checked on completion/reopen and restores no authority.
-Retained menu inspection does not grant normal-scene eligibility to memory or movement.
-Item/activity/lifecycle adapters and live ingress remain pending. Inventory multiselect and quantities above one
-remain unsupported by that source component. A highlighted inventory row does
-not prove a chosen item or amount, and confirmation delivery does not prove the
-player's semantic objective.
-The unconnected [owned-process adapter](../harness/native_process.py) launches only
-the fixed prepared exec wrapper after checking root binding, installed binary and
-windowed configuration. It retains the native child across timeout/cancellation,
-accepts no process ID or signal request, and reports process facts separately from
-save/identity/mission outcomes. Runtime lifecycle still must establish fresh native
-readiness and normal exit evidence. Its shared script generator is also used by
-preparation; source tests do not qualify the new adapter in real gameplay.
-The canonical evidence archive can retain an equivalent final preflight without
-promoting it to current or changing navigation's generation. Native-state equality
-requires positively attested scene/menu content; exact-PNG equality also checks
-verified encoded bytes. Neither historical comparison grants freshness or a lease.
-Runtime/native and actual fresh-player acceptance remain separate delivery gates.
+Navigation, native-row focus and fallible image controls share the same mission
+writer. One ordinary interact root may own a returned prompt. Explicit menu/edit
+children retain its original scope, actor/epoch, deadlines and cumulative input
+ceiling. A settled owned menu may be refreshed only through retained exact-PNG
+source revalidation. Typed PhaseReceipt audit data restores no private phase on
+reopen. A normal return closes the prompt without proving the desired effect.
+Cancellation uses one actually registered QUIT, or TEXT.QUIT for a string editor;
+it returns partial for verification and never answers a later question implicitly.
+Inventory multiselect, quantity semantics and native editor qualification remain gaps.
 
-Only one execution arrangement is active at a time: an external campaign operator
-uses ordinary CLI inputs, or the leased waypoint service executes plans. They are
-different responsibilities in the current system, not old/new wire contracts or
-compatibility paths. A dedicated operator keeps game observations out of the lead's
-engineering context. Its identity and stop handshake are procedural; the controller
-does not authenticate individual sub-agents. The [two-phase operating result](acceptance/2026-10-18-campaign-operator.md)
-shows carried-water consumption, ration conservation and paused lead inspection
-on one saved development character. The earlier failed access attempt remains
-evidence. No broader survival reliability, water resupply or unattended service
-is established by this operating procedure.
+Ledger6 records Resume as a distinct primitive under an admitted lifecycle root.
+The controller's trusted Resume compares controller boot, operator-Pause counter,
+general generation and current native evidence. Expected internal revocation cannot
+erase an intervening user Pause. Exact-PNG controls additionally compare verified
+encoded frame bytes; native-row/navigation controls require native-state equality.
+Prepublication callbacks retain source and durable intent outside the controller's
+data lock, then all authority/deadline fences are checked again. Unknown delivery
+retains its pending identity and charge; it is never blindly replayed.
+
+Start/Observe cannot seed normal sources, identity or the mission clock from an
+unowned game. Current lifecycle/item/activity/inspection/handoff/final-finish
+adapters still block. The fixed owned-process adapter is component-tested but has
+not launched this mission. Its lifecycle must establish real native readiness,
+admitted identity and normal exit evidence before those claims are accepted.
+The [timeline reducer](../harness/gameplay/timeline.py) sums normal-session spans
+only with exact chronological equal-turn endpoint links across sessions. Such links
+are data, not identity or permission; the lifecycle producer is still pending.
+Missing continuity makes cost unknown instead of silently resetting it.
+
+Cached status performs no evidence or memory I/O. It can show the last explicitly
+requested context packet, including claims, Work, source IDs, omissions and
+dispositions. That packet is historical as of its ID; rendering neither recomputes
+it nor turns it into current evidence. Unmeasured model cost/latency remains unknown.
+The [mission design](design/player-owned-mission.md) owns further integration and
+acceptance. Portable source checks, wire4 menu qualification and actual independent
+normal-game play are separate evidence lanes.
+
+The [first seven-day campaign](acceptance/2026-10-19-seven-day-survival.md) used a
+supervised external operator and supplies development evidence for this migration.
+Its ordinary-input workflow and waypoint runtime are not alternate live mission
+paths. Passive waypoint/planner libraries remain available for offline studies.
+The earlier [two-phase operator result](acceptance/2026-10-18-campaign-operator.md)
+retains its narrow consumption/conservation and handoff evidence.
 
 The [first fresh deciding attempt](acceptance/2026-10-18-seven-day-stop.md) later
 stopped at13game seconds after an approval rejection following a guarded-walk stop.
@@ -309,21 +283,19 @@ leg still validates the actual next tile before requesting a fresh plan.
 
 ![A task alternates bound planning and one-step verification, preserving progress at stops.](diagrams/supervisor.svg)
 
-This current logical diagram answers “Where do feedback and correction happen?”
+This passive-component diagram answers “Where do feedback and correction happen
+in the waypoint study?”
 Boxes are responsibilities/states in one serialized caller, not processes. Solid
-arrows show decisions and evidence flow; the dotted edge identifies the runtime
-adapter that owns the real controller lease and native receipt mapping. The [editable diagram](diagrams/supervisor.mmd) and
+arrows show decisions and evidence flow; the dotted edge identifies the caller adapter used by the historical study. The [editable diagram](diagrams/supervisor.mmd) and
 [exact contract](protocol.md#passive-waypoint-supervision) distinguish eligible
 intents from real authority. Explicit continuation verifies the remaining route;
 unknown effects stay unresolved, and complete legs need verification without
 another move. A new timestamp or model assertion cannot clear a nonprogress stop.
 
-The runtime instantiates this passive supervisor on explicit task admission,
-connects it to a controller lease and exact native receipts, and supplies the
-external-chat planning handoff. Fresh revalidation permits slow planning without
-weakening input freshness. The supervisor package itself still grants no lease.
-Portable composition tests establish no native or model-performance claim; real
-acceptance remains a separate lane.
+The retired waypoint runtime used this passive supervisor. It has no current
+live task/planner endpoint; MissionRuntime accounts for its own typed semantic
+operations and controller receipts. The supervisor package itself grants no
+lease. Historical native evidence does not qualify the migrated mission path.
 
 ## Run ownership and operator takeover
 
@@ -340,12 +312,13 @@ explicit interaction/lifecycle operation, with empty writer queues. The exact
 object capability binds mission/actor/epoch, host Pause and human takeover
 generations. Navigation uses shared movement guards; each action/key rechecks
 the informing session/revision/boundary. External key/action/walk/resume
-reject while owned; Observe/status/goal remain available. Pause, recovery, native
+reject while owned. At the HTTP boundary a nonterminal mission additionally owns
+Observe and recovery; use its typed request. Cached status and Pause remain available. Pause, recovery, native
 takeover, transport failures and shutdown revoke the owner. Explicit release also pauses;
 Resume restores transport only. Queued requests retain their original admission
 generation and cannot cross takeover or acquisition. No process restores a lease.
 
 [Protocol](protocol.md#controller-run-ownership) owns the precise contract. This
-controller capability is consumed by the run service. The
-[integration contract](protocol.md#integrated-gameplay-lifecycle) explains task
-lifecycle, planning, exact logical/native receipts and the spectator.
+controller capability is consumed by MissionRuntime. The
+[integration contract](protocol.md#integrated-mission-lifecycle) explains mission
+admission, exact logical/native receipts and the spectator.

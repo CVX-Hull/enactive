@@ -13,6 +13,28 @@ from tests.test_gameplay_evidence import observation, png
 
 
 class SemanticControlTests(unittest.TestCase):
+    def test_dismissal_uses_one_actual_registered_action_without_effect_credit(self):
+        for category, action in (("INVENTORY", "QUIT"), ("STRING_INPUT", "TEXT.QUIT"), ("YESNO", "QUIT")):
+            with self.subTest(category=category):
+                before = self.frame(category=category, actions=[action])
+                skill = self.skill(before, view=self.view(before, kind="dismissal"),
+                    goal=dict(purpose="Close visible prompt", label="Cancel", outcome="dismissed"))
+                intent = self.propose(skill)
+                self.assertEqual(intent.action, action)
+                # A cancellation can open another prompt; do not answer it.
+                after = self.frame(category="YESNO", actions=["YES", "NO"])
+                outcome = self.accept(skill, intent, after)
+                self.assertEqual((outcome.disposition, outcome.proposed_count), ("partial", 1))
+                self.assertTrue(outcome.verification_required)
+                self.assertIs(self.propose(skill), outcome)
+
+    def test_dismissal_never_substitutes_no_confirm_or_quit_for_editor_action(self):
+        before = self.frame(category="STRING_INPUT", actions=["QUIT", "NO", "CONFIRM"])
+        skill = self.skill(before, view=self.view(before, kind="dismissal"),
+            goal=dict(purpose="Cancel editor", label="Cancel", outcome="dismissed"))
+        outcome = self.propose(skill)
+        self.assertEqual((outcome.disposition, outcome.proposed_count), ("blocked", 0))
+
     def setUp(self):
         owned = Path(__file__).resolve().parents[1] / ".runtime" / "semantic-control-tests"
         owned.mkdir(parents=True, exist_ok=True)

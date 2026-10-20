@@ -61,6 +61,18 @@ def binding(**changes):
 
 
 class MissionContractTests(unittest.TestCase):
+    def test_dismissal_requires_its_closed_source_view_and_exact_goal(self):
+        valid = skill(skill_kind="menu", goal=dict(purpose="Close visible menu", label="Cancel", outcome="dismissed"),
+            perception=dict(kind="dismissal", source_id="source-1", basis="player_interpretation", question="Visible menu"))
+        self.assertEqual(validate_request(valid), valid)
+        for changes in (dict(perception=None), dict(goal=dict(purpose="Close", label="No", outcome="dismissed")),
+                dict(goal=dict(purpose="Close", label="Cancel", outcome="activated")),
+                dict(perception={**valid["perception"], "kind": "confirmation"}),
+                dict(perception={**valid["perception"], "rows": []}),
+                dict(perception={**valid["perception"], "question": ""})):
+            with self.subTest(changes=changes), self.assertRaises(ContractError):
+                validate_request({**valid, **changes})
+
     def test_source_revalidation_is_one_refresh_audit_data_without_authority(self):
         original = binding()
         current = binding(source_id="fresh-1", store_generation=2)

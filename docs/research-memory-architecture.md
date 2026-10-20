@@ -30,7 +30,10 @@ bounded [trace/label pilot #71](https://github.com/CVX-Hull/enactive/issues/71).
 The [player-owned outcome #136](https://github.com/CVX-Hull/enactive/issues/136)
 already owns delivery; this assessment sharpens it rather than creating a second roadmap.
 
-## What the implementation actually does
+## What the assessed baseline did
+
+This section describes the dated c58ee0a baseline above, not the current mission
+API. Use [current architecture](architecture.md) for migrated behavior.
 
 | Boundary | Verified current behavior | Consequence for the next architecture |
 | --- | --- | --- |
@@ -42,7 +45,7 @@ already owns delivery; this assessment sharpens it rather than creating a second
 | Facts and authority | Extracted facts are position, turn and visible-creature count. A belief's `valid` checks retained support, not semantic truth. Current-input freshness is separate | Preserve exact guards; do not mistake an authentic screenshot or source-linked interpretation for a correct current-state claim |
 | Outcome monitoring | The general monitor is a proposed design; executable skills currently accept cardinal movement | Implement the first semantic families through the shared monitor/skill contract, not a second competing monitor |
 
-Code anchors: [runtime start](../harness/runtime.py), [supervisor packet construction](../harness/gameplay/supervisor.py),
+Code anchors: [baseline runtime start](https://github.com/CVX-Hull/enactive/blob/c58ee0a1a31c5ab072edf4397cc76b677a311364/harness/runtime.py), [supervisor packet construction](../harness/gameplay/supervisor.py),
 [task memory](../harness/gameplay/memory.py), [evidence validation/facts](../harness/gameplay/evidence.py),
 [skill registry](../harness/gameplay/skills.py). Relevant functions are `_start`,
 `_submit_or_verify`, `TaskMemory.refresh`, `_validate_observation` and `EvidenceStore.historical_facts`;

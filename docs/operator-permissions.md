@@ -26,7 +26,8 @@ or downloads have separate permissions; do not stamp every shell call elevated.
 
 [Project-local rules](../.codex/rules/gameplay.rules) allow only the existing
 `.venv/bin/python -m harness` command family for ordinary observation, control,
-recovery and bounded waypoint tasks. Setup/server launch, GitHub publication,
+recovery and the current typed mission-request entry point. Retired gameplay-*
+commands are removed from both parser and allowance. Setup/server launch, GitHub publication,
 arbitrary Python, shell scripts and study capture wrappers are not matched. The
 exact005 recorder rule was retired at its stopped closeout; it is historical, not
 a template for wildcard studies.
@@ -58,7 +59,7 @@ support changes. Review the diff, effective policy and an allowed/blocked harmle
 preflight before relying on activation. Retire obsolete allowances with their
 commands. Reuse these inline checks rather than building a policy parser.
 
-Official sources checked2026-10-18: [rules](https://learn.chatgpt.com/docs/agent-configuration/rules),
+Official rules source rechecked2026-10-20; other linked background checked2026-10-18: [rules](https://learn.chatgpt.com/docs/agent-configuration/rules),
 [sandbox and approvals](https://learn.chatgpt.com/docs/agent-approvals-security),
 [sub-agent permissions](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 
@@ -138,21 +139,19 @@ observations separate from engineering discussion. It does not require a weaker
 model tier or another paid API. It inherits parent permissions; role instructions
 do not create security isolation, and delegation alone cannot remove approvals.
 
-The waypoint planner proposes candidates through the
-[existing planning contract](protocol.md#bounded-injected-planner); it still has
-no raw-input role. A separately designated campaign operator may use ordinary
-inputs under the [bounded actor contract](protocol.md#designated-campaign-operator).
-The lead retains admission, source/game/service ownership, escalation and final
-verification. These responsibilities are mutually scheduled, not simultaneous
-executors or alternate protocol versions.
+The current designated player uses typed mission requests for semantic skills,
+memory and registered lifecycle. The passive waypoint planner has no live ingress.
+The lead retains admission, source/game/service custody, escalation and acceptance;
+it supplies no ordinary gameplay rescue during the deciding mission. Historical
+operator reports below describe the first campaign's procedure, not another current
+execution path. A new command allowance needs syntax/matching and actual-player
+loading checks; no activation claim follows from a policy-file edit.
 
-The operator's clean-context brief identifies command/file scope, phase and
-cumulative limits. Pause, completed tool calls, an explicitly quiescent agent,
-empty live request/lease checks and fresh paused observation precede lead
-inspection. Returning control needs a new bounded assignment and fresh Resume;
-historical unknowns and accounting do not reset. Actor names and instructions
-are workflow controls, not exclusive external capabilities or a sandbox. Do not
-use explorer/reviewer roles to send input. See the [runbook](runbook.md#designated-campaign-operator).
+The clean-context brief identifies command/file scope, actor/phase, cumulative
+limits and reserve. Pause, completed tools, explicit quiescence and empty live
+slots precede inspection or registered handoff. Original unknowns and accounting
+never reset. Role names/instructions are workflow controls, not a sandbox. Follow
+the [current actor contract](protocol.md#designated-campaign-operator).
 
 [#97](https://github.com/CVX-Hull/enactive/issues/97)'s
 [two-phase result](acceptance/2026-10-18-campaign-operator.md) records actual

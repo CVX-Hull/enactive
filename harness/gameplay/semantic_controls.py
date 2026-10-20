@@ -219,6 +219,8 @@ class SemanticControlSkill:
         view, goal = self._request["perception"], self._request["goal"]
         if state["boundary"]["kind"] != "menu":
             raise _ControlBlocked("Interpreted controls require a menu boundary")
+        if view["kind"] == "dismissal":
+            return (("action", "TEXT.QUIT" if state["category"] == "STRING_INPUT" else "QUIT"),)
         if view["kind"] in ("direction", "confirmation"):
             if view["kind"] == "direction":
                 category = "DEFAULTMODE"
@@ -391,7 +393,7 @@ class SemanticControlSkill:
             self._index += 1
             one_effect = (self._request["skill_kind"] == "interact" or pending.action in
                           ("CONFIRM", "TEXT.CONFIRM") or self._request["perception"]["kind"] in
-                          ("direction", "confirmation"))
+                          ("direction", "confirmation", "dismissal"))
             self._budget(current, now_monotonic, completing=True)
             if one_effect:
                 return self._finish("Input returned; player verification of the semantic effect is required",

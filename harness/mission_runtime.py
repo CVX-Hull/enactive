@@ -25,6 +25,7 @@ from .gameplay.mission_contracts import (
 from .gameplay.mission_ledger import BudgetError, LedgerError, MissionLedger, TERMINAL
 from .gameplay.navigation import NavigationIntent, NavigationOutcome, NavigationSkill, ObservedMap
 from .gameplay.semantic_controls import ControlIntent, ControlOutcome, SemanticControlSkill
+from .gameplay.timeline import SessionContinuity, game_timeline
 
 MissionIntent = NavigationIntent | MenuIntent | ControlIntent
 
@@ -84,8 +85,10 @@ class MissionRuntime:
         self._prompt_phase: _PromptPhase | None = None
         self._mission_deadline: float | None = None
         self._game_cost: int | None = None
+        self._timeline_links: tuple[SessionContinuity, ...] = ()
         self._memory_version = 0
         self._last_context_id: str | None = None
+        self._last_memory_context: dict | None = None
         self._issued_packets: list[str] = []
         self._last_receipt: dict | None = None
         self._progress: dict | None = None
@@ -210,7 +213,7 @@ class MissionRuntime:
             self._bindings.clear()
             self._prompt_phase = None
             self._rotation = None
-            if self._snapshot is not None:
+            if self._snapshot is not None and self._snapshot["phase"] not in TERMINAL:
                 self._snapshot.update(phase="paused", pause_cause=cause, reason=reason, lease_owner=None,
                     prompt_phase=None,
                     epoch=self._snapshot["epoch"] + 1, next_needed_decision="Explicit supported readmission required")
@@ -260,6 +263,7 @@ class MissionRuntime:
                 for p in self._ledger.primitive_records() if p["state"] in ("prepared", "published")
                 or p["state"] == "unknown" and p["effect"] is None],
             "memory_version": self._memory_version, "last_context_id": self._last_context_id,
+            "memory_context": copy.deepcopy(self._last_memory_context),
             "next_needed_decision": "Player semantic decision" if state["phase"] == "active" else
                 "Registered lifecycle/readmission needed" if state["phase"] == "admitted" else
                 "Explicit supported transition required", "grants_authority": False,
@@ -401,21 +405,15 @@ class MissionRuntime:
                 or usage["bytes"] + byte_count > limits.frame_bytes - reserve.frame_bytes):
             raise CapacityError("Ordinary evidence would consume cleanup/required after-frame reserve")
 
-    def _game_time(self, reference: EvidenceRef) -> None:
-        refs = [r for r in self._store.historical_references if r.boundary_kind == "normal_play"]
-        if not refs:
+    def _update_game_time(self) -> None:
+        try:
+            timeline = game_timeline(self._store, self._timeline_links)
+        except EvidenceError:
             self._game_cost = None
-            return
-        if any(r.session != refs[0].session for r in refs):
             self._map = None
             self._bindings.clear()
-            raise EvidenceError("Session changed; registered same-character lifecycle alignment required")
-        ordered = sorted(refs, key=lambda r: r.revision)
-        if any(b.turn < a.turn for a, b in zip(ordered, ordered[1:])):
-            raise EvidenceError("Observed game time regressed")
-        self._store.verify(ordered[0])
-        self._store.verify(ordered[-1])
-        self._game_cost = ordered[-1].turn - ordered[0].turn
+            raise
+        self._game_cost = None if timeline is None else timeline.elapsed_seconds
 
     def _binding(self, reference: EvidenceRef) -> SourceBinding:
         state, generation, boot = self._check_lease()
@@ -428,7 +426,7 @@ class MissionRuntime:
 
     def _publish_source(self, reference: EvidenceRef, *, authoritative: bool) -> SourceBinding | None:
         self._current = reference
-        self._game_time(reference)
+        self._update_game_time()
         if reference.boundary_kind == "normal_play":
             scope = {"mission_id": self._admission.mission_id, "session": reference.session, "coordinate_epoch": 0}
             if self._map is None:
@@ -494,23 +492,25 @@ class MissionRuntime:
         self._bindings, self._map, self._lease, self._current, self._rotation = {}, None, None, None, None
         self._clear_prompt()
         self._game_cost = None
+        self._timeline_links = ()
         historical = [r for r in store.historical_references if r.boundary_kind == "normal_play"]
         if historical:
             try:
-                self._game_time(historical[-1])
+                self._update_game_time()
             except EvidenceError as exc:
                 self._diagnostic = f"Historic game time unprovable: {exc}"[:1024]
                 self._game_cost = None
         self._memory_version = max((r["sequence"] for k in ("claim", "work", "decision")
                                    for r in ledger.memory_records(k)), default=0)
         self._last_context_id = None
+        self._last_memory_context = None
         self._issued_packets = []
         self._mission_deadline = ledger.snapshot(now=self._wall())["deadline"]
         return ledger.snapshot(now=self._wall())["phase"] == "admitted"
 
     def _bootstrap(self, work: _Work) -> dict:
-        # Admission and observation never implicitly Resume or create a world.
-        before = self._live()
+        # Admission cannot adopt an existing scene as the named fresh/loaded
+        # character. Only the registered owned lifecycle may establish that.
         try:
             state, received = self._observe_native(work)
         except ControlError as exc:
@@ -518,24 +518,12 @@ class MissionRuntime:
             return {"admitted": True, "lifecycle_needed": True, "reason": str(exc), "grants_authority": False}
         self._capacity()
         self._check_cancelled(work)
-        live = self._live()
-        eligible = (live[1] == before[1] and not live[4] and not live[5]
-                    and not state["paused"] and state["boundary"]["kind"] == "normal_play"
-                    and state["in_game"] and state["scene"] is not None
-                    and not self.controller.unknown_outcomes and not self.controller.control_unknown_outcomes)
-        if eligible:
-            ledger = self._ledger.snapshot(now=self._wall())
-            if ledger["phase"] == "admitted" and ledger["pause_cause"] == "internal_bootstrap":
-                self._lease = self.controller.acquire_mission(self._admission.mission_id,
-                    ledger["epoch"], ledger["player_id"], operation="interaction",
-                    expected_session=state["session"], expected_revision=state["revision"],
-                    expected_boundary_id=state["boundary"]["id"])
-                self._check_cancelled(work)
-                self._ledger.activate(epoch=ledger["epoch"], player_id=ledger["player_id"], now=self._wall())
+        if state["boundary"]["kind"] == "normal_play":
+            return {"admitted": True, "lifecycle_needed": True, "source_ids": [],
+                "reason": "Unowned normal play cannot seed mission identity or its game-time anchor", "grants_authority": False}
         reference = self._ingest(state, received)
-        self._publish_source(reference, authoritative=self._lease is not None)
-        self._capture_memory(reference)
-        return {"admitted": True, "lifecycle_needed": self._lease is None,
+        self._publish_source(reference, authoritative=False)
+        return {"admitted": True, "lifecycle_needed": True,
                 "source_ids": [reference.observation_id], "grants_authority": False}
 
     def _capture_memory(self, reference: EvidenceRef) -> None:
@@ -550,6 +538,10 @@ class MissionRuntime:
         prior = None if phase is None else self._bindings.get(phase.checkpoint.observation_id)
         self._capacity()
         state, received = self._observe_native(work)
+        normals = [r for r in self._store.historical_references if r.boundary_kind == "normal_play"]
+        if state["boundary"]["kind"] == "normal_play" and (not normals or normals[-1].session != state["session"]):
+            return {"source_ids": [], "lifecycle_needed": True,
+                "reason": "Unowned normal session requires registered lifecycle adoption", "grants_authority": False}
         reference = self._ingest(state, received)
         live = self._live()
         authoritative = self._lease is not None and live[3] is self._lease and not live[4] and not live[5]
@@ -624,6 +616,8 @@ class MissionRuntime:
         self._check_cancelled(work)
         self._issued_packets = (self._issued_packets + [packet["packet_id"]])[-32:]
         self._last_context_id = packet["packet_id"]
+        # Observer preview of the exact journaled packet, never a fresh projection.
+        self._last_memory_context = copy.deepcopy(packet)
         self._memory_version = packet["memory_version"]
         return wrapper
 

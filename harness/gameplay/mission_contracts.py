@@ -88,11 +88,12 @@ _VIEWS = {
         "focused": {"type": "boolean"}}),
     "direction": _object({**_VIEW_BASE, "kind": {"const": "direction"}, "question": _text(1024)}),
     "confirmation": _object({**_VIEW_BASE, "kind": {"const": "confirmation"}, "question": _text(1024)}),
+    "dismissal": _object({**_VIEW_BASE, "kind": {"const": "dismissal"}, "question": _text(1024)}),
 }
 _GOALS = {
     "navigate": _object({"scope": _SCOPE, "target": _VEC}),
     "menu": _object({"purpose": _text(128), "label": _text(1024),
-                       "outcome": _enum("focused", "activated", "inspected")}),
+                       "outcome": _enum("focused", "activated", "inspected", "dismissed")}),
     "item": _object({"purpose": _enum("pickup", "consume", "drop", "store"),
                        "label": _text(1024), "quantity": _integer(9999, 1),
                        "outcome": _enum("acquired", "consumed", "stored", "dropped")}),
@@ -507,6 +508,11 @@ def validate_request(value: dict | str | bytes) -> dict:
             if result["goal"]["outcome"] != expected[result["goal"]["purpose"]]:
                 raise ContractError("Item purpose and outcome disagree")
         view = result["perception"]
+        dismissing = result["skill_kind"] == "menu" and result["goal"]["outcome"] == "dismissed"
+        if dismissing and (view is None or view["kind"] != "dismissal" or result["goal"]["label"] != "Cancel"):
+            raise ContractError("Dismissal requires exact Cancel and its source-bound dismissal question")
+        if view is not None and view["kind"] == "dismissal" and not dismissing:
+            raise ContractError("Dismissal interpretation requires the exact menu dismissal goal")
         if view is not None:
             if view["source_id"] not in result["sources"]:
                 raise ContractError("Interpretation must name an immutable informing source")

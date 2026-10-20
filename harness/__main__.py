@@ -3,14 +3,16 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 from pathlib import Path
+import stat
 import sys
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, build_opener, ProxyHandler
 
-from .controller import Controller, ControlError, MAX_REQUEST, MAX_WAIT, RECOVERY_KINDS, read_json
-from .gameplay.contracts import PlanCandidate
-from .server import Server, validate_gameplay
+from .controller import Controller, ControlError, MAX_WAIT, RECOVERY_KINDS, read_json
+from .gameplay.mission_contracts import MAX_REQUEST_BYTES, canonical, validate_request
+from .server import Server
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -77,21 +79,30 @@ def command_parser() -> argparse.ArgumentParser:
         if name == "answer_interrupt":
             recovery.add_argument("--interrupt-request-id", type=nonempty, required=True)
             recovery.add_argument("--choice", choices=("YES", "NO"), required=True)
-    for name in ("start", "continue", "abandon", "request", "plan"):
-        gameplay = commands.add_parser(f"gameplay-{name}", help="Explicit bounded waypoint-and-return gameplay")
-        if name == "start":
-            gameplay.add_argument("direction", choices=("north", "east", "south", "west"))
-            gameplay.add_argument("--distance", type=int, choices=range(1, 5), required=True)
-        if name in {"continue", "abandon"}:
-            gameplay.add_argument("run_id", type=nonempty)
-            gameplay.add_argument("--epoch", dest="execution_epoch", type=nonnegative, required=True)
-        if name in {"start", "continue"}:
-            gameplay.add_argument("--expect", type=expectation, required=True)
-        if name == "plan":
-            gameplay.add_argument("request_id", type=nonempty)
-            gameplay.add_argument("--candidate", type=Path, required=True,
-                                  help="One bounded gameplay/2 PlanCandidate JSON file")
+    mission = commands.add_parser("mission-request", help="Submit one current typed mission record; admission is not effect completion")
+    mission.add_argument("--request", type=Path, required=True,
+                         help="One mission/2 JSON file directly in this project's .runtime/mission-requests")
     return parser
+
+
+def mission_request(path: Path) -> dict:
+    """Bounded transport staging, not an evaluator or arbitrary file reader."""
+    directory = ROOT / ".runtime" / "mission-requests"
+    if (any(p.is_symlink() for p in (ROOT / ".runtime", directory, path))
+            or Path(os.path.abspath(path.parent)) != directory
+            or path.parent.resolve() != directory.resolve() or path.suffix != ".json" or not path.is_file()):
+        raise ControlError("Mission request must be a regular .json file directly in project .runtime/mission-requests")
+    descriptor = os.open(path, os.O_RDONLY | os.O_NONBLOCK | os.O_NOFOLLOW)
+    with os.fdopen(descriptor, "rb") as stream:
+        info = os.fstat(stream.fileno())
+        if not stat.S_ISREG(info.st_mode):
+            raise ControlError("Mission request must remain a regular file")
+        if info.st_size > MAX_REQUEST_BYTES:
+            raise ControlError("Mission request exceeds its 65536-byte limit")
+        value = stream.read(MAX_REQUEST_BYTES + 1)
+    if len(value) > MAX_REQUEST_BYTES:
+        raise ControlError("Mission request exceeds its 65536-byte limit")
+    return validate_request(value)
 
 
 def main() -> int:
@@ -131,25 +142,9 @@ def main() -> int:
                 args["expected_session"], args["expected_revision"] = args.pop("expect")
             if "timeout" in args and not 0 < args["timeout"] <= MAX_WAIT:
                 raise ControlError("Timeout must be greater than 0 and at most 15 seconds")
-            is_gameplay = command.startswith("gameplay-")
-            if is_gameplay:
-                command = command.removeprefix("gameplay-")
-                if command == "request":
-                    command = "planning_request"
-                if command == "plan":
-                    path = args["candidate"]
-                    if not path.is_file():
-                        raise ControlError("Candidate must be a regular JSON file")
-                    with path.open("rb") as stream:
-                        candidate = stream.read(MAX_REQUEST + 1)
-                    if len(candidate) > MAX_REQUEST:
-                        raise ControlError("Candidate file exceeds the 4096-byte HTTP body limit")
-                    args["candidate"] = PlanCandidate.from_dict(candidate).to_dict()
-                validate_gameplay({"kind": command, **args})
-            data = json.dumps({"kind": command, **args}).encode()
-            if is_gameplay and len(data) > MAX_REQUEST:
-                raise ControlError("Gameplay command exceeds the 4096-byte HTTP body limit")
-            endpoint = "/api/gameplay" if is_gameplay else "/api/recovery" if command in RECOVERY_KINDS else "/api/command"
+            is_mission = command == "mission-request"
+            data = canonical(mission_request(args["request"])).encode() if is_mission else json.dumps({"kind": command, **args}).encode()
+            endpoint = "/api/mission" if is_mission else "/api/recovery" if command in RECOVERY_KINDS else "/api/command"
             request = Request(base + endpoint, data=data, headers=headers, method="POST")
         # A walk may consume two bounded native exchanges per step; pause remains independent.
         network_timeout = 2 * args.get("timeout", 5) * args.get("steps", 1) + 5

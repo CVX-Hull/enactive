@@ -49,10 +49,11 @@ external writer. A serialized lease description cannot request replacement.
 
 Ordinary external key/action/walk/resume reject while leased. Existing HTTP/CLI
 input reaches this same controller gate; it cannot supply or obtain a capability.
-Observe/status, record-only goal and Pause remain available. The viewer displays
-run ownership and disables ordinary input/Resume until takeover. A model call
-never holds controller locks. An explicit gameplay start/continue connects the
-service supervisor to a lease; service startup and transport Resume never do.
+At the controller layer Observe/status, record-only goal and Pause remain
+available. HTTP further routes nonterminal mission Observe through typed ingress
+and blocks raw input/recovery. The viewer displays mission ownership; a model call
+never holds controller locks. Only registered mission operations can request a
+lease; service startup, admission and transport Resume never establish identity.
 
 A leased call submits one registered action or permitted key, using native-v4
 observation and input checks. Intended boundary and human takeover generation are
@@ -101,86 +102,70 @@ It does not establish an admitted phase itself. Public command JSON cannot call
 this API, and an old lease cannot Resume. Runtime integration remains separately
 tracked; these controller capabilities alone do not make a player autonomous.
 
-## Integrated gameplay lifecycle
+## Integrated mission lifecycle
 
-`harness/runtime.py` connects the passive gameplay package to the controller. The
-service constructs one GameplayRuntime but starts no task until an authenticated
-explicit request. One run worker owns the supervisor, evidence store, external
-planner inbox and exact lease. Evidence is retained under the project session
-journal directory. Restart restores neither task execution nor authority.
+The service constructs one [MissionRuntime](../harness/mission_runtime.py), with
+one bounded writer, one queue slot and no automatic admission, launch or Resume.
+The old waypoint runtime and its live API/CLI are removed. Passive movement,
+planner and supervisor components below remain source/study tools, not another
+execution ingress. The [mission design](design/player-owned-mission.md) owns the
+chosen records, lifecycle requirements and separate native acceptance.
 
-Authenticated `POST /api/gameplay` uses the same loopback host/origin/token and
-4096-byte request limits as operator commands. Fields must match exactly:
+Authenticated `POST /api/mission` accepts one strict mission/2 record, at most65536
+UTF-8 bytes. It reuses host/origin/token and finite/duplicate-key JSON validation;
+operator command/recovery bodies keep4096-byte limits. Required fields and closed
+variants live in [mission_contracts.py](../harness/gameplay/mission_contracts.py),
+not a second HTTP schema. Unsupported versions and `/api/gameplay` reject, without
+conversion. Admission and original deadlines/costs persist in the ledger; parsed
+JSON and status contain no executable lease.
 
-| kind | Fields besides kind |
-| --- | --- |
-| start | direction, distance (1–4), expected_session, expected_revision |
-| continue | run_id, execution_epoch, expected_session, expected_revision |
-| abandon | run_id, execution_epoch |
-| planning_request | none |
-| plan | request_id, candidate (gameplay/2 PlanCandidate object) |
+Start records admission and observes only. Even already-unpaused normal play does
+not prove the named world/character, receive a lease or seed the mission's game-time
+anchor. Registered owned launch/create/load must establish those facts. Production
+lifecycle, item/activity/inspection, handoff and normal finish adapters remain
+required gaps: source fixtures that assume trusted identity do not implement them.
+No independent mission is accepted from those tests. Observe likewise cannot adopt
+an unexplained normal session. Reopening restores neither phase nor input authority.
 
-Start constructs the waypoint task from the observed origin with existing bounded
-budgets. Continue preserves task/history/original budgets, requires a fresh same-world
-checkpoint and no unresolved effect, and creates a new epoch/lease. Neither resumes
-transport. Completed/stopped tasks remain inspectable until explicit abandon;
-starting another task requires abandonment and worker exit. Recording goal text
-still does not start or replace a task. Ordinary Pause immediately revokes controller
-authority without waiting for a model/native exchange; serialized supervisor
-invalidation follows. Completion releases the lease and leaves transport paused.
-Recovery keeps its existing exact-generation contract; no extra preceding Pause
-changes the caller's supplied generation.
+The CLI exposes `mission-request --request PATH` for a current typed record directly
+in project `.runtime/mission-requests/`, regular JSON only, no symlink/script or
+arbitrary file path. It checks the same bounded schema before authenticated HTTP,
+with no evaluation or implicit retry. Accepted is an admission acknowledgment;
+request the immutable operation result by ID and inspect actual sources/effects.
+Reusing an ID requires exactly the same payload. Missing network response does not
+prove nondelivery. A retained delivery receipt cannot prove semantic success.
 
-Runtime responses contain status `accepted` or `rejected`, a gameplay snapshot and
-an error when applicable; planning_request additionally returns its pending request
-or null. HTTP ingress errors retain ordinary error-only responses and status codes.
-An accepted asynchronous lifecycle request is not a completed task; inspect status.
-The CLI exposes gameplay-start, gameplay-continue, gameplay-abandon, gameplay-request
-and gameplay-plan; see the [operator procedure](runbook.md).
+The admission gate excludes new mission Start while any raw HTTP command/recovery
+is unsettled; raw admission cannot slip past a pending Start. It registers counts
+under a short standard lock and rejects busy admission instead of queueing. Native
+ordinary/recovery exchanges remain independent under controller channel locks.
+While a nonterminal mission exists, raw Observe/input/recovery reject; use the
+current typed mission path. Pause and cached status bypass this gate. Raw commands
+also bind their original host generation before reading the body, so a delayed
+Resume cannot adopt a later Pause. The generation is a trusted Python argument,
+not a public JSON field. Terminal history remains visible and owns no execution.
 
-The waypoint planner is a dedicated sub-agent in this active Codex chat. The lead
-admits tasks and owns runtime/verification. This planner reads bounded visible
-evidence and returns candidate data only; it does not send raw game inputs or
-manage the game. The same external planning interface can be answered by the
-lead, with no automatic fallback. Missing planner, deadline, invalid plan or changed
-evidence stops visibly. No separate paid API is connected. A separately admitted
-campaign operator uses the external operator procedure below; it cannot send
-ordinary inputs while a waypoint run holds its lease.
+`/api/status.mission` is null or a copied bounded mission snapshot: objective, actor,
+epoch, phase/cause, active operation/skill/progress, exact source/receipt identifiers,
+remaining limits/reserve, unresolved effects, memory version and diagnostic. The
+spectator uses mission Observe and disables ordinary input/Resume/recovery while
+nonterminal; malformed mission state stays locked and Pause remains available.
+Rendering sends no gameplay or memory request. Normal native input can still take
+over; it is not an automatic mission continuation.
 
-Each external request contains request_id, deadline_ms and decoded ProviderInput
-`input` (task, packet, skills, binding, public_context, admission_monotonic). One
-request accepts at most one candidate; duplicates, wrong IDs, cancelled and late
-answers reject. A pending observation may age while reasoning. Before admitting
-that answer, runtime obtains fresh Observe and explicitly revalidates equivalence:
-same session/revision/turn/position, complete visible scene, actions, boundary/control
-identity and retained frame hash, with no intervening invalidation. It records the
-old/new evidence, preserves the original candidate binding, and reruns fresh guards.
-Changed evidence stops and requires explicit continuation/replanning; no timestamp,
-revision or deadline is silently rewritten. Input evidence still expires at three
-seconds. Status reports an aged planning source as stale without invalidating it
-merely for age; disputes still revoke evidence authority.
-
-Every intent reserves evidence capacity before dispatch, validates its original
-absolute deadline and real lease, and maps to exactly one native action admission.
-Only attributable successful retained after-evidence can earn progress. Known
-nonpublication is not_dispatched; exact rejection is rejected; uncertain publication,
-missing/malformed frame, timeout or changed-world result remains unknown. Observe
-reconciliation cannot retrospectively turn an unknown action into success. Preserve
-raw failure receipts and reservations for unresolved effects; never replay.
-
-`/api/status.gameplay` is null or contains run_id, TaskSpec `task`, RunStatus `run`,
-`planner`, and last_receipt. Runtime supplies actual descriptive ownership, pause,
-next check and historical progress; status never authorizes an input. Planner shows
-external_chat, pending_request_id, deadline_ms and usage_known=false. Receipt summary
-shows logical_action_id, native_request_id, disposition and reason. The spectator
-shows task, stage, progress, next check and stop reason, with evidence and unknown
-cost details behind disclosure; no private reasoning transcript is exposed.
+`memory_context` is the nullable last durably journaled bounded context packet, copied
+for historical inspection. It is query-specific and includes as-of/version/source
+IDs, tagged claims/work, omissions and dispositions; status never recomputes it or
+claims that its old `current` labels are current now. `spent_inputs` is primitive
+cost, not model decisions. External tokens, model time, quota, spending and
+interventions remain unknown where unavailable. The source cache is not a new
+memory history store. Native/graphical/independent-player acceptance stays separate.
 
 ## Transport and state
 
 
 The game enables the bridge only when CDDA_HARNESS_DIR names an existing private
-directory. Version 3 uses atomic JSON files and PNG snapshots, avoiding another
+directory. Version 4 uses atomic JSON files and PNG snapshots, avoiding another
 server thread in CDDA. Each channel admits one live request at a time; the host holds a
 process lock for both writers. Gameplay and recovery retain separate identities. Requests carry protocol, unique id, session, expected revision, intended boundary,
 human takeover generation,
@@ -405,98 +390,36 @@ and journal evidence, granting no authority, replay or inferred resolution.
 
 ## Designated campaign operator
 
-The lead may designate one general-purpose sub-agent to choose and send ordinary
-operator commands for a bounded campaign segment. This is an external operator
-workflow using the existing authenticated CLI, not a new runtime supervisor or
-MissionLease type. The waypoint planner remains candidate-only. No runtime contract,
-wire version, stored task format or automatic role restoration changes.
+The lead designates one general-purpose player for a finite mission. It chooses
+plans, interprets evidence, retrieves/updates memory and requests semantic skills
+and registered normal lifecycle through mission/2. The lead owns source/release
+acceptance, finite admission, shared runtime custody, escalation and final
+verification. It supplies no ordinary gameplay rescue in the deciding mission.
+Explorers/reviewers never send inputs. Actor names and instructions are workflow
+controls, not an OS sandbox or authenticated sub-agent capability.
 
-The lead owns source/release acceptance, finite admission, game/service lifecycle,
-escalation and final verification. The designated operator owns ordinary decisions,
-the charged capture sequence and visible-outcome assessment only for its named
-segment. Its brief names the immutable source/native, allowed command and file
-scope, actor identity, phase and cumulative limits, cleanup reserve and stop rules.
-It may not launch processes, modify source/saves, publish work, start a competing
-task, use debug advantages or silently extend a segment. Explorers/reviewers are
-not input operators. Role instructions and recorded actor names do not isolate
-tools or authenticate an agent to the OS.
+A brief names immutable source/native, admitted world/character, exact command/file
+scope, actor/phase, cumulative limits, cleanup reserve and stop rules. No source or
+save edits, debug advantages, arbitrary process commands, hidden state, competing
+executor or silent budget extension follow from player assignment. User Pause and
+native takeover always win. Unsupported or uncertain effects require explicit
+source-linked reassessment; they never authorize blind replay or a different actor.
 
-Admit this mode only with no live waypoint lease, unresolved live request or
-competing executor. Retained historical unknowns stay unknown. The controller
-still checks current session/revision, frame, boundary and host authority for
-every input; serialization does not identify which chat requested it. The lead
-must not issue ordinary inputs or Resume while the player is assigned input.
-Status, watching and emergency Pause remain available. Deliberate native inspection
-or a new Observe decision uses the handoff procedure to avoid racing the player.
+Handoff requires Pause, completed tool handles, no scheduled/queued input, a retained
+checkpoint and explicit player quiescence. Cached status alone cannot prove an
+empty external tool queue. Fresh-context replacement must use the registered
+one-use handoff and retained campaign memory, not lead reconstruction. The runtime
+must validate current actor/epoch, sources and original costs before continuation;
+a durable receipt or summary restores no lease or Resume. Lifecycle and handoff
+adapters remain implementation gates, not permission to fall back to raw commands.
 
-For handoff, request stop/Pause and have the operator finish its current tool call,
-Pause, and return a source-linked checkpoint with no further command scheduled.
-Verify that the agent turn and every retained execution handle are terminal, then
-check controller status for no live request/recovery or run lease. Status alone
-does not establish an empty external tool queue. Lead Pause fences remaining
-pre-takeover requests at the existing generation/token checks; committed native
-actions or activities may still take effect. Fresh Observe must show an interpretable
-paused boundary before inspection or another actor is authorized. Unresolved or
-unknown effects retain their normal reconciliation rules; never replay an input.
-
-Returning input requires a new explicit bounded actor assignment, fresh evidence
-and Resume by that actor. Preserve original history, consumed budgets and spatial
-invalidation; no ownership, saved command or active model call is restored. A missing
-or unquiesced operator, failed access/approval, corrupt accounting or unreadable
-state stops further play. The lead may perform bounded ordinary recovery after
-handoff using the established recovery procedure; user rescue is not the fallback.
-
-For functional campaign admissions that permit transient-boundary reassessment,
-an unsupported return stops ordinary input immediately. The actor pauses, finishes
-the call, supplies a terminal checkpoint and relinquishes authority. Lead may make
-at most three passive Observes within 120 seconds of that return, without remote input,
-Resume or remote recovery at an unsupported boundary. Explicit bounded reassignment is
-eligible only at a fresh supported interpretable boundary, with actual null live
-slots, reconciled effects and credible remaining whole-route fit. Persistent bad
-state ends the admission unless its explicit verified native UI branch below is
-eligible; authority/permission denial or lost fit ends ordinary authority.
-Other rejection classes still follow the admission's explicit failure rules. Unknown ACKs remain
-unknown. A functional admission may separately permit the runbook's verified native UI
-recovery after terminal handoff: remote stays paused, actual owned-window evidence
-must match the prompt, and at most five charged native inputs within120seconds
-retain fresh evidence after each. No blind repeat, remote unsupported input or OS
-event injection; failed/unreadable access or uncertain effect ends that recovery.
-Only actual supported paused state, null live slots, reconciled effects, terminal
-tools and whole fit permit explicit reassignment. This optional branch exists only
-when the admission names it; it never relaxes a stricter stop or extends resources.
-A stricter admission stop rule still wins. This is a manual workflow
-control, not a new native guarantee or automatic retry. [020/021 evidence](acceptance/2026-10-19-treatment-stop.md)
-retains the closed attempts; the prospective 021 procedure was reviewed, but no
-new unsupported recovery was exercised in 021.
-
-Actor assignment/quiescence and campaign semantic limits are workflow controls.
-They are not an exclusive external capability or a sandbox against a malicious
-cooperating agent. The native/controller authority, Pause and in-process waypoint
-lease retain their implemented guarantees. The [two-phase operator acceptance](acceptance/2026-10-18-campaign-operator.md)
-records actual delegated input, paused inspection and fresh reassignment, following
-a retained access failure. No broader survival reliability or unattended service
-is implied by this procedure.
-
-The [first fresh deciding attempt](acceptance/2026-10-18-seven-day-stop.md) stopped
-on actual approval denial after a guarded-walk stop. The corrected public-walk
-contract below retains its actual observation and requires fresh Observe/Resume;
-ordinary native preflight still cannot prove the player's semantic reassessment.
-Honor the actual denial and that frozen campaign's stop rules; no implicit
-continuation or rule/actor/transport change restores the stopped admission.
-
-
-
-For functional admissions that explicitly permit it, a definitive pre-dispatch
-formulation or actuation-capability failure may stop the primitive rather than the
-whole mission. Require exact receipt plus pinned implementation evidence of no
-delivered event, no authority/permission denial and no uncertain effect. Retain
-charge/error, freshly Observe/interpret and follow current Pause/Resume/token
-requirements before a distinct eligible choice within unchanged limits. No blind
-retry or alternate channel to evade guards. User Pause/takeover ends actor authority;
-no automatic Resume may override it. Unfamiliar/ambiguous rejection requires
-terminal handoff and lead adjudication. Permission/authority/lease refusal and all
-stricter admission stops still win. Registered actions are not executable-binding
-guarantees; this manual classification changes no wire shape or native guard.
+The [first seven-day campaign](acceptance/2026-10-19-seven-day-survival.md) used the
+earlier supervised ordinary-input procedure. Its failures, known nondelivery
+replans, unknown ACKs, native menu gaps and source-linked decisions remain evidence.
+That workflow is historical, not an alternate live campaign ingress. The passive
+waypoint planner remains candidate-only for offline studies. Future campaigns need
+new prospective authority and actual-player permission preflight; no old campaign
+budget, exception, rule allowance or running chat renews admission.
 
 ## Closed-loop play and observations
 
@@ -779,7 +702,8 @@ undoing observed progress. `EvidenceStore.observation(ref)` supplies an integrit
 checked deep copy of retained history; it never refreshes authority or freshness.
 
 The passive supervisor below owns task completion, handoff, epochs and nonprogress
-readmission. The runtime above connects this passive caller to controller leases. The [native acceptance](acceptance/2026-10-17-bounded-skills.md)
+readmission. This is a passive study component; the retired waypoint runtime no longer
+connects it to live input. MissionRuntime uses its own typed operation accounting. The [native acceptance](acceptance/2026-10-17-bounded-skills.md)
 proves a short manually driven example, not autonomy, trap safety or general survival.
 
 ## Passive waypoint supervision

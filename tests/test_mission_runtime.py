@@ -1,4 +1,8 @@
-"""Source integration with file transport; no native gameplay/autonomy claim."""
+"""Core integration with synthetic transport and an explicit trusted admission fixture.
+
+Core dispatch tests isolate the owned-identity boundary, not its implementation.
+Unmodified production admission is tested separately; no native gameplay claim.
+"""
 from concurrent.futures import ThreadPoolExecutor
 from contextlib import closing
 import copy
@@ -20,6 +24,25 @@ from tests.test_mission_ledger import intent
 from harness.mission_runtime import MissionRuntime
 from tests.test_controller import FakeBridge
 from tests.test_mission_contracts import admission, claim
+
+
+def bootstrap_core_fixture(runtime, work):
+    """Assume already-proven identity only for temporary fake-bridge core tests.
+
+    This replaces no production gate or native failure: ordinary Start must not
+    call this path. Registered lifecycle needs separate real and synthetic checks.
+    """
+    state, received = runtime._observe_native(work)
+    ledger = runtime._ledger.snapshot(now=runtime._wall())
+    runtime._lease = runtime.controller.acquire_mission(runtime._admission.mission_id,
+        ledger["epoch"], ledger["player_id"], operation="interaction", expected_session=state["session"],
+        expected_revision=state["revision"], expected_boundary_id=state["boundary"]["id"])
+    runtime._ledger.activate(epoch=ledger["epoch"], player_id=ledger["player_id"], now=runtime._wall())
+    reference = runtime._ingest(state, received)
+    runtime._publish_source(reference, authoritative=True)
+    runtime._capture_memory(reference)
+    return dict(admitted=True, lifecycle_needed=False, fixture_only=True,
+                source_ids=[reference.observation_id], grants_authority=False)
 
 
 class VisibleBridge(FakeBridge):
@@ -95,9 +118,10 @@ class MissionRuntimeTests(unittest.TestCase):
             self.assertEqual(self.controller.execute("resume")["status"], "ready")
             self._prepared_native = True
         req = dict(schema="mission/2", kind="start", request_id="start-1", admission=self.a.to_dict())
-        response = self.runtime.command(req)
-        self.assertEqual(response["status"], "accepted", response)
-        self.settled("start-1")
+        with patch.object(self.runtime, "_bootstrap", side_effect=lambda work: bootstrap_core_fixture(self.runtime, work)):
+            response = self.runtime.command(req)
+            self.assertEqual(response["status"], "accepted", response)
+            self.settled("start-1")
         return self.runtime.status()
 
     def navigation(self, target=(1, 0, 0), **changes):
@@ -211,6 +235,26 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertIsNone(self.runtime._prompt_phase)
         self.assertEqual(self.runtime.status()["spent_inputs"], 1)
         self.assertIsNone(self.controller._mission_lease)
+
+    def test_prompt_dismissal_is_one_accounted_input_with_partial_effect_verification(self):
+        normal = copy.deepcopy(self.bridge.value["scene"])
+        def dismiss(bridge, request):
+            if request.get("action") == "TEXT.QUIT":
+                bridge.value.update(scene=normal, ui=None, category="DEFAULTMODE", actions=["UP", "DOWN", "LEFT", "RIGHT"])
+                bridge.value["boundary"].update(kind="normal_play", id="editor-cancel-return")
+            return True
+        root, _ = self.open_direction(prompt=dict(category="STRING_INPUT", actions=["TEXT.QUIT"]), effect=dismiss)
+        child = self.control("menu", dict(purpose="Cancel filter editor", label="Cancel", outcome="dismissed"),
+            phase_id=root["request_id"], perception=dict(kind="dismissal", basis="player_interpretation",
+            source_id=self.runtime.status()["current_source"]["observation_id"], question="Filter"))
+        self.runtime.command(child)
+        operation = self.settled(child["request_id"])
+        self.assertEqual(operation["state"], "partial", operation)
+        self.assertTrue(operation["result"]["verification_required"])
+        self.assertEqual(operation["result"]["phase"]["stage"], "complete")
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertEqual([r.get("action") for r in self.bridge.delivered if r["kind"] == "action"], ["open", "TEXT.QUIT"])
 
     def native_choices(self, *, effect=None, **changes):
         ui = dict(purpose="uilist", title="Choices", rows=[
@@ -372,6 +416,25 @@ class MissionRuntimeTests(unittest.TestCase):
             self.assertIn("lifecycle", response["reason"])
         self.assertIsNotNone(self.runtime._prompt_phase)
         self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+
+    def test_observer_memory_is_copied_journaled_context_not_a_fresh_projection(self):
+        initial = self.start()
+        self.assertIsNone(initial["memory_context"])
+        scope = dict(mission_id=self.a.mission_id, session=initial["current_source"]["session"], coordinate_epoch=0)
+        response = self.runtime.command(dict(schema="mission/2", kind="context", mission_id=self.a.mission_id,
+            scope=scope, query="position", max_bytes=32768))
+        packet = copy.deepcopy(response["context"]["packet"])
+        response["context"]["packet"]["query"] = "Modified caller copy"
+        with patch.object(self.runtime._memory, "context", side_effect=AssertionError("Status must not recompute memory")):
+            first = self.runtime.status()
+            self.assertEqual(first["memory_context"], packet)
+            first["memory_context"]["query"] = "Modified status copy"
+            self.assertEqual(self.runtime.status()["memory_context"], packet)
+        navigation = self.navigation()
+        self.runtime.command(navigation)
+        self.settled(navigation["request_id"])
+        self.assertEqual(self.runtime.status()["memory_context"], packet)
+        self.assertFalse(packet["grants_authority"])
 
     def test_interaction_unknown_delivery_cannot_open_prompt(self):
         self.bridge.value["actions"].append("open")
@@ -693,6 +756,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertTrue(op["result"]["lifecycle_needed"])
         self.assertEqual(self.runtime.status()["phase"], "admitted")
         self.assertEqual(self.bridge.delivered, [])
+
         self.assertEqual(self.runtime._bindings, {})
         self.assertIsNone(self.controller._mission_lease)
         req = self.request("observe")
@@ -700,6 +764,23 @@ class MissionRuntimeTests(unittest.TestCase):
         self.settled(req["request_id"])
         self.assertEqual(self.runtime.status()["phase"], "admitted")
         self.assertEqual(self.bridge.delivered, [])
+
+    def test_unpaused_unowned_scene_cannot_seed_identity_or_mission_game_clock(self):
+        self.assertEqual(self.controller.execute("observe")["status"], "ready")
+        self.assertEqual(self.controller.execute("resume")["status"], "ready")
+        delivered = copy.deepcopy(self.bridge.delivered)
+        req = dict(schema="mission/2", kind="start", request_id="start-1", admission=self.a.to_dict())
+        with patch.object(self.controller, "acquire_mission", side_effect=AssertionError("Start cannot adopt identity")):
+            self.assertEqual(self.runtime.command(req)["status"], "accepted")
+            self.assertTrue(self.settled("start-1")["result"]["lifecycle_needed"])
+            self.runtime.command(self.request("observe"))
+            self.settled("observe-1")
+        self.assertEqual(self.runtime.status()["phase"], "admitted")
+        self.assertIsNone(self.runtime.status()["current_source"])
+        self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
+        self.assertEqual(self.runtime._store.historical_references, ())
+        self.assertEqual(self.bridge.delivered, delivered)
+        self.assertIsNone(self.controller._mission_lease)
 
     def test_missing_native_start_stays_admitted_without_launch(self):
         self.bridge.__exit__(None, None, None)

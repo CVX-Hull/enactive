@@ -7,9 +7,10 @@ review_trigger: Mission interface adoption; implementation or native validation 
 # Player-owned mission design
 
 This is the design deliverable for [#137](https://github.com/CVX-Hull/enactive/issues/137),
-not an implemented contract or gameplay admission. Base `9df034ef` has only the
-leased waypoint service and external campaign operator. [Architecture](../architecture.md)
-and [protocol](../protocol.md) remain authoritative until the coordinated migration.
+with implemented component checkpoints and remaining acceptance work below; it
+is not a gameplay admission. The coordinated mission/2 ingress now replaces the
+waypoint runtime. [Architecture](../architecture.md) and [protocol](../protocol.md)
+own current behavior; lifecycle and independent mission acceptance remain pending.
 The [assessment](../research-memory-architecture.md) supplies the research rationale;
 the [trace pilot](../acceptance/2026-10-19-memory-trace-pilot.md) supplies bounded
 first-run development cases. GitHub owns scope, allocation and live stages.
@@ -615,18 +616,20 @@ receipt order; missing newest sources remain unknown. Work availability requires
 fresh scoped evidence, while retained output/progress remains historical. Neither
 module is a player, dispatcher or proof of continuity, autonomy or learning benefit.
 
-### Unconnected runtime core
+### Integrated runtime and admission gate
 
 The reviewed [mission runtime](../../harness/mission_runtime.py) now composes the
 existing controller, ledger, archive, memory and navigation behind one bounded
-writer. It is a source component; the server still uses the current waypoint
-runtime until the coordinated ingress migration. It does not create a second live
-executor. Cached status does no storage work, original costs survive reopening,
+writer. It is the sole live server runtime, using strict POST /api/mission and the
+mission-request CLI. The old waypoint runtime/API/CLI are removed; passive study
+components create no second executor. Cached status does no storage work, original costs survive reopening,
 and exact final preflight precedes durable intent and input publication.
 Contradictory publication receipts remain unknown, even if movement occurred.
 
-Start and Observe never launch or Resume. A paused bootstrap needs the registered
-lifecycle adapter. Stop(false) requests Pause and leaves cleanup possible; a busy
+Start and Observe never launch or Resume. Neither paused menus nor unowned normal
+play can establish world/character or the game-time anchor. Production Start stays
+read-only until the registered owned lifecycle verifies those facts. Core tests
+explicitly mock that boundary; they are not lifecycle acceptance. Stop(false) requests Pause and leaves cleanup possible; a busy
 Stop is not admitted under the old epoch. Unsupported item/inspection, activity,
 lifecycle, handoff and final-finish requests explicitly block in this component.
 Fresh player replacement and independent play remain separate acceptance work.
@@ -637,8 +640,8 @@ enabled label, followed by one CONFIRM. Focus checks follow the advanced native
 boundary and one attributed archive promotion. Confirmation returns partial with
 verification required; contradictory after-state retains unknown delivery and
 its pending ID. Only native uilist rows are supported by this policy. Inventory
-highlight versus multiselect, text editors and fallible screenshot controls remain
-separate gaps; this component cannot substitute for them.
+highlight versus multiselect remains a gap. The separate semantic policy handles
+fallible image controls and text editing; component tests do not qualify native focus.
 
 Ledger format6 accounts Resume as a distinct primitive with null value under an
 admitted lifecycle request. Its required preflight source, reserved receipt,
@@ -666,8 +669,8 @@ evidence, not model latency or an efficiency baseline for a different scenario.
 Current source uses mission/2, campaign-memory/2 and ledger6. Every caller and
 fixture migrates; missing fields and prior formats reject without mutation or a
 compatibility reader. No production mission database existed at this migration.
-Native4/gameplay2/archive3 stay unchanged. These contracts do not activate the
-mission runtime or accept independent gameplay.
+Native4/gameplay2/archive3 stay unchanged. These contracts do not accept independent gameplay; the current single ingress
+still blocks unimplemented lifecycle admission.
 
 Skills carry required nullable work_id, phase_id and perception. Lifecycle carries
 required nullable work_id/phase_id and up to4 identity_claim_ids, with a separate
@@ -706,14 +709,15 @@ The passive policy additionally stops an arrow batch when available native rows
 contradict its next expected enabled focus. Unknown results retain their pending
 ID and canonical actual-after reference even when the PNG is missing or corrupt;
 that diagnostic reference cannot authorize another input. This remains synthetic
-component verification, with native editor behavior and live ingress pending.
+component verification, with native editor behavior pending. The current mission
+HTTP ingress is connected; owned lifecycle acceptance is not.
 
 Ledger6 validates a direct earlier lifecycle or item/activity/interact root,
 derives child deadlines from its original deadline, and counts direct-root and child
 inputs together through SQLite's indexed request/primitive join. It checks links,
 original ceilings and counts again on reopen. A partial root receipt remains
 immutable. This accounting is data and restores no live phase authority.
-The unconnected runtime now integrates one ordinary interact prompt root and its
+The sole live runtime integrates one ordinary interact prompt root and its
 menu/edit children, original root/Work association
 and exact stage/source/actor/epoch checks before publication. One root may return
 partial and release the writer while awaiting player interpretation; it leaves no
@@ -772,3 +776,23 @@ current undisputed scope and admission names, not annotation text or any existin
 claim ID. These remain fallible identity evidence. Item selection, activity result,
 registered lifecycle, one-current ingress, observer views and the actual fresh-player
 mission remain acceptance gates in the linked Issues.
+
+
+### Cached observer and continuity reducer
+
+The observer consumes the single cached mission status and last explicitly requested
+memory packet. It labels that packet historical; later observations/corrections do
+not silently rewrite it. It displays source IDs, claims, Work, omissions/dispositions,
+original budget/reserve and unavailable costs as unknown. A nonterminal or malformed
+mission disables raw input/Resume/recovery. Typed Observe uses mission ID and epoch;
+Pause remains independent. Rendering issues no gameplay/memory operation.
+
+Explicit dismissal is a rowless fallible view of the actual question, paired only
+with Cancel/dismissed. One registered QUIT, or TEXT.QUIT in STRING_INPUT, is delivered;
+the result is partial for verification. It cannot alias NO or answer a later prompt.
+
+The timeline reducer validates archive chronology and exact adjacent normal-session
+endpoint links, rejects disputed/lost sources and sums session durations. Runtime
+currently supplies no lifecycle links, so a second session makes cost unknown.
+A future validated identity transition must produce the link and a new coordinate
+epoch. Equal turns alone never prove same-character identity or restore authority.

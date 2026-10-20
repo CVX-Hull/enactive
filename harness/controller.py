@@ -975,8 +975,10 @@ class Controller:
             return None
         return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
 
-    def execute(self, kind: str, *, timeout: float | None = None, **payload: Any) -> dict[str, Any]:
-        return self._execute(kind, timeout, payload, None)
+    def execute(self, kind: str, *, timeout: float | None = None,
+                expected_generation: int | None = None, **payload: Any) -> dict[str, Any]:
+        """Trusted ingress may bind its original host generation; JSON cannot set it."""
+        return self._execute(kind, timeout, payload, None, expected_generation=expected_generation)
 
     def _execute(self, kind: str, timeout: float | None, payload: dict[str, Any],
                  lease: MissionLease | None, *, deadline_monotonic: float | None = None,
@@ -994,6 +996,8 @@ class Controller:
                 raise ControlError("Expected image hash must be exactly 64 lowercase hexadecimal characters")
             if preflight is not None and not callable(preflight):
                 raise ControlError("Mission preflight must be a trusted Python callback")
+            if expected_generation is not None and (type(expected_generation) is not int or expected_generation < 0):
+                raise ControlError("Expected host generation requires a nonnegative integer")
             if expected_generation is not None and expected_generation != admitted_generation:
                 raise ControlError("Mission continuation superseded by host Pause or takeover")
             if self.closed:

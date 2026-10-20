@@ -9,16 +9,15 @@ status: active
 Supported scope: one prepared local macOS game.
 For fresh installation use [setup](setup.md); use [overview](overview.md) for limits.
 
-## When a run owns input
+## When a mission owns execution
 
-The viewer identifies an active run owner and disables ordinary inputs and Resume.
-Observe and Pause stay available. Use Pause to take over, inspect a current frame,
-and explicitly Resume before manual input. A released or revoked run is not
-restored by Resume. Recording goal text never starts or replaces a task.
-The explicit waypoint task controls acquire a run lease through the runtime;
-the planning-only player never receives it. Restart begins paused without ownership.
-If a result is unknown, preserve it and reconcile under the procedures below;
-acquiring new ownership does not prove the old task succeeded.
+A nonterminal mission owns observation/input even while paused and without a live
+lease. The spectator shows objective, actor, epoch, skill, costs and source details;
+Observe uses the typed mission path and Pause stays independent. Native window
+input can take over. Resume cannot restore a mission lease, identity or private
+phase. Unknown delivery stays unknown; a new owner does not prove success.
+Before admission, ordinary controller commands retain their documented guards.
+Current lifecycle gaps below prevent independent production gameplay.
 
 ## Permissions and player ownership
 
@@ -28,8 +27,8 @@ matching-tested; [actual-player calls and resumed play](acceptance/2026-10-18-ac
 verified the scoped loaded setup. A later native proof used the stable CLI without
 recurring review or another restart. Changed actors/entry points/policy need their
 own preflight; existing capture wrappers do not match the stable CLI rule. User keys/unlock/rescue are not the
-routine fallback. A waypoint planner remains candidate-only. A designated campaign
-operator needs the explicit bounded assignment and handoff below; permission rules
+routine fallback. A passive waypoint planner has no live ingress. A designated
+player needs the explicit bounded mission assignment and handoff below; permission rules
 do not establish actor identity or restore ownership.
 Before admitting gameplay, have that actor perform a passive access preflight with
 the required explicit tool permission mode. Lead access alone is insufficient;
@@ -75,7 +74,9 @@ then explicitly resume. Read returned session/revision after every command:
 SESSION:REVISION is a placeholder for values from the observation used to decide
 the action. Resume changes revision. `ready` is an input-boundary acknowledgment,
 not proof that an objective succeeded. Reinterpret prompts and new frames. The
-viewer goal field records an objective; it does not start another agent.
+viewer displays the recorded objective read-only. Outside a mission, the CLI
+`goal` command records text without starting an agent. Mission objectives come
+from their immutable admission.
 A registered action can be rejected if it has no usable single-key binding. A
 walk may report `stopped` after all requested steps completed; inspect `steps`
 and the frame before deciding again. See the [protocol](protocol.md).
@@ -300,100 +301,67 @@ frame. Save normally and stop only owned processes after acceptance.
 
 ## Designated campaign operator
 
-This procedure follows the [operator contract](protocol.md#designated-campaign-operator).
-The lead starts the one prepared windowed game/controller and verifies visible
-identity, source/native, budgets, empty live requests and no waypoint lease before
-assignment. Use a clean-context general-purpose agent with an explicit bounded
-brief; read-only explorer/reviewer roles are not suitable. A separate source
-worktree is unnecessary for a player that cannot edit source or launch processes.
+Use the [current actor contract](protocol.md#designated-campaign-operator). One
+explicitly designated general-purpose player makes mission decisions; explorers
+and reviewers are read-only. Its frozen brief identifies source/native, prospective
+limits/reserve, allowed typed requests and memory/output paths. Verify actual-player
+passive access before admission. The lead owns the runtime and acceptance, without
+ordinary gameplay rescue in the deciding attempt.
 
-Assign only ordinary registered actions/keys, Observe/Resume/Pause/status and dated
-goal recording, plus named project-local evidence paths. Charge inputs before
-dispatch, including rejected/unknown requests and full requested walk expansion.
-The player must inspect actual frames and fresh applicability, distinguish carried
-from reachable supplies, and retain public reasons and unknowns. Do not trust an
-old summary as current state or equate `ready` with successful consumption/rest.
-Campaign-specific limits remain explicit; the controller is not a general needs
-or campaign-budget verifier.
+Before lead inspection or player replacement: request Pause, finish every tool
+handle, retain the checkpoint, verify no queued/scheduled action and obtain explicit
+quiescence. Cached status alone cannot prove the agent's queue is empty. User
+Pause/native takeover prevents automatic continuation. The registered one-use
+handoff and real fresh context must preserve original costs and retrieve retained
+memory; these adapters remain pending. Do not substitute raw inputs or lead-written
+reconstruction to make acceptance pass. Historical operator reports remain evidence,
+not standing admissions or a second runtime mode.
 
-While assigned, the lead may watch/status-check and issue emergency Pause but
-does not Resume, send ordinary inputs or race Observe decisions. For deliberate
-inspection, ask the player to finish its current tool, Pause and return a bounded
-checkpoint, then stop issuing calls. Verify its turn and all execution handles
-are terminal. A timed-out observation of an agent is not proof that it stopped;
-re-poll the same handle. Check no live gameplay/recovery request or lease, issue
-lead Pause, then obtain a fresh paused Observe. Native activity may still run;
-retain its outcome or use scoped recovery without inventing cancellation.
+## Typed mission requests and the player
 
-Record the new actor/phase and remaining original limits before authorizing input
-again. A returning player reobserves, verifies applicability and explicitly
-Resumes; no old capability or input is restored. The lead handles unsupported
-native prompts only after this handoff, using actual readable frames and separately
-charged CUA evidence. Failed access, approval denial or unknown/unreadable state
-stops the affected play; never ask the user for routine keys/unlock or route around
-the failed control. Lifecycle/save operations stay under the declared cleanup
-scope and deadlines. The [two-phase result](acceptance/2026-10-18-campaign-operator.md)
-records finite development acceptance and its retained failed access prefix,
-separate from a seven-day deciding campaign. Derive summary counts from original
-IDs and distinguish inherited unknowns from the total including new ones; correct
-a mistaken summary separately without rewriting original evidence.
+The current service has one mission runtime and `/api/mission`. The old waypoint
+Start/Continue/Abandon/planner inbox and `gameplay-*` CLI are removed, with no alias.
+The [mission contract](protocol.md#integrated-mission-lifecycle) and strict source
+schema own the supported records; the [design](design/player-owned-mission.md)
+separates implemented components from remaining independent-play acceptance.
 
-## Explicit waypoint tasks and the player
+1. Freeze the exact reviewed candidate, finite objective/scenario/limits/reserve,
+   actor, native build and permission preflight before gameplay. The initial
+   admission is not authority to adopt an unrelated open character.
+2. Put one current mission/2 record in project `.runtime/mission-requests/record.json`.
+   Use `.venv/bin/python -m harness mission-request --request
+   .runtime/mission-requests/record.json` from this trusted checkout. The CLI accepts
+   a regular bounded JSON file directly in that directory, validates it and sends
+   one authenticated request. It does not run code or create an arbitrary process.
+3. Start and Observe are read-only. Registered owned lifecycle must establish
+   world/character identity and fresh input authority. Those production adapters
+   remain unfinished; do not substitute raw keys/Resume or a trusted unit fixture.
+4. Read the result by its exact operation ID. Accepted only acknowledges admission;
+   wait for the settled immutable result and inspect the frame/effect. A lost response
+   is not nondelivery. Never change a request body under an existing ID or blindly
+   replay an uncertain input. Busy admission is a visible rejection, not a queued
+   future action.
+5. The player requests bounded context, reads needed retained sources, records
+   fallible claims/corrections/Work and chooses semantic goals. The observer's last
+   context packet is historical, query-specific and possibly incomplete. Its labels
+   are as-of that packet; use a new explicit query to judge current knowledge.
+6. Owned menus support bounded focusing, literal text and direction/confirmation
+   handling. Dismissal uses one registered QUIT or editor TEXT.QUIT, returns partial
+   for effect verification and never automatically answers a new prompt. Original
+   root/child limits and unknowns stay recorded. Item/activity and lifecycle still
+   need their registered adapters and separate native qualification.
+7. Pause prevents further admission, without undoing an input or native activity.
+   Honor user Pause/takeover; do not auto-Resume or restore a phase from disk. A
+   stopped deciding attempt remains stopped. Normal cleanup, actual fresh-context
+   replacement and full mission acceptance are separately required.
 
-The service supports one bounded waypoint-and-return task. Start from a fresh
-normal-play observation after explicit transport Resume. Native input and saved
-goal text do not start a task. In the spectator, choose a cardinal direction and
-1–4 tiles, then Start task. The origin/target are constructed from current visible
-state. A direction is a bounded request, not a guarantee that every route tile is
-safe or known. Each step must pass the current guard.
-
-The equivalent project-local CLI is `.venv/bin/python -m harness gameplay-start
-east --distance 1 --expect SESSION:REV`, using the actual observation that informed
-the decision. `gameplay-request` reads the pending task/evidence/skill/binding packet.
-The dedicated player sub-agent reads that packet and retained frame, then submits
-one validated candidate file with `gameplay-plan REQUEST_ID --candidate PATH`.
-Only the player proposes the candidate; an acceptance script must not manufacture
-plans and label them model decisions. Candidate reasons are concise public
-justifications, not a private reasoning transcript. Start the player before task
-admission so the 30-second call ceiling is usable; task wall time remains 120 seconds
-including planning and Pause. No response means stop, not automatic replanning.
-
-The lead supervises and owns the game/service; this waypoint planner must not
-start/continue runs, resume, send raw inputs, edit source/saves, or launch another process. Both
-use one external planning contract. Sub-agent role instructions do not remove its
-inherited tool permissions. Keep the planning brief narrow and retain requests,
-responses, real receipts and frames. Codex usage and model identity are unmeasured
-unless independently recorded; the harness makes no paid model API calls.
-
-After a slow response, the service reobserves and explicitly proves the unchanged
-visible scene before admitting input. Changed evidence stops; it never rewrites the
-candidate binding. The spectator shows planning, current stage, verified progress,
-next check and failure/unknown reasons. Read evidence details when judging progress;
-transport delivery alone is not task completion. Status polling does not renew
-freshness or a planner deadline.
-
-Pause always takes control immediately, even while planning or waiting for native
-input. It cannot undo an already committed action. Reconcile with Observe and
-explicitly Resume transport, then use Continue task (or `gameplay-continue RUN_ID
---epoch N --expect SESSION:REV`) only if current evidence matches the retained
-checkpoint and no effect is unresolved. Original history and all budgets remain;
-already verified legs are not replayed. Unknown effects prohibit continuation.
-
-Completion releases ownership and pauses transport. A stopped/completed task stays
-visible until Abandon task (`gameplay-abandon RUN_ID --epoch N`); await worker exit
-before starting another. Abandonment preserves evidence and does not erase unknown
-native effects. Service restart does not restore an active task. Stop the dedicated
-player at the end of the session, then save/quit normally and close only owned
-processes under the existing cleanup procedure.
+The lead owns source/integration/admission and verification. The deciding player
+owns ordinary tactics and supported lifecycle; source faults or unsupported required
+capabilities stop the attempt with evidence instead of inviting engineering rescue.
+Role assignment is procedural, not filesystem isolation. Optional curation or
+additional model tiers do not gate this functional path. No paid API is implied.
 
 The [stopped functional continuation](acceptance/2026-10-18-seven-day-continuation-stop.md)
-demonstrates why access and cleanup reachability are separate. LIST_ITEMS was readable
-but unsupported, so neither advertised actions nor a fresh frame authorized Escape.
-Native CUA access failed and no user rescue was requested. One prospectively recorded
-cleanup exception invoked upstream Ctrl-C Quit, confirmed its actual supported
-prompt and closed without Save. It remains failed normal-save acceptance; that
-expired exception is not standing recovery authority. Current menu repair and its
-[qualified real-game proof](acceptance/2026-10-18-ordinary-menus.md) are tracked in #112.
-Item examination/comparison and work-menu entry/cancel worked; the
-[subsequent gate](acceptance/2026-10-18-menu-gate.md) verified direction cancellation
-and prior-save reload. Unknown ACKs remain; other unknown boundaries still stop.
+and [ordinary menu repair](acceptance/2026-10-18-ordinary-menus.md) retain historical
+coverage and failures. Their old CLI/recorders and expired admissions cannot authorize
+current play. #156 freezes the actual candidate; #157 owns deciding mission evidence.
