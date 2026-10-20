@@ -123,6 +123,13 @@ or later frame alone cannot prove delivery. Preserve original unknown receipts,
 costs, root limits and user Pause when adding that path. Reuse the mission writer,
 ledger, controller and deliberate charged Resume rather than adding an outbox or
 another executor. Any contract change must migrate every caller together.
+Its first source foundation now retains original unknown-dispatch custody and
+reserved evidence capacity, collecting exact unclaimed-retirement or terminal
+evidence once before Observe. Collection leaves the ACK, cost and ledger effect
+unknown and grants no Resume/lease. A missed response remains ambiguous even if
+the next frame looks expected. Typed effect proof, explicit readmission/root
+accounting and native qualification remain the next coupled work, not newly
+completed acceptance. Source/fixture review is distinct from an actual mission.
 #144 records the exact source/test checkpoint, including outstanding failures;
 resolve and review this scope before pulling more implementation work. Publish the
 single contract only after callers, persistence validation, tests and current

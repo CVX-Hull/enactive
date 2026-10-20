@@ -7,6 +7,7 @@ import hashlib
 import re
 import copy
 import json
+import math
 import os
 from pathlib import Path
 import secrets
@@ -235,6 +236,10 @@ class Controller:
         self.control_pending: dict[str, Any] | None = None
         self.control_unknown_outcomes: list[dict[str, Any]] = []
         self.control_admitted: dict[str, dict[str, Any]] = {}
+        # Process-local custody references, never restored as authority/history.
+        # The existing admission/cancellation files remain the evidence source.
+        self._retired_mission_inputs: dict[tuple[bool, str], tuple[Path, dict]] = {}
+        self._mission_delivery_evidence: dict[tuple[bool, str], dict] = {}
         self.historical_unknowns: tuple[dict[str, Any], ...] = ()
         self.token = secrets.token_urlsafe(32)
         local_session = time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8]
@@ -831,9 +836,137 @@ class Controller:
         destination = self.bridge / f"{prefix}cancelled-{reason}-{uuid.uuid4().hex}.json"
         try:
             os.rename(self.bridge / ("control.json" if control else "request.json"), destination)
+            with self.data_lock:
+                pending = self.control_pending if control else self.pending
+                if pending is not None:
+                    # Compare the file's actual contents at proof collection.
+                    # A pending ID alone cannot attest which file was renamed.
+                    self._retired_mission_inputs[(control, pending["id"])] = (destination, copy.deepcopy(pending))
+                    while len(self._retired_mission_inputs) > 60:
+                        self._retired_mission_inputs.pop(next(iter(self._retired_mission_inputs)))
             return "retired_before_claim"
         except FileNotFoundError:
             return "absent_may_be_claimed_or_dispatched"
+
+    def inspect_mission_delivery(self, *, expected_request: dict[str, Any],
+                                 expected_controller_boot_id: str, expected_operator_generation: int,
+                                 expected_generation: int, expected_takeover_generation: int,
+                                 deadline_monotonic: float) -> dict[str, Any] | None:
+        """Collect exact unknown-input evidence without sending/accepting input.
+
+        Collect before publishing Observe: the native writer can overwrite a
+        terminal response with that Observe. Host locks do not close that race.
+        Collection is bounded to250ms and its original caller deadline. A miss
+        remains ambiguous; no frame, absent inbox or caller assertion is proof.
+        Returning evidence neither retires pending custody nor grants a lease,
+        changes an ACK, clears frozen state, publishes Observe or sends Resume.
+        """
+        started = time.monotonic()
+        if type(expected_request) is not dict:
+            raise ControlError("Delivery proof requires its exact input request")
+        request = copy.deepcopy(expected_request)
+        control = request.get("kind") in RECOVERY_KINDS
+        if control:
+            validate_control_request(request)
+        else:
+            self._validate_stored_request(request)
+            if request["kind"] not in {"action", "key", "resume"}:
+                raise ControlError("Delivery proof requires an admitted input")
+        try:
+            exact_id = str(uuid.UUID(request["id"])) == request["id"]
+        except (ValueError, TypeError, AttributeError):
+            exact_id = False
+        if (len(json.dumps(request).encode()) > MAX_REQUEST
+                or not exact_id
+                or type(expected_controller_boot_id) is not str or not expected_controller_boot_id
+                or any(type(value) is not int or value < 0 for value in
+                       (expected_operator_generation, expected_generation, expected_takeover_generation))
+                or type(deadline_monotonic) not in (int, float) or not math.isfinite(deadline_monotonic)):
+            raise ControlError("Malformed delivery-proof binding")
+        key = control, request["id"]
+        def guard():
+            with self.data_lock:
+                unknowns = self.control_unknown_outcomes if control else self.unknown_outcomes
+                if (self.closed or self._command_work or self._mission_lease is not None
+                        or not self.pause_requested or self.state is None
+                        or expected_controller_boot_id != self.authority["controller_boot_id"]
+                        or request["authority"]["controller_boot_id"] != expected_controller_boot_id
+                        or self.operator_pause_generation != expected_operator_generation
+                        or self.pause_generation != expected_generation
+                        or not control and request["takeover_generation"] != expected_takeover_generation
+                        or self.state["session"] != request["session"]
+                        or self.state["takeover_generation"] != expected_takeover_generation
+                        or not any(item["request"] == request for item in unknowns)
+                        or any(pending is not None and pending != request
+                               for pending in (self.pending, self.control_pending))):
+                    raise ControlError("Delivery proof crossed its original unknown/Pause/controller custody")
+                if time.monotonic() >= deadline_monotonic:
+                    raise ControlError("Original delivery-proof deadline exhausted")
+        if not self.command_lock.acquire(blocking=False):
+            raise ControlError("Command writer is active")
+        try:
+            if not self.control_lock.acquire(blocking=False):
+                raise ControlError("Recovery writer is active")
+            try:
+                guard()
+                cached = self._mission_delivery_evidence.get(key)
+                if cached is not None:
+                    guard()
+                    return copy.deepcopy(cached)
+                admission = self.control_admissions if control else self.admissions
+                if read_json(admission / f'{request["id"]}.json') != request:
+                    raise ControlError("Delivery proof lacks its exact durable admission")
+                end = min(deadline_monotonic, started + 0.25)
+                while True:
+                    guard()
+                    if time.monotonic() >= end:
+                        return None
+                    retired = self._retired_mission_inputs.get(key)
+                    proof = None
+                    if retired is not None:
+                        path, original = retired
+                        if original != request or read_json(path) != request:
+                            raise ControlError("Retired inbox differs from its exact admitted input")
+                        proof = {"basis": "unclaimed_retirement", "request": request,
+                                 "result": None, "retirement": path.name}
+                    else:
+                        response = read_json(self.bridge / ("control-response.json" if control else "response.json"))
+                        if response is not None and response.get("id") == request["id"]:
+                            if control:
+                                with self.data_lock:
+                                    correlated = self._validate_admitted_control_response(response)
+                                terminal = correlated == request and response["status"] in CONTROL_TERMINAL
+                                native = response["state"]
+                            else:
+                                validate_state(response, request["id"])
+                                terminal = response["status"] in {"ready", "rejected"}
+                                native = response
+                            if terminal:
+                                if (native["session"] != request["session"]
+                                        or native["takeover_generation"] != expected_takeover_generation
+                                        or not control and (native["revision"] < request["revision"]
+                                            or response["status"] == "ready" and native["revision"] == request["revision"])):
+                                    raise ControlError("Terminal delivery evidence changed session/takeover or regressed revision")
+                                proof = {"basis": "terminal_response", "request": request,
+                                         "result": response, "retirement": None}
+                    guard()
+                    received = time.monotonic()
+                    if received >= end:
+                        return None  # Filesystem delay cannot earn late proof credit.
+                    if proof is not None:
+                        proof.update(received_monotonic=received, grants_authority=False)
+                        self._mission_delivery_evidence[key] = copy.deepcopy(proof)
+                        while len(self._mission_delivery_evidence) > 60:
+                            self._mission_delivery_evidence.pop(next(iter(self._mission_delivery_evidence)))
+                        return copy.deepcopy(proof)
+                    remaining = end - time.monotonic()
+                    if remaining <= 0:
+                        return None
+                    time.sleep(min(0.01, remaining))
+            finally:
+                self.control_lock.release()
+        finally:
+            self.command_lock.release()
 
     def _record(self, request: dict[str, Any], outcome: dict[str, Any]) -> None:
         event = {"timestamp_ms": int(time.time() * 1000), "request": request,

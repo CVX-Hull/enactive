@@ -21,6 +21,7 @@ from .native_process import NativeProcess
 from .mission_lifecycle import NormalPhase, RegisteredLifecycle
 from .mission_handoff import HandoffEvidenceError, HandoffPhase, RegisteredHandoff
 from .mission_activity import ActivityFeedback, ActivityIntent, ActivityPhase, RegisteredActivity
+from .mission_recovery import RegisteredRecovery
 from .gameplay.campaign_memory import CampaignMemory
 from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
 from .gameplay.evidence import MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore
@@ -142,6 +143,7 @@ class MissionRuntime:
         self._registered_lifecycle = RegisteredLifecycle(self)
         self._registered_handoff = RegisteredHandoff(self)
         self._registered_activity = RegisteredActivity(self)
+        self._registered_recovery = RegisteredRecovery(self)
         self._thread = threading.Thread(target=self._work, name="mission-runtime", daemon=True)
         self._thread.start()
 
@@ -273,6 +275,7 @@ class MissionRuntime:
             self._registered_lifecycle.revoke()
             self._registered_handoff.revoke()
             self._registered_activity.revoke()
+            self._registered_recovery.revoke()
             self._rotation = None
             if self._snapshot is not None and self._snapshot["phase"] not in TERMINAL:
                 self._snapshot.update(phase="paused", pause_cause=cause, reason=reason, lease_owner=None,
@@ -357,6 +360,7 @@ class MissionRuntime:
             self._lease = None
             self._registered_handoff.revoke()
             self._registered_activity.revoke()
+            self._registered_recovery.revoke()
         if self._ledger is not None:
             for cause, reason in events:
                 self._ledger.pause(cause=cause, reason=reason, now=self._wall())
@@ -521,6 +525,7 @@ class MissionRuntime:
         self._registered_lifecycle.revoke()
         self._registered_handoff.revoke()
         self._registered_activity.revoke()
+        self._registered_recovery.revoke()
 
     def _capacity(self, *, frames: int = 1, byte_count: int = MAX_FRAME_BYTES) -> None:
         usage = self._store.usage()
@@ -577,6 +582,8 @@ class MissionRuntime:
 
     def _observe_native(self, work: _Work, *, timeout: float | None = None,
                         deadline_monotonic: float | None = None) -> tuple[dict, float]:
+        self._check_cancelled(work)
+        self._registered_recovery.before_observe(work, deadline_monotonic=deadline_monotonic)
         self._check_cancelled(work)
         result = (self.controller.execute("observe", timeout=timeout) if deadline_monotonic is None else
                   self.controller.observe_mission(deadline_monotonic=deadline_monotonic, timeout=timeout))
@@ -650,6 +657,7 @@ class MissionRuntime:
         self._issued_packets = {}
         self._registered_handoff.revoke()
         self._registered_activity.revoke()
+        self._registered_recovery.reset()
         self._mission_deadline = ledger.snapshot(now=self._wall())["deadline"]
         return ledger.snapshot(now=self._wall())["phase"] == "admitted"
 
@@ -1482,6 +1490,10 @@ class MissionRuntime:
         raw = None
         disposition, reason = "not_dispatched", "Dispatch not admitted"
         envelope_valid = False
+        operator_mark = self._operator_mark()
+        takeover_generation = self._store.observation(proposal.before)["takeover_generation"]
+        game_anchor = (activity.prompt.game_anchor if activity is not None else
+                       self._prompt_phase.game_anchor if self._prompt_phase is not None else original)
         control = isinstance(proposal, ActivityIntent)
         image_informed = work.request.get("perception") is not None or lifecycle is not None or activity is not None
         rule = "exact_png_bytes" if image_informed else "native_state"
@@ -1619,6 +1631,9 @@ class MissionRuntime:
             # Settlement owns the unknown epoch transition. Do not advance it again
             # or replace an already recorded user/takeover Pause with a late receipt.
             self._stop_unknown_policy()
+            if lifecycle is None and prepared and envelope_valid:
+                self._registered_recovery.remember(work, proposal, raw, reservation,
+                    operator_mark=operator_mark, takeover_generation=takeover_generation, game_anchor=game_anchor)
         if control:
             return ActivityFeedback(proposal.before, after, disposition, reason, raw)
         displacement = None if (after is None or after.session != proposal.before.session
@@ -1709,7 +1724,10 @@ class MissionRuntime:
                     if receipt_phase.checkpoint.boundary_kind == "normal_play" else "activity_poll"
                     if receipt_phase.checkpoint.boundary_kind == "activity_poll" else "awaiting_control")
                 result["phase"] = self._prompt_receipt(receipt_phase, stage)
-            if outcome.disposition == "unknown":
+            # Transport unknown already stopped in _dispatch and retained its
+            # exact recovery generation. Only a new semantic uncertainty stops
+            # here; another revoke would destroy that original custody binding.
+            if outcome.disposition == "unknown" and self._lease is not None:
                 self._stop_unknown_policy()
             try:
                 self._game_guard(work.game_anchor, data["limits"]["game_seconds"], after=True)
@@ -1964,6 +1982,7 @@ class MissionRuntime:
         self._registered_lifecycle.revoke()
         self._registered_handoff.revoke()
         self._registered_activity.revoke()
+        self._registered_recovery.revoke()
         self._rotation = None
         self._apply_pauses()
         state = self._ledger.snapshot(now=self._wall())

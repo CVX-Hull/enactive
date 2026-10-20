@@ -399,6 +399,25 @@ packets keep their DOM so polling does not reset reading/selection. The source
 cache is not a new memory history store. Native/independent-player acceptance
 stays separate from the [synthetic viewer inspection](acceptance/2026-10-20-mission-observer.md).
 
+For an eligible published non-lifecycle, non-Resume unknown dispatch, the runtime keeps its original
+root, actor/epochs, operator/takeover binding, native request and after-frame
+reservation in a private process-local candidate. Before the first later Observe,
+it makes one bounded delivery-evidence collection attempt. An exact successful
+unclaimed inbox retirement or a validated correlated terminal result may be
+retained; missing/claimed files, progress or the next frame alone are not proof.
+Collection admits no new evidence after250ms or the caller's deadline, including
+after delayed file reads. Filesystem stalls themselves cannot be interrupted by
+this software deadline. Host locks do not serialize the native response writer;
+an uncaptured terminal result may be overwritten by Observe and stay ambiguous.
+
+The existing journal records the collection and its original capture clock.
+This neither accepts the old response as current, retires pending custody,
+resolves the ledger effect, refunds costs nor sends Resume. User Pause/takeover
+revokes eligibility while retaining uncertain capacity/costs; reopen restores no
+candidate. Registered lifecycle keeps its own transition handling. Typed generic
+reconciliation, reservation disposal and separate charged readmission remain
+unfinished; the declared reconcile request is not yet a general recovery path.
+
 ## Transport and state
 
 

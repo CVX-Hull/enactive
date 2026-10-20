@@ -136,6 +136,13 @@ or second counter store. Known nondelivery does not invalidate memory premises;
 source freshness, scope and unknown-effect checks still apply. The
 [observer inspection](acceptance/2026-10-20-mission-observer.md) uses synthetic data,
 not native mission evidence.
+The private [recovery holder](../harness/mission_recovery.py) now preserves an
+unknown dispatch's original custody and evidence reservation. It collects actual
+controller delivery evidence once before Observe can overwrite it, through the
+existing files/journal and bounded process-local references. Collection restores
+no authority and leaves the ledger unknown. Typed common reconciliation and
+deliberate readmission still require integration; this is not native recovery
+qualification or an additional executor/history store.
 The [mission design](design/player-owned-mission.md) owns further integration and
 acceptance. Portable source checks, wire4 menu qualification and actual independent
 normal-game play are separate evidence lanes.

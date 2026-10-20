@@ -31,6 +31,9 @@ admissions separately from requests, live activity and old results. These counts
 do not measure model usage or prove greater gameplay efficiency. Its
 [synthetic UI inspection](acceptance/2026-10-20-mission-observer.md) is separate from
 the pending independent native mission.
+Unknown-input custody and available late acknowledgements are now retained before
+Observe can overwrite them. General reconciliation/resumption remains unfinished;
+collection alone leaves the player paused and the original input charged/unknown.
 
 The [seven-day functional campaign](acceptance/2026-10-19-seven-day-survival.md)
 records the same normally created Ned Meyers / Belgium, ordinary supplies and
