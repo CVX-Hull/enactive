@@ -230,7 +230,12 @@ class ActivityRecoveryTests(unittest.TestCase):
         interrupted, snapshots = [], []
         def pause_after_summary():
             value = summary()
-            if value is not None and not interrupted:
+            active = self.runtime._active
+            # The preceding interrupt's final cache publication may still be
+            # running after its result is readable. Inject only in this admitted
+            # Observe, not that earlier publication before Observe can be admitted.
+            if (value is not None and not interrupted and active is not None
+                    and active.request["request_id"] == "summary-race"):
                 interrupted.append(True)
                 self.runtime.pause("Pause between summary build and cache publication")
             return value
@@ -242,7 +247,8 @@ class ActivityRecoveryTests(unittest.TestCase):
              patch.object(self.runtime, "_publish", side_effect=capture_publication):
             req = self.request("observe", request_id="summary-race")
             self.runtime.command(req)
-            self.settled(req["request_id"])
+            operation = self.settled(req["request_id"])
+            self.assertEqual(operation["state"], "paused")
         self.assertTrue(interrupted)
         paused = [snapshot for snapshot in snapshots if snapshot["phase"] == "paused"]
         self.assertTrue(paused)

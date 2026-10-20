@@ -52,6 +52,17 @@ three widths passed. Source, screenshots, results and that failure remain in
 `.runtime/research/mission-observer/`. No server or native game was started.
 This checks layout and passive behavior, not real game frames or native control.
 
+The initial source checkpoint `5b7ab65` passed both local full gates and PR CI,
+but [push CI failed](https://github.com/CVX-Hull/enactive/actions/runs/39418806950)
+in the new forced-Pause test: its injection could run in the preceding operation's
+final cache publication, cancelling Observe before it existed in the ledger.
+The observed paused snapshot had already cleared the activity as required; the
+test incorrectly assumed an admitted Observe. The correction binds injection to
+the exact active Observe and asserts its retained paused result, while preserving
+all publication/no-input assertions. The failed run remains evidence. The
+correction requires its own full hook and both exact-head hosted checks; the
+earlier local/PR passes do not override the failure.
+
 The source checkpoint, full common checks, exact hosted checks and issue/project
 readback belong in PR158 and the owning issues. Common outcome reconciliation,
 native character/item/activity qualification, actual retained-memory player
