@@ -152,7 +152,8 @@ The controller checks the same object/generation at queue admission, after its
 fresh observation and immediately before native publication/commit. Native still
 validates its durable token, request session/revision and matching presented
 boundary freshness at input commit. The host additionally binds the expected
-boundary ID; wire4 must carry/check it for mission primitives rather than infer
+boundary ID; wire4 ordinary action/key/resume requests carry `boundary_id` and
+`takeover_generation` from the informing observation and check both at dispatch, rather than infer
 a caller's intended menu from action text. A command
 cannot cross a changed menu, actor epoch, session or Pause by waiting in a queue.
 Recovery and native activity effects already committed remain outside rollback.
@@ -169,7 +170,7 @@ boundary. Exact operation payloads are:
 | Kind | Payload beyond binding |
 | --- | --- |
 | start | `admission`: the immutable mission admission object; rejects another nonterminal mission. No native input is implicit. |
-| status / result | `mission_id`; result also `request_id` of the retained operation. |
+| status / result | `mission_id`; result also `operation_id` of the retained operation. |
 | observe / reconcile | No replacement intent. Reconcile references `unresolved_request_id` and a new observation; it cannot rewrite the old delivery disposition. |
 | context | `mission_id`, `query`, `scope`, `max_bytes` (<=32768); returns selected IDs/version and omission counts. |
 | remember / correct | Typed claim/work update; correction names retired derivation IDs, replacement interpretation/support and reason. Clients cannot insert native facts. |
@@ -471,7 +472,7 @@ restart/exact reload and actual clean player-context replacement. A selected ala
 or attempted rest is not measured sleep. No universal safe-shelter guarantee.
 
 Initial preparation ceiling:1500ordinary inputs,2hours wall time,12game hours,
-one deciding attempt; reserve100inputs,15wall minutes and128MiB for ending work.
+one deciding attempt; reserve100inputs,15wall minutes,256frame slots and128MiB for ending work.
 These are proposed ceilings to verify against observed preflight throughput and
 final engine boundary, not live authority or a promise of enough resources.
 Record lower skill/phase limits and attempt identity before any deciding input.
@@ -545,3 +546,15 @@ mission crash/deduplication state, lifecycle effect-versus-ACK completion, pause
 startup/creation adoption and delayed-state/source-loss reduction. Final focused
 reviews found no remaining blockers in those scopes. This accepts a design basis;
 it does not establish implemented schemas, native fields, gameplay or efficacy.
+
+
+### Passive source foundation checkpoint
+
+The first source slice defines strict `mission/1`/`campaign-memory/1` records in
+[mission_contracts.py](../../harness/gameplay/mission_contracts.py) and single-writer
+accounting in [mission_ledger.py](../../harness/gameplay/mission_ledger.py).
+These modules do not activate the proposed runtime, change native wire3 or issue
+inputs. Their SQLite receipt reservations precede dispatch intent, crash reopening
+retains uncertainty/cost and clears authority, and rejected expiry checks retain
+the observed wall-clock watermark. Source-level regression and independent review
+are separate from the future integrated native/graphical acceptance.
