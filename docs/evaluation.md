@@ -33,22 +33,34 @@ for a bounded semantic skill; the controller observes and guards its primitives
 without a model or approval round trip per key. Retrieve memory at meaningful
 planning/correction/handoff boundaries, not automatically for every primitive.
 
-Qualification004's31 returned primitives had a62.33ms median,91.30ms nearest-rank
-p95 and95.37ms maximum **retained preflight-to-ACK interval**. This includes host
+Qualification 004's 31 returned primitives had a 62.33 ms median, 91.30 ms nearest-rank
+p95 and 95.37 ms maximum **retained preflight-to-ACK interval**. This includes host
 callback/persistence, native input/frame and transport; it is not pure engine or
-end-to-end player latency. Its world-selection ready ACK arrived7.272seconds after
-journaled admission, outside the default5second wait. The matching acknowledgement
-remains historical; an explicit15second setting was chosen prospectively for later
+end-to-end player latency. Its world-selection ready ACK arrived 7.272 seconds after
+journaled admission, outside the default 5-second wait. The matching acknowledgement
+remains historical; an explicit 15-second setting was chosen prospectively for later
 attempts, within the existing controller limit. Neither changing a ceiling nor
 fast ordinary samples resolves an old unknown or measures all loading cases.
 
+[Qualification006](acceptance/2026-10-20-native-character-lifecycle.md) broadens the
+sample: 66 ordinary returned inputs, excluding world entry, had 120.96 ms median,
+242.11 ms nearest-rank p95 and 508.84 ms maximum. All 67 returns had 242.78 ms p95;
+world entry took 7580.40 ms. UI categories and sample sizes differ from 004, so this
+is not a controlled regression or speedup comparison. No movement was delivered.
+One 15-primitive name batch reached its last receipt in 1.886 seconds, and eight
+inventory arrows in 2.779 seconds from admission. Those are **last-receipt proxies**,
+not settled-result timestamps; model/tool/approval and actual browser decode
+latency remain unknown. Three session/exit ACK timeouts are separate from those
+successful intervals. Whole engineering wall time includes investigation and
+cannot be used as player or engine throughput.
+
 | Proposed next-campaign target | Measurement / limit |
 | --- | --- |
-| Ordinary movement/menu input p95 ≤250ms | Original retained preflight-to-terminal ACK intervals; report sample count, rejected/unknown inputs and tails separately |
-| Newly available frame displayed within500ms during active play | Native frame/capture to successful browser decode; the active poll now schedules250ms after the preceding status response, idle/disconnected1000ms. Cadence alone does not prove the target |
-| Small semantic batches complete within a few seconds | Whole request admission to settled outcome; report primitive count and model/approval/tool overhead separately. A20-key edit's native intervals target ≤5seconds |
+| Ordinary movement/menu input p95 ≤250 ms | Original retained preflight-to-terminal ACK intervals; report sample count, rejected/unknown inputs and tails separately |
+| Newly available frame displayed within 500 ms during active play | Native frame/capture to successful browser decode; the active poll now schedules 250 ms after the preceding status response, idle/disconnected 1000 ms. Cadence alone does not prove the target |
+| Small semantic batches complete within a few seconds | Whole request admission to settled outcome; report primitive count and model/approval/tool overhead separately. A 20-key edit's native intervals target ≤5 seconds |
 | Player makes goal/outcome decisions, rather than decisions per key | Compare actual decision boundaries and skill requests; requests are not automatically model-call counts |
-| Loading and long activities have separate finite budgets | Record visible readiness/progress and actual stop/unknowns; do not apply the250ms input target or treat a15second wait as a universal load guarantee |
+| Loading and long activities have separate finite budgets | Record visible readiness/progress and actual stop/unknowns; do not apply the 250 ms input target or treat a 15-second wait as a universal load guarantee |
 
 These are proposed operational targets, not passing badges or new blanket gates
 for optional model tiers, telemetry frameworks or paid providers. The existing

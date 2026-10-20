@@ -933,10 +933,54 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertTrue(self.controller.pause_requested)
             self.assertTrue((fake.bridge / "pause").exists())
 
-    def test_walk_stops_on_creature_even_when_not_hostile(self):
+    def test_walk_permits_closed_nonhostile_npc_and_monster_evidence(self):
+        for name in ("Cornell", "cat"):
+            with self.subTest(name=name), FakeBridge(self.controller) as fake:
+                self.ready()
+                fake.value["scene"]["visible_creatures"] = [{"name": name, "hostile": False}]
+                result = self.controller.execute("walk", direction="east", steps=2, **self.expect())
+                self.assertEqual((result["status"], result["steps"]), ("complete", 2))
+                self.assertEqual(sum(r["kind"] == "action" for r in fake.requests), 2)
+                self.assertEqual(result["observation"]["scene"]["position"], [2, 0, 0])
+
+    def test_walk_rejects_new_hostile_or_unknown_creatures_before_dispatch(self):
+        invalid = (None, [{"name": "cat"}], [{"name": "cat", "hostile": 0}],
+                   [{"name": "cat", "hostile": "false"}],
+                   [{"name": "cat", "hostile": False, "friendly": True}],
+                   [{"name": "zombie", "hostile": True}],
+                   [{"name": "Cornell", "hostile": False}, {"name": "zombie", "hostile": True}])
+        for creatures in invalid:
+            with self.subTest(creatures=creatures), FakeBridge(self.controller) as fake:
+                self.ready()
+                fake.value["scene"]["visible_creatures"] = creatures
+                result = self.controller.execute("walk", direction="east", steps=2, **self.expect())
+                self.assertEqual((result["status"], result["steps"]), ("stopped", 0))
+                self.assertFalse(any(r["kind"] == "action" for r in fake.requests))
+                self.assertEqual(result["observation_phase"], "pre_step")
+
+    def test_walk_new_hostile_or_malformed_after_step_retains_progress_including_target(self):
+        invalid = (None, [{"name": "cat"}], [{"name": "cat", "hostile": 0}],
+                   [{"name": "Cornell", "hostile": False}, {"name": "zombie", "hostile": True}])
+        for steps in (1, 3):
+            for creatures in invalid:
+                def change_after_step(fake, request):
+                    if request["kind"] == "action":
+                        fake.value["scene"]["visible_creatures"] = creatures
+                    return True
+                with self.subTest(steps=steps, creatures=creatures), FakeBridge(self.controller, change_after_step) as fake:
+                    self.ready()
+                    fake.value["scene"]["visible_creatures"] = [{"name": "Cornell", "hostile": False}]
+                    result = self.controller.execute("walk", direction="east", steps=steps, **self.expect())
+                    self.assertEqual((result["status"], result["steps"]), ("stopped", 1))
+                    self.assertEqual(sum(r["kind"] == "action" for r in fake.requests), 1)
+                    self.assertEqual(result["observation_phase"], "post_step")
+                    self.assertEqual(result["observation"]["scene"]["position"], [1, 0, 0])
+                    self.assertEqual(result["observation"]["scene"]["visible_creatures"], creatures)
+
+    def test_walk_stops_on_new_hostile_after_returned_step(self):
         def creature(fake, request):
             if request["kind"] == "action":
-                fake.value["scene"]["visible_creatures"] = [{"name": "cat", "hostile": False}]
+                fake.value["scene"]["visible_creatures"] = [{"name": "zombie", "hostile": True}]
             return True
         with FakeBridge(self.controller, creature) as fake:
             self.ready()
@@ -946,7 +990,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(sum(r["kind"] == "action" for r in fake.requests), 1)
             self.assertEqual(result["observation_phase"], "post_step")
             self.assertEqual(result["observation"]["scene"]["visible_creatures"],
-                             [{"name": "cat", "hostile": False}])
+                             [{"name": "zombie", "hostile": True}])
 
     def test_walk_stops_on_unknown_terrain_furniture_and_no_progress(self):
         with FakeBridge(self.controller) as fake:
@@ -968,9 +1012,11 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             return True
         with FakeBridge(self.controller, no_progress) as fake:
             self.ready()
+            fake.value["scene"]["visible_creatures"] = [{"name": "Cornell", "hostile": False}]
             result = self.controller.execute("walk", direction="east", steps=3, **self.expect())
-            self.assertEqual(result["status"], "stopped")
+            self.assertEqual((result["status"], result["steps"]), ("stopped", 0))
             self.assertIn("displacement", result["error"])
+            self.assertEqual(sum(r["kind"] == "action" for r in fake.requests), 1)
 
     def test_walk_context_change_stops(self):
         def prompt(fake, request):
@@ -989,7 +1035,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
     def test_walk_zero_step_stop_requires_explicit_observe_and_resume(self):
         with FakeBridge(self.controller) as fake:
             self.ready()
-            fake.value["scene"]["visible_creatures"] = [{"name": "cat", "hostile": False}]
+            fake.value["scene"]["visible_creatures"] = [{"name": "zombie", "hostile": True}]
             generation = self.controller.pause_generation
             result = self.controller.execute("walk", direction="east", steps=2, **self.expect())
             self.assertEqual((result["status"], result["steps"]), ("stopped", 0))
@@ -1016,7 +1062,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(self.controller.execute("action", action="RIGHT", **self.expect())["status"], "ready")
             self.assertEqual(result["observation"]["scene"]["position"], [0, 0, 0])
             self.assertEqual(result["observation"]["scene"]["visible_creatures"],
-                             [{"name": "cat", "hostile": False}])
+                             [{"name": "zombie", "hostile": True}])
 
     def test_walk_snapshot_clock_requires_entire_matching_snapshot(self):
         with FakeBridge(self.controller):
@@ -1139,7 +1185,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             release.clear()
             with self.subTest(pause_race=pause_race), FakeBridge(self.controller) as fake:
                 self.ready()
-                fake.value["scene"]["visible_creatures"] = [{"name": "cat", "hostile": False}]
+                fake.value["scene"]["visible_creatures"] = [{"name": "zombie", "hostile": True}]
                 original = self.controller._walk_guard
                 def stop(value, dx, dy):
                     entered.set()

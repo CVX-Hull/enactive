@@ -56,7 +56,9 @@ separates execution/verification costs and reopened historical proof. This nativ
 qualification provides no character creation, save/reload or mission acceptance.
 Current source adds registered creation/identity adoption and normal save/new-child
 reload through synthetic integration tests, with exact canonical continuity and
-unknown ACKs retained. Native character lifecycle remains unqualified. The [mission design](design/player-owned-mission.md)
+unknown ACKs retained. Native character lifecycle is only partially qualified in
+[native006](acceptance/2026-10-20-native-character-lifecycle.md); exact reload and
+independent use remain open. The [mission design](design/player-owned-mission.md)
 defines the remaining lifecycle, fresh-context and bounded acceptance work; the [trace pilot](acceptance/2026-10-19-memory-trace-pilot.md)
 records actual source/interpretation limits. Neither page claims runtime delivery.
 
@@ -134,25 +136,24 @@ Pause, competing roots, unsupported ownership and unknown Resume cannot renew it
 A missed response stays ambiguous even if the next frame looks expected. Historical
 proof, including an orphan proof left by a crash, restores no live authority.
 
-The lead owns the coupled receipt-clock correction and active observer cadence,
-with parallel read-only authority/evidence reviews. A causal source test covers
-spectator-first receipt of the same frame; original UUID/clock/freshness/state and
-input authority remain exact. #154/#155 require the common gate and exact source
-CI, then a separately finite engineering qualification006 with explicit wait15 at
-the retained native binary. Engineering may parallel hosted checks after reviewed
-common/clean committed freeze; both exact hosted lanes remain required before
-#156 deciding readiness, release or integration. No failed allowance transfers.
+The latest [native006 report](acceptance/2026-10-20-native-character-lifecycle.md)
+owns actual creation/identity memory, counted drop, native wait/poll and normal
+first save/exit evidence, plus failed navigation/pickup/reload and exceptional
+second-child closure. All game/server processes are stopped. Current repairs are
+one coherent batch: known non-HOSTILE movement/descriptor4 (#138), actionable
+inventory-row projection (#151), truthful reload staging and narrow Resume-only
+create/load abort (#155). Two disjoint project-local workers delivered movement
+and renderer patches; the lead integrates coupled runtime/ledger/lifecycle/docs
+and owns the sole native build/runtime. Independent reviewers verify source and
+retained outcomes. General cancellation after other setup inputs remains deferred.
 
-Historical [qualification001](acceptance/2026-10-20-lifecycle-freshness.md) stopped
-before input and normally cleaned up. [Native002](acceptance/2026-10-20-native-capture-churn.md)
-exposed capture churn and required exceptional teardown. [Native003](acceptance/2026-10-20-native-editor-caret.md)
-accepted only controlled Resume-only abort cleanup, then failed on a blinking
-editor. [Native004/005](acceptance/2026-10-20-native-receipt-order.md) retained scoped
-steady-editor/text/world success and separate wait/ready-envelope failures; both
-needed exceptional cleanup before character commit. Native005's failure-time
-snapshot is unavailable, so its exact cause is not inferred from the source
-regression. General setup cancellation remains explicit deferred #155 contract
-work, not a consent-restoration or undocumented normal-exit guarantee.
+Next: common/clean committed freeze and exact CI → rebuilt native plus separately
+finite qualification → #156 explicit readiness → #157/#144 actual deciding player
+and genuine memory successor → #145 seven-day readiness/finite plan or owned
+blockers. Engineering may parallel hosted checks after reviewed common freeze;
+both exact lanes are required before deciding readiness, release or integration.
+Earlier [setup/receipt reports](acceptance/2026-10-20-native-receipt-order.md) and
+failed synthetic/hosted checks remain evidence, not renewed allowance or acceptance.
 
 #143 owns active observer cadence and measured presentation. The
 [latency budgets](evaluation.md#latency-budgets-for-interactive-play) separate native
@@ -163,21 +164,11 @@ and #145's seven-day readiness decision. These are the same integrated iteration
 and active goal, with original costs and no date/admission reset. Exact outcomes,
 clock bases and interventions belong in the linked reports and GitHub Issues.
 
-The item/count/inspection and activity-poll checkpoint passed local and
-pull-request checks, but its first push CI timed out in two synthetic lifecycle
-tests before their finish assertions. The retained failure is not native evidence.
-A controlled delayed-ACK probe reproduces that fixture limit; the functional
-fixture now uses the existing runtime suite's bounded wait, while deliberately
-withheld acknowledgments still become unknown. The subsequent correction passed the full common gate and both hosted checks;
-the failed run remains evidence rather than native qualification.
-
-The lead owns contracts/runtime/ledger and the sole native runtime. Existing item
-policy and activity transport workers have finished their assigned paths; further
-implementation delegation needs a new frozen, disjoint brief, with at most two
-isolated worktree writers. Read-only memory/backlog/skill audits can run in parallel;
-independent reviewers challenge authority and semantic outcomes. During deciding
-play, one player and a later clean-context successor own inputs; any curator stays
-read-only and optional. No worker changes the shared game, saves or build.
+During deciding play, one player and a later clean-context successor own inputs;
+any curator stays read-only and optional. No worker changes the shared game,
+saves or build. #75 owns the concrete fixture-realism lesson from006: compare
+changed boundary assumptions against the pinned producer and actual UI through
+existing review/common/native controls, without a new validation framework.
 
 Keep the aggregate L/Low and its bounded children; original effort ranges are
 planning assumptions, not evidence of remaining duration. Reforecast at the next

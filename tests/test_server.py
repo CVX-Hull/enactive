@@ -312,11 +312,27 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(self.post({"kind": "resume"})[0], 200)
             self.assertIsNone(self.controller.status()["mission_lease"])
 
-    def test_walk_stop_evidence_and_reassessment_through_http(self):
+    def test_walk_accepts_known_nonhostile_evidence_through_http(self):
         with FakeBridge(self.controller) as bridge:
             self.assertEqual(self.post({"kind": "observe"})[0], 200)
             self.assertEqual(self.post({"kind": "resume"})[0], 200)
             bridge.value["scene"]["visible_creatures"] = [{"name": "cat", "hostile": False}]
+            current = self.controller.state
+            code, body, _ = self.post({"kind": "walk", "direction": "east", "steps": 2,
+                "expected_session": current["session"], "expected_revision": current["revision"]})
+            result = json.loads(body)
+            self.assertEqual((code, result["status"], result["steps"]), (200, "complete", 2))
+            self.assertEqual(result["observation"]["scene"]["position"], [2, 0, 0])
+            self.assertEqual(result["observation"]["scene"]["visible_creatures"],
+                [{"name": "cat", "hostile": False}])
+            self.assertEqual([request["action"] for request in bridge.requests if request["kind"] == "action"],
+                ["RIGHT", "RIGHT"])
+
+    def test_walk_stop_evidence_and_reassessment_through_http(self):
+        with FakeBridge(self.controller) as bridge:
+            self.assertEqual(self.post({"kind": "observe"})[0], 200)
+            self.assertEqual(self.post({"kind": "resume"})[0], 200)
+            bridge.value["scene"]["visible_creatures"] = [{"name": "cat", "hostile": True}]
             current = self.controller.state
             code, body, _ = self.post({"kind": "walk", "direction": "east", "steps": 2,
                 "expected_session": current["session"], "expected_revision": current["revision"]})

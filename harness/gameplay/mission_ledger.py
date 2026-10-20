@@ -1426,7 +1426,7 @@ class MissionLedger:
         data, intent, receipt = owner["request"], primitive["intent"], primitive["result"] or {}
         native = json_object(receipt["native_request_json"]) if receipt.get("native_request_json") else {}
         binding = receipt.get("dispatch_binding") or {}
-        if (data["kind"] != "lifecycle" or data["operation"] != "create" or data["phase_id"] is not None
+        if (data["kind"] != "lifecycle" or data["operation"] not in ("create", "load") or data["phase_id"] is not None
                 or primitive["state"] != "returned" or primitive["effect"] is not None
                 or intent["kind"] != "resume" or intent["value"] is not None
                 or primitive["native_id"] is None or receipt.get("published") is not True

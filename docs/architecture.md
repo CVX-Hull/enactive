@@ -155,13 +155,18 @@ Observe keeps its exact response/original receipt; image and input-authority che
 remain separate. A proven returned-Resume-only startup can adopt a fresh internally
 paused copy of the original menu for a separate normal cleanup root. Ledger audits
 its immutable input lineage; runtime/store verify pixels and live custody.
-[Native qualification002](acceptance/2026-10-20-native-capture-churn.md) exposed
-these defects and required exceptional teardown. Qualification003 later accepted
-only Resume-only cleanup. [Native004/005](acceptance/2026-10-20-native-receipt-order.md)
-retain later scoped editor/world success and wait/receipt failures. After the
-independent-clock correction, exact candidate checks and separately finite
-qualification006 with explicit wait15 at the retained binary precede deciding
-readiness; source tests do not accept normal character lifecycle.
+[Native006](acceptance/2026-10-20-native-character-lifecycle.md) established
+ordinary creation/identity, counted dropping, native wait/poll and normal first
+save/exit, then stopped before reload and exceptionally closed its new child.
+Its actual blockers drive one repair batch: known non-HOSTILE movement,
+engine-scoped actionable inventory rows, actual MAIN_MENU→UILIST reload staging
+and narrow Resume-only create/load abort. The abort revokes authority without
+input or rebasing the launch; separate Observe/new exit verifies the paused menu.
+Unique enabled selected admitted-character evidence is checked before reload
+dispatch. No fictitious label, prior-child save or historical proof grants input.
+Common/exact-source checks, rebuilt native qualification and #156 readiness
+still precede the real deciding player/successor mission. Earlier setup reports
+remain linked evidence, not current implementation instructions.
 
 Cached status performs no evidence or memory I/O. It can show the last explicitly
 requested context packet, including claims, Work, source IDs, omissions and

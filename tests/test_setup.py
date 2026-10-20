@@ -60,8 +60,23 @@ class SetupTests(unittest.TestCase):
                 '                        ImGui::TableSetColumnIndex( 2 );\n}\n}\n'),
             "src/inventory_ui.cpp": ('void inventory_selector::refresh_window()\n{\n'
                 '    cata_assert( w_inv );\n'
+                '}\n'
+                'void inventory_column::draw()\n{\n'
+                '    if( !visible() ) {\n        return;\n    }\n'
+                '    for( size_t index = page_offset, line = 0; index < entries.size() &&\n'
+                '         line < entries_per_page; ++index, ++line ) {\n'
+                '        inventory_entry &entry = entries[index];\n'
+                '        const bool selected = active && is_highlighted( entry );\n'
+                '        size_t count = denial.empty() ? cells.size() : 1;\n'
+                '        for( size_t cell_index = 0; cell_index < count; ++cell_index ) {\n'
+                '            if( !cells[cell_index].visible() ) {\n                continue;\n            }\n'
+                '            if( text_width > 0 ) {\n'
+                '                if( entry.is_item() && ( selected || !entry.is_selectable() ) ) {\n'
+                '                    trim_and_print( win, point( text_x, yy ), text_width, c_dark_gray, text );\n'
+                '                } else {\n'
+                '                    trim_and_print( win, point( text_x, yy ), text_width, entry_cell_cache.color, text );\n'
                 '                }\n            }\n\n            x1 = x2;\n        }\n\n'
-                '        if( entry.is_item() ) {\n            int xx = p.x;\n}\n}\n'
+                '        if( entry.is_item() ) {\n            int xx = p.x;\n        }\n    }\n}\n'
                 'void unrelated() { trim_and_print( win, point( 0, 0 ), 10, c_white, hidden ); }\n'),
 
             "src/input_context.cpp": "const std::string &input_context::handle_input( const int timeout )\n{\n        next_action = inp_mngr.get_input_event( preferred_keyboard_mode );\n}",
@@ -137,7 +152,7 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(first.returncode, 0, first.stderr)
         expected = {path.relative_to(source): path.read_bytes()
                     for path in source.rglob("*") if path.is_file()}
-        for name in ("ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp", "cata_imgui.cpp"):
+        for name in ("ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp", "cata_imgui.cpp", "inventory_ui.cpp"):
             (source / "src" / name).write_text("stale patched contents")
         second = self.run_patch(repository, source)
         self.assertEqual(second.returncode, 0, second.stderr)
@@ -203,6 +218,7 @@ class SetupTests(unittest.TestCase):
 
     def test_visible_ui_hooks_are_at_actual_clipped_and_paged_renderers(self):
         repository, source = self.patch_fixture()
+        original_inventory = (source / "src/inventory_ui.cpp").read_text()
         result = self.run_patch(repository, source)
         self.assertEqual(result.returncode, 0, result.stderr)
         uilist = (source / "src/uilist.cpp").read_text()
@@ -214,9 +230,26 @@ class SetupTests(unittest.TestCase):
         self.assertIn('label.resize( end )', uilist)
         inventory = (source / "src/inventory_ui.cpp").read_text()
         self.assertIn('cdda_harness::ui_begin( "inventory", "INVENTORY", "" )', inventory)
-        self.assertIn('cell_index == 0 && entry.is_item()', inventory)
-        self.assertIn('remove_color_tags( trim_by_length( text, text_width ) )', inventory)
-        self.assertIn('yy >= 0 && yy < getmaxy( win )', inventory)
+        # Only cosmetic columns are excluded: disabled rows, hotkeys and exact
+        # active focus retain their renderer-derived payload and clipping guards.
+        inventory_hook = (
+            '                if( allows_selecting() && cell_index == 0 && entry.is_item() && text_x >= 0 &&\n'
+            '                    text_x + static_cast<int>( text_width ) <= getmaxx( win ) &&\n'
+            '                    yy >= 0 && yy < getmaxy( win ) ) {\n'
+            '                    const std::string label = remove_color_tags( trim_by_length( text, text_width ) );\n'
+            '                    const char invlet = entry.get_invlet();\n'
+            '                    const std::string hotkey = p.x >= 0 && p.x < getmaxx( win ) &&\n'
+            '                        invlet >= 32 && invlet <= 126 ? std::string( 1, invlet ) : std::string();\n'
+            '                    cdda_harness::ui_row( label, entry.is_selectable(), hotkey, selected );\n'
+            '                }\n')
+        self.assertEqual(inventory.count(inventory_hook), 1)
+        self.assertEqual(inventory.count('cdda_harness::ui_row('), 1)
+        self.assertIn('text_width, entry_cell_cache.color, text );\n                }\n' + inventory_hook, inventory)
+        # Removing only the two attestation hooks/include recovers the original
+        # renderer, including visible-column/page/cell fences and disabled draws.
+        self.assertEqual(inventory.replace(inventory_hook, '').replace(
+            '    cdda_harness::ui_begin( "inventory", "INVENTORY", "" );\n', '').replace(
+            '#include "cdda_harness.h"\n', ''), original_inventory)
         self.assertIn('void unrelated() { trim_and_print( win, point( 0, 0 ), 10, c_white, hidden ); }', inventory)
         manager = (source / "src/ui_manager.cpp").read_text()
         self.assertIn('cdda_harness::ui_redraw( ui.is_on_top );\n                        ui.redraw_cb( ui );', manager)

@@ -227,6 +227,13 @@ class RegisteredLifecycle:
                     or proposal.action == "YES" and phase.stage not in
                        ("world_confirmation", "points_confirmation", "character_confirmation", "save_confirmation")):
                 raise ControlError("Lifecycle confirmation requires its explicitly committed stage")
+        elif phase.operation == "load" and state["category"] == "UILIST" and proposal.action in ("CONFIRM", "UILIST.CONFIRM"):
+            ui = state["ui"]
+            rows = [] if ui is None else ui["rows"]
+            targets = [row for row in rows if row["text"] == r._admission.scenario.character]
+            if (phase.stage != "load_selection" or ui is None or ui["purpose"] != "uilist"
+                    or len(targets) != 1 or not targets[0]["enabled"] or targets[0]["id"] != ui["selected"]):
+                raise ControlError("Reload confirmation requires its unique enabled selected admitted-character row")
         elif state["category"] not in _SETUP or state["category"] in _CHARACTER and phase.operation != "create":
             raise ControlError("Unsupported lifecycle category or wrong operation")
 
@@ -429,8 +436,11 @@ class RegisteredLifecycle:
                     stage = phase.stage
                     if phase.operation == "load" and proposal.action in ("CONFIRM", "UILIST.CONFIRM"):
                         self.candidate = None
-                    if phase.operation == "load" and data["goal"].get("label") == "Load Game":
+                    if (phase.operation == "load" and state["category"] == "MAIN_MENU"
+                            and after["category"] == "UILIST" and proposal.action in ("CONFIRM", "UILIST.CONFIRM")):
                         stage = "load_selection"
+                    elif phase.operation == "load" and after["category"] == "MAIN_MENU":
+                        stage = "awaiting_control"
                     if stage == "points_confirmation":
                         stage = "character_confirmation" if after["category"] == "YESNO" else "awaiting_control"
                     if after["category"] != "YESNO" and stage in ("world_confirmation", "character_confirmation"):

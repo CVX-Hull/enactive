@@ -628,16 +628,22 @@ and exact final preflight precedes durable intent and input publication.
 Contradictory publication receipts remain unknown, even if movement occurred.
 
 Start and Observe never launch or Resume. Neither paused menus nor unowned normal
-play establish world/character or the game-time anchor. Stop(false) requests Pause
-and leaves cleanup possible. Registered launch and untouched-menu exit have bounded
+play establish world/character or the game-time anchor. Stop requests user Pause
+and revokes current consent; it cannot authorize automatic cleanup or Resume.
+Registered normal lifecycle and the narrow internally paused Resume-only abort
+path own eligible cleanup. Registered launch and untouched-menu exit have bounded
 [native qualification](../acceptance/2026-10-20-owned-launch.md), with the first
 failure and unknown ACKs retained. Character creation/save/load and provisional
 identity inspection now compose through the real controller/ledger in synthetic UI
 tests, including normal exit/new child/reload and exact saved-turn continuity.
 The [current protocol](../protocol.md#integrated-mission-lifecycle) specifies typed
 transition/adoption/checkpoint proofs, diagnostic unknown reconciliation, canonical
-all-session validation and non-restoration of authority. Native character lifecycle,
-native item/activity/ordinary-inspection qualification remains required. Quiescent bound-memory handoff
+all-session validation and non-restoration of authority.
+[Native006](../acceptance/2026-10-20-native-character-lifecycle.md) qualified only
+ordinary creation/identity, counted dropping, inventory inspection, one-minute
+wait/poll and first normal save/exit. Its navigation, acquisition, exact reload,
+final normal shutdown and independent mission remain open; source repairs require
+new native qualification. Quiescent bound-memory handoff
 and charged readmission have synthetic coverage. Normal finish has source coverage
 after verified owned exit, with separate player-reported objective evidence and no
 native input. Actual mission acceptance remains open;

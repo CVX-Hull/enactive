@@ -39,21 +39,22 @@ Resume and bounded continuation share the original root limits; user Pause revok
 eligibility. Missing proof stays stopped. These are source checks, not native
 recovery or independent-player acceptance.
 
-Native qualification has established scoped owned launch, Resume-only normal
-abort cleanup, a steady world-name editor and ordinary world creation. Actual
-normal character lifecycle and the independent player/successor mission remain
-unaccepted. The dated [first lifecycle](acceptance/2026-10-20-lifecycle-freshness.md),
-[capture-churn](acceptance/2026-10-20-native-capture-churn.md),
-[caret](acceptance/2026-10-20-native-editor-caret.md) and
-[receipt-order reports](acceptance/2026-10-20-native-receipt-order.md) retain failures,
-scoped passes, unknown acknowledgements and exceptional cleanup.
+The latest [native006 qualification](acceptance/2026-10-20-native-character-lifecycle.md)
+normally created/saved a character and exited its first process, with visible
+identity/stock memory, counted dropping and a one-minute native wait/poll. It
+stopped before reload selection and exceptionally closed its new second process.
+Navigation near a nonhostile NPC, pickup acquisition, exact reload, final normal
+shutdown and independent player/successor play remain unqualified. Earlier
+[receipt-order and setup reports](acceptance/2026-10-20-native-receipt-order.md)
+retain their distinct failures, scoped passes, unknown ACKs and cleanup.
 
-The latest004/005 attempts both stopped before character commit and needed
-exceptional engineering cleanup. One exceeded the default wait; the other failed
-an atomic-observation check. A causal source regression covers independent receipt
-clock ordering, but005's missing failure-time snapshot prevents exact retrospective
-attribution. The source journals snapshots on future mismatches. General setup
-cancellation after phase revocation remains an explicit owned limitation.
+Current repairs allow bounded movement with strictly known non-HOSTILE evidence,
+omit a cosmetic inventory-summary echo using CDDA's own selecting predicate, and
+stage reload from the actual world→character-list transition. Exact admitted-row
+checks precede character confirmation. An explicit Resume-only create/load menu
+abort revokes setup without input; separate Observe/new normal exit remain
+necessary. These source corrections require new native qualification; general
+cancellation after other setup inputs remains an explicit owned limitation.
 
 Active observer polling now schedules250ms after each completed status response;
 actual presentation latency still needs native/browser measurement. Fast ordinary
@@ -118,12 +119,12 @@ explain why native integration was selected and when we would reconsider it.
 | Graphical local play | Verified in the dated MVP session; normal native window and browser spectator | [MVP acceptance](acceptance/2026-10-17-mvp.md) |
 | Observe, menus, individual inputs, supplies and save/reload | Demonstrated; results still require interpretation after each input | [Acceptance probes](acceptance/2026-10-17-mvp.md#real-game-acceptance-2026-10-17) |
 | Ordinary direction queries | Common chooser preserves CDDA bindings; real adjacent-pickup cancellation/selection and saved-character reload worked without user keys | [Direction-menu acceptance](acceptance/2026-10-18-native-direction-menu.md) |
-| Guarded short walks | Limited: cardinal directions, at most eight steps, conservative terrain and visible-creature stops | [Current contract](protocol.md#closed-loop-play-and-observations) |
+| Guarded short walks | Limited: cardinal directions, at most eight steps, conservative terrain and hostile/unknown creature stops | [Current contract](protocol.md#closed-loop-play-and-observations) |
 | Planner round trips | One real three-tile comparison used three individual decisions versus one guarded request, retaining per-step checks; not a general speed or safety result | [Timing trial](acceptance/2026-10-17-completion.md#fresh-real-game-timing-probe) |
 | Input authority and takeover | The accepted native-v3 baseline distinguishes ordinary play, menus, activity polls and debug prompts; revoked tokens and old worlds are rejected. Already-committed actions and activities cannot be undone by Pause | [Recovery acceptance](acceptance/2026-10-17-recovery-memory.md) |
 | Retained gameplay evidence and memory | First-campaign traces and reviewed source underpin the new memory/navigation components. Wire4 menu preflight is exercised; independent memory continuity and normal-game wire4 validation remain pending | [Component probe](acceptance/2026-10-20-native-presentation.md), [current evidence contract](protocol.md#passive-gameplay-records-and-evidence) |
 | Mission skill composition | Source integration shares navigation, native menu focus, interpreted controls and bounded text entry through one writer; ordinary prompts preserve original limits. One typed ingress and cached historical memory observer are connected; lifecycle and independent mission acceptance remain pending | [Architecture](architecture.md), [mission design](design/player-owned-mission.md#integrated-runtime-and-admission-gate) |
-| Passive movement skills | One proposed step at a time with cumulative route history; version 3 separates reached-target verification from eligibility for another step | [Skill contract](protocol.md#passive-bounded-movement-skills) |
+| Passive movement skills | One proposed step at a time with cumulative route history; version4 permits strictly known non-HOSTILE evidence and separates reached-target verification from another step | [Skill contract](protocol.md#passive-bounded-movement-skills) |
 | Mission input ownership | Nonterminal mission owns HTTP observation/input; exact controller lease gates dispatch; Pause remains available, with disk-stall limits | [Ownership contract](protocol.md#controller-run-ownership) |
 | Passive waypoint supervision | Retained offline library and historical probes; no live task endpoint | [Supervisor contract](protocol.md#passive-waypoint-supervision) |
 | Passive planner handoff | Candidate-only study component; current mission player chooses typed operations and interprets outcomes; chat usage remains unmeasured | [Planner contract](protocol.md#bounded-injected-planner) |
@@ -144,8 +145,9 @@ Native keyboard control remains available. Tutorial save loading still has a
 [tracked content defect](https://github.com/CVX-Hull/enactive/issues/47).
 There is no structured trap/damage guarantee or general combat policy. The movement
 skill verifies the reached waypoint without requiring a further clear tile. Every
-remaining step and the actual return direction still require a visible empty
-allowlisted neighbor; public `walk` remains conservative after each step.
+remaining step and the actual return direction still require a visible,
+furniture-free allowlisted neighbor. Creature occupancy is not established;
+public `walk` remains conservative after each step.
 [Waypoint readiness](changes/014-waypoint-readiness.md) records this decision and
 the gates remaining before a comparative experiment. Its
 [acceptance](acceptance/2026-10-18-waypoint-readiness.md) records real completion,

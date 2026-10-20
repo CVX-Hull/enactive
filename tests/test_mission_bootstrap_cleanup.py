@@ -16,6 +16,94 @@ from tests.test_mission_creation import MissionCreationFixture
 
 
 class BootstrapCleanupTests(MissionCreationFixture, unittest.TestCase):
+    def untouched_setup(self, operation):
+        if operation == "create":
+            self.ready()
+        else:
+            self.create()
+            self.save()
+            self.exit()
+            self.assertEqual(self.launch(identity="second-launch")["state"], "completed")
+            self.stage = "load-world"
+        self.assertEqual(self.run_request(self.lifecycle("setup", operation))["state"], "partial")
+        return copy.deepcopy(self.runtime._ledger.primitive_records()[-1])
+
+    def explicit_abort_and_finish(self, operation):
+        resume = self.untouched_setup(operation)
+        spent = self.runtime.status()["spent_inputs"]
+        deadline = self.runtime.status()["deadline"]
+        aborted = self.run_request(self.lifecycle("abort", "exit"))
+        self.assertEqual(aborted["state"], "partial", aborted)
+        self.assertTrue(aborted["result"]["cleanup_requested"])
+        self.assertNotIn("phase", aborted["result"])
+        self.assertNotIn("normal_exit", aborted["result"])
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNone(self.controller._mission_lease)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertEqual(self.runtime.status()["deadline"], deadline)
+        # Model native's host-origin sentinel pause; no user Pause is supplied.
+        self.bridge.value["pause_origin"] = "host"
+        self.observe("abort-observe")
+        self.assertEqual(self.runtime._owned_launch.checkpoint, self.runtime._current)
+        exited = self.exit(root="exit-after-abort")
+        self.assertTrue(exited["result"]["normal_exit"]["no_save_required"])
+        finished = self.run_request(self.lifecycle("finish", "finish"))
+        self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent + 3)
+        self.assertEqual(self.runtime._ledger.primitive(resume["logical_id"]), resume)
+        self.runtime.close()
+        self.runtime = MissionRuntime(self.controller)
+        self.start()
+        self.assertEqual(self.runtime.status()["phase"], "stopped")
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNone(self.runtime._owned_launch)
+        self.assertIsNone(self.controller._mission_lease)
+
+    def test_explicit_create_resume_only_abort_exits_without_manufactured_failure(self):
+        self.explicit_abort_and_finish("create")
+
+    def test_explicit_load_resume_only_abort_exits_without_manufactured_failure(self):
+        self.explicit_abort_and_finish("load")
+
+    def test_explicit_abort_rejects_additional_setup_input(self):
+        self.untouched_setup("create")
+        self.run_request(self.control("world-form", "Create World", parent="setup"))
+        spent = self.runtime.status()["spent_inputs"]
+        result = self.run_request(self.lifecycle("abort", "exit"))
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertFalse(any(row.get("action") == "QUIT" for row in self.bridge.delivered))
+
+    def test_explicit_abort_rejects_changed_menu_pixels(self):
+        self.untouched_setup("create")
+        self.bridge.editor_text = "Changed visible menu"
+        result = self.run_request(self.lifecycle("abort", "exit"))
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+
+    def user_pause_during_abort(self, method):
+        self.untouched_setup("create")
+        original = getattr(self.runtime, method)
+        def pause_inside(*args, **kwargs):
+            result = original(*args, **kwargs) if method == "_observe_native" else None
+            self.runtime.pause("Controlled user Pause during explicit abort")
+            return result if method == "_observe_native" else original(*args, **kwargs)
+        with patch.object(self.runtime, method, side_effect=pause_inside):
+            result = self.run_request(self.lifecycle("abort", "exit"))
+        self.assertEqual(result["state"], "paused", result)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+        self.assertEqual(self.runtime.status()["pause_cause"], "user")
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNone(self.controller._mission_lease)
+        self.assertFalse(any(row["kind"] == "action" for row in self.bridge.delivered))
+
+    def test_user_pause_during_abort_capture_sends_no_cleanup_input(self):
+        self.user_pause_during_abort("_observe_native")
+
+    def test_user_pause_during_abort_revocation_retains_user_cause(self):
+        self.user_pause_during_abort("_stop_after_failure")
+
     def failed_after_resume(self):
         self.ready()
         self.assertEqual(self.run_request(self.lifecycle("create"))["state"], "partial")

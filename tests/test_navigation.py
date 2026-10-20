@@ -364,7 +364,7 @@ class NavigationTests(unittest.TestCase):
 
     def test_current_creatures_pause_missing_action_and_furniture_stop(self):
         mutations = (lambda v: v.update(paused=True),
-                     lambda v: v["scene"].update(visible_creatures=[{"name": "cat", "hostile": False}]),
+                     lambda v: v["scene"].update(visible_creatures=[{"name": "zombie", "hostile": True}]),
                      lambda v: v.update(actions=[]),
                      lambda v: next(t for t in v["scene"]["neighbors"] if (t["dx"], t["dy"]) == (1, 0)).update(furniture="f_chair"))
         for change in mutations:
@@ -372,6 +372,49 @@ class NavigationTests(unittest.TestCase):
                 self.map = ObservedMap("mission", "world", 0)
                 skill = self.skill(self.frame(change=change))
                 self.assertEqual(self.propose(skill).disposition, "blocked")
+
+    def test_nonhostile_npc_and_monster_allow_navigation_through_target(self):
+        for name in ("Cornell", "cat"):
+            with self.subTest(name=name):
+                self.map = ObservedMap("mission", "world", 0)
+                def change(v):
+                    v["scene"]["visible_creatures"] = [{"name": name, "hostile": False}]
+                skill = self.skill(self.frame(change=change))
+                intent = self.propose(skill)
+                self.assertIsInstance(intent, NavigationIntent)
+                outcome = self.accept(skill, intent, self.frame((1, 0, 0), turn=11, change=change))
+                self.assertEqual((outcome.disposition, outcome.verified_steps, outcome.proposed_count),
+                                 ("completed", 1, 1))
+
+    def test_malformed_creature_evidence_revokes_navigation_without_inventing_a_step(self):
+        for pending in (False, True):
+            for creatures in (None, [{"name": "cat"}], [{"name": "cat", "hostile": 0}]):
+                with self.subTest(pending=pending, creatures=creatures):
+                    self.map = ObservedMap("mission", "world", 0)
+                    skill = self.skill(self.frame())
+                    if pending:
+                        self.assertIsInstance(self.propose(skill), NavigationIntent)
+                    with self.assertRaises(EvidenceError):
+                        self.frame((1, 0, 0) if pending else (0, 0, 0), turn=11,
+                                   change=lambda v: v["scene"].update(visible_creatures=creatures))
+                    outcome = self.propose(skill)
+                    self.assertEqual((outcome.disposition, outcome.verified_steps, outcome.proposed_count),
+                                     ("unknown" if pending else "blocked", 0, int(pending)))
+                    self.assertIs(self.propose(skill), outcome)
+
+    def test_new_hostile_after_returned_step_stops_including_at_target(self):
+        for target in ((1, 0, 0), (2, 0, 0)):
+            with self.subTest(target=target):
+                self.map = ObservedMap("mission", "world", 0)
+                self.map.add(self.frame((1, 0, 0)), self.store)
+                skill = self.skill(self.frame(), target)
+                intent = self.propose(skill)
+                after = self.frame((1, 0, 0), turn=11, change=lambda v: v["scene"].update(
+                    visible_creatures=[{"name": "Cornell", "hostile": False}, {"name": "zombie", "hostile": True}]))
+                outcome = self.accept(skill, intent, after)
+                self.assertEqual((outcome.disposition, outcome.verified_steps, outcome.proposed_count), ("partial", 1, 1))
+                self.assertIn(after, outcome.evidence)
+                self.assertIs(self.propose(skill), outcome)
 
     def test_stale_menu_and_session_changes_stop(self):
         skill = self.skill()

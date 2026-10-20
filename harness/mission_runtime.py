@@ -1120,7 +1120,16 @@ class MissionRuntime:
                 or any((self.controller.bridge / name).exists() for name in
                        ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
             return False
-        primitive = self._ledger.menu_cleanup_resume(launch.request_id)
+        return self._resume_menu_equivalent(launch, reference, paused=True, exit_root_id=None)
+
+    def _resume_menu_equivalent(self, launch: _OwnedLaunch, reference: EvidenceRef, *, paused: bool,
+                                exit_root_id: str | None) -> bool:
+        """Compare one audited setup Resume with its exact current menu state.
+
+        The caller owns live-phase/lease/custody checks. This shared proof grants
+        neither setup continuation nor cleanup authority by itself.
+        """
+        primitive = self._ledger.menu_cleanup_resume(launch.request_id, exit_root_id=exit_root_id)
         if primitive is None:
             return False
         intent, receipt = primitive["intent"], primitive["result"]
@@ -1133,8 +1142,9 @@ class MissionRuntime:
         expected = copy.deepcopy(original)
         expected.update(revision=before.revision + 1, paused=False, pause_origin="none")
         expected["boundary"]["control_generation"] += 1
-        paused = copy.deepcopy(expected)
-        paused.update(paused=True, pause_origin="host")
+        current_expected = copy.deepcopy(expected)
+        if paused:
+            current_expected.update(paused=True, pause_origin="host")
         ledger = self._ledger.snapshot(now=self._wall())
         return (launch.operator_mark == self._operator_mark() and ledger["clock_valid"] and not ledger["unreconciled"]
             and binding["controller_boot_id"] == launch.operator_mark[0]
@@ -1144,10 +1154,46 @@ class MissionRuntime:
             and original["category"] == "MAIN_MENU" and not original["in_game"] and original["paused"]
             and self._store.equivalent(baseline, before, rule="exact_png_bytes")
             and self._store.equivalent(before, preflight, rule="exact_png_bytes")
-            and same_native_state(expected, resumed) and same_native_state(paused, current)
+            and same_native_state(expected, resumed) and same_native_state(current_expected, current)
             and resumed["id"] == primitive["native_id"]
             and baseline.frame_sha256 == after.frame_sha256 == reference.frame_sha256
             and self._store.current_boundary(**self._clocks()) == reference)
+
+    def _abort_untouched_setup(self, work: _Work) -> tuple[str, dict]:
+        """An explicit exit may first revoke a proven Resume-only menu phase.
+
+        No input is sent and the launch checkpoint is not rebased. Separate
+        Observe and a new finite exit root are required after the epoch change.
+        """
+        data, adapter = work.request, self._registered_lifecycle
+        phase = adapter.phase
+        launch = self._owned_menu()
+        if (phase is None or adapter.candidate is not None or phase.launch != launch
+                or phase.operation not in ("create", "load") or phase.stage != "awaiting_control"
+                or data["phase_id"] is not None or data["work_id"] is not None or data["identity_claim_ids"]
+                or self._exit_phase is not None or self._exit_candidate is not None or self._prompt_phase is not None
+                or adapter.normal_after_launch() or self._live()[5]
+                or any((self.controller.bridge / name).exists() for name in
+                       ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
+            raise ControlError("Setup abort requires only its returned Resume and untouched owned main menu")
+        adapter.guard(work, phase)
+        adapter._binding_request(work, phase.checkpoint)
+        observed = self._store.observation(phase.checkpoint)
+        if observed["category"] != "MAIN_MENU" or observed["paused"] or observed["in_game"]:
+            raise ControlError("Setup abort cannot cancel another setup screen or normal gameplay")
+        # Even a fresh retained image is compared with a new native capture:
+        # this is a zero-input revocation, without dispatch's usual preflight.
+        phase = adapter._refresh(work, phase)
+        if not self._resume_menu_equivalent(launch, phase.checkpoint, paused=False, exit_root_id=data["request_id"]):
+            raise EvidenceError("Setup abort changed its exact Resume-only menu evidence")
+        self._check_cancelled(work)
+        source = phase.checkpoint.observation_id
+        self._stop_after_failure("Explicit Resume-only setup abort; fresh Observe and new normal exit required")
+        self._check_cancelled(work)
+        result = {"cleanup_requested": True, "source_ids": [source], "grants_authority": False,
+            "reason": "Setup authority revoked without input; separately Observe then request normal exit"}
+        self._record("mission_menu_cleanup_requested", result)
+        return "partial", result
 
     def _exit_guard(self, work: _Work, phase: _ExitPhase,
                     proposal: MissionIntent | _ResumeIntent | None = None) -> None:
@@ -1218,6 +1264,8 @@ class MissionRuntime:
         return phase
 
     def _exit(self, work: _Work) -> tuple[str, dict]:
+        if self._registered_lifecycle.phase is not None:
+            return self._abort_untouched_setup(work)
         data = work.request
         launch = self._owned_menu()
         if (data["phase_id"] is not None or data["work_id"] is not None or data["identity_claim_ids"]

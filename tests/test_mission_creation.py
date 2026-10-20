@@ -39,7 +39,7 @@ class MissionCreationFixture:
     def normal(self, session, *, paused=False):
         scene = observation()["scene"]
         scene.update(turn=self.turn, provenance="player-visible input boundary")
-        self.bridge.value.update(session=session, category="DEFAULTMODE", scene=scene, in_game=True,
+        self.bridge.value.update(session=session, category="DEFAULTMODE", scene=scene, ui=None, in_game=True,
             paused=paused, pause_origin="world_change" if paused else "none",
             actions=["player_data", "save", "UP", "DOWN", "LEFT", "RIGHT"])
         self.bridge.value["boundary"].update(kind="normal_play", id=f'normal-{self.bridge.value["revision"]}')
@@ -54,9 +54,16 @@ class MissionCreationFixture:
         elif category == "MAIN_MENU" and action == "CONFIRM":
             if self.stage == "world":
                 self.menu("WORLDGEN_CONFIRM_DIALOG", ["UP", "DOWN", "CONFIRM", "FINALIZE"])
-            elif self.stage == "load":
-                self.normal(f"normal-{self.launch_count}", paused=True)
-                return False
+            elif self.stage == "load-world":
+                self.stage = "load"
+                self.menu("UILIST", ["UILIST.UP", "UILIST.DOWN", "CONFIRM", "QUIT"])
+                rows = [
+                    dict(id="row-0", text=self.a.scenario.character, enabled=True, hotkey=None),
+                    dict(id="row-1", text="<- Back to Main Menu", enabled=True, hotkey="q")]
+                bridge.value["ui"] = dict(purpose="uilist", title="",
+                    rows=copy.deepcopy(getattr(self, "load_rows", rows)),
+                    selected=getattr(self, "load_selected", "row-0"),
+                    filter=None, count=None, coverage="rendered_rows_only")
             else:
                 self.menu("NEW_CHAR_DESCRIPTION", ["PREV_TAB", "NEXT_TAB", "CONFIRM"])
         elif category == "WORLDGEN_CONFIRM_DIALOG" and action == "FINALIZE":
@@ -75,6 +82,12 @@ class MissionCreationFixture:
                 actions = (["UP", "DOWN", "CONFIRM", "FINALIZE"] if self.editor_parent == "WORLDGEN_CONFIRM_DIALOG"
                     else ["PREV_TAB", "NEXT_TAB", "CONFIRM"])
                 self.menu(self.editor_parent, actions)
+        elif category == "UILIST" and action == "CONFIRM" and self.stage == "load":
+            self.normal(f"normal-{self.launch_count}", paused=True)
+            return False
+        elif category == "UILIST" and action == "QUIT" and self.stage == "load":
+            self.stage = "load-world"
+            self.menu("MAIN_MENU", ["CONFIRM", "QUIT"])
         elif category == "NEW_CHAR_DESCRIPTION" and action == "NEXT_TAB":
             self.stage = "points-confirmation" if getattr(self, "spare_points", False) else "character-confirmation"
             self.menu("YESNO", ["YES", "NO"])
@@ -413,30 +426,71 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
         self.assertIsNone(self.controller.pending)
         self.assertFalse(self.process_state["running"])
         self.assertEqual(self.launch(identity="second-launch")["state"], "completed")
-        self.stage = "load"
+        self.stage = "load-world"
         begun = self.run_request(self.lifecycle("load", "load"))
         self.assertEqual(begun["state"], "partial", begun)
-        # Selecting Load Game first enters its registered selection phase.
-        # The fake UI stays on MAIN_MENU until the following saved entry.
-        self.stage = "load-menu"
-        original = self.bridge.behavior
-        def load_menu(bridge, request):
-            if self.stage == "load-menu" and request.get("action") == "CONFIRM":
-                self.stage = "load"
-                self.menu("MAIN_MENU", ["CONFIRM", "QUIT"])
-                return True
-            return original(bridge, request)
-        self.bridge.behavior = load_menu
-        selected = self.run_request(self.control("load-menu", "Load Game", parent="load"))
-        self.assertEqual(selected["state"], "partial", selected)
         world = self.runtime._current
-        entered = self.run_request(self.control("load-entry", self.a.scenario.character, parent="load"))
+        # Match the pinned native flow: MAIN_MENU world -> UILIST character.
+        # There is no visible "Load Game" row to arm a private transition.
+        selected = self.run_request(self.control("load-world", f"{self.a.scenario.world} (1)", parent="load"))
+        self.assertEqual(selected["state"], "partial", selected)
+        selection = self.control("load-entry", self.a.scenario.character, parent="load")
+        selection["perception"] = None
+        entered = self.run_request(selection)
         self.assertEqual(entered["state"], "unknown", entered)
+        self.assertIsNotNone(self.runtime._registered_lifecycle.candidate)
         self.observe("load-observe")
         adopted = self.finish_identity("load", world, 1)
         self.assertEqual(adopted["result"]["normal_adoption"]["saved_checkpoint_request_id"], "save-reconcile")
         self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 0)
         self.runtime._ledger._verify(self.a)
+
+    def reload_picker(self):
+        self.create()
+        self.save()
+        self.exit()
+        self.assertEqual(self.launch(identity="second-launch")["state"], "completed")
+        self.stage = "load-world"
+        self.assertEqual(self.run_request(self.lifecycle("load", "load"))["state"], "partial")
+        selected = self.run_request(self.control("load-world", f"{self.a.scenario.world} (1)", parent="load"))
+        self.assertEqual(selected["state"], "partial", selected)
+        self.assertEqual(self.runtime._registered_lifecycle.phase.stage, "load_selection")
+
+    def reject_reload_row(self, rows, selected, target):
+        self.load_rows, self.load_selected = rows, selected
+        self.reload_picker()
+        delivered = len([row for row in self.bridge.delivered if row["kind"] == "action"])
+        request = self.control("invalid-load-entry", target, parent="load")
+        request["perception"] = None
+        result = self.run_request(request)
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertEqual(len([row for row in self.bridge.delivered if row["kind"] == "action"]), delivered)
+        self.assertIsNone(self.runtime._registered_lifecycle.candidate)
+
+    def test_reload_other_selected_character_is_rejected_before_input(self):
+        self.reject_reload_row([
+            dict(id="row-0", text=self.a.scenario.character, enabled=True, hotkey=None),
+            dict(id="row-1", text="Other", enabled=True, hotkey=None)], "row-1", "Other")
+
+    def test_reload_missing_admitted_character_is_rejected_before_input(self):
+        self.reject_reload_row([dict(id="row-0", text="Other", enabled=True, hotkey=None)], "row-0", "Other")
+
+    def test_reload_disabled_admitted_character_is_rejected_before_input(self):
+        self.reject_reload_row([
+            dict(id="row-0", text=self.a.scenario.character, enabled=False, hotkey=None),
+            dict(id="row-1", text="Other", enabled=True, hotkey=None)], "row-1", "Other")
+
+    def test_reload_duplicate_admitted_character_is_rejected_before_input(self):
+        self.reject_reload_row([
+            dict(id=f"row-{index}", text=self.a.scenario.character, enabled=True, hotkey=None)
+            for index in range(2)], "row-0", self.a.scenario.character)
+
+    def test_return_from_reload_picker_retires_selection_stage(self):
+        self.reload_picker()
+        result = self.run_request(self.control("load-back", "Cancel", parent="load"))
+        self.assertEqual(result["state"], "partial", result)
+        self.assertEqual(self.runtime._registered_lifecycle.phase.stage, "awaiting_control")
+        self.assertIsNone(self.runtime._registered_lifecycle.candidate)
 
     def test_creation_uses_durable_identity_without_a_gate_mock(self):
         adopted = self.create()

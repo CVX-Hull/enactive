@@ -45,8 +45,14 @@ def current_guard(state: dict[str, Any], dx: int, dy: int, *, paused: bool,
             or now_timestamp_ms - timestamp > 3000 or not isinstance(scene, dict)):
         raise MovementBlocked("Walk stopped: normal play scene is unavailable")
     creatures = scene.get("visible_creatures")
-    if not isinstance(creatures, list) or creatures:
-        raise MovementBlocked("Walk stopped: visible creatures or unknown visibility")
+    # Match the retained visible-evidence shape. False only means CDDA did not
+    # classify the creature as HOSTILE; it proves neither friendliness nor vacancy.
+    if (not isinstance(creatures, list) or len(creatures) > 512
+            or any(not isinstance(creature, dict) or set(creature) != {"name", "hostile"}
+                   or not isinstance(creature["name"], str) or not 1 <= len(creature["name"]) <= 1024
+                   or type(creature["hostile"]) is not bool or creature["hostile"]
+                   for creature in creatures)):
+        raise MovementBlocked("Walk stopped: hostile creatures or unknown creature evidence")
     position = scene.get("position")
     expected_position(position, dx, dy)
     return tuple(position)
@@ -54,7 +60,7 @@ def current_guard(state: dict[str, Any], dx: int, dy: int, *, paused: bool,
 
 def guard(state: dict[str, Any], dx: int, dy: int, *, paused: bool,
           frozen: bool, now_timestamp_ms: int) -> tuple[int, int, int]:
-    """Check current_boundary plus the next visible, empty, allowlisted tile.
+    """Check current_boundary plus visible, allowlisted, furniture-free geometry.
 
     Public walk deliberately checks this even after its final displacement.
     """
@@ -81,7 +87,7 @@ def visible_destination(scene: dict[str, Any], dx: int, dy: int) -> tuple[int, i
     tile = matches[0] if len(matches) == 1 else None
     if (not tile or tile.get("visible") is not True or tile.get("furniture") != "f_null"
             or not isinstance(tile.get("terrain"), str) or tile["terrain"] not in SAFE_TERRAIN):
-        raise MovementBlocked("Walk stopped: next tile is not a visible, empty, allowlisted surface")
+        raise MovementBlocked("Walk stopped: next tile is not a visible, allowlisted, furniture-free surface")
     return expected_position(scene.get("position"), dx, dy)
 
 

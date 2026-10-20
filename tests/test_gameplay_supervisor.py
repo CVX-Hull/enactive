@@ -49,7 +49,7 @@ class Provider:
                     evidence_session=binding["evidence_session"], evidence_revision=binding["evidence_revision"],
                     stage=binding["expected_stage"], direction=direction,
                     distance_remaining=binding["distance_remaining"], skill_id="cardinal_movement",
-                    skill_version=3, reason="Synthetic bounded route")
+                    skill_version=4, reason="Synthetic bounded route")
         if self.change:
             data.update(self.change)
         return ProviderReply(json.dumps(PlanCandidate(**data).to_dict()), ProviderUsage(10, 5, 0, 0))
@@ -144,7 +144,7 @@ class SupervisorTests(unittest.TestCase):
 
     @staticmethod
     def threat(value):
-        value["scene"]["visible_creatures"] = [{"name": "cat", "hostile": False}]
+        value["scene"]["visible_creatures"] = [{"name": "zombie", "hostile": True}]
 
     @staticmethod
     def grass(value):
@@ -157,7 +157,7 @@ class SupervisorTests(unittest.TestCase):
         self.assertIsInstance(intent, DispatchIntent)
         self.assertFalse(intent.grants_dispatch_authority)
         self.assertEqual((intent.run_id, intent.task_id, intent.task_version, intent.skill_version),
-                         ("run", "task", 1, 3))
+                         ("run", "task", 1, 4))
         with self.assertRaises(FrozenInstanceError):
             intent.execution_epoch = 7
         after = self.frame((1, 0, 0), turn=11)
@@ -173,6 +173,19 @@ class SupervisorTests(unittest.TestCase):
         self.step("back", (0, 0, 0))
         self.assertEqual(self.status().state, "completed")
         self.assertIsNone(self.status().lease_owner)
+        self.assertEqual(len(self.super.route_history), 2)
+
+    def test_nonhostile_creatures_allow_both_version_four_legs(self):
+        def creatures(value):
+            value["scene"]["visible_creatures"] = [{"name": "Cornell", "hostile": False},
+                                                     {"name": "cat", "hostile": False}]
+        self.start_ref = self.frame(change=creatures)
+        self.admitted(distance=1)
+        self.step("outbound", (1, 0, 0), change=creatures)
+        self.wait_plan()
+        self.assertEqual(self.status().state, "admitted")
+        self.step("return", (0, 0, 0), change=creatures)
+        self.assertEqual(self.status().state, "completed")
         self.assertEqual(len(self.super.route_history), 2)
 
     def test_partial_both_leg_continuation_keeps_one_port_memory_and_remaining_distance(self):
@@ -601,7 +614,7 @@ class SupervisorTests(unittest.TestCase):
         self.assertTrue(provider.cancelled.is_set())
 
     def test_wrong_skill_version_candidate_cannot_become_an_intent(self):
-        provider = Provider(change={"skill_version": 2})
+        provider = Provider(change={"skill_version": 3})
         self.supervisor(provider=provider).start(**self.clocks())
         self.wait_plan()
         self.assertEqual(self.status().state, "failed")

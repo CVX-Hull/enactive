@@ -95,6 +95,7 @@ replace_once(source / "src/uilist.cpp",
 
 # These hooks run inside the existing visible-column/page/cell loops, after
 # denial widths, hidden cells and trimming have been resolved by the renderer.
+# Use the engine's selecting predicate to omit the cosmetic selected-items column.
 # Do not enumerate inventory locations, hidden children or latent entry caches.
 replace_once(source / "src/inventory_ui.cpp",
     'void inventory_selector::refresh_window()\n{\n'
@@ -106,7 +107,7 @@ replace_once(source / "src/inventory_ui.cpp",
     '                }\n            }\n\n            x1 = x2;\n        }\n\n'
     '        if( entry.is_item() ) {\n            int xx = p.x;',
     '                }\n'
-    '                if( cell_index == 0 && entry.is_item() && text_x >= 0 &&\n'
+    '                if( allows_selecting() && cell_index == 0 && entry.is_item() && text_x >= 0 &&\n'
     '                    text_x + static_cast<int>( text_width ) <= getmaxx( win ) &&\n'
     '                    yy >= 0 && yy < getmaxy( win ) ) {\n'
     '                    const std::string label = remove_color_tags( trim_by_length( text, text_width ) );\n'

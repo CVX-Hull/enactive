@@ -138,7 +138,10 @@ polls and registered activity interruption/answer/resumption now compose in sour
 Selected delivery reconciliation and separate normal-play readmission now compose
 in source; normal finish has source coverage. Unsupported semantic uncertainty
 remains stopped rather than being passed through unknown-delivery reconciliation.
-Native acceptance remains pending.
+Native006 qualified only ordinary creation/identity, counted dropping, native
+wait/poll and first normal save/exit; reload/acquisition/navigation and the
+independent mission remain unqualified. Its [report](acceptance/2026-10-20-native-character-lifecycle.md)
+owns the actual limits and exceptional second-child cleanup.
 Neither synthetic UI tests nor tests assuming identity accept an independent mission. Observe likewise cannot adopt
 an unexplained normal session. Reopening restores neither phase nor input authority.
 An aged lifecycle Resume checkpoint is refreshed inside the registered operation
@@ -161,7 +164,8 @@ The harness-enabled SDL ImGui context disables only input-text cursor blinking
 through its existing library option; exact encoded PNG equivalence is unchanged.
 There is no image masking or tolerance for changed content. Other animations can
 still invalidate an old interpreted decision. General setup cancellation after
-phase revocation is unsupported; Resume-only cleanup below does not cover it.
+other setup inputs remains unsupported; only the proven Resume-only main-menu
+case below has a narrow normal cleanup path.
 Interpreted tab focus excludes WORLDGEN_CONFIRM_DIALOG. NEW_CHAR_DESCRIPTION may
 return through PREV_TAB, but NEXT_TAB starts character completion and requires an
 explicit lifecycle stage commit; a focused menu outcome cannot authorize it.
@@ -185,7 +189,7 @@ Process absence or exit code alone cannot prove a normal save/exit.
 
 Registered `exit` covers the same owned untouched MAIN_MENU, a verified Resume-only
 pre-character menu, or a menu reached by this child's validated SavedCheckpoint.
-Resume-only eligibility requires exactly one correlated returned creation Resume,
+Resume-only eligibility requires exactly one correlated returned create/load Resume,
 no other setup input, unknown, transition candidate or normal-play evidence. The
 fresh internally paused menu must retain the immutable launch pixels and expected
 Resume revision/control transition under the original operator/takeover mark.
@@ -194,9 +198,33 @@ Ledger write/reopen/orphan checks audit the original Resume mapping/source IDs;
 runtime and EvidenceStore own PNG and live-authority checks. An earlier exit must
 have no inputs or its fully settled verified No; pending/unknown exit inputs cannot
 be skipped by a new root. This does not handle arbitrary setup rollback or restore
-consent after user Pause. The saved branch requires the exact final
+consent after user Pause.
+
+While that Resume-only create/load phase is still live at MAIN_MENU, a new
+source-bound `exit` root may explicitly request its abort. It audits the original
+single Resume, actor/operator/custody, no normal segment/other input/candidate or
+pending slot, then compares a new native capture with the exact original pixels
+and expected resumed state. It revokes setup through internal recovery without
+sending input or changing the launch checkpoint. The plain partial result reports
+`cleanup_requested`, not an exit proof or a phase receipt. The original request
+epoch remains historical; the ledger's pause advances its current epoch. Separate
+Observe must establish the fresh internally paused Resume-only menu, followed by
+a new finite normal-exit root. Neither step restores the old setup phase, renews
+mission ceilings nor overrides a concurrent user Pause/takeover. Other setup
+screens/inputs, unknown Resume and historical reopened evidence cannot use this
+abort path. The saved branch requires the exact final
 normal endpoint and its original first menu source, even after later observations.
 It retains the launch's original operator mark.
+
+Reload staging follows actual native transitions: a returned MAIN_MENU world
+confirmation entering UILIST arms the private character-selection stage; return
+to MAIN_MENU retires that stage. Before a load confirmation is dispatched, the
+rendered UILIST must have one enabled admitted-character row and that exact row
+must be selected. No literal `Load Game` label or alternate label reader arms the
+stage. Unknown delivery retains its original UUID/reservation; diagnostic Observe,
+same-root transition reconciliation, separate identity-only Resume and visible
+identity Claims/adoption remain required. The row check establishes selection
+only; world identity still needs its source-backed interpretation.
 A source-bound root charges distinct Resume and QUIT primitives, then awaits an
 explicit interpreted Really quit? Yes/No child. Exact-PNG refreshes preserve
 checkpoint provenance; root/child ceilings and original deadlines never renew.
@@ -768,14 +796,19 @@ budget, exception, rule allowance or running chat renews admission.
 Use goal → bounded skill → one primitive → fresh observation → verification.
 Start with movement, menu navigation and single actions. Movement routines have
 a small step limit, require normal-game context, and stop on a prompt, no
-progress, any visible creature, pause, stale revision or
+progress, a visible hostile creature or unknown creature evidence, pause, stale revision or
 transport error. Unknown information stops a routine instead of assuming safe.
 Maintain observed facts with provenance/age; do not infer an unseen route is
 clear. Structured movement fields are relative avatar position, current game
 turn, the UI's visible-creature list, and eight neighboring tiles' terrain and
 furniture identities only at CLEAR visibility. No item contents, unseen
 creatures, absolute world position, or trap state is exported. Movement accepts
-only a small known floor/ground whitelist without furniture. Damage has no
+only a small known floor/ground whitelist without furniture. Strictly represented
+non-HOSTILE creatures may remain visible. Native`hostile:false` means not classified
+HOSTILE, not FRIENDLY or safe; creature positions/occupancy are unavailable. An
+attempt into an occupied tile can prompt or fail displacement and stops without
+retry. New hostility after a returned step stops subsequent input, including at
+the target, without undoing that delivered turn. Damage has no
 structured field in the first slice and is assessed visually by the planner;
 no deterministic damage guard is claimed. The model chooses high-level objectives, while deterministic guards
 handle immediate interrupts. VLA/robotics supplies architectural inspiration;
@@ -831,7 +864,13 @@ coverage. `current()` requires a positively marked normal scene for movement;
 `current_boundary()` checks freshness/integrity without granting input permission.
 Non-normal references have null game time and no fabricated position/scene facts.
 Native `ui` is null or bounded rendered-row coverage only; omitted rows, titles,
-filter/count and null selection are unknown, not absence. Native facts never
+filter/count and null selection are unknown, not absence. Inventory rows follow
+the visible renderer's selecting columns; the engine's non-selecting cosmetic
+selection-summary column is omitted. Other actionable columns, disabled rows,
+renderer order and active focus remain represented when visible. This is not
+label deduplication: genuine duplicate actionable targets remain ambiguous.
+Quantities and complete selected-item coverage remain player interpretations of
+the actual screen, not native stock or acquisition facts. Native facts never
 include latent/off-page inventory. `pause_origin` is diagnostic; host generation
 and process-scoped human takeover count govern continuation checks. Its observation identity is the hash of session plus immutable
 frame basename; a transport request ID is not a frame identity. It copies original
@@ -980,7 +1019,7 @@ a completed call ends at physical completion even if its reservation is unsettle
 `harness/gameplay/skills.py` implements `MovementStage` and the versioned
 `CARDINAL_MOVEMENT` descriptor. `ACCEPTED_SKILLS` contains this one capability.
 Descriptors declare implemented predicates; arbitrary strings are not executable
-conditions. Cardinal skill version 3 supports the remaining part of outbound/return
+conditions. Cardinal skill version4 supports the remaining part of outbound/return
 legs of 1–4 steps using the TaskSpec's original primitive, turn and wall budgets.
 The module never sends input, acquires authority, automatically resumes or retries.
 
@@ -1008,13 +1047,14 @@ one logical action can be outstanding; proposing consumes primitive budget even
 if later rejected. Every call requires finite nondecreasing clocks. The checkpoint
 and EvidenceStore authority generation must match, all credited/start/waypoint
 sources must remain undisputed. The shared `current_guard` requires fresh normal
-play, unpaused/unfrozen control, known absence of visible creatures and valid current
+play, unpaused/unfrozen control, closed bounded visible-creature evidence with
+every`hostile` value exactly false, and valid current
 position. A registered cardinal action is required even at completion. At an exact,
 fully credited target this current-boundary check suffices; before any further step,
-the full `guard` additionally requires a CLEAR empty allowlisted cardinal neighbor.
+the full `guard` additionally requires a CLEAR allowlisted furniture-free cardinal neighbor.
 Evidence still requires all eight cells: an invisible future neighbor may omit its
 hidden contents, but a missing cell is invalid. Public controller `walk` retains its
-conservative next-neighbor check after every step. Version-2 cardinal candidates
+conservative next-neighbor check after every step. Prior cardinal descriptor versions
 reject; no fallback descriptor or reader exists.
 
 The caller reserves after-frame capacity, rechecks authority and serializes one

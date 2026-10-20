@@ -21,13 +21,13 @@ from .evidence import EvidenceError, EvidenceStore
 
 # Declarative predicates, not an interpreter for arbitrary condition strings.
 CARDINAL_MOVEMENT = SkillDescriptor(
-    skill_id="cardinal_movement", skill_version=3,
+    skill_id="cardinal_movement", skill_version=4,
     task_kinds=("waypoint_return",), stage_kinds=("outbound", "return"),
     contexts=("normal_play",), action_bindings=("UP", "DOWN", "LEFT", "RIGHT"),
     observable_predicates=("fresh_current_retained_normal_play", "same_session_and_checkpoint",
                            "undisputed_start_waypoint_and_credited_sources", "unpaused_unfrozen",
-                           "no_visible_creatures", "current_boundary_at_exact_verified_target",
-                           "visible_empty_allowlisted_neighbor_before_further_step",
+                           "known_nonhostile_visible_creatures", "current_boundary_at_exact_verified_target",
+                           "visible_allowlisted_furniture_free_neighbor_before_further_step",
                            "registered_cardinal_action", "original_task_budgets_remaining"),
     allowed_primitives=("cardinal_step",),
     postconditions=("correlated_logical_action_and_before_reference", "exact_unit_displacement",
@@ -36,7 +36,7 @@ CARDINAL_MOVEMENT = SkillDescriptor(
                     "current_guard_at_target_full_guard_before_further_step",
                     "immutable_leg_target_and_cumulative_verified_steps"),
     stop_rules=("pause_or_freeze", "missing_stale_disputed_or_replaced_evidence",
-                "visible_creature_or_unknown_current_boundary",
+                "hostile_or_unknown_visible_creatures_or_current_boundary",
                 "unknown_or_blocked_neighbor_before_further_step", "unregistered_action",
                 "capacity_or_original_task_budget", "invalid_or_regressing_clock",
                 "unknown_or_dispatched_only_outcome", "rejected_or_not_dispatched",
