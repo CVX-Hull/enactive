@@ -145,7 +145,7 @@ class ServerTests(unittest.TestCase):
         payload = {"kind": "plan", "request_id": "request-exact", "candidate": candidate}
         self.assertEqual(self.gameplay(payload)[0], 200)
         self.assertEqual(self.server.gameplay.calls[-1], ("plan", {"request_id": "request-exact", "candidate": candidate}))
-        for bad_candidate in ({**candidate, "schema": "gameplay/2"}, {**candidate, "extra": 1},
+        for bad_candidate in ({**candidate, "schema": "gameplay/1"}, {**candidate, "extra": 1},
                               {**candidate, "execution_epoch": True}):
             self.assertEqual(self.gameplay({**payload, "candidate": bad_candidate})[0], 400)
         request = {"request_id": "pending-exact", "deadline_ms": 12345,
@@ -226,13 +226,13 @@ class ServerTests(unittest.TestCase):
             payload.update(interrupt_request_id=state["boundary"]["interrupt_request_id"], choice="NO")
         return payload
 
-    def test_run_lease_enforced_on_existing_http_ingress(self):
+    def test_mission_lease_enforced_on_existing_http_ingress(self):
         with FakeBridge(self.controller) as bridge:
             self.assertEqual(self.post({"kind": "observe"})[0], 200)
             self.assertEqual(self.post({"kind": "resume"})[0], 200)
             current = self.controller.state
-            lease = self.controller.acquire_run("http-task", 0, "test-player",
-                expected_session=current["session"], expected_revision=current["revision"])
+            lease = self.controller.acquire_mission("http-task", 0, "test-player", operation="navigate",
+                expected_boundary_id=current["boundary"]["id"], expected_session=current["session"], expected_revision=current["revision"])
             delivered = len(bridge.delivered)
             for kind, payload in (("key", {"key": "x"}), ("action", {"action": "RIGHT"}),
                                   ("walk", {"direction": "east", "steps": 1}), ("resume", {})):
@@ -244,16 +244,16 @@ class ServerTests(unittest.TestCase):
 
             code, body, _ = self.request()
             self.assertEqual(code, 200)
-            self.assertEqual(json.loads(body)["run_lease"], {"task_id": "http-task",
-                "execution_epoch": 0, "owner": "test-player", "session": current["session"]})
+            self.assertEqual(json.loads(body)["mission_lease"], {"mission_id": "http-task", "epoch": 0, "actor_id": "test-player", "session": current["session"],
+                "operation": "navigate", "pause_generation": lease.pause_generation, "takeover_generation": 0})
             self.assertEqual(self.post({"kind": "observe"})[0], 200)
             self.assertEqual(self.post({"kind": "goal", "text": "record only"})[0], 200)
             # Public JSON cannot supply an in-process capability or start a run.
-            self.assertEqual(self.post({"kind": "action", "action": "RIGHT", "run_lease": {}})[0], 400)
-            self.assertEqual(self.post({"kind": "acquire_run"})[0], 409)
+            self.assertEqual(self.post({"kind": "action", "action": "RIGHT", "mission_lease": {}})[0], 400)
+            self.assertEqual(self.post({"kind": "acquire_mission"})[0], 409)
             self.assertEqual(self.post({"kind": "pause"})[0], 200)
-            self.assertIsNone(self.controller.status()["run_lease"])
-            rejected = self.controller.execute_run(lease, action="RIGHT",
+            self.assertIsNone(self.controller.status()["mission_lease"])
+            rejected = self.controller.execute_mission(lease, kind="action", value="RIGHT", expected_boundary_id=current["boundary"]["id"],
                 expected_session=current["session"], expected_revision=current["revision"],
                 logical_action_id="revoked-http-lease", deadline_monotonic=time.monotonic() + 1)
             self.assertFalse(rejected["published"])
@@ -261,7 +261,7 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(len(bridge.delivered), delivered)
             self.assertEqual(self.post({"kind": "observe"})[0], 200)
             self.assertEqual(self.post({"kind": "resume"})[0], 200)
-            self.assertIsNone(self.controller.status()["run_lease"])
+            self.assertIsNone(self.controller.status()["mission_lease"])
 
     def test_walk_stop_evidence_and_reassessment_through_http(self):
         with FakeBridge(self.controller) as bridge:
@@ -442,7 +442,7 @@ class ServerTests(unittest.TestCase):
         path = self.controller.bridge / "controller.json"
         self.assertEqual(path.stat().st_mode & 0o777, 0o600)
         self.assertEqual(json.loads(path.read_text())["token"], self.controller.token)
-        self.assertEqual(json.loads(path.read_text())["protocol"], 3)
+        self.assertEqual(json.loads(path.read_text())["protocol"], 4)
 
     def test_token_required_and_not_in_url(self):
         self.assertEqual(self.post({"kind": "pause"}, **{"X-CDDA-Token": "wrong"})[0], 403)

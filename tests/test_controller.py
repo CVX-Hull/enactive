@@ -19,7 +19,7 @@ from harness.controller import Controller, ControlError, atomic_json, read_json,
 
 
 def state(request_id="", *, revision=1, **changes):
-    value = {"protocol": 3, "id": request_id, "session": "game-test", "revision": revision,
+    value = {"protocol": 4, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": request_id, "session": "game-test", "revision": revision,
              "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT", "INVENTORY"],
              "status": "ready", "error": "", "paused": False,
              "timestamp_ms": int(time.time() * 1000), "frame_ok": True, "in_game": True,
@@ -183,7 +183,7 @@ class ControlBridge:
                         result = "answer_delivered" if request["kind"] == "answer_interrupt" else "dismissal_delivered"
                     if self.after_commit:
                         self.after_commit(self, request)
-                response = {"protocol": 3, "id": request["id"], "status": result,
+                response = {"protocol": 4, "id": request["id"], "status": result,
                             "error": "revoked" if result == "rejected" else "", "state": value}
                 (self.bridge / "control-claimed.json").unlink(missing_ok=True)
                 if self.publish_result:
@@ -220,10 +220,10 @@ class ControllerTests(unittest.TestCase):
                           expected_frame=value["frame"])
         return result
 
-    def test_control_envelopes_are_exact_v3_and_prompt_owner_is_mandatory(self):
+    def test_control_envelopes_are_exact_v4_and_prompt_owner_is_mandatory(self):
         value = recovery_state("interrupt_confirmation", owner=str(uuid.uuid4()))
         validate_state(value)
-        response = {"protocol": 3, "id": value["boundary"]["interrupt_request_id"],
+        response = {"protocol": 4, "id": value["boundary"]["interrupt_request_id"],
                     "status": "prompt_opened", "error": "", "state": value}
         validate_control_response(response)
         for mutate in (lambda v: v.update(protocol=2), lambda v: v.update(extra=1),
@@ -233,7 +233,7 @@ class ControllerTests(unittest.TestCase):
             mutate(broken)
             with self.assertRaises(ControlError):
                 validate_control_response(broken)
-        request = {"protocol": 3, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
+        request = {"protocol": 4, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
                    "control_generation": 1, "authority": {"controller_boot_id": "boot", "counter": 1},
                    "created_ms": 1000, "deadline_ms": 3000}
         validate_control_request(request)
@@ -397,7 +397,7 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
             (self.controller.bridge / "control.json").rename(self.controller.bridge / "control-claimed.json")
             value = recovery_state("debug_prompt", generation=1, revision=4)
             value.update(frame_ok=False, frame="")
-            response = {"protocol": 3, "id": request["id"], "status": "dispatched", "error": "", "state": value}
+            response = {"protocol": 4, "id": request["id"], "status": "dispatched", "error": "", "state": value}
             atomic_json(self.controller.bridge / "control-response.json", response)
             (self.controller.bridge / "control-claimed.json").unlink()
             process.kill()
@@ -434,7 +434,7 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
     def test_orphan_control_claim_and_malformed_passive_state_fail_closed(self):
         self.controller.close()
         created = int(time.time() * 1000)
-        request = {"protocol": 3, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
+        request = {"protocol": 4, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
                    "control_generation": 0, "authority": {"controller_boot_id": "boot", "counter": 1},
                    "created_ms": created, "deadline_ms": created + 2000}
         path = self.controller.bridge / "control-claimed.json"
@@ -462,14 +462,14 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
             result = self.controller.recover("continue_debug_once", timeout=0.04, **self.recovery_expect())
             self.assertEqual(result["status"], "unknown")
             request = fake.requests[0]
-        original = {"protocol": 3, "id": "ordinary-unknown", "kind": "action", "action": "UP",
+        original = {"protocol": 4, "id": "ordinary-unknown", "kind": "action", "action": "UP",
                     "session": "game-test", "revision": 1, "deadline_ms": 1,
                     "authority": {"controller_boot_id": "old", "counter": 0}}
         self.controller.pending = original.copy()
         atomic_json(self.controller.admissions / "ordinary-unknown.json", original)
         value = recovery_state("debug_prompt", generation=request["control_generation"] + 1)
         value.update(frame_ok=False, frame="")
-        atomic_json(self.controller.bridge / "control-response.json", {"protocol": 3, "id": request["id"],
+        atomic_json(self.controller.bridge / "control-response.json", {"protocol": 4, "id": request["id"],
                     "status": "dismissal_delivered", "error": "", "state": value})
         self.controller.status()
         self.assertEqual(self.controller.control_pending["id"], request["id"])
@@ -523,13 +523,13 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
 
     def test_startup_rejects_unsupported_stored_versions_and_preserves_evidence(self):
         self.controller.close()
-        request = {"protocol": 3, "id": "uncertain", "kind": "action", "action": "UP",
-                   "session": "world", "revision": 1, "deadline_ms": 1,
+        request = {"protocol": 4, "id": "uncertain", "kind": "action", "action": "UP",
+                   "session": "world", "revision": 1, "boundary_id": "world-b1", "takeover_generation": 0, "deadline_ms": 1,
                    "authority": {"controller_boot_id": "old-boot", "counter": 1}}
         bridge = self.controller.bridge
         for relative in ("admissions/uncertain.json", "claimed.json", "response.json"):
             path = bridge / relative
-            for version in (None, 1, 2, True, 3.0):
+            for version in (None, 1, 2, 3, 5, True, 4.0):
                 with self.subTest(path=relative, version=version):
                     value = state() if relative == "response.json" else request.copy()
                     if version is None:
@@ -564,8 +564,8 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
         for index in range(61):
             request_id = f"retained-{index:03d}"
             atomic_json(self.controller.admissions / f"{request_id}.json",
-                        {"protocol": 3, "id": request_id, "kind": "action", "action": "UP",
-                         "session": "world", "revision": 1, "deadline_ms": 1,
+                        {"protocol": 4, "id": request_id, "kind": "action", "action": "UP",
+                         "session": "world", "revision": 1, "boundary_id": "world-b1", "takeover_generation": 0, "deadline_ms": 1,
                          "authority": {"controller_boot_id": "old-boot", "counter": 1}})
         atomic_json(self.controller.bridge / "response.json",
                     state("retained-000", status="dispatched", frame_ok=False))
@@ -755,7 +755,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
 
     def test_v1_and_malformed_boundaries_fail_closed(self):
         from harness.controller import validate_state
-        for changes in ({"protocol": 1}, {"boundary": None},
+        for changes in ({"protocol": 1}, {"protocol": 3}, {"boundary": None},
                         {"boundary": {**state()["boundary"], "control_generation": True}},
                         {"boundary": {**state()["boundary"], "extra": 1}},
                         {"boundary": {**state()["boundary"], "kind": "debug_prompt"}}):
@@ -765,8 +765,8 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
     def test_startup_pauses_retires_and_never_replays(self):
         self.controller.close()
         bridge = self.root / ".runtime" / "bridge"
-        atomic_json(bridge / "request.json", {"protocol": 3, "kind": "key", "key": "x", "id": "old",
-            "session": "world", "revision": 1, "deadline_ms": 1,
+        atomic_json(bridge / "request.json", {"protocol": 4, "kind": "key", "key": "x", "id": "old",
+            "session": "world", "revision": 1, "boundary_id": "world-b1", "takeover_generation": 0, "deadline_ms": 1,
             "authority": {"controller_boot_id": "old-boot", "counter": 1}})
         self.controller = Controller(self.root, timeout=2.0)
         self.addCleanup(self.controller.close)
@@ -1252,48 +1252,120 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 self.controller.command_lock = original
 
     def run_action(self, lease, **payload):
-        envelope = self.controller.execute_run(lease, logical_action_id="test-logical-action",
+        envelope = self.controller.execute_mission(lease, kind="action", value=payload.pop("action"),
+            expected_boundary_id=self.controller.state["boundary"]["id"], logical_action_id="test-logical-action",
             deadline_monotonic=time.monotonic() + payload.get("timeout", 2), **payload)
         self.assertEqual(envelope["logical_action_id"], "test-logical-action")
         self.assertEqual(set(envelope), {"logical_action_id", "request", "result", "published", "received_monotonic"})
         return envelope["result"]
 
     def acquire(self, **changes):
-        values = {"task_id": "task-test", "execution_epoch": 0, "owner": "supervisor", **self.expect(), **changes}
-        return self.controller.acquire_run(**values)
+        values = {"mission_id": "task-test", "epoch": 0, "actor_id": "supervisor", "operation": "navigate",
+                  "expected_boundary_id": self.controller.state["boundary"]["id"], **self.expect(), **changes}
+        return self.controller.acquire_mission(**values)
 
-    def test_run_lease_exact_identity_status_and_release(self):
+    def mission_resume_binding(self):
+        snapshot = self.controller.status(); state = snapshot["state"]
+        return {"expected_generation": snapshot["pause_generation"], "expected_session": state["session"],
+                "expected_revision": state["revision"], "expected_boundary_id": state["boundary"]["id"],
+                "expected_takeover_generation": state["takeover_generation"], "expected_pause_origin": state["pause_origin"]}
+
+    def test_interaction_lease_accepts_supported_menu_key_without_movement_permission(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            fake.value.update(category="UILIST", scene=None)
+            fake.value["boundary"]["kind"]="menu"
+            self.assertEqual(self.controller.execute("observe")["status"], "ready")
+            with self.assertRaises(ControlError): self.acquire(operation="navigate")
+            lease = self.acquire(operation="interaction")
+            receipt = self.controller.execute_mission(lease, kind="key", value="ENTER", **self.expect(),
+                expected_boundary_id=self.controller.state["boundary"]["id"], logical_action_id="menu-selection",
+                deadline_monotonic=time.monotonic()+2)
+            self.assertEqual(receipt["result"]["status"], "ready")
+            self.assertEqual([r["kind"] for r in fake.delivered], ["resume", "key"])
+            self.assertEqual(receipt["request"]["boundary_id"], "game-test-b1")
+            self.assertEqual(receipt["request"]["takeover_generation"], 0)
+
+    def test_mission_rechecks_intended_boundary_after_fresh_observation(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready(); lease = self.acquire(operation="interaction")
+            before = self.expect()
+            fake.value["boundary"]["id"]="new-menu-same-revision"
+            receipt = self.controller.execute_mission(lease, kind="key", value="ENTER", **before,
+                expected_boundary_id="game-test-b1", logical_action_id="stale-menu",
+                deadline_monotonic=time.monotonic()+2)
+            self.assertEqual(receipt["result"]["status"], "controller_error")
+            self.assertFalse(receipt["published"])
+            self.assertFalse(any(r["kind"]=="key" for r in fake.requests))
+
+    def test_navigation_lease_reuses_shared_guard_and_rejects_raw_keys(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready(); lease = self.acquire()
+            receipt = self.controller.execute_mission(lease, kind="key", value="l", **self.expect(),
+                expected_boundary_id="game-test-b1", logical_action_id="raw-move",
+                deadline_monotonic=time.monotonic()+2)
+            self.assertFalse(receipt["published"])
+            fake.value["scene"]["visible_creatures"]=[{"name":"zombie","hostile":True}]
+            result = self.run_action(lease, action="RIGHT", **self.expect())
+            self.assertEqual(result["status"], "controller_error")
+            self.assertFalse(any(r["kind"] in ("key","action") for r in fake.requests))
+
+    def test_runtime_resume_cas_rejects_new_host_pause_and_native_takeover(self):
+        for takeover in (False, True):
+            with self.subTest(takeover=takeover), FakeBridge(self.controller) as fake:
+                self.assertEqual(self.controller.execute("observe")["status"], "ready")
+                binding = self.mission_resume_binding()
+                if takeover:
+                    fake.value.update(takeover_generation=1, pause_origin="human")
+                else: self.controller.pause()
+                result = self.controller.resume_mission(**binding)
+                self.assertNotEqual(result["status"], "ready")
+                self.assertFalse(any(r["kind"]=="resume" for r in fake.requests))
+                self.assertTrue(self.controller.pause_requested)
+            self.controller.close(); self.controller=Controller(self.root, timeout=2)
+            self.addCleanup(self.controller.close)
+
+    def test_runtime_resume_cas_can_continue_exact_admitted_boundary_without_lease(self):
+        with FakeBridge(self.controller) as fake:
+            self.assertEqual(self.controller.execute("observe")["status"], "ready")
+            result = self.controller.resume_mission(**self.mission_resume_binding())
+            self.assertEqual(result["status"], "ready")
+            self.assertIsNone(self.controller.status()["mission_lease"])
+            self.assertEqual([r["kind"] for r in fake.delivered], ["resume"])
+
+    def test_mission_lease_exact_identity_status_and_release(self):
         from dataclasses import FrozenInstanceError, replace
         with FakeBridge(self.controller) as fake:
             self.ready()
             authority = self.controller.authority.copy()
             lease = self.acquire()
             self.assertNotEqual(authority, self.controller.authority)
-            self.assertEqual(self.controller.status()["run_lease"],
-                             {"task_id": "task-test", "execution_epoch": 0, "owner": "supervisor", "session": "game-test"})
+            self.assertEqual(self.controller.status()["mission_lease"],
+                             {"mission_id": "task-test", "epoch": 0, "actor_id": "supervisor", "session": "game-test",
+                              "operation": "navigate", "pause_generation": lease.pause_generation, "takeover_generation": 0})
             with self.assertRaises(FrozenInstanceError):
-                lease.owner = "other"
+                lease.actor_id = "other"
             impostor = replace(lease)
             result = self.run_action(impostor, action="UP", **self.expect())
             self.assertEqual(result["status"], "controller_error")
             with self.assertRaises(ControlError):
-                self.controller.release_run(impostor)
-            self.assertIsNotNone(self.controller.status()["run_lease"])
+                self.controller.release_mission(impostor)
+            self.assertIsNotNone(self.controller.status()["mission_lease"])
             moved = self.run_action(lease, action="UP", **self.expect())
             self.assertEqual(moved["status"], "ready")
             self.assertEqual([r["kind"] for r in fake.delivered], ["resume", "action"])
-            self.assertEqual(self.controller.release_run(lease)["status"], "pause_requested")
-            self.assertIsNone(self.controller.status()["run_lease"])
+            self.assertEqual(self.controller.release_mission(lease)["status"], "pause_requested")
+            self.assertIsNone(self.controller.status()["mission_lease"])
             self.assertTrue((fake.bridge / "pause").exists())
             self.assertEqual(self.run_action(lease, action="DOWN", **self.expect())["status"], "controller_error")
             self.assertEqual(self.controller.execute("resume")["status"], "ready")
             replacement = self.acquire()
             self.assertIsNot(lease, replacement)
             with self.assertRaises(ControlError):
-                self.controller.release_run(lease)
-            self.assertIsNotNone(self.controller.status()["run_lease"])
+                self.controller.release_mission(lease)
+            self.assertIsNotNone(self.controller.status()["mission_lease"])
 
-    def test_run_lease_excludes_external_writers_but_allows_observe_goal_pause(self):
+    def test_mission_lease_excludes_external_writers_but_allows_observe_goal_pause(self):
         with FakeBridge(self.controller) as fake:
             self.ready()
             lease = self.acquire()
@@ -1307,19 +1379,19 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(leaked["status"], "controller_error")
             self.assertEqual(len(fake.requests), before)
             self.assertEqual(self.controller.execute("goal", text="another goal")["status"], "recorded")
-            self.assertEqual(self.controller.status()["run_lease"]["task_id"], "task-test")
+            self.assertEqual(self.controller.status()["mission_lease"]["mission_id"], "task-test")
             self.assertEqual(self.controller.execute("observe")["status"], "ready")
             self.assertEqual(self.controller.execute("pause")["status"], "pause_requested")
-            self.assertIsNone(self.controller.status()["run_lease"])
+            self.assertIsNone(self.controller.status()["mission_lease"])
             self.assertEqual(self.controller.execute("resume")["status"], "ready")
-            self.assertIsNone(self.controller.status()["run_lease"])
+            self.assertIsNone(self.controller.status()["mission_lease"])
 
     def test_run_acquisition_validates_identifiers_and_expected_fresh_normal_evidence(self):
         with FakeBridge(self.controller):
             self.ready()
         baseline = copy.deepcopy(self.controller.state)
-        for changes in ({"task_id": ""}, {"task_id": "x" * 161}, {"owner": " "}, {"owner": 1},
-                        {"execution_epoch": True}, {"execution_epoch": -1}, {"execution_epoch": 0.0},
+        for changes in ({"mission_id": ""}, {"mission_id": "x" * 161}, {"actor_id": " "}, {"actor_id": 1},
+                        {"epoch": True}, {"epoch": -1}, {"epoch": 0.0},
                         {"expected_session": "old"}, {"expected_revision": True}, {"expected_revision": -1}):
             with self.subTest(changes=changes), self.assertRaises(ControlError):
                 self.acquire(**changes)
@@ -1343,7 +1415,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
         self.assertEqual(len(self.controller.unknown_outcomes), 1)
         with self.assertRaises(ControlError):
             self.acquire()
-        self.controller.release_run(lease)
+        self.controller.release_mission(lease)
         with self.assertRaises(ControlError):
             self.acquire()
 
@@ -1436,7 +1508,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             (fake.bridge / "pause").touch()
             self.assertEqual(self.controller.execute("observe")["status"], "ready")
             self.assertEqual(self.controller.state["boundary"]["control_generation"], generation)
-            self.assertIsNone(self.controller.status()["run_lease"])
+            self.assertIsNone(self.controller.status()["mission_lease"])
             self.assertEqual(self.run_action(lease, action="UP", **self.expect())["status"], "controller_error")
 
     def test_leased_preflight_rejects_changed_session_revision_or_boundary(self):
@@ -1479,7 +1551,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertFalse(any(r["kind"] == "action" for r in fake.requests))
             self.assertEqual(self.controller.unknown_outcomes, [])
             self.assertEqual(list(self.controller.admissions.glob("*.json")), [])
-            self.assertIsNone(self.controller.status()["run_lease"])
+            self.assertIsNone(self.controller.status()["mission_lease"])
 
     def test_pause_after_leased_native_claim_rejects_at_commit(self):
         claimed, release = threading.Event(), threading.Event()
@@ -1499,7 +1571,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 result = future.result(2)
             self.assertEqual(result["status"], "rejected")
             self.assertEqual([r["kind"] for r in fake.delivered], ["resume"])
-            self.assertIsNone(self.controller.status()["run_lease"])
+            self.assertIsNone(self.controller.status()["mission_lease"])
 
     def test_leased_timeout_and_malformed_response_revoke_without_retry(self):
         for malformed in (False, True):
@@ -1526,7 +1598,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     return True
                 fake.behavior = fail
                 with patch("harness.controller.time", proxy), ThreadPoolExecutor(1) as pool:
-                    future = pool.submit(self.controller.execute_run, lease, action="UP",
+                    future = pool.submit(self.controller.execute_mission, lease, kind="action", value="UP", expected_boundary_id="game-test-b1",
                         logical_action_id="fault-after-publication", deadline_monotonic=deadline,
                         timeout=2, **expected)
                     try:
@@ -1545,7 +1617,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                                  "controller_error" if malformed else "timeout", diagnostics)
                 if malformed:
                     self.assertIn("Unsupported response protocol", envelope["result"]["error"], diagnostics)
-                self.assertIsNone(self.controller.status()["run_lease"], diagnostics)
+                self.assertIsNone(self.controller.status()["mission_lease"], diagnostics)
                 self.assertTrue(self.controller.frozen, diagnostics)
                 self.assertEqual(sum(r["kind"] == "action" for r in fake.requests), 1, diagnostics)
                 self.assertTrue(any(item["request"]["id"] == envelope["request"]["id"]
@@ -1563,17 +1635,17 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
         with ControlBridge(self.controller):
             result = self.controller.recover("request_interrupt", **self.recovery_expect())
             self.assertEqual(result["status"], "prompt_opened")
-        self.assertIsNone(self.controller.status()["run_lease"])
+        self.assertIsNone(self.controller.status()["mission_lease"])
         self.assertEqual(self.run_action(lease, action="UP", **self.expect())["status"], "controller_error")
         self.controller.close()
         self.controller = Controller(self.root, timeout=2)
         self.addCleanup(self.controller.close)
-        self.assertIsNone(self.controller.status()["run_lease"])
+        self.assertIsNone(self.controller.status()["mission_lease"])
         self.assertTrue(self.controller.pause_requested)
         with self.assertRaises(ControlError):
             self.acquire()
 
-    def test_execute_run_accepts_only_one_registered_action(self):
+    def test_execute_mission_accepts_only_one_registered_action(self):
         with FakeBridge(self.controller) as fake:
             self.ready()
             lease = self.acquire()
@@ -1669,7 +1741,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 try:
                     self.assertTrue(entered.wait(1))
                     lease = self.acquire()
-                    self.controller.release_run(lease)
+                    self.controller.release_mission(lease)
                     self.assertEqual(self.controller.execute("resume")["status"], "ready")
                     before = len(fake.requests)
                 finally:
@@ -1684,18 +1756,18 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             lease = self.acquire()
             expected = self.expect()
             self.controller.close()
-            self.assertIsNone(self.controller.status()["run_lease"])
+            self.assertIsNone(self.controller.status()["mission_lease"])
             self.assertEqual(self.run_action(lease, action="UP", **expected)["status"], "controller_error")
         self.controller = Controller(self.root, timeout=2)
         self.addCleanup(self.controller.close)
-        self.assertIsNone(self.controller.status()["run_lease"])
+        self.assertIsNone(self.controller.status()["mission_lease"])
         self.assertTrue(self.controller.pause_requested)
         with FakeBridge(self.controller):
             self.ready()
             replacement = self.acquire()
             self.assertIsNot(replacement, lease)
             self.assertEqual(self.run_action(lease, action="UP", **self.expect())["status"], "controller_error")
-            self.assertEqual(self.controller.status()["run_lease"]["task_id"], "task-test")
+            self.assertEqual(self.controller.status()["mission_lease"]["mission_id"], "task-test")
 
     def test_walk_does_not_renew_generation_between_steps(self):
         with FakeBridge(self.controller) as fake:
@@ -1739,7 +1811,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
         with FakeBridge(self.controller) as fake:
             self.ready()
             lease = self.acquire()
-            envelope = self.controller.execute_run(lease, action="UP", logical_action_id="logical-1",
+            envelope = self.controller.execute_mission(lease, kind="action", value="UP", expected_boundary_id="game-test-b1", logical_action_id="logical-1",
                 deadline_monotonic=time.monotonic() + 2, **self.expect())
             self.assertEqual(envelope["logical_action_id"], "logical-1")
             self.assertTrue(envelope["published"])
@@ -1749,7 +1821,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(fake.requests[-2]["kind"], "observe")
             self.assertLessEqual(envelope["received_monotonic"], time.monotonic())
             entries = [json.loads(line) for line in self.controller.journal.read_text().splitlines()]
-            self.assertEqual(entries[-1]["request"]["kind"], "run_receipt")
+            self.assertEqual(entries[-1]["request"]["kind"], "mission_receipt")
             self.assertEqual(entries[-1]["outcome"], envelope)
 
     def test_run_preflight_rejection_is_never_an_action_receipt(self):
@@ -1760,7 +1832,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 bridge.value.update(status="rejected", error="Observe rejected")
                 return True
             fake.behavior = reject
-            envelope = self.controller.execute_run(lease, action="UP", logical_action_id="logical",
+            envelope = self.controller.execute_mission(lease, kind="action", value="UP", expected_boundary_id="game-test-b1", logical_action_id="logical",
                 deadline_monotonic=time.monotonic() + 2, **self.expect())
             self.assertFalse(envelope["published"])
             self.assertIsNone(envelope["request"])
@@ -1790,7 +1862,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     self.controller.command_lock.acquire()
                 with patch("harness.controller.time", proxy), patch.object(self.controller, "_exchange", side_effect=exchange):
                     with ThreadPoolExecutor(1) as pool:
-                        future = pool.submit(self.controller.execute_run, lease, action="UP",
+                        future = pool.submit(self.controller.execute_mission, lease, kind="action", value="UP", expected_boundary_id="game-test-b1",
                             logical_action_id="deadline-test", deadline_monotonic=deadline, **expected)
                         if queued:
                             end = real_time.monotonic() + 1
@@ -1826,7 +1898,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 if path.parent == self.controller.admissions:
                     clock.value = deadline
             with patch("harness.controller.time", proxy), patch("harness.controller.atomic_json", side_effect=publish):
-                envelope = self.controller.execute_run(lease, action="UP", logical_action_id="publication-deadline",
+                envelope = self.controller.execute_mission(lease, kind="action", value="UP", expected_boundary_id="game-test-b1", logical_action_id="publication-deadline",
                     deadline_monotonic=deadline, **expected)
             self.assertFalse(envelope["published"])
             self.assertEqual(envelope["request"]["kind"], "action")
@@ -1854,7 +1926,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     callbacks["before_publish"] = delayed
                 original(path, value, **callbacks)
             with patch("harness.controller.time", proxy), patch("harness.controller.atomic_json", side_effect=stage):
-                envelope = self.controller.execute_run(lease, action="UP", logical_action_id="staging-deadline",
+                envelope = self.controller.execute_mission(lease, kind="action", value="UP", expected_boundary_id="game-test-b1", logical_action_id="staging-deadline",
                     deadline_monotonic=deadline, **expected)
             self.assertFalse(envelope["published"])
             self.assertEqual(envelope["request"]["kind"], "action")
@@ -1872,7 +1944,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 if path.name == "request.json" and value["kind"] == "action":
                     raise OSError("Synthetic directory flush failure after atomic publication")
             with patch("harness.controller.atomic_json", side_effect=fail_after_publication):
-                envelope = self.controller.execute_run(lease, action="UP", logical_action_id="published-failure",
+                envelope = self.controller.execute_mission(lease, kind="action", value="UP", expected_boundary_id="game-test-b1", logical_action_id="published-failure",
                     deadline_monotonic=time.monotonic() + 2, **expected)
             self.assertTrue(envelope["published"])
             self.assertEqual(envelope["result"]["status"], "controller_error")
@@ -1896,7 +1968,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             fake.before_gate = gate
             with patch("harness.controller.time", proxy):
                 with ThreadPoolExecutor(1) as pool:
-                    future = pool.submit(self.controller.execute_run, lease, action="UP", logical_action_id="blocked-preflight",
+                    future = pool.submit(self.controller.execute_mission, lease, kind="action", value="UP", expected_boundary_id="game-test-b1", logical_action_id="blocked-preflight",
                         deadline_monotonic=deadline, **expected)
                     self.assertTrue(entered.wait(1))
                     clock.value = deadline

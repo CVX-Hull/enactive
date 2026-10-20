@@ -88,7 +88,7 @@ class GameplayHTTPTests(unittest.TestCase):
         status = self.status()
         self.assertEqual(status["gameplay"]["run"]["progress"]["verified_steps"], 2)
         self.assertEqual(status["state"]["scene"]["position"], [0, 0, 0])
-        self.assertIsNone(status["run_lease"])
+        self.assertIsNone(status["mission_lease"])
         self.assertTrue(status["pause_requested"])
         self.assertEqual(status["gameplay"]["last_receipt"]["disposition"], "returned")
 

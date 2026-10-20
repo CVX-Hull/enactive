@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from harness.gameplay.contracts import Budgets, ContractError, PrimitiveResult, TaskSpec
-from harness.gameplay.evidence import CapacityError, EvidenceError, EvidenceStore, MAX_BYTES, MAX_FRAMES
+from harness.gameplay.evidence import CapacityError, EvidenceError, EvidenceStore, DEFAULT_BYTES, DEFAULT_FRAMES
 from harness.gameplay.memory import TaskMemory
 from tests.test_gameplay_contracts import candidate, skill
 from tests.test_gameplay_evidence import observation, png
@@ -270,9 +270,25 @@ class MemoryTests(unittest.TestCase):
         with self.assertRaises(EvidenceError):
             self.memory.record_action(PrimitiveResult("foreign", new_world, None, "unknown", None, "Foreign action"))
 
+    def test_larger_archive_cannot_expand_task_memory_dependency_limit(self):
+        self.store.close()
+        self.store = EvidenceStore(self.bridge, self.directory, max_frames=64)
+        self.addCleanup(self.store.close)
+        self.memory = TaskMemory(self.task, self.store, execution_epoch=3)
+        for number in range(1, DEFAULT_FRAMES+1):
+            self.ingest(number); self.memory.refresh(**CLOCK)
+        self.ingest(DEFAULT_FRAMES+1)
+        with self.assertRaises(CapacityError): self.memory.refresh(**CLOCK)
+        snapshot = self.snapshot()
+        self.assertEqual(snapshot.counts.unique_sources, DEFAULT_FRAMES)
+        self.assertEqual(snapshot.counts.source_facts, 96)
+        self.assertEqual(snapshot.costs.source_checks, DEFAULT_FRAMES)
+        self.assertEqual(snapshot.current_facts, ())
+        self.assertEqual(len(self.store.historical_references), DEFAULT_FRAMES+1)
+
     def test_long_history_bounded_unique_source_checks_and_capacity_no_eviction(self):
         refs = []
-        for number in range(1, MAX_FRAMES + 1):
+        for number in range(1, DEFAULT_FRAMES + 1):
             refs.append(self.ingest(number))
             self.memory.refresh(**CLOCK)
         for index in range(32):
@@ -285,11 +301,11 @@ class MemoryTests(unittest.TestCase):
             self.plan(candidate_id=f"plan-{index}", evidence_revision=32)
         with patch.object(self.store, "source_status", wraps=self.store.source_status) as verify:
             snap = self.snapshot()
-        self.assertEqual(verify.call_count, MAX_FRAMES)
-        self.assertEqual(len({call.args[0] for call in verify.call_args_list}), MAX_FRAMES)
+        self.assertEqual(verify.call_count, DEFAULT_FRAMES)
+        self.assertEqual(len({call.args[0] for call in verify.call_args_list}), DEFAULT_FRAMES)
         self.assertEqual(snap.counts.source_facts, 96)
-        self.assertEqual(snap.costs.maximum_source_checks, MAX_FRAMES)
-        self.assertEqual(snap.costs.maximum_retained_image_bytes, MAX_BYTES)
+        self.assertEqual(snap.costs.maximum_source_checks, DEFAULT_FRAMES)
+        self.assertEqual(snap.costs.maximum_retained_image_bytes, DEFAULT_BYTES)
         self.assertLessEqual(snap.counts.text_bytes, 64 * 1024)
         for append in (lambda: self.memory.interpret("Extra", (refs[0],)),
                        lambda: self.memory.hypothesize("Extra", (refs[0],)),

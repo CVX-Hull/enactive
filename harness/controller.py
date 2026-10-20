@@ -16,6 +16,8 @@ from dataclasses import dataclass, asdict
 from typing import Any, Callable
 
 from harness.movement import DIRECTIONS, MovementBlocked, guard, observed_step
+from harness.gameplay.contracts import ContractError
+from harness.gameplay.mission_contracts import PAUSE_ORIGINS, validate_visible_ui
 
 MAX_REQUEST = 4096
 MAX_WAIT = 15.0
@@ -33,13 +35,16 @@ class ControlError(Exception):
 
 
 @dataclass(frozen=True)
-class RunLease:
+class MissionLease:
     """Descriptive fields are public; only the controller's exact object grants input."""
 
-    task_id: str
-    execution_epoch: int
-    owner: str
+    mission_id: str
+    epoch: int
+    actor_id: str
     session: str
+    pause_generation: int
+    takeover_generation: int
+    operation: str
 
 
 def atomic_json(path: Path, value: dict[str, Any], *,
@@ -86,18 +91,25 @@ def read_json(path: Path) -> dict[str, Any] | None:
 def validate_state(value: dict[str, Any], request_id: str | None = None) -> None:
     required = {"id": str, "session": str, "revision": int, "category": str,
                 "actions": list, "status": str, "error": str, "paused": bool,
-                "timestamp_ms": int, "frame_ok": bool, "in_game": bool, "frame": str}
-    if type(value.get("protocol")) is not int or value["protocol"] != 3:
+                "timestamp_ms": int, "frame_ok": bool, "in_game": bool, "frame": str,
+                "pause_origin": str, "takeover_generation": int}
+    if type(value.get("protocol")) is not int or value["protocol"] != 4:
         raise ControlError("Unsupported response protocol; observe after fixing the bridge")
     if request_id is not None and value.get("id") != request_id:
         raise ControlError("Response id does not match request")
-    if (set(value) != set(required) | {"protocol", "boundary", "scene"}
+    if (set(value) != set(required) | {"protocol", "boundary", "scene", "ui"}
             or any(type(value.get(key)) is not expected for key, expected in required.items())):
         raise ControlError("Malformed native response fields")
     if (not value["session"] or value["revision"] < 0
             or value["status"] not in {"ready", "dispatched", "rejected"}
             or not all(isinstance(action, str) for action in value["actions"])):
         raise ControlError("Invalid native response values")
+    if value["pause_origin"] not in PAUSE_ORIGINS or value["takeover_generation"] < 0:
+        raise ControlError("Malformed native takeover metadata")
+    try:
+        validate_visible_ui(value["ui"])
+    except ContractError as exc:
+        raise ControlError(f"Malformed visible UI: {exc}") from exc
     if value["status"] == "dispatched" and value["frame_ok"]:
         raise ControlError("Dispatched response cannot assert a fresh frame")
     boundary = value.get("boundary")
@@ -116,6 +128,8 @@ def validate_state(value: dict[str, Any], request_id: str | None = None) -> None
             and (not isinstance(owner, str) or not owner or operations != expected))
             or (boundary["kind"] != "interrupt_confirmation" and owner is not None)):
         raise ControlError("Malformed or unsupported native boundary")
+    if boundary["kind"] != "menu" and value["ui"] is not None:
+        raise ControlError("Visible menu data outside its native owner")
     if boundary["kind"] != "normal_play" and value.get("scene") is not None:
         raise ControlError("Scene outside normal play")
     if value.get("scene") is not None and not isinstance(value["scene"], dict):
@@ -143,7 +157,7 @@ def validate_control_request(request: dict[str, Any]) -> None:
         valid_id = str(uuid.UUID(request.get("id", ""))) == request.get("id")
     except (ValueError, TypeError, AttributeError):
         valid_id = False
-    if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 3
+    if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 4
             or not valid_id or len(request["id"]) > 80
             or not isinstance(request.get("session"), str) or not request["session"]
             or type(request.get("control_generation")) is not int or request["control_generation"] < 0
@@ -159,7 +173,7 @@ def validate_control_request(request: dict[str, Any]) -> None:
 
 def validate_control_response(value: dict[str, Any], request_id: str | None = None) -> None:
     if (set(value) != {"protocol", "id", "status", "error", "state"}
-            or type(value.get("protocol")) is not int or value["protocol"] != 3
+            or type(value.get("protocol")) is not int or value["protocol"] != 4
             or not isinstance(value.get("id"), str) or not value["id"]
             or not isinstance(value.get("status"), str) or value["status"] not in CONTROL_TERMINAL | {"dispatched"}
             or not isinstance(value.get("error"), str) or not isinstance(value.get("state"), dict)
@@ -198,7 +212,7 @@ class Controller:
         self.closed = False
         self.pause_requested = True
         self.pause_generation = 0
-        self._run_lease: RunLease | None = None
+        self._mission_lease: MissionLease | None = None
         self._command_work = 0
         self.authority = {"controller_boot_id": uuid.uuid4().hex, "counter": 0}
         self.unknown_outcomes: list[dict[str, Any]] = []
@@ -418,7 +432,7 @@ class Controller:
                 if kind not in boundary["recovery_operations"]:
                     raise ControlError("Recovery operation is not advertised at this boundary")
                 created = int(time.time() * 1000)
-                request = {"protocol": 3, "id": str(uuid.uuid4()), "kind": kind, "session": state["session"],
+                request = {"protocol": 4, "id": str(uuid.uuid4()), "kind": kind, "session": state["session"],
                            "control_generation": boundary["control_generation"], "authority": self.authority.copy(),
                            "created_ms": created, "deadline_ms": created + 2000}
                 if kind != "request_interrupt":
@@ -480,10 +494,12 @@ class Controller:
         if not isinstance(kind, str) or kind not in {"observe", "pause", "resume", "key", "action"}:
             raise ControlError("Unsupported stored request kind; migrate or archive offline")
         if kind in {"resume", "key", "action"}:
-            fields |= {"session", "revision", "authority"}
+            fields |= {"session", "revision", "boundary_id", "takeover_generation", "authority"}
             authority = request.get("authority")
             if (not isinstance(request.get("session"), str) or not request["session"]
                     or type(request.get("revision")) is not int or request["revision"] < 0
+                    or not isinstance(request.get("boundary_id"), str) or not request["boundary_id"]
+                    or type(request.get("takeover_generation")) is not int or request["takeover_generation"] < 0
                     or not isinstance(authority, dict) or set(authority) != {"controller_boot_id", "counter"}
                     or not isinstance(authority["controller_boot_id"], str) or not authority["controller_boot_id"]
                     or type(authority["counter"]) is not int or authority["counter"] < 0):
@@ -492,7 +508,7 @@ class Controller:
             fields.add(kind)
             if not isinstance(request.get(kind), str) or not request[kind]:
                 raise ControlError("Malformed stored input; migrate or archive offline")
-        if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 3
+        if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 4
                 or not isinstance(request.get("id"), str) or not request["id"]
                 or type(request.get("deadline_ms")) is not int):
             raise ControlError("Unsupported stored request format; migrate or archive offline")
@@ -521,7 +537,7 @@ class Controller:
 
     def _revoke(self) -> None:
         """Call under data_lock: token publication precedes retirement/admission."""
-        self._run_lease = None
+        self._mission_lease = None
         self.pause_generation += 1
         counter = self.authority["counter"] + 1
         if counter > 2_147_483_647:
@@ -566,11 +582,15 @@ class Controller:
     def _accept(self, response: dict[str, Any]) -> None:
         with self.data_lock:
             changed_session = self.state is not None and response["session"] != self.state["session"]
-            takeover = self.state is not None and response["paused"] and (
+            takeover = self.state is not None and (
+                response["takeover_generation"] != self.state["takeover_generation"] or response["paused"] and
                 response["boundary"]["control_generation"] != self.state["boundary"]["control_generation"])
-            if changed_session or takeover or (response["paused"] and self._run_lease is not None):
+            if (self.state is not None and not changed_session
+                    and response["takeover_generation"] < self.state["takeover_generation"]):
+                raise ControlError("Native takeover generation regressed within a session")
+            if changed_session or takeover or (response["paused"] and self._mission_lease is not None):
                 self._revoke()
-                if changed_session:
+                if changed_session or takeover:
                     self.frozen = True
                     self.pause_requested = True
                     self._pause_file()
@@ -591,7 +611,7 @@ class Controller:
             return copy.deepcopy(self.state), self._state_received_monotonic
 
     def _exchange(self, kind: str, timeout: float, *, generation: int | None = None,
-                  lease: RunLease | None = None, deadline_monotonic: float | None = None,
+                  lease: MissionLease | None = None, deadline_monotonic: float | None = None,
                   receipt: dict[str, Any] | None = None, **payload: Any) -> dict[str, Any]:
         request_id = str(uuid.uuid4())
         started = time.monotonic()
@@ -599,13 +619,15 @@ class Controller:
             timeout = min(timeout, deadline_monotonic - started)
             if timeout <= 0:
                 return {"status": "controller_error", "error": "Original dispatch deadline expired before publication"}
-        request = {"protocol": 3, "id": request_id, "kind": kind,
+        request = {"protocol": 4, "id": request_id, "kind": kind,
                    "deadline_ms": int(time.time() * 1000 + timeout * 1000), **payload}
         if kind not in {"observe", "pause"}:
             if self.state is None:
                 raise ControlError("No observation; observe first")
             request.setdefault("session", self.state["session"])
             request.setdefault("revision", self.state["revision"])
+            request.setdefault("boundary_id", self.state["boundary"]["id"])
+            request.setdefault("takeover_generation", self.state["takeover_generation"])
         if len(json.dumps(request).encode()) > MAX_REQUEST:
             raise ControlError("Request exceeds 4096 bytes")
         terminal_received = False
@@ -634,7 +656,7 @@ class Controller:
                     admitted_input = True
                     if receipt is not None:
                         receipt["request"] = copy.deepcopy(request)
-                        self._record({"kind": "run_admission", "logical_action_id": receipt["logical_action_id"]},
+                        self._record({"kind": "mission_admission", "logical_action_id": receipt["logical_action_id"]},
                                      {"request": copy.deepcopy(request)})
                 if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:
                     raise ControlError("Original dispatch deadline expired before publication")
@@ -722,14 +744,17 @@ class Controller:
         self._record({"kind": "pause"}, result)
         return result
 
-    def acquire_run(self, task_id: str, execution_epoch: int, owner: str, *,
-                    expected_session: str, expected_revision: int) -> RunLease:
-        """Claim reconciled normal play without waiting for or sending native work."""
-        for name, value in (("task_id", task_id), ("owner", owner)):
+    def acquire_mission(self, mission_id: str, epoch: int, actor_id: str, *, operation: str,
+                        expected_session: str, expected_revision: int,
+                        expected_boundary_id: str) -> MissionLease:
+        """Claim one admitted operation at a supported boundary; sends no input."""
+        if operation not in ("navigate", "interaction", "lifecycle"):
+            raise ControlError("Unknown mission operation")
+        for name, value in (("mission_id", mission_id), ("actor_id", actor_id)):
             if not isinstance(value, str) or not value.strip() or len(value) > 160:
                 raise ControlError(f"Run {name} must be nonempty text of at most 160 characters")
-        if type(execution_epoch) is not int or execution_epoch < 0:
-            raise ControlError("Run execution_epoch must be a nonnegative integer")
+        if type(epoch) is not int or epoch < 0:
+            raise ControlError("Mission epoch must be a nonnegative integer")
         if not self.command_lock.acquire(blocking=False):
             raise ControlError("Command writer is active")
         try:
@@ -739,7 +764,7 @@ class Controller:
                 with self.data_lock:
                     if self._command_work:
                         raise ControlError("Command work is active or queued")
-                    if self._run_lease is not None:
+                    if self._mission_lease is not None:
                         raise ControlError("A run already owns this controller")
                     if self.closed or self.frozen or self.pause_requested or (self.bridge / "pause").exists():
                         raise ControlError("Run acquisition requires a reconciled, resumed controller")
@@ -749,11 +774,13 @@ class Controller:
                         raise ControlError("Native or recovery work is pending")
                     if self.state is None:
                         raise ControlError("Run acquisition requires a current observation")
-                    self._run_frame(self.state)
+                    self._mission_frame(self.state, operation)
                     self._expect(self.state, expected_session, expected_revision)
+                    self._expect_boundary(self.state, expected_boundary_id)
                     self._revoke()
-                    lease = RunLease(task_id, execution_epoch, owner, self.state["session"])
-                    self._run_lease = lease
+                    lease = MissionLease(mission_id, epoch, actor_id, self.state["session"],
+                                         self.pause_generation, self.state["takeover_generation"], operation)
+                    self._mission_lease = lease
                     return lease
             finally:
                 self.control_lock.release()
@@ -761,66 +788,96 @@ class Controller:
             self.command_lock.release()
 
     @staticmethod
-    def _run_frame(state: dict[str, Any]) -> None:
+    def _mission_frame(state: dict[str, Any], operation: str) -> None:
         validate_state(state)
         age = int(time.time() * 1000) - state["timestamp_ms"]
-        if (state["status"] != "ready" or state["error"] or state["paused"]
-                or not state["in_game"] or not state["frame_ok"] or not state["frame"]
-                or state["boundary"]["kind"] != "normal_play" or not -1000 <= age <= 3000):
-            raise ControlError("Run input requires a fresh successful normal-play frame")
+        boundary = state["boundary"]["kind"]
+        supported = boundary == "normal_play" and state["in_game"] and state["scene"] is not None
+        if operation in ("interaction", "lifecycle") and boundary == "menu": supported = True
+        if (state["status"] != "ready" or state["error"] or state["paused"] or not supported
+                or not state["frame_ok"] or not state["frame"] or not -1000 <= age <= 3000):
+            raise ControlError("Mission input requires a fresh successful boundary eligible for its operation")
 
-    def _check_owner(self, lease: RunLease | None, generation: int | None) -> None:
+    def _check_owner(self, lease: MissionLease | None, generation: int | None) -> None:
         """Call under data_lock at each admission/commit boundary."""
         if lease is None:
-            if self._run_lease is not None:
+            if self._mission_lease is not None:
                 raise ControlError("A run owns input; Pause or release it before external input")
             return
-        if (lease is not self._run_lease or generation != self.pause_generation
+        if (lease is not self._mission_lease or generation != self.pause_generation
                 or self.state is None or lease.session != self.state["session"]
+                or lease.pause_generation != self.pause_generation
+                or lease.takeover_generation != self.state["takeover_generation"]
                 or self.closed or self.frozen or self.pause_requested):
             raise ControlError("Run lease is stale or input authority was revoked")
 
-    def execute_run(self, lease: RunLease, *, action: str, expected_session: str,
-                    expected_revision: int, logical_action_id: str,
-                    deadline_monotonic: float, timeout: float | None = None) -> dict[str, Any]:
-        """One leased action and its exact admission/terminal receipt envelope."""
+    def execute_mission(self, lease: MissionLease, *, kind: str, value: str, expected_session: str,
+                        expected_revision: int, expected_boundary_id: str, logical_action_id: str,
+                        deadline_monotonic: float, timeout: float | None = None) -> dict[str, Any]:
+        """One registered action/key with its exact logical/native receipt."""
         receipt = {"logical_action_id": logical_action_id, "request": None, "result": None,
                    "published": False, "received_monotonic": None}
         if (type(logical_action_id) is not str or not 1 <= len(logical_action_id) <= 128
                 or type(deadline_monotonic) not in (int, float)
-                or not 0 <= deadline_monotonic <= 1e12 or lease is None):
-            receipt["result"] = {"status": "controller_error", "error": "Invalid run identity, deadline or lease"}
+                or not 0 <= deadline_monotonic <= 1e12 or lease is None or kind not in ("action", "key")):
+            receipt["result"] = {"status": "controller_error", "error": "Invalid mission identity, kind, deadline or lease"}
         else:
-            receipt["result"] = self._execute("action", timeout,
-                {"action": action, "expected_session": expected_session,
-                 "expected_revision": expected_revision}, lease,
+            receipt["result"] = self._execute(kind, timeout,
+                {kind: value, "expected_session": expected_session,
+                 "expected_revision": expected_revision, "expected_boundary_id": expected_boundary_id}, lease,
                 deadline_monotonic=deadline_monotonic, receipt=receipt)
         if type(logical_action_id) is str:
-            self._record({"kind": "run_receipt", "logical_action_id": logical_action_id}, receipt)
+            self._record({"kind": "mission_receipt", "logical_action_id": logical_action_id}, receipt)
         return receipt
 
-    def release_run(self, lease: RunLease) -> dict[str, Any]:
+    def release_mission(self, lease: MissionLease) -> dict[str, Any]:
         with self.data_lock:
-            if lease is None or lease is not self._run_lease:
+            if lease is None or lease is not self._mission_lease:
                 raise ControlError("Run lease is stale; cannot release another owner")
             return self.pause()
+
+    def resume_mission(self, *, expected_generation: int, expected_session: str,
+                       expected_revision: int, expected_boundary_id: str,
+                       expected_takeover_generation: int, expected_pause_origin: str,
+                       timeout: float | None = None) -> dict[str, Any]:
+        """CAS for runtime-admitted bootstrap/lifecycle/recovery, never a lease resume.
+
+        Runtime must establish the admitted phase and cause. Exact observed values
+        prevent a newer host/human event from becoming implicit permission while
+        waiting for the command writer. Public command JSON cannot call this API.
+        """
+        binding = {"session": expected_session, "revision": expected_revision,
+                   "boundary_id": expected_boundary_id, "takeover_generation": expected_takeover_generation,
+                   "pause_origin": expected_pause_origin}
+        if (type(expected_generation) is not int or expected_generation < 0
+                or type(expected_revision) is not int or expected_revision < 0
+                or type(expected_takeover_generation) is not int or expected_takeover_generation < 0
+                or not isinstance(expected_session, str) or not expected_session
+                or not isinstance(expected_boundary_id, str) or not expected_boundary_id
+                or expected_pause_origin not in PAUSE_ORIGINS):
+            return {"status": "controller_error", "error": "Malformed mission continuation binding"}
+        return self._execute("resume", timeout, {}, None, expected_generation=expected_generation,
+                             resume_binding=binding)
 
     def execute(self, kind: str, *, timeout: float | None = None, **payload: Any) -> dict[str, Any]:
         return self._execute(kind, timeout, payload, None)
 
     def _execute(self, kind: str, timeout: float | None, payload: dict[str, Any],
-                 lease: RunLease | None, *, deadline_monotonic: float | None = None,
-                 receipt: dict[str, Any] | None = None) -> dict[str, Any]:
+                 lease: MissionLease | None, *, deadline_monotonic: float | None = None,
+                 receipt: dict[str, Any] | None = None, expected_generation: int | None = None,
+                 resume_binding: dict[str, Any] | None = None) -> dict[str, Any]:
         wait = self.timeout if timeout is None else timeout
         admitted = False
         with self.data_lock:
             admitted_generation = self.pause_generation
         try:
+            if expected_generation is not None and expected_generation != admitted_generation:
+                raise ControlError("Mission continuation superseded by host Pause or takeover")
             if self.closed:
                 raise ControlError("Controller is closed")
             if not isinstance(kind, str) or kind not in {"observe", "pause", "resume", "goal", "key", "action", "walk"}:
                 raise ControlError("Unknown command")
-            if set(payload) - {"key", "action", "direction", "steps", "text", "expected_session", "expected_revision"}:
+            if set(payload) - {"key", "action", "direction", "steps", "text", "expected_session", "expected_revision", "expected_boundary_id"}:
                 raise ControlError("Unknown command fields")
             if kind == "pause":
                 return self.pause()
@@ -862,7 +919,7 @@ class Controller:
                                         admitted_generation)
                 else:
                     result = self._command(kind, wait, payload, admitted_generation, lease,
-                                           deadline_monotonic=deadline_monotonic, receipt=receipt)
+                                           deadline_monotonic=deadline_monotonic, receipt=receipt, resume_binding=resume_binding)
                 with self.data_lock:
                     self.last_result = result
                 return result
@@ -880,8 +937,9 @@ class Controller:
                     self._command_work -= 1
 
     def _command(self, kind: str, timeout: float, payload: dict[str, Any], generation: int,
-                 lease: RunLease | None = None, *, deadline_monotonic: float | None = None,
-                 receipt: dict[str, Any] | None = None) -> dict[str, Any]:
+                 lease: MissionLease | None = None, *, deadline_monotonic: float | None = None,
+                 receipt: dict[str, Any] | None = None,
+                 resume_binding: dict[str, Any] | None = None) -> dict[str, Any]:
         with self.data_lock:
             if kind != "observe":
                 self._check_owner(lease, generation)
@@ -920,7 +978,7 @@ class Controller:
             if kind in {"key", "action", "resume"} and generation != self.pause_generation:
                 return {"status": "pause_requested", "error": "Resume superseded by a later pause"}
             if lease is not None:
-                self._run_frame(observed)
+                self._mission_frame(observed, lease.operation)
         if (observed["boundary"]["kind"] not in INPUT_BOUNDARIES or not observed["frame_ok"]
                 or int(time.time() * 1000) - observed["timestamp_ms"] > 3000):
             raise ControlError("Input requires a fresh matching normal-play or supported menu frame")
@@ -928,11 +986,25 @@ class Controller:
             raise ControlError("Native input is paused; explicit resume required")
         if kind != "resume":
             self._expect(observed, payload.get("expected_session"), payload.get("expected_revision"))
+        elif resume_binding is not None:
+            self._expect(observed, resume_binding["session"], resume_binding["revision"])
+            self._expect_boundary(observed, resume_binding["boundary_id"])
+            if (observed["takeover_generation"] != resume_binding["takeover_generation"]
+                    or observed["pause_origin"] != resume_binding["pause_origin"]):
+                raise ControlError("Mission continuation superseded by a native pause/takeover event")
+        if lease is not None:
+            self._expect_boundary(observed, payload.get("expected_boundary_id"))
+            if lease.operation == "navigate":
+                if kind != "action" or payload.get("action") not in {"UP", "DOWN", "LEFT", "RIGHT"}:
+                    raise ControlError("Navigation lease admits only registered cardinal movement")
+                dx, dy = {"UP": (0,-1), "DOWN": (0,1), "LEFT": (-1,0), "RIGHT": (1,0)}[payload["action"]]
+                self._walk_guard(observed, dx, dy)
         if kind == "action" and payload["action"] not in observed["actions"]:
             raise ControlError("Action is not registered in the current input context")
         primitive = {kind: payload[kind]} if kind in {"key", "action"} else {}
         result = self._exchange(kind, timeout, generation=generation, lease=lease, session=observed["session"],
-                                revision=observed["revision"], deadline_monotonic=deadline_monotonic,
+                                revision=observed["revision"], boundary_id=observed["boundary"]["id"],
+                                takeover_generation=observed["takeover_generation"], deadline_monotonic=deadline_monotonic,
                                 receipt=receipt, **primitive)
         if kind == "resume" and result["status"] == "ready":
             with self.data_lock:
@@ -950,6 +1022,11 @@ class Controller:
             raise ControlError("Gameplay commands require expected_session and expected_revision from observe")
         if session != state["session"] or revision != state["revision"]:
             raise ControlError("Stale session or revision; observe and reconsider the command")
+
+    @staticmethod
+    def _expect_boundary(state: dict[str, Any], boundary_id: Any) -> None:
+        if not isinstance(boundary_id, str) or not boundary_id or boundary_id != state["boundary"]["id"]:
+            raise ControlError("Stale or missing intended boundary; observe and reconsider")
 
     def _walk_guard(self, state: dict[str, Any], dx: int, dy: int) -> list[int]:
         try:
@@ -1000,7 +1077,8 @@ class Controller:
                 if action not in before["actions"]:
                     raise ControlError("Walk stopped: movement action is not registered")
                 after = exchange("post_step", "action", generation=generation, action=action,
-                                 session=before["session"], revision=before["revision"])
+                                 session=before["session"], revision=before["revision"],
+                                 boundary_id=before["boundary"]["id"], takeover_generation=before["takeover_generation"])
                 if after["status"] != "ready":
                     raise ControlError(after.get("error") or "Walk stopped: action failed")
                 if not observed_step(before, after, dx, dy):
@@ -1045,6 +1123,7 @@ class Controller:
             age = None if self.state is None else max(0, int(time.time() * 1000) - self.state["timestamp_ms"])
             connection = "disconnected" if age is None or age > 15000 else "stale" if age > 3000 else "fresh"
             return {"state": self.state, "frozen": self.frozen, "pause_requested": self.pause_requested,
+                    "pause_generation": self.pause_generation,
                     "goal": self.goal, "events": list(self.events), "last_result": self.last_result,
                     "latency_ms": self.latency_ms, "age_ms": age, "connection": connection,
                     "error": self.transport_error, "pending": self.pending,
@@ -1052,6 +1131,6 @@ class Controller:
                     "control_pending": copy.deepcopy(self.control_pending),
                     "control_unknown_outcomes": copy.deepcopy(self.control_unknown_outcomes),
                     "historical_unknowns": copy.deepcopy(list(self.historical_unknowns)),
-                    "run_lease": None if self._run_lease is None else asdict(self._run_lease),
+                    "mission_lease": None if self._mission_lease is None else asdict(self._mission_lease),
                     "journal": str(self.journal.relative_to(self.root)),
                     "expect": None if self.state is None else f'{self.state["session"]}:{self.state["revision"]}'}

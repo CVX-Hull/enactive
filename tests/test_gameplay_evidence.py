@@ -1,4 +1,4 @@
-"""Synthetic native-v3 observations only; never real CDDA/pipeline acceptance."""
+"""Synthetic native-v4 observations only; never real CDDA/pipeline acceptance."""
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
 import base64
@@ -9,6 +9,7 @@ from pathlib import Path
 import tempfile
 import threading
 import unittest
+from unittest.mock import patch
 
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import (
@@ -24,7 +25,7 @@ def png(marker=b"synthetic"):
 
 
 def observation(number=1, *, session="synthetic-world", timestamp_ms=1_000_000):
-    return {"protocol": 3, "id": "", "session": session, "revision": number,
+    return {"protocol": 4, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "", "session": session, "revision": number,
             "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT"],
             "status": "ready", "error": "", "paused": False,
             "timestamp_ms": timestamp_ms, "frame_ok": True,
@@ -69,6 +70,71 @@ class EvidenceTests(unittest.TestCase):
         arguments = dict(now_monotonic=100.0, now_timestamp_ms=1_000_000)
         arguments.update(changes)
         return self.store.current(**arguments)
+
+    def test_menu_is_retained_without_scene_time_or_movement_permission(self):
+        value = observation()
+        value.update(category="UILIST", scene=None, ui={"purpose": "UILIST", "title": "Alarm",
+            "rows": [{"id": "rendered-1", "text": "8 hours", "enabled": True, "hotkey": "8"}],
+            "selected": "rendered-1", "filter": None, "count": None, "coverage": "rendered_rows_only"})
+        value["boundary"]["kind"] = "menu"
+        ref = self.ingest(self.publish(value))
+        self.assertIsNone(ref.turn)
+        self.assertEqual(self.store.observation(ref)["ui"], value["ui"])
+        self.assertEqual(self.store.historical_facts(ref), ())
+        clocks = dict(now_monotonic=100.0, now_timestamp_ms=1_000_000)
+        self.assertEqual(self.store.current_boundary(**clocks), ref)
+        with self.assertRaises(EvidenceError): self.current()
+        with self.assertRaises(EvidenceError): self.store.position(ref)
+        self.assertEqual(self.store.current_boundary(**clocks), ref)
+        self.store.close(); self.store = self.open_store()
+        self.assertEqual(self.store.observation(ref)["ui"], value["ui"])
+        with self.assertRaises(EvidenceError): self.store.current_boundary(**clocks)
+
+    def test_activity_and_recovery_frames_preserve_missing_time_and_no_input_authority(self):
+        for number, kind in enumerate(("activity_poll", "interrupt_confirmation", "debug_prompt", "unsupported"), 1):
+            value = observation(number)
+            value.update(scene=None, category="ACTIVITY", paused=True, pause_origin="recovery")
+            operation = {"activity_poll": ["request_interrupt"], "interrupt_confirmation": ["answer_interrupt"],
+                         "debug_prompt": ["continue_debug_once"]}.get(kind, [])
+            value["boundary"].update(kind=kind, recovery_operations=operation,
+                                     interrupt_request_id="exact-owner" if kind=="interrupt_confirmation" else None)
+            with self.subTest(kind=kind):
+                ref = self.ingest(self.publish(value))
+                self.assertIsNone(ref.turn)
+                self.assertEqual(self.store.observation(ref)["boundary"]["kind"], kind)
+                with self.assertRaises(EvidenceError): self.current()
+                self.assertEqual(self.store.historical_facts(ref), ())
+
+    def test_ui_owner_offpage_and_takeover_metadata_reject_without_hidden_facts(self):
+        ui = {"purpose": "UILIST", "title": "", "rows": [], "selected": None,
+              "filter": None, "count": None, "coverage": "rendered_rows_only"}
+        mutations = [lambda v: v.update(ui=ui), lambda v: v.update(takeover_generation=True),
+                     lambda v: v.update(pause_origin="guessed"), lambda v: v.update(takeover_generation=-1)]
+        for number, change in enumerate(mutations, 1):
+            value = self.publish(observation(number)); change(value)
+            with self.subTest(number=number), self.assertRaises(EvidenceError): self.ingest(value)
+        value = observation(5); value.update(scene=None, category="UILIST", ui={**ui,"selected":"hidden-row"})
+        value["boundary"]["kind"]="menu"
+        with self.assertRaises(EvidenceError): self.ingest(self.publish(value))
+
+    def test_metadata_capacity_is_checked_before_reserving_input_evidence(self):
+        ref = self.ingest()
+        usage = self.store.usage()
+        self.assertEqual(usage["frames"], 1)
+        self.assertEqual(usage["max_frames"], 32)
+        from harness.gameplay.evidence import MAX_ENTRY_BYTES, METADATA_HEADROOM
+        with patch("harness.gameplay.evidence.MAX_METADATA_BYTES", usage["metadata_bytes"]+MAX_ENTRY_BYTES+METADATA_HEADROOM-1):
+            with self.assertRaises(CapacityError):
+                self.store.reserve_dispatch(ref, now_monotonic=100, now_timestamp_ms=1_000_000)
+        self.assertEqual(self.current(), ref)
+        self.assertEqual(len(self.store.historical_references), 1)
+
+    def test_mission_caps_can_increase_retention_without_changing_defaults(self):
+        self.store.close()
+        self.store = self.open_store(max_frames=4096, max_bytes=1024*1024*1024)
+        ref = self.ingest()
+        self.assertEqual(self.store.usage()["max_frames"], 4096)
+        self.assertEqual(self.current(), ref)
 
     def test_observation_copy_cannot_mutate_store_or_refresh_authority(self):
         first = self.ingest()
@@ -377,7 +443,7 @@ class EvidenceTests(unittest.TestCase):
     def test_wire_version_unknown_fields_bool_int_and_boundary_extra_fields_reject(self):
         changes = (
             lambda v: v.update(protocol=1), lambda v: v.update(protocol=2),
-            lambda v: v.update(protocol=4), lambda v: v.update(protocol=True),
+            lambda v: v.update(protocol=3), lambda v: v.update(protocol=5), lambda v: v.update(protocol=True),
             lambda v: v.update(protocol=3.0), lambda v: v.update(revision=True),
             lambda v: v.update(revision=1.0), lambda v: v.update(timestamp_ms=True),
             lambda v: v.update(hidden_position=[1, 2, 3]), lambda v: v.pop("boundary"),
@@ -474,7 +540,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertTrue(Path(ref.frame_path).exists())
 
     def test_limits_can_only_be_lowered_and_cache_directory_cannot_be_store(self):
-        for arguments in ({"max_frames": 33}, {"max_bytes": MAX_BYTES + 1},
+        for arguments in ({"max_frames": 4097}, {"max_bytes": MAX_BYTES + 1},
                           {"max_frames": True}, {"max_bytes": 0}):
             with self.subTest(arguments=arguments), self.assertRaises(CapacityError):
                 EvidenceStore(self.bridge, self.root / "other-store", **arguments)
@@ -611,7 +677,7 @@ class EvidenceTests(unittest.TestCase):
         self.store.close()
         manifest = self.directory / "evidence.json"
         original = manifest.read_bytes()
-        for version in (None, 0, 1, 3, True, 2.0):
+        for version in (None, 0, 1, 2, 4, True, 3.0):
             with self.subTest(version=version):
                 value = json.loads(original)
                 if version is None:

@@ -6,7 +6,7 @@ status: active
 
 # Bridge and guarded-play contract
 
-Protocol version: 3.
+Protocol version: 4.
 
 This is the detailed current contract supporting [architecture](architecture.md).
 Authority rules are [S-PROTOCOL](engineering.md#s-protocol-command-and-observation-authority).
@@ -21,19 +21,22 @@ See [coordinated migration](runbook.md#coordinated-migration).
 
 ## Controller run ownership
 
-The in-process controller API exposes `acquire_run(task_id, execution_epoch,
-owner, *, expected_session, expected_revision)`, `execute_run(lease, *, action,
-expected_session, expected_revision, logical_action_id, deadline_monotonic,
-timeout=None)` and `release_run(lease)`.
-A frozen RunLease belongs to exactly one controller and native session; only the
-exact returned Python object authorizes input. Descriptive fields or a JSON copy
-cannot reconstruct it. The public status `run_lease` is null or descriptive
-`task_id`, `execution_epoch`, `owner`, `session`; it never grants authority.
+The in-process controller API exposes `acquire_mission(mission_id, epoch,
+actor_id, *, operation, expected_session, expected_revision, expected_boundary_id)`,
+`execute_mission(lease, *, kind, value, expected_session, expected_revision,
+expected_boundary_id, logical_action_id, deadline_monotonic, timeout=None)` and
+`release_mission(lease)`. Operation is navigate, interaction or lifecycle.
+A frozen MissionLease belongs to one controller; only the exact returned Python
+object authorizes input. Status `mission_lease` contains descriptive mission/actor/
+epoch/session, host pause generation, native takeover generation and operation;
+JSON cannot reconstruct the capability. Navigation permits guarded cardinal
+movement only at normal play. Interaction/lifecycle can also use supported menus;
+activity/debug/unsupported boundaries never admit ordinary keys.
 
 Acquisition is explicit, nonblocking and has one winner. It requires no active or
 queued ordinary/control writer, live lease, pending effect or native inbox, plus
-reconciled, unpaused, fresh successful normal-play evidence matching the supplied
-session/revision. It rotates native authority and admission generation without
+reconciled, unpaused, fresh successful operation-eligible evidence matching the
+supplied session/revision/boundary. It rotates native authority and admission generation without
 observing, resuming or dispatching. Historical unknowns remain historical unknowns;
 new ownership cannot establish the outcome or continuation of an older task.
 
@@ -44,8 +47,9 @@ run ownership and disables ordinary input/Resume until takeover. A model call
 never holds controller locks. An explicit gameplay start/continue connects the
 service supervisor to a lease; service startup and transport Resume never do.
 
-A leased call submits one semantic action, using existing native-v3 observation
-and input checks. The original command admission generation and exact live lease
+A leased call submits one registered action or permitted key, using native-v4
+observation and input checks. Intended boundary and human takeover generation are
+bound in native action/key/resume requests and checked at native commit. The original command admission generation and exact live lease
 are checked around queueing/preflight and immediately before atomic publication.
 Every walk step uses its original entry generation. Pre-takeover or pre-acquisition
 queued inputs cannot become current merely by waiting. No stale expected revision
@@ -56,13 +60,21 @@ and also pauses. Recovery, native takeover/session change, a paused native
 observation, transport failure and shutdown invalidate ownership. Resume does not
 restore a lease. Startup restores no task or capability. Native token validation
 remains the final input commit gate; an already committed action cannot be undone.
-`execute_run` returns an envelope containing the logical action ID, exact native
+`execute_mission` returns an envelope containing the logical action ID, exact native
 `request` or null, `result`, `published`, and original terminal
 `received_monotonic` or null. Preflight Observe is not an action receipt. The
 absolute monotonic intent/task deadline is checked after queueing/preflight and
 under the publication lock; it bounds both exchanges and the native deadline.
 `observation_snapshot()` returns a copied current observation and original first
 receipt clock. Reading a snapshot does not renew its freshness.
+
+
+`resume_mission` accepts the exact recorded host generation and native session,
+revision, boundary, takeover count and diagnostic origin for a runtime-admitted
+transition. It rechecks after queueing/observation; a newer Pause/takeover wins.
+It does not establish an admitted phase itself. Public command JSON cannot call
+this API, and an old lease cannot Resume. Runtime integration remains separately
+tracked; these controller capabilities alone do not make a player autonomous.
 
 ## Integrated gameplay lifecycle
 
@@ -81,7 +93,7 @@ Authenticated `POST /api/gameplay` uses the same loopback host/origin/token and
 | continue | run_id, execution_epoch, expected_session, expected_revision |
 | abandon | run_id, execution_epoch |
 | planning_request | none |
-| plan | request_id, candidate (gameplay/1 PlanCandidate object) |
+| plan | request_id, candidate (gameplay/2 PlanCandidate object) |
 
 Start constructs the waypoint task from the observed origin with existing bounded
 budgets. Continue preserves task/history/original budgets, requires a fresh same-world
@@ -145,11 +157,12 @@ cost details behind disclosure; no private reasoning transcript is exposed.
 The game enables the bridge only when CDDA_HARNESS_DIR names an existing private
 directory. Version 3 uses atomic JSON files and PNG snapshots, avoiding another
 server thread in CDDA. Each channel admits one live request at a time; the host holds a
-process lock for both writers. Gameplay and recovery retain separate identities. Requests carry protocol, unique id, session, expected revision,
+process lock for both writers. Gameplay and recovery retain separate identities. Requests carry protocol, unique id, session, expected revision, intended boundary,
+human takeover generation,
 kind and payload. Size is bounded to 4096 bytes. World entry and exit replace the
 session, including a same-process save/reload; relative coordinates belong to that
 world lifetime. Stale session/revision commands are rejected, never replayed.
-Producer, controller, discovery, CLI, viewer and evidence validation require v3.
+Producer, controller, discovery, CLI, viewer and evidence validation require v4.
 Older and unknown versions are rejected; there is no fallback.
 
 Commands: observe, key, action, pause, resume. Observe is side-effect-free in
@@ -286,7 +299,7 @@ serializes admission and revocation; shutdown revokes and waits for both writers
 
 Files are `control.json → control-claimed.json → control-response.json`, with
 separate UUIDs, bounded native duplicate ledger and `control-admissions/` records.
-An envelope has exactly `protocol: 3`, `id`, `kind`, `session`,
+An envelope has exactly `protocol: 4`, `id`, `kind`, `session`,
 `control_generation`, `authority`, `created_ms`, `deadline_ms`, plus the operation's
 fields below. Integer Unix-millisecond expiry is exactly creation plus 2000;
 future creation has at most 1000 ms tolerance. Maximum request size is 4096 bytes.
@@ -323,7 +336,7 @@ remains exclusive to normal play. Recovery is polled before ordinary requests,
 even while an ordinary response is pending, after native input and Pause handling.
 
 A control response has exactly `protocol`, `id`, `status`, `error`, `state`; `state`
-is the ordinary current-v3 observation shape. `dispatched` is nonterminal.
+is the ordinary current-v4 observation shape. `dispatched` is nonterminal.
 `prompt_opened` requires an actual fresh owned confirmation frame.
 `answer_delivered` and `dismissal_delivered` report input delivery, even if no new
 successful frame is available. `not_applicable` and `rejected` report no applicable
@@ -360,7 +373,7 @@ and journal evidence, granting no authority, replay or inferred resolution.
 The lead may designate one general-purpose sub-agent to choose and send ordinary
 operator commands for a bounded campaign segment. This is an external operator
 workflow using the existing authenticated CLI, not a new runtime supervisor or
-RunLease type. The waypoint planner remains candidate-only. No runtime contract,
+MissionLease type. The waypoint planner remains candidate-only. No runtime contract,
 wire version, stored task format or automatic role restoration changes.
 
 The lead owns source/release acceptance, finite admission, game/service lifecycle,
@@ -500,22 +513,28 @@ internal native preflight and the retained walk image cannot clear the hold.
 Queued old generations stay revoked. Complete walks add no hold. The controller
 enforces this sequence; semantic reassessment remains the player's responsibility.
 The [repair brief](changes/023-walk-reassessment.md) explains scope and migration;
-native wire3 and conservative movement guards are unchanged.
+its conservative movement guards remain shared with mission navigation.
 
 ## Passive gameplay records and evidence
 
 [Contracts](../harness/gameplay/contracts.py) define eight frozen records:
 TaskSpec, EvidenceRef, EvidencePacket, SkillDescriptor, PlanCandidate,
 PrimitiveResult, StageResult and RunStatus. Serialized records carry
-`schema: "gameplay/1"` and `record_type`; `to_dict`/`from_dict` reject unknown fields,
+`schema: "gameplay/2"` and `record_type`; `to_dict`/`from_dict` reject unknown fields,
 wrong types, unsupported enums, nonfinite numbers and contradictory completion
 claims. JSON is bounded to 1 MiB. The injected planner below consumes these records;
 the runtime above connects the passive planner, supervisor and bounded skill.
 Broader task formation remains outside this [first slice](design/gameplay.md).
 
-[EvidenceStore](../harness/gameplay/evidence.py) accepts only native-v3 positively
-marked normal-play observations with a successful frame and the existing visible
-scene allowlist. Its observation identity is the hash of session plus immutable
+[EvidenceStore](../harness/gameplay/evidence.py) retains successful native-v4
+normal/menu/activity/recovery/unsupported diagnostic frames with their actual
+coverage. `current()` requires a positively marked normal scene for movement;
+`current_boundary()` checks freshness/integrity without granting input permission.
+Non-normal references have null game time and no fabricated position/scene facts.
+Native `ui` is null or bounded rendered-row coverage only; omitted rows, titles,
+filter/count and null selection are unknown, not absence. Native facts never
+include latent/off-page inventory. `pause_origin` is diagnostic; host generation
+and process-scoped human takeover count govern continuation checks. Its observation identity is the hash of session plus immutable
 frame basename; a transport request ID is not a frame identity. It copies original
 PNG bytes outside the evictable bridge cache, verifies hashes and records session,
 revision, native timestamp, actual first receipt and `cdda-visible/1` provenance.
@@ -535,8 +554,10 @@ cross-frame scene comparison. Actual scene/boundary conflicts still dispute peer
 Historical references remain verifiable but cannot authorize input.
 Reopening starts without current authority or a dispatch reservation.
 
-Each caller-owned task/run store has one writer, at most 32 distinct frames and
-64 MiB, including existing files on reopen. Each image is at most 32 MiB. Before
+Each caller-owned store has one writer and defaults to32frames/64MiB, including
+existing files on reopen. Explicit mission admission may raise retention up to
+4096frames/1GiB. Metadata stays bounded to34MiB with separate bookkeeping headroom;
+capacity checks reserve worst-case after metadata before dispatch. Each image is at most 32 MiB. Before
 dispatch, retain the before-frame and reserve one additional slot plus 32 MiB for
 the after/failure frame. Consume or explicitly release that reservation; capacity
 failure stops before dispatch and never deletes evidence to make room. The store
@@ -549,10 +570,10 @@ predicate path was accepted in
 [bounded-skill acceptance](acceptance/2026-10-17-bounded-skills.md) for its tested
 scope. This does not establish general campaign evidence ingestion.
 
-The evidence store uses format version 2 and exposes `source_status(reference)`
+The evidence store uses format version 3 and exposes `source_status(reference)`
 as `retained` or `disputed` after identity/integrity verification. Disputes persist
 across newer observations and reopening, including after damaged bytes are restored.
-Stale current authority alone does not dispute historical truth. Version 1 stores
+Stale current authority alone does not dispute historical truth. Earlier stores
 are archived evidence, not current runtime inputs; create a fresh store for a new
 task. Neither historical status grants current input permission.
 

@@ -61,7 +61,7 @@ class RuntimeTests(unittest.TestCase):
         self.runtime = GameplayRuntime(self.controller)
         self.addCleanup(self.runtime.close)
         self.assertIsNone(self.runtime.status())
-        self.assertIsNone(self.controller.status()["run_lease"])
+        self.assertIsNone(self.controller.status()["mission_lease"])
         self.assertEqual(self.controller.execute("observe")["status"], "ready")
         self.assertEqual(self.controller.execute("resume")["status"], "ready")
 
@@ -252,7 +252,7 @@ class RuntimeTests(unittest.TestCase):
         request = self.start()
         original = self.controller._record
         def fail_receipt(request, outcome):
-            if request.get("kind") == "run_receipt":
+            if request.get("kind") == "mission_receipt":
                 raise OSError("Receipt journal unavailable after native action")
             return original(request, outcome)
         with patch.object(self.controller, "_record", side_effect=fail_receipt):
@@ -272,7 +272,7 @@ class RuntimeTests(unittest.TestCase):
         failed = False
         def fail_from_receipt(request, outcome):
             nonlocal failed
-            failed = failed or request.get("kind") == "run_receipt"
+            failed = failed or request.get("kind") == "mission_receipt"
             if failed:
                 raise OSError("Persistent journal outage")
             return original(request, outcome)
@@ -283,7 +283,7 @@ class RuntimeTests(unittest.TestCase):
             self.assertIsNotNone(self.runtime._supervisor.pending_intent)
             self.assertEqual(stopped["last_receipt"]["disposition"], "unknown")
             self.assertIn("persistence failed", stopped["run"]["last_public_reason"])
-            self.assertIsNone(self.controller.status()["run_lease"])
+            self.assertIsNone(self.controller.status()["mission_lease"])
             self.assertEqual(self.runtime.command("abandon", run_id=stopped["run_id"],
                 execution_epoch=stopped["run"]["execution_epoch"])["status"], "accepted")
             self.state("abandoned")
@@ -344,7 +344,7 @@ class RuntimeTests(unittest.TestCase):
         replacement = GameplayRuntime(self.controller)
         self.addCleanup(replacement.close)
         self.assertIsNone(replacement.status())
-        self.assertIsNone(self.controller.status()["run_lease"])
+        self.assertIsNone(self.controller.status()["mission_lease"])
         self.assertTrue(self.controller.status()["pause_requested"])
 
     def test_close_during_planning_is_bounded_and_invalidates_request(self):
@@ -352,7 +352,7 @@ class RuntimeTests(unittest.TestCase):
         started = time.monotonic()
         self.runtime.close()
         self.assertLess(time.monotonic() - started, 0.3)
-        self.assertIsNone(self.controller.status()["run_lease"])
+        self.assertIsNone(self.controller.status()["mission_lease"])
         self.assertEqual(self.runtime.command("plan", request_id=request["request_id"], candidate=candidate(request))["status"], "rejected")
         self.assertEqual(self.runtime.command("start", direction="east", distance=1, **self.expect())["status"], "rejected")
 
@@ -375,7 +375,7 @@ class RuntimeTests(unittest.TestCase):
 
     def test_malformed_envelope_and_world_change_remain_unknown(self):
         request = self.start()
-        with patch.object(self.controller, "execute_run", return_value={"malformed": True}):
+        with patch.object(self.controller, "execute_mission", return_value={"malformed": True}):
             self.answer(request)
             stopped = self.state("unknown")
         self.assertEqual(stopped["last_receipt"]["disposition"], "unknown")

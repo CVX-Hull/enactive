@@ -20,6 +20,9 @@
     "src/ui_iteminfo.cpp": "ad600afd51d337878a4616a0a44b95a39bccb07c6f260b5972c96f0777a4aef7",
     "src/game_inventory.cpp": "511b49bcba6ce17fc17a8cb8709683d940f9b7c9bef796aca3da02db0adf810f",
     "src/output.cpp": "3ca681eeda796f33a518ecf8a9ec8ea1de0d1d49130e52b84d02237a4637fa82",
-    "src/bodygraph.cpp": "819d776eb9578c44e80eeac04848058a4ad38c36d6ddc9e4916da1cc7165a5bc"
+    "src/bodygraph.cpp": "819d776eb9578c44e80eeac04848058a4ad38c36d6ddc9e4916da1cc7165a5bc",
+    "src/uilist.cpp": "32974a71c267151e62cc3b3440932bb9d99764cad5195fb2c071a0dc16b7e0cf",
+    "src/inventory_ui.cpp": "56fa04a2196580ddb8bd1fb4834bdaaa58eb536e8ffdf2a2d5415ee4a9889aaf",
+    "src/ui_manager.cpp": "b13ae76ea817a2bc2bf0d231517fe68f77de1f582923c1da004c88a214c90b02"
   }
 }

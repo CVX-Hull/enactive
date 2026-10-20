@@ -36,11 +36,77 @@ def replace_once(path: Path, old: str, new: str) -> None:
 
 for name in ("cdda_harness.h", "cdda_harness.cpp"):
     shutil.copyfile(ROOT / "native" / name, source / "src" / name)
-for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp", "game.cpp", "action.cpp", "ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp"):
+for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp", "game.cpp", "action.cpp", "ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp", "uilist.cpp", "inventory_ui.cpp", "ui_manager.cpp"):
     path = source / "src" / name
     text = path.read_text()
     if '#include "cdda_harness.h"' not in text:
         path.write_text('#include "cdda_harness.h"\n' + text)
+
+# Only the last/topmost redraw callback may attest UI. An unsupported overlay
+# clears a lower supported menu even when the overlay has no harness hooks.
+replace_once(source / "src/ui_manager.cpp",
+    '                    if( ui.redraw_cb ) {\n'
+    '                        ui.default_cursor();\n'
+    '                        ui.redraw_cb( ui );',
+    '                    if( ui.redraw_cb ) {\n'
+    '                        ui.default_cursor();\n'
+    '                        cdda_harness::ui_redraw( ui.is_on_top );\n'
+    '                        ui.redraw_cb( ui );')
+
+# The ImGui clipper can force an offscreen selected entry into DisplayStart/End.
+# Attest only text within the actual window/column clip rectangle. Partial glyphs
+# and multiline labels are omitted; a clipped right suffix is never exported.
+replace_once(source / "src/uilist.cpp",
+    'void uilist_impl::draw_controls()\n{',
+    'void uilist_impl::draw_controls()\n{\n'
+    '    cdda_harness::ui_begin( "uilist", "UILIST", "" );\n'
+    '    const auto harness_label = []( const std::string &text, const ImVec2 &pos ) {\n'
+    '        const ImRect clip = ImGui::GetCurrentWindow()->ClipRect;\n'
+    '        std::string label = remove_color_tags( text );\n'
+    '        if( pos.x < clip.Min.x || pos.x >= clip.Max.x || pos.y < clip.Min.y ||\n'
+    '            pos.y + ImGui::GetTextLineHeight() > clip.Max.y ||\n'
+    '            label.find_first_of( "\\r\\n" ) != std::string::npos ) { return std::string(); }\n'
+    '        while( !label.empty() && pos.x + ImGui::CalcTextSize( label.c_str() ).x > clip.Max.x ) {\n'
+    '            size_t end = label.size() - 1;\n'
+    '            while( end > 0 && ( static_cast<unsigned char>( label[end] ) & 0xc0 ) == 0x80 ) { --end; }\n'
+    '            label.resize( end );\n'
+    '        }\n'
+    '        return label;\n'
+    '    };')
+replace_once(source / "src/uilist.cpp",
+    '                        ImGui::TableSetColumnIndex( 1 );\n'
+    '                        cataimgui::draw_colored_text( str1, color );',
+    '                        ImGui::TableSetColumnIndex( 1 );\n'
+    '                        const std::string harness_text = harness_label( str1, ImGui::GetCursorScreenPos() );\n'
+    '                        cataimgui::draw_colored_text( str1, color );\n'
+    '                        if( !harness_text.empty() ) {\n'
+    '                            cdda_harness::ui_row( harness_text, entry.enabled, "", is_selected );\n'
+    '                        }')
+
+# These hooks run inside the existing visible-column/page/cell loops, after
+# denial widths, hidden cells and trimming have been resolved by the renderer.
+# Do not enumerate inventory locations, hidden children or latent entry caches.
+replace_once(source / "src/inventory_ui.cpp",
+    'void inventory_selector::refresh_window()\n{\n'
+    '    cata_assert( w_inv );',
+    'void inventory_selector::refresh_window()\n{\n'
+    '    cata_assert( w_inv );\n'
+    '    cdda_harness::ui_begin( "inventory", "INVENTORY", "" );')
+replace_once(source / "src/inventory_ui.cpp",
+    '                }\n            }\n\n            x1 = x2;\n        }\n\n'
+    '        if( entry.is_item() ) {\n            int xx = p.x;',
+    '                }\n'
+    '                if( cell_index == 0 && entry.is_item() && text_x >= 0 &&\n'
+    '                    text_x + static_cast<int>( text_width ) <= getmaxx( win ) &&\n'
+    '                    yy >= 0 && yy < getmaxy( win ) ) {\n'
+    '                    const std::string label = remove_color_tags( trim_by_length( text, text_width ) );\n'
+    '                    const char invlet = entry.get_invlet();\n'
+    '                    const std::string hotkey = p.x >= 0 && p.x < getmaxx( win ) &&\n'
+    "                        invlet >= 32 && invlet <= 126 ? std::string( 1, invlet ) : std::string();\n"
+    '                    cdda_harness::ui_row( label, entry.is_selectable(), hotkey, selected );\n'
+    '                }\n'
+    '            }\n\n            x1 = x2;\n        }\n\n'
+    '        if( entry.is_item() ) {\n            int xx = p.x;')
 
 # The guard spans handle_input, including retries and nested keybinding UI.
 replace_once(source / "src/input_context.cpp",

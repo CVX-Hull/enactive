@@ -90,7 +90,7 @@ def command_parser() -> argparse.ArgumentParser:
         if name == "plan":
             gameplay.add_argument("request_id", type=nonempty)
             gameplay.add_argument("--candidate", type=Path, required=True,
-                                  help="One bounded gameplay/1 PlanCandidate JSON file")
+                                  help="One bounded gameplay/2 PlanCandidate JSON file")
     return parser
 
 
@@ -118,8 +118,8 @@ def main() -> int:
         return 0
     try:
         config = read_json(ROOT / ".runtime" / "bridge" / "controller.json")
-        if config is not None and (type(config.get("protocol")) is not int or config["protocol"] != 3):
-            raise ControlError("Unsupported service protocol; restart a matching native-v3 controller")
+        if config is not None and (type(config.get("protocol")) is not int or config["protocol"] != 4):
+            raise ControlError("Unsupported service protocol; restart a matching native-v4 controller")
         if config is None or type(config.get("port")) is not int or not 1 <= config["port"] <= 65535 or not isinstance(config.get("token"), str):
             raise ControlError("Service configuration missing; run python3 -m harness serve")
         base = f'http://127.0.0.1:{config["port"]}'

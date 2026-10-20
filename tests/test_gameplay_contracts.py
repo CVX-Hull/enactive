@@ -65,6 +65,14 @@ def records():
 
 
 class ContractTests(unittest.TestCase):
+    def test_menu_and_activity_references_cannot_manufacture_normal_scene_time(self):
+        for kind in ("menu", "activity_poll", "interrupt_confirmation", "unsupported"):
+            with self.subTest(kind=kind):
+                ref = evidence(boundary_kind=kind, turn=None)
+                self.assertEqual(EvidenceRef.from_dict(ref.to_dict()), ref)
+                with self.assertRaises(ContractError): evidence(boundary_kind=kind, turn=4)
+        with self.assertRaises(ContractError): evidence(turn=None)
+
     def test_all_eight_records_round_trip_and_expose_valid_schemas(self):
         self.assertEqual(len(records()), 8)
         for record in records():
@@ -78,7 +86,7 @@ class ContractTests(unittest.TestCase):
 
     def test_every_record_rejects_unknown_missing_and_wrong_version(self):
         for record in records():
-            for change in ({"extra": True}, {"schema": "gameplay/2"}, {"record_type": "Code"}):
+            for change in ({"extra": True}, {"schema": "gameplay/1"}, {"schema": "gameplay/3"}, {"record_type": "Code"}):
                 with self.subTest(record=type(record).__name__, change=change):
                     value = record.to_dict()
                     value.update(change)
@@ -134,7 +142,7 @@ class ContractTests(unittest.TestCase):
         with self.assertRaises(ContractError):
             EvidencePacket.from_dict(value)
         for value in (" " * 1_048_577, b" " * 1_048_577, [], None, "[]", "NaN",
-                      '{"schema":"gameplay/1","schema":"gameplay/1"}', '{"a":Infinity}',
+                      '{"schema":"gameplay/2","schema":"gameplay/2"}', '{"a":Infinity}',
                       {"payload": "x" * 1_048_576}):
             with self.subTest(kind=type(value).__name__), self.assertRaises(ContractError):
                 TaskSpec.from_dict(value)

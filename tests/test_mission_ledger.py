@@ -1,4 +1,5 @@
 """SQLite failure/restart probes. No native dispatch or gameplay is simulated."""
+from contextlib import closing
 from dataclasses import replace
 import hashlib
 import json
@@ -70,14 +71,14 @@ class LedgerTests(unittest.TestCase):
 
     def test_unsupported_database_version_rejects_without_migration(self):
         self.ledger.close()
-        with sqlite3.connect(self.ledger.path) as connection: connection.execute("PRAGMA user_version=999")
+        with closing(sqlite3.connect(self.ledger.path)) as connection, connection: connection.execute("PRAGMA user_version=999")
         before = hashlib.sha256(self.ledger.path.read_bytes()).hexdigest()
         with self.assertRaises(LedgerError): MissionLedger(self.directory, now=1001)
         self.assertEqual(hashlib.sha256(self.ledger.path.read_bytes()).hexdigest(), before)
 
     def test_intent_and_charge_are_committed_before_publication(self):
         self.prepared()
-        with sqlite3.connect(self.ledger.path) as reader:
+        with closing(sqlite3.connect(self.ledger.path)) as reader, reader:
             row = reader.execute("SELECT state,native_id FROM primitives WHERE id='logical-1'").fetchone()
             state = json.loads(reader.execute("SELECT value FROM metadata WHERE key='state'").fetchone()[0])
         self.assertEqual(row, ("prepared", None))
@@ -101,6 +102,17 @@ class LedgerTests(unittest.TestCase):
                     self.assertFalse(reopened.prepare_primitive("request-1", "logical-1", intent(), now=1010)["created"])
                     with self.assertRaises(LedgerError): reopened.activate(epoch=1, player_id="player-test", now=1010)
                     with self.assertRaises(LedgerError): reopened.prepare_primitive("request-1", "logical-2", intent(), now=1010)
+
+    def test_effect_history_is_copied_and_retains_unresolved_intents_for_memory(self):
+        self.prepared()
+        records = self.ledger.primitive_records()
+        self.assertEqual(len(records), 1)
+        self.assertEqual(records[0]["state"], "prepared")
+        records[0]["intent"]["expected_revision"] = 999
+        self.assertEqual(self.ledger.primitive_records()[0]["intent"]["expected_revision"], 30)
+        self.reopen()
+        self.assertEqual(self.ledger.primitive_records()[0]["state"], "unknown")
+        self.assertFalse(self.ledger.snapshot(now=1010)["grants_authority"])
 
     def test_duplicate_request_and_logical_id_never_charge_again(self):
         self.prepared()
@@ -201,7 +213,7 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(LedgerError): self.ledger.append_memory("event-1", "claim", claim(text="changed"), now=1002)
         self.assertEqual(self.reopen().memory_records("claim")[0]["entry"], claim())
         self.ledger.close()
-        with sqlite3.connect(self.ledger.path) as connection:
+        with closing(sqlite3.connect(self.ledger.path)) as connection, connection:
             state = json.loads(connection.execute("SELECT value FROM metadata WHERE key='state'").fetchone()[0])
             state["spent_inputs"] = 1
             connection.execute("UPDATE metadata SET value=? WHERE key='state'", (json.dumps(state),))
@@ -270,7 +282,7 @@ class LedgerTests(unittest.TestCase):
         for mutation in mutations:
             with self.subTest(mutation=mutation):
                 self.ledger.path.write_bytes(original)
-                with sqlite3.connect(self.ledger.path) as connection: connection.execute(mutation)
+                with closing(sqlite3.connect(self.ledger.path)) as connection, connection: connection.execute(mutation)
                 before = self.ledger.path.read_bytes()
                 with self.assertRaises(ContractError): MissionLedger(self.directory, now=1006)
                 self.assertEqual(self.ledger.path.read_bytes(), before)

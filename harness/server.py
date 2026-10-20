@@ -42,7 +42,7 @@ def validate_gameplay(body: dict[str, Any]) -> None:
             raise ValueError("Distance must be an integer from 1 to 4")
     if kind == "plan":
         if type(body["candidate"]) is not dict:
-            raise ValueError("Candidate must be a gameplay/1 PlanCandidate object")
+            raise ValueError("Candidate must be a gameplay/2 PlanCandidate object")
         PlanCandidate.from_dict(body["candidate"])
 
 
@@ -86,7 +86,7 @@ class Server(ThreadingHTTPServer):
         super().__init__(("127.0.0.1", port), Handler)
         self.port = self.server_address[1]
         atomic_json(controller.bridge / "controller.json", {
-            "protocol": 3, "port": self.port, "token": controller.token})
+            "protocol": 4, "port": self.port, "token": controller.token})
 
     def server_close(self) -> None:
         super().server_close()

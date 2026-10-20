@@ -8,7 +8,7 @@ requires the final clock even when a timeout follows the last event.
 
 Manifest keys and every event payload are described by ``run_schema()``. Events
 share event_id, elapsed_ms, kind, session, game_turn, game_turn_missing_reason,
-evidence (gameplay/1 EvidenceRef objects), and payload. Payload kinds:
+evidence (gameplay/2 EvidenceRef objects), and payload. Payload kinds:
 
 * action: unique primitive action_id, transport_disposition, dispatch_state,
   duration_ms, verified_steps (0, 1 or unknown), its missing reason, and boolean

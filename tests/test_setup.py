@@ -46,6 +46,22 @@ class SetupTests(unittest.TestCase):
         shutil.copyfile(actual / "tools/patch_game.py", repository / "tools/patch_game.py")
         originals = {
             "Makefile": "-mmacosx-version-min=10.15\n-mmacosx-version-min=10.15\n",
+            "src/ui_manager.cpp": ('                    if( ui.redraw_cb ) {\n'
+                '                        ui.default_cursor();\n'
+                '                        ui.redraw_cb( ui );\n}\n'),
+            "src/uilist.cpp": ('void uilist_impl::draw_controls()\n{\n'
+                '                    for( int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++ ) {\n'
+                '                        auto entry = parent.entries[parent.fentries[i]];\n'
+                '                        bool is_selected = i == parent.fselected;\n'
+                '                        ImGui::TableSetColumnIndex( 1 );\n'
+                '                        cataimgui::draw_colored_text( str1, color );\n'
+                '                        ImGui::TableSetColumnIndex( 2 );\n}\n}\n'),
+            "src/inventory_ui.cpp": ('void inventory_selector::refresh_window()\n{\n'
+                '    cata_assert( w_inv );\n'
+                '                }\n            }\n\n            x1 = x2;\n        }\n\n'
+                '        if( entry.is_item() ) {\n            int xx = p.x;\n}\n}\n'
+                'void unrelated() { trim_and_print( win, point( 0, 0 ), 10, c_white, hidden ); }\n'),
+
             "src/input_context.cpp": "const std::string &input_context::handle_input( const int timeout )\n{\n        next_action = inp_mngr.get_input_event( preferred_keyboard_mode );\n}",
             "src/handle_action.cpp": "input_context game::get_player_input( std::string &action )\n{\n}",
             "src/bodygraph.cpp": ('    bool done = false;\n'
@@ -113,7 +129,7 @@ class SetupTests(unittest.TestCase):
         return subprocess.run([sys.executable, str(repository / "tools/patch_game.py"), str(source)],
                               text=True, capture_output=True, check=False)
 
-    def test_native_v3_patch_is_repeatable_and_scopes_exact_input_paths(self):
+    def test_native_v4_patch_is_repeatable_and_scopes_exact_input_paths(self):
         repository, source = self.patch_fixture()
         first = self.run_patch(repository, source)
         self.assertEqual(first.returncode, 0, first.stderr)
@@ -174,6 +190,68 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(sdl.count("cdda_harness::poll("), 3)
         self.assertLess(sdl.index("cdda_harness::capture_frame();"), sdl.index("SDL_RenderPresent("))
         self.assertIn("frame_presented( static_cast<bool>( harness_presented_frame ) )", sdl)
+
+    def test_visible_ui_hooks_are_at_actual_clipped_and_paged_renderers(self):
+        repository, source = self.patch_fixture()
+        result = self.run_patch(repository, source)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        uilist = (source / "src/uilist.cpp").read_text()
+        self.assertIn('cdda_harness::ui_begin( "uilist", "UILIST", "" )', uilist)
+        self.assertLess(uilist.index('clipper.DisplayStart'), uilist.index('cdda_harness::ui_row('))
+        self.assertIn('ImGui::GetCurrentWindow()->ClipRect', uilist)
+        self.assertIn('pos.y + ImGui::GetTextLineHeight() > clip.Max.y', uilist)
+        self.assertIn('ImGui::CalcTextSize( label.c_str() ).x', uilist)
+        self.assertIn('label.resize( end )', uilist)
+        inventory = (source / "src/inventory_ui.cpp").read_text()
+        self.assertIn('cdda_harness::ui_begin( "inventory", "INVENTORY", "" )', inventory)
+        self.assertIn('cell_index == 0 && entry.is_item()', inventory)
+        self.assertIn('remove_color_tags( trim_by_length( text, text_width ) )', inventory)
+        self.assertIn('yy >= 0 && yy < getmaxy( win )', inventory)
+        self.assertIn('void unrelated() { trim_and_print( win, point( 0, 0 ), 10, c_white, hidden ); }', inventory)
+        manager = (source / "src/ui_manager.cpp").read_text()
+        self.assertIn('cdda_harness::ui_redraw( ui.is_on_top );\n                        ui.redraw_cb( ui );', manager)
+
+    def test_native_v4_commit_and_presented_ui_guards(self):
+        # Source-lane checks establish executable guard placement, not C++ execution.
+        native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
+        self.assertIn('out.member( "protocol", 4 )', native)
+        self.assertNotIn(r'\"protocol\":3', native)
+        self.assertIn('out.member( "pause_origin", pause_origin )', native)
+        self.assertIn('out.member( "takeover_generation", takeover_generation )', native)
+        self.assertIn('request.get_string( "boundary_id" ) != boundary_id', native)
+        self.assertIn('integer_member( request, "takeover_generation" ) != takeover_generation', native)
+        poll = native[native.index('bool poll( keyboard_mode'):]
+        self.assertEqual(poll.count('ordinary_gate( request );'), 3)
+        self.assertLess(poll.rindex('ordinary_gate( request );'), poll.index('pending = id;'))
+        human = native[native.index('void human_input()'):native.index('void boundary()')]
+        self.assertIn('++takeover_generation;', human)
+        world = native[native.index('void playing('):native.index('void frame_presented(')]
+        self.assertNotIn('takeover_generation =', world)
+        self.assertIn('pause_origin != "human"', world)
+        self.assertIn('staged_ui.reset();', native)
+        self.assertIn('ui_boundary == boundary_id && ui_session == session && ui_revision == revision', native)
+        self.assertIn('if( next_ui != presented_ui )', native)
+        self.assertIn('if( !ui_top || !staged_ui || staged_ui->rows.size() >= 32 )', native)
+
+    def test_patch_rejects_changed_render_owner_hashes_and_anchors(self):
+        for name in ("src/uilist.cpp", "src/inventory_ui.cpp", "src/ui_manager.cpp"):
+            for change in ("hash", "missing", "duplicate"):
+                with self.subTest(owner=name, change=change), tempfile.TemporaryDirectory() as temporary:
+                    self.root = Path(temporary)
+                    repository, source = self.patch_fixture()
+                    path = source / name
+                    original = path.read_text()
+                    altered = original * 2 if change == "duplicate" else "changed"
+                    path.write_text(altered)
+                    if change != "hash":
+                        pins = repository / "native/upstream.json"
+                        pin = json.loads(pins.read_text())
+                        pin["source_files"][name] = hashlib.sha256(altered.encode()).hexdigest()
+                        pins.write_text(json.dumps(pin))
+                    result = self.run_patch(repository, source)
+                    self.assertNotEqual(result.returncode, 0)
+                    message = "Upstream source differs" if change == "hash" else "Pinned source anchor changed"
+                    self.assertIn(message, result.stderr)
 
     def test_patch_rejects_changed_upstream_hash(self):
         repository, source = self.patch_fixture()

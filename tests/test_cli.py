@@ -13,7 +13,7 @@ from harness import __main__ as cli
 
 class DiscoveryTests(unittest.TestCase):
     def test_mixed_or_missing_protocol_never_contacts_service(self):
-        for version in (None, 1, 2, 4, True, 3.0, "3"):
+        for version in (None, 1, 2, 3, 5, True, 4.0, "4"):
             with self.subTest(version=version):
                 config = {"port": 8766, "token": "local", "protocol": version}
                 output = StringIO()
@@ -25,7 +25,7 @@ class DiscoveryTests(unittest.TestCase):
                 self.assertIn("Unsupported service protocol", output.getvalue())
 
     def test_matching_service_uses_discovered_port(self):
-        config = {"port": 8766, "token": "local", "protocol": 3}
+        config = {"port": 8766, "token": "local", "protocol": 4}
         opener = Mock()
         opener.open.return_value = BytesIO(b'{"paused":true}')
         with patch.object(cli, "read_json", return_value=config), \
@@ -44,7 +44,7 @@ class RecoveryCliTests(unittest.TestCase):
             opener.open.side_effect = HTTPError("http://local", 409, "Conflict", {}, BytesIO(result))
         else:
             opener.open.return_value = BytesIO(result)
-        with patch.object(cli, "read_json", return_value={"protocol": 3, "port": 8766, "token": "local"}), \
+        with patch.object(cli, "read_json", return_value={"protocol": 4, "port": 8766, "token": "local"}), \
                 patch.object(cli, "build_opener", return_value=opener), \
                 patch("sys.argv", ["harness", *arguments]), redirect_stdout(output), redirect_stderr(StringIO()):
             code = cli.main()
@@ -109,7 +109,7 @@ class GameplayCliTests(unittest.TestCase):
             self.assertEqual(request.get_header("X-cdda-token"), "local")
 
     def test_candidate_file_is_bounded_json_with_exact_current_schema(self):
-        candidate = {"schema": "gameplay/1", "record_type": "PlanCandidate", "candidate_id": "candidate", "task_id": "task", "task_version": 1,
+        candidate = {"schema": "gameplay/2", "record_type": "PlanCandidate", "candidate_id": "candidate", "task_id": "task", "task_version": 1,
                      "plan_id": "plan", "plan_version": 1, "execution_epoch": 0, "evidence_session": "seen",
                      "evidence_revision": 7, "stage": "outbound", "direction": "east", "distance_remaining": 2,
                      "skill_id": "cardinal_movement", "skill_version": 3, "reason": "Visible route is clear"}
@@ -121,8 +121,8 @@ class GameplayCliTests(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(json.loads(opener.open.call_args.args[0].data),
                              {"kind": "plan", "request_id": "request", "candidate": candidate})
-            for text in [json.dumps({**candidate, "schema": "gameplay/2"}), json.dumps({**candidate, "extra": 1}),
-                         '{"schema":"gameplay/1","schema":"gameplay/1"}', '[]', 'NaN', 'x' * 4097,
+            for text in [json.dumps({**candidate, "schema": "gameplay/1"}), json.dumps({**candidate, "extra": 1}),
+                         '{"schema":"gameplay/2","schema":"gameplay/2"}', '[]', 'NaN', 'x' * 4097,
                          'import os; os.system("false")']:
                 path.write_text(text)
                 code, _, opener = self.invoke(arguments)

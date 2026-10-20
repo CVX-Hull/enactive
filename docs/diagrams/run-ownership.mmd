@@ -2,17 +2,17 @@
 title: Current controller ownership and takeover
 ---
 flowchart TD
-  accTitle: One run owns input until revoked
-  accDescr: A trusted caller acquires a process-local capability only with fresh normal-play evidence and empty queues. Its semantic action rechecks lease, admission generation and observed native authority. Competing external input is rejected. Observe, status and goal recording remain available. Pause and recovery revoke ownership, and native takeover, transport failures and shutdown invalidate it. Resume does not reacquire. Native commit cannot be undone. The run service is the trusted caller for explicitly admitted gameplay tasks.
-  Caller[Trusted in-process caller] -->|Explicit acquire| Gate{Fresh normal play<br/>Empty writers and queues}
-  Gate -->|Pass| Lease[Exact RunLease object]
+  accTitle: One mission operation owns input until revoked
+  accDescr: A trusted caller acquires a process-local capability only with fresh evidence eligible for its operation and empty queues. Navigation requires normal play; interaction and lifecycle can use supported menus. Each action or key rechecks the exact lease, host Pause and native takeover generations, and intended session/revision/boundary. Competing external input is rejected. Observe, status and goal recording remain available. Pause and recovery revoke ownership, and native takeover, transport failures and shutdown invalidate it. Resume does not reacquire. Native commit cannot be undone. The trusted runtime must separately admit the operation and lifecycle continuation; controller capability alone is not autonomous play.
+  Caller[Trusted in-process caller] -->|Explicit acquire| Gate{Fresh eligible boundary<br/>Empty writers and queues}
+  Gate -->|Pass| Lease[Exact MissionLease object<br/>Mission, actor, epoch and generations]
   Gate -->|Fail| Reject[Reject without input]
-  Lease -->|One semantic action| Check{Live lease and original generation<br/>Matching observation}
-  Check -->|Pass| Native[Native token check at commit]
+  Lease -->|One action or permitted key| Check{Live operation and generations<br/>Matching intended boundary}
+  Check -->|Pass| Native[Native token, boundary and<br/>takeover check at commit]
   Check -->|Fail| Reject
   External[External key, action, walk, resume] -->|While owned| Reject
-  Operator[Pause, recovery or owner release] -->|Revoke before return| Revoke[No run owner]
+  Operator[Pause, recovery or owner release] -->|Revoke before return| Revoke[No input owner]
   Invalidate[Native takeover, transport failures, shutdown] -->|Invalidate| Revoke
-  Revoke -->|Reconcile or restart as needed<br/>Then successful Resume| Manual[Manual transport permission<br/>No run lease]
+  Revoke -->|Reconcile or restart as needed<br/>Then deliberately bound Resume| Manual[Resumed transport permission<br/>No restored lease]
   Read[Observe, status, goal recording] -->|Available while owned| View[Evidence and descriptive status]
   Native --> Limit[Committed input cannot be undone]

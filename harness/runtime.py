@@ -13,7 +13,7 @@ import threading
 import time
 from uuid import uuid4
 
-from .controller import Controller, ControlError, RunLease
+from .controller import Controller, ControlError, MissionLease
 from .gameplay.contracts import Budgets, ContractError, DIRECTIONS, EvidenceRef, PlanCandidate, PrimitiveResult, TaskSpec
 from .gameplay.evidence import EvidenceError, EvidenceStore
 from .gameplay.planner import PlannerConfig, ProviderReply, ProviderUsage
@@ -109,7 +109,7 @@ class GameplayRuntime:
         self._snapshot = None
         self._supervisor: WaypointSupervisor | None = None
         self._store: EvidenceStore | None = None
-        self._lease: RunLease | None = None
+        self._lease: MissionLease | None = None
         self._inbox: _ExternalInbox | None = None
         self._thread = None
         self._queued: tuple[str, dict] | None = None
@@ -126,8 +126,8 @@ class GameplayRuntime:
             snapshot = copy.deepcopy(self._snapshot)
         if snapshot is not None:
             native = self.controller.status()
-            owner = native["run_lease"]
-            snapshot["run"]["lease_owner"] = None if owner is None else owner["owner"]
+            owner = native["mission_lease"]
+            snapshot["run"]["lease_owner"] = None if owner is None else owner["actor_id"]
             snapshot["run"]["paused"] = native["pause_requested"]
             if native["state"] is None or native["state"]["session"] != snapshot["task"]["session"]:
                 snapshot["run"]["fresh"] = False
@@ -146,8 +146,8 @@ class GameplayRuntime:
     def _publish(self):
         run = self._supervisor.status(**self._clocks()).to_dict()
         native = self.controller.status()
-        owner = native["run_lease"]
-        run["lease_owner"] = None if owner is None else owner["owner"]
+        owner = native["mission_lease"]
+        run["lease_owner"] = None if owner is None else owner["actor_id"]
         run["paused"] = native["pause_requested"]
         if native["state"] is None or native["state"]["session"] != self._supervisor.task.session:
             run["fresh"] = False
@@ -251,8 +251,9 @@ class GameplayRuntime:
             task = TaskSpec(f"task-{uuid4().hex}", reference.session, origin, direction, distance,
                             target, 1, Budgets(), f"operator-{uuid4().hex}")
             task.to_dict()
-            lease = self.controller.acquire_run(task.task_id, 0, run_id,
-                expected_session=reference.session, expected_revision=reference.revision)
+            lease = self.controller.acquire_mission(task.task_id, 0, run_id, operation="navigate",
+                expected_session=reference.session, expected_revision=reference.revision,
+                expected_boundary_id=store.observation(reference)["boundary"]["id"])
             self._store, self._run_id, self._lease = store, run_id, lease
             self._inbox = _ExternalInbox(self._clock, self._wall)
             self._pause.clear()
@@ -310,7 +311,7 @@ class GameplayRuntime:
         lease, self._lease = self._lease, None
         if lease is not None:
             try:
-                self.controller.release_run(lease)
+                self.controller.release_mission(lease)
             except ControlError:
                 pass  # A revoked lease cannot release another owner's authority.
             except OSError as exc:
@@ -318,7 +319,7 @@ class GameplayRuntime:
 
     def _check_lease(self):
         native = self.controller.status()
-        if (self._lease is None or native["run_lease"] != asdict(self._lease)
+        if (self._lease is None or native["mission_lease"] != asdict(self._lease)
                 or native["pause_requested"] or native["frozen"]):
             raise ControlError("Run lease lost, native takeover, recovery or world change")
 
@@ -339,7 +340,8 @@ class GameplayRuntime:
             self._check_lease()
             self._publish()
             execution_started = True
-            envelope = self.controller.execute_run(self._lease, action=intent.proposal.action,
+            envelope = self.controller.execute_mission(self._lease, kind="action", value=intent.proposal.action,
+                expected_boundary_id=self._store.observation(intent.proposal.before)["boundary"]["id"],
                 expected_session=intent.proposal.before.session, expected_revision=intent.proposal.before.revision,
                 logical_action_id=intent.proposal.action_id, deadline_monotonic=deadline,
                 timeout=min(self.controller.timeout, 15, intent.proposal.wait_seconds))
@@ -418,8 +420,9 @@ class GameplayRuntime:
                 ref = self._ingest_snapshot()
                 self.controller._expect(self._store.observation(ref), payload["expected_session"], payload["expected_revision"])
                 epoch = self._supervisor.status(**self._clocks()).execution_epoch + 1
-                self._lease = self.controller.acquire_run(self._supervisor.task.task_id,
-                    epoch, self._run_id, expected_session=ref.session, expected_revision=ref.revision)
+                self._lease = self.controller.acquire_mission(self._supervisor.task.task_id,
+                    epoch, self._run_id, operation="navigate", expected_session=ref.session, expected_revision=ref.revision,
+                    expected_boundary_id=self._store.observation(ref)["boundary"]["id"])
                 self._inbox = _ExternalInbox(self._clock, self._wall)
                 self._supervisor.continue_task(**self._clocks())
         state = self._supervisor.status(**self._clocks()).state

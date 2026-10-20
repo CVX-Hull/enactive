@@ -141,7 +141,7 @@ and reconcile, then resume. For a game crash/restart: preserve diagnostics, foll
 the bundle-based [start procedure](#start-and-observe), use normal CDDA load UI,
 and acquire new session authority.
 Old-session commands must not be reused, including after normal save/reload in the
-same process. Native-v3 rejects older and mixed components; restart a
+same process. Native-v4 rejects older and mixed components; restart a
 matching controller and native build, then observe. No save-file repair/editing is prescribed.
 
 Input admissions are durably retained in `.runtime/bridge/admissions/` before
@@ -268,7 +268,7 @@ an incident archive and document the explicit transition to a fresh bridge with
 unresolved work still tracked. No replay or save editing is permitted. Historical
 reports and journals stay immutable; they need no runtime reader.
 
-Build manifests require `schema_version: 1`; evidence stores require store version 2.
+Build manifests require `schema_version: 1`; evidence stores require store version 3.
 Never just relabel an unknown file. A reviewed one-time build-manifest migration
 must first verify workspace ownership, pinned source/headers and binary hashes,
 then record before/after hashes. Alternatively preserve the old manifest/workspace
@@ -276,12 +276,12 @@ and use a fresh extraction. Permanent setup/startup paths only read current form
 Remove temporary converters after recording their operation. Roll back only as a
 coordinated system with a validated data transition, never by enabling a fallback.
 
-For the wire-v3 cutover, archive the stopped bridge with original hashes under
+For the wire-v4 cutover, archive the stopped bridge with original hashes under
 `.runtime/incidents/` and start a fresh bridge. Do not relabel old requests. Carry
 unresolved identities as verified `incident/1` references in
 `historical-incidents.json`; startup validates referenced bytes without parsing
 old protocol records. These remain visible historical unknowns and grant no
-execution permission. Evidence store format 2 accepts only current-v3 observations;
+execution permission. Evidence store format 3 accepts only current-v4 observations;
 archive earlier stores and start new task stores, preserving original metadata.
 
 ## Passive skill acceptance

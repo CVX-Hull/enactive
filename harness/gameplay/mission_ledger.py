@@ -461,6 +461,17 @@ class MissionLedger:
                         state=row[3], result=None if row[4] is None else json_object(row[4]),
                         effect=None if row[5] is None else json_object(row[5]))
 
+    def primitive_records(self) -> tuple[dict, ...]:
+        """Bounded copied effect history for memory reduction; never an outbox.
+
+        Includes prepared/unknown intents so consumers cannot treat an uncertain
+        state-changing input as evidence that old dynamic facts remain current.
+        """
+        with self._mutex:
+            if self._db is None: raise LedgerError("Ledger is closed")
+            ids = [row[0] for row in self._db.execute("SELECT id FROM primitives ORDER BY rowid")]
+            return tuple(self.primitive(identity) for identity in ids)
+
     def published(self, logical_id: str, native_id: str, *, now: float) -> dict:
         _id(native_id)
         with self._transaction():

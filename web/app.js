@@ -33,7 +33,7 @@ function frameIdentity(state) {
   const boundary = state.boundary;
   return JSON.stringify([state.protocol, state.session, state.revision, state.frame,
     boundary?.kind, boundary?.id, boundary?.control_generation, boundary?.interrupt_request_id,
-    boundary?.recovery_operations]);
+    boundary?.recovery_operations, state.takeover_generation, state.pause_origin]);
 }
 function currentFrame() {
   return displayed && latest?.state?.frame_ok && latest.connection === 'fresh' &&
@@ -47,13 +47,13 @@ function authority() {
   if (!currentFrame()) {
     throw new Error('Wait for the current game frame before choosing an input.');
   }
-  if (displayed.protocol !== 3 || !['normal_play', 'menu'].includes(displayed.boundary?.kind)) {
+  if (displayed.protocol !== 4 || !['normal_play', 'menu'].includes(displayed.boundary?.kind)) {
     throw new Error('This input boundary needs native control. Observe again after returning to supported play or a menu.');
   }
   return {expected_session: displayed.session, expected_revision: displayed.revision};
 }
 function eligibleRecovery(kind) {
-  if (!currentFrame() || displayed.protocol !== 3) return false;
+  if (!currentFrame() || displayed.protocol !== 4) return false;
   const boundary = displayed.boundary;
   const expected = {request_interrupt: 'activity_poll', answer_interrupt: 'interrupt_confirmation',
     continue_debug_once: 'debug_prompt'};
@@ -80,14 +80,14 @@ function recoveryAuthority(kind, choice) {
 function updateControls() {
   const recoveryPending = recoveryBusy || recoveryNeedsObserve || !!latest?.control_pending;
   document.querySelectorAll('.send').forEach((button) => {
-    button.disabled = !!latest?.run_lease || gameplayBusy || taskBusy || recoveryPending || !currentFrame() || !!latest?.frozen || !!latest?.pause_requested;
+    button.disabled = !!latest?.mission_lease || gameplayBusy || taskBusy || recoveryPending || !currentFrame() || !!latest?.frozen || !!latest?.pause_requested;
   });
-  $('resume').disabled = !!latest?.run_lease || gameplayBusy || taskBusy || recoveryPending || !currentFrame() || !!latest?.frozen ||
+  $('resume').disabled = !!latest?.mission_lease || gameplayBusy || taskBusy || recoveryPending || !currentFrame() || !!latest?.frozen ||
     !['normal_play', 'menu'].includes(displayed?.boundary?.kind);
   const task = latest?.gameplay;
   const run = task?.run;
   const ready = !taskBusy && !gameplayBusy && !recoveryPending && !latest?.pending &&
-    !latest?.run_lease && currentFrame() && displayed?.protocol === 3 && displayed?.boundary?.kind === 'normal_play' &&
+    !latest?.mission_lease && currentFrame() && displayed?.protocol === 4 && displayed?.boundary?.kind === 'normal_play' &&
     !latest?.frozen && !latest?.pause_requested && !displayed?.paused;
   $('task-start').disabled = !ready || !!task && run?.state !== 'abandoned';
   $('task-continue').disabled = !ready || !task ||
@@ -159,7 +159,7 @@ function showResult(result, recovery = false) {
 }
 async function command(kind, payload = {}) {
   const ordinary = !['pause', 'goal', 'observe'].includes(kind);
-  if (ordinary && latest?.run_lease) {
+  if (ordinary && latest?.mission_lease) {
     showError('A gameplay run owns input. Pause to take over, then observe and resume.');
     return;
   }
@@ -340,7 +340,7 @@ function render(data) {
   $('connection-dot').className = `dot ${data.connection}`;
   $('age').textContent = data.age_ms === null ? 'No observation' : `${(data.age_ms / 1000).toFixed(1)}s old`;
   const paused = data.pause_requested || state?.paused;
-  $('control-state').textContent = data.frozen ? 'PAUSED · UNRECONCILED' : paused ? 'PAUSED' : data.run_lease ? `RUN OWNED · ${data.run_lease.owner}` : 'REMOTE CONTROL READY';
+  $('control-state').textContent = data.frozen ? 'PAUSED · UNRECONCILED' : paused ? 'PAUSED' : data.mission_lease ? `MISSION OWNED · ${data.mission_lease.actor_id}` : 'REMOTE CONTROL READY';
   $('control-state').classList.toggle('active', !paused && !data.frozen);
   const boundary = state?.boundary?.kind;
   $('category').textContent = boundary ? `${boundary.replaceAll('_', ' ').toUpperCase()} · ${state.category}` : 'NO VERIFIED INPUT BOUNDARY';

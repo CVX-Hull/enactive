@@ -28,7 +28,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8'), 
 const run = source => vm.runInContext(source, context);
 function render(revision, frame, changes = {}) {
   context.input = {connection: 'fresh', age_ms: 0, pause_requested: false, frozen: false,
-    latency_ms: 10, goal: '', events: [], state: {protocol: 3, boundary: {kind: 'normal_play', id: 'b-normal', control_generation: 0, recovery_operations: [], interrupt_request_id: null}, timestamp_ms: Date.now(), session: 'test', revision, frame,
+    latency_ms: 10, goal: '', events: [], state: {protocol: 4, pause_origin: 'none', takeover_generation: 0, ui: null, boundary: {kind: 'normal_play', id: 'b-normal', control_generation: 0, recovery_operations: [], interrupt_request_id: null}, timestamp_ms: Date.now(), session: 'test', revision, frame,
       frame_ok: true, status: 'ready', actions: [], ...changes}};
   run('render(input)');
 }
@@ -90,9 +90,9 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.equal(element('key').value, '');
   assert.equal(run('authority().expected_revision'), 2);
 
-  context.input.run_lease = {task_id: 'task', execution_epoch: 0, owner: 'waypoint player', session: 'test'};
+  context.input.mission_lease = {mission_id: 'task', epoch: 0, actor_id: 'waypoint player', session: 'test'};
   run('render(input)');
-  assert.match(element('control-state').textContent, /RUN OWNED.*waypoint player/);
+  assert.match(element('control-state').textContent, /MISSION OWNED.*waypoint player/);
   assert.ok(sendButtons.every(button => button.disabled));
   assert.equal(element('resume').disabled, true);
   assert.equal(element('observe').disabled, false);
@@ -101,7 +101,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   for (const kind of ['action', 'key', 'walk', 'resume']) await run(`command('${kind}')`);
   assert.equal(requests.length, countBeforeLeaseInput, 'leased viewer must not submit ordinary input');
   assert.match(element('error').textContent, /Pause to take over/);
-  context.input.run_lease = null;
+  context.input.mission_lease = null;
   context.input.pause_requested = true;
   run('render(input)');
   assert.equal(element('control-state').textContent, 'PAUSED');
@@ -324,7 +324,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   await statusReply();
   assert.equal(run('taskBusy'), true, 'Pause must not wait for the task request');
   context.input.gameplay = taskSnapshot();
-  context.input.run_lease = {owner: 'waypoint player'};
+  context.input.mission_lease = {actor_id: 'waypoint player'};
   await reply(startTask, {status: 'accepted', gameplay: context.input.gameplay});
   await statusReply();
   assert.equal(element('task-state').textContent, 'PLANNING');

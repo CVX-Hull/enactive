@@ -6,11 +6,15 @@ status: active
 
 # Current architecture
 
-Native-v3 recovery and integrated bounded gameplay architecture. The
+Current source contract: native-v4 recovery, bounded gameplay and passive mission
+foundations. Native-v4 build/graphical validation remains an explicit separate gate
+in #153/#150/#144; the installed wire3 binary must be rebuilt before using this
+source candidate. Mission ownership, campaign memory and semantic skills are still
+tracked implementation work, not accepted autonomous gameplay. The
 [foundation acceptance](acceptance/2026-10-17-foundation-implementation.md) records
 fresh windowed native-v2 probes and separately scoped portable evidence tests.
 [MVP acceptance](acceptance/2026-10-17-mvp.md) remains historical v1 evidence.
-Protocol version: 3.
+Protocol version: 4.
 
 ## Coordinated change
 
@@ -18,7 +22,7 @@ All project-controlled boundaries follow
 [S-MIGRATION](engineering.md#s-migration-one-current-contract-coordinated-migration):
 one current contract, with producers, consumers, persisted formats and guidance
 migrated together. There is no runtime compatibility layer or downgrade. Current
-native wire v3, gameplay records `gameplay/1`, evidence store version 2 and build
+native wire v4, gameplay records `gameplay/2`, evidence store version 3 and build
 manifest version 1 name separate contracts, not alternate versions of one interface.
 Historical artifacts are retained as evidence without being accepted as runtime input.
 
@@ -38,7 +42,7 @@ windowed operation and project isolation are [charter constraints](charter.md).
 | Campaign operator / designated general-purpose sub-agent | Visible evidence → ordinary operator commands and assessed outcomes | Explicit finite segment only, no waypoint lease; existing CLI/controller checks; cooperative actor assignment is not an exclusive external capability or OS isolation |
 | Waypoint planner / dedicated sub-agent | Bounded retained visible evidence → stage candidate | Candidate data only; no raw input, task start or lifecycle ownership; missing/late planner stops; roles need not be different model tiers |
 | Gameplay runtime / harness maintainer | Task and candidate → verified skill progress and public status | Sole run worker; exact controller lease and native receipt mapping; fresh revalidation after planning; original budgets and unknown effects preserved |
-| Controller / harness maintainer | Observed-state-bound commands → validated bridge requests, results and journal | One process with separate serialized gameplay and recovery writers; explicit run lease; process lock; deadlines; pause revokes ownership and freezes dispatch; never mutates saves or game state |
+| Controller / harness maintainer | Observed-state-bound commands → validated bridge requests, results and journal | One process with separate serialized gameplay and recovery writers; explicit mission lease; process lock; deadlines; pause revokes ownership and freezes dispatch; never mutates saves or game state |
 | Native bridge / integration maintainer | Bounded requests → actual input events, metadata and rendered frames | Game thread only; engine validates outcomes; session/revision/expiry checks; unsupported input boundaries cannot claim success |
 | Spectator / viewer maintainer | Frames and state → display and operator controls | Input authority only after matching current image decodes; stale state stays visible; browser controls require origin/token validation |
 | Gameplay evidence and memory / harness maintainer | Native observations → retained original frames and bounded typed task views | Passive only; validates provenance, freshness, source disputes and invalidation generations; never dispatches or promotes historical facts into current authority |
@@ -270,8 +274,11 @@ occurs inside the game at commit. Status is descriptive, not a capability.
 ![Controller run ownership: one explicit owner, competing inputs rejected, Pause revokes before returning.](diagrams/run-ownership.svg)
 
 [Editable diagram](diagrams/run-ownership.mmd). A trusted in-process caller claims
-only fresh normal-play authority with empty writer queues. It receives an exact
-object capability for single semantic actions. External key/action/walk/resume
+fresh normal-play authority for navigation, or supported-menu authority for an
+explicit interaction/lifecycle operation, with empty writer queues. The exact
+object capability binds mission/actor/epoch, host Pause and human takeover
+generations. Navigation uses shared movement guards; each action/key rechecks
+the informing session/revision/boundary. External key/action/walk/resume
 reject while owned; Observe/status/goal remain available. Pause, recovery, native
 takeover, transport failures and shutdown revoke the owner. Explicit release also pauses;
 Resume restores transport only. Queued requests retain their original admission
