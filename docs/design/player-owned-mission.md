@@ -579,9 +579,9 @@ retains uncertainty/cost and clears authority, and rejected expiry checks retain
 the observed wall-clock watermark. Source-level regression and independent review
 are separate from the future integrated native/graphical acceptance.
 
-Ledger format6 reuses immutable typed handoff/claim request results for up to16
+Ledger format7 reuses immutable typed handoff/claim request results for up to16
 one-use handoffs, rather than adding a second mutable consumption store. It rejects
-formats1/2/3/4/5. Issuance requires active, settled work and atomically pauses at a new epoch;
+formats1/2/3/4/5/6. Issuance requires active, settled work and atomically pauses at a new epoch;
 claim changes the recorded actor while remaining paused. Runtime must verify actual
 quiescence, fresh native binding and deliberate readmission; the ledger sends no
 Pause/Resume. Human Pause or reopen invalidates an old issuance without erasing it,
@@ -652,8 +652,9 @@ its pending ID. Only native uilist rows are supported by this policy. Inventory
 highlight versus multiselect remains a gap. The separate semantic policy handles
 fallible image controls and text editing; component tests do not qualify native focus.
 
-Ledger format6 accounts Resume as a distinct primitive with null value under an
-admitted lifecycle request. Its required preflight source, reserved receipt,
+Ledger format7 accounts Resume as a distinct primitive with null value under an
+admitted lifecycle/readmission or exact activity-resume request. Activity interruption
+and answers use this same primitive table, exact parent checks and cumulative limits. Its required preflight source, reserved receipt,
 original limits and crash uncertainty use the existing accounting path. The
 controller supplies the same correlated six-field envelope for mission Resume,
 requires an actual paused frame and keeps the unchanged Pause sentinel through
@@ -675,7 +676,7 @@ ground-versus-carried water corrections motivate explicit Work and effect eviden
 its lifecycle overhead motivates composed controls. Those totals are development
 evidence, not model latency or an efficiency baseline for a different scenario.
 
-Current source uses mission/5, campaign-memory/2 and ledger6. Stop has only a Pause
+Current source uses mission/5, campaign-memory/2 and ledger7. Stop has only a Pause
 reason; NormalFinish is separate. Mission/5 retains bound successor context and
 readmission, adding typed item/activity/inspection phase records and explicit units.
 All current callers, results and fixtures migrate; mission/2, mission/3 and mission/4 requests/admissions reject without
@@ -728,7 +729,7 @@ that diagnostic reference cannot authorize another input. This remains synthetic
 component verification, with native editor behavior pending. The current mission
 HTTP ingress is connected; owned lifecycle acceptance is not.
 
-Ledger6 validates a direct earlier lifecycle or item/activity/interact/inspect root,
+Ledger7 validates a direct earlier lifecycle or item/activity/interact/inspect root,
 derives child deadlines from its original deadline, and counts direct-root and child
 inputs together through SQLite's indexed request/primitive join. It checks links,
 original ceilings and counts again on reopen. A partial root receipt remains
@@ -744,8 +745,10 @@ trusted Resume requires the captured operator counter and controller boot in add
 to the general generation. Internal stops still revoke and set the Pause sentinel.
 The lifecycle adapter must capture those values before an expected transition;
 user Pause always prevents automatic adoption/Resume. Registered lifecycle phases
-are separate; runtime activity interruption/resumption and common outcome recovery
-remain required. Ordinary prompt handling cannot adopt unrelated lifecycle phases.
+are separate. Registered activity interruption/answer/resumption now has synthetic
+source coverage, with exact ACK/frame separation, fresh observation and separately
+charged Resume under original consent. Native qualification and common semantic
+outcome/recovery remain required. Ordinary prompts cannot adopt lifecycle phases.
 An ordinary interact root may open a private phase only from its exact correlated
 supported returned prompt. Its menu/edit/inspect children share the original
 32-input/900-second maximum. Unknown delivery cannot open it; actual return to normal

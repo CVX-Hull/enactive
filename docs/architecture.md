@@ -7,7 +7,7 @@ status: active
 # Current architecture
 
 Current source contracts are native4, mission/5, campaign-memory/2, gameplay/2,
-evidence archive3 and mission ledger6. One MissionRuntime owns the live mission API.
+evidence archive3 and mission ledger7. One MissionRuntime owns the live mission API.
 The wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.
 Start is source-free and cannot adopt an unrelated already-running character. The
@@ -72,13 +72,18 @@ MARK_WITH_COUNT opened it. Native editor/selector qualification remains pending.
 An owned activity poll advances through one bounded observation, including native
 output menus or normal return; no poll sends input or certifies sleep/output.
 Activity control transport preserves terminal ACKs before persistence and sends no
-Resume. Its runtime interruption/resumption and shared semantic recovery remain gaps.
+Resume. A registered private activity phase now composes internal stop, exact
+interruption/answer and separately charged Resume in source. Unknown delivery stops;
+known ACKs remain delivery evidence without a frame. Actual native qualification
+and common semantic outcome/recovery remain open.
 World-generation forms have no tab-focus mapping. On the final character-description
 screen, NEXT_TAB begins character completion and is blocked as ordinary focus;
 returning to a previous tab remains available. World FINALIZE and character finish
 use explicit registered lifecycle stage commits, separate from ordinary focus.
 
-Ledger6 records Resume as a distinct primitive under an admitted lifecycle root.
+Ledger7 records Resume under admitted lifecycle/readmission or an exact activity
+resume child, and charges activity controls through the same primitive table.
+Prepare and reopen share parent/answer rules; prior ledger formats reject unchanged.
 The controller's trusted Resume compares controller boot, operator-Pause counter,
 general generation and current native evidence. Expected internal revocation cannot
 erase an intervening user Pause. Exact-PNG controls additionally compare verified

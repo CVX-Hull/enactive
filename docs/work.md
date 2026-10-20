@@ -108,8 +108,10 @@ correction and handoff boundaries; do not introduce a critic or retrieval call p
 key. Retained facts cannot authorize an input. General lesson promotion or training
 is separate from campaign fact correction.
 
-Activity interruption/resumption and common outcome/recovery remain unfinished.
-Selected item/count/inspection and one-observation activity polls compose in source.
+Common outcome/recovery remains unfinished. Selected item/count/inspection,
+activity polls and registered interruption/answer/separate Resume compose in source.
+The activity adapter preserves original consent/limits, known frameless ACKs and
+unknown UUIDs; native activity qualification remains open.
 #144 records the exact source/test checkpoint, including outstanding failures;
 resolve and review this scope before pulling more implementation work. Publish the
 single contract only after callers, persistence validation, tests and current

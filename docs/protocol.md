@@ -126,8 +126,8 @@ Registered creation/save/load and provisional character inspection now compose i
 source tests through the real controller, ledger and evidence archive. Quiescent
 successor handoff and deliberately charged readmission also compose in source.
 Selected item/inspection roots, owned quantity editing and one-observation activity
-polls now compose in source. Activity interruption/resumption and common semantic
-outcome/recovery still need runtime integration; normal finish has source coverage.
+polls and registered activity interruption/answer/resumption now compose in source.
+Common semantic outcome/recovery still needs integration; normal finish has source coverage.
 Native acceptance remains pending.
 Neither synthetic UI tests nor tests assuming identity accept an independent mission. Observe likewise cannot adopt
 an unexplained normal session. Reopening restores neither phase nor input authority.
@@ -263,9 +263,32 @@ a lease or Resume. Native fixed expiry is checked immediately before publication
 pure correlation captures a terminal ACK/time before acceptance or retention I/O.
 A later persistence failure stops authority without rewriting that ACK as unknown.
 Genuinely unknown delivery retains its identity and cannot be replayed. The ordinary
-operator recovery API remains separate. This transport's runtime charging/phase/
-interruption/resumption composition is still required; it is not available through
-public JSON as an alternate executor. Source tests do not qualify native gameplay.
+operator recovery API remains separate. The registered activity adapter now composes
+this transport through the existing writer and ledger; public JSON has no raw
+recovery executor. A permitted interrupt child first stops ordinary dispatch,
+preserving the original operator mark, actor/epoch, root Work and all ceilings.
+One bounded fresh paused observation can find natural completion before any
+interrupt is sent. Otherwise each interrupt and exact YES/NO answer is charged
+as an ordinary primitive mapping. Terminal request/result/clock remain immutable
+delivery evidence even without an after-frame or after a failed publication
+bookkeeping transaction; a writable settlement atomically binds the native UUID.
+No semantic effect or Work completion follows from an ACK.
+
+The private paused phase requires unchanged session/takeover/control generations,
+original host consent and nonregressing evidence. Observe is read-only under the
+original root/child/mission deadlines. A known frameless ACK requires a fresh
+observation, while persistence faults or unknown delivery stop continuation. NO
+may leave native activity running while the harness is paused; after a fresh poll
+closes its answered confirmation, another interruption uses a new UUID and the
+same cumulative root budget. An answered confirmation cannot be answered twice.
+
+Resume is a separate charged activity child, eligible only at a fresh paused
+normal/menu boundary under the original operator mark. It grants no lease until
+its verified return; root/child/mission time and actor fences still apply before
+publishing a new prompt or normal source. A newer user Pause wins throughout.
+Ledger7 rejects earlier formats before mutation; there is no compatibility reader.
+Reopening restores neither the private phase nor authority. Source tests do not
+qualify native gameplay. Common semantic outcome/recovery remains separate work.
 
 ### Quiescent player replacement
 

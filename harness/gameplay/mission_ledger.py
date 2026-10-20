@@ -23,7 +23,7 @@ from .mission_contracts import (
     validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission,
 )
 
-DB_VERSION = 6
+DB_VERSION = 7
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
 MAX_RECEIPT_BYTES = 65_536
 MAX_EFFECT_BYTES = 4096
@@ -78,7 +78,7 @@ def _intent(value: dict | str) -> dict:
     data = json_object(value)
     expected = {"kind", "value", "expected_session", "expected_revision", "expected_boundary_id",
                 "source_before", "preflight_source", "revalidation", "reservation_id"}
-    if set(data) != expected or data["kind"] not in ("action", "key", "resume"):
+    if set(data) != expected or data["kind"] not in ("action", "key", "resume", "request_interrupt", "answer_interrupt"):
         raise LedgerError("Primitive intent fields do not match")
     for key in ("expected_session", "expected_boundary_id", "source_before", "preflight_source", "reservation_id"): _id(data[key])
     if data["revalidation"] is not None:
@@ -87,12 +87,77 @@ def _intent(value: dict | str) -> dict:
             raise LedgerError("Revalidation current source differs from the proposal before-source")
     if type(data["expected_revision"]) is not int or data["expected_revision"] < 0:
         raise LedgerError("Primitive requires exact observed revision")
-    if data["kind"] == "resume":
+    if data["kind"] in ("resume", "request_interrupt"):
         if data["value"] is not None:
-            raise LedgerError("Resume has no action/key value")
+            raise LedgerError("Resume/interrupt request has no action/key value")
+    elif data["kind"] == "answer_interrupt":
+        value = data["value"]
+        if type(value) is not dict or set(value) != {"interrupt_request_id", "choice"} or value["choice"] not in ("YES", "NO"):
+            raise LedgerError("Interrupt answer requires its exact owner and YES/NO choice")
+        _id(value["interrupt_request_id"])
     elif not isinstance(data["value"], str) or not 1 <= len(data["value"]) <= 160:
         raise LedgerError("Primitive requires bounded action/key")
     return data
+
+
+def _primitive_parent(intent: dict, request: dict) -> None:
+    """One prepare/reopen rule for ordinary, lifecycle and activity inputs."""
+    if request["kind"] not in ("skill", "lifecycle", "readmit"):
+        raise LedgerError("Primitive requires an executable parent")
+    activity = (request["kind"] == "skill" and request["skill_kind"] == "activity"
+                and request["phase_id"] is not None)
+    kind = intent["kind"]
+    if kind in ("request_interrupt", "answer_interrupt"):
+        step = "interrupt" if kind == "request_interrupt" else "answer_interrupt"
+        if not activity or request["goal"]["step"] != step or not request["goal"]["interrupt_allowed"]:
+            raise LedgerError("Control requires its exact permitted activity child")
+        if kind == "answer_interrupt" and intent["value"] != {
+                "interrupt_request_id": request["goal"]["interrupt_request_id"], "choice": request["goal"]["answer"]}:
+            raise LedgerError("Control intent differs from its immutable answer")
+    if kind == "resume" and request["kind"] not in ("lifecycle", "readmit") and not (
+            activity and request["goal"]["step"] == "resume"):
+        raise LedgerError("Resume requires lifecycle/readmission or its activity resume child")
+    if activity and request["goal"]["step"] in ("interrupt", "answer_interrupt", "resume"):
+        expected = {"interrupt": "request_interrupt", "answer_interrupt": "answer_interrupt", "resume": "resume"}
+        if kind != expected[request["goal"]["step"]]:
+            raise LedgerError("Activity recovery cannot dispatch an ordinary action/key")
+    if request["kind"] == "readmit" and kind != "resume":
+        raise LedgerError("Readmission permits only its charged Resume")
+
+
+def _control_mapping(intent: dict, result: dict, *, logical_id: str, native_id: str | None, disposition: str) -> None:
+    """Audit control correlation; controller still owns full native validation."""
+    if intent["kind"] not in ("request_interrupt", "answer_interrupt"):
+        return
+    if (result.get("logical_action_id") != logical_id or result.get("native_request_id") != native_id
+            or result.get("transport_disposition") != disposition
+            or any(result.get(k) != intent[k] for k in ("kind", "value", "expected_session", "expected_revision",
+                                                        "expected_boundary_id", "source_before", "preflight_source"))):
+        raise LedgerError("Control receipt contradicts its immutable logical/native mapping")
+    if disposition not in ("returned", "rejected"):
+        return
+    control = result.get("control")
+    if type(control) is not dict or set(control) != {"request", "result"}:
+        raise LedgerError("Known control delivery lost its terminal ACK")
+    request, ack = control["request"], control["result"]
+    if (type(request) is not dict or type(ack) is not dict or not result.get("published")
+            or native_id is None or request.get("id") != native_id or ack.get("id") != native_id
+            or request.get("kind") != intent["kind"] or request.get("session") != intent["expected_session"]):
+        raise LedgerError("Control ACK lost native operation/session correlation")
+    if intent["kind"] == "answer_interrupt" and any(request.get(k) != v for k, v in {
+            "revision": intent["expected_revision"], "boundary_id": intent["expected_boundary_id"], **intent["value"]}.items()):
+        raise LedgerError("Control ACK differs from its exact owner/answer")
+    allowed = ({"prompt_opened", "not_applicable"} if intent["kind"] == "request_interrupt" else {"answer_delivered"})
+    if ack.get("status") not in (allowed if disposition == "returned" else {"rejected"}):
+        raise LedgerError("Control ACK contradicts its terminal disposition")
+    _clock(result.get("received_monotonic"))
+    if disposition == "returned":
+        native = ack.get("state")
+        if (type(native) is not dict or native.get("session") != intent["expected_session"]
+                or native.get("paused") is not True):
+            raise LedgerError("Returned control lost its paused native state")
+        if ack["status"] == "prompt_opened" and native.get("boundary", {}).get("interrupt_request_id") != native_id:
+            raise LedgerError("Interrupt ACK lost its exact returned owner")
 
 
 def _effect(value: dict | str) -> dict:
@@ -319,12 +384,7 @@ class MissionLedger:
             data = _intent(intent)
             if intent != _json(data): raise LedgerError("Noncanonical primitive intent")
             parent = self.request(request_id)
-            if parent["request"]["kind"] not in ("skill", "lifecycle", "readmit"):
-                raise LedgerError("Primitive lost its executable parent")
-            if data["kind"] == "resume" and parent["request"]["kind"] not in ("lifecycle", "readmit"):
-                raise LedgerError("Resume requires an admitted lifecycle parent")
-            if parent["request"]["kind"] == "readmit" and data["kind"] != "resume":
-                raise LedgerError("Readmission permits only its charged Resume")
+            _primitive_parent(data, parent["request"])
             actor = next(player for epoch, player in reversed(actors) if epoch <= parent["epoch"])
             self._check_revalidation(data, parent["epoch"], stored.mission_id,
                                      informing_sources=parent["request"]["sources"], actor_id=actor)
@@ -333,6 +393,7 @@ class MissionLedger:
             if result is not None:
                 if result != _json(json_object(result)) or status in ("prepared", "published"):
                     raise LedgerError("Corrupt primitive receipt")
+                _control_mapping(data, json_object(result), logical_id=logical_id, native_id=native_id, disposition=status)
             elif status not in ("prepared", "published", "unknown"):
                 raise LedgerError("Terminal primitive lost its receipt")
             if effect is not None and (status != "unknown" or effect != _json(_effect(effect))):
@@ -709,12 +770,7 @@ class MissionLedger:
                 return {"created": False, "primitive": self.primitive(logical_id)}
             state = self._touch(now, dispatch=True, cleanup=cleanup)
             request = self.request(request_id)
-            if request["request"]["kind"] not in ("skill", "lifecycle", "readmit"):
-                raise LedgerError("Only an admitted skill/lifecycle can propose input")
-            if data["kind"] == "resume" and request["request"]["kind"] not in ("lifecycle", "readmit"):
-                raise LedgerError("Resume requires an admitted lifecycle parent")
-            if request["request"]["kind"] == "readmit" and data["kind"] != "resume":
-                raise LedgerError("Readmission permits only its charged Resume")
+            _primitive_parent(data, request["request"])
             if now >= request["deadline"]:
                 raise BudgetError("Original operation deadline expired")
             count = self._db.execute("SELECT count(*) FROM primitives WHERE request_id=?", (request_id,)).fetchone()[0]
@@ -796,6 +852,16 @@ class MissionLedger:
             if p["state"] not in ("prepared", "published"):
                 if p["state"] == disposition and p["result"] == json_object(encoded): return p
                 raise LedgerError("Terminal receipt cannot be rewritten")
+            if (p["intent"]["kind"] in ("request_interrupt", "answer_interrupt") and p["native_id"] is None
+                    and result.get("published") is True and result.get("native_request_id") is not None):
+                # A prior publication bookkeeping transaction may have failed
+                # after a real ACK. Bind and settle atomically; never resend.
+                native_id = result["native_request_id"]
+                _id(native_id)
+                _control_mapping(p["intent"], result, logical_id=logical_id, native_id=native_id, disposition=disposition)
+                self._db.execute("UPDATE primitives SET native_id=? WHERE id=?", (native_id, logical_id))
+                p["native_id"] = native_id
+            _control_mapping(p["intent"], result, logical_id=logical_id, native_id=p["native_id"], disposition=disposition)
             self._release(f"receipt:{logical_id}")
             if disposition != "unknown":
                 self._release(f"effect:{logical_id}")

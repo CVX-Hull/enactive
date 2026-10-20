@@ -266,10 +266,11 @@
         "tests/test_gameplay_interactions.py",
         "tests/test_mission_items.py",
         "tests/test_mission_activities.py",
-        "tests/test_mission_activity_control.py"
+        "tests/test_mission_activity_control.py",
+        "tests/test_mission_activity_recovery.py"
       ],
       "failure_response": "Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.",
-      "limitations": "Portable tests use fake bridges and explicitly mocked identity boundaries for core skill composition. Owned launch/untouched-menu Yes exit have bounded native qualification with failed001 retained; native No/user Pause and normal character lifecycle remain unqualified; creation/save/reload have synthetic integration coverage only; handoff/readmission, selected item/count/inspection and activity polls have synthetic coverage only; runtime activity interruption/resumption and common semantic recovery remain unimplemented; normal finish has synthetic coverage only; native normal-game/editor/context-replacement acceptance is pending. Historical menu-only native4 qualification is not mission acceptance. Pause cannot undo committed input or cancel an activity; filesystem stalls can delay revocation; no general combat/damage guarantee.",
+      "limitations": "Portable tests use fake bridges and explicitly mocked identity boundaries for core skill composition. Owned launch/untouched-menu Yes exit have bounded native qualification with failed001 retained; native No/user Pause and normal character lifecycle remain unqualified; creation/save/reload have synthetic integration coverage only; handoff/readmission, selected item/count/inspection and activity polls have synthetic coverage only; activity interruption/answer/resumption has synthetic coverage only; common semantic recovery remains unimplemented; normal finish has synthetic coverage only; native normal-game/editor/context-replacement acceptance is pending. Historical menu-only native4 qualification is not mission acceptance. Pause cannot undo committed input or cancel an activity; filesystem stalls can delay revocation; no general combat/damage guarantee.",
       "enforcement": "Implemented at runtime; regression execution is C-PORTABLE. Source references alone establish no behavioral pass.",
       "status": "active",
       "rationale": null,

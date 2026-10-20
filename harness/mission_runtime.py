@@ -20,6 +20,7 @@ from .controller import Controller, ControlError, MissionLease, validate_state
 from .native_process import NativeProcess
 from .mission_lifecycle import NormalPhase, RegisteredLifecycle
 from .mission_handoff import HandoffEvidenceError, HandoffPhase, RegisteredHandoff
+from .mission_activity import ActivityFeedback, ActivityIntent, ActivityPhase, RegisteredActivity
 from .gameplay.campaign_memory import CampaignMemory
 from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
 from .gameplay.evidence import MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore
@@ -140,6 +141,7 @@ class MissionRuntime:
         self._diagnostic: str | None = None
         self._registered_lifecycle = RegisteredLifecycle(self)
         self._registered_handoff = RegisteredHandoff(self)
+        self._registered_activity = RegisteredActivity(self)
         self._thread = threading.Thread(target=self._work, name="mission-runtime", daemon=True)
         self._thread.start()
 
@@ -270,6 +272,7 @@ class MissionRuntime:
             self._exit_phase = None
             self._registered_lifecycle.revoke()
             self._registered_handoff.revoke()
+            self._registered_activity.revoke()
             self._rotation = None
             if self._snapshot is not None and self._snapshot["phase"] not in TERMINAL:
                 self._snapshot.update(phase="paused", pause_cause=cause, reason=reason, lease_owner=None,
@@ -349,6 +352,7 @@ class MissionRuntime:
             self._rotation = None
             self._lease = None
             self._registered_handoff.revoke()
+            self._registered_activity.revoke()
         if self._ledger is not None:
             for cause, reason in events:
                 self._ledger.pause(cause=cause, reason=reason, now=self._wall())
@@ -512,6 +516,7 @@ class MissionRuntime:
         self._exit_phase = None
         self._registered_lifecycle.revoke()
         self._registered_handoff.revoke()
+        self._registered_activity.revoke()
 
     def _capacity(self, *, frames: int = 1, byte_count: int = MAX_FRAME_BYTES) -> None:
         usage = self._store.usage()
@@ -640,6 +645,7 @@ class MissionRuntime:
         self._last_memory_context = None
         self._issued_packets = {}
         self._registered_handoff.revoke()
+        self._registered_activity.revoke()
         self._mission_deadline = ledger.snapshot(now=self._wall())["deadline"]
         return ledger.snapshot(now=self._wall())["phase"] == "admitted"
 
@@ -658,6 +664,8 @@ class MissionRuntime:
             self._memory_version = receipt["memory_version"]
 
     def _observe(self, work: _Work) -> dict:
+        if self._registered_activity.phase is not None:
+            return self._registered_activity.observe(work)
         if self._registered_lifecycle.phase is not None or self._registered_lifecycle.candidate is not None:
             return self._registered_lifecycle.observe(work)
         if self._exit_phase is not None:
@@ -1460,8 +1468,9 @@ class MissionRuntime:
             return "returned", "Exact terminal ready receipt; displacement requires independent verification"
         return "unknown", str(result.get("error") or "Input acknowledgment is unresolved")[:1024]
 
-    def _dispatch(self, work: _Work, proposal: MissionIntent | _ResumeIntent, original: EvidenceRef,
-                  *, lifecycle: _ExitPhase | NormalPhase | HandoffPhase | None = None) -> PrimitiveResult:
+    def _dispatch(self, work: _Work, proposal: MissionIntent | _ResumeIntent | ActivityIntent, original: EvidenceRef,
+                  *, lifecycle: _ExitPhase | NormalPhase | HandoffPhase | None = None,
+                  activity: ActivityPhase | None = None) -> PrimitiveResult | ActivityFeedback:
         reservation = None
         preflight_source = None
         prepared = False
@@ -1469,10 +1478,13 @@ class MissionRuntime:
         raw = None
         disposition, reason = "not_dispatched", "Dispatch not admitted"
         envelope_valid = False
-        image_informed = work.request.get("perception") is not None or lifecycle is not None
+        control = isinstance(proposal, ActivityIntent)
+        image_informed = work.request.get("perception") is not None or lifecycle is not None or activity is not None
         rule = "exact_png_bytes" if image_informed else "native_state"
         def guard() -> None:
-            if lifecycle is None:
+            if activity is not None:
+                self._registered_activity.guard(work, activity, proposal)
+            elif lifecycle is None:
                 self._dispatch_guard(work, proposal)
             elif isinstance(lifecycle, NormalPhase):
                 self._registered_lifecycle.guard(work, lifecycle, proposal)
@@ -1506,14 +1518,24 @@ class MissionRuntime:
             self._store.verify(preflight_source)
         try:
             guard()
-            deadline = self._deadline(work, proposal.before if lifecycle is not None else original)
+            deadline = self._deadline(work, proposal.before if lifecycle is not None or activity is not None else original)
             self._publish()
-            if isinstance(proposal, _ResumeIntent) and lifecycle is not None:
+            if control:
+                observed = self._store.observation(proposal.before)
+                raw = self.controller.recover_mission(proposal.kind, expected_generation=activity.generation,
+                    expected_operator_generation=activity.operator_mark[1], expected_controller_boot_id=activity.operator_mark[0],
+                    expected_session=proposal.before.session, expected_revision=proposal.before.revision,
+                    expected_boundary_id=proposal.expected_boundary_id, expected_takeover_generation=activity.takeover_generation,
+                    expected_pause_origin=observed["pause_origin"], expected_control_generation=proposal.control_generation,
+                    logical_action_id=proposal.logical_id, deadline_monotonic=deadline, preflight=preflight,
+                    expected_image_sha256=proposal.before.frame_sha256, **(proposal.action or {}))
+            elif isinstance(proposal, _ResumeIntent) and (lifecycle is not None or activity is not None):
                 with self.controller.data_lock:
                     generation = self.controller.pause_generation
                 observed = self._store.observation(proposal.before)
-                mark = lifecycle.operator_mark if isinstance(lifecycle, HandoffPhase) else lifecycle.launch.operator_mark
-                takeover = lifecycle.takeover_generation if isinstance(lifecycle, HandoffPhase) else lifecycle.launch.takeover_generation
+                context = activity or lifecycle
+                mark = context.operator_mark if isinstance(context, (HandoffPhase, ActivityPhase)) else context.launch.operator_mark
+                takeover = context.takeover_generation if isinstance(context, (HandoffPhase, ActivityPhase)) else context.launch.takeover_generation
                 raw = self.controller.resume_mission(expected_generation=generation,
                     expected_operator_generation=mark[1],
                     expected_controller_boot_id=mark[0],
@@ -1530,7 +1552,8 @@ class MissionRuntime:
                     expected_image_sha256=proposal.before.frame_sha256 if image_informed else None)
             if not prepared:
                 prepared = any(row["logical_id"] == proposal.logical_id for row in self._ledger.primitive_records())
-            disposition, reason = self._envelope(raw, work, proposal, preflight_source, image_informed=image_informed)
+            disposition, reason = (self._registered_activity.envelope(raw, proposal, preflight_source) if control else
+                self._envelope(raw, work, proposal, preflight_source, image_informed=image_informed))
             envelope_valid = True
             if raw["published"]:
                 self._ledger.published(proposal.logical_id, raw["request"]["id"], now=self._wall())
@@ -1538,8 +1561,9 @@ class MissionRuntime:
                     self._registered_lifecycle.published(lifecycle, proposal, raw["request"], reservation)
                 elif lifecycle is not None and proposal.kind == "action" and proposal.action == "YES":
                     self._exit_candidate = (lifecycle, proposal.logical_id, copy.deepcopy(raw["request"]), reservation)
-            if disposition == "returned":
-                after = self._ingest(raw["result"], raw["received_monotonic"], reservation=reservation)
+            native_after = raw["result"].get("state") if control else raw["result"]
+            if disposition == "returned" and (not control or native_after.get("frame_ok") and native_after.get("status") == "ready"):
+                after = self._ingest(native_after, raw["received_monotonic"], reservation=reservation)
                 reservation = None
                 if self._exit_candidate is not None and self._exit_candidate[1] == proposal.logical_id:
                     self._exit_candidate = (*self._exit_candidate[:3], None)
@@ -1554,7 +1578,8 @@ class MissionRuntime:
                 else:
                     self._publish_source(after, authoritative=authoritative)
         except Exception as exc:
-            disposition = "unknown" if raw is not None and (not envelope_valid or raw.get("published")) or prepared and raw is None else "not_dispatched"
+            if not (control and envelope_valid and disposition in ("returned", "rejected")):
+                disposition = "unknown" if raw is not None and (not envelope_valid or raw.get("published")) or prepared and raw is None else "not_dispatched"
             reason = f"{type(exc).__name__}: {exc}"[:1024]
             # An exception from execute_mission may occur after input publication.
             if prepared and raw is None:
@@ -1562,10 +1587,11 @@ class MissionRuntime:
         if raw is not None and (type(raw) is not dict or set(raw) != {
                 "logical_action_id", "request", "result", "published", "received_monotonic", "preflight"}):
             disposition = "unknown"
-        if reservation is not None and disposition in ("not_dispatched", "rejected"):
+        if reservation is not None and (disposition in ("not_dispatched", "rejected") or control and disposition == "returned"):
             self._store.release(reservation)
         receipt = {"logical_action_id": proposal.logical_id,
-            "native_request_id": raw["request"].get("id") if envelope_valid and type(raw.get("request")) is dict else None,
+            "native_request_id": raw["request"].get("id") if envelope_valid and type(raw.get("request")) is dict
+                and (not control or raw["published"]) else None,
             "kind": proposal.kind, "value": proposal.action, "expected_session": proposal.before.session,
             "expected_revision": proposal.before.revision, "expected_boundary_id": proposal.expected_boundary_id,
             "published": raw.get("published") is True if type(raw) is dict else False,
@@ -1575,18 +1601,22 @@ class MissionRuntime:
             "received_monotonic": raw.get("received_monotonic") if envelope_valid and
                 type(raw.get("received_monotonic")) in (int, float) and math.isfinite(raw["received_monotonic"]) else None,
             "reason": reason}
+        if control and envelope_valid:
+            receipt["control"] = {"request": copy.deepcopy(raw["request"]), "result": copy.deepcopy(raw["result"])}
         # Pause may already own the epoch/cause. Settle cost without rewriting it.
         self._apply_pauses()
         if prepared:
             self._ledger.settle_primitive(proposal.logical_id, disposition, receipt, now=self._wall())
         live = self._live()
-        if disposition != "unknown" and (live[3] is not self._lease or live[4]):
+        if disposition != "unknown" and (activity is None or disposition != "returned") and (live[3] is not self._lease or live[4]):
             self._stop_after_failure(reason)
         self._last_receipt = receipt
         if disposition == "unknown":
             # Settlement owns the unknown epoch transition. Do not advance it again
             # or replace an already recorded user/takeover Pause with a late receipt.
             self._stop_unknown_policy()
+        if control:
+            return ActivityFeedback(proposal.before, after, disposition, reason, raw)
         displacement = None if (after is None or after.session != proposal.before.session
             or after.boundary_kind != "normal_play" or proposal.before.boundary_kind != "normal_play") else tuple(
             b - a for a, b in zip(self._store.position(proposal.before), self._store.position(after)))
@@ -1759,7 +1789,11 @@ class MissionRuntime:
                 return self._registered_lifecycle.control(work)
             if self._exit_phase is not None:
                 return self._exit_control(work)
-            self._prompt_guard(work.request)
+            activity_control = (work.request["skill_kind"] == "activity" and (
+                work.request["goal"]["step"] in ("interrupt", "answer_interrupt", "resume")
+                or self._registered_activity.phase is not None))
+            if not activity_control:
+                self._prompt_guard(work.request)
             work_id = work.request["work_id"]
             if work_id is not None:
                 matches = [row["entry"] for row in self._ledger.memory_records("work") if row["entry"]["id"] == work_id]
@@ -1767,6 +1801,8 @@ class MissionRuntime:
                     return "blocked", {"reason": "Associated Work must exist in this mission and current session"}
                 if work.request["skill_kind"] == "navigate" and matches[-1]["scope"] != work.request["goal"]["scope"]:
                     return "blocked", {"reason": "Navigation Work coordinate scope differs"}
+            if activity_control:
+                return self._registered_activity.execute(work)
             if work.request["skill_kind"] == "navigate":
                 return self._navigate(work)
             if work.request["skill_kind"] == "activity" and work.request["goal"]["step"] == "poll":
@@ -1923,6 +1959,7 @@ class MissionRuntime:
         self._exit_phase = None
         self._registered_lifecycle.revoke()
         self._registered_handoff.revoke()
+        self._registered_activity.revoke()
         self._rotation = None
         self._apply_pauses()
         state = self._ledger.snapshot(now=self._wall())

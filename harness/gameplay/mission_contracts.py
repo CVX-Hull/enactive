@@ -319,7 +319,7 @@ def validate_prompt_result(value: dict, *, request: dict, root: dict, actor_id: 
         raise ContractError("Prompt receipt contradicts its immutable root, actor or epoch")
     if request["kind"] == "observe":
         activity_observation = (not lifecycle and data["phase_kind"] == "activity"
-                                and data["stage"] in ("activity_poll", "awaiting_control", "complete"))
+                                and data["stage"] in ("activity_poll", "awaiting_control", "interrupt_confirmation", "awaiting_readmission", "complete"))
         if (lifecycle and data["stage"] == "complete"
                 or not lifecycle and not activity_observation and data["stage"] != "complete"):
             raise ContractError("Observe may only close an ordinary prompt")
