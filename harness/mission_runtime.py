@@ -1467,13 +1467,13 @@ class MissionRuntime:
             "source_id": proposal.before.observation_id, "before": asdict(old), "after": asdict(new)})
         self._check_cancelled(work)
 
-    def _dispatch_guard(self, work: _Work, proposal: MissionIntent) -> None:
+    def _dispatch_guard(self, work: _Work, before: EvidenceRef) -> None:
         self._check_cancelled(work)
         state, generation, boot = self._check_lease()
         ledger = self._ledger.snapshot(now=self._wall())
         if ledger["epoch"] != work.request["epoch"] or ledger["phase"] != "active":
             raise LedgerError("Operation epoch/phase revoked")
-        entry = self._bindings.get(proposal.before.observation_id)
+        entry = self._bindings.get(before.observation_id)
         if entry is None:
             raise EvidenceError("Proposal source has no live binding")
         binding = entry[1]
@@ -1483,7 +1483,7 @@ class MissionRuntime:
         if binding.pause_generation != generation:
             transition = self._rotation
             if (transition is None or transition[:3] != (work.request["request_id"],
-                    proposal.before.observation_id, binding.pause_generation)
+                    before.observation_id, binding.pause_generation)
                     or transition[3].pause_generation != binding.pause_generation
                     or transition[4] is not self._lease or generation != binding.pause_generation + 1):
                 raise EvidenceError("Proposal binding crossed an unauthenticated host generation")
@@ -1491,12 +1491,86 @@ class MissionRuntime:
             raise EvidenceError("Proposal store generation changed")
         if self._game_cost is None or self._game_cost >= self._admission.limits.game_seconds:
             raise BudgetError("Game time unavailable or exhausted")
-        phase = self._prompt_guard(work.request, proposal.before)
+        phase = self._prompt_guard(work.request, before)
         if phase is not None:
             root = self._ledger.request(phase.root_id)["request"]
             self._game_guard(phase.game_anchor, root["limits"]["game_seconds"])
         if work.game_anchor is not None:
             self._game_guard(work.game_anchor, work.request["limits"]["game_seconds"])
+
+    def _skill_binding_rejection(self, work: _Work) -> dict | None:
+        """Reject inconsistent request metadata only while its original scope is eligible.
+
+        This reads an immutable source, never substitutes fields or promotes its
+        freshness. Real authority/evidence/budget faults retain their stopping
+        path; a new corrected request must still pass normal execution checks.
+        """
+        data = work.request
+        current, _ = self._store.inspect_current_boundary(**self._clocks())
+        if current is None or current != self._current or current.observation_id not in data["sources"]:
+            return None
+        if data["perception"] is not None and data["perception"]["source_id"] != current.observation_id:
+            return None
+        observed = self._store.observation(current)
+        if ((data["expected_session"], data["expected_revision"], data["expected_boundary_id"]) ==
+                (current.session, current.revision, observed["boundary"]["id"])):
+            return None
+
+        self._check_cancelled(work)
+        ledger = self._ledger.snapshot(now=self._wall())
+        counts = self._ledger.measured_counts()["primitives"]
+        if (ledger["phase"] != "active" or ledger["unreconciled"] or not ledger["clock_valid"]
+                or any(counts["by_state"].get(state, 0) for state in ("prepared", "published"))):
+            raise LedgerError("Inconsistent request cannot bypass unsettled or inactive mission authority")
+        if self._game_cost is not None and self._game_cost >= self._admission.limits.game_seconds:
+            raise BudgetError("Mission game-time ceiling exhausted")
+        if (ledger["remaining_inputs"] <= self._admission.cleanup_reserve.inputs
+                or counts["charged"] >= self._admission.limits.primitive_mappings):
+            raise BudgetError("Input budget or cleanup reserve exhausted")
+        self._deadline(work, current)
+        self._capacity(frames=2, byte_count=2 * MAX_FRAME_BYTES)
+        root_id = data["phase_id"]
+        if root_id is not None:
+            root = self._ledger.request(root_id)
+            with self._ledger._mutex:
+                if self._ledger._phase_primitive_count(root_id) >= root["request"]["limits"]["primitives"]:
+                    raise BudgetError("Phase primitive limit exhausted")
+
+        if self._registered_lifecycle.phase is not None:
+            phase = self._registered_lifecycle.phase
+            if root_id != phase.root_id or data["work_id"] is not None or self._lease is None:
+                return None
+            self._registered_lifecycle.guard(work, phase)
+            self._check_lease()
+        elif self._exit_phase is not None:
+            phase = self._exit_phase
+            if root_id != phase.root_id or data["skill_kind"] != "menu" or self._lease is None:
+                return None
+            self._exit_guard(work, phase)
+            self._check_lease()
+        elif self._registered_activity.phase is not None:
+            phase = self._registered_activity.phase
+            if (data["skill_kind"] != "activity" or root_id != phase.prompt.root_id
+                    or phase.needs_observation or phase.checkpoint != current):
+                return None
+            self._registered_activity.guard(work, phase)
+        else:
+            self._informing(data)
+            self._prompt_guard(data, current)
+            work.game_anchor = current if current.boundary_kind == "normal_play" else self._last_normal()
+            self._dispatch_guard(work, current)
+        actual = self._live()[0]
+        if not same_native_state(actual, observed):
+            raise EvidenceError("Inconsistent request cannot bypass changed native source state")
+        image_informed = (data["perception"] is not None or self._registered_lifecycle.phase is not None
+            or self._exit_phase is not None or self._registered_activity.phase is not None
+            or data["skill_kind"] == "activity" and data["goal"]["step"] in ("interrupt", "answer_interrupt", "resume"))
+        if image_informed and self.controller._frame_sha256(actual) != current.frame_sha256:
+            raise EvidenceError("Inconsistent request cannot bypass changed native pixels")
+        self._check_cancelled(work)
+        return {"reason": "Skill request session, revision or boundary differs from its cited immutable source. "
+                    "No input or refresh was attempted; read the source and submit a new corrected request ID.",
+                "source_ids": [current.observation_id], "grants_authority": False}
 
     def _deadline(self, work: _Work, original: EvidenceRef) -> float:
         operation = self._ledger.request(work.request["request_id"])
@@ -1622,7 +1696,7 @@ class MissionRuntime:
             if activity is not None:
                 self._registered_activity.guard(work, activity, proposal)
             elif lifecycle is None:
-                self._dispatch_guard(work, proposal)
+                self._dispatch_guard(work, proposal.before)
             elif isinstance(lifecycle, NormalPhase):
                 self._registered_lifecycle.guard(work, lifecycle, proposal)
             elif isinstance(lifecycle, HandoffPhase):
@@ -1954,6 +2028,9 @@ class MissionRuntime:
             return "completed", self._memory_request(work)
         if kind == "skill":
             self._registered_recovery.executable_guard(work.request)
+            rejection = self._skill_binding_rejection(work)
+            if rejection is not None:
+                return "blocked", rejection
             if self._registered_lifecycle.phase is not None:
                 return self._registered_lifecycle.control(work)
             if self._exit_phase is not None:

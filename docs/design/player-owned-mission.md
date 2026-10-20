@@ -117,6 +117,13 @@ quickly; its bounded worker settles through `result/status`. Only one operation
 can own native input; concurrent skill/lifecycle admissions reject. Retained
 candidates/results are bounded and never resurrect an expired operation.
 
+Request producers derive opaque expected fields from the same retained observation
+as their chosen source. [Narrow source-binding validation](../protocol.md#skill-request-binding-errors)
+rejects an internally inconsistent request before mutation only after applicable
+existing authority/ownership/budget fences. It preserves original deadlines and
+permits a new fully guarded request; it does not infer new bindings or recover an
+already stopped phase. Failed deciding002 remains evidence, never a resumed pass.
+
 The existing user Observe/Pause interfaces remain. User direct input first revokes
 mission authority; it cannot race an active mission. A mission records external
 intervention and cannot conceal it by acquiring another epoch. The ordinary

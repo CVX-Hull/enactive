@@ -59,9 +59,14 @@ fresh evidence and all original authority/budget checks.
 [Native008](acceptance/2026-10-20-confirmation-correction.md) qualified both world
 and Save question corrections, ordinary identity/adoption and normal save/exit/
 stopped Finish through a fresh engineering operator. Its 67 charges retain three
-unknown ACKs with reconciled effects. A hosted PR clock-fixture failure still
-requires correction and exact checks before new deciding readiness; independent
-supplies/shelter and actual successor acceptance remain open.
+unknown ACKs with reconciled effects. The clock fixture was corrected and both
+exact hosted lanes passed before deciding002. That
+[second attempt](acceptance/2026-10-20-independent-mission-second-attempt.md)
+created/adopted Quinn, then failed when a copied old inventory boundary caused a
+pre-input rejection and phase revocation. Its 74 charges/one unknown and exceptional
+teardown remain retained. Source now checks eligible local metadata inconsistencies
+before altering the phase, with all real authority/budget stops preserved; native
+correction qualification and a new independent player/successor mission remain open.
 
 Current movement uses strictly known non-HOSTILE evidence. Inventory projection
 omits only the engine's non-selecting cosmetic summary. Reload follows the actual

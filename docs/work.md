@@ -161,16 +161,27 @@ Its 67 charges/three unchanged unknown ACKs, 165 frames and 517.49-second termin
 watermark stay retained; zero game-seconds and no independent objective are claimed.
 The push lane passed, but PR CI found a synthetic wall-age fault based on a clock
 sample preceding its actual frame. Correcting that fixture preserves production
-freshness checks and all assertions; new common/exact hosted checks are required.
+freshness checks and all assertions; common and both exact hosted lanes passed
+at cd55bcd before a new independently reviewed deciding002 admission.
 
-Next: coherent test/report checkpoint and exact CI → #156 new explicit readiness
-→ #157/#144 genuinely fresh deciding player and memory successor → #145 seven-day
-readiness/finite plan or owned blockers. No native rebuild or repeated gameplay
-qualification is implied by a test/document-only change; verify unchanged runtime
-and native contents against the actual proof. Both hosted lanes remain required
-before deciding readiness, release or integration. No old failure, allowance or
-date resets. General setup cancellation remains unsupported beyond its narrow
-existing branch.
+[Deciding002](acceptance/2026-10-20-independent-mission-second-attempt.md) created
+and adopted Quinn, then failed after a copied old inventory boundary was rejected
+before activation and its prompt phase was revoked. Its 42 requests, 74 charges,
+one unchanged unknown ACK, 182 verified frames and exceptional owned teardown remain
+retained; no independent objective or normal Finish is accepted. Both processes
+are closed. #160 owns narrow request consistency validation before adapter mutation,
+with applicable existing authority/ownership/budget fences before a neutral
+rejection. One lead owns this coupled repair; independent readers check source,
+fixtures and original evidence. Current wire/persisted contracts and native binary
+are unchanged; no new builder, recovery framework or compatibility path is added.
+
+Next: reviewed #160 source/report and common/both exact CI → #156 separately finite
+native correction/normal-ending qualification and new readiness → genuinely new
+#157/#144 player and retained-memory successor → #145 evidence-backed seven-day
+plan or owned blockers. Never resume or relabel002. Changed host validation needs
+actual scoped qualification; an unchanged native binary needs no rebuild solely
+for that change. No old failure, allowance or date resets. General setup
+cancellation remains unsupported beyond its narrow existing branch.
 
 #143 owns active observer cadence and measured presentation. The
 [latency budgets](evaluation.md#latency-budgets-for-interactive-play) separate native

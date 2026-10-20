@@ -285,6 +285,32 @@ world and Save local-question rejection followed by new exact guarded correction
 identity/adoption and normal save/exit/stopped Finish. Original unknown delivery
 and the failed independent001 remain retained; no independent objective is accepted.
 
+### Skill request binding errors
+
+Construct `expected_session`, `expected_revision` and `expected_boundary_id`
+programmatically from the single chosen retained observation associated with the
+cited source. Use existing JSON tooling; do not copy opaque fields independently
+or carry an earlier boundary across a focus change. A source reference alone does
+not expose every native field: read its declared observation metadata and verify
+the pair. A draft, cached status or historical source grants no input authority.
+
+The writer checks an internally inconsistent expected triple before adapter
+mutation or refresh only when the cited current source is exact and available,
+and any explicit perception names that same source. Existing read-only ownership,
+authority, original budget and integrity fences must still pass. Then it records
+plain blocked without Observe, rotation, reservation or input, retaining the
+original phase/checkpoint, lease/epoch and deadlines. It never substitutes fields
+or certifies freshness. Same-ID results are immutable; a new corrected request
+traverses every normal guard. Request counts and elapsed time remain spent.
+
+Actual Pause/takeover, unsettled delivery, wrong ownership, missing/disputed source
+or exhausted budgets retain their existing stops. Frameless activity states that
+cannot establish exact retained/live equivalence use their specialized handling;
+this is not a generic EvidenceError exemption or menu recovery route. Real
+native correction qualification remains separate from portable coverage.
+[Deciding002](acceptance/2026-10-20-independent-mission-second-attempt.md) retains
+the stale-boundary failure that motivated this change; it cannot resume.
+
 MissionLimits permits at most 691200 game-seconds (eight days); its default remains
 43200 seconds. Each finite admission must budget normal ending work before its
 selected cap. Every input lane checks known canonical game cost before publication,
