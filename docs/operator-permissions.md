@@ -154,6 +154,48 @@ operator reports below describe the first campaign's procedure, not another curr
 execution path. A new command allowance needs syntax/matching and actual-player
 loading checks; no activation claim follows from a policy-file edit.
 
+### Constructing player requests
+
+For ordinary skill/lifecycle requests, use the
+[pure canonical producer](protocol.md#skill-request-binding-errors), then the existing
+canonical JSON serializer and literal `mission-request --request PATH` entry point.
+Choose semantic intent and context explicitly; do not fill opaque headers manually:
+
+```python
+from harness.gameplay.mission_contracts import canonical
+from harness.gameplay.mission_requests import compose_request
+
+request = compose_request(
+    selected_mission_status,
+    request_id=new_request_id,
+    intent=selected_semantic_intent,
+    limits=finite_child_limits,
+    scope="lifecycle",
+    source=selected_archive_entry,
+)
+request_path.write_text(canonical(request), encoding="utf-8")
+```
+
+These variables are explicit player selections, not an automatic status lookup.
+The archive entry contains the matching retained `reference` and `observation`.
+For provisional character inspection, intent selects `skill_kind="inspect"` and
+`goal={"purpose": "character_identity"}` with null Work; lifecycle scope keeps the
+creation/load root. A missing phase/checkpoint rejects locally. Lifecycle confirmation
+and editor intent also keep that root. Never substitute a new root to bypass it.
+Use explicit `supporting_source_ids` for the additional diagnostic source in
+two-observation transitions. Initial activity interruption uses the prompt summary;
+the subsequent answer/Resume use the activity summary and its exact checkpoint,
+which can differ from `current_source`. Memory/handoff and specialized recovery
+retain their existing records. Composition is not permission to dispatch.
+
+Keep complete raw CLI/tool receipts; use existing JSON extraction to present bounded
+operation/status fields. Parse only complete retained responses, never truncated tool
+text. Do not repeat an ambiguous input to obtain shorter output. Preparing JSON adds
+no new allowed command or gameplay authority; literal CLI access and actual actor
+preflight remain required. Routine semantic skills keep per-key checks local, with
+no model, memory query or approval round trip for each arrow. Native ACK timing does
+not measure model/tool delay, whole skills or successful frame display.
+
 The clean-context brief identifies command/file scope, actor/phase, cumulative
 limits and reserve. Pause, completed tools, explicit quiescence and empty live
 slots precede inspection or registered handoff. Original unknowns and accounting

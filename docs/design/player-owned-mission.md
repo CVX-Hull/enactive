@@ -118,7 +118,11 @@ can own native input; concurrent skill/lifecycle admissions reject. Retained
 candidates/results are bounded and never resurrect an expired operation.
 
 Request producers derive opaque expected fields from the same retained observation
-as their chosen source. [Narrow source-binding validation](../protocol.md#skill-request-binding-errors)
+as their chosen source, using the pure canonical producer for ordinary skill/lifecycle
+intent. Select a named public phase scope and primary archive bundle explicitly;
+the producer never selects fresher evidence or certifies authority. Specialized
+memory/handoff/recovery records retain their current typed shapes.
+[Narrow source-binding validation](../protocol.md#skill-request-binding-errors)
 rejects an internally inconsistent request before mutation only after applicable
 existing authority/ownership/budget fences. It preserves original deadlines and
 permits a new fully guarded request; it does not infer new bindings or recover an

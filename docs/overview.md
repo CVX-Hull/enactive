@@ -67,6 +67,11 @@ pre-input rejection and phase revocation. Its 74 charges/one unknown and excepti
 teardown remain retained. Source now checks eligible local metadata inconsistencies
 before altering the phase, with all real authority/budget stops preserved; native
 correction qualification and a new independent player/successor mission remain open.
+The [next engineering attempt](acceptance/2026-10-20-request-construction-qualification.md)
+failed before that probe when identity inspection omitted its creation root; it is
+closed with no adoption or normal ending. A pure canonical request producer now
+combines explicitly chosen context and intent to reduce repeated field/root errors.
+It changes no authority or runtime contract; native qualification remains pending.
 
 Current movement uses strictly known non-HOSTILE evidence. Inventory projection
 omits only the engine's non-selecting cosmetic summary. Reload follows the actual

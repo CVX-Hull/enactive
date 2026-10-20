@@ -162,7 +162,10 @@ lead takes work back. Reports never substitute for inspecting a diff or result.
 
 For gameplay requests, derive opaque source/session/revision/boundary fields
 programmatically from one chosen returned source and its retained observation,
-using existing JSON tooling. Never carry individual fields across a focus change.
+using the protocol's pure canonical producer and existing JSON tooling for ordinary
+skill/lifecycle requests. Choose scope and primary context explicitly; use bounded
+support IDs when needed. Specialized memory/handoff/recovery records retain their
+current typed ingress. Never carry individual fields across a focus change.
 The protocol's binding checks and portable/native evidence enforce consistency;
 review still checks that the chosen source supports the player's interpretation.
 

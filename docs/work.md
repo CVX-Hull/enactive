@@ -169,14 +169,30 @@ and adopted Quinn, then failed after a copied old inventory boundary was rejecte
 before activation and its prompt phase was revoked. Its 42 requests, 74 charges,
 one unchanged unknown ACK, 182 verified frames and exceptional owned teardown remain
 retained; no independent objective or normal Finish is accepted. Both processes
-are closed. #160 owns narrow request consistency validation before adapter mutation,
+are closed. #160 implements narrow request consistency validation before adapter mutation,
 with applicable existing authority/ownership/budget fences before a neutral
 rejection. One lead owns this coupled repair; independent readers check source,
 fixtures and original evidence. Current wire/persisted contracts and native binary
-are unchanged; no new builder, recovery framework or compatibility path is added.
+are unchanged; no recovery framework or compatibility path is added.
 
-Next: reviewed #160 source/report and common/both exact CI → #156 separately finite
-native correction/normal-ending qualification and new readiness → genuinely new
+Reviewed26a2924 passed 1,156 common tests and both exact hosted lanes. The
+[Native009 attempt](acceptance/2026-10-20-request-construction-qualification.md)
+then failed before its declared binding probe: provisional identity omitted its
+direct creation root. Zero identity primitives, no adoption/normal ending and
+unknown canonical game time remain. Its 34 requests, 68 charges/one unchanged
+unknown, 166 verified PNGs and exceptional exact-child teardown are retained;
+both processes/listener/slots are closed. No old attempt resumes or transfers.
+
+#161 owns the reviewed pure canonical producer: selected retained primary bundle,
+explicit bounded supporting IDs, semantic intent and explicit phase scope compose
+the existing contract without I/O or authority. One worker owns only the helper/
+pure tests in a separate project-local worktree; the lead integrates and verifies
+real writer/controller/lifecycle tests and current docs. Independent review found
+and corrected unsupported scope/skill combinations; raw malformed-request tests
+remain. #162 separately assesses error classification, not a blanket delivery gate.
+
+Next: reviewed #161 source/report and common/both exact CI → #156 new separately
+finite producer/binding-correction/normal-ending qualification and readiness → genuinely new
 #157/#144 player and retained-memory successor → #145 evidence-backed seven-day
 plan or owned blockers. Never resume or relabel002. Changed host validation needs
 actual scoped qualification; an unchanged native binary needs no rebuild solely

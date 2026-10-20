@@ -294,6 +294,36 @@ or carry an earlier boundary across a focus change. A source reference alone doe
 not expose every native field: read its declared observation metadata and verify
 the pair. A draft, cached status or historical source grants no input authority.
 
+The canonical pure producer is `harness.gameplay.mission_requests.compose_request`.
+Supply a mission status snapshot (all three phase summaries, including nulls),
+one explicitly selected retained archive entry (`reference` and `observation`),
+semantic skill/lifecycle intent, new request ID, finite limits and an explicit
+`new_root`, `prompt`, `lifecycle` or `activity` scope. It derives the source/triple,
+mission/epoch and selected phase's direct origin together; opaque headers and
+`perception.source_id` in intent reject locally. The existing validator owns
+wire shape and bounds; `canonical` remains the serializer. It performs no I/O,
+source selection, refresh, clock checks, dispatch or authority grant.
+
+Additional informing source IDs are explicit bounded support: a two-observation
+transition selects its latest binding bundle and cites its first observation as
+support. A phase scope requires that exact summary/checkpoint, without falling
+back to another phase or null root. Prompt supports only menu/edit/inspect/item/
+activity children; activity scope supports only activity. Lifecycle children keep
+their direct create/save/load root, including provisional identity inspection;
+exit confirmation is a lifecycle-scoped menu child. No unrelated Work attaches
+to lifecycle skill children. These composition checks do not duplicate live guards.
+
+Source-free launch is an explicit new root with no bundle/support. Explicit new-root
+exit alongside create/load only expresses the existing narrow setup-abort intent;
+the receiver determines eligibility. Retained final-source Finish and frameless
+activity checkpoints do not require `current_source`. The initial activity poll
+uses its public prompt scope; after interrupt, select its public activity scope.
+Memory, handoff, claim, recovery readmission and post-reconciliation navigation
+continuation retain their specialized typed records. The producer adds no wire,
+persisted format, alternate executor or compatibility path. Review it with contract
+or phase-summary changes; real-component tests detect drift. Replace it if maintained
+upstream composition tooling fills this concrete gap at lower maintenance cost.
+
 The writer checks an internally inconsistent expected triple before adapter
 mutation or refresh only when the cited current source is exact and available,
 and any explicit perception names that same source. Existing read-only ownership,
@@ -310,6 +340,9 @@ this is not a generic EvidenceError exemption or menu recovery route. Real
 native correction qualification remains separate from portable coverage.
 [Deciding002](acceptance/2026-10-20-independent-mission-second-attempt.md) retains
 the stale-boundary failure that motivated this change; it cannot resume.
+[Native009](acceptance/2026-10-20-request-construction-qualification.md) separately
+failed before the declared probe after omitting the direct identity root. It cannot
+resume either; pure producer tests do not replace a new finite native qualification.
 
 MissionLimits permits at most 691200 game-seconds (eight days); its default remains
 43200 seconds. Each finite admission must budget normal ending work before its

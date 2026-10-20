@@ -55,6 +55,10 @@ before phase mutation or native refresh. Its original limits and authority stay
 unchanged; real authority/evidence faults still stop. The
 [binding contract](protocol.md#skill-request-binding-errors) defines this narrow
 case and programmatic request construction. It adds no executor or alternate API.
+The pure client producer combines selected retained context with semantic intent
+into that same contract. It owns no live state or source selection; receiver guards
+remain authoritative. This small composition gap does not justify another service,
+schema framework, history layer or dependency.
 
 | Boundary / owner | Input and output | Authority and failure behavior |
 | --- | --- | --- |
