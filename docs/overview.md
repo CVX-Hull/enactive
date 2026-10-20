@@ -56,6 +56,12 @@ Pause test revoked a live phase/lease and rejected stale input. Neither accepts
 the independent mission. The source correction preserves an original phase only
 for a local malformed-question rejection; a new corrected request must still pass
 fresh evidence and all original authority/budget checks.
+[Native008](acceptance/2026-10-20-confirmation-correction.md) qualified both world
+and Save question corrections, ordinary identity/adoption and normal save/exit/
+stopped Finish through a fresh engineering operator. Its 67 charges retain three
+unknown ACKs with reconciled effects. A hosted PR clock-fixture failure still
+requires correction and exact checks before new deciding readiness; independent
+supplies/shelter and actual successor acceptance remain open.
 
 Current movement uses strictly known non-HOSTILE evidence. Inventory projection
 omits only the engine's non-selecting cosmetic summary. Reload follows the actual

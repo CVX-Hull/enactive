@@ -193,8 +193,13 @@ The [first actual deciding attempt](acceptance/2026-10-20-independent-mission-fi
 failed on a paraphrased world question before Yes input; its exceptional cleanup
 and 70 returned inputs stay retained. The separate actual spectator Pause test
 passed live phase/lease revocation and stale-request rejection. It qualifies no
-in-flight cancellation or post-Pause readmission. The local-validation repair
-still needs a new scoped native proof and finite deciding admission.
+in-flight cancellation or post-Pause readmission.
+[Native008](acceptance/2026-10-20-confirmation-correction.md) subsequently qualified
+both world/Save local rejections and new exact corrected requests, visible identity
+and normal save/exit/stopped Finish through a fresh engineering operator. It
+retains three unknown ACKs with reconciled effects and no gameplay objective.
+A synthetic hosted clock-fault fixture needs correction before exact CI and a
+new finite deciding admission; production dispatch checks are unchanged by it.
 
 Cached status performs no evidence or memory I/O. It can show the last explicitly
 requested context packet, including claims, Work, source IDs, omissions and

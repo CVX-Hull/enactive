@@ -114,6 +114,13 @@ configuration changes; reuse the verified setup otherwise.
    status/observation calls from the actual designated player through its exact
    entry point. Record whether either call required review; a successful approved
    call alone proves access, not absence of per-action review.
+   Name the required tool execution mode in the actor brief. Native008's passive
+   status calls worked in the default sandbox while Start's connection did not;
+   its existing allowed CLI worked with explicit `require_escalated`. Use that
+   authorized mode consistently for the admitted loopback command, retain actual
+   failures, and distinguish sandbox access from an approval rejection. After an
+   ambiguous admission response, inspect the existing mission/request ID before
+   proceeding; never replay a possibly delivered gameplay input.
    Retain loading, matching, access and absence of recurring review as separate
    evidence. A fresh diagnostic process does not prove the active chat reloaded.
 4. If every action still reaches approval review, stop permission admission and

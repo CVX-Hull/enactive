@@ -280,6 +280,10 @@ can be explicitly corrected within its original phase/deadline. Reopen verifies
 history but reconstructs no process handle, phase, lineage, lease or queued input.
 Native007 qualified the selected actual creation/save/load path. Independent
 mission acceptance and actual fresh-context memory use remain pending.
+[Native008](acceptance/2026-10-20-confirmation-correction.md) additionally qualified
+world and Save local-question rejection followed by new exact guarded correction,
+identity/adoption and normal save/exit/stopped Finish. Original unknown delivery
+and the failed independent001 remain retained; no independent objective is accepted.
 
 MissionLimits permits at most 691200 game-seconds (eight days); its default remains
 43200 seconds. Each finite admission must budget normal ending work before its

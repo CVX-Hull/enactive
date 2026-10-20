@@ -1560,11 +1560,14 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     observed = original_exchange(kind, *args, **kwargs)
                     if kind == "observe" and fault == "sentinel_create": sentinel.unlink()
                     return observed
-                def preflight(*args):
+                def preflight(observation, received):
                     if fault == "host": self.controller.pause()
                     elif fault == "deadline": clock.value += 2
                     elif fault == "monotonic_age": clock.value += 3.01
-                    elif fault == "wall_age": clock.wall += 3.01
+                    elif fault == "wall_age":
+                        # Age the actual returned frame, not the earlier time
+                        # sampled before a scheduled bridge thread captures it.
+                        clock.wall = observation["timestamp_ms"] / 1000 + 3.01
                     elif fault == "control_lock": self.controller.control_lock.acquire()
                     elif fault == "control_pending": self.controller.control_pending = {"id": "pending"}
                     elif fault == "control_slot": (fake.bridge / "control.json").write_text("{}")
@@ -1602,6 +1605,8 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     self.assertIsNotNone(envelope["preflight"])
                     self.assertFalse(envelope["published"])
                     self.assertIsNone(envelope["request"])
+                    if fault == "wall_age":
+                        self.assertIn("fresh successful", envelope["result"]["error"])
                     self.assertTrue(self.controller.frozen)
                     self.assertEqual(self.controller.unknown_outcomes, [])
                     self.assertFalse(any(r["kind"] == "resume" for r in fake.requests))
@@ -2715,7 +2720,9 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     calls.append((observation, received))
                     if fault == "deadline": clock.value += 2
                     elif fault == "monotonic_age": clock.value += 3.01
-                    elif fault == "wall_age": clock.wall += 3.01
+                    elif fault == "wall_age":
+                        # Age the returned frame despite bridge scheduling lag.
+                        clock.wall = observation["timestamp_ms"] / 1000 + 3.01
                     elif fault == "recovery_lock": self.controller.control_lock.acquire()
                     elif fault == "recovery_pending": self.controller.control_pending = {"id": "pending"}
                     elif fault == "control_slot": (fake.bridge / "control.json").write_text("{}")
@@ -2736,6 +2743,8 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     self.assertFalse(envelope["published"])
                     self.assertIsNone(envelope["request"])
                     self.assertEqual(envelope["result"]["status"], "controller_error")
+                    if fault == "wall_age":
+                        self.assertIn("fresh successful", envelope["result"]["error"])
                     self.assertTrue(self.controller.pause_requested)
                     self.assertIsNone(self.controller._mission_lease)
                     self.assertEqual(self.controller.unknown_outcomes, [])

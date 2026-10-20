@@ -155,13 +155,22 @@ blocked receipts and finite limits; no generic retry/control framework or cleanu
 exemption. Independent read-only reviewers check source and original evidence;
 no parallel writer is useful for this tightly coupled repair.
 
-Next: reviewed common/clean committed freeze and exact CI → separately finite
-native correction proof → #156 new explicit readiness → #157/#144 genuinely fresh
-deciding player and memory successor → #145 seven-day readiness/finite plan or
-owned blockers. The unchanged native binary needs no rebuild for Python-only
-changes. Both exact hosted lanes are required before deciding readiness, release
-or integration. No old failure, allowance or date resets. General setup
-cancellation remains unsupported beyond its narrow existing branch.
+[Native008](acceptance/2026-10-20-confirmation-correction.md) passed the separately
+finite correction/identity/save/exit/stopped-Finish proof through a fresh operator.
+Its 67 charges/three unchanged unknown ACKs, 165 frames and 517.49-second terminal
+watermark stay retained; zero game-seconds and no independent objective are claimed.
+The push lane passed, but PR CI found a synthetic wall-age fault based on a clock
+sample preceding its actual frame. Correcting that fixture preserves production
+freshness checks and all assertions; new common/exact hosted checks are required.
+
+Next: coherent test/report checkpoint and exact CI → #156 new explicit readiness
+→ #157/#144 genuinely fresh deciding player and memory successor → #145 seven-day
+readiness/finite plan or owned blockers. No native rebuild or repeated gameplay
+qualification is implied by a test/document-only change; verify unchanged runtime
+and native contents against the actual proof. Both hosted lanes remain required
+before deciding readiness, release or integration. No old failure, allowance or
+date resets. General setup cancellation remains unsupported beyond its narrow
+existing branch.
 
 #143 owns active observer cadence and measured presentation. The
 [latency budgets](evaluation.md#latency-budgets-for-interactive-play) separate native

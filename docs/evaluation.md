@@ -67,6 +67,12 @@ engineering wall time includes unmeasured planning/tool work and is not throughp
 The broader ordinary p95 exceeds the proposed250ms target. Profile the tails and
 model/tool/display boundaries before choosing faster models or adding infrastructure.
 
+[Native008](acceptance/2026-10-20-confirmation-correction.md) adds 64 returned
+setup/menu/identity intervals: median 77.91 ms, nearest-rank p95 141.60 ms and
+maximum 6393.12 ms, with three unknown ACKs retained separately. This is another
+scope/sample, not a controlled improvement over007. Its 517.49-second deliberate
+qualification does not measure normal-play throughput, model or browser latency.
+
 | Proposed next-campaign target | Measurement / limit |
 | --- | --- |
 | Ordinary movement/menu input p95 ≤250 ms | Original retained preflight-to-terminal ACK intervals; report sample count, rejected/unknown inputs and tails separately |
@@ -95,6 +101,14 @@ to profile, not explanations for all delay. Prioritize removing per-key player/t
 round trips and unnecessary captures or repeated retrieval. Keep per-primitive
 outcome/authority checks; batch decisions rather than blindly batching input.
 Do not add a broker, telemetry service or new model tier without an observed gap.
+
+Campaign length is another profiling axis. Current ingestion scans retained peers,
+capacity accounting walks frame files and archive save serializes the manifest.
+Navigation rechecks accumulated source files/hashes. Profile those stages against
+archive and route-source counts before replacing storage or introducing a cache.
+Required loss/correction/integrity and current-authority checks must remain;
+reuse the existing SQLite/journal if evidence establishes a storage gap. #154
+owns this follow-up without adding a new framework gate to the current mission.
 
 ## Caller contract
 
