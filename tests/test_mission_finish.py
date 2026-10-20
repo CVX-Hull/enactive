@@ -208,6 +208,22 @@ class MissionFinishTests(MissionCreationFixture, unittest.TestCase):
         self.exit()
         self.expire_during_final_status(work_id="objective-work")
 
+    def test_pause_during_final_process_sample_wins_before_terminal_write(self):
+        self.untouched_exit()
+        original = self.runtime._native.status
+        def pause_at_last_sample():
+            operation = self.runtime._ledger.request("finish")
+            if operation["result"] is not None and "normal_finish" in operation["result"]:
+                self.runtime.pause()
+            return original()
+        with patch.object(self.runtime._native, "status", side_effect=pause_at_last_sample):
+            operation = self.finish()
+        self.assertEqual(operation["state"], "completed", operation)
+        self.assertEqual(self.runtime.status()["phase"], "paused")
+        self.assertEqual(self.runtime._ledger.snapshot(now=self.runtime._wall())["phase"], "paused")
+        self.assertFalse(self.runtime._closed.is_set())
+        self.assertIsNotNone(self.runtime._native)
+
 
 if __name__ == "__main__":
     unittest.main()

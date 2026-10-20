@@ -929,6 +929,13 @@ class MissionRuntime:
         state = self._ledger.snapshot(now=self._wall())
         if state["epoch"] != work.finish_epoch or state["phase"] != "finishing":
             raise ControlError("Finishing epoch changed before terminal persistence")
+        # Process sampling and ledger reads may yield to an operator Pause.
+        # This is the final cancellation fence, after those reads and before
+        # terminal persistence; no controller/runtime lock spans SQLite I/O.
+        with self._metadata:
+            self._check_cancelled(work)
+            if self._pending_pauses or self._operator_mark() != work.finish_mark:
+                raise _Cancelled("Normal finish superseded before terminal persistence")
         disposition = result["normal_finish"]["disposition"]
         self._ledger.finish_mission(disposition, epoch=work.finish_epoch,
             request_id=work.request["request_id"],
