@@ -35,13 +35,24 @@ handoff, unknown-effect and bounded-recovery rules. Future play requires a new
 explicit finite objective, budget, current preflight and actor assignment. No old
 allowance or running chat renews it.
 
-The next bounded item is [#71](https://github.com/CVX-Hull/enactive/issues/71), trace
-extraction and label readiness. See the Project for its current stage and estimate. Use
-actual campaign failures, corrections and uncertainty before selecting memory
-architecture or model comparisons. #75 owns workflow/control maintenance; #40 owns
-general outcome monitoring. Research review remains October24,2026 and control
-maintenance keeps January15,2027 and earlier event triggers. The public Project
-owns changing work estimates and Status/Horizon, not this dated evidence map.
+The next planned outcome is [player-owned campaigns #136](https://github.com/CVX-Hull/enactive/issues/136)
+in the [new milestone](https://github.com/CVX-Hull/enactive/milestone/6). [Design #137](https://github.com/CVX-Hull/enactive/issues/137)
+and [#71](https://github.com/CVX-Hull/enactive/issues/71), bounded trace extraction
+and label readiness, prepare the next integrated delivery. Semantic navigation
+and interaction, durable campaign memory, outcome assessment/recovery, mission
+ownership and observer visibility feed one [supply-and-shelter acceptance #144](https://github.com/CVX-Hull/enactive/issues/144),
+then a [fresh seven-day assessment #145](https://github.com/CVX-Hull/enactive/issues/145)
+with the engineering lead outside gameplay. Reviewed component readiness permits
+shared native validation; the mission does not wait for component issue closure.
+The current execution contract below remains in force until a reviewed migration.
+
+An [optional read-only curator #146](https://github.com/CVX-Hull/enactive/issues/146)
+and broader memory/monitor/model efficacy studies remain separate candidates.
+Use actual campaign failures, corrections and uncertainty before choosing memory
+architecture or model comparisons. #75 owns finite workflow/control maintenance;
+#40 retains broader monitoring scope. Research review remains October24,2026 and
+control maintenance keeps January15,2027 and earlier event triggers. The public
+Project owns changing estimates and Status/Horizon, not this evidence map.
 
 ## Execution ownership
 
@@ -57,11 +68,11 @@ Use the [campaign-driven improvement workflow](project-management.md#campaign-dr
 
 | Area | Backlog owner and revisit rule |
 | --- | --- |
-| Further runtime, UI and gameplay gaps | #126 owns external-operator display; #128 retains publication-stall recurrence/recovery triggers. Future campaigns need scoped admission and separate native evidence. |
+| Player autonomy and observer visibility | [#136](https://github.com/CVX-Hull/enactive/issues/136) owns the planned delivery and required children; #143 owns expanded player/memory/intervention visibility. #126 stays a narrow external-operator wording fix; #128 retains publication-stall recurrence/recovery triggers. Future campaigns need scoped admission and separate native evidence. |
 | Workflow, documentation and control maintenance | [#75](https://github.com/CVX-Hull/enactive/issues/75); reconcile triggered gaps and burden. Keep current contracts concise, link historical evidence, and do not renew due dates through grooming. |
-| Memory | [#70/#71](https://github.com/CVX-Hull/enactive/issues/70); inspect actual player-visible traces before choosing persistent architecture. Actual campaign handoff is separate from a general memory benchmark. |
+| Memory | [#140](https://github.com/CVX-Hull/enactive/issues/140) owns planned campaign continuity; [#70/#71](https://github.com/CVX-Hull/enactive/issues/70) retain research/label readiness. Inspect actual player-visible traces before choosing persistent architecture. Actual campaign handoff is separate from a general memory benchmark. |
 | Model tiering and comparison | [#16/#24/#25](https://github.com/CVX-Hull/enactive/issues/16), with #72/#73/#74 as explicit measurement gates. More tiers or paid providers need a measured benefit and authorized configuration. |
-| Outcome monitoring | [#40/#42–44](https://github.com/CVX-Hull/enactive/issues/40); campaign findings can justify bounded capabilities. Active human/model interpretation does not claim this framework is implemented. |
+| Outcome monitoring | [#141](https://github.com/CVX-Hull/enactive/issues/141) owns the first functional assessment/recovery slice, reusing the shared design; [#40/#42–44](https://github.com/CVX-Hull/enactive/issues/40) retain broader delivery/effectiveness scope. Active human/model interpretation does not claim this framework is implemented. |
 | Research currency | [#26](https://github.com/CVX-Hull/enactive/issues/26); retain the October 24, 2026 active-work/event review trigger unless explicitly changed through the workflow. |
 
 Native regression automation #9, broader host/browser delivery #11, tooling #12, advanced learning #27 and tutorial repair #47 retain their recorded revisit triggers. They are not automatic campaign prerequisites. Prefer existing engine activities, CLI/control tools, Git and GitHub capabilities over new infrastructure. No new paid API, global installation or generic world-model/training system follows solely from a difficult run.

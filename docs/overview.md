@@ -118,6 +118,14 @@ The campaign-driven [improvement workflow](project-management.md#campaign-driven
 routes observed pain points to owned work and later verification. It is manual
 engineering; continuous policy learning remains unimplemented.
 
+The next planned outcome is [player-owned campaigns (#136)](https://github.com/CVX-Hull/enactive/issues/136):
+the player handles planning, campaign memory, semantic skills, routine recovery
+and normal lifecycle while the user and engineering lead observe. [Design #137](https://github.com/CVX-Hull/enactive/issues/137)
+and the bounded trace/label pilot #71 prepare an integrated supply-and-shelter
+mission, then a fresh seven-day assessment. This is a delivery roadmap, not a
+change to current runtime authority. An optional read-only curator and broader
+efficacy studies remain separate candidates; [work](work.md) links their owners.
+
 The next memory and [monitoring design](design/outcome-monitoring.md) must use
 actual trajectories while distinguishing observations, fallible judgments and
 unknowns. The [representation study](research-memory-representations.md) and
