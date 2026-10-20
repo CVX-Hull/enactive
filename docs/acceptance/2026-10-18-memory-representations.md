@@ -32,8 +32,10 @@ Accepted runs `final-r2` and `final-r3` use clean source
 `6ccb3941550f20388ffca8ec2cfa4620e1cf8a32`, protocol `memory-study-v1.1`, Python
 3.14.7, SQLite 3.53.4, Darwin arm64. Their manifests record all 16 experiment,
 test and configuration hashes. The [selected results](../assets/memory-study-results.json)
-retain these hashes and full-report digests. Later explanatory documentation does
-not change these frozen experiment files.
+retain these hashes and full-report digests. The original receipts stay unchanged.
+A later migration changed two Issue URLs in the protocol document, so its current
+hash differs; the other fifteen frozen experiment/configuration files still match
+at the October19 assessment. See the reproduction clarification below.
 
 | Suite | Raw seed aggregates | Scope |
 | --- | ---: | --- |
@@ -174,6 +176,16 @@ fresh, nonexistent output directory:
 ```sh
 .venv/bin/python -m tools.memory_study.run --mode final --output-dir .runtime/research/memory-representations/runs/reproduction-1
 ```
+
+For exact historical source identity, the sanitized revision
+[`1cd0399ec32a5fb4900d49d1dc2b97d94c65430c`](https://github.com/CVX-Hull/enactive/tree/1cd0399ec32a5fb4900d49d1dc2b97d94c65430c)
+contains all sixteen recorded experiment/configuration blobs, including protocol
+SHA-256 `f3629309aaf4064b9b1d7934752a7cff7bb7de25d36f180bd7184f1228ae8c1a`.
+The original pre-migration commit above is historical and is not in canonical Git
+history. Current-checkout runs correctly record a different protocol source hash
+after its two link changes; numeric content/raw comparisons and source identity
+are separate checks. This clarification does not rerun or replace the accepted
+results, restore old formats, or establish cross-platform byte identity.
 
 Repeat in another fresh process/output directory. Compare `content_sha256`,
 `raw_sha256`, matrix coverage, laws and source hashes, not report-file identity

@@ -543,8 +543,11 @@ failure stops before dispatch and never deletes evidence to make room. The store
 itself cannot dispatch. There is no automatic pruning, hidden-state augmentation
 or synthetic replacement. Original evidence and bounded tagged interpretations
 remain separate. A cross-session PrimitiveResult can retain an after-observation
-only as unknown context with no attributed displacement. The real end-to-end
-gameplay evidence pipeline still requires [#33](https://github.com/CVX-Hull/enactive/issues/33).
+only as unknown context with no attributed displacement. The bounded native
+predicate path was accepted in
+[#33](https://github.com/CVX-Hull/enactive/issues/33); see the
+[bounded-skill acceptance](acceptance/2026-10-17-bounded-skills.md) for its tested
+scope. This does not establish general campaign evidence ingestion.
 
 The evidence store uses format version 2 and exposes `source_status(reference)`
 as `retained` or `disputed` after identity/integrity verification. Disputes persist
