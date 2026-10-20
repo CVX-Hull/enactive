@@ -215,7 +215,7 @@ async function missionObserve() {
   missionError = '';
   updateControls();
   try {
-    const request = {schema: 'mission/6', kind: 'observe', request_id: crypto.randomUUID(),
+    const request = {schema: 'mission/7', kind: 'observe', request_id: crypto.randomUUID(),
       mission_id: mission.mission_id, epoch: mission.epoch};
     const response = await fetch('/api/mission', {
       method: 'POST', headers: {'Content-Type': 'application/json', 'X-CDDA-Token': token},
@@ -270,12 +270,12 @@ function renderLifecycle(mission) {
   const result = mission?.progress;
   const proof = record(result) ? result.normal_exit : null;
   const finish = record(result) ? result.normal_finish : null;
-  const finishRecorded = record(finish) && finish.schema === 'mission/6' && finish.record_type === 'NormalFinish' &&
+  const finishRecorded = record(finish) && finish.schema === 'mission/7' && finish.record_type === 'NormalFinish' &&
     finish.grants_authority === false && [finish.final_source_id, finish.normal_exit_result_request_id].every(recordedId) &&
     ((finish.disposition === 'stopped' && finish.completed_work_event_id === null) ||
      (finish.disposition === 'completed' && recordedId(finish.completed_work_event_id)));
   // Summarize the producer's recorded proof; process samples and ACKs cannot supply it.
-  const verified = record(proof) && proof.schema === 'mission/6' && proof.record_type === 'OwnedNormalExit' &&
+  const verified = record(proof) && proof.schema === 'mission/7' && proof.record_type === 'OwnedNormalExit' &&
     proof.grants_authority === false && proof.returncode === 0 &&
     (proof.no_save_required === true || proof.no_save_required === false && recordedId(proof.saved_checkpoint_request_id)) &&
     [proof.origin_request_id, proof.launch_request_id, proof.launch_id,
@@ -363,7 +363,7 @@ function quantities(value) {
 }
 function renderMemory(mission) {
   const memory = mission?.memory_context;
-  const usable = record(memory) && memory.schema === 'campaign-memory/2' && memory.grants_authority === false;
+  const usable = record(memory) && memory.schema === 'campaign-memory/3' && memory.grants_authority === false;
   $('mission-memory-summary').textContent = usable ?
     `Historical, query-specific last journaled context · packet ${known(memory.packet_id)} · memory version ${known(memory.memory_version)} · query ${known(memory.query)} · as of ${known(memory.as_of)} · scope ${known(memory.scope)}. Status labels belong to that packet, not the current world. This preview is not current authority and is not recomputed by the viewer.` :
     `No journaled context preview available${memory == null ? '' : ' (unavailable or inconsistent packet)'}. Memory version ${known(mission?.memory_version)} · last packet ${known(mission?.last_context_id)}.`;

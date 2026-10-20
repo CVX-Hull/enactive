@@ -1,4 +1,4 @@
-"""Compose ordinary mission/6 requests from explicit passive context.
+"""Compose ordinary mission/7 requests from explicit passive context.
 
 No I/O, refresh, source selection or execution occurs here. Supplied dictionaries
 can establish metadata consistency, never archive membership, PNG integrity,

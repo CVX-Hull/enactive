@@ -73,8 +73,22 @@ failed before the probe when identity inspection omitted its root.
 [Native010](acceptance/2026-10-20-menu-dismissal-qualification.md) then exercised
 the correction and actual item inspection, but failed normal ending because
 semantic dismissal used QUIT where UILIST registered UILIST.QUIT. Both are closed.
-The mapping now follows the registered context action; new dismissal/ending and
-independent-player qualification remain pending. Authority/contracts are unchanged.
+The mapping now follows the registered context action.
+[Native011](acceptance/2026-10-20-registered-dismissal-qualified.md) qualified that
+dismissal and normal ending within engineering scope. The
+[third independent attempt](acceptance/2026-10-20-independent-mission-third-attempt.md)
+failed before creation on a lead-admitted unsupported name length. The
+[fourth](acceptance/2026-10-20-independent-mission-fourth-attempt.md) reached a real
+fresh successor, then failed because valid Work history could not fit retrieval.
+All failures are closed with their costs and exceptional cleanup retained.
+
+Current source distinguishes raw assertions from combined Work views and checks
+complete handoff retrieval capacity before giving up the active player's control.
+This source change has no new native or independent acceptance yet. Review-free
+gameplay execution and automated request/result/image handling remain owned setup
+work in [#166](https://github.com/CVX-Hull/enactive/issues/166) and
+[#164](https://github.com/CVX-Hull/enactive/issues/164); rule matching alone does
+not prove that automatic reviews are absent.
 
 Current movement uses strictly known non-HOSTILE evidence. Inventory projection
 omits only the engine's non-selecting cosmetic summary. Reload follows the actual

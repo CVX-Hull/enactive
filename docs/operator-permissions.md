@@ -6,7 +6,10 @@ review_trigger: Codex permission support, CLI entry point, executor ownership or
 
 # Gameplay permissions and player ownership
 
-Routine admitted play should proceed without user keys or permission decisions.
+Routine admitted play must proceed without user keys, human approvals or automatic
+approval/guardrail-review round trips, including observation, memory, lifecycle,
+handoff and supporting request/result plumbing. The user's standing gameplay
+delegation does not need to be requested again for each action or successor.
 User Pause/takeover remains available. There are three separate boundaries:
 Codex controls process/network permission; the harness validates current input
 authority; the player judges the visible game outcome. An allow rule changes
@@ -111,9 +114,10 @@ configuration changes; reuse the verified setup otherwise.
    in this checkout's `.codex/rules/`, not a broad user-level Python/shell rule.
 3. Check positive and negative command examples with the installed Codex policy
    checker. Then reload Codex when required and test two consecutive harmless live
-   status/observation calls from the actual designated player through its exact
-   entry point. Record whether either call required review; a successful approved
-   call alone proves access, not absence of per-action review.
+   status/observation calls and a representative semantic/result/image/memory/
+   lifecycle workflow from the actual designated player through its exact entry
+   point. Record both human and automatic review; a successful approved call or
+   neither no visible prompt nor an exit code proves the absence of review.
    Name the required tool execution mode in the actor brief. Native008's passive
    status calls worked in the default sandbox while Start's connection did not;
    its existing allowed CLI worked with explicit `require_escalated`. Use that
@@ -134,6 +138,27 @@ a user-requested configuration interruption. This prospective setup standard
 does not retroactively invalidate their recorded gameplay or renew allowances.
 Native guards, user Pause, recovery eligibility and campaign limits still apply.
 Setup, source changes, publication and unrelated commands have separate scope.
+
+### Current review-free execution gap
+
+Independent004's fresh successor initially reached automatic approval review on a
+literal passive status call. Review rejected it as unrelated work; the same action
+subsequently passed after the original human authorization was supplied. The
+denial remains evidence. The project rule still matches allow and this checkout
+is trusted, but active review-free execution is not established. Current session
+settings remain workspace-write/on-request/auto_review. No global defaults or
+permissions were changed. [#166](https://github.com/CVX-Hull/enactive/issues/166)
+owns this setup gap; [#164](https://github.com/CVX-Hull/enactive/issues/164) owns
+structured request/result/image automation using the existing ingress. Repeating
+authorization arguments to a reviewer is not the accepted gameplay loop.
+
+The [official automatic-review guidance](https://learn.chatgpt.com/docs/sandboxing/auto-review)
+explains that routine actions inside effective policy proceed without review;
+changing approval policy alone grants no missing access. A supported integration
+must be configured and verified before it can be called review-free. Do not
+silently route a denied action through another tool, override managed policy or
+use a broad Python/shell allowance. Keep local deterministic protocol validation,
+finite accounting and user Pause/control; these require no reviewer model.
 
 The [trust correction](changes/033-gameplay-permission-preflight.md) records the
 observed disabled project layer and the exact-project fix. Fresh bundled loading

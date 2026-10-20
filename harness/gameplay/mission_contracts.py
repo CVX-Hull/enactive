@@ -1,4 +1,4 @@
-"""Strict mission/6 data. Parsing never grants a controller capability.
+"""Strict mission/7 data. Parsing never grants a controller capability.
 
 The existing JSON decoder/schema helpers own duplicate, finite-number and strict
 integer validation. Request dictionaries are decoded copies, not mutable aliases.
@@ -15,10 +15,15 @@ from .contracts import (
     json_object, validate_json,
 )
 
-VERSION = "mission/6"
-MEMORY_VERSION = "campaign-memory/2"
+VERSION = "mission/7"
+MEMORY_VERSION = "campaign-memory/3"
 MAX_REQUEST_BYTES = 65_536
 MAX_CONTEXT_BYTES = 32_768
+MAX_HANDOFF_CONTEXT_BYTES = 131_072
+MAX_HANDOFF_SOURCES = 128
+# Leave room for the bounded mission wrapper and the future post-Pause source.
+# The packet itself must fit the remaining 96KiB before authority is relinquished.
+HANDOFF_CONTEXT_RESERVE = 32_768
 SKILLS = ("navigate", "menu", "item", "activity", "inspect", "edit", "interact")
 LIFECYCLE = ("launch", "create", "save", "exit", "load", "finish")
 INTERACTIONS = (
@@ -147,12 +152,16 @@ _WORK = _object({
     "sources": _IDS, "next_verification": _text(1024),
     "status": _enum("planned", "active", "interrupted", "completed", "failed", "unknown"),
 })
+_WORK_VIEW = _object({**_WORK["properties"],
+    "record_type": {"const": "WorkView"},
+    "sources": {**_array(_ID, MAX_HANDOFF_SOURCES), "uniqueItems": True},
+})
 _DECISION = _object({
     "schema": {"const": MEMORY_VERSION}, "record_type": {"const": "Decision"},
     "id": _ID, "packet_id": _ID, "scope": _SCOPE, "query": _text(1024), "memory_version": _integer(),
     "claim_ids": {**_array(_ID, 32), "uniqueItems": True},
     "work_ids": {**_array(_ID, 16), "uniqueItems": True},
-    "source_ids": {**_array(_ID, 16), "uniqueItems": True},
+    "source_ids": {**_array(_ID, MAX_HANDOFF_SOURCES), "uniqueItems": True},
     "lesson_ids": {**_array(_ID, 16), "uniqueItems": True},
     "omitted": _integer(), "reason": _text(1024),
 })
@@ -614,6 +623,11 @@ def validate_visible_ui(value: dict | None) -> dict | None:
     return data
 
 
+def validate_work_view(value: dict | str | bytes) -> dict:
+    """A coherent projection may retain more premises than one raw assertion."""
+    return _decode(value, _WORK_VIEW, maximum=MAX_HANDOFF_CONTEXT_BYTES)
+
+
 def validate_memory_entry(value: dict | str | bytes, entry_type: str, *, player=False) -> dict:
     if not isinstance(entry_type, str) or entry_type not in _ENTRIES:
         raise ContractError("Unknown memory entry type")
@@ -661,7 +675,7 @@ def _request_schema(kind: str, data: dict) -> dict:
         props["mission_id"] = _ID
         if kind == "result": props["operation_id"] = _ID
         if kind == "context": props.update(query=_text(1024), scope=_SCOPE,
-            max_bytes=_integer(MAX_CONTEXT_BYTES, 512), handoff=_nullable(_object({
+            max_bytes=_integer(MAX_HANDOFF_CONTEXT_BYTES if data.get("handoff") is not None else MAX_CONTEXT_BYTES, 512), handoff=_nullable(_object({
                 "handoff_id": _ID, "prospective_player_id": _ID, "actor_role": _ID})))
     elif kind == "start":
         props.update(request_id=_ID, admission=_ADMISSION)

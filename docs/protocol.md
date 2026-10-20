@@ -119,7 +119,7 @@ planner and supervisor components below remain source/study tools, not another
 execution ingress. The [mission design](design/player-owned-mission.md) owns the
 chosen records, lifecycle requirements and separate native acceptance.
 
-Authenticated `POST /api/mission` accepts one strict mission/6 record, at most65536
+Authenticated `POST /api/mission` accepts one strict mission/7 record, at most65536
 UTF-8 bytes. It reuses host/origin/token and finite/duplicate-key JSON validation;
 operator command/recovery bodies keep4096-byte limits. Required fields and closed
 variants live in [mission_contracts.py](../harness/gameplay/mission_contracts.py),
@@ -368,11 +368,15 @@ and user Pause do not dispatch inputs. Raising the software maximum extends no
 existing admission and establishes no native survival outcome.
 
 `lifecycle(operation=finish)` is the sole normal finish route. Stop carries only
-its Pause reason; former Stop `finish` fields and mission/2, mission/3, mission/4 or mission/5 records reject. The
-current mission/6 contract migrates CLI, viewer, requests, results and fixtures
-without an alias or automatic old-admission import. Native wire4, gameplay/2,
-campaign-memory/2 and archive3 remain unchanged. Prior accepted reports and raw
-mission/2, mission/3, mission/4 and mission/5 artifacts remain historical evidence, not current request inputs.
+its Pause reason; former Stop `finish` fields and mission/2, mission/3, mission/4,
+mission/5 or mission/6 records reject. The
+current mission/7 contract migrates CLI, viewer, requests, results and fixtures
+without an alias or automatic old-admission import. Campaign memory advances to
+campaign-memory/3 and SQLite to ledger9. Native wire4, gameplay/2 and archive3
+remain unchanged. Prior accepted reports and raw older mission/memory/ledger
+artifacts remain historical evidence, not current request inputs. Closed failed
+missions stay closed; a new admission uses a new mission directory, with no
+automatic old-state import or restored authority.
 
 Finish sends no Observe, Resume or game input. It requires empty writer/controller/
 native slots, no live phase or unresolved effect, every owned launch's unique
@@ -397,7 +401,7 @@ native final shutdown or the independent mission.
 
 ### Selected item, inspection and activity composition
 
-Mission/6 retains explicit item units (`items` or `charges`) and root/select/commit
+Mission/7 retains explicit item units (`items` or `charges`) and root/select/commit
 steps. The pure [item policy](../harness/gameplay/interactions.py) checks exact
 represented target, native row contradictions, known availability and chosen
 count. A focus batch sends at most eight observed arrows and never confirms.
@@ -457,7 +461,7 @@ Resume is a separate charged activity child, eligible only at a fresh paused
 normal/menu boundary under the original operator mark. It grants no lease until
 its verified return; root/child/mission time and actor fences still apply before
 publishing a new prompt or normal source. A newer user Pause wins throughout.
-Ledger8 rejects earlier formats before mutation; there is no compatibility reader.
+Ledger9 rejects earlier formats before mutation; there is no compatibility reader.
 Reopening restores neither the private phase nor authority. Source tests do not
 qualify native gameplay. Already-returned but uninterpretable semantic outcomes
 remain unsupported by delivery reconciliation.
@@ -468,7 +472,13 @@ remain unsupported by delivery reconciliation.
 runtime handle/empty queue and reconciled effects. It identifies up to32 retained
 checkpoints and every unfinished Work item (up to16); completed/failed Work with
 lost supporting bytes also needs attention. Classification uses the coherent Work
-projection and at most128 distinct source checks, without truncation. The runtime
+projection without truncation. Before stopping input, one shared checker bounds
+classification, checkpoints and complete required support to127 distinct sources,
+reserving the128th for the future post-Pause source. Required Work must fit a
+complete96KiB packet;32KiB of the128KiB handoff envelope remains reserved for the
+mission wrapper, maximum query and future source metadata. A narrowly typed
+representation refusal sends no input and preserves the original lease, epoch and
+bindings. Actual authority, storage and budget failures still stop. The runtime
 internally stops input, clears the lease/bindings/map, captures the post-Pause normal
 source and checks empty controller/native slots. Atomic issuance records that source,
 controller boot, original operator Pause counter, host/native generations and a new
@@ -477,14 +487,28 @@ epoch. This is not a public user Pause or restored input authority.
 Every `context` request has a required nullable `handoff` field. A successor sets
 `{handoff_id, prospective_player_id, actor_role}` while the issuance is live and
 unconsumed. Its exact wrapper is journaled and cached (last32), with the packet's
-memory version. Ordinary predecessor retrieval uses null. A claim references one
+memory version. Ordinary predecessor retrieval uses null and keeps its32KiB,
+16-source selective envelope. Bound successor retrieval instead returns every
+required Work item, its complete source dispositions and all issuance checkpoints,
+independently of query ranking or unrelated Claims, within128KiB/128sources/16Work.
+Insufficient requested bytes fail explicitly; required Work is never omitted.
+Raw Work assertions retain their eight-source bound. A distinct `WorkView` may
+retain up to128 coherent premises, including incomparable or unavailable sources;
+its historical/unknown state grants no current progress or input authority.
+A claim references one
 to four such packets at the current memory version, covering the issued and current
-unfinished Work set. Corrections or new memory require fresh retrieval. Packets
+unfinished Work set. Work writes are frozen from issuance through claim until
+readmission; permitted Claim corrections require fresh-version retrieval. Packets
 retain explicit omissions/unknowns; unavailable old Work evidence is never upgraded
 to current progress. A claim may declare up to128 retained sources from those
 packets and issuance, including every checkpoint, the post-Pause source and retained support for required
 Work. Source loss after retrieval requires a new packet with an explicit unknown
-disposition; declaring a nonexistent source read cannot repair it.
+disposition; declaring a nonexistent source read cannot repair it. Classification,
+Work support and read declarations share a per-operation128-distinct-source cache;
+the exact live checkpoint guards still verify independently. Arbitrary evidence
+loss can expand previously terminal Work and invalidate finite fit; preflight is
+not a guarantee against later archive corruption. Oversized/lost support stays
+explicitly stopped rather than being truncated or replaced by an older assertion.
 
 `claim` records the successor role and source-read declarations, changes the actor
 atomically, and remains paused. IDs and declarations are audit statements, not
@@ -622,7 +646,7 @@ verified terminal suffix or explicit stop. Historical phase IDs grant no authori
 This selected source path does not establish semantic success, native recovery or
 general recovery from already-returned but uninterpretable outcomes.
 
-Mission/6 and ledger8 migrate all current producers, callers and persisted readers
+Mission/7 and ledger9 migrate all current producers, callers and persisted readers
 together. Earlier mission versions, ledger7 and its old untyped effect shape reject
 without conversion. Retain old mission artifacts and saves as evidence; only a
 separately admitted current mission can start anew. Migration never resets input
@@ -859,7 +883,7 @@ and journal evidence, granting no authority, replay or inferred resolution.
 
 The lead designates one general-purpose player for a finite mission. It chooses
 plans, interprets evidence, retrieves/updates memory and requests semantic skills
-and registered normal lifecycle through mission/6. The lead owns source/release
+and registered normal lifecycle through mission/7. The lead owns source/release
 acceptance, finite admission, shared runtime custody, escalation and final
 verification. It supplies no ordinary gameplay rescue in the deciding mission.
 Explorers/reviewers never send inputs. Actor names and instructions are workflow

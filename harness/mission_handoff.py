@@ -7,11 +7,13 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 import os
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Callable
 
 from .controller import MAX_WAIT, ControlError
 from .gameplay.contracts import EvidenceRef
-from .gameplay.mission_contracts import VERSION
+from .gameplay.mission_contracts import (
+    VERSION, MAX_HANDOFF_CONTEXT_BYTES, MAX_HANDOFF_SOURCES, HANDOFF_CONTEXT_RESERVE,
+)
 from .gameplay.evidence import CapacityError, EvidenceError, same_native_state
 from .gameplay.mission_ledger import BudgetError, LedgerError
 
@@ -31,7 +33,7 @@ class HandoffPhase:
 
 
 class HandoffEvidenceError(EvidenceError):
-    """Correctable claim evidence failure; no input or epoch change occurred."""
+    """Correctable representation/claim failure before any input or epoch change."""
 
 
 class RegisteredHandoff:
@@ -60,12 +62,23 @@ class RegisteredHandoff:
                ("request.json", "claimed.json", "control.json", "control-claimed.json")):
             raise ControlError("Handoff requires empty native inboxes")
 
-    def _source(self, identity: str) -> EvidenceRef:
+    def _source_checker(self, maximum: int = MAX_HANDOFF_SOURCES) -> tuple[dict[str, EvidenceRef], Callable[[str], str]]:
+        """One operation's distinct checks, including classification/checkpoints."""
         r = self.runtime
-        ref = next((ref for ref in r._store.historical_references if ref.observation_id == identity), None)
-        if ref is None or r._store.source_status(ref) != "retained":
-            raise EvidenceError("Handoff source unavailable: " + identity)
-        return ref
+        refs, checks = r._memory._references(), {}
+        def status(identity: str) -> str:
+            if identity not in checks:
+                if len(checks) >= maximum:
+                    raise CapacityError("Handoff aggregate source-check bound exhausted; no truncation")
+                try:
+                    checks[identity] = (r._store.source_status(refs[identity]) if identity in refs
+                                        else "unavailable")
+                except CapacityError:
+                    raise
+                except EvidenceError as exc:
+                    checks[identity] = ("unavailable: " + str(exc))[:1024]
+            return checks[identity]
+        return refs, status
 
     def _observe(self, work: _Work) -> tuple[dict, float]:
         r = self.runtime
@@ -85,11 +98,23 @@ class RegisteredHandoff:
             raise ControlError("Handoff requires settled adopted normal play")
         launch = r._registered_lifecycle._owned()
         mark = launch.operator_mark
-        for identity in data["checkpoint_ids"]:
-            self._source(identity)
-        unfinished = self._unfinished()
+        # Prove complete successor representability while the original lease is
+        # still live. Reserve one distinct source for the future post-Pause frame.
+        _, status = self._source_checker(MAX_HANDOFF_SOURCES - 1)
+        try:
+            for identity in data["checkpoint_ids"]:
+                if status(identity) != "retained":
+                    raise EvidenceError("Handoff source unavailable: " + identity)
+            unfinished = self._unfinished(status)
+            r._memory.context(r._coordinate_scope(before), "Complete unfinished Work for successor",
+                max_bytes=MAX_HANDOFF_CONTEXT_BYTES - HANDOFF_CONTEXT_RESERVE,
+                required_work_ids=frozenset(unfinished), support_source_ids=tuple(data["checkpoint_ids"]),
+                source_status=status, cache=False, **r._clocks())
+        except CapacityError as exc:
+            raise HandoffEvidenceError("Handoff representation refused before stopping input: " + str(exc)) from exc
         if set(data["unfinished_work_ids"]) != unfinished:
             raise LedgerError("Handoff must identify every unfinished Work item, without truncation")
+        r._check_lease()  # User Pause during source verification always wins.
         r.controller.stop_input()  # Internal stop; never cancel this handle or advance ledger epoch here.
         r._lease, r._map = None, None
         r._bindings.clear()
@@ -118,24 +143,23 @@ class RegisteredHandoff:
             self.phase = HandoffPhase(data["request_id"], ref, mark, live[1], state["takeover_generation"], result["epoch"])
         return "completed", result
 
-    def _unfinished(self) -> set[str]:
+    def _unfinished(self, source_status: Callable[[str], str] | None = None) -> set[str]:
         r = self.runtime
         refs = r._memory._references()
         views, _ = r._memory._work_views(r._ledger.memory_records("work"), refs)
-        checks: dict[str, bool] = {}
-        def retained(identity: str) -> bool:
-            if identity not in checks:
-                if len(checks) >= 128:
-                    raise CapacityError("Handoff Work source-check bound exhausted; no truncation")
-                try:
-                    checks[identity] = identity in refs and r._store.source_status(refs[identity]) == "retained"
-                except CapacityError:
-                    raise
-                except EvidenceError:
-                    checks[identity] = False
-            return checks[identity]
+        if source_status is None:
+            _, source_status = self._source_checker()
         return {identity for identity, entry in views.items() if entry["status"] not in ("completed", "failed")
-            or any(not retained(s) for s in entry["sources"])}
+            or any(source_status(s) != "retained" for s in entry["sources"])}
+
+    def context_options(self) -> dict:
+        """Only called after the live successor context binding has passed."""
+        r, phase = self.runtime, self.phase
+        issued = r._ledger.request(phase.handoff_id)["result"]
+        _, status = self._source_checker()
+        required = set(issued["unfinished_work_ids"]) | self._unfinished(status)
+        return dict(required_work_ids=frozenset(required), source_status=status,
+            support_source_ids=tuple(dict.fromkeys(issued["checkpoint_ids"] + [issued["post_pause_source_id"]])))
 
     def context_binding(self, work: _Work) -> dict | None:
         r, binding = self.runtime, work.request["handoff"]
@@ -186,8 +210,13 @@ class RegisteredHandoff:
                     or wrapper["packet"]["memory_version"] != r._memory_version):
                 raise HandoffEvidenceError("Claim requires fresh-version successor-bound issued context packets")
             packets.append(wrapper["packet"])
+        refs, status = self._source_checker()
+        def retained(identity: str) -> EvidenceRef:
+            if status(identity) != "retained":
+                raise EvidenceError("Handoff source unavailable: " + identity)
+            return refs[identity]
         represented_work = {entry["id"] for packet in packets for entry in packet["work"]}
-        required_work = set(issued["unfinished_work_ids"]) | self._unfinished()
+        required_work = set(issued["unfinished_work_ids"]) | self._unfinished(status)
         if len(required_work) > 16:
             raise HandoffEvidenceError("Claim unfinished Work bound exceeded; no truncated handoff")
         if not required_work <= represented_work:
@@ -205,7 +234,7 @@ class RegisteredHandoff:
                         raise HandoffEvidenceError("Work packet omitted a source disposition")
                     if sources[identity]["status"] == "retained":
                         try:
-                            self._source(identity)
+                            retained(identity)
                         except EvidenceError as exc:
                             raise HandoffEvidenceError("Work source changed after retrieval; retrieve its unknown disposition") from exc
                         needed.add(identity)
@@ -214,7 +243,7 @@ class RegisteredHandoff:
         if not set(data["read_source_ids"]) <= allowed or not needed <= set(data["read_source_ids"]):
             raise HandoffEvidenceError("Claim read declarations must cover checkpoints/retained Work support and refer to issued sources")
         for identity in data["read_source_ids"]:
-            self._source(identity)
+            retained(identity)
         self.guard(work, phase, ledger_phase="handoff")
         result = r._ledger.consume_handoff(data["request_id"], actor_id=data["player_id"], actor_role=data["actor_role"], now=r._wall())
         with r._metadata:

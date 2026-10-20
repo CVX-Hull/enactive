@@ -27,7 +27,7 @@ def scope():
 
 
 def claim(**changes):
-    fields = dict(schema="campaign-memory/2", record_type="Claim", id="claim-1", kind="interpretation",
+    fields = dict(schema="campaign-memory/3", record_type="Claim", id="claim-1", kind="interpretation",
                   key={"subject": "water", "property": "supply", "unit": "charges", "coverage_id": "page-1"},
                   value={"quantity": 18, "state": None}, text="Visible clean water count",
                   scope=scope(), observed_time={"revision": 30, "turn": None}, received_time=100_000,
@@ -38,7 +38,7 @@ def claim(**changes):
 
 
 def request(kind="observe", **changes):
-    fields = dict(schema="mission/6", kind=kind, request_id="request-1", mission_id="mission-test", epoch=0)
+    fields = dict(schema="mission/7", kind=kind, request_id="request-1", mission_id="mission-test", epoch=0)
     if kind == "handoff":
         fields.update(unfinished_work_ids=[])
     if kind == "lifecycle":
@@ -123,10 +123,10 @@ class MissionContractTests(unittest.TestCase):
             with self.assertRaises(ContractError): MissionLimits(wall_seconds=value)
 
     def test_closed_requests_and_scope_binding(self):
-        valid = [request(), {"schema": "mission/6", "kind": "start", "request_id": "start-1", "admission": admission().to_dict()},
-                 {"schema": "mission/6", "kind": "status", "mission_id": "mission-test"},
-                 {"schema": "mission/6", "kind": "result", "mission_id": "mission-test", "operation_id": "old-1"},
-                 {"schema": "mission/6", "kind": "context", "handoff": None, "mission_id": "mission-test", "query": "water", "scope": scope(), "max_bytes": 32768},
+        valid = [request(), {"schema": "mission/7", "kind": "start", "request_id": "start-1", "admission": admission().to_dict()},
+                 {"schema": "mission/7", "kind": "status", "mission_id": "mission-test"},
+                 {"schema": "mission/7", "kind": "result", "mission_id": "mission-test", "operation_id": "old-1"},
+                 {"schema": "mission/7", "kind": "context", "handoff": None, "mission_id": "mission-test", "query": "water", "scope": scope(), "max_bytes": 32768},
                  skill(), request("stop", reason="Pause")]
         for value in valid:
             with self.subTest(kind=value["kind"]): self.assertEqual(validate_request(value), value)
@@ -139,7 +139,8 @@ class MissionContractTests(unittest.TestCase):
         self.assertEqual(validate_request(value), value)
         for changed in ({**value, "finish": False}, {**value, "finish": True},
                         {**value, "schema": "mission/2"}, {**value, "schema": "mission/3"},
-                        {**value, "schema": "mission/4"}, {**value, "schema": "mission/5"}):
+                        {**value, "schema": "mission/4"}, {**value, "schema": "mission/5"},
+                        {**value, "schema": "mission/6"}):
             with self.subTest(changed=changed), self.assertRaises(ContractError):
                 validate_request(changed)
 
@@ -167,6 +168,7 @@ class MissionContractTests(unittest.TestCase):
             with self.subTest(field=field), self.assertRaises(ContractError): validate_request(old)
         with self.assertRaises(ContractError): validate_request(skill(schema="mission/1"))
         with self.assertRaises(ContractError): validate_memory_entry(claim(schema="campaign-memory/1"), "claim")
+        with self.assertRaises(ContractError): validate_memory_entry(claim(schema="campaign-memory/2"), "claim")
         with self.assertRaises(ContractError): MissionAdmission.from_dict({**admission().to_dict(), "schema": "mission/4"})
         for goal in ({"purpose": "alarm", "label": "8 hours", "outcome": "selected"},
                      {"purpose": "alarm", "label": "8 hours", "outcome": "activated", "quantity": 1}):
@@ -277,7 +279,7 @@ class MissionContractTests(unittest.TestCase):
         with self.assertRaises(ContractError): validate_request({**value, "entry": claim()})
 
     def test_decisions_require_an_explicit_context_packet_reference(self):
-        decision = dict(schema="campaign-memory/2", record_type="Decision", id="decision-1",
+        decision = dict(schema="campaign-memory/3", record_type="Decision", id="decision-1",
                         packet_id="packet-1", scope=scope(), query="water", memory_version=3,
                         claim_ids=["claim-1"], work_ids=[], source_ids=["source-1"],
                         lesson_ids=[], omitted=0, reason="Check the last observed supply")
@@ -296,8 +298,8 @@ class MissionContractTests(unittest.TestCase):
             with self.assertRaises(ContractError): validate_visible_ui(bad)
 
     def test_duplicate_nonfinite_oversized_and_mutable_alias_inputs_reject(self):
-        for value in ['{"schema":"mission/6","kind":"observe","kind":"stop"}',
-                      '{"schema":"mission/6","kind":"observe","epoch":NaN}',
+        for value in ['{"schema":"mission/7","kind":"observe","kind":"stop"}',
+                      '{"schema":"mission/7","kind":"observe","epoch":NaN}',
                       ' ' * MAX_REQUEST_BYTES + json.dumps(request())]:
             with self.assertRaises(ContractError): validate_request(value)
         original = skill(); parsed = validate_request(original)

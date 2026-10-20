@@ -129,8 +129,10 @@ The survival campaign must not depend on user keystrokes or routine rescue.
 Verify automated control/recovery access before admission; required human help is
 a retained autonomy failure, not accepted recovery. Native UI operation still uses
 ordinary engine input and current visible evidence; it cannot relax remote guards.
-Routine admitted gameplay must use a reviewed, project-scoped command allowance
-without repeated per-action approval. Before ordinary gameplay or player replacement,
+Routine admitted gameplay, observation, memory, lifecycle, handoff and supporting
+request/result plumbing must incur neither human approval nor automatic approval/
+guardrail-review round trips. Configure the supported project-scoped execution
+path during setup. Before ordinary gameplay or player replacement,
 verify effective project trust/rule loading and a harmless live call from the
 actual designated player, using its exact command entry point. A rule match alone
 does not pass this gate. Resolve recurring reviews in setup; do not normalize

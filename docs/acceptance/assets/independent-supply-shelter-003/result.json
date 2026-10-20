@@ -1,0 +1,43 @@
+{
+  "outcome": "FAILED independent003 before world/character creation: lead-admitted26-character world name cannot use24-character whole-value typed editor",
+  "source_commit": "e92734f82b813ac501d159e8440c13bcd47e0bbf",
+  "requests": 10,
+  "charged_inputs": 7,
+  "returned": 7,
+  "unknown": 0,
+  "unreconciled_effects": 0,
+  "frames": 22,
+  "png_bytes": 647611,
+  "canonical_game_seconds": null,
+  "wall_seconds_through_stopped_owner_watermark": 168.16785502433777,
+  "wall_seconds_through_process_shutdown_verification": 298.95715618133545,
+  "normal_adoption": false,
+  "normal_save": false,
+  "normal_exit": false,
+  "normal_finish": false,
+  "lead_gameplay_rescue": false,
+  "player_quiescent": true,
+  "game_signals": 1,
+  "exceptional_failed_setup_teardowns": 1,
+  "child_exit_code": 0,
+  "service_exit_code": 0,
+  "in_memory_progress_preserved": null,
+  "model_tool_approval_usage": null,
+  "original_epoch": 1,
+  "reopened_epoch": 4,
+  "reopen_grants_authority": false,
+  "recorded_at": 1792535081.3288372,
+  "native_intervals": {
+    "scope": "Seven returned setup/resume preflight-to-ACK intervals; no native/whole-skill/model/tool/display general performance claim",
+    "samples": 7,
+    "unknown": 0,
+    "median_ms": 49.94291719049215,
+    "nearest_rank_p95_ms": 74.76633321493864,
+    "sum_intervals_seconds": 0.38696908252313733
+  },
+  "blocked_zero_input_request": {
+    "request_id": "indep003-newgame-001",
+    "reason": "Horizontal/tab/column interpretations support focused outcomes only"
+  },
+  "next_disposition": "Use a genuinely new finite admission with current edit-goal-schema-valid fresh names; no source repair/contract migration required for a shorter proposed scenario. Preserve all original costs/failure; no resume/transfer."
+}

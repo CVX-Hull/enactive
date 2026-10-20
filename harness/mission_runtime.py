@@ -849,7 +849,9 @@ class MissionRuntime:
         allowance = data["max_bytes"] - len(canonical(wrapper).encode()) + len("null")
         if allowance < 512:
             raise ContractError("Context allowance cannot hold wrapper and memory packet")
-        packet = self._memory.context(data["scope"], data["query"], max_bytes=allowance, **self._clocks())
+        options = {} if handoff is None else self._registered_handoff.context_options()
+        packet = self._memory.context(data["scope"], data["query"], max_bytes=allowance,
+            **options, **self._clocks())
         wrapper["packet"] = packet
         if len(canonical(wrapper).encode()) > data["max_bytes"]:
             raise ContractError("Context wrapper exceeds requested byte ceiling")
@@ -867,6 +869,8 @@ class MissionRuntime:
 
     def _memory_request(self, work: _Work) -> dict:
         self._check_cancelled(work)
+        if work.request["entry_type"] == "work" and self._registered_handoff.phase is not None:
+            raise HandoffEvidenceError("Work updates are frozen during handoff; retrieve/claim/readmit first")
         if work.request["entry_type"] == "decision" and work.request["entry"]["packet_id"] not in self._issued_packets:
             raise ContractError("Decision requires a durably issued context wrapper")
         result = self._memory.apply(work.request, now=self._wall())

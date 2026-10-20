@@ -6,8 +6,8 @@ status: active
 
 # Current architecture
 
-Current source contracts are native4, mission/6, campaign-memory/2, gameplay/2,
-evidence archive3 and mission ledger8. One MissionRuntime owns the live mission API.
+Current source contracts are native4, mission/7, campaign-memory/3, gameplay/2,
+evidence archive3 and mission ledger9. One MissionRuntime owns the live mission API.
 The wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.
 Start is source-free and cannot adopt an unrelated already-running character. The
@@ -60,11 +60,19 @@ into that same contract. It owns no live state or source selection; receiver gua
 remain authoritative. This small composition gap does not justify another service,
 schema framework, history layer or dependency.
 
+Memory assertions and their combined views have separate bounds. A `WorkView`
+retains all coherent premises, including conflicts, rather than forcing history
+back into one assertion's eight-source shape. Handoff uses a complete required-Work
+packet and checks its finite fit before relinquishing the player lease. Work
+updates then freeze until successor claim/readmission. Ordinary queries remain
+small; unavailable support stays unknown. The [replacement contract](protocol.md#quiescent-player-replacement)
+owns the exact source/byte bounds and later evidence-loss limits.
+
 | Boundary / owner | Input and output | Authority and failure behavior |
 | --- | --- | --- |
 | Lead / active Codex chat | Objective → frozen admission, reviewed source and acceptance | Owns shared runtime and integration; no ordinary gameplay rescue in the deciding mission |
 | Designated player / general-purpose agent | Visible evidence and memory → typed mission requests, plans and verification | One bounded actor; fresh-context handoff needs quiescence and one-use accounting; no authority from a summary |
-| Mission runtime / harness maintainer | mission/6 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
+| Mission runtime / harness maintainer | mission/7 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
 | Controller / harness maintainer | State-bound command → native request and correlated receipt | Serialized ordinary/control writers, exact process-local lease, Pause revocation and native fences; never edits saves |
 | Native bridge / integration maintainer | Bounded request → actual input, visible metadata and rendered frame | Engine validates outcomes on its game thread; unsupported boundaries cannot claim success |
 | Spectator / viewer maintainer | Frame and mission snapshot → inspectable progress, uncertainty and Pause | Mission Observe uses typed ingress; raw input/Resume/recovery disabled while nonterminal; malformed state stays locked |
@@ -109,7 +117,7 @@ screen, NEXT_TAB begins character completion and is blocked as ordinary focus;
 returning to a previous tab remains available. World FINALIZE and character finish
 use explicit registered lifecycle stage commits, separate from ordinary focus.
 
-Ledger8 records Resume under admitted lifecycle/readmission or an exact activity
+Ledger9 records Resume under admitted lifecycle/readmission or an exact activity
 resume child, and charges activity controls through the same primitive table.
 Prepare and reopen share parent/answer rules; prior ledger formats reject unchanged.
 The controller's trusted Resume compares controller boot, operator-Pause counter,
@@ -237,7 +245,7 @@ and a fresh paused diagnostic source. Separate normal-play readmission charges
 one Resume. Navigation continuation retains the original goal, Work, game-time
 anchor and cumulative root limits; competing roots and handoff remain fenced.
 Reopen validates historical proof but restores no private phase or input consent.
-The single current effect envelope and ledger8 reject older shapes rather than
+The single current effect envelope and ledger9 reject older shapes rather than
 converting them. This source integration is not native recovery qualification or
 an additional executor/history store. Ambiguous delivery and unsupported semantic
 uncertainty remain stopped; a later expected-looking frame cannot supply proof.

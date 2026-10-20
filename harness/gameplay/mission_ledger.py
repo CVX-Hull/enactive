@@ -24,7 +24,7 @@ from .mission_contracts import (
     validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission,
 )
 
-DB_VERSION = 8
+DB_VERSION = 9
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
 MAX_RECEIPT_BYTES = 65_536
 MAX_EFFECT_BYTES = 32_768

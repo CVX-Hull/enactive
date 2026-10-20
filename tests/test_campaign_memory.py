@@ -17,7 +17,7 @@ from unittest.mock import patch
 from harness.gameplay.campaign_memory import CampaignMemory
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import CapacityError, EvidenceStore
-from harness.gameplay.mission_contracts import MEMORY_VERSION, VERSION, canonical, validate_memory_entry
+from harness.gameplay.mission_contracts import MEMORY_VERSION, VERSION, canonical, validate_memory_entry, validate_work_view
 from harness.gameplay.mission_ledger import LedgerError, MissionLedger
 from tests.test_gameplay_evidence import observation, png
 from tests.test_mission_contracts import admission, claim, request, scope, skill
@@ -511,7 +511,59 @@ class CampaignMemoryTests(unittest.TestCase):
             {"ground-prompt": 6, "consume-page": 18})
         self.assertLessEqual(len(canonical(packet).encode()), 32768)
         for work in packet["work"]:
-            validate_memory_entry(work, "work")
+            validate_work_view(work)
+
+    def test_valid_eight_source_update_retains_nine_source_coherent_view(self):
+        first = self.source(30)
+        self.remember(self.work(first))
+        menus = [self.source(31+i, menu=True) for i in range(8)]
+        updated = self.work(menus[-1], sources=[ref.observation_id for ref in menus], progress=80)
+        self.remember(updated)
+        expected = {first.observation_id, *(ref.observation_id for ref in menus)}
+        packet = self.context()
+        view = packet["work"][0]
+        self.assertEqual(view["record_type"], "WorkView")
+        self.assertEqual(set(view["sources"]), expected)
+        self.assertEqual(view["status"], "unknown")
+        self.assertIsNone(view["progress"])
+        self.assertEqual(validate_work_view(view), view)
+        with self.assertRaises(ContractError):
+            validate_memory_entry({**view, "record_type": "Work"}, "work")
+        complete = self.context("irrelevant", required_work_ids=frozenset([view["id"]]))
+        self.assertEqual(set(complete["work"][0]["sources"]), expected)
+        self.assertEqual({ref["id"] for ref in complete["sources"]}, expected)
+        self.assertEqual(complete["omitted"]["work"], 0)
+        self.assertEqual(complete["claims"], [])
+        with self.assertRaises(CapacityError):
+            self.context("irrelevant", required_work_ids=frozenset([view["id"]]),
+                         max_bytes=len(canonical(complete).encode())-1)
+        Path(first.frame_path).unlink()
+        missing = self.context("irrelevant", required_work_ids=frozenset([view["id"]]))
+        self.assertEqual(set(missing["work"][0]["sources"]), expected)
+        self.assertEqual(missing["work"][0]["status"], "unknown")
+        self.assertEqual(missing["work"][0]["observed_output"], [])
+        self.assertNotEqual(next(s for s in missing["sources"] if s["id"]==first.observation_id)["status"], "retained")
+
+    def test_complete_work_context_and_decision_can_retain_more_than_sixteen_premises(self):
+        first = self.source(30)
+        self.remember(self.work(first))
+        expected = {first.observation_id}
+        for group in range(2):
+            refs = [self.source(31+group*8+i, turn=5+group, menu=i!=0) for i in range(8)]
+            expected.update(ref.observation_id for ref in refs)
+            self.remember(self.work(refs[-1], sources=[r.observation_id for r in refs]))
+        self.assertEqual(len(expected), 17)
+        ordinary = self.context()
+        self.assertEqual(ordinary["work"], [])
+        self.assertEqual(ordinary["omitted"]["reasons"]["work/source limit"], 1)
+        packet = self.context("replace context", required_work_ids=frozenset(["water-craft"]), max_bytes=131072)
+        self.assertEqual(set(packet["work"][0]["sources"]), expected)
+        self.assertEqual(packet["work"][0]["status"], "unknown")
+        decision = dict(schema=MEMORY_VERSION, record_type="Decision", id="large-closure-decision",
+            packet_id=packet["packet_id"], scope=scope(), query=packet["query"], memory_version=packet["memory_version"],
+            claim_ids=[], work_ids=["water-craft"], source_ids=sorted(expected), lesson_ids=[],
+            omitted=packet["omitted"]["claims"]+packet["omitted"]["work"], reason="Retain every premise before replanning")
+        self.assertEqual(self.memory.record_decision(decision, now=1000)["entry"], decision)
 
     def test_source_checks_are_bounded_and_dependency_closure_cannot_disappear(self):
         refs = [self.source(i + 1) for i in range(20)]

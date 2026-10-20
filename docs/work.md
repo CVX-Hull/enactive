@@ -44,7 +44,7 @@ ownership and observer visibility feed one [supply-and-shelter acceptance #144](
 then a [fresh seven-day assessment #145](https://github.com/CVX-Hull/enactive/issues/145)
 with the engineering lead outside gameplay. Reviewed component readiness permits
 shared native validation; the mission does not wait for component issue closure.
-The current source ingress is mission/6, with coordinated item/activity/inspection
+The current source ingress is mission/7, with coordinated item/activity/inspection
 records and rejection of prior contracts. Native capability qualification remains
 separate from source integration.
 Start/Observe remain read-only until the
@@ -126,7 +126,7 @@ retirement can prove unclaimed custody only for its exact request; an absent inb
 or later frame alone cannot prove delivery. Original unknown receipts,
 costs, root limits and user Pause remain intact. It reuses the mission writer,
 ledger, controller and deliberate charged Resume rather than adding an outbox or
-another executor. Mission/6 and ledger8 migrate every current caller and reject
+another executor. Mission/7 and ledger9 migrate every current caller and reject
 old shapes. Original dispatch custody and evidence capacity survive uncertainty;
 one pre-Observe collection retains exact unclaimed retirement or terminal evidence.
 Framed terminal bytes use the original reservation before diagnostic Observe.
@@ -208,12 +208,27 @@ must be registered and sends only one input, never an automatic answer. General
 setup abortion remains unsupported. Independent source/test/report readers verify
 the repair; no parallel implementation worker or new framework is warranted.
 
-Next: reviewed #163 source/report and common/both exact CI → new finite Native011
-item-menu dismissal and normal ending → #156 actual readiness → genuinely new
-#157/#144 player and retained-memory successor → #145 evidence-backed seven-day
-plan or owned blockers. Never resume or relabel002. Changed host validation needs
-actual scoped qualification; an unchanged native binary needs no rebuild solely
-for that change. No old failure, allowance or date resets. General setup
+[Native011](acceptance/2026-10-20-registered-dismissal-qualified.md) passed scoped
+registered dismissal and normal ending on e92734f, with independent audit, common
+checks and both exact hosted lanes. The
+[third deciding attempt](acceptance/2026-10-20-independent-mission-third-attempt.md)
+failed on a lead-admitted fresh name beyond the typed editor's capacity. A new,
+schema-validated scenario then reached actual registered handoff, but its
+[fresh successor failed required-Work retrieval](acceptance/2026-10-20-independent-mission-fourth-attempt.md).
+Both attempts are closed; all failures, costs and exceptional cleanup remain.
+
+#165 owns the coupled representability repair: raw eight-source assertions and
+coherent Work views have separate bounds; complete handoff context is checked
+before authority is relinquished, and Work writes freeze until readmission.
+Current source migrates every active caller to mission/7, campaign-memory/3 and
+ledger9. Tests/source review do not accept native successor play. #166 owns the
+user's explicit zero routine approval-review requirement; literal allow matching
+and an approved passive call do not prove it. #164 owns automated request/result/
+image handling with that requirement. These are actual owned next steps before
+#156 readiness, a genuinely new #157/#144 mission and #145's finite seven-day plan
+or blockers. Never resume or relabel a failed attempt. Changed host validation
+needs actual scoped acceptance; the unchanged native binary needs no rebuild
+solely for this source change. No old allowance or date resets. General setup
 cancellation remains unsupported beyond its narrow existing branch.
 
 #143 owns active observer cadence and measured presentation. The

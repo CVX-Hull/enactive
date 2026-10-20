@@ -10,13 +10,13 @@ from __future__ import annotations
 import hashlib
 import math
 import re
-from typing import Any
+from typing import Any, Callable
 
 from .contracts import ContractError, EvidenceRef, json_object
 from .evidence import CapacityError, EvidenceError, EvidenceStore
 from .mission_contracts import (
-    MAX_CONTEXT_BYTES, MEMORY_VERSION, VERSION, canonical, validate_memory_entry,
-    validate_request,
+    MAX_CONTEXT_BYTES, MAX_HANDOFF_CONTEXT_BYTES, MAX_HANDOFF_SOURCES,
+    MEMORY_VERSION, VERSION, canonical, validate_memory_entry, validate_work_view, validate_request,
 )
 from .mission_ledger import MissionLedger
 
@@ -282,16 +282,27 @@ class CampaignMemory:
         return views, reasons
 
     def context(self, scope: dict, query: str, *, max_bytes: int, now_monotonic: float,
-                now_timestamp_ms: int) -> dict:
-        """Return at most 32KiB/32claims/16work/16sources with complete premises.
+                now_timestamp_ms: int, required_work_ids: frozenset[str] | None = None,
+                support_source_ids: tuple[str, ...] = (),
+                source_status: Callable[[str], str] | None = None, cache: bool = True) -> dict:
+        """Selective32KiB/16sources, or complete handoff128KiB/128sources.
 
         Source-check work is bounded separately from retained archive size. Broken
         frontier sources remain unknown across reopen; no fallback selects an older
         matching sentence. Historical scope hints remain explicitly last_seen.
         """
+        complete = required_work_ids is not None
+        if complete and type(required_work_ids) is not frozenset:
+            raise ContractError("Complete context requires an explicit frozen Work set")
+        maximum = MAX_HANDOFF_CONTEXT_BYTES if complete else MAX_CONTEXT_BYTES
+        source_limit = MAX_HANDOFF_SOURCES if complete else MAX_SOURCES
+        if type(max_bytes) is not int or not 512 <= max_bytes <= maximum:
+            raise ContractError("Context byte allowance is outside its current mode")
+        if not complete and (support_source_ids or source_status is not None):
+            raise ContractError("Additional source checks require complete handoff context")
         scope = self._scope(scope)
         validate_request({"schema": VERSION, "kind": "context", "handoff": None, "mission_id": scope["mission_id"],
-                          "scope": scope, "query": query, "max_bytes": max_bytes})
+                          "scope": scope, "query": query, "max_bytes": min(max_bytes, MAX_CONTEXT_BYTES)})
         _clock(now_monotonic)
         _wall_clock(now_timestamp_ms)
         rows = {kind: self.ledger.memory_records(kind) for kind in ("claim", "work", "decision")}
@@ -299,6 +310,8 @@ class CampaignMemory:
         claims = {r["entry"]["id"]: r["entry"] for r in rows["claim"]}
         refs = self._references()
         work, work_reasons = self._work_views(rows["work"], refs)
+        if complete and (len(required_work_ids) > MAX_WORK or not required_work_ids <= work.keys()):
+            raise CapacityError("Complete handoff context requires every bounded Work identity")
         frontiers, retired = self._frontier(claims)
         primitives = self.ledger.primitive_records()
         frontier_ids = {identity for ids in frontiers for identity in ids}
@@ -311,7 +324,8 @@ class CampaignMemory:
         checks: dict[str, str] = {}
         current = None
         try:
-            current, fresh = self.store.inspect_current(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
+            current, fresh = (None, False) if complete else self.store.inspect_current(
+                now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
             if current is not None:
                 checks[current.observation_id] = "retained"
             if not fresh:
@@ -323,14 +337,16 @@ class CampaignMemory:
             current = None
         # inspect_current may have verified an opaque menu source before returning
         # None. Reserve its one check even when its identity was not returned.
-        reserved_check = 0 if checks else 1
+        reserved_check = 0 if complete or checks else 1
 
         def check(identity: str) -> str:
             if identity not in checks:
-                if len(checks) + reserved_check >= MAX_SOURCES:
+                if len(checks) + reserved_check >= source_limit:
                     raise CapacityError("Packet source-check budget exhausted")
                 ref = refs.get(identity)
-                if ref is None:
+                if source_status is not None:
+                    checks[identity] = source_status(identity)
+                elif ref is None:
                     checks[identity] = "unavailable"
                 else:
                     try:
@@ -375,9 +391,10 @@ class CampaignMemory:
             eligibility = 0 if fresh else (1 if usable else 2)
             return (0 if exact else 1, eligibility, -score, entries[0]["id"])
 
-        groups = [ids for ids in frontiers if not terms or rank([claims[i] for i in ids])[2] < 0]
+        groups = [] if complete else [ids for ids in frontiers if not terms or rank([claims[i] for i in ids])[2] < 0]
         groups.sort(key=lambda ids: rank([claims[i] for i in ids]))
-        ordered_work = [entry for entry in work.values() if not terms or rank([entry])[2] < 0]
+        ordered_work = ([work[identity] for identity in sorted(required_work_ids)] if complete else
+            [entry for entry in work.values() if not terms or rank([entry])[2] < 0])
         ordered_work.sort(key=lambda entry: rank([entry]))
         packet: dict[str, Any] = {"schema": MEMORY_VERSION, "record_type": "Context", "packet_id": "",
             "scope": scope, "query": query, "memory_version": version,
@@ -386,7 +403,9 @@ class CampaignMemory:
             "omitted": {"claims": len(claims), "work": len(work), "bounds": 0, "reasons": {}},
             "reobservations": [], "grants_authority": False}
         selected: set[str] = set()
-        selected_sources: set[str] = set()
+        selected_sources: set[str] = set(support_source_ids)
+        if len(selected_sources) > source_limit:
+            raise CapacityError("Complete handoff support source bound exhausted")
 
         def finish(value: dict) -> dict:
             result = _copy(value)
@@ -402,6 +421,9 @@ class CampaignMemory:
         def add_sources(candidate: dict, identities: set[str]) -> None:
             candidate["sources"] = [{"id": identity, "status": check(identity),
                 "reference": None if identity not in refs else refs[identity].to_dict()} for identity in sorted(identities)]
+
+        if complete:
+            add_sources(packet, selected_sources)
 
         def reobserve(candidate: dict, entry: dict, reason: str) -> None:
             candidate["reobservations"].append({"id": entry["id"], "scope": entry["scope"],
@@ -458,12 +480,15 @@ class CampaignMemory:
 
         for original in ordered_work:
             source_ids = selected_sources | set(original["sources"])
-            if (len(original["sources"]) > 8 or len(packet["work"]) >= MAX_WORK or len(source_ids) > MAX_SOURCES
-                    or len(set(checks) | source_ids) + reserved_check > MAX_SOURCES):
+            if (len(original["sources"]) > MAX_HANDOFF_SOURCES or len(packet["work"]) >= MAX_WORK
+                    or len(source_ids) > source_limit
+                    or len(set(checks) | source_ids) + reserved_check > source_limit):
+                if complete:
+                    raise CapacityError("Complete handoff Work/source bound exhausted; no omission")
                 omit("work/source limit", 1)
                 continue
             candidate = _copy(packet)
-            entry = _copy(original)
+            entry = validate_work_view({**original, "record_type": "WorkView"})
             bad = [s for s in entry["sources"] if check(s) != "retained"]
             effects = self._effects(entry, refs, primitives)
             unresolved = [p["logical_id"] for p in primitives if p["logical_id"] in set(effects) | set(entry["unresolved_effects"])
@@ -485,6 +510,8 @@ class CampaignMemory:
                 # The closed schema bounds this list; do not silently discard a
                 # premise when an old work item has too many unresolved effects.
                 if len(unresolved) > 16:
+                    if complete:
+                        raise CapacityError("Complete handoff unresolved-effect bound exhausted")
                     omit("work unresolved-effect limit", 1)
                     continue
                 reasons.append("unknown delivery/effect remains unresolved")
@@ -498,6 +525,8 @@ class CampaignMemory:
             if fits(candidate):
                 packet, selected_sources = candidate, source_ids
             else:
+                if complete:
+                    raise CapacityError("Complete handoff packet byte limit; no omission")
                 omit("packet byte limit", 1)
         if not packet["claims"] and not packet["work"]:
             packet["reobservations"] = [{"scope": scope, "reason": "No supported matching memory fits this packet",
@@ -505,8 +534,9 @@ class CampaignMemory:
         packet = finish(packet)
         if len(canonical(packet).encode()) > max_bytes:
             raise CapacityError("Packet cap cannot retain its envelope and explicit omissions")
-        self._packets.append(_copy(packet))
-        self._packets = self._packets[-32:]
+        if cache:
+            self._packets.append(_copy(packet))
+            self._packets = self._packets[-32:]
         return _copy(packet)
 
     def record_decision(self, entry: dict, *, now: float) -> dict:

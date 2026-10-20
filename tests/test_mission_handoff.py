@@ -8,11 +8,12 @@ from unittest.mock import patch
 
 from harness.mission_runtime import MissionRuntime
 from tests.test_mission_creation import MissionCreationFixture
+from tests.test_mission_contracts import claim
 
 
 class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
     def operation(self, kind, identity, **fields):
-        return dict(schema="mission/6", kind=kind, request_id=identity, mission_id=self.a.mission_id,
+        return dict(schema="mission/7", kind=kind, request_id=identity, mission_id=self.a.mission_id,
                     epoch=self.runtime.status()["epoch"], **fields)
 
     def handoff(self, **fields):
@@ -24,10 +25,12 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
     def context(self, *, binding=True, query="unfinished supplies shelter"):
         phase = self.runtime._registered_handoff.phase
         ref = phase.checkpoint
-        return self.runtime.command(dict(schema="mission/6", kind="context", mission_id=self.a.mission_id,
+        result = self.runtime.command(dict(schema="mission/7", kind="context", mission_id=self.a.mission_id,
             scope=dict(mission_id=self.a.mission_id, session=ref.session, coordinate_epoch=0),
             query=query, max_bytes=32768, handoff=dict(handoff_id="handoff", prospective_player_id="successor",
                 actor_role="player") if binding else None))
+        self.assertEqual(result["status"], "accepted", result.get("reason"))
+        return result
 
     def claim(self, packet, identity="claim", **changes):
         issued = self.runtime._ledger.request("handoff")["result"]
@@ -45,12 +48,13 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
             sources=[issued["post_pause_source_id"]], expected_session=issued["session"], expected_revision=issued["revision"],
             expected_boundary_id=issued["boundary_id"], limits=dict(primitives=1, wall_seconds=30, game_seconds=10))
 
-    def remember_work(self, *, status="active", identity="pending", event="work", intent=None):
+    def remember_work(self, *, status="active", identity="pending", event="work", intent=None, sources=None):
         ref, _ = self.current()
-        entry = dict(schema="campaign-memory/2", record_type="Work", id=identity, predecessor_work_id=None,
+        entry = dict(schema="campaign-memory/3", record_type="Work", id=identity, predecessor_work_id=None,
             intent=intent or "unfinished supplies shelter", scope=dict(mission_id=self.a.mission_id, session=ref.session, coordinate_epoch=0),
             stage="pending", progress=25, available=[], committed=[], predicted_output=[], observed_output=[],
-            unresolved_effects=[], sources=[ref.observation_id], next_verification="Reobserve supplies", status=status)
+            unresolved_effects=[], sources=[ref.observation_id] if sources is None else sources,
+            next_verification="Reobserve supplies", status=status)
         result = self.run_request(self.operation("remember", event, entry_type="work", entry=entry))
         self.assertEqual(result["state"], "completed", result)
         return entry
@@ -146,7 +150,12 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
         self.create()
         self.handoff()
         packet = self.context()["context"]["packet"]
-        self.remember_work()
+        ref, _ = self.current()
+        entry = claim(id="later-claim", key=dict(subject="water", property="supply", unit="items", coverage_id="fixture-scene"),
+            scope=dict(mission_id=self.a.mission_id, session=ref.session, coordinate_epoch=0),
+            observed_time=dict(revision=ref.revision, turn=ref.turn), sources=[ref.observation_id],
+            supports=[dict(sources=[ref.observation_id], claims=[])])
+        self.assertEqual(self.run_request(self.operation("remember", "later-memory", entry_type="claim", entry=entry))["state"], "completed")
         result = self.run_request(self.claim(packet))
         self.assertEqual(result["state"], "blocked", result)
         self.assertIn("fresh-version", result["result"]["reason"])
@@ -155,11 +164,14 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
         corrected = self.run_request(self.claim(fresh, identity="corrected-claim"))
         self.assertEqual(corrected["state"], "completed", corrected)
 
-    def test_packet_omitting_declared_work_is_correctable_without_resume(self):
+    def test_query_cannot_displace_required_work_and_claim_still_checks_coverage(self):
         self.create()
         self.remember_work()
         self.handoff(unfinished_work_ids=["pending"])
         omitted = self.context(query="unrelated-xyz")["context"]["packet"]
+        self.assertEqual([w["id"] for w in omitted["work"]], ["pending"])
+        # Keep the receiver's coverage defense even if a cached packet is damaged.
+        self.runtime._issued_packets[omitted["packet_id"]]["packet"]["work"] = []
         before = self.runtime.status()["spent_inputs"]
         result = self.run_request(self.claim(omitted))
         self.assertEqual(result["state"], "blocked", result)
@@ -231,17 +243,137 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(self.run_request(data), result)
         self.assertEqual(len(self.bridge.requests), before)
 
-    def test_claim_cannot_expand_unfinished_work_beyond_sixteen_after_issuance(self):
+    def test_work_mutation_cannot_invalidate_a_live_handoff(self):
         self.create()
-        self.handoff()
-        for index in range(17):
-            self.remember_work(identity=f"new-{index}", event=f"remember-new-{index}")
+        entry = self.remember_work()
+        self.assertEqual(self.handoff(unfinished_work_ids=["pending"])["state"], "completed")
+        before = self.runtime.status()
+        changed = {**entry, "id": "new-work"}
+        result = self.run_request(self.operation("remember", "new-work-event", entry_type="work", entry=changed))
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertIn("frozen during handoff", result["result"]["reason"])
+        self.assertEqual(self.runtime.status()["memory_version"], before["memory_version"])
+        self.assertEqual(self.runtime.status()["epoch"], before["epoch"])
         packet = self.context()["context"]["packet"]
         result = self.run_request(self.claim(packet))
-        self.assertEqual(result["state"], "blocked", result)
-        self.assertIn("bound exceeded", result["result"]["reason"])
-        self.assertEqual(self.runtime.status()["actor_id"], self.a.player_id)
+        self.assertEqual(result["state"], "completed", result)
+        self.assertEqual(self.runtime.status()["actor_id"], "successor")
         self.assertIsNone(self.runtime._lease)
+
+    def test_seventeen_work_items_refuse_handoff_before_authority_revocation(self):
+        self.create()
+        identities = [f"pending-{i}" for i in range(17)]
+        for identity in identities:
+            self.remember_work(identity=identity, event=f"remember-{identity}")
+        before, lease = self.runtime.status(), self.runtime._lease
+        with patch.object(self.controller, "stop_input", wraps=self.controller.stop_input) as stopped:
+            result = self.handoff(unfinished_work_ids=identities[:16])
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertIn("representation refused before stopping", result["result"]["reason"])
+        stopped.assert_not_called()
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(self.runtime.status()["epoch"], before["epoch"])
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
+
+    def test_actual_shaped_nine_source_work_retrieval_claim_and_readmission(self):
+        self.create()
+        first = self.remember_work()
+        session = self.runtime._current.session
+        menu_sources = []
+        for index in range(8):
+            self.bridge.value["revision"] += 1
+            self.menu("UILIST", ["CONFIRM", "UILIST.QUIT"], in_game=True)
+            self.observe(f"support-menu-{index}")
+            menu_sources.append(self.runtime._current.observation_id)
+        self.bridge.value["revision"] += 1
+        self.normal(session)
+        self.observe("back-normal")
+        self.remember_work(event="work-update", sources=menu_sources)
+        expected = set(first["sources"] + menu_sources)
+        self.assertEqual(len(expected), 9)
+        self.assertEqual(self.handoff(unfinished_work_ids=["pending"])["state"], "completed")
+        packet = self.context(query="unrelated")["context"]["packet"]
+        self.assertEqual(set(packet["work"][0]["sources"]), expected)
+        self.assertEqual(packet["work"][0]["status"], "unknown")
+        self.assertIsNone(packet["work"][0]["progress"])
+        data = self.claim(packet)
+        data["read_source_ids"] = list(dict.fromkeys(data["read_source_ids"] + list(expected)))
+        with patch.object(self.runtime._store, "source_status", wraps=self.runtime._store.source_status) as checked:
+            result = self.run_request(data)
+        self.assertEqual(result["state"], "completed", result)
+        checked_ids = [call.args[0].observation_id for call in checked.call_args_list]
+        work_checks = [identity for identity in checked_ids if identity in expected]
+        self.assertEqual(set(work_checks), expected)
+        self.assertEqual(len(work_checks), len(expected))
+        # Exact current checkpoint verification at both guards remains separate.
+        self.assertLessEqual(len(set(checked_ids)), 128)
+        before = self.runtime.status()["spent_inputs"]
+        self.assertEqual(self.run_request(self.readmit())["state"], "completed")
+        self.assertEqual(self.runtime.status()["spent_inputs"], before+1)
+
+    def test_aggregate_packet_bytes_refuse_before_relinquishing_authority(self):
+        self.create()
+        template = self.remember_work(status="completed", identity="template")
+        quantity = dict(subject="s"*128, quantity=1, unit="u"*32, coverage_id="c"*128)
+        identities = []
+        for index in range(6):
+            identity = f"large-{index}"
+            entry = {**template, "id": identity, "status": "active", "intent": "🧭"*1024,
+                "next_verification": "🧭"*1024,
+                **{key: [quantity]*16 for key in ("available", "committed", "predicted_output", "observed_output")}}
+            result = self.run_request(self.operation("remember", f"event-{identity}", entry_type="work", entry=entry))
+            self.assertEqual(result["state"], "completed", result)
+            identities.append(identity)
+        before, lease = self.runtime.status(), self.runtime._lease
+        with patch.object(self.controller, "stop_input", wraps=self.controller.stop_input) as stopped:
+            result = self.handoff(unfinished_work_ids=identities)
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertIn("packet byte limit", result["result"]["reason"])
+        stopped.assert_not_called()
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(self.runtime.status()["epoch"], before["epoch"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
+
+    def test_source_budget_includes_checkpoint_work_and_reserved_post_pause(self):
+        self.create()
+        work = self.remember_work()
+        self.observe("separate-checkpoint")
+        self.assertNotEqual(work["sources"], [self.runtime._current.observation_id])
+        before, lease = self.runtime.status(), self.runtime._lease
+        # Two existing distinct sources need a third slot for post-Pause evidence.
+        with patch("harness.mission_handoff.MAX_HANDOFF_SOURCES", 2), \
+                patch.object(self.controller, "stop_input", wraps=self.controller.stop_input) as stopped:
+            result = self.handoff(unfinished_work_ids=["pending"])
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertIn("aggregate source-check bound", result["result"]["reason"])
+        stopped.assert_not_called()
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(self.runtime.status()["epoch"], before["epoch"])
+
+    def test_user_pause_wins_during_preflight_source_checks(self):
+        self.create()
+        self.remember_work()
+        before = self.runtime.status()
+        original = self.runtime._registered_handoff._source_checker
+        paused = False
+        def checker(*args, **kwargs):
+            refs, status = original(*args, **kwargs)
+            def check(identity):
+                nonlocal paused
+                if not paused:
+                    paused = True
+                    self.runtime.pause("Actual user Pause during representation preflight")
+                return status(identity)
+            return refs, check
+        with patch.object(self.runtime._registered_handoff, "_source_checker", side_effect=checker):
+            result = self.handoff(unfinished_work_ids=["pending"])
+        self.assertIn(result["state"], ("blocked", "paused"))
+        self.assertIsNone(self.runtime._lease)
+        self.assertIsNone(self.runtime._registered_handoff.phase)
+        self.assertGreater(self.runtime.status()["epoch"], before["epoch"])
+        self.assertEqual(self.runtime.status()["pause_cause"], "user")
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
 
     def test_intake_fence_prevents_new_queue_work_at_atomic_issuance(self):
         self.create()

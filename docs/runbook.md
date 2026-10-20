@@ -352,7 +352,13 @@ separates implemented components from remaining independent-play acceptance.
 1. Freeze the exact reviewed candidate, finite objective/scenario/limits/reserve,
    actor, native build and permission preflight before gameplay. The initial
    admission is not authority to adopt an unrelated open character.
-2. Put one current mission/6 record in project `.runtime/mission-requests/record.json`.
+   Validate proposed fresh world/character names against the actual edit-goal
+   JSON Schema through the existing validator: current whole-value editing accepts
+   at most24 supported ASCII characters, while Scenario can describe80-character
+   load identities. Budget TEXT.CLEAR plus typing and a separately interpreted
+   commit. This pure feasibility check is not native acceptance; recheck when
+   editor/schema/scenario changes. Never shorten an immutable admitted identity.
+2. Put one current mission/7 record in project `.runtime/mission-requests/record.json`.
    Use `.venv/bin/python -m harness mission-request --request
    .runtime/mission-requests/record.json` from this trusted checkout. The CLI accepts
    a regular bounded JSON file directly in that directory, validates it and sends

@@ -209,7 +209,7 @@ class LedgerTests(unittest.TestCase):
         self.ledger.settle_primitive(logical_id, "not_dispatched", {"reason": "Synthetic accounting probe"}, now=now)
 
     def prompt_receipt(self, **changes):
-        value = dict(schema="mission/6", record_type="PhaseReceipt", origin_request_id="request-1",
+        value = dict(schema="mission/7", record_type="PhaseReceipt", origin_request_id="request-1",
             phase_kind="interact", operation="open_consume", stage="awaiting_control", epoch=0,
             actor_id="player-test", controller_boot_id="controller-test", operator_pause_generation=0,
             takeover_generation=0, source_ids=["source-1"], continuity=None, grants_authority=False)
@@ -674,7 +674,7 @@ class LedgerTests(unittest.TestCase):
 
     def test_earlier_ledger_format_is_rejected_without_conversion(self):
         self.ledger.close()
-        for version in (1, 2, 3, 4, 5, 6, 7):
+        for version in (1, 2, 3, 4, 5, 6, 7, 8):
             with self.subTest(version=version):
                 with closing(sqlite3.connect(self.ledger.path)) as connection, connection:
                     connection.execute(f"PRAGMA user_version={version}")
@@ -953,7 +953,7 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(LedgerError):
             self.ledger.prepare_primitive("observe-only", "bad-input", intent(), now=1003)
         with self.assertRaises(LedgerError):
-            self.ledger.begin_request({"schema": "mission/6", "kind": "status", "mission_id": "mission-test"}, now=1003)
+            self.ledger.begin_request({"schema": "mission/7", "kind": "status", "mission_id": "mission-test"}, now=1003)
         with self.assertRaises(LedgerError):
             self.ledger.begin_request(skill(mission_id="other", goal={"scope": {"mission_id": "other", "session": "native-session", "coordinate_epoch": 0}, "target": [2, -3, 0]}), now=1003)
         self.ledger.close()
