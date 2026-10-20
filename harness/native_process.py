@@ -188,22 +188,32 @@ class NativeProcess:
         if result.returncode != 1 or result.stdout != "" or result.stderr != "":
             raise NativeProcessError("Native process guard found an existing game or uncertain result")
 
-    def launch(self, *, deadline_monotonic: float) -> dict:
+    def launch(self, *, deadline_monotonic: float, cancelled: Callable[[], bool]) -> dict:
         """Validate fixed preparation, reject another game, then retain one child."""
         self._deadline(deadline_monotonic)
+        if not callable(cancelled):
+            raise NativeProcessError("cancelled must be a callable")
         if self.status()["running"]:
             raise NativeProcessError("Cannot launch with a live owned child")
         try:
+            if cancelled():
+                return self._interrupted("cancelled")
             self._remaining(deadline_monotonic)
             self._guard(deadline_monotonic)
             self._remaining(deadline_monotonic)
+            if cancelled():
+                return self._interrupted("cancelled")
             wrapper = self._validate_preparation(deadline_monotonic)
+            if cancelled():
+                return self._interrupted("cancelled")
             launch_id = uuid4().hex
             self._remaining(deadline_monotonic)
             child = subprocess.Popen([str(wrapper)], cwd=self._root,
                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             # Retain custody before any deadline check can return to the caller.
             self._child, self._launch_id = child, launch_id
+            if cancelled():
+                return self._interrupted("cancelled")
             self._remaining(deadline_monotonic)
         except _Deadline:
             return self._interrupted("deadline")

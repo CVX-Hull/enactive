@@ -229,7 +229,7 @@
       "name": "Live authority and input guards",
       "mode": "runtime",
       "scope": "Single-controller mission dispatch and admission, original typed operation accounting, HTTP trust boundary, historical memory observer and spectator input freshness.",
-      "mechanism": "One MissionRuntime accepts strict mission/2 over authenticated HTTP and a bounded regular-JSON CLI; one writer uses exact controller leases, durable intents and original root/child ceilings. Start/Observe cannot adopt unowned normal play. Admission counters exclude raw-command/Start races without blocking independent recovery or Pause; original HTTP entry generation fences stale Resume. Native4 validates boundary, matching frame, expiry and token at commit. Controller serializes each channel, persists uncertainty and revokes before retirement. Viewer uses typed mission Observe, historical cached memory and fail-closed input locks; Pause remains independent. Unknown outcomes are retained without replay.",
+      "mechanism": "One MissionRuntime accepts strict mission/2 over authenticated HTTP and a bounded regular-JSON CLI; one writer uses exact controller leases, durable intents and original root/child ceilings. Start/Observe cannot adopt unowned normal play. Admission counters exclude raw-command/Start races without blocking independent recovery or Pause; original HTTP entry generation fences stale Resume. Native4 validates boundary, matching frame, expiry and token at commit. Controller serializes each channel, persists uncertainty and revokes before retirement. Viewer uses typed mission Observe, historical cached memory and fail-closed input locks; Pause remains independent. Unknown outcomes are retained without replay. Registered launch binds the fixed owned child to admission and fresh paused menu evidence, preserving cancellation custody without identity/Resume. Trusted passive Observe carries original absolute deadlines through bounded command queueing and publication; reopening attempted launches reports unavailable custody without replay.",
       "owner": "controller and viewer maintainer",
       "trigger": "every relevant request, observation and image decode",
       "evidence": [
@@ -250,10 +250,14 @@
         "tests/test_mission_http.py",
         "docs/acceptance/2026-10-18-walk-reassessment.md",
         "harness/gameplay/timeline.py",
-        "tests/test_gameplay_timeline.py"
+        "tests/test_gameplay_timeline.py",
+        "harness/native_process.py",
+        "tests/test_native_process.py",
+        "tests/test_mission_launch.py",
+        "docs/acceptance/2026-10-20-owned-launch.md"
       ],
       "failure_response": "Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.",
-      "limitations": "Portable tests use fake bridges and explicitly mocked identity boundaries for core skill composition. Production owned lifecycle is still blocked; native normal-game/editor/context-replacement acceptance is pending. Historical menu-only native4 qualification is not mission acceptance. Pause cannot undo committed input or cancel an activity; filesystem stalls can delay revocation; no general combat/damage guarantee.",
+      "limitations": "Portable tests use fake bridges and explicitly mocked identity boundaries for core skill composition. Launch is source-qualified only; production creation/save/reload/handoff are still blocked; native normal-game/editor/context-replacement acceptance is pending. Historical menu-only native4 qualification is not mission acceptance. Pause cannot undo committed input or cancel an activity; filesystem stalls can delay revocation; no general combat/damage guarantee.",
       "enforcement": "Implemented at runtime; regression execution is C-PORTABLE. Source references alone establish no behavioral pass.",
       "status": "active",
       "rationale": null,

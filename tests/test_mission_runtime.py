@@ -1152,12 +1152,28 @@ class MissionRuntimeTests(unittest.TestCase):
         self.runtime.command(correction)
         self.assertEqual(self.settled(correction["request_id"])["state"], "completed")
 
-    def test_no_fake_handoff_lifecycle_or_finish_and_stop_revokes(self):
+    def test_active_normal_scene_cannot_authorize_process_launch(self):
         self.start()
+        data = self.request("lifecycle", operation="launch", world=self.a.scenario.world,
+            character=self.a.scenario.character, sources=[], expected_session=None,
+            expected_revision=None, expected_boundary_id=None,
+            limits=dict(primitives=1, wall_seconds=60, game_seconds=1))
+        with patch("harness.mission_runtime.NativeProcess", side_effect=AssertionError("No launch from active game")):
+            self.assertEqual(self.runtime.command(data)["status"], "accepted")
+            operation = self.settled(data["request_id"])
+        self.assertEqual(operation["state"], "blocked", operation)
+        self.assertIn("unchanged paused/admitted", operation["result"]["reason"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 0)
+        self.assertIsNone(self.controller._mission_lease)
+
+    def test_no_fake_handoff_unimplemented_load_or_finish_and_stop_revokes(self):
+        self.start()
+        source = self.runtime.status()["current_source"]
         for req in [self.request("handoff", checkpoint_ids=[], successor_role="player"),
-                    self.request("lifecycle", operation="launch", world=self.a.scenario.world,
-                                 character=self.a.scenario.character, sources=[], expected_session=None,
-                                 expected_revision=None, expected_boundary_id=None,
+                    self.request("lifecycle", operation="load", world=self.a.scenario.world,
+                                 character=self.a.scenario.character, sources=[source["observation_id"]],
+                                 expected_session=source["session"], expected_revision=source["revision"],
+                                 expected_boundary_id=self.runtime._store.observation(self.runtime._current)["boundary"]["id"],
                                  limits={"primitives": 1, "wall_seconds": 60, "game_seconds": 1}),
                     self.request("stop", finish=True, reason="claimed success")]:
             self.assertEqual(self.runtime.command(req)["status"], "accepted")

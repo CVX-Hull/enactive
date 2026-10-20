@@ -15,6 +15,7 @@ from typing import Any
 from uuid import UUID
 
 from .controller import Controller, ControlError, MissionLease, validate_state
+from .native_process import NativeProcess
 from .gameplay.campaign_memory import CampaignMemory
 from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
 from .gameplay.evidence import MAX_FRAME_BYTES, CapacityError, EvidenceError, EvidenceStore
@@ -86,6 +87,10 @@ class MissionRuntime:
         self._mission_deadline: float | None = None
         self._game_cost: int | None = None
         self._timeline_links: tuple[SessionContinuity, ...] = ()
+        self._native: NativeProcess | None = None
+        self._native_owner: tuple[str, str] | None = None
+        self._native_facts: dict | None = None
+        self._lost_process_custody: tuple[str, ...] = ()
         self._memory_version = 0
         self._last_context_id: str | None = None
         self._last_memory_context: dict | None = None
@@ -264,6 +269,9 @@ class MissionRuntime:
                 or p["state"] == "unknown" and p["effect"] is None],
             "memory_version": self._memory_version, "last_context_id": self._last_context_id,
             "memory_context": copy.deepcopy(self._last_memory_context),
+            "native_process": {"owner_mission_id": None if self._native_owner is None else self._native_owner[0],
+                "last_sample": copy.deepcopy(self._native_facts),
+                "unresolved_custody_requests": list(self._lost_process_custody), "restored_from_disk": False},
             "next_needed_decision": "Player semantic decision" if state["phase"] == "active" else
                 "Registered lifecycle/readmission needed" if state["phase"] == "admitted" else
                 "Explicit supported transition required", "grants_authority": False,
@@ -448,9 +456,11 @@ class MissionRuntime:
                     del self._bindings[next(iter(self._bindings))]
         return binding
 
-    def _observe_native(self, work: _Work) -> tuple[dict, float]:
+    def _observe_native(self, work: _Work, *, timeout: float | None = None,
+                        deadline_monotonic: float | None = None) -> tuple[dict, float]:
         self._check_cancelled(work)
-        result = self.controller.execute("observe")
+        result = (self.controller.execute("observe", timeout=timeout) if deadline_monotonic is None else
+                  self.controller.observe_mission(deadline_monotonic=deadline_monotonic, timeout=timeout))
         self._check_cancelled(work)
         state, received = self.controller.observation_snapshot()
         if result.get("status") != "ready" or state != result or received is None:
@@ -467,6 +477,10 @@ class MissionRuntime:
     def _start(self, data: dict) -> bool:
         admission = MissionAdmission.from_dict(data["admission"])
         if self._ledger is not None:
+            if self._native is not None and self._native.status()["launch_id"] is not None:
+                raise LedgerError("Registered normal finish must settle owned process custody before mission replacement")
+            if self._lost_process_custody:
+                raise LedgerError("Unresolved process custody prevents mission replacement")
             old = self._ledger.snapshot(now=self._wall())
             if old["phase"] not in TERMINAL:
                 raise LedgerError("A live mission cannot be replaced")
@@ -485,6 +499,12 @@ class MissionRuntime:
             ledger.close()
             raise
         self._ledger, self._store, self._admission = ledger, store, admission
+        # Ordered immutable request results are audit data, not a restored handle.
+        # This launch-only increment cannot qualify a later normal exit yet.
+        self._lost_process_custody = tuple(row["request"]["request_id"] for row in ledger.request_records()
+            if row["request"]["kind"] == "lifecycle" and row["request"]["operation"] == "launch"
+            and (row["result"] is None or row["state"] in ("accepted", "running", "unknown")
+                 or row["result"].get("launch_attempted", False)))
         with self._metadata:
             self._operations.clear()
         self._diagnostic, self._progress, self._last_receipt = None, None, None
@@ -632,8 +652,104 @@ class MissionRuntime:
     def _handoff(self, work: _Work) -> tuple[str, dict]:
         return self._unsupported("Registered quiescent handoff/claim adapter required")
 
+    def _launch_guard(self, work: _Work, mark: tuple[str, int]) -> None:
+        self._check_cancelled(work)
+        if mark != self._operator_mark():
+            raise ControlError("Owned launch superseded by controller restart or operator Pause")
+        ledger = self._ledger.snapshot(now=self._wall())
+        if (ledger["epoch"] != work.request["epoch"] or not ledger["clock_valid"]
+                or ledger["phase"] not in ("admitted", "paused") or ledger["unreconciled"]):
+            raise ControlError("Owned launch requires unchanged paused/admitted actor epoch and reconciled accounting")
+        with self.controller.data_lock:
+            if (self.controller.closed or self.controller.pending is not None
+                    or self.controller.control_pending is not None or self.controller._mission_lease is not None
+                    or self.controller._command_work or self.controller.command_lock.locked()
+                    or self.controller.control_lock.locked() or not self.controller.pause_requested):
+                raise ControlError("Owned launch requires paused empty controller slots")
+        if any((self.controller.bridge / name).exists() for name in
+               ("request.json", "claimed.json", "control.json", "control-claimed.json")):
+            raise ControlError("Owned launch requires empty native inboxes")
+
+    def _launch(self, work: _Work) -> tuple[str, dict]:
+        data = work.request
+        if (data["phase_id"] is not None or data["work_id"] is not None or data["sources"]
+                or data["identity_claim_ids"] or any(data[key] is not None for key in
+                    ("expected_session", "expected_revision", "expected_boundary_id"))):
+            raise ControlError("Launch is a source-free root; it cannot adopt identity or an existing phase")
+        if self._lost_process_custody:
+            raise ControlError("Previous launch custody is unavailable; no handle restore, PID adoption or replay")
+        mark = self._operator_mark()
+        self._launch_guard(work, mark)
+        owner = (self._admission.mission_id, self._admission.configuration.native_sha256)
+        if self._native is not None:
+            if self._native_owner != owner or self._native.status()["launch_id"] is not None:
+                raise ControlError("Owned launch must reach registered normal exit before another launch")
+        else:
+            self._native = NativeProcess(self.controller.root, owner[1], clock=self._clock)
+            self._native_owner = owner
+        operation = self._ledger.request(data["request_id"])
+        deadline = self._clock() + min(operation["deadline"],
+            self._mission_deadline - self._admission.cleanup_reserve.wall_seconds) - self._wall()
+        if deadline <= self._clock():
+            raise BudgetError("Original launch/mission wall budget exhausted")
+        attempted = False
+        result = {"launch_attempted": False, "process": None, "source_ids": [],
+            "native_ready": False, "identity_verified": False, "grants_authority": False}
+        try:
+            self._record("mission_process_launch_prepared", {"request_id": data["request_id"],
+                "native_sha256": owner[1], "deadline_monotonic": deadline, "grants_authority": False})
+            self._launch_guard(work, mark)
+            attempted = True
+            facts = self._native.launch(deadline_monotonic=deadline,
+                cancelled=lambda: work.cancelled.is_set() or self._closed.is_set() or mark != self._operator_mark())
+            self._native_facts = copy.deepcopy(facts)
+            if facts["outcome"] in ("cancelled", "deadline"):
+                raise ControlError(f"Owned process launch {facts['outcome']}; custody retained")
+            while True:
+                self._launch_guard(work, mark)
+                self._native_facts = self._native.status()
+                if not self._native_facts["running"]:
+                    raise ControlError("Owned child exited before native readiness; normal exit is unverified")
+                remaining = deadline - self._clock()
+                if remaining <= 0:
+                    raise BudgetError("Original native readiness deadline expired; no retry of launch")
+                self._capacity()
+                try:
+                    state, received = self._observe_native(work,
+                        timeout=min(self.controller.timeout, remaining), deadline_monotonic=deadline)
+                except ControlError:
+                    self._launch_guard(work, mark)
+                    if self._clock() >= deadline:
+                        raise BudgetError("Original native readiness deadline expired")
+                    work.cancelled.wait(min(0.05, max(0, deadline - self._clock())))
+                    continue
+                self._launch_guard(work, mark)
+                if (state["boundary"]["kind"] != "menu" or state["category"] != "MAIN_MENU"
+                        or state["in_game"] or not state["paused"] or not state["frame_ok"] or state["error"]
+                        or not 0 <= self._clock() - received <= 3
+                        or not -1000 <= int(self._wall() * 1000) - state["timestamp_ms"] <= 3000
+                        or state["pause_origin"] not in ("startup", "host") or state["takeover_generation"] != 0):
+                    raise ControlError("Owned launch did not reach a fresh paused untouched MAIN_MENU")
+                if self._clock() >= deadline or not self._native.status()["running"]:
+                    raise ControlError("Owned readiness exceeded its deadline or child exited")
+                reference = self._ingest(state, received)
+                self._publish_source(reference, authoritative=False)
+                self._launch_guard(work, mark)
+                result.update(native_ready=True, source_ids=[reference.observation_id],
+                    reason="Owned child and fresh paused main menu verified; creation/identity/Resume remain pending")
+                return "completed", result
+        except (ControlError, ContractError, OSError, ValueError) as exc:
+            result["reason"] = f"{type(exc).__name__}: {exc}"[:1024]
+            return "paused" if work.cancelled.is_set() else "blocked", result
+        finally:
+            self._native_facts = self._native.status()
+            result.update(launch_attempted=attempted, process=copy.deepcopy(self._native_facts))
+            self._record("mission_process_launch_result", {"request_id": data["request_id"], **result})
+
     def _lifecycle(self, work: _Work) -> tuple[str, dict]:
-        return self._unsupported("Registered normal lifecycle adapter and engine evidence required")
+        if work.request["operation"] == "launch":
+            return self._launch(work)
+        return self._unsupported("Registered create/save/exit/load/finish adapter and identity/effect evidence required")
 
     @staticmethod
     def _unsupported(reason: str) -> tuple[str, dict]:
@@ -1167,6 +1283,10 @@ class MissionRuntime:
             self._cancel_queue()
             try:
                 self._apply_pauses()
+                if self._native is not None:
+                    self._native_facts = self._native.status()
+                    self._record("mission_process_shutdown_custody", {"process": self._native_facts,
+                        "normal_exit_verified": False, "restored_from_disk": False, "grants_authority": False})
                 self._publish()
             except Exception as exc:
                 self._diagnostic = f"Terminal persistence failed: {exc}"[:1024]

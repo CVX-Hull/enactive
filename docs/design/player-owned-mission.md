@@ -630,8 +630,10 @@ Start and Observe never launch or Resume. Neither paused menus nor unowned norma
 play can establish world/character or the game-time anchor. Production Start stays
 read-only until the registered owned lifecycle verifies those facts. Core tests
 explicitly mock that boundary; they are not lifecycle acceptance. Stop(false) requests Pause and leaves cleanup possible; a busy
-Stop is not admitted under the old epoch. Unsupported item/inspection, activity,
-lifecycle, handoff and final-finish requests explicitly block in this component.
+Stop is not admitted under the old epoch. Registered launch now verifies owned child/fresh paused main-menu readiness in
+portable fixtures, retaining custody and original deadlines with no Resume or
+identity/time adoption. Other lifecycle, item/inspection, activity, handoff and
+final-finish requests explicitly block. Real launch acceptance remains pending.
 Fresh player replacement and independent play remain separate acceptance work.
 
 The [native-row menu policy](../../harness/gameplay/interaction.py) can propose a
@@ -773,9 +775,9 @@ value.state, with quantity=null and kind=interpretation. World uses subject=worl
 coverage_id=visible-world-menu; character uses subject=character/
 coverage_id=visible-character-hud. Lifecycle must check actual phase source/support,
 current undisputed scope and admission names, not annotation text or any existing
-claim ID. These remain fallible identity evidence. Item selection, activity result,
-registered lifecycle, one-current ingress, observer views and the actual fresh-player
-mission remain acceptance gates in the linked Issues.
+claim ID. These remain fallible identity evidence. One-current ingress and cached observer
+views are connected. Item/activity outcomes, the rest of registered lifecycle,
+actual observer behavior and the fresh-player mission remain acceptance gates.
 
 
 ### Cached observer and continuity reducer

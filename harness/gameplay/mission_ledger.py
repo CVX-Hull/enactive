@@ -635,6 +635,13 @@ class MissionLedger:
                     "result": None if row[3] is None else json_object(row[3]),
                     "admitted_at": row[4], "deadline": row[5]}
 
+    def request_records(self) -> tuple[dict, ...]:
+        """Ordered copied audit history; never restore an executor or process handle."""
+        with self._mutex:
+            if self._db is None: raise LedgerError("Ledger is closed")
+            ids = [row[0] for row in self._db.execute("SELECT id FROM requests ORDER BY rowid")]
+            return tuple(self.request(identity) for identity in ids)
+
     def prepare_primitive(self, request_id: str, logical_id: str, intent: dict, *, now: float,
                           cleanup=False) -> dict:
         """Call after EvidenceStore reservation, before any transport publication.

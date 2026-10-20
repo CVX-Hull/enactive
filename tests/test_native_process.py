@@ -48,7 +48,7 @@ class NativeProcessTests(unittest.TestCase):
         self.process = NativeProcess(self.root, self.sha, clock=self.clock)
 
     def launch(self, deadline=20.0):
-        return self.process.launch(deadline_monotonic=deadline)
+        return self.process.launch(deadline_monotonic=deadline, cancelled=lambda: False)
 
     def assert_no_signals(self):
         for name in ("kill", "terminate", "send_signal"):
@@ -73,6 +73,30 @@ class NativeProcessTests(unittest.TestCase):
         self.assertEqual(state["outcome"], "running")
         self.assertEqual(state["pid"], 1234)
         self.assertIsInstance(state["launch_id"], str)
+        self.assert_no_signals()
+
+    def test_launch_requires_explicit_callable_cancellation(self):
+        with self.assertRaisesRegex(NativeProcessError, "cancelled"):
+            self.process.launch(deadline_monotonic=20, cancelled=False)
+        self.popen.assert_not_called()
+        self.pgrep.assert_not_called()
+
+    def test_launch_cancellation_before_guard_after_guard_and_preparation(self):
+        for checks in ([True], [False, True], [False, False, True]):
+            with self.subTest(checks=checks):
+                result = self.process.launch(deadline_monotonic=20, cancelled=Mock(side_effect=checks))
+                self.assertEqual(result["outcome"], "cancelled")
+                self.assertEqual(result["launch_id"], None)
+                self.popen.assert_not_called()
+        self.assert_no_signals()
+
+    def test_cancellation_after_spawn_retains_child_and_never_sends_signals(self):
+        result = self.process.launch(deadline_monotonic=20,
+            cancelled=Mock(side_effect=[False, False, False, True]))
+        self.assertEqual(result["outcome"], "cancelled")
+        self.assertTrue(result["running"])
+        self.assertEqual(result["launch_id"], self.process.status()["launch_id"])
+        self.popen.assert_called_once()
         self.assert_no_signals()
 
     def test_status_only_polls_owned_handle_and_returns_copies(self):

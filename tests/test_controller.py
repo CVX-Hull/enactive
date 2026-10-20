@@ -2213,6 +2213,36 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(envelope["result"]["status"], "rejected")
             self.assertFalse(any(request["kind"] == "action" for request in fake.requests))
 
+    def test_trusted_observe_deadline_bounds_queue_without_late_publication(self):
+        with FakeBridge(self.controller) as fake:
+            self.controller.command_lock.acquire()
+            try:
+                with ThreadPoolExecutor(1) as pool:
+                    started = time.monotonic()
+                    future = pool.submit(self.controller.observe_mission,
+                        deadline_monotonic=started + 0.08, timeout=1)
+                    result = future.result(0.5)
+                    self.assertLess(time.monotonic() - started, 0.5)
+            finally:
+                self.controller.command_lock.release()
+            self.assertEqual(result["status"], "controller_error", result)
+            self.assertEqual(fake.requests, [])
+            self.assertEqual(self.controller._command_work, 0)
+            self.assertEqual(self.controller.unknown_outcomes, [])
+
+    def test_trusted_observe_deadline_caps_native_publication_and_rejects_bad_clocks(self):
+        with FakeBridge(self.controller) as fake:
+            deadline = time.monotonic() + 1
+            result = self.controller.observe_mission(deadline_monotonic=deadline, timeout=2)
+            self.assertEqual(result["status"], "ready", result)
+            self.assertEqual(len(fake.requests), 1)
+            self.assertLessEqual(fake.requests[0]["deadline_ms"], int(time.time() * 1000) + 1000)
+            for invalid in (True, -1, float("nan"), float("inf"), "later"):
+                result = self.controller.observe_mission(deadline_monotonic=invalid)
+                self.assertEqual(result["status"], "controller_error", (invalid, result))
+            self.assertEqual(len(fake.requests), 1)
+            self.assertEqual(fake.delivered, [])
+
     def test_original_absolute_deadline_expires_in_queue_and_after_preflight(self):
         for queued in (True, False):
             with self.subTest(queued=queued), FakeBridge(self.controller) as fake:

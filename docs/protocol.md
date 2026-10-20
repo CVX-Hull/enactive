@@ -121,11 +121,33 @@ JSON and status contain no executable lease.
 
 Start records admission and observes only. Even already-unpaused normal play does
 not prove the named world/character, receive a lease or seed the mission's game-time
-anchor. Registered owned launch/create/load must establish those facts. Production
-lifecycle, item/activity/inspection, handoff and normal finish adapters remain
-required gaps: source fixtures that assume trusted identity do not implement them.
+anchor. Registered creation/load must establish those facts after owned launch.
+Creation/save/exit/load, item/activity/inspection, handoff and normal finish remain
+required adapters: source fixtures that assume trusted identity do not implement them.
 No independent mission is accepted from those tests. Observe likewise cannot adopt
 an unexplained normal session. Reopening restores neither phase nor input authority.
+
+Registered lifecycle launch is a source-free root: null phase/Work/native binding,
+empty source/identity IDs and exact admitted names. It invokes only the fixed
+prepared NativeProcess with its admitted binary hash. Original root/mission wall
+and cleanup limits include process validation, exec, command queueing and native
+readiness. It retains child custody after cancellation/timeout; a second launch
+or admission replacement cannot silently replace it. A fresh paused untouched
+MAIN_MENU, empty error, valid rendered frame and unchanged actor/epoch/controller/
+operator counter are required for a readiness receipt. It remains passive: no
+Resume, lease, normal facts, identity or game-time anchor. Other lifecycle adapters
+remain blocked. Portable fake-process tests are not actual native launch acceptance.
+
+Cached process facts are last samples, not a liveness guarantee. Shutdown journals
+any owned child without signals; reopening restores no process handle. The launch-only
+adapter conservatively reports every prior attempted/uncertain launch as unavailable
+custody, preventing replay or PID adoption until registered exit/effect handling is
+implemented. Process absence or exit code alone cannot prove a normal save/exit.
+
+Trusted Python `observe_mission(deadline_monotonic, timeout)` uses the original
+absolute deadline through command-lock admission and native publication. It grants
+no input capability and is absent from public command JSON. A timed queue refusal
+is explicit; it never starts another relative timeout after the root expires.
 
 The CLI exposes `mission-request --request PATH` for a current typed record directly
 in project `.runtime/mission-requests/`, regular JSON only, no symlink/script or

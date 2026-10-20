@@ -17,7 +17,10 @@ Observe uses the typed mission path and Pause stays independent. Native window
 input can take over. Resume cannot restore a mission lease, identity or private
 phase. Unknown delivery stays unknown; a new owner does not prove success.
 Before admission, ordinary controller commands retain their documented guards.
-Current lifecycle gaps below prevent independent production gameplay.
+Registered launch can only verify a retained child and paused main-menu readiness;
+other lifecycle gaps below prevent independent production gameplay. A launch receipt
+grants no character identity, Resume, lease or normal-game time. No actual launch
+acceptance follows from portable process fixtures.
 
 ## Permissions and player ownership
 

@@ -1,6 +1,7 @@
 """Serialized, at-most-once file transport and conservative movement guard."""
 from __future__ import annotations
 
+from contextlib import contextmanager
 import fcntl
 import hashlib
 import re
@@ -975,6 +976,24 @@ class Controller:
             return None
         return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
 
+    @contextmanager
+    def _command_slot(self, deadline_monotonic: float | None):
+        if deadline_monotonic is None:
+            with self.command_lock:
+                yield
+            return
+        remaining = deadline_monotonic - time.monotonic()
+        if remaining <= 0 or not self.command_lock.acquire(timeout=min(MAX_WAIT, remaining)):
+            raise ControlError("Original dispatch deadline expired or command writer unavailable")
+        try:
+            yield
+        finally:
+            self.command_lock.release()
+
+    def observe_mission(self, *, deadline_monotonic: float, timeout: float | None = None) -> dict[str, Any]:
+        """Trusted bounded passive read, including queueing; no JSON authority field."""
+        return self._execute("observe", timeout, {}, None, deadline_monotonic=deadline_monotonic)
+
     def execute(self, kind: str, *, timeout: float | None = None,
                 expected_generation: int | None = None, **payload: Any) -> dict[str, Any]:
         """Trusted ingress may bind its original host generation; JSON cannot set it."""
@@ -991,6 +1010,9 @@ class Controller:
         with self.data_lock:
             admitted_generation = self.pause_generation
         try:
+            if deadline_monotonic is not None and (type(deadline_monotonic) not in (int, float)
+                    or not 0 <= deadline_monotonic <= 1e12):
+                raise ControlError("Original deadline must be finite, nonbool and nonnegative")
             if expected_image_sha256 is not None and (type(expected_image_sha256) is not str
                     or re.fullmatch(r"[0-9a-f]{64}", expected_image_sha256) is None):
                 raise ControlError("Expected image hash must be exactly 64 lowercase hexadecimal characters")
@@ -1030,7 +1052,7 @@ class Controller:
                     self._check_owner(lease, admitted_generation)
                 self._command_work += 1
                 admitted = True
-            with self.command_lock:
+            with self._command_slot(deadline_monotonic):
                 if self.closed:
                     raise ControlError("Controller is closed")
                 with self.data_lock:
@@ -1099,7 +1121,7 @@ class Controller:
                 if remaining > 0:
                     raise ControlError("Prior request deadline has not passed; wait before reconciliation")
                 self._pause_file()
-            result = self._exchange("observe", timeout)
+            result = self._exchange("observe", timeout, deadline_monotonic=deadline_monotonic)
             if result["status"] == "ready":
                 self._reconcile_expired_control(result)
                 with self.data_lock:
