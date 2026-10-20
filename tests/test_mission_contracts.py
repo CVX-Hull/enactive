@@ -5,7 +5,7 @@ import unittest
 
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.mission_contracts import (
-    CleanupReserve, Configuration, MissionAdmission, MissionLimits, Scenario,
+    CleanupReserve, Configuration, MissionAdmission, MissionLimits, Scenario, SourceBinding, SourceRevalidation,
     MAX_REQUEST_BYTES, validate_memory_entry, validate_request, validate_visible_ui,
 )
 
@@ -51,7 +51,33 @@ def skill(**changes):
     return value
 
 
+def binding(**changes):
+    value = dict(source_id="source-1", mission_id="mission-test", epoch=0, actor_id="player-test",
+                 controller_boot_id="boot-1", pause_generation=4, takeover_generation=0, store_generation=1)
+    value.update(changes)
+    return SourceBinding(**value)
+
+
 class MissionContractTests(unittest.TestCase):
+    def test_source_revalidation_is_one_refresh_audit_data_without_authority(self):
+        original = binding()
+        current = binding(source_id="fresh-1", store_generation=2)
+        refreshed = SourceRevalidation(original, current, "native_state")
+        self.assertEqual(SourceRevalidation.from_dict(refreshed.to_dict()), refreshed)
+        self.assertFalse(refreshed.to_dict()["grants_authority"])
+        with self.assertRaises(FrozenInstanceError): original.epoch = 2
+        serialized = refreshed.to_dict(); serialized["current"]["store_generation"] = 100
+        self.assertEqual(refreshed.current.store_generation, 2)
+        for field, value in (("epoch", 1), ("actor_id", "other"), ("mission_id", "other"),
+                             ("controller_boot_id", "boot-2"), ("pause_generation", 5),
+                             ("takeover_generation", 1), ("store_generation", 3), ("source_id", "source-1")):
+            with self.subTest(field=field), self.assertRaises(ContractError):
+                SourceRevalidation(original, replace(current, **{field: value}), "native_state")
+        with self.assertRaises(ContractError): SourceRevalidation(original, current, "fuzzy_pixels")
+        with self.assertRaises(ContractError): SourceRevalidation(original.to_dict(), current, "native_state")
+        with self.assertRaises(ContractError): SourceRevalidation.from_dict({**refreshed.to_dict(), "grants_authority": True})
+        with self.assertRaises(ContractError): SourceBinding.from_dict({**original.to_dict(), "epoch": True})
+
     def test_admission_roundtrip_is_typed_and_immutable(self):
         original = admission()
         for value in [original.to_dict(), json.dumps(original.to_dict()), json.dumps(original.to_dict()).encode()]:

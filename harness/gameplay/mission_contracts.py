@@ -53,6 +53,16 @@ _ADMISSION = _object({
     "update_policy": {"const": "facts-and-provisional/1"}, "configuration": _CONFIGURATION,
 })
 _SCOPE = _object({"mission_id": _ID, "session": _ID, "coordinate_epoch": _integer()})
+_SOURCE_BINDING = _object({
+    "source_id": _ID, "mission_id": _ID, "epoch": _integer(), "actor_id": _ID,
+    "controller_boot_id": _ID, "pause_generation": _integer(),
+    "takeover_generation": _integer(), "store_generation": _integer(),
+})
+_REVALIDATION = _object({
+    "schema": {"const": VERSION}, "record_type": {"const": "SourceRevalidation"},
+    "original": _SOURCE_BINDING, "current": _SOURCE_BINDING,
+    "rule": _enum("native_state", "exact_png_bytes"), "grants_authority": {"const": False},
+})
 _SKILL_LIMITS = _object({"primitives": _integer(32, 1), "wall_seconds": _number(900),
                          "game_seconds": _integer(43_200, 1)})
 _GOALS = {
@@ -155,6 +165,62 @@ def validate_handoff_binding(value: dict) -> dict:
 def validate_handoff_result(value: dict, *, claimed: bool = False) -> dict:
     """Closed durable result; the ledger crosschecks its originating requests."""
     return _decode(value, _CLAIMED_HANDOFF if claimed else _HANDOFF)
+
+
+@dataclass(frozen=True)
+class SourceBinding:
+    """Runtime-recorded observation context; serialized audit data is not authority."""
+    source_id: str
+    mission_id: str
+    epoch: int
+    actor_id: str
+    controller_boot_id: str
+    pause_generation: int
+    takeover_generation: int
+    store_generation: int
+
+    def __post_init__(self):
+        validate_json(json_object(asdict(self)), _SOURCE_BINDING)
+
+    def to_dict(self) -> dict:
+        return asdict(self)
+
+    @classmethod
+    def from_dict(cls, value: dict) -> SourceBinding:
+        return cls(**_decode(value, _SOURCE_BINDING))
+
+
+@dataclass(frozen=True)
+class SourceRevalidation:
+    """One explicit refresh, preserving original model evidence and execution scope.
+
+    Consumers verify actual retained bytes/native state. Runtime additionally
+    checks its live opaque lease and actor context; parsing restores none of them.
+    """
+    original: SourceBinding
+    current: SourceBinding
+    rule: str
+
+    def __post_init__(self):
+        if type(self.original) is not SourceBinding or type(self.current) is not SourceBinding:
+            raise ContractError("Revalidation requires immutable typed source bindings")
+        validate_json(self.to_dict(), _REVALIDATION)
+        if self.original.source_id == self.current.source_id:
+            raise ContractError("A refresh must identify a distinct current source")
+        unchanged = ("mission_id", "epoch", "actor_id", "controller_boot_id", "pause_generation", "takeover_generation")
+        if any(getattr(self.original, key) != getattr(self.current, key) for key in unchanged):
+            raise ContractError("Revalidation cannot cross actor/epoch/controller/Pause/takeover")
+        if self.current.store_generation != self.original.store_generation + 1:
+            raise ContractError("Revalidation permits exactly one deliberate source refresh")
+
+    def to_dict(self) -> dict:
+        return {"schema": VERSION, "record_type": "SourceRevalidation", "original": self.original.to_dict(),
+                "current": self.current.to_dict(), "rule": self.rule, "grants_authority": False}
+
+    @classmethod
+    def from_dict(cls, value: dict) -> SourceRevalidation:
+        data = _decode(value, _REVALIDATION)
+        return cls(SourceBinding.from_dict(data["original"]), SourceBinding.from_dict(data["current"]), data["rule"])
 
 
 @dataclass(frozen=True)

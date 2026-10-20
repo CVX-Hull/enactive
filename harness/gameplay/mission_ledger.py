@@ -18,11 +18,11 @@ from typing import Any
 
 from .contracts import ContractError, json_object
 from .mission_contracts import (
-    VERSION, MissionAdmission, canonical, validate_handoff_binding,
+    VERSION, MissionAdmission, SourceRevalidation, canonical, validate_handoff_binding,
     validate_handoff_result, validate_memory_entry, validate_request,
 )
 
-DB_VERSION = 2
+DB_VERSION = 3
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
 MAX_RECEIPT_BYTES = 65_536
 MAX_EFFECT_BYTES = 4096
@@ -74,10 +74,15 @@ def _json(value: dict, maximum=65_536) -> str:
 
 def _intent(value: dict | str) -> dict:
     data = json_object(value)
-    expected = {"kind", "value", "expected_session", "expected_revision", "expected_boundary_id", "source_before", "reservation_id"}
+    expected = {"kind", "value", "expected_session", "expected_revision", "expected_boundary_id",
+                "source_before", "preflight_source", "revalidation", "reservation_id"}
     if set(data) != expected or data["kind"] not in ("action", "key"):
         raise LedgerError("Primitive intent fields do not match")
-    for key in ("expected_session", "expected_boundary_id", "source_before", "reservation_id"): _id(data[key])
+    for key in ("expected_session", "expected_boundary_id", "source_before", "preflight_source", "reservation_id"): _id(data[key])
+    if data["revalidation"] is not None:
+        refreshed = SourceRevalidation.from_dict(data["revalidation"])
+        if refreshed.current.source_id != data["source_before"]:
+            raise LedgerError("Revalidation current source differs from the proposal before-source")
     if type(data["expected_revision"]) is not int or data["expected_revision"] < 0:
         raise LedgerError("Primitive requires exact observed revision")
     if not isinstance(data["value"], str) or not 1 <= len(data["value"]) <= 160:
@@ -268,6 +273,9 @@ class MissionLedger:
             entry = validate_memory_entry(body, entry_type)
             if entry["id"] != record_id or entry["scope"]["mission_id"] != stored.mission_id:
                 raise LedgerError("Corrupt semantic record scope")
+        issued, consumed = self._handoffs(state=state)
+        actors = [(0, stored.player_id)] + sorted((issued[identity]["epoch"], self.request(claim)["result"]["player_id"])
+                                                 for identity, claim in consumed.items())
         count = 0
         for logical_id, request_id, intent, native_id, status, result, effect in self._db.execute(
                 "SELECT id,request_id,intent,native_id,state,result,effect FROM primitives"):
@@ -278,6 +286,9 @@ class MissionLedger:
             parent = self.request(request_id)
             if parent["request"]["kind"] not in ("skill", "lifecycle"):
                 raise LedgerError("Primitive lost its executable parent")
+            actor = next(player for epoch, player in reversed(actors) if epoch <= parent["epoch"])
+            self._check_revalidation(json_object(intent), parent["epoch"], stored.mission_id,
+                                     informing_sources=parent["request"]["sources"], actor_id=actor)
             if status == "prepared" and native_id is not None or status == "published" and native_id is None:
                 raise LedgerError("Corrupt publication identity")
             if result is not None:
@@ -299,7 +310,6 @@ class MissionLedger:
                 raise LedgerError("Operation primitive ceiling was exceeded")
         if type(state["spent_inputs"]) is not int or state["spent_inputs"] != count or count > stored.limits.inputs:
             raise LedgerError("Spent inputs differ from immutable primitive mappings")
-        self._handoffs(state=state)
         if self._db.execute("PRAGMA foreign_key_check").fetchone() is not None:
             raise LedgerError("Primitive lost its semantic request")
 
@@ -580,6 +590,8 @@ class MissionLedger:
                 raise BudgetError("Per-operation primitive limit exhausted")
             if request["epoch"] != state["epoch"] or request["state"] not in ("accepted", "running"):
                 raise LedgerError("Request is stale or no longer dispatchable")
+            self._check_revalidation(data, request["epoch"], self.admission.mission_id,
+                                     informing_sources=request["request"]["sources"], actor_id=state["player_id"])
             reserve = 0 if cleanup else self.admission.cleanup_reserve.inputs
             if state["spent_inputs"] >= self.admission.limits.inputs - reserve:
                 raise BudgetError("Input budget or cleanup reserve exhausted")
@@ -594,6 +606,17 @@ class MissionLedger:
             state["spent_inputs"] += 1
             self._put("state", state)
         return {"created": True, "primitive": self.primitive(logical_id)}
+
+    @staticmethod
+    def _check_revalidation(intent: dict, epoch: int, mission_id: str, *, informing_sources: list[str],
+                            actor_id: str | None = None) -> None:
+        if intent["revalidation"] is not None:
+            refreshed = SourceRevalidation.from_dict(intent["revalidation"])
+            current = refreshed.current
+            if current.epoch != epoch or current.mission_id != mission_id or (actor_id is not None and current.actor_id != actor_id):
+                raise LedgerError("Revalidation belongs to another mission/epoch/actor")
+            if refreshed.original.source_id not in informing_sources:
+                raise LedgerError("Revalidation original source did not inform the immutable request")
 
     def primitive(self, logical_id: str) -> dict:
         _id(logical_id)

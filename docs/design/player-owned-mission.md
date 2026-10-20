@@ -566,13 +566,23 @@ retains uncertainty/cost and clears authority, and rejected expiry checks retain
 the observed wall-clock watermark. Source-level regression and independent review
 are separate from the future integrated native/graphical acceptance.
 
-Ledger format2 reuses immutable typed handoff/claim request results for up to16
+Ledger format3 reuses immutable typed handoff/claim request results for up to16
 one-use handoffs, rather than adding a second mutable consumption store. It rejects
-format1. Issuance requires active, settled work and atomically pauses at a new epoch;
+formats1/2. Issuance requires active, settled work and atomically pauses at a new epoch;
 claim changes the recorded actor while remaining paused. Runtime must verify actual
 quiescence, fresh native binding and deliberate readmission; the ledger sends no
 Pause/Resume. Human Pause or reopen invalidates an old issuance without erasing it,
 renewing costs or permanently blocking a later legitimately admitted handoff.
+
+`SourceBinding` records mission/epoch/actor, controller boot, host/native generations
+and store generation for a source. `SourceRevalidation` permits one deliberate
+refresh within that same scope, using native state or exact encoded PNG equality.
+Runtime must check those records against its live opaque capability; parsing them
+restores no authority. Immutable request sources, fresh proposal `source_before`
+and required actual `preflight_source` remain separate. A prepared intent can
+include the typed refresh relation only when it connects the original request to
+that proposal source; subsequent verified steps keep their own before/preflight
+references. Never encode the relationship only in rationale text.
 
 The passive [navigation skill](../../harness/gameplay/navigation.py) projects only
 observed cardinal cells, retains route support and validates each settled step.

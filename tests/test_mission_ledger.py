@@ -11,15 +11,16 @@ import unittest
 from unittest.mock import patch
 
 from harness.gameplay.contracts import ContractError
-from harness.gameplay.mission_contracts import CleanupReserve, MissionLimits
+from harness.gameplay.mission_contracts import CleanupReserve, MissionLimits, SourceRevalidation
 from harness.gameplay.mission_ledger import BudgetError, LedgerError, MissionLedger
-from tests.test_mission_contracts import admission, claim, request, skill
+from tests.test_mission_contracts import admission, binding, claim, request, skill
 
 
 def intent(**changes):
     values = {"kind": "action", "value": "RIGHT", "expected_session": "native-session",
               "expected_revision": 30, "expected_boundary_id": "boundary-1",
-              "source_before": "source-1", "reservation_id": "reservation-1"}
+              "source_before": "source-1", "preflight_source": "preflight-1", "revalidation": None,
+              "reservation_id": "reservation-1"}
     values.update(changes)
     return values
 
@@ -250,12 +251,14 @@ class LedgerTests(unittest.TestCase):
 
     def test_earlier_ledger_format_is_rejected_without_conversion(self):
         self.ledger.close()
-        with closing(sqlite3.connect(self.ledger.path)) as connection, connection:
-            connection.execute("PRAGMA user_version=1")
-        original = self.ledger.path.read_bytes()
-        with self.assertRaisesRegex(LedgerError, "Unsupported mission ledger version"):
-            MissionLedger(self.directory, now=1001)
-        self.assertEqual(self.ledger.path.read_bytes(), original)
+        for version in (1, 2):
+            with self.subTest(version=version):
+                with closing(sqlite3.connect(self.ledger.path)) as connection, connection:
+                    connection.execute(f"PRAGMA user_version={version}")
+                original = self.ledger.path.read_bytes()
+                with self.assertRaisesRegex(LedgerError, "Unsupported mission ledger version"):
+                    MissionLedger(self.directory, now=1001)
+                self.assertEqual(self.ledger.path.read_bytes(), original)
 
     def test_create_reopen_preserves_deadline_scope_and_no_authority(self):
         old = self.ledger.snapshot(now=1000)
@@ -293,6 +296,58 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(row, ("prepared", None))
         self.assertEqual(state["spent_inputs"], 1)
         self.assertFalse(self.ledger.snapshot(now=1002)["grants_authority"])
+
+    def test_prepared_intent_requires_actual_preflight_and_scoped_refresh(self):
+        self.active_request()
+        refreshed = SourceRevalidation(binding(), binding(source_id="fresh-1", store_generation=2), "native_state")
+        missing = intent(); missing.pop("preflight_source")
+        invalid = [missing, intent(preflight_source=None), intent(preflight_source=""),
+                   intent(revalidation=refreshed.to_dict()),
+                   intent(source_before="fresh-1", revalidation=SourceRevalidation(
+                       binding(source_id="not-in-request"), binding(source_id="fresh-1", store_generation=2), "native_state").to_dict()),
+                   intent(source_before="fresh-1", revalidation=SourceRevalidation(
+                       binding(epoch=1), binding(epoch=1, source_id="fresh-1", store_generation=2), "native_state").to_dict()),
+                   intent(source_before="fresh-1", revalidation=SourceRevalidation(
+                       binding(actor_id="other"), binding(actor_id="other", source_id="fresh-1", store_generation=2), "native_state").to_dict())]
+        for index, value in enumerate(invalid):
+            with self.subTest(index=index), self.assertRaises(ContractError):
+                self.ledger.prepare_primitive("request-1", f"invalid-{index}", value, now=1002)
+        self.assertEqual(self.ledger.snapshot(now=1002)["spent_inputs"], 0)
+        self.ledger.prepare_primitive("request-1", "logical-refresh", intent(source_before="fresh-1",
+            revalidation=refreshed.to_dict()), now=1002)
+        reopened = self.reopen(now=1003).primitive("logical-refresh")
+        self.assertEqual(reopened["intent"]["preflight_source"], "preflight-1")
+        self.assertEqual(reopened["intent"]["revalidation"], refreshed.to_dict())
+        self.assertEqual(reopened["state"], "unknown")
+
+    def test_reopen_validates_refresh_actor_at_original_request_epoch(self):
+        self.active_request()
+        first = SourceRevalidation(binding(), binding(source_id="fresh-1", store_generation=2), "native_state")
+        self.ledger.prepare_primitive("request-1", "logical-old", intent(source_before="fresh-1", revalidation=first.to_dict()), now=1002)
+        self.ledger.settle_primitive("logical-old", "returned", {"synthetic": True}, now=1003)
+        self.ledger.complete_request("request-1", "completed", {"synthetic": True}, now=1003)
+        self.ledger.begin_request(request("handoff", request_id="handoff-actor", checkpoint_ids=["source-1"], successor_role="player"), now=1004)
+        issued = self.ledger.issue_handoff("handoff-actor", binding=handoff_binding(), now=1005)
+        self.ledger.begin_request(handoff_claim(issued), now=1006)
+        self.ledger.consume_handoff("claim-1", actor_id="replacement-player", actor_role="player", now=1007)
+        self.ledger.activate(epoch=1, player_id="replacement-player", now=1008)
+        self.ledger.begin_request(skill(request_id="replacement-skill", epoch=1, sources=["replacement-source"]), now=1009)
+        second = SourceRevalidation(
+            binding(source_id="replacement-source", epoch=1, actor_id="replacement-player"),
+            binding(source_id="replacement-fresh", epoch=1, actor_id="replacement-player", store_generation=2), "native_state")
+        self.ledger.prepare_primitive("replacement-skill", "logical-new", intent(source_before="replacement-fresh",
+            preflight_source="replacement-preflight", revalidation=second.to_dict()), now=1010)
+        self.reopen(now=1011)
+        self.assertEqual(self.ledger.primitive("logical-old")["state"], "returned")
+        self.assertEqual(self.ledger.primitive("logical-new")["state"], "unknown")
+        corrupt = self.ledger.primitive("logical-new")["intent"]
+        for key in ("original", "current"): corrupt["revalidation"][key]["actor_id"] = "player-test"
+        self.ledger.close()
+        with closing(sqlite3.connect(self.ledger.path)) as connection, connection:
+            connection.execute("UPDATE primitives SET intent=? WHERE id='logical-new'",
+                               (json.dumps(corrupt, sort_keys=True, separators=(",", ":")),))
+        with self.assertRaisesRegex(LedgerError, "actor"):
+            MissionLedger(self.directory, now=1012)
 
     def test_crash_before_and_after_publication_never_replays_or_refunds(self):
         for published in [False, True]:

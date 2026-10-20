@@ -61,8 +61,12 @@ components: [contracts](../harness/gameplay/mission_contracts.py),
 [observed navigation](../harness/gameplay/navigation.py) and
 [campaign memory](../harness/gameplay/campaign_memory.py). They produce bounded data
 and record uncertainty; none owns input or replaces the live runtime below yet.
-Ledger format2 rejects prior databases. Its typed immutable request results retain
+Ledger format3 rejects prior databases. Its typed immutable request results retain
 one-use handoff issuance/consumption without restoring a lease or Resume on reopen.
+Typed source revalidation distinguishes the original request evidence, a deliberately
+refreshed proposal source and the actual final-preflight source required by a
+prepared intent. These records remain data; runtime must verify live actor/lease
+and generation bindings before input.
 Runtime/native and actual fresh-player acceptance remain separate delivery gates.
 
 Only one execution arrangement is active at a time: an external campaign operator
