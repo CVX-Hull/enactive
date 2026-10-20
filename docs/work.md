@@ -45,6 +45,9 @@ then a [fresh seven-day assessment #145](https://github.com/CVX-Hull/enactive/is
 with the engineering lead outside gameplay. Reviewed component readiness permits
 shared native validation; the mission does not wait for component issue closure.
 The current execution contract below remains in force until a reviewed migration.
+The [proposed mission design](design/player-owned-mission.md) defines that migration
+and bounded acceptance; the [trace pilot](acceptance/2026-10-19-memory-trace-pilot.md)
+records actual source/interpretation limits. Neither page claims runtime delivery.
 
 An [optional read-only curator #146](https://github.com/CVX-Hull/enactive/issues/146)
 and broader memory/monitor/model efficacy studies remain separate candidates.

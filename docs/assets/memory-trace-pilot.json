@@ -1,0 +1,258 @@
+{
+  "schema_version": 1,
+  "kind": "development-memory-label-pilot",
+  "date": "2026-10-19",
+  "episodes": [
+    {
+      "id": "water",
+      "scope": "Selected interrupted craft and later output/storage observations within the original first campaign",
+      "rows": [
+        185,
+        238,
+        297,
+        304
+      ]
+    },
+    {
+      "id": "rest",
+      "scope": "Final rest selection, timeout and later observed effect in that same campaign",
+      "rows": [
+        589,
+        590,
+        592
+      ]
+    }
+  ],
+  "independent_campaigns": 1,
+  "held_out": false,
+  "questions": [
+    {
+      "id": "W1",
+      "episode": "water",
+      "question": "Does row185 establish 59% progress at the first fire-loss stop?",
+      "disposition": "unknown",
+      "answer": "No current percentage is established by this frame. It shows a historical start-at-0% message and a fire-loss message; 59% belongs to a later frame.",
+      "rows": [
+        185
+      ],
+      "interpretation": true
+    },
+    {
+      "id": "W2",
+      "episode": "water",
+      "question": "What percentage does the wielded unfinished-water sidebar show at row238?",
+      "disposition": "answer",
+      "answer": "59%; the message log separately refers to starting work at24%. These are different temporal observations.",
+      "rows": [
+        238
+      ],
+      "interpretation": true
+    },
+    {
+      "id": "W3",
+      "episode": "water",
+      "question": "Does the six-charge output prompt at row297 prove those charges are already stored?",
+      "disposition": "unknown",
+      "answer": "The prompt displays clean water(hot)(6) awaiting a pour/ground choice. Completed storage is not established at this boundary.",
+      "rows": [
+        297
+      ],
+      "interpretation": true
+    },
+    {
+      "id": "W4",
+      "episode": "water",
+      "question": "What water and food counts are visible at row304, and are they all newly produced by this craft?",
+      "disposition": "answer",
+      "answer": "The consume menu shows clean water(18), water(2),12protein rations. Attribution of all stock to this craft and bottle-fill count are unknown from this frame.",
+      "rows": [
+        304
+      ],
+      "interpretation": true
+    },
+    {
+      "id": "R1",
+      "episode": "rest",
+      "question": "Does the later wake frame convert request907f35e9-661d-4c7d-b3f9-8fa445c82517 into an acknowledged action?",
+      "disposition": "unknown",
+      "answer": "No. Row590 reports timeout/outcome unknown; row592 retains the same pending UUID and an unknown-outcome entry. Later visible effects are separate evidence.",
+      "rows": [
+        590,
+        592
+      ],
+      "interpretation": false
+    },
+    {
+      "id": "R2",
+      "episode": "rest",
+      "question": "Does selecting the eight-hour alarm establish eight hours asleep?",
+      "disposition": "unknown",
+      "answer": "No. Row589 highlights an8-hour alarm. Row592 shows a later wake frame; exact asleep duration is not observed. The visible clocks differ by10h00m01s, which is elapsed calendar time, not measured sleep.",
+      "rows": [
+        589,
+        592
+      ],
+      "interpretation": true
+    },
+    {
+      "id": "R3",
+      "episode": "rest",
+      "question": "What needs and conditions are visible at row592, and does it establish global safety?",
+      "disposition": "answer",
+      "answer": "Rest blank; Chilly, Thirsty, Peckish and Fresh visible. Structured visible_creatures is empty. Global safety and absence of unseen threats are not established.",
+      "rows": [
+        592
+      ],
+      "interpretation": true
+    }
+  ],
+  "sources": {
+    ".runtime/campaigns/seven-day-campaign-028/0185-stdout.json": {
+      "sha256": "3076fc1c48265f6794430ec164221297e78c7e0c379a4df45fdbdd75e0aa572d",
+      "bytes": 4664,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-water-coverage-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/0185-capture.json": {
+      "sha256": "673ca77ce1b1b586d6cdd0939768c4bbd0692a11b7acb2da5842b171ff91cb0a",
+      "bytes": 2100,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-water-coverage-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/frames/0185-frame-1792428799127-24221-1-19393.png": {
+      "sha256": "7dd1bff7df7f00612a9cc41476f192630a4e07cc917d80f830b4880438e4f1ed",
+      "bytes": 195566,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-water-coverage-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/0238-stdout.json": {
+      "sha256": "2c3c1d4d6fcdfa1f639dd045fbd4a74a619a7f41d540d7e2f6868c7bb96c32c5",
+      "bytes": 4664,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-water-coverage-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/0238-capture.json": {
+      "sha256": "16ab153ec92b34622e2c86fccbd71e4ccce6a1ce5a02a6e175120d06172c80df",
+      "bytes": 2100,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-water-coverage-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/frames/0238-frame-1792428799127-24221-1-20506.png": {
+      "sha256": "75325d2cc28e12a60ae48266593ed15d98784fdb22f12760140c70127fa5615a",
+      "bytes": 195922,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-water-coverage-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/0297-stdout.json": {
+      "sha256": "0404acccee5434a53a97ffb3a3c5d9c11d3c5fc02ba44b484661cdef1e935fbe",
+      "bytes": 788,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-water-coverage-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/0297-capture.json": {
+      "sha256": "1527cee4d6375103401c370036c06efd855a000f404761bbf6505f9d90ff992a",
+      "bytes": 585,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-water-coverage-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/frames/0297-frame-1792428799127-24221-1-21886.png": {
+      "sha256": "5621231b455eb9c8d08222a41c142161a3410970241b2cc0f79976b0e0d01221",
+      "bytes": 184897,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-water-coverage-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/0304-stdout.json": {
+      "sha256": "35e40510e5ee97f78deba54a8ddf5774e4262b58ea7b2f37cdbac552e19b510e",
+      "bytes": 1162,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-water-coverage-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/0304-capture.json": {
+      "sha256": "91ff9f46fdcc8618aaf451d7c209403b715970bd4c0203cd3731e8900705af7c",
+      "bytes": 588,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-water-coverage-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/frames/0304-frame-1792428799127-24221-1-22019.png": {
+      "sha256": "c7e5e74c2136f77bd1f34e41635d44a773e041ae18e9d8e8efd84b29c4fc64b3",
+      "bytes": 92139,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-water-coverage-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/0589-stdout.json": {
+      "sha256": "98134336c3b89e01ca5edbe872456b39b0893e45598b336cdc08b2fc9ea21506",
+      "bytes": 788,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-seven-day-survival-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/0589-capture.json": {
+      "sha256": "35d6c466f7c164f4a1b901474d0e3d3eb3a187964a0b3157800501048cd4ce6a",
+      "bytes": 585,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-seven-day-survival-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/frames/0589-frame-1792428799127-24221-1-26828.png": {
+      "sha256": "9952686be0012dc3d83e2cbf060355c7dff8909e1e2c43706d8a8a16da3e9c1a",
+      "bytes": 105894,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-seven-day-survival-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/0590-stdout.json": {
+      "sha256": "0e2c8f93d59c01f1f8cd6c1504ac6d7971aec63da282e0acbd4363034be54e7e",
+      "bytes": 213,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-seven-day-survival-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/0590-capture.json": {
+      "sha256": "80a3e07f7f15fe01a50607fc30a8972cf3344dee42d9f861a9e860d62398b6c7",
+      "bytes": 217,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-seven-day-survival-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/0592-stdout.json": {
+      "sha256": "f72f33085ff44fcf72b5635bb321a12d44b7d843b8a32778faab2e12afb251e7",
+      "bytes": 193301,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-seven-day-survival-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/0592-capture.json": {
+      "sha256": "17f3de0049ccab6dbbd7adeb93abbda23b8a3add8ca480c42e9c518ace4b4ca4",
+      "bytes": 2205,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-seven-day-survival-manifest.json"
+      ]
+    },
+    ".runtime/campaigns/seven-day-campaign-028/frames/0592-frame-1792428799127-24221-1-26868.png": {
+      "sha256": "980646d0d07ccbb54f26324e2543a33cacdffd9120592c151856c32c87d17ff5",
+      "bytes": 109878,
+      "verified_against": [
+        "docs/acceptance/2026-10-19-seven-day-survival-manifest.json"
+      ]
+    }
+  },
+  "limits": [
+    "Selected source bytes match committed historical manifests; hashes do not establish interpretation truth.",
+    "Raw images and records remain local-only and are not included in a fresh checkout.",
+    "Only selected visible rows inspected; no complete inventory, causal fuel result or exact sleep duration.",
+    "Episode separation is diagnostic; these are correlated development examples, excluded from later deciding tests.",
+    "Labels are lead-adjudicated interpretations, not engine ground truth; independent review required."
+  ]
+}
