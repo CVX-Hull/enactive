@@ -110,7 +110,7 @@ class MissionLaunchTests(unittest.TestCase):
 
     def test_launch_cannot_use_a_source_claim_or_work_to_adopt_a_running_game(self):
         self.start()
-        for index, changes in enumerate((dict(sources=[self.runtime._current.observation_id]),
+        for index, changes in enumerate((dict(sources=["unowned-source"]),
                 dict(identity_claim_ids=["claim"]), dict(work_id="work"))):
             operation = self.launch(identity=f"invalid-{index}", **changes)
             self.assertEqual(operation["state"], "blocked", operation)

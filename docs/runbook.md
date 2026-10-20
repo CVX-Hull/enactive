@@ -336,7 +336,7 @@ separates implemented components from remaining independent-play acceptance.
    .runtime/mission-requests/record.json` from this trusted checkout. The CLI accepts
    a regular bounded JSON file directly in that directory, validates it and sends
    one authenticated request. It does not run code or create an arbitrary process.
-3. Start and Observe are read-only. Registered owned lifecycle must establish
+3. Start is source-free; explicit Observe is passive. Registered owned lifecycle must establish
    world/character identity and fresh input authority. Those production adapters
    remain unfinished; do not substitute raw keys/Resume or a trusted unit fixture.
 4. Read the result by its exact operation ID. Accepted only acknowledges admission;
@@ -351,8 +351,10 @@ separates implemented components from remaining independent-play acceptance.
 6. Owned menus support bounded focusing, literal text and direction/confirmation
    handling. Dismissal uses one registered QUIT or editor TEXT.QUIT, returns partial
    for effect verification and never automatically answers a new prompt. Original
-   root/child limits and unknowns stay recorded. Item/activity and lifecycle still
-   need their registered adapters and separate native qualification.
+   root/child limits and unknowns stay recorded. Untouched-menu exit uses its owned
+   lifecycle root and an explicit interpreted confirmation child. It is not a
+   character save/exit path. Item/activity, creation/save/reload and handoff still
+   need their adapters and separate native qualification.
 7. Pause prevents further admission, without undoing an input or native activity.
    Honor user Pause/takeover; do not auto-Resume or restore a phase from disk. A
    stopped deciding attempt remains stopped. Normal cleanup, actual fresh-context

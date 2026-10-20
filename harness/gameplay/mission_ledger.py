@@ -19,7 +19,7 @@ from typing import Any
 from .contracts import ContractError, json_object
 from .mission_contracts import (
     VERSION, MissionAdmission, SourceRevalidation, canonical, validate_handoff_binding,
-    validate_handoff_result, validate_memory_entry, validate_prompt_result, validate_request,
+    validate_handoff_result, validate_memory_entry, validate_normal_exit, validate_prompt_result, validate_request,
 )
 
 DB_VERSION = 6
@@ -293,10 +293,10 @@ class MissionLedger:
         issued, consumed = self._handoffs(state=state)
         actors = [(0, stored.player_id)] + sorted((issued[identity]["epoch"], self.request(claim)["result"]["player_id"])
                                                  for identity, claim in consumed.items())
-        for request_id, payload, result in self._db.execute("SELECT id,payload,result FROM requests WHERE result IS NOT NULL"):
+        for request_id, payload, result, status in self._db.execute("SELECT id,payload,result,state FROM requests WHERE result IS NOT NULL"):
             data = json_object(payload)
             actor = next(player for epoch, player in reversed(actors) if epoch <= data.get("epoch", 0))
-            self._check_prompt_result(request_id, data, json_object(result), actor_id=actor)
+            self._check_prompt_result(request_id, data, json_object(result), actor_id=actor, request_state=status)
         count = 0
         for logical_id, request_id, intent, native_id, status, result, effect in self._db.execute(
                 "SELECT id,request_id,intent,native_id,state,result,effect FROM primitives"):
@@ -771,12 +771,20 @@ class MissionLedger:
             self._db.execute("UPDATE primitives SET effect=? WHERE id=?", (_json(effect), logical_id))
         return self.primitive(logical_id)
 
-    def _check_prompt_result(self, request_id: str, data: dict, result: dict, *, actor_id: str) -> None:
+    def _check_prompt_result(self, request_id: str, data: dict, result: dict, *, actor_id: str,
+                             request_state: str) -> None:
+        if "normal_exit" in result:
+            if request_state != "completed":
+                raise LedgerError("Normal exit requires a completed operation result")
+            try:
+                self._check_normal_exit(request_id, data, result)
+            except ContractError as exc:
+                raise LedgerError(f"Invalid normal exit: {exc}") from exc
         if "phase" not in result:
             return
         try:
-            if data["kind"] not in ("skill", "observe"):
-                raise LedgerError("Ordinary prompt receipt requires a skill or closing Observe")
+            if data["kind"] not in ("skill", "observe", "lifecycle"):
+                raise LedgerError("Phase receipt requires executable work or closing Observe")
             if type(result["phase"]) is not dict:
                 raise LedgerError("Prompt result.phase must be a typed object")
             phase = json_object(result["phase"])
@@ -788,11 +796,61 @@ class MissionLedger:
             if root_row > child_row or root["epoch"] > data["epoch"]:
                 raise LedgerError("Prompt result refers to a future root")
             validate_prompt_result(phase, request=data, root=root["request"], actor_id=actor_id)
+            if phase["phase_kind"] == "lifecycle":
+                launch = self.request(phase["launch_request_id"])
+                launched = launch["result"]
+                launch_row = self._db.execute("SELECT rowid FROM requests WHERE id=?", (phase["launch_request_id"],)).fetchone()[0]
+                if (launch["request"].get("operation") != "launch" or launch["state"] != "completed"
+                        or launched is None or launched.get("native_ready") is not True
+                        or type(launched.get("process")) is not dict or launched["process"].get("launch_id") != phase["launch_id"]
+                        or launch["epoch"] > root["epoch"] or launch_row >= root_row
+                        or not launched.get("source_ids") or not set(launched["source_ids"]) <= set(phase["source_ids"])
+                        or not set(root["request"]["sources"]) & set(phase["source_ids"])):
+                    raise LedgerError("Exit phase lost its owned launch/epoch")
         except ContractError as exc:
             raise LedgerError(f"Invalid prompt result: {exc}") from exc
 
+    def _check_normal_exit(self, request_id: str, data: dict, result: dict) -> None:
+        proof = validate_normal_exit(result["normal_exit"])
+        phase = result.get("phase", {})
+        if type(phase) is not dict:
+            raise LedgerError("Normal exit requires a typed phase object")
+        root = self.request(proof["origin_request_id"])["request"]
+        if (data["kind"] != "skill" or data["skill_kind"] != "menu" or data["phase_id"] != root["request_id"]
+                or root.get("operation") != "exit" or root["phase_id"] is not None
+                or phase.get("phase_kind") != "lifecycle" or phase.get("stage") != "complete"
+                or phase.get("origin_request_id") != root["request_id"]
+                or any(phase.get(key) != proof[key] for key in ("launch_request_id", "launch_id", "source_ids"))
+                or data["goal"]["label"] != "Yes" or data["goal"]["outcome"] != "activated"
+                or data["perception"] is None or data["perception"]["kind"] != "confirmation"
+                or data["perception"]["question"] != "Really quit?"):
+            raise LedgerError("Normal exit lacks its exact root/confirmation phase")
+        primitive = self.primitive(proof["terminal_logical_id"])
+        if (primitive["request_id"] != request_id or primitive["intent"]["kind"] != "action"
+                or primitive["intent"]["value"] != "YES" or primitive["native_id"] != proof["native_request_id"]
+                or primitive["state"] not in ("unknown", "returned")
+                or primitive["intent"]["source_before"] not in proof["source_ids"]
+                or primitive["intent"]["source_before"] != data["perception"]["source_id"]
+                or primitive["result"] is None or primitive["result"].get("published") is not True
+                or primitive["result"].get("native_request_id") != proof["native_request_id"]
+                or any(primitive["result"].get(key) != value for key, value in {
+                    "logical_action_id": proof["terminal_logical_id"], "kind": "action", "value": "YES",
+                    "transport_disposition": primitive["state"], "expected_session": primitive["intent"]["expected_session"],
+                    "expected_revision": primitive["intent"]["expected_revision"],
+                    "expected_boundary_id": primitive["intent"]["expected_boundary_id"],
+                    "source_before": primitive["intent"]["source_before"], "preflight_source": primitive["intent"]["preflight_source"],
+                }.items())
+                or primitive["state"] == "unknown" and primitive["effect"] is None):
+            raise LedgerError("Normal exit lacks its charged terminal input/effect correlation")
+        if primitive["state"] == "unknown" and primitive["effect"] != {
+                "sources": proof["source_ids"],
+                "note": f"Owned normal exit {proof['launch_id']} after published YES; ACK remains unknown"}:
+            raise LedgerError("Normal exit effect evidence differs from the exact owned phase")
+
     def complete_request(self, request_id: str, disposition: str, result: dict, *, now: float) -> dict:
         if disposition not in REQUEST_STATES - {"accepted", "running"}: raise LedgerError("Invalid operation result")
+        if "normal_exit" in result and disposition != "completed":
+            raise LedgerError("A verified normal-exit result requires completed effect reconciliation")
         encoded = _json(result)
         with self._transaction():
             state = self._touch(now)
@@ -809,7 +867,8 @@ class MissionLedger:
                 actor = next(player for epoch, player in reversed(actors) if epoch <= old["epoch"])
                 if actor != state["player_id"]:
                     raise LedgerError("New prompt result cannot cross the current actor")
-            self._check_prompt_result(request_id, old["request"], json_object(encoded), actor_id=state["player_id"])
+            self._check_prompt_result(request_id, old["request"], json_object(encoded), actor_id=state["player_id"],
+                                      request_state=disposition)
             unresolved = self._db.execute("SELECT 1 FROM primitives WHERE request_id=? AND (state IN ('prepared','published') OR (state='unknown' AND effect IS NULL))", (request_id,)).fetchone()
             if disposition == "completed" and unresolved: raise LedgerError("Unresolved effects cannot silently become completion")
             self._release(f"request:{request_id}")

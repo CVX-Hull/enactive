@@ -33,6 +33,9 @@ def bootstrap_core_fixture(runtime, work):
     call this path. Registered lifecycle needs separate real and synthetic checks.
     """
     state, received = runtime._observe_native(work)
+    # Explicitly assume the same missing durable identity boundary here only.
+    # Production has no flag, restored-handle shortcut or automatic adoption.
+    runtime._require_normal_adoption = runtime._store.verify
     ledger = runtime._ledger.snapshot(now=runtime._wall())
     runtime._lease = runtime.controller.acquire_mission(runtime._admission.mission_id,
         ledger["epoch"], ledger["player_id"], operation="interaction", expected_session=state["session"],
@@ -736,7 +739,11 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertNotEqual(self.controller.journal, original_journal)
         self.assertNotEqual(self.controller.authority["controller_boot_id"], original_boot)
         self._prepared_native = True
-        status = self.start()
+        # This core fixture assumes durable identity only to isolate historical
+        # timeline arithmetic. Production diagnostic-session reopening is tested
+        # without this assumption in test_mission_exit.
+        with patch.object(self.runtime, "_require_normal_adoption", side_effect=lambda ref: self.runtime._store.verify(ref)):
+            status = self.start()
         self.assertEqual(self.runtime._ledger.path, ledger_path)
         self.assertEqual(self.runtime._store.directory, evidence_directory)
         self.assertEqual(self.runtime._mission_deadline, deadline)
@@ -791,6 +798,8 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.runtime.status()["phase"], "admitted")
         self.assertIsNone(self.runtime.status()["current_source"])
         self.assertEqual(self.bridge.delivered, [])
+        self.assertIsNone(self.controller.pending)
+        self.assertEqual(self.bridge.requests, [])
 
     def test_two_step_surveyed_route_uses_only_verified_cardinal_displacement(self):
         self.bridge.value["scene"]["position"] = [1, 0, 0]

@@ -66,3 +66,49 @@ input, model run or autonomy result. The installed wire4 binary/patch is unchang
 its earlier menu-only graphical probe remains separately scoped. Registered normal
 exit and recovery of unavailable custody still require implementation; no forceful
 cleanup fallback is granted by this report.
+
+## Source extension: owned untouched-menu normal exit
+
+A later bounded increment composes normal cleanup before attempting actual launch.
+Start now records source-free admission without publishing Observe into a missing
+native process. Registered exit applies only to that runtime's owned untouched
+main menu; creation/load/normal activity excludes its no-save-required branch.
+The root charges Resume and Quit separately, and a player-interpreted Really quit?
+confirmation child chooses Yes or No. All use ordinary budgets, the original
+operator mark, shared primitive ceiling/deadline and existing exact preflight/ledger.
+No save is claimed, no automatic Yes or input retry is added.
+
+Published Yes, exact retained normal child exit, source/actor/native checks and a
+narrow controller retirement CAS yield typed historical exit proof. The original
+unknown ACK, charge, durable admission and history remain. Retirement records before
+clearing only matching expired in-memory pending state, revokes tokens and stays
+paused/frozen. Committed validated proof resolves prior launch custody on reopen;
+neither that proof nor a PhaseReceipt restores a handle, input phase or lease.
+No/diagnostic/failed exit cannot discharge custody.
+
+Independent review found and drove repairs for terminal takeover acceptance,
+unexpected normal-frame time/map adoption (including after reopening), false
+no-save exit after a normal return, a child deadline incorrectly tied to an old
+launch source, and missing immutable launch-source provenance after refresh/No.
+Actual normal-session adoption remains blocked behind a durable-proof gate;
+synthetic core fixtures explicitly assume that missing identity boundary. New
+fault tests retain valid unexpected normal scenes without native facts, bindings,
+map or zero-cost game time. Persistent proof-corruption probes reject nested-string
+proof, wrong logical receipt/effect source/status, lost launch source, wrong phase
+type and noninteger code. Test-only failures and earlier red regressions remain in
+local evidence. Independent controller review cleared its narrow retirement API.
+
+Reuse review: this composes existing CDDA Quit/confirmation, controller tokens and
+unknown journal, NativeProcess handle, SQLite requests/primitives, EvidenceStore
+and JSON Schema. No process manager, new registry/outbox, generic recovery framework
+or third-party dependency was added. The harness maintainer owns these narrow
+adapters; revisit them with creation/save/reload and actual native failure evidence.
+Actual native composition, character lifecycle, fresh-player memory handoff and the
+independent mission remain separate acceptance work. No real game or server was
+started during this source extension.
+
+The extended source passed859 Python tests plus viewer, Ruff, four dependency
+contracts, syntax, document stewardship/links, governance and pinned diagram
+receipts. Nineteen new mission-exit cases and nineteen controller-retirement cases
+cover composition and faults. Actual native launch/exit is not established by
+these portable results.

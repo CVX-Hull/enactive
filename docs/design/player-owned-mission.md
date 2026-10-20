@@ -632,8 +632,13 @@ read-only until the registered owned lifecycle verifies those facts. Core tests
 explicitly mock that boundary; they are not lifecycle acceptance. Stop(false) requests Pause and leaves cleanup possible; a busy
 Stop is not admitted under the old epoch. Registered launch now verifies owned child/fresh paused main-menu readiness in
 portable fixtures, retaining custody and original deadlines with no Resume or
-identity/time adoption. Other lifecycle, item/inspection, activity, handoff and
-final-finish requests explicitly block. Real launch acceptance remains pending.
+identity/time adoption. Registered untouched-menu exit now composes charged Resume,
+Quit and an explicit interpreted confirmation with normal process/effect proof;
+unknown ACK/history survives narrow pending retirement. No character save is claimed.
+Source-free Start publishes no native Observe before owned launch. Normal adoption
+remains unavailable even after reopening diagnostic frames. Other lifecycle,
+item/inspection, activity, handoff and final-finish requests explicitly block.
+Actual composed native launch/exit qualification remains pending.
 Fresh player replacement and independent play remain separate acceptance work.
 
 The [native-row menu policy](../../harness/gameplay/interaction.py) can propose a

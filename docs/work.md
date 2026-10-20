@@ -46,7 +46,9 @@ with the engineering lead outside gameplay. Reviewed component readiness permits
 shared native validation; the mission does not wait for component issue closure.
 The sole live ingress is now mission/2. Start/Observe remain read-only until the
 registered lifecycle proves owned world/character; no unrelated running game can
-seed identity or mission time. The [mission design](design/player-owned-mission.md)
+seed identity or mission time. Owned launch and untouched-menu normal exit are now
+source-composed, retaining unknown acknowledgments and finite costs. This cleanup
+branch does not provide character creation, save/reload or mission acceptance. The [mission design](design/player-owned-mission.md)
 defines the remaining lifecycle, fresh-context and bounded acceptance work; the [trace pilot](acceptance/2026-10-19-memory-trace-pilot.md)
 records actual source/interpretation limits. Neither page claims runtime delivery.
 

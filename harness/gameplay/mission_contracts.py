@@ -178,6 +178,24 @@ _PROMPT_RECEIPT = _object({
     "source_ids": {**_IDS, "minItems": 1}, "continuity": {"type": "null"},
     "grants_authority": {"const": False},
 })
+_EXIT_PHASE_RECEIPT = _object({
+    **_PROMPT_RECEIPT["properties"], "phase_kind": {"const": "lifecycle"},
+    "operation": {"const": "exit"}, "stage": _enum("awaiting_control", "complete", "unknown"),
+    "launch_request_id": _ID, "launch_id": _ID, "no_save_required": {"const": True},
+})
+_EXIT_RETIREMENT = _object({
+    "launch_id": _ID, "exit_request_id": _ID, "native_request_id": _nullable(_ID),
+    "returncode": {"const": 0}, "retired_pending": {"type": "boolean"},
+    "grants_authority": {"const": False},
+})
+_NORMAL_EXIT = _object({
+    "schema": {"const": VERSION}, "record_type": {"const": "OwnedNormalExit"},
+    "origin_request_id": _ID, "launch_request_id": _ID, "launch_id": _ID,
+    "terminal_logical_id": _ID, "native_request_id": _ID,
+    "source_ids": {**_IDS, "minItems": 1}, "no_save_required": {"const": True},
+    "returncode": {"const": 0}, "retirement": _EXIT_RETIREMENT,
+    "grants_authority": {"const": False},
+})
 
 
 def canonical(value: dict[str, Any]) -> str:
@@ -207,19 +225,37 @@ def validate_handoff_result(value: dict, *, claimed: bool = False) -> dict:
 
 
 def validate_prompt_result(value: dict, *, request: dict, root: dict, actor_id: str) -> dict:
-    """Closed ordinary prompt audit data; a receipt never restores a live phase."""
-    data = _decode(value, _PROMPT_RECEIPT)
-    if (root["kind"] != "skill" or root["skill_kind"] != "interact" or root["phase_id"] is not None
-            or data["origin_request_id"] != root["request_id"] or data["operation"] != root["goal"]["action"]
+    """Closed ordinary/lifecycle audit data; never restore a live phase."""
+    lifecycle = type(value) is dict and value.get("phase_kind") == "lifecycle"
+    data = _decode(value, _EXIT_PHASE_RECEIPT if lifecycle else _PROMPT_RECEIPT)
+    valid_root = (root["kind"] == "lifecycle" and root["operation"] == "exit" if lifecycle else
+                  root["kind"] == "skill" and root["skill_kind"] == "interact")
+    operation = root.get("operation") if lifecycle else root.get("goal", {}).get("action")
+    if (not valid_root or root["phase_id"] is not None
+            or data["origin_request_id"] != root["request_id"] or data["operation"] != operation
             or data["epoch"] != request["epoch"] or data["actor_id"] != actor_id
             or root["mission_id"] != request["mission_id"]):
         raise ContractError("Prompt receipt contradicts its immutable root, actor or epoch")
     if request["kind"] == "observe":
-        if data["stage"] != "complete":
+        if data["stage"] != ("awaiting_control" if lifecycle else "complete"):
             raise ContractError("Observe may only close an ordinary prompt")
-    elif request["kind"] != "skill" or (request["request_id"] != root["request_id"]
-            and request["phase_id"] != root["request_id"]):
+    elif request["kind"] not in (("skill", "lifecycle") if lifecycle else ("skill",)) or (
+            request["request_id"] != root["request_id"] and request["phase_id"] != root["request_id"]):
         raise ContractError("Prompt result lost its root/child request correlation")
+    return data
+
+
+def validate_normal_exit(value: dict) -> dict:
+    """Process/effect audit data, distinct from a positive input acknowledgment."""
+    if type(value) is not dict:
+        raise ContractError("Normal exit must be a typed nested object")
+    data = _decode(value, _NORMAL_EXIT)
+    retirement = data["retirement"]
+    if (type(data["returncode"]) is not int or type(retirement["returncode"]) is not int
+            or retirement["launch_id"] != data["launch_id"]
+            or retirement["exit_request_id"] != data["origin_request_id"]
+            or retirement["native_request_id"] != (data["native_request_id"] if retirement["retired_pending"] else None)):
+        raise ContractError("Exit retirement lost its exact launch/root/native correlation")
     return data
 
 

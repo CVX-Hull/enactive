@@ -119,10 +119,10 @@ not a second HTTP schema. Unsupported versions and `/api/gameplay` reject, witho
 conversion. Admission and original deadlines/costs persist in the ledger; parsed
 JSON and status contain no executable lease.
 
-Start records admission and observes only. Even already-unpaused normal play does
-not prove the named world/character, receive a lease or seed the mission's game-time
+Start records source-free admission and sends no native request; explicit Observe
+remains passive. Even already-unpaused normal play does not prove the named world/character, receive a lease or seed the mission's game-time
 anchor. Registered creation/load must establish those facts after owned launch.
-Creation/save/exit/load, item/activity/inspection, handoff and normal finish remain
+Creation/save/character-exit/load, item/activity/inspection, handoff and normal finish remain
 required adapters: source fixtures that assume trusted identity do not implement them.
 No independent mission is accepted from those tests. Observe likewise cannot adopt
 an unexplained normal session. Reopening restores neither phase nor input authority.
@@ -135,14 +135,32 @@ readiness. It retains child custody after cancellation/timeout; a second launch
 or admission replacement cannot silently replace it. A fresh paused untouched
 MAIN_MENU, empty error, valid rendered frame and unchanged actor/epoch/controller/
 operator counter are required for a readiness receipt. It remains passive: no
-Resume, lease, normal facts, identity or game-time anchor. Other lifecycle adapters
-remain blocked. Portable fake-process tests are not actual native launch acceptance.
+Resume, lease, normal facts, identity or game-time anchor. Portable fake-process
+tests are not actual native launch acceptance.
 
 Cached process facts are last samples, not a liveness guarantee. Shutdown journals
-any owned child without signals; reopening restores no process handle. The launch-only
-adapter conservatively reports every prior attempted/uncertain launch as unavailable
-custody, preventing replay or PID adoption until registered exit/effect handling is
-implemented. Process absence or exit code alone cannot prove a normal save/exit.
+any owned child without signals; reopening restores no process handle. Only a
+validated committed OwnedNormalExit resolves that launch's historical custody.
+Otherwise attempted/uncertain launches remain unavailable, with no PID adoption.
+Process absence or exit code alone cannot prove a normal save/exit.
+
+Registered `exit` currently covers only the same owned untouched MAIN_MENU, before
+creation, load or normal activity. It retains the launch's original operator mark.
+A source-bound root charges distinct Resume and QUIT primitives, then awaits an
+explicit interpreted Really quit? Yes/No child. Exact-PNG refreshes preserve
+checkpoint provenance; root/child ceilings and original deadlines never renew.
+This branch uses ordinary budgets and preserves the cleanup reserve. A verified
+No returns the owned paused main menu without claiming exit. Only published Yes,
+unchanged controller/native authority, the retained child's normal code0 exit,
+matching terminal input/effect and narrow controller retirement produce a closed
+OwnedNormalExit. The original ACK can remain unknown; its cost/history/admission
+file stay retained. Retirement clears only matching expired in-memory pending
+state after durable recording, stays paused/frozen and sends no input or signals.
+Lifecycle PhaseReceipt/exit proof are historical data, never restored permissions.
+Any unexpected normal frame remains diagnostic: registered identity/adoption is
+required before time cost, maps, native memory facts or ordinary dispatch, including
+after reopening. Creation/save/reload/character-exit still need their adapters;
+untouched-menu cleanup proves neither a save nor independent normal-game play.
 
 Trusted Python `observe_mission(deadline_monotonic, timeout)` uses the original
 absolute deadline through command-lock admission and native publication. It grants

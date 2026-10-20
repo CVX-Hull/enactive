@@ -10,7 +10,7 @@ Current source contracts are native4, mission/2, campaign-memory/2, gameplay/2,
 evidence archive3 and mission ledger6. One MissionRuntime owns the live mission API.
 The wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.
-Start is read-only and cannot adopt an unrelated already-running character. The
+Start is source-free and cannot adopt an unrelated already-running character. The
 registered lifecycle must verify owned launch and admitted world/character before
 normal-play authority or a game-time anchor can be established. This is not yet an
 accepted autonomous survival service. Earlier [foundation](acceptance/2026-10-17-foundation-implementation.md)
@@ -76,12 +76,19 @@ Prepublication callbacks retain source and durable intent outside the controller
 data lock, then all authority/deadline fences are checked again. Unknown delivery
 retains its pending identity and charge; it is never blindly replayed.
 
-Start/Observe cannot seed normal sources, identity or the mission clock from an
-unowned game. Creation/save/exit/load, item/activity/inspection, handoff and final-finish
-adapters still block. Registered launch now composes the fixed process adapter
+Start/Observe cannot seed identity or the mission clock from an unowned game.
+Unexpected normal sources stay diagnostic across reopen; one explicit adoption gate
+protects time, map and native-memory eligibility. Core tests mock that missing
+identity boundary explicitly. Creation/save/character-exit/load, item/activity/
+inspection, handoff and final-finish adapters still block. Registered launch now composes the fixed process adapter
 with original deadlines and fresh paused-menu readiness in portable fixtures.
-It sends no Resume/input and establishes no identity or game-time anchor. The
-adapter has not launched a real mission. The remaining lifecycle must establish
+Launch sends no Resume/input and establishes no identity or game-time anchor.
+Registered untouched-menu exit composes charged Resume/QUIT with an explicit
+player-interpreted confirmation, original operator mark and shared root/child limits.
+Published Yes plus exact owned normal exit and narrow durable pending retirement
+can resolve process custody while retaining an unknown ACK and all charges. No
+normal save is claimed. This source composition still needs actual native qualification.
+The remaining lifecycle must establish
 actual native readiness,
 admitted identity and normal exit evidence before those claims are accepted.
 The [timeline reducer](../harness/gameplay/timeline.py) sums normal-session spans

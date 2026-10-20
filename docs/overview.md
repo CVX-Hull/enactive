@@ -18,8 +18,8 @@ and retain control. The harness makes observations, actions and uncertainty visi
 It needs an active Codex player to choose plans and interpret scenes. A dedicated
 player sub-agent owns planning, memory use and typed semantic requests within a
 finite mission. The lead owns source integration and acceptance. The live service
-uses one MissionRuntime; owned lifecycle and independent normal-game acceptance
-are still pending. Passive waypoint/planner components remain offline study tools.
+uses one MissionRuntime. Owned launch/untouched-menu exit are source-composed;
+character lifecycle and independent normal-game acceptance are still pending. Passive waypoint/planner components remain offline study tools.
 
 The [seven-day functional campaign](acceptance/2026-10-19-seven-day-survival.md)
 records the same normally created Ned Meyers / Belgium, ordinary supplies and

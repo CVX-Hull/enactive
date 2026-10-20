@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import copy
 from dataclasses import asdict, dataclass, field, replace
+import hashlib
 import math
 from queue import Empty, Full, Queue
 import threading
@@ -56,6 +57,34 @@ class _PromptPhase:
     takeover_generation: int
 
 
+@dataclass(frozen=True)
+class _OwnedLaunch:
+    request_id: str
+    launch_id: str
+    checkpoint: EvidenceRef
+    operator_mark: tuple[str, int]
+    takeover_generation: int
+
+
+@dataclass(frozen=True)
+class _ExitPhase:
+    root_id: str
+    checkpoint: EvidenceRef
+    launch: _OwnedLaunch
+    actor_id: str
+    epoch: int
+
+
+@dataclass(frozen=True)
+class _ResumeIntent:
+    logical_id: str
+    before: EvidenceRef
+    expected_boundary_id: str
+    kind: str = "resume"
+    action: None = None
+    revalidation: None = None
+
+
 class MissionRuntime:
     """One serialized worker and one bounded queue; constructor sends no input.
 
@@ -91,6 +120,9 @@ class MissionRuntime:
         self._native_owner: tuple[str, str] | None = None
         self._native_facts: dict | None = None
         self._lost_process_custody: tuple[str, ...] = ()
+        self._owned_launch: _OwnedLaunch | None = None
+        self._exit_phase: _ExitPhase | None = None
+        self._exit_candidate: tuple[_ExitPhase, str, dict] | None = None
         self._memory_version = 0
         self._last_context_id: str | None = None
         self._last_memory_context: dict | None = None
@@ -175,6 +207,9 @@ class MissionRuntime:
                     (kind != "skill" or data["phase_id"] != self._prompt_phase.root_id
                      or data["skill_kind"] not in ("menu", "edit", "inspect"))):
                 rejection = "An owned prompt requires its exact phase and supported control child"
+            elif (self._exit_phase is not None and kind in ("skill", "lifecycle") and
+                    (kind != "skill" or data["phase_id"] != self._exit_phase.root_id or data["skill_kind"] != "menu")):
+                rejection = "Owned exit permits only its exact interpreted confirmation child"
             elif (kind == "skill" and data["skill_kind"] == "edit"
                     and data["goal"]["purpose"] in ("character_name", "world_name")):
                 rejection = "Creation-name editing requires the registered lifecycle adapter"
@@ -217,10 +252,11 @@ class MissionRuntime:
                 handle.cancelled.set()
             self._bindings.clear()
             self._prompt_phase = None
+            self._exit_phase = None
             self._rotation = None
             if self._snapshot is not None and self._snapshot["phase"] not in TERMINAL:
                 self._snapshot.update(phase="paused", pause_cause=cause, reason=reason, lease_owner=None,
-                    prompt_phase=None,
+                    prompt_phase=None, lifecycle_phase=None,
                     epoch=self._snapshot["epoch"] + 1, next_needed_decision="Explicit supported readmission required")
         return result
 
@@ -255,6 +291,9 @@ class MissionRuntime:
             "prompt_phase": None if self._prompt_phase is None else {
                 "origin_request_id": self._prompt_phase.root_id,
                 "checkpoint_id": self._prompt_phase.checkpoint.observation_id, "grants_authority": False},
+            "lifecycle_phase": None if self._exit_phase is None else {
+                "origin_request_id": self._exit_phase.root_id, "operation": "exit",
+                "checkpoint_id": self._exit_phase.checkpoint.observation_id, "grants_authority": False},
             "active_operation": None if active is None else active.get("request_id", active["kind"]),
             "skill": self._skill, "progress": copy.deepcopy(self._progress),
             "last_receipt": copy.deepcopy(self._last_receipt),
@@ -321,7 +360,18 @@ class MissionRuntime:
         if not refs:
             raise BudgetError("An observed normal game-time anchor is required")
         self._store.verify(refs[-1])
+        self._require_normal_adoption(refs[-1])
         return refs[-1]
+
+    def _require_normal_adoption(self, reference: EvidenceRef) -> None:
+        """No normal adapter can yet produce the required durable identity proof.
+
+        Keep this gate independent of retained process handles: reopening must
+        not promote an unexpected diagnostic session into a new zero-cost game.
+        Registered creation/reload will supply the typed chronological producer.
+        """
+        self._store.verify(reference)
+        raise EvidenceError("Registered normal-session identity/adoption proof is required")
 
     def _game_guard(self, anchor: EvidenceRef, limit: int, *, after=False) -> None:
         latest = self._last_normal()
@@ -405,6 +455,7 @@ class MissionRuntime:
         self._bindings.clear()
         self._lease, self._rotation = None, None
         self._clear_prompt()
+        self._exit_phase = None
 
     def _capacity(self, *, frames: int = 1, byte_count: int = MAX_FRAME_BYTES) -> None:
         usage = self._store.usage()
@@ -415,6 +466,11 @@ class MissionRuntime:
 
     def _update_game_time(self) -> None:
         try:
+            sessions = set()
+            for ref in self._store.historical_references:
+                if ref.boundary_kind == "normal_play" and ref.session not in sessions:
+                    self._require_normal_adoption(ref)
+                    sessions.add(ref.session)
             timeline = game_timeline(self._store, self._timeline_links)
         except EvidenceError:
             self._game_cost = None
@@ -499,10 +555,12 @@ class MissionRuntime:
             ledger.close()
             raise
         self._ledger, self._store, self._admission = ledger, store, admission
-        # Ordered immutable request results are audit data, not a restored handle.
-        # This launch-only increment cannot qualify a later normal exit yet.
+        # Validated immutable exit results resolve history, never restore a handle.
+        closed_launches = {row["result"]["normal_exit"]["launch_request_id"] for row in ledger.request_records()
+            if row["state"] == "completed" and row["result"] is not None and "normal_exit" in row["result"]}
         self._lost_process_custody = tuple(row["request"]["request_id"] for row in ledger.request_records()
             if row["request"]["kind"] == "lifecycle" and row["request"]["operation"] == "launch"
+            and row["request"]["request_id"] not in closed_launches
             and (row["result"] is None or row["state"] in ("accepted", "running", "unknown")
                  or row["result"].get("launch_attempted", False)))
         with self._metadata:
@@ -511,6 +569,7 @@ class MissionRuntime:
         self._memory = CampaignMemory(ledger, store)
         self._bindings, self._map, self._lease, self._current, self._rotation = {}, None, None, None, None
         self._clear_prompt()
+        self._owned_launch, self._exit_phase, self._exit_candidate = None, None, None
         self._game_cost = None
         self._timeline_links = ()
         historical = [r for r in store.historical_references if r.boundary_kind == "normal_play"]
@@ -529,31 +588,26 @@ class MissionRuntime:
         return ledger.snapshot(now=self._wall())["phase"] == "admitted"
 
     def _bootstrap(self, work: _Work) -> dict:
-        # Admission cannot adopt an existing scene as the named fresh/loaded
-        # character. Only the registered owned lifecycle may establish that.
-        try:
-            state, received = self._observe_native(work)
-        except ControlError as exc:
-            self._diagnostic = str(exc)
-            return {"admitted": True, "lifecycle_needed": True, "reason": str(exc), "grants_authority": False}
-        self._capacity()
+        # Source-free admission cannot adopt an existing game. Publishing Observe
+        # before owned launch would strand an expired pending slot when no game
+        # exists, preventing the launch this admission is supposed to enable.
         self._check_cancelled(work)
-        if state["boundary"]["kind"] == "normal_play":
-            return {"admitted": True, "lifecycle_needed": True, "source_ids": [],
-                "reason": "Unowned normal play cannot seed mission identity or its game-time anchor", "grants_authority": False}
-        reference = self._ingest(state, received)
-        self._publish_source(reference, authoritative=False)
-        return {"admitted": True, "lifecycle_needed": True,
-                "source_ids": [reference.observation_id], "grants_authority": False}
+        return {"admitted": True, "lifecycle_needed": True, "source_ids": [],
+            "reason": "Source-free admission; registered owned launch/identity required", "grants_authority": False}
 
     def _capture_memory(self, reference: EvidenceRef) -> None:
         if reference.boundary_kind == "normal_play":
+            self._require_normal_adoption(reference)
             receipt = self._memory.capture_native(reference, {"mission_id": self._admission.mission_id,
                 "session": reference.session, "coordinate_epoch": 0}, now=self._wall())
             self._record("mission_native_memory", receipt)
             self._memory_version = receipt["memory_version"]
 
     def _observe(self, work: _Work) -> dict:
+        if self._exit_phase is not None:
+            phase = self._refresh_exit(work, self._exit_phase)
+            return {"source_ids": [phase.checkpoint.observation_id], "phase": self._exit_receipt(phase, "awaiting_control"),
+                "lifecycle_needed": True, "grants_authority": False}
         phase = self._prompt_phase
         prior = None if phase is None else self._bindings.get(phase.checkpoint.observation_id)
         self._capacity()
@@ -563,6 +617,13 @@ class MissionRuntime:
             return {"source_ids": [], "lifecycle_needed": True,
                 "reason": "Unowned normal session requires registered lifecycle adoption", "grants_authority": False}
         reference = self._ingest(state, received)
+        owned = self._owned_launch
+        if (owned is not None and self._native is not None and owned.operator_mark == self._operator_mark()
+                and self._native.status()["running"] and state["category"] == "MAIN_MENU"
+                and state["paused"] and self._store.equivalent(owned.checkpoint, reference, rule="exact_png_bytes")):
+            self._owned_launch = replace(owned, checkpoint=reference)
+            self._record("mission_owned_menu_checkpoint", {"before": owned.checkpoint.observation_id,
+                "after": reference.observation_id, "rule": "exact_png_bytes", "grants_authority": False})
         live = self._live()
         authoritative = self._lease is not None and live[3] is self._lease and not live[4] and not live[5]
         relation = None
@@ -682,7 +743,11 @@ class MissionRuntime:
         self._launch_guard(work, mark)
         owner = (self._admission.mission_id, self._admission.configuration.native_sha256)
         if self._native is not None:
-            if self._native_owner != owner or self._native.status()["launch_id"] is not None:
+            current_launch = self._native.status()["launch_id"]
+            verified = any(row["state"] == "completed" and row["result"] is not None
+                and row["result"].get("normal_exit", {}).get("launch_id") == current_launch
+                for row in self._ledger.request_records()) if current_launch is not None else False
+            if self._native_owner != owner or current_launch is not None and not verified:
                 raise ControlError("Owned launch must reach registered normal exit before another launch")
         else:
             self._native = NativeProcess(self.controller.root, owner[1], clock=self._clock)
@@ -735,6 +800,8 @@ class MissionRuntime:
                 reference = self._ingest(state, received)
                 self._publish_source(reference, authoritative=False)
                 self._launch_guard(work, mark)
+                self._owned_launch = _OwnedLaunch(data["request_id"], self._native_facts["launch_id"], reference,
+                    mark, state["takeover_generation"])
                 result.update(native_ready=True, source_ids=[reference.observation_id],
                     reason="Owned child and fresh paused main menu verified; creation/identity/Resume remain pending")
                 return "completed", result
@@ -749,7 +816,225 @@ class MissionRuntime:
     def _lifecycle(self, work: _Work) -> tuple[str, dict]:
         if work.request["operation"] == "launch":
             return self._launch(work)
+        if work.request["operation"] == "exit":
+            return self._exit(work)
         return self._unsupported("Registered create/save/exit/load/finish adapter and identity/effect evidence required")
+
+    def _owned_menu(self) -> _OwnedLaunch:
+        launch = self._owned_launch
+        if launch is None or self._native is None or self._lost_process_custody:
+            raise ControlError("Untouched-menu exit requires this runtime's retained owned launch")
+        self._native_facts = self._native.status()
+        if (self._native_facts["launch_id"] != launch.launch_id or not self._native_facts["running"]
+                or self._operator_mark() != launch.operator_mark):
+            raise ControlError("Owned menu custody or original operator mark changed")
+        rows = self._ledger.request_records()
+        primitive_requests = {p["request_id"] for p in self._ledger.primitive_records()}
+        if (any(ref.boundary_kind == "normal_play" for ref in self._store.historical_references)
+                or any(row["request"]["kind"] == "lifecycle" and row["request"]["operation"] in
+                       ("create", "load", "save") and (row["state"] in ("accepted", "running") or
+                        row["request"]["request_id"] in primitive_requests)
+                       for row in rows)):
+            raise ControlError("No-save exit cannot follow creation/load/normal gameplay")
+        return launch
+
+    def _exit_guard(self, work: _Work, phase: _ExitPhase,
+                    proposal: MissionIntent | _ResumeIntent | None = None) -> None:
+        self._check_cancelled(work)
+        launch = self._owned_menu()
+        ledger = self._ledger.snapshot(now=self._wall())
+        if (phase is not self._exit_phase or phase.launch.launch_id != launch.launch_id
+                or phase.launch.operator_mark != launch.operator_mark
+                or ledger["epoch"] != phase.epoch or work.request["epoch"] != phase.epoch
+                or ledger["player_id"] != phase.actor_id or ledger["unreconciled"] or not ledger["clock_valid"]):
+            raise ControlError("Exit phase lost its actor/epoch/accounting or original operator mark")
+        before = self._store.observation(phase.checkpoint)
+        if (before["session"] != launch.checkpoint.session or before["takeover_generation"] != launch.takeover_generation
+                or before["in_game"] or before["boundary"]["kind"] != "menu" or before["error"]
+                or before["category"] not in ("MAIN_MENU", "YESNO")):
+            raise ControlError("Exit phase cannot adopt a different native session/boundary")
+        if proposal is not None:
+            if proposal.before != phase.checkpoint:
+                raise EvidenceError("Exit input does not name its exact owned checkpoint")
+            if proposal.kind == "resume":
+                state, _, boot, lease, _, pending = self._live()
+                if (lease is not None or pending or boot != launch.operator_mark[0] or state is None
+                        or not before["paused"] or before["category"] != "MAIN_MENU"):
+                    raise ControlError("Bootstrap Resume requires an owned paused untouched main menu")
+            else:
+                state, _, _ = self._check_lease()
+                if self._lease.operation != "lifecycle" or state["session"] != before["session"]:
+                    raise ControlError("Exit requires its exact lifecycle lease")
+                allowed = ("QUIT",) if before["category"] == "MAIN_MENU" else ("YES", "NO")
+                if proposal.kind != "action" or proposal.action not in allowed:
+                    raise ControlError("Owned exit admits only its registered Quit/confirmation action")
+
+    def _exit_receipt(self, phase: _ExitPhase, stage: str) -> dict:
+        return {"schema": VERSION, "record_type": "PhaseReceipt", "phase_kind": "lifecycle", "operation": "exit",
+            "origin_request_id": phase.root_id, "stage": stage, "epoch": phase.epoch, "actor_id": phase.actor_id,
+            "controller_boot_id": phase.launch.operator_mark[0], "operator_pause_generation": phase.launch.operator_mark[1],
+            "takeover_generation": phase.launch.takeover_generation,
+            "source_ids": list(dict.fromkeys((*self._ledger.request(phase.launch.request_id)["result"]["source_ids"],
+                phase.launch.checkpoint.observation_id, phase.checkpoint.observation_id))),
+            "continuity": None, "launch_request_id": phase.launch.request_id, "launch_id": phase.launch.launch_id,
+            "no_save_required": True, "grants_authority": False}
+
+    def _refresh_exit(self, work: _Work, phase: _ExitPhase) -> _ExitPhase:
+        self._exit_guard(work, phase)
+        self._capacity()
+        source = phase.checkpoint
+        operation = self._ledger.request(phase.root_id if work.request["kind"] == "observe" else work.request["request_id"])
+        deadline = self._clock() + min(operation["deadline"],
+            self._mission_deadline - self._admission.cleanup_reserve.wall_seconds) - self._wall()
+        state, received = self._observe_native(work, deadline_monotonic=deadline)
+        reference = self._ingest(state, received)
+        if not self._store.equivalent(source, reference, rule="exact_png_bytes"):
+            raise EvidenceError("Owned exit Observe changed the exact menu image/state")
+        self._exit_guard(work, phase)
+        phase = replace(phase, checkpoint=reference)
+        self._exit_phase = phase
+        self._publish_source(reference, authoritative=False)
+        self._record("mission_exit_checkpoint", {"before": source.observation_id, "after": reference.observation_id,
+            "rule": "exact_png_bytes", "grants_authority": False})
+        return phase
+
+    def _exit(self, work: _Work) -> tuple[str, dict]:
+        data = work.request
+        launch = self._owned_menu()
+        if (data["phase_id"] is not None or data["work_id"] is not None or data["identity_claim_ids"]
+                or self._exit_phase is not None or self._prompt_phase is not None
+                or self._current != launch.checkpoint or launch.checkpoint.observation_id not in data["sources"]):
+            raise ControlError("Untouched exit requires its owned source as a new unambiguous root")
+        state = self._store.observation(launch.checkpoint)
+        if (state["category"] != "MAIN_MENU" or not state["paused"]
+                or (data["expected_session"], data["expected_revision"], data["expected_boundary_id"]) !=
+                   (state["session"], state["revision"], state["boundary"]["id"])):
+            raise ControlError("Untouched exit requires its exact paused main-menu binding")
+        ledger = self._ledger.snapshot(now=self._wall())
+        self._exit_phase = phase = _ExitPhase(data["request_id"], launch.checkpoint, launch,
+            ledger["player_id"], ledger["epoch"])
+        phase = self._refresh_exit(work, phase)
+        self._ledger.activate(epoch=phase.epoch, player_id=phase.actor_id, now=self._wall())
+        logical = "resume-" + hashlib.sha256(data["request_id"].encode()).hexdigest()
+        proposal = _ResumeIntent(logical, phase.checkpoint, self._store.observation(phase.checkpoint)["boundary"]["id"])
+        feedback = self._dispatch(work, proposal, phase.launch.checkpoint, lifecycle=phase)
+        if feedback.transport_disposition != "returned" or feedback.after is None:
+            return feedback.transport_disposition if feedback.transport_disposition == "unknown" else "blocked", {
+                "reason": feedback.reason, "phase": self._exit_receipt(phase, "unknown"), "grants_authority": False}
+        state = self._store.observation(feedback.after)
+        if state["paused"] or state["category"] != "MAIN_MENU" or state["takeover_generation"] != launch.takeover_generation:
+            raise ControlError("Bootstrap Resume did not return the same owned main menu")
+        self._lease = self.controller.acquire_mission(self._admission.mission_id, phase.epoch, phase.actor_id,
+            operation="lifecycle", expected_session=state["session"], expected_revision=state["revision"],
+            expected_boundary_id=state["boundary"]["id"])
+        self._exit_phase = phase = replace(phase, checkpoint=feedback.after)
+        proposal = ControlIntent("quit-" + hashlib.sha256(data["request_id"].encode()).hexdigest(),
+            "action", "QUIT", phase.checkpoint, state["boundary"]["id"])
+        feedback = self._dispatch(work, proposal, phase.launch.checkpoint, lifecycle=phase)
+        if feedback.transport_disposition != "returned" or feedback.after is None:
+            return "unknown" if feedback.transport_disposition == "unknown" else "blocked", {
+                "reason": feedback.reason, "phase": self._exit_receipt(phase, "unknown"), "grants_authority": False}
+        state = self._store.observation(feedback.after)
+        if state["category"] != "YESNO" or state["boundary"]["kind"] != "menu":
+            raise ControlError("Owned Quit did not return its supported confirmation")
+        self._exit_phase = phase = replace(phase, checkpoint=feedback.after)
+        return "partial", {"reason": "Owned Quit awaits the player's explicit interpreted confirmation",
+            "phase": self._exit_receipt(phase, "awaiting_control"), "grants_authority": False}
+
+    def _exit_control(self, work: _Work) -> tuple[str, dict]:
+        phase, data = self._exit_phase, work.request
+        if (phase is None or data["phase_id"] != phase.root_id or data["work_id"] is not None
+                or data["skill_kind"] != "menu" or data["perception"] is None
+                or data["perception"]["kind"] != "confirmation" or data["perception"]["question"] != "Really quit?"
+                or data["goal"]["label"] not in ("Yes", "No") or data["goal"]["outcome"] != "activated"
+                or phase.checkpoint.observation_id not in data["sources"]):
+            raise ControlError("Owned exit requires its exact interpreted Really quit? Yes/No child")
+        self._exit_guard(work, phase)
+        skill = SemanticControlSkill(data)
+        proposal = skill.propose(self._store, **self._clocks())
+        if not isinstance(proposal, ControlIntent):
+            return proposal.disposition, self._control_result(proposal)
+        feedback = self._dispatch(work, proposal, phase.launch.checkpoint, lifecycle=phase)
+        if proposal.action == "YES" and self._exit_candidate is not None:
+            return self._finish_owned_exit(work, phase, proposal)
+        outcome = skill.accept(feedback, self._store, **self._clocks())
+        if (feedback.transport_disposition == "returned" and feedback.after is not None
+                and self._store.observation(feedback.after)["category"] == "MAIN_MENU" and proposal.action == "NO"):
+            self._exit_guard(work, phase)
+            # Pause deliberately after the verified No. Another root still uses
+            # the original operator mark; observing it cannot grant new consent.
+            self.controller.stop_input()
+            self._lease = None
+            self._exit_phase = None
+            state, received = self._observe_native(work, deadline_monotonic=self._deadline(work, proposal.before))
+            reference = self._ingest(state, received)
+            if (state["session"] != phase.launch.checkpoint.session or state["category"] != "MAIN_MENU"
+                    or not state["paused"] or state["takeover_generation"] != phase.launch.takeover_generation):
+                raise ControlError("Declined quit did not return the same owned paused main menu")
+            self._owned_launch = replace(phase.launch, checkpoint=reference)
+            self._publish_source(reference, authoritative=False)
+            phase = replace(phase, checkpoint=reference)
+            return "partial", {"reason": "Quit declined; owned process remains live", "normal_exit_verified": False,
+                "phase": self._exit_receipt(phase, "complete"), "grants_authority": False}
+        return ("unknown" if feedback.transport_disposition == "unknown" else "blocked"), {
+            "reason": feedback.reason if outcome is None else outcome.reason,
+            "phase": self._exit_receipt(phase, "unknown"), "grants_authority": False}
+
+    def _finish_owned_exit(self, work: _Work, phase: _ExitPhase, proposal: ControlIntent) -> tuple[str, dict]:
+        candidate = self._exit_candidate
+        if candidate is None or candidate[:2] != (phase, proposal.logical_id):
+            raise ControlError("No correlated published terminal exit candidate")
+        self._exit_effect_guard(work, phase)
+        facts = self._native.wait_exit(deadline_monotonic=self._deadline(work, proposal.before),
+            cancelled=lambda: work.cancelled.is_set() or self._closed.is_set() or phase.launch.operator_mark != self._operator_mark())
+        self._native_facts = copy.deepcopy(facts)
+        self._exit_effect_guard(work, phase)
+        if (phase.launch.operator_mark != self._operator_mark() or facts["launch_id"] != phase.launch.launch_id
+                or facts["running"] or facts["returncode"] != 0 or facts["outcome"] != "exited"):
+            raise ControlError("Expected terminal input did not establish this owned child's normal exit")
+        for identity in self._exit_receipt(phase, "complete")["source_ids"]:
+            self._store.verify(next(ref for ref in self._store.historical_references if ref.observation_id == identity))
+        self.controller.stop_input()
+        self._lease = None
+        with self.controller.data_lock:
+            self._exit_effect_guard(work, phase)
+            self.controller.frozen = True
+            pending = copy.deepcopy(self.controller.pending)
+            generation = self.controller.pause_generation
+        if pending is not None and pending != candidate[2]:
+            raise ControlError("Exit pending slot differs from its exact terminal native request")
+        retirement = self.controller.retire_mission_exit(expected_controller_boot_id=phase.launch.operator_mark[0],
+            expected_operator_generation=phase.launch.operator_mark[1], expected_generation=generation,
+            expected_request=pending, launch_id=phase.launch.launch_id, exit_request_id=phase.root_id, returncode=0)
+        receipt = self._exit_receipt(phase, "complete")
+        primitive = self._ledger.primitive(proposal.logical_id)
+        if primitive["state"] == "unknown":
+            self._ledger.reconcile_effect(proposal.logical_id, sources=tuple(receipt["source_ids"]),
+                note=f"Owned normal exit {phase.launch.launch_id} after published YES; ACK remains unknown", now=self._wall())
+        proof = {"schema": VERSION, "record_type": "OwnedNormalExit", "origin_request_id": phase.root_id,
+            "launch_request_id": phase.launch.request_id, "launch_id": phase.launch.launch_id,
+            "terminal_logical_id": proposal.logical_id, "native_request_id": candidate[2]["id"],
+            "source_ids": receipt["source_ids"], "no_save_required": True, "returncode": 0,
+            "retirement": retirement, "grants_authority": False}
+        self._exit_phase = None
+        self._exit_candidate = None
+        self._bindings.clear()
+        return "completed", {"reason": "Owned untouched-menu normal exit verified; input ACK retained separately",
+            "phase": receipt, "normal_exit": proof, "grants_authority": False}
+
+    def _exit_effect_guard(self, work: _Work, phase: _ExitPhase) -> None:
+        """An expected unknown destroys input authority, not takeover precedence."""
+        self._check_cancelled(work)
+        before = self._store.observation(phase.checkpoint)
+        state = self._live()[0]
+        if (self._operator_mark() != phase.launch.operator_mark or state is None
+                or state["session"] != phase.checkpoint.session or state["pause_origin"] == "human"
+                or state["in_game"] or state["scene"] is not None or state["error"]
+                or state["boundary"]["kind"] != "menu" or state["category"] != "YESNO"
+                or any(ref.boundary_kind == "normal_play" for ref in self._store.historical_references)
+                or state["takeover_generation"] != phase.launch.takeover_generation
+                or state["boundary"]["control_generation"] != before["boundary"]["control_generation"]):
+            raise ControlError("Expected exit effect superseded by controller/native Pause or takeover")
 
     @staticmethod
     def _unsupported(reason: str) -> tuple[str, dict]:
@@ -838,8 +1123,9 @@ class MissionRuntime:
             raise BudgetError("Original navigation/mission deadline exhausted")
         return deadline
 
-    def _envelope(self, raw: dict, work: _Work, proposal: MissionIntent, preflight: EvidenceRef | None) -> tuple[str, str]:
-        image_informed = work.request["perception"] is not None
+    def _envelope(self, raw: dict, work: _Work, proposal: MissionIntent | _ResumeIntent,
+                  preflight: EvidenceRef | None) -> tuple[str, str]:
+        image_informed = work.request.get("perception") is not None or work.request["kind"] == "lifecycle"
         fields = {"logical_action_id", "request", "result", "published", "received_monotonic", "preflight"}
         if type(raw) is not dict or set(raw) != fields or raw["logical_action_id"] != proposal.logical_id or type(raw["published"]) is not bool:
             raise ContractError("Malformed exact mission receipt envelope")
@@ -850,8 +1136,10 @@ class MissionRuntime:
             if raw["published"]:
                 raise ContractError("Published receipt lost native request identity")
         else:
-            expected = {"kind": proposal.kind, proposal.kind: proposal.action, "session": proposal.before.session,
+            expected = {"kind": proposal.kind, "session": proposal.before.session,
                 "revision": proposal.before.revision, "boundary_id": proposal.expected_boundary_id}
+            if proposal.kind != "resume":
+                expected[proposal.kind] = proposal.action
             if any(request.get(key) != value for key, value in expected.items()) or not isinstance(request.get("id"), str):
                 raise ContractError("Mission native request does not correlate with logical proposal")
             if request.get("require_exact_frame") is not image_informed:
@@ -909,7 +1197,8 @@ class MissionRuntime:
             return "returned", "Exact terminal ready receipt; displacement requires independent verification"
         return "unknown", str(result.get("error") or "Input acknowledgment is unresolved")[:1024]
 
-    def _dispatch(self, work: _Work, proposal: MissionIntent, original: EvidenceRef) -> PrimitiveResult:
+    def _dispatch(self, work: _Work, proposal: MissionIntent | _ResumeIntent, original: EvidenceRef,
+                  *, lifecycle: _ExitPhase | None = None) -> PrimitiveResult:
         reservation = None
         preflight_source = None
         prepared = False
@@ -917,18 +1206,23 @@ class MissionRuntime:
         raw = None
         disposition, reason = "not_dispatched", "Dispatch not admitted"
         envelope_valid = False
-        image_informed = work.request["perception"] is not None
+        image_informed = work.request.get("perception") is not None or lifecycle is not None
         rule = "exact_png_bytes" if image_informed else "native_state"
+        def guard() -> None:
+            if lifecycle is None:
+                self._dispatch_guard(work, proposal)
+            else:
+                self._exit_guard(work, lifecycle, proposal)
         def preflight(observed: dict, received: float) -> None:
             nonlocal reservation, preflight_source, prepared
-            self._dispatch_guard(work, proposal)
+            guard()
             self._capacity(frames=2, byte_count=2 * MAX_FRAME_BYTES)
             preflight_source = self._store.retain_equivalent(observed,
                 received_monotonic=received, rule=rule, **self._clocks())
             if (preflight_source == proposal.before or preflight_source.received_monotonic != received
                     or self._store.observation(preflight_source) != observed):
                 raise EvidenceError("Preflight retention must attest its actual distinct source and original receipt")
-            self._dispatch_guard(work, proposal)
+            guard()
             self._capacity()
             reservation = self._store.reserve_dispatch(proposal.before, **self._clocks())
             intent = {"kind": proposal.kind, "value": proposal.action,
@@ -940,24 +1234,39 @@ class MissionRuntime:
             self._ledger.prepare_primitive(work.request["request_id"], proposal.logical_id, intent, now=self._wall())
             prepared = True
             self._cache_operation(self._ledger.request(work.request["request_id"]))
-            self._dispatch_guard(work, proposal)
+            guard()
             self._store.verify(proposal.before)
             self._store.verify(preflight_source)
         try:
-            self._dispatch_guard(work, proposal)
-            deadline = self._deadline(work, original)
+            guard()
+            deadline = self._deadline(work, proposal.before if lifecycle is not None else original)
             self._publish()
-            raw = self.controller.execute_mission(self._lease, kind=proposal.kind, value=proposal.action,
-                expected_session=proposal.before.session, expected_revision=proposal.before.revision,
-                expected_boundary_id=proposal.expected_boundary_id, logical_action_id=proposal.logical_id,
-                deadline_monotonic=deadline, preflight=preflight,
-                expected_image_sha256=proposal.before.frame_sha256 if image_informed else None)
+            if isinstance(proposal, _ResumeIntent) and lifecycle is not None:
+                with self.controller.data_lock:
+                    generation = self.controller.pause_generation
+                observed = self._store.observation(proposal.before)
+                raw = self.controller.resume_mission(expected_generation=generation,
+                    expected_operator_generation=lifecycle.launch.operator_mark[1],
+                    expected_controller_boot_id=lifecycle.launch.operator_mark[0],
+                    expected_takeover_generation=lifecycle.launch.takeover_generation,
+                    expected_pause_origin=observed["pause_origin"], expected_session=proposal.before.session,
+                    expected_revision=proposal.before.revision, expected_boundary_id=proposal.expected_boundary_id,
+                    logical_action_id=proposal.logical_id, deadline_monotonic=deadline, preflight=preflight,
+                    expected_image_sha256=proposal.before.frame_sha256)
+            else:
+                raw = self.controller.execute_mission(self._lease, kind=proposal.kind, value=proposal.action,
+                    expected_session=proposal.before.session, expected_revision=proposal.before.revision,
+                    expected_boundary_id=proposal.expected_boundary_id, logical_action_id=proposal.logical_id,
+                    deadline_monotonic=deadline, preflight=preflight,
+                    expected_image_sha256=proposal.before.frame_sha256 if image_informed else None)
             if not prepared:
                 prepared = any(row["logical_id"] == proposal.logical_id for row in self._ledger.primitive_records())
             disposition, reason = self._envelope(raw, work, proposal, preflight_source)
             envelope_valid = True
             if raw["published"]:
                 self._ledger.published(proposal.logical_id, raw["request"]["id"], now=self._wall())
+                if lifecycle is not None and proposal.kind == "action" and proposal.action == "YES":
+                    self._exit_candidate = (lifecycle, proposal.logical_id, copy.deepcopy(raw["request"]))
             if disposition == "returned":
                 after = self._ingest(raw["result"], raw["received_monotonic"], reservation=reservation)
                 reservation = None
@@ -1167,6 +1476,8 @@ class MissionRuntime:
         if kind in ("remember", "correct"):
             return "completed", self._memory_request(work)
         if kind == "skill":
+            if self._exit_phase is not None:
+                return self._exit_control(work)
             self._prompt_guard(work.request)
             work_id = work.request["work_id"]
             if work_id is not None:
@@ -1285,8 +1596,11 @@ class MissionRuntime:
                 self._apply_pauses()
                 if self._native is not None:
                     self._native_facts = self._native.status()
+                    verified = self._ledger is not None and any(row["state"] == "completed" and row["result"] is not None
+                        and row["result"].get("normal_exit", {}).get("launch_id") == self._native_facts["launch_id"]
+                        for row in self._ledger.request_records())
                     self._record("mission_process_shutdown_custody", {"process": self._native_facts,
-                        "normal_exit_verified": False, "restored_from_disk": False, "grants_authority": False})
+                        "normal_exit_verified": verified, "restored_from_disk": False, "grants_authority": False})
                 self._publish()
             except Exception as exc:
                 self._diagnostic = f"Terminal persistence failed: {exc}"[:1024]
@@ -1299,6 +1613,7 @@ class MissionRuntime:
             self._diagnostic = f"{reason}; Pause persistence unconfirmed: {exc}"[:1024]
         self._bindings.clear()
         self._clear_prompt()
+        self._exit_phase = None
         self._rotation = None
         self._apply_pauses()
         state = self._ledger.snapshot(now=self._wall())

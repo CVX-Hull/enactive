@@ -498,6 +498,11 @@ class Controller:
 
     def _restore_request(self, request: dict[str, Any], reason: str) -> None:
         """Restore only current-format uncertainty; never translate older records."""
+        self._validate_stored_request(request)
+        self._unknown(request, reason)
+
+    @staticmethod
+    def _validate_stored_request(request: dict[str, Any]) -> None:
         fields = {"protocol", "id", "kind", "deadline_ms"}
         kind = request.get("kind")
         if not isinstance(kind, str) or kind not in {"observe", "pause", "resume", "key", "action"}:
@@ -523,7 +528,6 @@ class Controller:
                 or not isinstance(request.get("id"), str) or not request["id"]
                 or type(request.get("deadline_ms")) is not int):
             raise ControlError("Unsupported stored request format; migrate or archive offline")
-        self._unknown(request, reason)
 
     def close(self) -> None:
         if not hasattr(self, "_lock_file") or self._lock_file.closed:
@@ -756,6 +760,69 @@ class Controller:
     def stop_input(self) -> dict[str, Any]:
         """Trusted runtime stop, never evidence that the operator requested Pause."""
         return self._pause_input(operator=False)
+
+    def retire_mission_exit(self, *, expected_controller_boot_id: str,
+                            expected_operator_generation: int, expected_generation: int,
+                            expected_request: dict[str, Any] | None, launch_id: str,
+                            exit_request_id: str, returncode: int) -> dict[str, Any]:
+        """Retire host pending state after runtime attests an owned normal exit.
+
+        Runtime must prove its exact child and admitted final-input phase. This
+        trusted Python API checks only controller custody; it cannot establish a
+        save or native input outcome and is unavailable through command JSON.
+        """
+        for name, value in (("launch_id", launch_id), ("exit_request_id", exit_request_id)):
+            if type(value) is not str or re.fullmatch(r"[\x21-\x7e]{1,128}", value) is None:
+                raise ControlError(f"Exit {name} requires 1 to 128 printable ASCII characters")
+        if type(returncode) is not int or returncode != 0:
+            raise ControlError("Exit retirement requires a normal zero return code")
+        if (type(expected_controller_boot_id) is not str or not expected_controller_boot_id
+                or type(expected_operator_generation) is not int or expected_operator_generation < 0
+                or type(expected_generation) is not int or expected_generation < 0
+                or expected_request is not None and type(expected_request) is not dict):
+            raise ControlError("Malformed exit retirement binding")
+        if not self.command_lock.acquire(blocking=False):
+            raise ControlError("Command writer is active")
+        try:
+            if not self.control_lock.acquire(blocking=False):
+                raise ControlError("Recovery writer is active")
+            try:
+                with self.data_lock:
+                    if (self.closed or expected_controller_boot_id != self.authority["controller_boot_id"]
+                            or expected_operator_generation != self.operator_pause_generation
+                            or expected_generation != self.pause_generation):
+                        raise ControlError("Exit retirement superseded by controller change or Pause")
+                    if (self._mission_lease is not None or self._command_work
+                            or self.control_pending is not None):
+                        raise ControlError("Mission or command/recovery work is active")
+                    if not self.pause_requested or not self.frozen:
+                        raise ControlError("Exit retirement requires a paused, frozen controller")
+                    if any(os.path.lexists(self.bridge / name) for name in
+                           ("request.json", "claimed.json", "control.json", "control-claimed.json")):
+                        raise ControlError("Native or recovery inbox is not empty")
+                    if self.pending != expected_request:
+                        raise ControlError("Exit retirement requires the exact pending request")
+                    if expected_request is not None:
+                        self._validate_stored_request(expected_request)
+                        if (expected_request["kind"] not in {"action", "key"}
+                                or expected_request["deadline_ms"] > int(time.time() * 1000)):
+                            raise ControlError("Exit retirement requires an expired action or key")
+                        if not any(item["request"] == expected_request for item in self.unknown_outcomes):
+                            raise ControlError("Exit retirement requires the exact existing unknown outcome")
+                    receipt = {"launch_id": launch_id, "exit_request_id": exit_request_id,
+                               "native_request_id": None if expected_request is None else expected_request["id"],
+                               "returncode": 0, "retired_pending": expected_request is not None,
+                               "grants_authority": False}
+                    self._revoke()
+                    self._pause_file()
+                    # Durable evidence must precede removal of the in-memory gate.
+                    self._record({"kind": "mission_exit_retirement"}, receipt)
+                    self.pending = None
+                    return receipt
+            finally:
+                self.control_lock.release()
+        finally:
+            self.command_lock.release()
 
     def _pause_input(self, *, operator: bool) -> dict[str, Any]:
         # This path deliberately never waits for the command lock or the game.
