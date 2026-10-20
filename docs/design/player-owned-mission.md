@@ -1,0 +1,547 @@
+---
+owner: lead
+status: proposed
+review_trigger: Mission interface adoption; implementation or native validation contradicts this design; new source or player lifecycle constraints
+---
+
+# Player-owned mission design
+
+This is the design deliverable for [#137](https://github.com/CVX-Hull/enactive/issues/137),
+not an implemented contract or gameplay admission. Base `9df034ef` has only the
+leased waypoint service and external campaign operator. [Architecture](../architecture.md)
+and [protocol](../protocol.md) remain authoritative until the coordinated migration.
+The [assessment](../research-memory-architecture.md) supplies the research rationale;
+the [trace pilot](../acceptance/2026-10-19-memory-trace-pilot.md) supplies bounded
+first-run development cases. GitHub owns scope, allocation and live stages.
+
+## What changes for the owner
+
+One designated playing system receives a finite objective and handles its own
+plans, memory, semantic skills, routine recovery and normal lifecycle. The user
+and engineering lead can observe without supplying keys, tactical advice, memory
+repairs or another assignment at every skill boundary. Ordinary-width graphical
+play, source inspection and immediate Pause remain available.
+
+The next delivery is one useful supply-and-shelter mission, followed by an explicit
+readiness decision for a fresh seven-day assessment. The short mission is not the
+seven-day result. A safe failed mission remains a failure, even if its incident
+report or component tests are useful. No model superiority or memory benefit is
+claimed from this functional delivery.
+
+Reader question: **who remembers, who chooses, and who can send input?**
+The existing proposed logical diagram applies to this design:
+
+![One player retrieves supported state and pending work, requests bounded skills and revises memory from observed results; current guards and user Pause remain separate.](../diagrams/player-owned-memory.svg)
+
+Boxes are responsibilities, not required model tiers/processes. Solid arrows are
+requests and updates; dashed arrows are returned observations/results. Retained
+memory informs choices but grants no dispatch authority. Text equivalent: the
+player retrieves a bounded state/work packet, selects a skill, receives feedback
+from guarded execution, then updates or corrects its understanding and replans.
+[Editable diagram](../diagrams/player-owned-memory.mmd). The diagram remains
+proposed until the corresponding protocol/runtime is delivered.
+
+## Responsibilities and physical ownership
+
+| Responsibility | Implementation boundary and limit |
+| --- | --- |
+| Mission policy and decisions | A designated general-purpose Codex player; no concrete paid provider or automatic model routing. It owns subgoal/skill choices, evidence interpretation and routine replanning. Its chat is replaceable. |
+| Durable understanding | Passive campaign memory and canonical retained evidence; no controller/process imports or tool execution. Facts from native fields and fallible image/model interpretations are distinct. |
+| Skill policy | Passive bounded navigation, visible-item/menu and activity policies return one proposed primitive or a progress/stop result. They do not acquire authority. |
+| Execution/session | One `MissionRuntime` in the existing service assembles policies, counters, memory and controller receipts. It is the only general admitted runtime; no second campaign service beside the waypoint worker. |
+| Native/lifecycle custody | The existing controller plus a fixed wrapper launch/normal-exit adapter. Native CDDA owns outcomes. No arbitrary command, PID, path, environment or save editor is accepted from the player. |
+| Engineering and review | Lead designs/integrates/adjudicates/releases; independent reviewers read evidence. During deciding gameplay they supply no routine gameplay assistance. Optional curation is not an ordinary-action approval gate. |
+
+A single model can fill several reasoning roles. Luna remains a candidate, not a
+selected configuration. Use a capable single-player baseline for this delivery;
+record exposed identity/effort, otherwise unknown. Stronger consultation is an
+in-system reasoning operation, not authority or independent source truth.
+
+## One current migration
+
+Replace `/api/gameplay` and `gameplay-*` CLI ingress with `/api/mission` and
+`mission-*`; migrate server, CLI, viewer, tests and project command-rule examples
+together. Remove the old live waypoint worker/inbox ingress, not a fallback.
+Waypoint-return remains a scenario built from current navigation skills; useful
+passive contracts/planner/supervisor logic may remain only with current consumers
+and tests. Remove unconsumed execution scaffolding rather than keep two players.
+
+Advance gameplay records together to `gameplay/2` where their shared encoding is
+used; unsupported `gameplay/1` input rejects. Introduce `mission/1` for the strict
+mission request/state envelope and `campaign-memory/1` for the durable index.
+Advance the evidence-store metadata to version3 and native observation to wire4
+for the visible-menu field below. Update every active producer/reader/fixture,
+source patch, build pin receipt and permission-rule example in the same integrated
+candidate. Native3 and prior executable metadata cannot be current inputs.
+Historical reports/raw artifacts remain historical evidence, not runtime readers.
+
+Deploy only with all writers stopped, old slots terminal/reconciled, normal save
+and owned process shutdown. No live old lease, inbox, queue or relative-coordinate
+map migrates. An offline import of historical source references is explicit and
+advisory; unsupported files are rejected without modification. No compatibility
+alias, dual reader, version guessing or automatic old-state upgrade. Current docs,
+setup/checks and operation preflight change with implementation, not merely because
+this proposal is accepted.
+
+## Minimal objects and interfaces
+
+Use the existing strict finite-JSON/JSON-Schema machinery. Extra fields, duplicate
+keys, nonfinite numbers and unsupported versions reject. Runtime ingress stays
+bounded to64KiB; source images travel through existing authenticated frame routes,
+not JSON. IDs are audit/binding fields, not OS isolation.
+
+| Object | Required fields / meaning |
+| --- | --- |
+| Mission admission | `mission_id`, `objective`, `player_id`, `scenario`, `limits`, `cleanup_reserve`, `allowed_skills`, `allowed_lifecycle`, `update_policy`, `configuration`. Immutable prospective scope. Configuration identifies source/native/skill/lesson/model conditions and unavailable metrics. |
+| Mission state | `mission_id`, `epoch`, `phase`, `player_id`, `objective`, `subgoal`, `active_skill`, `remaining`, `pause_cause`, `unresolved_effects`, `memory_version`, `last_evidence`, `interventions`. Advisory status is never a lease. |
+| Skill request | `request_id`, `mission_id`, `epoch`, `kind`, `goal`, `sources`, `expected_session`, `expected_revision`, `limits`. Request ID deduplicates admission; it never causes a timed-out side effect to replay. |
+| Skill result | Same request/mission/epoch plus `state`, `reason`, `progress`, `before`, `after`, `primitive_receipts`, `next_observation`. States: running/completed/partial/blocked/failed/unknown/paused. Delivery and semantic completion are separate. |
+| Evidence reference | Existing session/revision/frame/hash/boundary plus canonical retained source ID. Receipt time is not observation time; missing scene/time remains null. Menu/activity evidence is not a normal-play scene. |
+| Claim | `id`, `kind`, `key`, `value`, `text`, `scope`, `observed_time`, `received_time`, `coverage`, `sources`, `supports`, `status`, `supersedes`. Native fact versus interpretation; current/last_seen/inferred/disputed/retired/unknown. |
+| Work instance | `id`, `intent`, `scope`, `stage`, `progress`, `available`, `committed`, `predicted_output`, `observed_output`, `unresolved_effects`, `sources`, `next_verification`, `status`. Association with an engine activity may be uncertain. |
+| Decision/context packet | Query, memory version, selected claim/work/source IDs, applicable lesson IDs/counterexamples, omitted/truncated counts and original objective/remaining limits. No implicit claim that it contains everything. |
+
+`scenario` identifies an ordinary creation/load UI condition; it cannot prescribe
+hidden world contents. Scope contains mission, native session and coordinate epoch;
+character/world names are fallible observed identity clues, not a universal key.
+Native position stays relative. Explicit visible relocalization is needed before
+a new session can use an old place; no origin-vector arithmetic across reloads.
+
+Expose these operations through the one mission ingress and literal CLI:
+`start`, `status`, `observe`, `context`, `remember`, `correct`, `skill`, `result`,
+`reconcile`, `handoff`, `claim`, `lifecycle`, `stop`. Fixed kind-specific schemas;
+no generic execute/callable/import endpoint. `status/context/result` are read-only.
+`remember/correct` update advisory records only. `skill` returns an accepted ID
+quickly; its bounded worker settles through `result/status`. Only one operation
+can own native input; concurrent skill/lifecycle admissions reject. Retained
+candidates/results are bounded and never resurrect an expired operation.
+
+The existing user Observe/Pause interfaces remain. User direct input first revokes
+mission authority; it cannot race an active mission. A mission records external
+intervention and cannot conceal it by acquiring another epoch. The ordinary
+controller CLI remains useful outside an admitted mission, not a legacy mission
+execution path.
+
+### Dispatch capability and boundary matrix
+
+The current `Controller.acquire_run`/`execute_run` are normal-play/action-only;
+this design **replaces that capability API**, not merely its metadata. One
+`MissionLease` object is created only inside the controller. It binds mission ID,
+mission epoch, actor assignment, native session and pause generation. Only the
+mission runtime receives it; JSON/player names never recreate the object.
+`acquire_mission(...)` requires reconciled empty command/recovery slots, a fresh
+successful supported boundary and explicit mission-phase eligibility.
+`execute_mission(lease, logical_id, kind, payload, expected_session,
+expected_revision, expected_boundary_id, deadline)` accepts exactly one registered
+action or permitted printable/named key through the existing serialized transport.
+It returns the existing exact logical/native receipt envelope, including publication
+and unknown status. No broad private `_execute` bypass or unguarded macro path.
+
+| Operation | Eligible boundary and capability rule |
+| --- | --- |
+| Acquire | Fresh unpaused normal play, or supported menu in the admitted creation/load/interaction/lifecycle phase. A menu lease is not permission to navigate normal terrain. No pending/frozen work. |
+| Navigation step | Normal play only; same-session position and existing shared movement guard, registered direction, exact displacement afterward. |
+| Item/menu action or key | Fresh supported menu or admitted ordinary entry action; exact session/revision/boundary and registered binding. UI selection additionally rechecks the requested visible row/label/count scope. Unknown prompts stop. |
+| Observe/activity poll | No input capability required; serialized Observe may reconcile expired transport. Retention grants no input. Activity-poll metadata never admits ordinary keys. |
+| Recovery | Release/revoke lease first; use existing exact recovery request/confirmation identities and native eligibility. Stay paused afterward. A new generation/observation and deliberate permitted continuation are required before another lease. |
+| Resume | No old lease can Resume itself. Runtime may request deliberate Resume only for its admitted initial startup or documented lifecycle/recovery/handoff transition, with exact pause-generation/cause and no newer user Pause/takeover. Unknown cause defaults to user-controlled stop. |
+| Native session change | Immediately revoke old lease/queued intents, retain pending request as unknown, enter lifecycle reconciliation. Only the explicitly outstanding launch/create/load/save-exit phase may adopt a new supported session after its completion evidence below. |
+| User Pause/takeover, deadline, shutdown or fault | Revoke synchronously before bookkeeping; no automatic reacquisition or Resume. Polling/status remain available. |
+
+The controller checks the same object/generation at queue admission, after its
+fresh observation and immediately before native publication/commit. Native still
+validates its durable token, request session/revision and matching presented
+boundary freshness at input commit. The host additionally binds the expected
+boundary ID; wire4 must carry/check it for mission primitives rather than infer
+a caller's intended menu from action text. A command
+cannot cross a changed menu, actor epoch, session or Pause by waiting in a queue.
+Recovery and native activity effects already committed remain outside rollback.
+Source/format adoption must migrate the existing owner checks and tests together;
+retaining the normal-only gate and calling external keys alongside it is rejected.
+
+### Request shapes
+
+Every request has `schema=mission/1`, `kind` and a unique `request_id` except read-only
+status/result/context. Mutating existing-mission operations additionally bind
+`mission_id` and `epoch`; input decisions bind the informing session/revision and
+boundary. Exact operation payloads are:
+
+| Kind | Payload beyond binding |
+| --- | --- |
+| start | `admission`: the immutable mission admission object; rejects another nonterminal mission. No native input is implicit. |
+| status / result | `mission_id`; result also `request_id` of the retained operation. |
+| observe / reconcile | No replacement intent. Reconcile references `unresolved_request_id` and a new observation; it cannot rewrite the old delivery disposition. |
+| context | `mission_id`, `query`, `scope`, `max_bytes` (<=32768); returns selected IDs/version and omission counts. |
+| remember / correct | Typed claim/work update; correction names retired derivation IDs, replacement interpretation/support and reason. Clients cannot insert native facts. |
+| skill | The exact skill request; kinds navigate/menu/item/activity/inspect, each with typed goal fields and bounded stop conditions. No callable, shell or arbitrary path. |
+| handoff / claim | Handoff names settled checkpoint/source IDs and intended successor role; claim consumes one-use handoff ID and exact epoch/generation after reconciliation. |
+| lifecycle | `operation` launch/create/save/exit/load/finish, supported observed identity/target when relevant, before-source IDs and explicit remaining limits. No player-supplied process path/PID. |
+| stop | Reason and explicit finishing-versus-immediate-pause intent; always revokes further ordinary dispatch first. |
+
+Only request IDs known as read-only may be retried as reads. An identical retained
+mutating request returns its existing state/result and never repeats inputs;
+a conflicting payload for the same ID rejects. Skill goals are concretized in
+strict shared schemas before worker dispatch: navigate has scoped integer target;
+menu/item has purpose, exact label, quantity and outcome predicate; activity has
+ordinary operation, visible target/progress/time bound and interrupt policy;
+inspect has a registered UI purpose. This is a closed enum, not a policy language.
+
+## Evidence and memory storage
+
+Reuse the existing controller journal/native frame identities. One mission-owned
+canonical archive retains successful normal/menu/activity/recovery frames and
+metadata before they are referenced; no second raw game log. Extend evidence
+retention, not a parallel recorder. Separate “can retain this source” from “is
+this source eligible for this primitive?” Movement still requires the current
+normal scene and existing shared terrain/creature predicates.
+
+Use Python's bundled SQLite for the campaign index: one writer, standard
+transactions, fixed version in `PRAGMA user_version`, bounded tables for claims,
+work and decision references, and exact queries. No ORM/vector DB/graph service,
+custom history/VCS or automatic lesson learner. Original images/journal records
+remain canonical observation evidence. SQLite owns the retained semantic assertions,
+corrections and work updates; its current views are rebuildable projections of
+those records. A lost assertion cannot be recreated as truth from an image hash.
+Rebuilding a source index alone does not reconstruct lost interpretations. A transaction cannot atomically commit CDDA input plus an acknowledgment.
+Never use database recovery as an outbox retry of unknown game effects.
+
+Initial admission ceilings:4096 retained frames,1GiB total image bytes,32MiB per
+image,2048 claims,256 work records,2048 decisions,8sources per claim,1024characters
+per text field. Context response <=32KiB, <=32claims,16work entries and16source
+references, with omissions explicit. Reserve capacity for terminal receipts and
+cleanup before dispatch. Hard ceilings are implementation bounds, not permission
+to consume all space; mission preflight chooses finite lower budgets and a cleanup
+reserve. If storage cannot preserve evidence, stop before further side effects.
+No silent eviction of referenced sources; explicitly record unavailable/retired
+sources and invalidate dependent advice. A rebuild is verified against retained
+references; broken sources remain broken, not reconstructed facts.
+
+### Durable mission ledger and crash ordering
+
+One project-local SQLite file at `.runtime/missions/<mission_id>/mission.sqlite3`
+owns both mission execution metadata and semantic memory; it is not a Git-like
+history system. Fixed tables: immutable admission/configuration; mission phase,
+epoch, pause cause and original deadlines; admitted semantic requests with canonical
+payload hash/state/result; logical primitive/native UUID mappings and terminal or
+unknown disposition; cumulative charges/reserves; handoffs; source references;
+immutable claim/correction/work-update records and rebuildable current views;
+decision/context references. Keep source images/journal evidence in the one archive.
+One process/file lock and one serialized writer; no concurrent restored mission.
+
+Transactionally reserve input/capacity/cumulative cost and insert semantic request
+and logical primitive **before** attempting transport publication. Record native
+UUID/published metadata when available and settle with exact receipt/source IDs.
+There is no cross-process database/native atomic commit: a crash between these
+steps leaves the intent potentially sent, not safely retryable. Count it conservatively
+and mark unknown on reopen. Settlement/storage failure synchronously pauses further
+inputs and preserves existing controller evidence for reconciliation.
+
+On service reopen verify schema/configuration and source references; retain original
+admission/deadline, spent costs and every nonterminal mapping, mark interrupted
+operations unknown, clear ephemeral capabilities/queued execution and remain paused.
+Never restart workers or dispatch from persisted requests. Querying old results is
+allowed; continuing requires explicit fresh reconciliation and readmission to the
+remaining original scope, or a new separately recorded attempt. An unknown native
+UUID may lack a terminal receipt even after its effect is separately observed.
+Wall-clock rollback or unprovable remaining budget stops instead of renewing time.
+Persisted counters are charged before dispatch, including attempts with unknown
+outcome; report actual known delivery counts separately, without refund-by-guess.
+
+Bound mission request/primitive records by admission's input ceilings plus bounded
+read/control operations; reject growth beyond4096semantic requests,8192primitive
+mappings,16handoffs or64MiB database. Claims/updates and context limits below remain
+independent. Reopening tests inject failure before publication, after publication,
+before settlement and during source retention/cost update. They must prove no
+double input, no renewed budget/lease and retained unknowns, not pretend to transact
+the game through SQLite. Deleted semantic records cannot be reconstructed as truth
+from raw frames; explicit loss remains loss.
+
+Pause cause is set by controller/runtime events, never a client-provided reason
+claim: user/takeover/unknown, internal_bootstrap, internal_lifecycle, internal_handoff, internal_recovery or finishing.
+A newer user/takeover generation always supersedes an internal cause. Deliberate
+continuation compares the exact recorded cause and generation before Resume and
+again before reacquisition; unknown origin defaults to no automatic continuation.
+
+Native facts enter automatically with their actual coverage. Player observations
+from screenshots enter as interpretations with source references; language-model
+assertions never become native facts. `correct` appends a correction, retires the
+specified derivation and flags dependent interpretations/plans. Preserve surviving
+independent support; duplicate citations or reviewer repetition do not increase
+support. Each bounded support group is conjunctive; alternative groups are
+explicitly separate. Retiring one premise invalidates that derivation, not an
+independent surviving group. Reject cyclic claim dependencies; this is a small
+provenance check, not a general theorem prover. Historical truth and present
+applicability are separate. An inventory
+page proves only its inspected coverage, not all containers or future stock.
+
+The current-view reducer uses typed `key={subject, property, unit, coverage_id}`
+within scope, not prose similarity. Initial properties are visible needs, displayed
+supply counts, observed place and work progress; unsupported identity/unit alignment
+stays separate. Duplicate labels do not identify the same item/container. A value
+contains a typed quantity/state or explicit unknown; free-text advice is not an
+inventory observation. Client `status=current` is only a request, never permission
+to override this reducer.
+
+Order observations by supported native session/revision and observed game time
+when available, never arrival/receipt order. Comparisons across sessions require
+explicit supported identity/time alignment; otherwise retain separate last-seen
+claims. A delayed older observation cannot supersede a newer frontier. Conflicting
+values at the same supported order, unknown/incomparable order or incompatible
+coverage produce disputed/unknown rather than a guessed last writer. A later
+partial page never clears uninspected containers. Native absence requires the
+corresponding explicit visible coverage; unsupported negative interpretations
+remain interpretations.
+
+Persist the supersession/correction frontier even if its source later becomes
+missing/retired. Losing the newest support makes the current value unknown; it
+cannot revive an older superseded stock count. Independent valid support at the
+same frontier may survive. Only a new supported observation/correction can establish
+another current value. Any potentially state-changing input or unknown effect
+invalidates affected freshness (conservatively all dynamic supply/needs/work keys
+when effects are not known); historical observations remain last-seen. Retrieval
+reports its as-of source and requires fresh reobservation for a current execution
+precondition. Rebuilding projections must reproduce these frontiers, conflicts and
+loss dispositions, not re-run an LLM to invent missing facts.
+
+Retrieve at subgoal/skill choice, material change, surprise and context replacement,
+not per key. Rank exact scope/status/eligibility before text relevance; use simple
+term matching/exact keys first, no embeddings or trained composer. Permit an empty
+useful result and a concrete reobservation request. Record which packet IDs actually
+informed a choice. Mutable campaign facts and scoped provisional tactics may
+change under the admitted update policy; executable skills/guards/reusable lessons
+stay frozen. New general lessons remain candidates outside the executable library.
+
+## Semantic skills and outcome feedback
+
+Navigation takes a scoped destination or bounded sequence of observed places,
+not a long blind key list. The retained visible-neighbor graph supplies candidate
+routes, current observation authorizes each next step, and the executor verifies
+displacement before continuing. Maximum32primitives per request, bounded node set
+and deterministic shortest-path search on admitted cardinal cells. Unknown cells
+are unavailable; changed obstacles/threats, menus, no progress, world changes,
+Pause or missing evidence produce a partial/blocked/unknown result for the player.
+Reached-target verification is separate from permission for another move.
+
+Reuse review: pinned `handle_action.cpp` selects auto-move directions before ordinary
+`get_player_input()` when a destination exists; directional autotravel creates a
+native route and destination. The current bridge offers activity interruption but
+no observed-route/step restriction for this flow. Therefore this iteration does
+not start native autotravel or read `map::route` on unseen cells. Use the smallest
+bounded graph search over already observed cells, sharing `harness/movement.py`
+guards. This is a specific authority/visibility gap, not a general pathfinding
+library. Revisit native navigation when a proven current-gate integration exists.
+
+Visible item/menu skill takes exact displayed label, intended quantity, menu purpose
+and outcome goal. Reuse native registered actions, filters, invlets/count controls;
+no direct insertion/removal from inventory. It may navigate a bounded number of
+rows or type a bounded filter while observing every transition, without another
+model decision for every key. Ambiguous/disabled/missing targets, changed menus,
+partial quantities or warnings return an exception. Selection is not acquisition,
+consumption or completed storage; completion needs a subsequent visible result.
+
+Wire4 adds nullable `ui`: purpose/title, selected visible row, visible rows with
+screen-order ID/text/enabled/displayed hotkey, visible filter/count text and a
+coverage tag. Hook only rendered `uilist`/inventory selector rows, never enumerate
+hidden inventory, off-page/filter-excluded entries, recipe internals or latent
+needs. IDs are scoped to the exact rendered boundary/frame and cannot select a
+hidden item. Capture/render and metadata must describe the same presentation;
+if a hook cannot attest that, `ui=null` and the operation requests interpretation
+or stops, rather than filling fields from engine internals. A semantic selection
+may use player-supplied fallible screenshot interpretation, but cannot silently
+assert exact native label/quantity coverage from it.
+
+Native activity skill uses ordinary wait/rest/craft UI and activity polling. It
+tracks requested versus elapsed game time, visible progress, committed inputs,
+unfinished output, interruptions and next verification. It does not force sleep,
+disable questions/alarms, modify mechanics or treat a forecast as stock. Bound
+polling by original wall/input/game-time budgets and permitted repairs. User Pause
+revokes further harness dispatch; it cannot reverse already committed actions or
+promise to freeze an autonomous native activity. Expose that limitation and use the
+existing eligible interrupt/confirmation path when policy permits.
+
+One shared outcome contract composes deterministic invariants with fallible semantic
+judgment. Missing evidence -> specific observation; stale prerequisites -> reobserve;
+partial/refused activity -> bounded supported repair or revised plan; contradiction
+-> correct the derivation and revise dependent plans; repeated no progress ->
+strategy change/stop; unknown delivery -> reconcile without replay; software fault
+or unsupported required capability -> engineering incident and stopped attempt.
+Focused internal reasoning is allowed when reasoning can help, including with the
+strongest model already active. No per-key critic or identical repeated review loop.
+
+## Lifecycle, restart and player-context replacement
+
+Mission phase: admitted -> active -> (paused/reconciling/handoff/finishing) ->
+completed/failed/stopped. Every transition retains original admission and cumulative
+costs. Hard limits reserve cleanup time/inputs/space. Normal completion requires
+observed mission objectives and verified normal lifecycle; a timeout/process absence
+alone is neither a save acknowledgment nor proof of success.
+
+Registered lifecycle is only launch, ordinary creation, normal save/menu exit, normal process exit,
+restart/load and finish, through the fixed prepared project wrapper and ordinary
+engine UI. Use an owned `subprocess.Popen` handle, never an arbitrary player PID.
+Launch rejects another owned/live game. Normal exit waits for its owned child;
+no force-kill/signal or global application changes. If normal exit/save cannot be
+verified within the reserve, stop with evidence and a cleanup incident. Startup
+at the main menu and loading are supported mission phases, not normal-play facts.
+The player chooses ordinary menu options; runtime owns process handles and records
+them. Native session changes invalidate execution authority/maps until explicit
+fresh observation and supported identity/relocalization.
+
+Initial admission may exist before a native child or scene. `launch` owns the
+fixed wrapper handle and records an internal-bootstrap operation, then awaits a
+fresh paused main-menu frame. Only that exact launch/create/load operation can
+request the first deliberate Resume; a general mission start never unpauses an
+unowned existing game. Ordinary new-character creation has its own lifecycle phase
+and verifies the displayed setup/identity and first in-game observation. The
+`playing(true)` session change is expected for that phase, but still revokes the
+old menu lease and requires explicit fresh reconciliation/acquisition.
+
+Wire4 additionally publishes authority metadata `pause_origin` and monotonic
+`takeover_generation` (actual human input only, scoped to native process identity).
+Host user Pause is tracked by the controller's separate pause generation. Bind
+both values before each lifecycle input; startup/session-change origin alone is
+not enough if a newer human/host event occurred. Native `human_input()` increments
+the takeover counter even if a later world change overwrites the latest pause
+origin. Reconcile only the exact owned launch/session-transition with no newer
+host Pause or takeover; compare generations immediately before Resume/acquisition
+and again at commit. New-process counters are not compared numerically to old ones:
+require the owned child/new native identity and initial current observation. Any
+unexplained origin/generation or intervening user input stays paused. Test human
+and host Pause during launch, creation, load and recovery, including an event
+followed by a world change. None may be mistaken for bootstrap permission.
+
+Lifecycle requests have their own durable operation ID and phases, separate from
+ordinary primitive delivery. Result fields are `operation_id`, `phase`,
+`before_session`, `after_session`, `before_turn`, `after_turn`, `sources`,
+`native_receipts`, `owned_child_exit`, `identity_status`, `disposition` and
+`unresolved_requests`. Missing times remain null; no scene is invented for a menu.
+
+| Lifecycle phase | Required evidence and allowable conclusion |
+| --- | --- |
+| launch | Fixed wrapper's owned child handle plus fresh supported native main-menu frame; launch return/process alive alone is not readiness. |
+| create | Observed ordinary scenario/attributes/world and character menus followed by fresh in-game identity; no prearranged hidden world. Adopt only this expected creation transition, preserving any input ACK uncertainty. |
+| save -> menu | Ordinary save UI/confirmation and fresh main-menu presentation; retain input ACK if available. A session change may erase the old ACK, which stays unknown even when the lifecycle transition is verified. |
+| exit | Previously verified saved/menu state plus the owned child's normal exit result within reserve. A missing process without this preceding evidence is unresolved cleanup, not successful save/exit. |
+| restart -> load | New owned child/main-menu frame, ordinary observed world/character selection, then fresh in-game frame. Verify displayed identity against retained source and exact pre-save turn when available; ambiguity stops acceptance. |
+| relocalize | New coordinate epoch; recover places only from supported visible landmarks/identity. Same character/turn does not prove old relative vectors still apply. |
+| finish | Objective evidence, normal saved/menu transition and normal owned-child exit, no live writer/queue/lease. Publish outcome separately from any unknown primitive ACK. |
+
+`playing()` currently changes native session and clears old pending acknowledgment;
+the controller correctly revokes/freezes on that change. Lifecycle reconciliation
+must use the exact outstanding phase and newly observed frames/owned handle, then
+record “effect verified, delivery unknown” where appropriate. It cannot relabel an
+unknown ACK, blindly resend Enter, or adopt an unrelated world just because a menu
+transition occurred. New-session adoption requires explicit reconciliation and
+fresh capability acquisition, with user Pause/takeover precedence intact. A saved
+menu plus exact reload identity/turn validates continuity without hidden save reads;
+if that visible comparison is unavailable, continuity remains unproven.
+
+On player replacement, the playing system first pauses/releases its current lease,
+settles every tool handle and native slot, persists objective/state/work/source IDs
+and counters, and emits a one-use handoff reference tied to the mission epoch.
+A clean-context successor receives only that reference, the admitted instruction
+and read-only retrieval tools, loads the bounded packet and independently reads
+needed sources. It claims the new epoch and deliberately resumes only an eligible
+internally requested handoff. User Pause/takeover never auto-resumes. Unknown
+pending effects prevent input claim until explicit reconciliation, not a new actor.
+A normal native restart similarly grants no inherited lease.
+
+For the Codex implementation the designated playing-system coordinator may request
+one clean-context successor under this frozen procedure; the engineering lead does
+not reconstruct its memory, choose its tactics or provide a segment plan. Record
+all orchestration and any outside assistance. Actor names/shared inherited tools
+are procedural roles, not security isolation; only the in-process controller object
+is dispatch authority. A claimed `player_id` alone does not authenticate a person.
+
+## First integrated native acceptance
+
+Use a new ordinary Evacuee/Survivor character in a new project-local world; preserve
+Ned/Belgium and its evidence. Default attributes/random location; no debug spawn,
+map selection for guaranteed supplies or save edits. The mission may fail honestly
+if needed supplies/coverage are unavailable. Creation is ordinary player UI work.
+
+Prospective target profile, confirmed/frozen after portable/native preflight:
+within12elapsed game hours, acquire and visibly retain at least500mL clean water
+and one food portion, actually consume a food/drink when needed, reach an observed
+shelter/rest place and assess one ordinary wait/rest interval of at least30game
+minutes, with no observed critical unmet need at finish. Include a meaningful
+navigation goal of at least four credited steps and a direction change, one actual
+partial/changed condition with player-owned replanning, ordinary save/process
+restart/exact reload and actual clean player-context replacement. A selected alarm
+or attempted rest is not measured sleep. No universal safe-shelter guarantee.
+
+Initial preparation ceiling:1500ordinary inputs,2hours wall time,12game hours,
+one deciding attempt; reserve100inputs,15wall minutes and128MiB for ending work.
+These are proposed ceilings to verify against observed preflight throughput and
+final engine boundary, not live authority or a promise of enough resources.
+Record lower skill/phase limits and attempt identity before any deciding input.
+Adjust only prospectively under the user's existing finite-budget delegation,
+retaining old costs/limits and a credible final cleanup forecast. Wall/input limits bound further harness admission, not already-running native
+activity; game-time ceilings are checked at observed boundaries. An overshoot or
+unobservable required deadline is recorded as failure, not rewound or claimed
+as an exact freeze. A stopped deciding
+attempt cannot be silently resumed or relabeled; a repaired candidate needs a
+new assessment. Native fault probes stay separate.
+
+Use the actual player CLI twice for harmless status/observe permission preflight;
+new mission entry points require narrow project-rule matching/loading verification,
+not a global allow setting or recurring approval per action. Record which facts
+are unexposed. Deliberate Pause/control tests are declared separately; prohibited
+engineering gameplay rescue invalidates independence even if safety cleanup succeeds.
+
+Show objective/skill/progress, current versus last-seen/inferred memory, pending
+work/unknowns and remaining limits in the existing spectator, with source details
+available at ordinary width. Count semantic requests, primitives, tool/model calls,
+retrieval/recovery/curation, interventions and measured phase time separately.
+Unavailable external tokens, model-inference time, quota and spending stay unknown.
+
+## Implementation briefs, review and maintenance
+
+Lead first migrates shared contracts/evidence/native observation and current docs;
+source/API changes must not be deployed piecemeal to a running game. Then memory
+and navigation workers consume fixed interfaces in separate worktrees, with
+exclusive test files. After integration, interaction/activity/outcome ownership is
+serialized where it shares modules; a viewer worker can operate against the fixed
+status payload. Lead owns controller/runtime/server/CLI/lifecycle and all builds,
+shared dependency/cache resources and native scheduling. At most two implementation
+workers; no worker runs a native campaign. Each dispatch pins base revision, actual
+owned paths, exact tests, return evidence and the two-failed-repairs stop rule.
+
+Split #139 into visible-menu observation, selected item interaction, bounded native
+activity; #142 into shared contracts/capability/ledger foundation, single mission
+runtime and registered lifecycle/context handoff; #144 into candidate/preflight readiness and independent deciding mission.
+These are real component/review boundaries, not a PR or budget renewal per action.
+Keep parent aggregates Backlog/L until children exist and interfaces are reviewed.
+Component candidates may stay Validation while shared acceptance runs; only #137
+and bounded #71 closure are initial design/source gates. No full memory benchmark,
+model-tier experiment or optional curator is required to ship the functional path.
+
+Checks: strict-schema/old-version rejection; stale/cross-session/scope and source-loss;
+semantic correction with surviving independent support; delayed older stock,
+same-order conflicts, unknown observation order, newest-source loss without
+resurrection and exact projection rebuild; pending-work/unknown-ACK
+reconstruction; budget/cleanup/Pause races; item reorder/quantity/refusal/partial
+results; activity/no-progress interruption; normal lifecycle and takeover. Fresh
+native build/real windowed graphical evidence is required for wire4, visible-menu
+coverage, changed dispatch and lifecycle, separate from portable tests. Independent
+review challenges native field visibility, changed tests, primitive authority,
+interpretation labels and no-assistance evidence. Exact candidate and merged-main
+protected CI plus inspected current docs precede Done.
+
+At #137 exit re-estimate the whole integrated critical path including review,
+rework, native runtime and cleanup. At #144 closeout produce #145's bounded fresh
+seven-day brief or owned actual blockers, using measured throughput/resource gaps.
+Keep #136/#145 open until seven-day independence is actually accepted. #75 owns
+maintenance findings/control burden; #26 retains October24,2026/earlier research
+triggers. Revisit this design on an implementation contradiction, repeated false
+memory, missing observation or changed engine/model. Keep one concise current
+contract after adoption; preserve this design as rationale instead of a duplicate
+operating policy. No new scheduler, general learning stack or automatic lesson
+promotion is included.
+
+Design review on2026-10-19 independently checked execution authority/lifecycle and
+memory representation. Revisions resolved the normal-only lease gap, durable
+mission crash/deduplication state, lifecycle effect-versus-ACK completion, paused
+startup/creation adoption and delayed-state/source-loss reduction. Final focused
+reviews found no remaining blockers in those scopes. This accepts a design basis;
+it does not establish implemented schemas, native fields, gameplay or efficacy.
