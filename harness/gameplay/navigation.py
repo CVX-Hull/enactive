@@ -18,7 +18,7 @@ from harness.movement import (
 )
 from .contracts import ContractError, EvidenceRef, PrimitiveResult, Vector
 from .evidence import CapacityError, EvidenceError, EvidenceStore
-from .mission_contracts import VERSION, validate_request
+from .mission_contracts import VERSION, SourceRevalidation, validate_request
 
 
 @dataclass(frozen=True)
@@ -29,6 +29,7 @@ class NavigationIntent:
     before: EvidenceRef
     expected_boundary_id: str
     target_next: Vector
+    revalidation: SourceRevalidation | None = None
     kind: Literal["action"] = "action"
 
 
@@ -42,6 +43,7 @@ class NavigationOutcome:
     position: Vector | None
     evidence: tuple[EvidenceRef, ...]
     pending_logical_id: str | None
+    revalidation: SourceRevalidation | None = None
 
 
 @dataclass(frozen=True)
@@ -224,6 +226,7 @@ class NavigationSkill:
         self._position: Vector | None = None
         self._pending: NavigationIntent | None = None
         self._terminal: NavigationOutcome | None = None
+        self._revalidation: SourceRevalidation | None = None
 
     def _clocks(self, now_monotonic: float, now_timestamp_ms: int) -> None:
         if (type(now_monotonic) not in (int, float) or not math.isfinite(now_monotonic)
@@ -237,7 +240,8 @@ class NavigationSkill:
         disposition = "unknown" if unknown else "completed" if completed else "partial" if self._steps else "blocked"
         self._terminal = NavigationOutcome(disposition, reason, self._steps, self._proposals,
                                            self._position, self._sources,
-                                           self._pending.logical_id if self._pending else None)
+                                           self._pending.logical_id if self._pending else None,
+                                           self._revalidation)
         return self._terminal
 
     def _scan_sources(self, store: EvidenceStore, verified: dict[EvidenceRef, dict]) -> None:
@@ -245,22 +249,72 @@ class NavigationSkill:
         for source in self._sources:
             self._map._source(source, store, verified)
 
-    def _initialize(self, current: EvidenceRef, state: dict, store: EvidenceStore,
-                    verified: dict[EvidenceRef, dict]) -> None:
+    def _informing_boundary(self, reference: EvidenceRef, state: dict) -> None:
         data = self._request
-        if ((current.session, current.revision, state["boundary"]["id"]) !=
+        if ((reference.session, reference.revision, state["boundary"]["id"]) !=
                 (data["expected_session"], data["expected_revision"], data["expected_boundary_id"])):
             raise EvidenceError("Navigation informing boundary changed before first proposal")
+
+    def _informing_sources(self, store: EvidenceStore) -> tuple[EvidenceRef, ...]:
         references = {ref.observation_id: ref for ref in store.historical_references}
         try:
-            sources = tuple(references[identity] for identity in data["sources"])
+            return tuple(references[identity] for identity in self._request["sources"])
         except KeyError as exc:
             raise EvidenceError("Navigation informing source is unavailable") from exc
-        if current not in sources:
+
+    def revalidate(self, receipt: SourceRevalidation, store: EvidenceStore, *, now_monotonic: float,
+                   now_timestamp_ms: int) -> None:
+        """Accept one equivalent refresh before initialization; never renew budgets.
+
+        This checks retained evidence and process-local store continuity. The
+        runtime must separately authenticate actor/controller/Pause audit fields
+        against its live capability map; these records cannot restore authority.
+        """
+        if self._revalidation is not None or self._start is not None or self._terminal is not None:
+            raise ContractError("Navigation revalidation is allowed once before any proposal")
+        if type(receipt) is not SourceRevalidation:
+            raise ContractError("Navigation requires typed SourceRevalidation")
+        receipt.__post_init__()
+        if (receipt.original.mission_id, receipt.original.epoch) != (self._request["mission_id"], self._request["epoch"]):
+            raise ContractError("Navigation refresh must match its exact mission and epoch")
+        self._clocks(now_monotonic, now_timestamp_ms)
+        self._map._bind(store)
+        sources = self._informing_sources(store)
+        original = next((ref for ref in sources if ref.observation_id == receipt.original.source_id), None)
+        if original is None:
+            raise EvidenceError("Navigation refresh original must be an immutable informing source")
+        current = store.current(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
+        if (current.observation_id != receipt.current.source_id
+                or store.authority_generation() != receipt.current.store_generation):
+            raise EvidenceError("Navigation refresh requires the exact current source and generation")
+        verified: dict[EvidenceRef, dict] = {}
+        for source in (*sources, current):
+            state = self._map._source(source, store, verified)
+            if source in (original, current):
+                self._informing_boundary(source, state)
+                if state["takeover_generation"] != receipt.original.takeover_generation:
+                    raise EvidenceError("Navigation refresh native takeover binding differs")
+        if not store.equivalent(original, current, rule=receipt.rule):
+            raise EvidenceError("Navigation refresh is not equivalent to its informing native state")
+        self._sources = tuple(dict.fromkeys((*sources, current)))
+        self._checkpoint, self._generation = current, receipt.current.store_generation
+        self._revalidation = receipt
+
+    def _initialize(self, current: EvidenceRef, state: dict, store: EvidenceStore,
+                    verified: dict[EvidenceRef, dict]) -> None:
+        self._informing_boundary(current, state)
+        sources = self._informing_sources(store)
+        if self._revalidation is not None:
+            if current != self._checkpoint or store.authority_generation() != self._generation:
+                raise EvidenceError("Navigation refresh cannot adopt an intervening source or generation")
+            start = next(ref for ref in sources if ref.observation_id == self._revalidation.original.source_id)
+        elif current not in sources:
             raise EvidenceError("Navigation requires its exact informing current source")
-        self._sources = sources
+        else:
+            start = current
+        self._sources = tuple(dict.fromkeys((*sources, current)))
         self._scan_sources(store, verified)
-        self._start = self._checkpoint = current
+        self._start, self._checkpoint = start, current
         self._position = _position(state["scene"]["position"])
         self._generation = store.authority_generation()
 
@@ -296,6 +350,9 @@ class NavigationSkill:
             self._scan_sources(store, verified)
             if current.session != self._map.scope[1] or _position(state["scene"]["position"]) != self._position:
                 raise EvidenceError("Navigation session or route position changed")
+            if self._revalidation is not None and (current != self._checkpoint
+                                                   or store.authority_generation() != self._generation):
+                raise EvidenceError("Navigation refresh requires its exact attributed checkpoint generation")
             if self._pending is not None:
                 if current != self._checkpoint or store.authority_generation() != self._generation:
                     raise EvidenceError("Pending navigation proposal requires exact unchanged before evidence")
@@ -329,7 +386,8 @@ class NavigationSkill:
             return self._finish(str(exc), unknown=self._pending is not None)
         self._proposals += 1
         self._pending = NavigationIntent(f"{self._logical_prefix}-{self._proposals}", action,
-                                         current, state["boundary"]["id"], next_position)
+                                         current, state["boundary"]["id"], next_position,
+                                         self._revalidation if self._proposals == 1 else None)
         return self._pending
 
     def accept(self, result: PrimitiveResult, store: EvidenceStore, *, now_monotonic: float,

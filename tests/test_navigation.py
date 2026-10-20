@@ -9,7 +9,7 @@ from unittest.mock import patch
 
 from harness.gameplay.contracts import ContractError, PrimitiveResult
 from harness.gameplay.evidence import CapacityError, EvidenceError, EvidenceStore
-from harness.gameplay.mission_contracts import VERSION
+from harness.gameplay.mission_contracts import VERSION, SourceBinding, SourceRevalidation
 from harness.gameplay.navigation import NavigationIntent, NavigationOutcome, NavigationSkill, ObservedMap
 from harness.movement import MovementBlocked, guard, visible_destination
 from tests.test_gameplay_evidence import observation, png
@@ -30,7 +30,7 @@ class NavigationTests(unittest.TestCase):
 
     def frame(self, position=(0, 0, 0), *, cells=None, change=None, turn=10, session="world"):
         self.number += 1
-        value = observation(self.number, session=session)
+        value = observation(self.number, session=session, timestamp_ms=self.clocks["now_timestamp_ms"])
         value["scene"].update(position=list(position), turn=turn)
         value["boundary"]["id"] = f"boundary-{self.number}"
         if cells is not None:
@@ -41,7 +41,7 @@ class NavigationTests(unittest.TestCase):
         if change:
             change(value)
         (self.bridge / value["frame"]).write_bytes(png())
-        return self.store.ingest(value, received_monotonic=100.0, **self.clocks)
+        return self.store.ingest(value, received_monotonic=self.clocks["now_monotonic"], **self.clocks)
 
     def request(self, before, target=(1, 0, 0), **changes):
         value = dict(schema=VERSION, kind="skill", request_id="navigate", mission_id="mission", epoch=0,
@@ -68,6 +68,246 @@ class NavigationTests(unittest.TestCase):
         result = PrimitiveResult(intent.logical_id, intent.before, after, disposition, displacement,
                                  "Synthetic transport result")
         return skill.accept(result, self.store, **(self.clocks | clocks))
+
+    def recapture(self, before, *, change=None, data=None, promote=True):
+        value = self.store.observation(before)
+        self.number += 1
+        value.update(frame=f"frame-{value['session']}-{self.number}.png", id=f"refresh-{self.number}",
+                     timestamp_ms=self.clocks["now_timestamp_ms"])
+        if change:
+            change(value)
+        (self.bridge / value["frame"]).write_bytes(png() if data is None else data)
+        method = self.store.ingest if promote else self.store.retain_equivalent
+        extra = {} if promote else {"rule": "native_state"}
+        return method(value, received_monotonic=self.clocks["now_monotonic"], **self.clocks, **extra)
+
+    def refresh_relation(self, before, current, *, rule="native_state", generation=None):
+        generation = self.store.authority_generation() if generation is None else generation
+        original = SourceBinding(before.observation_id, "mission", 0, "actor", "boot", 0, 0, generation - 1)
+        return SourceRevalidation(original, replace(original, source_id=current.observation_id,
+                                                   store_generation=generation), rule)
+
+    def test_deliberate_refresh_preserves_request_provenance_and_first_intent_relation(self):
+        self.map.add(self.frame((1, 0, 0)), self.store)
+        original = self.frame()
+        request = self.request(original, (2, 0, 0))
+        unchanged = deepcopy(request)
+        self.map.add(original, self.store)
+        skill = NavigationSkill(request, self.map)
+        self.clocks = dict(now_monotonic=104.0, now_timestamp_ms=1_004_000)
+        current = self.recapture(original)
+        relation = self.refresh_relation(original, current)
+        skill.revalidate(relation, self.store, **self.clocks)
+        self.assertEqual(request, unchanged)
+        self.assertEqual(skill._request, unchanged)
+        intent = self.propose(skill)
+        self.assertIsInstance(intent, NavigationIntent)
+        self.assertEqual(intent.before, current)
+        self.assertIs(intent.revalidation, relation)
+        self.assertEqual(skill._start, original)
+        preflight = self.recapture(current, promote=False)
+        self.assertNotEqual(preflight, current)
+        self.assertEqual(self.store.current(**self.clocks), current)
+        self.assertIs(self.propose(skill), intent)
+        self.assertIsNone(self.accept(skill, intent, self.frame((1, 0, 0), turn=11)))
+        second = self.propose(skill)
+        self.assertIsNone(second.revalidation)
+        outcome = self.accept(skill, second, self.frame((2, 0, 0), turn=12))
+        self.assertEqual((outcome.disposition, outcome.verified_steps), ("completed", 2))
+        self.assertIs(outcome.revalidation, relation)
+        self.assertTrue({original, current, second.before}.issubset(outcome.evidence))
+
+    def test_refresh_does_not_renew_original_wall_limit(self):
+        original = self.frame()
+        skill = self.skill(original, limits={"primitives": 32, "wall_seconds": 4, "game_seconds": 100})
+        self.clocks = dict(now_monotonic=104.5, now_timestamp_ms=1_004_500)
+        current = self.recapture(original)
+        relation = self.refresh_relation(original, current)
+        skill.revalidate(relation, self.store, **self.clocks)
+        outcome = self.propose(skill)
+        self.assertEqual((outcome.disposition, outcome.proposed_count), ("blocked", 0))
+        self.assertIn("Original navigation", outcome.reason)
+        self.assertIs(outcome.revalidation, relation)
+
+    def test_native_state_refresh_allows_changed_png_but_exact_png_rule_rejects_it(self):
+        original = self.frame()
+        skill = self.skill(original)
+        current = self.recapture(original, data=png(b"changed"))
+        with self.assertRaises(EvidenceError):
+            skill.revalidate(self.refresh_relation(original, current, rule="exact_png_bytes"),
+                             self.store, **self.clocks)
+        skill.revalidate(self.refresh_relation(original, current), self.store, **self.clocks)
+        self.assertIsInstance(self.propose(skill), NavigationIntent)
+
+    def test_exact_png_refresh_with_equal_bytes_and_plain_navigation_have_explicit_relation(self):
+        original = self.frame()
+        plain = self.skill(original)
+        self.assertIsNone(self.propose(plain).revalidation)
+        skill = self.skill(original)
+        current = self.recapture(original)
+        relation = self.refresh_relation(original, current, rule="exact_png_bytes")
+        skill.revalidate(relation, self.store, **self.clocks)
+        self.assertIs(self.propose(skill).revalidation, relation)
+
+    def test_refresh_rejects_actual_native_changes(self):
+        changes = (
+            lambda v: v["scene"].update(position=[1, 0, 0]),
+            lambda v: v["scene"].update(turn=11),
+            lambda v: v.update(revision=v["revision"] + 1),
+            lambda v: v["boundary"].update(id="other-boundary"),
+            lambda v: v["boundary"].update(control_generation=1),
+            lambda v: v.update(takeover_generation=1),
+            lambda v: v.update(paused=True, pause_origin="user"),
+            lambda v: v.update(actions=["UP"]),
+            lambda v: v.update(category="OTHER"),
+            lambda v: v["scene"].update(visible_creatures=[{"name": "cat", "hostile": False}]),
+            lambda v: v.update(scene=None, category="MENU", boundary=v["boundary"] | {"kind": "menu"}),
+            lambda v: v.update(session="other", frame="frame-other-999.png"),
+        )
+        for change in changes:
+            with self.subTest(change=change):
+                self.map = ObservedMap("mission", "world", 0)
+                original = self.frame()
+                skill = self.skill(original)
+                try:
+                    current = self.recapture(original, change=change)
+                except EvidenceError:
+                    # Store contradictions already prevent a refresh from existing.
+                    self.assertIsNone(skill._revalidation)
+                    continue
+                with self.assertRaises(EvidenceError):
+                    skill.revalidate(self.refresh_relation(original, current), self.store, **self.clocks)
+                self.assertIsNone(skill._revalidation)
+
+    def test_refresh_requires_request_scope_and_exact_original_informing_source(self):
+        original = self.frame()
+        skill = self.skill(original)
+        current = self.recapture(original)
+        relation = self.refresh_relation(original, current)
+        invalid = [None, relation.to_dict(),
+                   replace(relation, original=replace(relation.original, source_id="missing")),
+                   replace(relation, current=replace(relation.current, source_id="missing"))]
+        for field, value in (("mission_id", "foreign"), ("epoch", 1)):
+            invalid.append(SourceRevalidation(replace(relation.original, **{field: value}),
+                                              replace(relation.current, **{field: value}), relation.rule))
+        for candidate in invalid:
+            with self.subTest(candidate=candidate), self.assertRaises((ContractError, EvidenceError)):
+                skill.revalidate(candidate, self.store, **self.clocks)
+        for changes in ({"expected_session": "other"}, {"expected_revision": 999},
+                        {"expected_boundary_id": "other"}, {"sources": ["missing"]}):
+            with self.subTest(changes=changes), self.assertRaises((ContractError, EvidenceError)):
+                self.skill(original, **changes).revalidate(relation, self.store, **self.clocks)
+        skill.revalidate(relation, self.store, **self.clocks)
+
+    def test_refresh_rejects_false_native_takeover_binding_even_when_both_records_match(self):
+        original = self.frame()
+        skill = self.skill(original)
+        current = self.recapture(original)
+        relation = self.refresh_relation(original, current)
+        false = SourceRevalidation(replace(relation.original, takeover_generation=1),
+                                   replace(relation.current, takeover_generation=1), relation.rule)
+        with self.assertRaises(EvidenceError):
+            skill.revalidate(false, self.store, **self.clocks)
+
+    def test_refresh_rejects_stale_current_foreign_store_and_generation_gap(self):
+        original = self.frame()
+        skill = self.skill(original)
+        current = self.recapture(original)
+        relation = self.refresh_relation(original, current)
+        other = EvidenceStore(self.bridge, self.root / "other-refresh")
+        self.addCleanup(other.close)
+        with self.assertRaises(EvidenceError):
+            skill.revalidate(relation, other, **self.clocks)
+        with self.assertRaises(EvidenceError):
+            skill.revalidate(self.refresh_relation(original, current, generation=relation.current.store_generation + 1),
+                             self.store, **self.clocks)
+        with self.assertRaises(ContractError):
+            replace(relation, current=replace(relation.current, store_generation=relation.current.store_generation + 1))
+        with self.assertRaises(EvidenceError):
+            skill.revalidate(relation, self.store, now_monotonic=104.0, now_timestamp_ms=1_004_000)
+        self.assertIsNone(skill._revalidation)
+
+    def test_refresh_rejects_lost_corrupt_and_disputed_sources(self):
+        for which in ("original", "current"):
+            for damage in ("missing", "corrupt", "disputed"):
+                with self.subTest(which=which, damage=damage):
+                    self.map = ObservedMap("mission", "world", 0)
+                    original = self.frame()
+                    skill = self.skill(original)
+                    current = self.recapture(original)
+                    relation = self.refresh_relation(original, current)
+                    source = original if which == "original" else current
+                    if damage == "missing":
+                        Path(source.frame_path).unlink()
+                    elif damage == "corrupt":
+                        Path(source.frame_path).chmod(0o600)
+                        Path(source.frame_path).write_bytes(b"corrupt")
+                    else:
+                        contradiction = self.store.observation(source)
+                        contradiction["actions"] = []
+                        with self.assertRaises(EvidenceError):
+                            self.store.ingest(contradiction, received_monotonic=100.0, **self.clocks)
+                    with self.assertRaises(EvidenceError):
+                        skill.revalidate(relation, self.store, **self.clocks)
+                    self.assertIsNone(skill._revalidation)
+
+    def test_refresh_once_before_any_proposal_or_terminal_and_no_second_current_adoption(self):
+        original = self.frame()
+        skill = self.skill(original)
+        current = self.recapture(original)
+        relation = self.refresh_relation(original, current)
+        skill.revalidate(relation, self.store, **self.clocks)
+        with self.assertRaises(ContractError):
+            skill.revalidate(relation, self.store, **self.clocks)
+        later = self.recapture(current)
+        self.assertNotEqual(later, current)
+        outcome = self.propose(skill)
+        self.assertEqual(outcome.disposition, "blocked")
+        self.assertIs(outcome.revalidation, relation)
+        with self.assertRaises(ContractError):
+            skill.revalidate(relation, self.store, **self.clocks)
+        original = self.frame()
+        proposed = self.skill(original)
+        self.propose(proposed)
+        current = self.recapture(original)
+        with self.assertRaises(ContractError):
+            proposed.revalidate(self.refresh_relation(original, current), self.store, **self.clocks)
+
+    def test_refresh_intervening_invalidation_and_unknown_feedback_cannot_resume(self):
+        original = self.frame()
+        skill = self.skill(original)
+        current = self.recapture(original)
+        relation = self.refresh_relation(original, current)
+        skill.revalidate(relation, self.store, **self.clocks)
+        intent = self.propose(skill)
+        outcome = self.accept(skill, intent, disposition="unknown")
+        self.assertEqual(outcome.disposition, "unknown")
+        self.assertIs(outcome.revalidation, relation)
+        self.frame((1, 0, 0), turn=11)
+        self.assertIs(self.propose(skill), outcome)
+        original = self.frame()
+        skill = self.skill(original)
+        current = self.recapture(original)
+        skill.revalidate(self.refresh_relation(original, current), self.store, **self.clocks)
+        with self.assertRaises(EvidenceError):
+            self.store.current(now_monotonic=104.0, now_timestamp_ms=1_004_000)
+        # Returning to the same retained identity cannot erase the invalidation.
+        with self.assertRaises(EvidenceError):
+            self.store.ingest(self.store.observation(current), received_monotonic=100.0, **self.clocks)
+        self.assertEqual(self.propose(skill).disposition, "blocked")
+
+    def test_refresh_does_not_adopt_an_unattributed_capture_after_verified_progress(self):
+        self.map.add(self.frame((1, 0, 0)), self.store)
+        original = self.frame()
+        skill = self.skill(original, (2, 0, 0))
+        current = self.recapture(original)
+        skill.revalidate(self.refresh_relation(original, current), self.store, **self.clocks)
+        intent = self.propose(skill)
+        after = self.frame((1, 0, 0), turn=11)
+        self.assertIsNone(self.accept(skill, intent, after))
+        self.recapture(after)
+        outcome = self.propose(skill)
+        self.assertEqual((outcome.disposition, outcome.verified_steps), ("partial", 1))
 
     def test_known_l_route_uses_one_frozen_proposal_and_actual_feedback_per_step(self):
         route = ((0, 0, 0), (1, 0, 0), (2, 0, 0), (2, 1, 0), (2, 2, 0))

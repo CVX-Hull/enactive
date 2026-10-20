@@ -594,6 +594,10 @@ They do not make a fallible screenshot interpretation native-attested UI metadat
 
 The passive [navigation skill](../../harness/gameplay/navigation.py) projects only
 observed cardinal cells, retains route support and validates each settled step.
+Before its first proposal, one explicit typed source revalidation can connect an
+original planning view to a fresh equivalent checkpoint. The original budget
+anchor survives; any intervening promoted capture invalidates that attribution.
+Only the first refreshed intent carries the relation; the final outcome retains it.
 The passive [campaign memory](../../harness/gameplay/campaign_memory.py) reduces
 typed claims and work before retrieval. Old quantities never become current from
 receipt order; missing newest sources remain unknown. Work availability requires
