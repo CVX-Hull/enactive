@@ -67,11 +67,14 @@ pre-input rejection and phase revocation. Its 74 charges/one unknown and excepti
 teardown remain retained. Source now checks eligible local metadata inconsistencies
 before altering the phase, with all real authority/budget stops preserved; native
 correction qualification and a new independent player/successor mission remain open.
-The [next engineering attempt](acceptance/2026-10-20-request-construction-qualification.md)
-failed before that probe when identity inspection omitted its creation root; it is
-closed with no adoption or normal ending. A pure canonical request producer now
-combines explicitly chosen context and intent to reduce repeated field/root errors.
-It changes no authority or runtime contract; native qualification remains pending.
+A pure canonical request producer combines chosen context and intent to reduce
+repeated field/root errors. [Native009](acceptance/2026-10-20-request-construction-qualification.md)
+failed before the probe when identity inspection omitted its root.
+[Native010](acceptance/2026-10-20-menu-dismissal-qualification.md) then exercised
+the correction and actual item inspection, but failed normal ending because
+semantic dismissal used QUIT where UILIST registered UILIST.QUIT. Both are closed.
+The mapping now follows the registered context action; new dismissal/ending and
+independent-player qualification remain pending. Authority/contracts are unchanged.
 
 Current movement uses strictly known non-HOSTILE evidence. Inventory projection
 omits only the engine's non-selecting cosmetic summary. Reload follows the actual

@@ -273,7 +273,7 @@ class MissionRuntimeTests(unittest.TestCase):
                 bridge.value["boundary"]["id"] = f'choice-{bridge.value["revision"]}'
             return True
         return self.open_direction(prompt=dict(ui=ui, category="UILIST",
-            actions=["UILIST.UP", "UILIST.DOWN", "CONFIRM", "QUIT"]),
+            actions=["UILIST.UP", "UILIST.DOWN", "CONFIRM", "UILIST.QUIT"]),
             effect=focus if effect is None else effect, **changes)
 
     def test_native_menu_batches_focus_without_activation_and_keeps_owned_phase(self):

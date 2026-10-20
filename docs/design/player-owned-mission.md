@@ -830,8 +830,12 @@ mission disables raw input/Resume/recovery. Typed Observe uses mission ID and ep
 Pause remains independent. Rendering issues no gameplay/memory operation.
 
 Explicit dismissal is a rowless fallible view of the actual question, paired only
-with Cancel/dismissed. One registered QUIT, or TEXT.QUIT in STRING_INPUT, is delivered;
-the result is partial for verification. It cannot alias NO or answer a later prompt.
+with Cancel/dismissed. It selects the exact registered action: TEXT.QUIT in
+STRING_INPUT, UILIST.QUIT in UILIST, WORLDGEN_CONFIRM.QUIT in WORLDGEN_CONFIRM_DIALOG,
+and QUIT in other supported contexts. No other action is tried when registration
+is absent. One input returns partial for verification; it cannot alias NO or answer
+a later prompt. General setup-abort lifecycle remains unsupported beyond its narrow
+existing branch, even when one cancel action can open a separate confirmation.
 
 The timeline reducer validates archive chronology and exact adjacent normal-session
 endpoint links, rejects disputed/lost sources and sums session durations. The historical lifecycle reader now derives links only from validated transitions,

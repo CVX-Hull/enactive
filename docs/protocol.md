@@ -344,6 +344,20 @@ the stale-boundary failure that motivated this change; it cannot resume.
 failed before the declared probe after omitting the direct identity root. It cannot
 resume either; pure producer tests do not replace a new finite native qualification.
 
+Semantic menu dismissal selects exactly one action by captured context:
+`STRING_INPUT` → `TEXT.QUIT`, `UILIST` → `UILIST.QUIT`,
+`WORLDGEN_CONFIRM_DIALOG` → `WORLDGEN_CONFIRM.QUIT`, otherwise the existing `QUIT`.
+That action must actually be registered in the selected evidence; missing actions
+block with zero proposals, without trying a different alias, NO, confirmation or
+raw key. A delivered dismissal returns partial for verification and never answers
+a newly opened question. Upstream UILIST cancellation is conditional; category
+admission alone does not establish that cancellation is enabled. First worldgen
+cancel support does not implement a general setup-abort lifecycle.
+[Native010](acceptance/2026-10-20-menu-dismissal-qualification.md) exercised the
+narrow binding correction, then failed normal ending on the old generic-QUIT
+mapping. The translation repair still needs new finite native dismissal/ending
+qualification; the failed attempt cannot resume.
+
 MissionLimits permits at most 691200 game-seconds (eight days); its default remains
 43200 seconds. Each finite admission must budget normal ending work before its
 selected cap. Every input lane checks known canonical game cost before publication,

@@ -234,7 +234,9 @@ class SemanticControlSkill:
         if state["boundary"]["kind"] != "menu":
             raise _ControlBlocked("Interpreted controls require a menu boundary")
         if view["kind"] == "dismissal":
-            return (("action", "TEXT.QUIT" if state["category"] == "STRING_INPUT" else "QUIT"),)
+            action = {"STRING_INPUT": "TEXT.QUIT", "UILIST": "UILIST.QUIT",
+                      "WORLDGEN_CONFIRM_DIALOG": "WORLDGEN_CONFIRM.QUIT"}.get(state["category"], "QUIT")
+            return (("action", action),)
         if view["kind"] in ("direction", "confirmation"):
             if view["kind"] == "direction":
                 category = "DEFAULTMODE"

@@ -175,7 +175,7 @@ rejection. One lead owns this coupled repair; independent readers check source,
 fixtures and original evidence. Current wire/persisted contracts and native binary
 are unchanged; no recovery framework or compatibility path is added.
 
-Reviewed26a2924 passed 1,156 common tests and both exact hosted lanes. The
+Reviewed `26a2924` passed 1,156 common tests and both exact hosted lanes. The
 [Native009 attempt](acceptance/2026-10-20-request-construction-qualification.md)
 then failed before its declared binding probe: provisional identity omitted its
 direct creation root. Zero identity primitives, no adoption/normal ending and
@@ -185,14 +185,31 @@ both processes/listener/slots are closed. No old attempt resumes or transfers.
 
 #161 owns the reviewed pure canonical producer: selected retained primary bundle,
 explicit bounded supporting IDs, semantic intent and explicit phase scope compose
-the existing contract without I/O or authority. One worker owns only the helper/
-pure tests in a separate project-local worktree; the lead integrates and verifies
-real writer/controller/lifecycle tests and current docs. Independent review found
+the existing contract without I/O or authority. One worker owned only the helper/
+pure tests in a project-local worktree; the lead integrated real-component tests
+and current docs, retained the worker files and removed that worktree/branch.
+Independent review found
 and corrected unsupported scope/skill combinations; raw malformed-request tests
 remain. #162 separately assesses error classification, not a blanket delivery gate.
 
-Next: reviewed #161 source/report and common/both exact CI → #156 new separately
-finite producer/binding-correction/normal-ending qualification and readiness → genuinely new
+Reviewed `63da3a2` passed 1,178 common tests and both exact hosted lanes.
+[Native010](acceptance/2026-10-20-menu-dismissal-qualification.md) normally created/
+adopted Casey and exercised the declared malformed-boundary/new-corrected-request
+probe with real pocket-knife details. Its required normal ending failed because
+UILIST needed UILIST.QUIT rather than semantic dismissal's generic QUIT. Stop,
+one separately reviewed exceptional teardown and actual closure retain 42 requests,
+67 charges/one unchanged unknown, 168 verified frames, zero game-seconds and no
+normal Save/Exit/Finish. No attempt resumes or transfers authority.
+
+#163 owns the lead's tightly coupled registered-action repair, stale UILIST fixture
+migration and real writer/controller/production-identity dismissal-to-normal-ending
+tests. Pinned engine source also distinguishes WORLDGEN_CONFIRM.QUIT; cancellation
+must be registered and sends only one input, never an automatic answer. General
+setup abortion remains unsupported. Independent source/test/report readers verify
+the repair; no parallel implementation worker or new framework is warranted.
+
+Next: reviewed #163 source/report and common/both exact CI → new finite Native011
+item-menu dismissal and normal ending → #156 actual readiness → genuinely new
 #157/#144 player and retained-memory successor → #145 evidence-backed seven-day
 plan or owned blockers. Never resume or relabel002. Changed host validation needs
 actual scoped qualification; an unchanged native binary needs no rebuild solely

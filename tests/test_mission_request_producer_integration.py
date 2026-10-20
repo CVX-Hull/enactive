@@ -54,6 +54,62 @@ class ProducedCreationFixture(MissionCreationFixture):
 
 
 class ProducerLifecycleIntegrationTests(ProducedCreationFixture, unittest.TestCase):
+    def test_item_uilist_and_inventory_dismissals_then_normal_ending(self):
+        self.create()
+        self.bridge.value["actions"].append("inventory")
+        self.bridge.value["revision"] += 1  # The changed fixture action set is a new native revision.
+        self.bridge.value["boundary"]["id"] = "inventory-capable-normal"
+        self.observe("inventory-ready")
+        ordinary = self.bridge.behavior
+
+        def item_menu(bridge, request):
+            category, action = bridge.value["category"], request.get("action")
+            if category == "DEFAULTMODE" and action == "inventory":
+                self.menu("INVENTORY", ["UP", "DOWN", "CONFIRM", "QUIT"], in_game=True)
+            elif category == "INVENTORY" and action == "CONFIRM":
+                self.menu("UILIST", ["UILIST.UP", "UILIST.DOWN", "CONFIRM", "UILIST.QUIT"], in_game=True)
+            elif category == "UILIST" and action == "UILIST.QUIT":
+                self.menu("INVENTORY", ["UP", "DOWN", "CONFIRM", "QUIT"], in_game=True)
+            elif category == "INVENTORY" and action == "QUIT":
+                self.normal(f"normal-{self.launch_count}")
+            else:
+                return ordinary(bridge, request)
+            return True
+
+        self.bridge.behavior = item_menu
+        intent = dict(kind="skill", skill_kind="inspect", goal=dict(purpose="inventory"),
+                      work_id=None, perception=None)
+        limits = dict(primitives=8, wall_seconds=120, game_seconds=60)
+
+        def request(identity, intent, scope):
+            ref = self.runtime._current
+            return compose_request(self.runtime.status(), request_id=identity, intent=intent,
+                limits=limits, scope=scope,
+                source=dict(reference=ref.to_dict(), observation=self.runtime._store.observation(ref)))
+
+        opened = self.run_request(request("inventory", intent, "new_root"))
+        self.assertEqual(opened["state"], "partial", opened)
+        menu = dict(kind="skill", skill_kind="menu", work_id=None,
+            goal=dict(purpose="Inspect actual represented item", label="pocket knife", outcome="activated"),
+            perception=dict(kind="menu", basis="player_interpretation", control="vertical",
+                rows=[dict(label="pocket knife", enabled=True)], selected=0, question=""))
+        self.assertEqual(self.run_request(request("item", menu, "prompt"))["state"], "partial")
+        for identity in ("item-dismiss", "inventory-dismiss"):
+            intent = dict(kind="skill", skill_kind="menu", work_id=None,
+                goal=dict(purpose="Return from current menu", label="Cancel", outcome="dismissed"),
+                perception=dict(kind="dismissal", basis="player_interpretation", question="Current item menu"))
+            result = self.run_request(request(identity, intent, "prompt"))
+            self.assertEqual(result["state"], "partial", result)
+        values = [r["intent"]["value"] for r in self.runtime._ledger.primitive_records()
+                  if r["request_id"] in ("inventory", "item", "item-dismiss", "inventory-dismiss")]
+        self.assertEqual(values, ["inventory", "CONFIRM", "UILIST.QUIT", "QUIT"])
+        self.assertIsNone(self.runtime.status()["prompt_phase"])
+        self.save()
+        self.exit()
+        result = self.run_request(self.lifecycle("finish", "finish"))
+        self.assertEqual(result["result"]["normal_finish"]["disposition"], "stopped")
+        self.runtime._ledger._verify(self.a)
+
     def test_create_save_new_child_exact_reload_and_retained_finish(self):
         self.create()
         original_ack = deepcopy(self.runtime._ledger.request("character-yes"))

@@ -371,8 +371,9 @@ separates implemented components from remaining independent-play acceptance.
    context packet is historical, query-specific and possibly incomplete. Its labels
    are as-of that packet; use a new explicit query to judge current knowledge.
 6. Owned menus support bounded focusing, literal text and direction/confirmation
-   handling. Dismissal uses one registered QUIT or editor TEXT.QUIT, returns partial
-   for effect verification and never automatically answers a new prompt. Original
+   handling. Dismissal uses its exact registered context action (TEXT.QUIT,
+   UILIST.QUIT, WORLDGEN_CONFIRM.QUIT or ordinary QUIT), returns partial for effect
+   verification and never automatically answers a new prompt. Original
    root/child limits and unknowns stay recorded. Untouched-menu exit uses its owned
    lifecycle root and an explicit interpreted confirmation child. It is not a
    character save/exit path. Item/activity, creation/save/reload and handoff adapters

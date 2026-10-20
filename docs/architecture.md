@@ -88,8 +88,11 @@ children retain its original scope, actor/epoch, deadlines and cumulative input
 ceiling. A settled owned menu may be refreshed only through retained exact-PNG
 source revalidation. Typed PhaseReceipt audit data restores no private phase on
 reopen. A normal return closes the prompt without proving the desired effect.
-Cancellation uses one actually registered QUIT, or TEXT.QUIT for a string editor;
-it returns partial for verification and never answers a later question implicitly.
+Cancellation selects one exact registered action: TEXT.QUIT for STRING_INPUT,
+UILIST.QUIT for UILIST, WORLDGEN_CONFIRM.QUIT for WORLDGEN_CONFIRM_DIALOG, otherwise
+QUIT. Missing registration blocks without trying another alias. The result is
+partial for verification and never answers a later question implicitly. Supporting
+one worldgen cancel action does not implement the whole setup-abort workflow.
 Typed item selection/count/commit and registered inspection have synthetic runtime
 coverage. Quantity editing belongs only to the item phase whose returned
 MARK_WITH_COUNT opened it. Native007 qualified the selected counted drop/pickup

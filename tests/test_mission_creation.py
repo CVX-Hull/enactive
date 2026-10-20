@@ -56,7 +56,7 @@ class MissionCreationFixture:
                 self.menu("WORLDGEN_CONFIRM_DIALOG", ["UP", "DOWN", "CONFIRM", "FINALIZE"])
             elif self.stage == "load-world":
                 self.stage = "load"
-                self.menu("UILIST", ["UILIST.UP", "UILIST.DOWN", "CONFIRM", "QUIT"])
+                self.menu("UILIST", ["UILIST.UP", "UILIST.DOWN", "CONFIRM", "UILIST.QUIT"])
                 rows = [
                     dict(id="row-0", text=self.a.scenario.character, enabled=True, hotkey=None),
                     dict(id="row-1", text="<- Back to Main Menu", enabled=True, hotkey="q")]
@@ -85,7 +85,7 @@ class MissionCreationFixture:
         elif category == "UILIST" and action == "CONFIRM" and self.stage == "load":
             self.normal(f"normal-{self.launch_count}", paused=True)
             return False
-        elif category == "UILIST" and action == "QUIT" and self.stage == "load":
+        elif category == "UILIST" and action == "UILIST.QUIT" and self.stage == "load":
             self.stage = "load-world"
             self.menu("MAIN_MENU", ["CONFIRM", "QUIT"])
         elif category == "NEW_CHAR_DESCRIPTION" and action == "NEXT_TAB":

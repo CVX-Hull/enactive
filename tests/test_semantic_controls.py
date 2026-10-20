@@ -14,7 +14,8 @@ from tests.test_gameplay_evidence import observation, png
 
 class SemanticControlTests(unittest.TestCase):
     def test_dismissal_uses_one_actual_registered_action_without_effect_credit(self):
-        for category, action in (("INVENTORY", "QUIT"), ("STRING_INPUT", "TEXT.QUIT"), ("YESNO", "QUIT")):
+        for category, action in (("INVENTORY", "QUIT"), ("STRING_INPUT", "TEXT.QUIT"), ("YESNO", "QUIT"),
+                                 ("UILIST", "UILIST.QUIT"), ("WORLDGEN_CONFIRM_DIALOG", "WORLDGEN_CONFIRM.QUIT")):
             with self.subTest(category=category):
                 before = self.frame(category=category, actions=[action])
                 skill = self.skill(before, view=self.view(before, kind="dismissal"),
@@ -34,6 +35,15 @@ class SemanticControlTests(unittest.TestCase):
             goal=dict(purpose="Cancel editor", label="Cancel", outcome="dismissed"))
         outcome = self.propose(skill)
         self.assertEqual((outcome.disposition, outcome.proposed_count), ("blocked", 0))
+
+    def test_namespaced_dismissal_requires_its_actual_registered_action(self):
+        for category in ("UILIST", "WORLDGEN_CONFIRM_DIALOG"):
+            with self.subTest(category=category):
+                before = self.frame(category=category, actions=["QUIT", "TEXT.QUIT", "NO", "CONFIRM"])
+                skill = self.skill(before, view=self.view(before, kind="dismissal"),
+                    goal=dict(purpose="Close visible menu", label="Cancel", outcome="dismissed"))
+                outcome = self.propose(skill)
+                self.assertEqual((outcome.disposition, outcome.proposed_count), ("blocked", 0))
 
     def setUp(self):
         owned = Path(__file__).resolve().parents[1] / ".runtime" / "semantic-control-tests"
