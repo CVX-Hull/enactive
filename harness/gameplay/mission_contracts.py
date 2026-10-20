@@ -439,11 +439,11 @@ def validate_memory_entry(value: dict | str | bytes, entry_type: str, *, player=
             raise ContractError("An unsupported value must remain unknown/disputed/retired")
         if result["key"]["property"] == "identity":
             key = result["key"]
-            coverage = {"world": "visible-world-menu", "character": "visible-character-hud"}
+            coverage = {"world": "visible-world-menu", "character": "visible-character-screen"}
             if (result["kind"] != "interpretation" or key["subject"] not in coverage
                     or key["unit"] != "name" or key["coverage_id"] != coverage[key["subject"]]
                     or content["quantity"] is not None):
-                raise ContractError("Identity is a fallible visible world/menu or character/HUD name")
+                raise ContractError("Identity is a fallible visible world/menu or character/screen name")
         for support in result["supports"]:
             if not support["sources"] and not support["claims"]:
                 raise ContractError("Empty support group cannot establish a claim")

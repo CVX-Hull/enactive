@@ -503,6 +503,110 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.equal(requests.length, countBeforeMission, 'mission-owned viewer cannot submit manual input');
   assert.throws(() => run('recoveryAuthority("request_interrupt")'), /mission/i);
 
+  // Lifecycle checkpoints remain visible between operations, without inventing a prompt.
+  mission.active_operation = null;
+  mission.lifecycle_phase = {origin_request_id: 'exit-root', operation: 'exit',
+    checkpoint_id: 'exit-checkpoint', grants_authority: false};
+  mission.native_process = {owner_mission_id: mission.mission_id, restored_from_disk: false,
+    unresolved_custody_requests: ['uncertain-launch'], last_sample: {
+      launch_id: 'launch-test', pid: 123, running: true, returncode: null, outcome: 'running', error: null}};
+  mission.last_receipt = {transport_disposition: 'unknown', native_request_id: 'exit-native', logical_action_id: 'exit-logical'};
+  mission.progress = {phase: {stage: 'awaiting_control', operation: 'exit'}};
+  run('render(input)');
+  assert.match(element('mission-operation').textContent, /No active operation/);
+  assert.match(element('mission-lifecycle').textContent, /Awaiting lifecycle decision.*exit.*exit-root.*exit-checkpoint/);
+  assert.doesNotMatch(element('mission-lifecycle').textContent, /Yes\/No|choose Yes|choose No|Really quit/i);
+  assert.match(element('mission-process').textContent, /Historical last sample.*running: true/);
+  assert.match(element('mission-process').textContent, /current liveness unknown/);
+  assert.match(element('mission-process').textContent, /1 unresolved custody request/);
+  assert.match(element('mission-exit').textContent, /No verified normal exit.*acknowledgment unknown/i);
+  assert.deepEqual(JSON.parse(element('mission-evidence').textContent).lifecycle_phase, mission.lifecycle_phase);
+  assert.deepEqual(JSON.parse(element('mission-evidence').textContent).native_process, mission.native_process);
+  assert.ok(sendButtons.every(button => button.disabled));
+  assert.equal(element('resume').disabled, true);
+  assert.equal(element('pause').disabled, false);
+  assert.equal(requests.length, countBeforeMission, 'lifecycle display sends no requests');
+
+  // Process absence/code zero alone and a transport disconnect cannot prove normal exit.
+  mission.native_process.last_sample = {...mission.native_process.last_sample,
+    running: false, returncode: 0, outcome: 'exited'};
+  context.input.connection = 'stale';
+  run('render(input)');
+  assert.match(element('mission-process').textContent, /Historical last sample.*running: false.*exit code: 0/);
+  assert.match(element('mission-process').textContent, /status stale or unavailable/);
+  assert.match(element('mission-exit').textContent, /No verified normal exit/);
+  run('void refresh()');
+  request('/api/status').reject(new Error('Service unavailable'));
+  await tick();
+  assert.match(element('mission-process').textContent, /service disconnected.*current liveness unknown/i);
+  assert.match(element('mission-exit').textContent, /No verified normal exit/);
+  assert.ok(sendButtons.every(button => button.disabled));
+  context.input.connection = 'disconnected';
+
+  const normalExit = {schema: 'mission/2', record_type: 'OwnedNormalExit',
+    origin_request_id: 'exit-root', launch_request_id: 'launch-root', launch_id: 'launch-test',
+    terminal_logical_id: 'exit-logical', native_request_id: 'exit-native', source_ids: ['exit-checkpoint'],
+    no_save_required: true, returncode: 0, grants_authority: false,
+    retirement: {launch_id: 'launch-test', exit_request_id: 'exit-root', native_request_id: 'exit-native',
+      returncode: 0, retired_pending: true, grants_authority: false}};
+  mission.lifecycle_phase = null;
+  mission.progress = {phase: {stage: 'complete', operation: 'exit'}, normal_exit: normalExit};
+  run('render(input)');
+  assert.match(element('mission-exit').textContent, /Recorded verified normal exit effect.*launch-test/);
+  assert.match(element('mission-exit').textContent, /acknowledgment unknown/i);
+  assert.match(element('mission-exit').textContent, /Matches the recorded terminal exit input/);
+  assert.match(element('mission-exit').textContent, /no save required.*untouched menu/i);
+  assert.match(element('mission-process').textContent, /service disconnected.*current liveness unknown/i);
+  assert.ok(sendButtons.every(button => button.disabled));
+
+  const exitReceipt = mission.last_receipt;
+  mission.last_receipt = {transport_disposition: 'returned', native_request_id: 'unrelated-native',
+    logical_action_id: 'unrelated-logical'};
+  run('render(input)');
+  assert.match(element('mission-exit').textContent, /Latest primitive receipt unrelated-native.*logical unrelated-logical.*acknowledgment returned/);
+  assert.match(element('mission-exit').textContent, /Not correlated with a recorded terminal exit input/);
+  mission.last_receipt = exitReceipt;
+
+  const exitProgress = mission.progress;
+  mission.progress = {source_ids: ['later-observation']};
+  run('render(input)');
+  assert.match(element('mission-exit').textContent, /No verified normal exit proof reported/,
+    'a later Observe result cannot reconstruct a missing exit proof from the process sample');
+  mission.progress = exitProgress;
+  for (const malformed of [{...normalExit, returncode: false}, {...normalExit, grants_authority: true},
+    {...normalExit, source_ids: []}, {...normalExit, retirement: []},
+    {...normalExit, retirement: {...normalExit.retirement, native_request_id: null}},
+    {...normalExit, retirement: {...normalExit.retirement, retired_pending: false}},
+    {...normalExit, retirement: {...normalExit.retirement, launch_id: 'unrelated-launch'}}]) {
+    mission.progress.normal_exit = malformed;
+    run('render(input)');
+    assert.match(element('mission-exit').textContent, /No verified normal exit/);
+  }
+
+  // Incomplete/malformed optional status stays inspectable and cannot manufacture proof or input.
+  for (const malformed of [undefined, null, [], 'exit', {}, {grants_authority: true},
+    {origin_request_id: 'exit-root', operation: 'exit', checkpoint_id: [], grants_authority: false},
+    {last_sample: {running: 'true', outcome: 'running'}, unresolved_custody_requests: 'unknown'}]) {
+    mission.lifecycle_phase = malformed;
+    mission.native_process = malformed;
+    mission.progress = {normal_exit: malformed};
+    mission.last_receipt = malformed;
+    run('render(input)');
+    assert.doesNotMatch(element('mission-lifecycle').textContent, /Awaiting lifecycle decision/);
+    assert.match(element('mission-process').textContent, /No usable process sample.*current liveness unknown/);
+    assert.match(element('mission-exit').textContent, /No verified normal exit/);
+    assert.ok(sendButtons.every(button => button.disabled));
+    assert.equal(element('resume').disabled, true);
+    assert.equal(element('pause').disabled, false);
+    assert.equal(requests.length, countBeforeMission);
+  }
+  mission.lifecycle_phase = null;
+  mission.native_process = null;
+  mission.progress = null;
+  mission.last_receipt = null;
+  context.input.connection = 'fresh';
+  run('render(input)');
+
   // Nonterminal phase alone owns execution even with no lease, including Pause and handoff.
   for (const phase of ['admitted', 'active', 'paused', 'reconciling', 'handoff', 'finishing']) {
     mission.phase = phase;
@@ -664,6 +768,9 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.match(html, /Historical, query-specific/);
   assert.match(html, /cannot undo a committed input or cancel an activity/);
   assert.match(html, /<details><summary>Memory context/);
+  for (const id of ['mission-lifecycle', 'mission-process', 'mission-exit']) {
+    assert.ok(html.includes(`<dd id="${id}">`), `${id} must exist in the mission facts`);
+  }
   assert.doesNotMatch(html + app, /api\/gameplay|task-form|task-start|task-continue|task-abandon|goal-form|mission_lease|renderGameplay/);
-  console.log('Viewer regressions passed: decoded authority and freshness; mission observation, exact IDs/epoch, history and malformed status; safe memory/usage rendering; independent Pause and ordinary recovery; no implicit input, Resume or retry.');
+  console.log('Viewer regressions passed: decoded authority and freshness; mission observation, exact IDs/epoch, history and malformed status; lifecycle checkpoints, historical process samples and separate exit/ACK evidence; safe memory/usage rendering; independent Pause and ordinary recovery; no implicit input, Resume or retry.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

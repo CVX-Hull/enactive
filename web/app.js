@@ -243,6 +243,50 @@ function known(value) {
 function evidence(value, empty) {
   return value === null || value === undefined ? empty : JSON.stringify(value, null, 2);
 }
+function record(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function recordedId(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+function renderLifecycle(mission) {
+  const phase = mission?.lifecycle_phase;
+  const checkpoint = record(phase) && phase.grants_authority === false &&
+    [phase.origin_request_id, phase.operation, phase.checkpoint_id].every(recordedId);
+  $('mission-lifecycle').textContent = checkpoint ?
+    `${mission.active_operation === null ? 'Awaiting lifecycle decision' : 'Lifecycle checkpoint'} · ${phase.operation} · request ${phase.origin_request_id} · checkpoint ${phase.checkpoint_id} · grants no authority` :
+    phase == null ? 'No lifecycle checkpoint reported' : 'Lifecycle checkpoint unavailable or inconsistent; inspect evidence';
+  const process = mission?.native_process;
+  const sample = record(process) && record(process.last_sample) ? process.last_sample : null;
+  const sampled = sample && typeof sample.running === 'boolean' && typeof sample.outcome === 'string';
+  const connection = latest?.connection === 'disconnected' ? 'service disconnected' :
+    latest?.connection === 'fresh' ? 'status connected' : 'status stale or unavailable';
+  const custody = record(process) && Array.isArray(process.unresolved_custody_requests) ?
+    `${process.unresolved_custody_requests.length} unresolved custody request(s)` : 'unresolved custody unknown';
+  $('mission-process').textContent = `${sampled ?
+    `Historical last sample · owner ${known(process.owner_mission_id)} · launch ${known(sample.launch_id)} · running: ${sample.running} · outcome ${sample.outcome} · exit code: ${known(sample.returncode)}` :
+    'No usable process sample'} · ${custody} · ${connection} · current liveness unknown`;
+  const result = mission?.progress;
+  const proof = record(result) ? result.normal_exit : null;
+  // Summarize the producer's recorded proof; process samples and ACKs cannot supply it.
+  const verified = record(proof) && proof.schema === 'mission/2' && proof.record_type === 'OwnedNormalExit' &&
+    proof.grants_authority === false && proof.no_save_required === true && proof.returncode === 0 &&
+    [proof.origin_request_id, proof.launch_request_id, proof.launch_id,
+      proof.terminal_logical_id, proof.native_request_id].every(recordedId) &&
+    Array.isArray(proof.source_ids) && proof.source_ids.length > 0 && proof.source_ids.every(recordedId) &&
+    record(proof.retirement) && proof.retirement.grants_authority === false && proof.retirement.returncode === 0 &&
+    proof.retirement.launch_id === proof.launch_id && proof.retirement.exit_request_id === proof.origin_request_id &&
+    typeof proof.retirement.retired_pending === 'boolean' &&
+    proof.retirement.native_request_id === (proof.retirement.retired_pending ? proof.native_request_id : null) &&
+    result.phase?.operation === 'exit' && result.phase?.stage === 'complete';
+  const receipt = record(mission?.last_receipt) ? mission.last_receipt : null;
+  const matchesExit = verified && receipt?.native_request_id === proof.native_request_id &&
+    receipt?.logical_action_id === proof.terminal_logical_id;
+  $('mission-exit').textContent = `${verified ?
+    `Recorded verified normal exit effect · launch ${proof.launch_id} · no save required (untouched menu)` :
+    'No verified normal exit proof reported'}. Latest primitive receipt ${known(receipt?.native_request_id)} · logical ${known(receipt?.logical_action_id)} · acknowledgment ${known(receipt?.transport_disposition)}. ${matchesExit ?
+    'Matches the recorded terminal exit input.' : 'Not correlated with a recorded terminal exit input.'} Acknowledgment and exit effect are separate evidence.`;
+}
 function renderMission() {
   const {kind, mission} = missionState();
   const available = mission && typeof mission === 'object' && !Array.isArray(mission);
@@ -255,6 +299,7 @@ function renderMission() {
     `${known(mission.lease_owner.actor_id)} · ${known(mission.lease_owner.operation)} · lease epoch ${known(mission.lease_owner.epoch)}` :
     'No current input lease reported';
   $('mission-operation').textContent = available ? `${mission.active_operation ? known(mission.active_operation) : 'No active operation'} · skill ${mission.skill ? known(mission.skill) : 'none reported'}` : 'No active operation';
+  renderLifecycle(available ? mission : null);
   $('mission-progress').textContent = available ? `${known(mission.spent_inputs)} primitive inputs spent · model decisions unknown` : 'No mission progress';
   $('mission-next').textContent = available ? known(mission.next_needed_decision) : 'Waiting for an explicitly admitted player mission';
   $('mission-reason').textContent = available ? `${known(mission.pause_cause)} · ${known(mission.reason)}` : 'No mission admitted';
@@ -273,7 +318,8 @@ function renderMission() {
     'Observer only: missions are admitted outside this viewer. Ordinary controls require current decoded evidence.';
   $('mission-evidence').textContent = kind === 'invalid' ? evidence(mission, 'Mission field missing from status.') : available ? evidence({progress: mission.progress, last_receipt: mission.last_receipt,
     current_source: mission.current_source, unresolved_effects: mission.unresolved_effects,
-    prompt_phase: mission.prompt_phase, diagnostic: mission.diagnostic}, '') : 'No retained mission evidence.';
+    prompt_phase: mission.prompt_phase, lifecycle_phase: mission.lifecycle_phase,
+    native_process: mission.native_process, diagnostic: mission.diagnostic}, '') : 'No retained mission evidence.';
   $('mission-budgets').textContent = available ? evidence({remaining_limits: mission.remaining_limits,
     cleanup_reserve: mission.cleanup_reserve, configuration: mission.configuration}, '') : 'No mission limits reported.';
   const metrics = available ? mission.metrics : null;

@@ -126,6 +126,9 @@ Creation/save/character-exit/load, item/activity/inspection, handoff and normal 
 required adapters: source fixtures that assume trusted identity do not implement them.
 No independent mission is accepted from those tests. Observe likewise cannot adopt
 an unexplained normal session. Reopening restores neither phase nor input authority.
+Interpreted tab focus excludes WORLDGEN_CONFIRM_DIALOG. NEW_CHAR_DESCRIPTION may
+return through PREV_TAB, but NEXT_TAB starts character completion and requires an
+explicit lifecycle stage commit; a focused menu outcome cannot authorize it.
 
 Registered lifecycle launch is a source-free root: null phase/Work/native binding,
 empty source/identity IDs and exact admitted names. It invokes only the fixed

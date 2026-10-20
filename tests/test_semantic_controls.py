@@ -109,6 +109,31 @@ class SemanticControlTests(unittest.TestCase):
         self.assertEqual(len(outcome.evidence), 9)
         self.assertFalse(hasattr(outcome, "verified_focus_steps"))
 
+    def test_world_form_has_no_tab_navigation_even_if_an_action_is_reported(self):
+        before = self.frame(category="WORLDGEN_CONFIRM_DIALOG", actions=["PREV_TAB", "NEXT_TAB"])
+        skill = self.skill(before, view=self.view(before, control="tabs"),
+            goal=dict(purpose="Choose world form section", label="1", outcome="focused"))
+        result = self.propose(skill)
+        self.assertIsInstance(result, ControlOutcome)
+        self.assertEqual((result.disposition, result.proposed_count), ("blocked", 0))
+
+    def test_character_finish_cannot_be_proposed_as_tab_focus(self):
+        before = self.frame(category="NEW_CHAR_DESCRIPTION", actions=["PREV_TAB", "NEXT_TAB"])
+        skill = self.skill(before, view=self.view(before, control="tabs"),
+            goal=dict(purpose="Choose next tab", label="1", outcome="focused"))
+        result = self.propose(skill)
+        self.assertIsInstance(result, ControlOutcome)
+        self.assertEqual((result.disposition, result.proposed_count), ("blocked", 0))
+        self.assertIn("lifecycle", result.reason)
+
+    def test_character_description_can_return_to_a_previous_tab(self):
+        before = self.frame(category="NEW_CHAR_DESCRIPTION", actions=["PREV_TAB", "NEXT_TAB"])
+        skill = self.skill(before, view=self.view(before, control="tabs", selected=1),
+            goal=dict(purpose="Return to previous tab", label="0", outcome="focused"))
+        result = self.propose(skill)
+        self.assertIsInstance(result, ControlIntent)
+        self.assertEqual(result.action, "PREV_TAB")
+
     def test_enabled_represented_rows_determine_arrow_count_and_direction(self):
         for selected, label, action in ((0, "3", "DOWN"), (3, "0", "UP")):
             before = self.frame()

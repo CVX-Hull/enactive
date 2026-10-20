@@ -205,6 +205,14 @@ class MissionContractTests(unittest.TestCase):
             with self.assertRaises(ContractError): validate_memory_entry({**value, "key": {**value["key"], **change}}, "claim")
         with self.assertRaises(ContractError): validate_memory_entry({**value, "kind": "native_fact"}, "claim")
 
+    def test_character_identity_uses_visible_screen_and_rejects_old_hud_coverage(self):
+        value = claim(key=dict(subject="character", property="identity", unit="name",
+            coverage_id="visible-character-screen"), value=dict(quantity=None, state="test-person"))
+        self.assertEqual(validate_memory_entry(value, "claim", player=True), value)
+        with self.assertRaises(ContractError):
+            validate_memory_entry({**value, "key": {**value["key"],
+                "coverage_id": "visible-character-hud"}}, "claim", player=True)
+
     def test_lifecycle_launch_has_no_old_authority_other_operations_require_binding(self):
         launch = request("lifecycle", work_id=None, phase_id=None, identity_claim_ids=[], operation="launch", world="world", character="person", sources=[],
                          expected_session=None, expected_revision=None, expected_boundary_id=None,

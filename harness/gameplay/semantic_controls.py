@@ -19,7 +19,7 @@ _CHARACTER = frozenset({"NEW_CHAR_POINTS", "NEW_CHAR_STATS", "NEW_CHAR_TRAITS", 
                         "NEW_CHAR_SKILLS", "NEW_CHAR_SCENARIOS", "NEW_CHAR_DESCRIPTION"})
 _VERTICAL = _CHARACTER | {"MAIN_MENU", "INVENTORY", "INVENTORY_SELECTOR", "CRAFTING", "CONSTRUCTION",
                           "PICK_WORLD_DIALOG"}
-_TABS = _CHARACTER | {"MODMANAGER_DIALOG", "WORLDGEN_CONFIRM_DIALOG"}
+_TABS = _CHARACTER | {"MODMANAGER_DIALOG"}
 _COLUMNS = frozenset({"INVENTORY", "INVENTORY_SELECTOR"})
 
 
@@ -244,6 +244,11 @@ class SemanticControlSkill:
         if target == selected:
             return (("action", "CONFIRM"),) if goal["outcome"] == "activated" else ()
         direction = 1 if target > selected else -1
+        # In CDDA's description screen NEXT_TAB starts character completion;
+        # it is not a focus arrow. Only an explicit lifecycle stage may commit
+        # that transition, regardless of the player's interpreted tab list.
+        if state["category"] == "NEW_CHAR_DESCRIPTION" and view["control"] == "tabs" and direction > 0:
+            raise _ControlBlocked("Character finish requires an explicit lifecycle stage commit")
         steps = sum(rows[n]["enabled"] for n in range(selected + direction, target + direction, direction))
         # Every arrow is observed, but subsequent interpretation is unavailable.
         # Bounded prediction never appends confirmation or verifies focus.

@@ -714,6 +714,10 @@ byte-identical literal no-progress. A fresh whole-value interpretation is requir
 before separate TEXT.CONFIRM. Registered control/category mappings are fixed by
 pinned native source; unsupported controls stop. Native-row MenuSkill rejects
 player interpretations rather than silently treating them as native evidence.
+World-generation forms use their registered form controls, without a tab-focus
+mapping. NEXT_TAB on the final character-description screen begins completion;
+ordinary focus blocks it. The pending lifecycle adapter must request world
+FINALIZE and character finish as explicit stage commits, separate from focus.
 The passive policy additionally stops an arrow batch when available native rows
 contradict its next expected enabled focus. Unknown results retain their pending
 ID and canonical actual-after reference even when the PNG is missing or corrupt;
@@ -780,7 +784,10 @@ limits before a separately recorded trusted adoption, never blind retry.
 Identity Claims have property=identity, unit=name and exact visible name in
 value.state, with quantity=null and kind=interpretation. World uses subject=world/
 coverage_id=visible-world-menu; character uses subject=character/
-coverage_id=visible-character-hud. Lifecycle must check actual phase source/support,
+coverage_id=visible-character-screen; the old HUD coverage rejects. The world
+Claim keeps its actual menu-session scope; the character Claim keeps its normal
+session scope. The lifecycle proof must explicitly connect them rather than copy a
+world source into a different session. Lifecycle must check actual phase source/support,
 current undisputed scope and admission names, not annotation text or any existing
 claim ID. These remain fallible identity evidence. One-current ingress and cached observer
 views are connected. Item/activity outcomes, the rest of registered lifecycle,

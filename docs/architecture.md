@@ -66,6 +66,10 @@ reopen. A normal return closes the prompt without proving the desired effect.
 Cancellation uses one actually registered QUIT, or TEXT.QUIT for a string editor;
 it returns partial for verification and never answers a later question implicitly.
 Inventory multiselect, quantity semantics and native editor qualification remain gaps.
+World-generation forms have no tab-focus mapping. On the final character-description
+screen, NEXT_TAB begins character completion and is blocked as ordinary focus;
+returning to a previous tab remains available. World FINALIZE and character finish
+need explicit registered lifecycle stage commits, whose adapter is still pending.
 
 Ledger6 records Resume as a distinct primitive under an admitted lifecycle root.
 The controller's trusted Resume compares controller boot, operator-Pause counter,
