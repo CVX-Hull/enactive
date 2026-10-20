@@ -60,7 +60,18 @@ def guard(state: dict[str, Any], dx: int, dy: int, *, paused: bool,
     """
     position = current_guard(state, dx, dy, paused=paused, frozen=frozen,
                              now_timestamp_ms=now_timestamp_ms)
-    scene = state["scene"]
+    visible_destination(state["scene"], dx, dy)
+    return position
+
+
+def visible_destination(scene: dict[str, Any], dx: int, dy: int) -> tuple[int, int, int]:
+    """Historical candidate geometry only; no freshness, control or creature claim.
+
+    Current movement must call guard(), which checks current_guard() first.
+    """
+    _delta(dx, dy)
+    if not isinstance(scene, dict):
+        raise MovementBlocked("Walk stopped: neighboring terrain is unknown")
     neighbors = scene.get("neighbors")
     if not isinstance(neighbors, list):
         raise MovementBlocked("Walk stopped: neighboring terrain is unknown")
@@ -71,7 +82,7 @@ def guard(state: dict[str, Any], dx: int, dy: int, *, paused: bool,
     if (not tile or tile.get("visible") is not True or tile.get("furniture") != "f_null"
             or not isinstance(tile.get("terrain"), str) or tile["terrain"] not in SAFE_TERRAIN):
         raise MovementBlocked("Walk stopped: next tile is not a visible, empty, allowlisted surface")
-    return position
+    return expected_position(scene.get("position"), dx, dy)
 
 
 def observed_step(before: dict[str, Any], after: dict[str, Any], dx: int, dy: int) -> bool:

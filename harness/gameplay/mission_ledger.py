@@ -17,9 +17,12 @@ import threading
 from typing import Any
 
 from .contracts import ContractError, json_object
-from .mission_contracts import MissionAdmission, canonical, validate_memory_entry, validate_request
+from .mission_contracts import (
+    VERSION, MissionAdmission, canonical, validate_handoff_binding,
+    validate_handoff_result, validate_memory_entry, validate_request,
+)
 
-DB_VERSION = 1
+DB_VERSION = 2
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
 MAX_RECEIPT_BYTES = 65_536
 MAX_EFFECT_BYTES = 4096
@@ -296,8 +299,149 @@ class MissionLedger:
                 raise LedgerError("Operation primitive ceiling was exceeded")
         if type(state["spent_inputs"]) is not int or state["spent_inputs"] != count or count > stored.limits.inputs:
             raise LedgerError("Spent inputs differ from immutable primitive mappings")
+        self._handoffs(state=state)
         if self._db.execute("PRAGMA foreign_key_check").fetchone() is not None:
             raise LedgerError("Primitive lost its semantic request")
+
+    def _handoffs(self, *, state: dict | None = None) -> tuple[dict, dict]:
+        """Derive one-use consumption from existing immutable request results.
+
+        At most sixteen issuances, no copied mutable consumption pointer/table.
+        Reopen validates the actor chain as well as individual closed receipts.
+        """
+        admission = MissionAdmission.from_dict(self._get("admission"))
+        issued, consumed = {}, {}
+        player, previous_epoch = admission.player_id, -1
+        for identity, payload, status, result in self._db.execute(
+                "SELECT id,payload,state,result FROM requests ORDER BY rowid"):
+            data = json_object(payload)
+            if data["kind"] not in ("handoff", "claim") or status != "completed":
+                continue
+            receipt = validate_handoff_result(json_object(result), claimed=data["kind"] == "claim")
+            if receipt["mission_id"] != admission.mission_id:
+                raise LedgerError("Handoff receipt belongs to another mission")
+            if data["kind"] == "handoff":
+                if (receipt["handoff_id"] != identity or receipt["epoch"] != data["epoch"] + 1
+                        or receipt["epoch"] <= previous_epoch
+                        or receipt["original_player_id"] != player
+                        or receipt["successor_role"] != data["successor_role"]
+                        or receipt["checkpoint_ids"] != data["checkpoint_ids"]
+                        or receipt["pause_origin"] in ("human", "fault")):
+                    raise LedgerError("Handoff issuance contradicts request/actor chain")
+                issued[identity] = receipt
+                previous_epoch = receipt["epoch"]
+            else:
+                handoff = issued.get(data["handoff_id"])
+                if (handoff is None or data["handoff_id"] in consumed
+                        or data["epoch"] != handoff["epoch"]
+                        or player != handoff["original_player_id"]
+                        or data["player_id"] == player
+                        or receipt != self._claim_receipt(data, handoff["successor_role"])):
+                    raise LedgerError("Claim lost its one-use issuance/actor binding")
+                self._claim_binding(data, handoff)
+                consumed[data["handoff_id"]] = identity
+                player = data["player_id"]
+        if len(issued) > 16:
+            raise LedgerError("Handoff retention ceiling exceeded")
+        if state is not None:
+            if state["player_id"] != player or any(h["epoch"] > state["epoch"] for h in issued.values()):
+                raise LedgerError("Mission actor/epoch contradicts handoff history")
+            pending = [h for key, h in issued.items() if key not in consumed and h["epoch"] == state["epoch"]]
+            if state["phase"] == "handoff" and (len(pending) != 1 or state["pause_cause"] != "internal_handoff"):
+                raise LedgerError("Handoff phase lost its eligible issuance")
+            if state["phase"] == "active" and pending:
+                raise LedgerError("Unconsumed handoff cannot be active")
+        return issued, consumed
+
+    @staticmethod
+    def _claim_receipt(data: dict, role: str) -> dict:
+        return {"schema": VERSION, "record_type": "ClaimedHandoff", "handoff_id": data["handoff_id"],
+                "mission_id": data["mission_id"], "player_id": data["player_id"],
+                "actor_role": role, "epoch": data["epoch"], "grants_authority": False}
+
+    @staticmethod
+    def _claim_binding(data: dict, handoff: dict) -> None:
+        for requested, issued in (("expected_session", "session"), ("expected_revision", "revision"),
+                                  ("expected_boundary_id", "boundary_id"), ("expected_pause_origin", "pause_origin"),
+                                  ("pause_generation", "pause_generation"), ("takeover_generation", "takeover_generation")):
+            if data[requested] != handoff[issued]:
+                raise LedgerError("Claim differs from the exact post-Pause handoff binding")
+
+    def _settled_transition(self, request_id: str, result: dict) -> None:
+        self._release(f"request:{request_id}")
+        self._db.execute("UPDATE requests SET state='completed',result=? WHERE id=?", (_json(result), request_id))
+
+    def _quiescent(self, except_request: str, *, competing_claim: str | None = None) -> None:
+        if self._db.execute("SELECT 1 FROM primitives WHERE state IN ('prepared','published') OR (state='unknown' AND effect IS NULL)").fetchone():
+            raise LedgerError("Handoff requires reconciled primitive effects")
+        for payload, in self._db.execute("SELECT payload FROM requests WHERE id<>? AND state IN ('accepted','running')", (except_request,)):
+            data = json_object(payload)
+            if competing_claim is None or data["kind"] != "claim" or data["handoff_id"] != competing_claim:
+                raise LedgerError("Handoff requires settled other semantic work")
+
+    def issue_handoff(self, request_id: str, *, binding: dict, now: float) -> dict:
+        """Record runtime-attested quiescence; no Pause or Resume is sent here."""
+        binding = validate_handoff_binding(binding)
+        if binding["pause_origin"] in ("human", "fault"):
+            raise LedgerError("Human/fault Pause cannot be relabelled as internal handoff")
+        with self._transaction():
+            operation = self.request(request_id)
+            data = operation["request"]
+            if data["kind"] != "handoff": raise LedgerError("Issuance requires a handoff request")
+            issued, consumed = self._handoffs()
+            if request_id in issued:
+                if any(issued[request_id][key] != value for key, value in binding.items()):
+                    raise LedgerError("Handoff issuance cannot be rebound")
+                return json_object(issued[request_id])
+            if operation["result"] is not None: raise LedgerError("Handoff operation already settled")
+            state = self._touch(now, dispatch=True)
+            if data["epoch"] != state["epoch"] or now >= operation["deadline"]:
+                raise LedgerError("Handoff epoch/deadline expired")
+            self._quiescent(request_id)
+            if len(issued) >= 16: raise BudgetError("Handoff count exhausted")
+            if any(h["epoch"] == state["epoch"] and key not in consumed for key, h in issued.items()):
+                raise LedgerError("Another eligible handoff is pending")
+            result = validate_handoff_result({**binding, "schema": VERSION, "record_type": "Handoff",
+                "mission_id": self.admission.mission_id, "handoff_id": request_id,
+                "original_player_id": state["player_id"], "successor_role": data["successor_role"],
+                "epoch": state["epoch"] + 1, "checkpoint_ids": data["checkpoint_ids"], "grants_authority": False})
+            self._settled_transition(request_id, result)
+            state.update(phase="handoff", epoch=result["epoch"], pause_cause="internal_handoff",
+                         reason="Runtime attested quiescent internal handoff; no input authority")
+            self._put("state", state)
+        return json_object(result)
+
+    def consume_handoff(self, request_id: str, *, actor_id: str, actor_role: str, now: float) -> dict:
+        """Runtime compares its designated actor context; IDs are audit, not authentication."""
+        _id(actor_id); _id(actor_role)
+        with self._transaction():
+            operation = self.request(request_id)
+            data = operation["request"]
+            if data["kind"] != "claim" or data["player_id"] != actor_id:
+                raise LedgerError("Claim differs from designated runtime actor")
+            issued, consumed = self._handoffs()
+            handoff = issued.get(data["handoff_id"])
+            if handoff is None or handoff["successor_role"] != actor_role:
+                raise LedgerError("Claim differs from issued successor role")
+            self._claim_binding(data, handoff)
+            if consumed.get(data["handoff_id"]) == request_id:
+                return json_object(operation["result"])
+            if data["handoff_id"] in consumed or operation["result"] is not None:
+                raise LedgerError("Handoff already consumed or claim settled")
+            state = self._touch(now)
+            if (state["phase"] != "handoff" or state["pause_cause"] != "internal_handoff"
+                    or data["epoch"] != state["epoch"] or handoff["epoch"] != state["epoch"]
+                    or data["player_id"] == state["player_id"]):
+                raise LedgerError("Handoff was invalidated or actor context was not replaced")
+            if now >= min(operation["deadline"], self.request(data["handoff_id"])["deadline"],
+                          state["deadline"] - self.admission.cleanup_reserve.wall_seconds):
+                raise BudgetError("Claim cannot renew original operation/ordinary mission budget")
+            self._quiescent(request_id, competing_claim=data["handoff_id"])
+            result = validate_handoff_result(self._claim_receipt(data, actor_role), claimed=True)
+            self._settled_transition(request_id, result)
+            state.update(phase="paused", player_id=actor_id, reason="Handoff consumed; fresh runtime readmission still required")
+            self._put("state", state)
+        return json_object(result)
 
     def snapshot(self, *, now: float) -> dict:
         now = _clock(now)
@@ -331,7 +475,7 @@ class MissionLedger:
         _id(player_id)
         with self._transaction():
             state = self._touch(now)
-            if type(epoch) is not int or epoch != state["epoch"] or state["phase"] in TERMINAL or player_id != state["player_id"]:
+            if type(epoch) is not int or epoch != state["epoch"] or state["phase"] in TERMINAL | {"handoff"} or player_id != state["player_id"]:
                 raise LedgerError("Stale epoch, actor change without handoff or terminal mission")
             if now >= state["deadline"] - self.admission.cleanup_reserve.wall_seconds:
                 raise BudgetError("Readmission cannot renew the ordinary wall budget")
@@ -523,6 +667,8 @@ class MissionLedger:
         with self._transaction():
             state = self._touch(now)
             old = self.request(request_id)
+            if old["request"]["kind"] in ("handoff", "claim") and disposition == "completed":
+                raise LedgerError("Successful handoff/claim requires its atomic transition")
             if old["result"] is not None:
                 if old["state"] == disposition and old["result"] == json_object(encoded): return old
                 raise LedgerError("Operation result cannot be rewritten")

@@ -55,6 +55,16 @@ not extra services or a requirement for additional people. Implementation paths:
 [gameplay records](../harness/gameplay/contracts.py),
 [evidence store](../harness/gameplay/evidence.py), [task memory](../harness/gameplay/memory.py), [setup](../tools/setup.py).
 
+The [mission design](design/player-owned-mission.md) also has passive source
+components: [contracts](../harness/gameplay/mission_contracts.py),
+[SQLite accounting](../harness/gameplay/mission_ledger.py),
+[observed navigation](../harness/gameplay/navigation.py) and
+[campaign memory](../harness/gameplay/campaign_memory.py). They produce bounded data
+and record uncertainty; none owns input or replaces the live runtime below yet.
+Ledger format2 rejects prior databases. Its typed immutable request results retain
+one-use handoff issuance/consumption without restoring a lease or Resume on reopen.
+Runtime/native and actual fresh-player acceptance remain separate delivery gates.
+
 Only one execution arrangement is active at a time: an external campaign operator
 uses ordinary CLI inputs, or the leased waypoint service executes plans. They are
 different responsibilities in the current system, not old/new wire contracts or

@@ -38,7 +38,7 @@ allowance or running chat renews it.
 The next planned outcome is [player-owned campaigns #136](https://github.com/CVX-Hull/enactive/issues/136)
 in the [new milestone](https://github.com/CVX-Hull/enactive/milestone/6). [Design #137](https://github.com/CVX-Hull/enactive/issues/137)
 and [#71](https://github.com/CVX-Hull/enactive/issues/71), bounded trace extraction
-and label readiness, prepare the next integrated delivery. Semantic navigation
+and label readiness, establish its accepted design/evidence basis. Semantic navigation
 and interaction, durable campaign memory, outcome assessment/recovery, mission
 ownership and observer visibility feed one [supply-and-shelter acceptance #144](https://github.com/CVX-Hull/enactive/issues/144),
 then a [fresh seven-day assessment #145](https://github.com/CVX-Hull/enactive/issues/145)

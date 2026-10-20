@@ -112,6 +112,23 @@ _VISIBLE_UI = _object({
     "count": _nullable(_text(32, empty=True)), "coverage": {"const": "rendered_rows_only"},
 })
 PAUSE_ORIGINS = ("startup", "world_change", "human", "host", "recovery", "fault", "none")
+_HANDOFF_BINDING = _object({
+    "session": _ID, "revision": _integer(), "boundary_id": _ID,
+    "pause_generation": _integer(), "takeover_generation": _integer(),
+    "pause_origin": _enum(*PAUSE_ORIGINS),
+})
+_HANDOFF = _object({
+    **_HANDOFF_BINDING["properties"], "schema": {"const": VERSION},
+    "record_type": {"const": "Handoff"}, "handoff_id": _ID, "mission_id": _ID,
+    "original_player_id": _ID, "successor_role": _ID, "epoch": _integer(),
+    "checkpoint_ids": {**_array(_ID, 32), "uniqueItems": True},
+    "grants_authority": {"const": False},
+})
+_CLAIMED_HANDOFF = _object({
+    "schema": {"const": VERSION}, "record_type": {"const": "ClaimedHandoff"},
+    "handoff_id": _ID, "mission_id": _ID, "player_id": _ID, "actor_role": _ID,
+    "epoch": _integer(), "grants_authority": {"const": False},
+})
 
 
 def canonical(value: dict[str, Any]) -> str:
@@ -128,6 +145,16 @@ def _decode(value: dict | str | bytes, schema: dict, *, maximum=MAX_REQUEST_BYTE
         raise ContractError("Mission record exceeds its byte limit")
     validate_json(result, schema)
     return result
+
+
+def validate_handoff_binding(value: dict) -> dict:
+    """Runtime-attested post-Pause binding, never a capability or native proof."""
+    return _decode(value, _HANDOFF_BINDING)
+
+
+def validate_handoff_result(value: dict, *, claimed: bool = False) -> dict:
+    """Closed durable result; the ledger crosschecks its originating requests."""
+    return _decode(value, _CLAIMED_HANDOFF if claimed else _HANDOFF)
 
 
 @dataclass(frozen=True)
@@ -291,7 +318,8 @@ def _request_schema(kind: str, data: dict) -> dict:
             props.update(checkpoint_ids={**_array(_ID, 32), "uniqueItems": True}, successor_role=_ID)
         elif kind == "claim":
             props.update(handoff_id=_ID, player_id=_ID, pause_generation=_integer(),
-                         takeover_generation=_integer(), expected_session=_ID, expected_revision=_integer())
+                         takeover_generation=_integer(), expected_session=_ID, expected_revision=_integer(),
+                         expected_boundary_id=_ID, expected_pause_origin=_enum(*PAUSE_ORIGINS))
         elif kind == "lifecycle":
             props.update(operation=_enum(*LIFECYCLE), world=_text(80), character=_text(80),
                          sources=_IDS, expected_session=_nullable(_ID),

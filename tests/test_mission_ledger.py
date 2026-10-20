@@ -24,6 +24,23 @@ def intent(**changes):
     return values
 
 
+def handoff_binding(**changes):
+    values = dict(session="native-session", revision=30, boundary_id="boundary-1",
+                  pause_generation=4, takeover_generation=0, pause_origin="host")
+    values.update(changes)
+    return values
+
+
+def handoff_claim(issuance, **changes):
+    values = request("claim", request_id="claim-1", epoch=issuance["epoch"],
+        handoff_id=issuance["handoff_id"], player_id="replacement-player",
+        expected_session=issuance["session"], expected_revision=issuance["revision"],
+        expected_boundary_id=issuance["boundary_id"], expected_pause_origin=issuance["pause_origin"],
+        pause_generation=issuance["pause_generation"], takeover_generation=issuance["takeover_generation"])
+    values.update(changes)
+    return values
+
+
 class LedgerTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
@@ -47,6 +64,198 @@ class LedgerTests(unittest.TestCase):
         out = self.ledger.prepare_primitive("request-1", "logical-1", intent(), now=1002)
         self.assertTrue(out["created"])
         if native: self.ledger.published("logical-1", "native-uuid-1", now=1003)
+
+    def issue_handoff(self):
+        self.active_request(request("handoff", request_id="handoff-1", checkpoint_ids=["source-1"], successor_role="player"))
+        return self.ledger.issue_handoff("handoff-1", binding=handoff_binding(), now=1002)
+
+    def test_handoff_claim_is_durable_one_use_and_still_requires_readmission(self):
+        before = self.ledger.snapshot(now=1000)
+        issued = self.issue_handoff()
+        self.assertEqual(issued["handoff_id"], "handoff-1")
+        self.assertEqual(issued["epoch"], 1)
+        self.assertFalse(issued["grants_authority"])
+        with self.assertRaises(LedgerError): self.ledger.activate(epoch=1, player_id="player-test", now=1003)
+        claim = handoff_claim(issued)
+        self.ledger.begin_request(claim, now=1003)
+        result = self.ledger.consume_handoff("claim-1", actor_id="replacement-player", actor_role="player", now=1004)
+        state = self.ledger.snapshot(now=1004)
+        self.assertEqual(state["phase"], "paused")
+        self.assertEqual(state["deadline"], before["deadline"])
+        self.assertEqual(state["remaining_inputs"], before["remaining_inputs"])
+        self.assertEqual(state["player_id"], "replacement-player")
+        self.assertFalse(result["grants_authority"])
+        self.ledger.activate(epoch=1, player_id="replacement-player", now=1005)
+        reopened = self.reopen(now=1006).snapshot(now=1006)
+        self.assertEqual(reopened["player_id"], "replacement-player")
+        self.assertEqual(reopened["phase"], "paused")
+        self.assertEqual(self.ledger.request("handoff-1")["result"], issued)
+        self.assertEqual(self.ledger.request("claim-1")["result"], result)
+
+    def test_handoff_duplicates_return_original_results_without_budget_or_epoch_renewal(self):
+        issued = self.issue_handoff()
+        self.assertEqual(self.ledger.issue_handoff("handoff-1", binding=handoff_binding(), now=1003), issued)
+        with self.assertRaises(LedgerError):
+            self.ledger.issue_handoff("handoff-1", binding=handoff_binding(revision=31), now=1003)
+        self.ledger.begin_request(handoff_claim(issued), now=1003)
+        result = self.ledger.consume_handoff("claim-1", actor_id="replacement-player", actor_role="player", now=1004)
+        result["epoch"] = 99
+        again = self.ledger.consume_handoff("claim-1", actor_id="replacement-player", actor_role="player", now=1005)
+        self.assertEqual(again["epoch"], 1)
+        self.assertEqual(self.ledger.snapshot(now=1005)["epoch"], 1)
+        self.assertEqual(self.ledger.snapshot(now=1005)["deadline"], 8200)
+
+    def test_handoff_claim_exact_origin_boundary_and_actor_role_reject(self):
+        issued = self.issue_handoff()
+        for index, changes in enumerate((dict(expected_pause_origin="fault"), dict(expected_boundary_id="other"),
+                dict(pause_generation=5), dict(takeover_generation=1), dict(expected_session="other"),
+                dict(expected_revision=31), dict(player_id="player-test"))):
+            value = handoff_claim(issued, request_id=f"bad-{index}", **changes)
+            self.ledger.begin_request(value, now=1004)
+            with self.assertRaises(LedgerError):
+                self.ledger.consume_handoff(value["request_id"], actor_id=value["player_id"], actor_role="player", now=1004)
+            self.ledger.complete_request(value["request_id"], "blocked", {"reason": "Exact binding rejected"}, now=1004)
+        self.ledger.begin_request(handoff_claim(issued), now=1004)
+        for actor, role in (("other-actor", "player"), ("replacement-player", "curator")):
+            with self.assertRaises(LedgerError): self.ledger.consume_handoff("claim-1", actor_id=actor, actor_role=role, now=1005)
+        self.ledger.consume_handoff("claim-1", actor_id="replacement-player", actor_role="player", now=1005)
+
+    def test_handoff_human_pause_and_reopen_invalidate_without_relabelling(self):
+        issued = self.issue_handoff()
+        self.ledger.pause(cause="user", reason="User Pause wins", now=1003)
+        current_epoch = self.ledger.snapshot(now=1003)["epoch"]
+        value = handoff_claim(issued, epoch=current_epoch)
+        self.ledger.begin_request(value, now=1003)
+        with self.assertRaises(LedgerError):
+            self.ledger.consume_handoff("claim-1", actor_id="replacement-player", actor_role="player", now=1004)
+        self.reopen(now=1005)
+        self.assertEqual(self.ledger.request("handoff-1")["result"], issued)
+        value = handoff_claim(issued, request_id="claim-after-reopen", epoch=self.ledger.snapshot(now=1005)["epoch"])
+        self.ledger.begin_request(value, now=1005)
+        with self.assertRaises(LedgerError):
+            self.ledger.consume_handoff(value["request_id"], actor_id="replacement-player", actor_role="player", now=1006)
+
+    def test_stale_unconsumed_handoff_does_not_block_a_later_explicit_readmission(self):
+        old = self.issue_handoff()
+        paused = self.ledger.pause(cause="user", reason="Newer user event", now=1003)
+        self.ledger.activate(epoch=paused["epoch"], player_id="player-test", now=1004)
+        value = request("handoff", request_id="handoff-2", epoch=paused["epoch"], checkpoint_ids=["source-2"], successor_role="player")
+        self.ledger.begin_request(value, now=1004)
+        new = self.ledger.issue_handoff("handoff-2", binding=handoff_binding(revision=31, pause_generation=6), now=1005)
+        self.assertGreater(new["epoch"], old["epoch"])
+        self.assertEqual(self.ledger.request("handoff-1")["result"], old)
+
+    def test_competing_handoff_claims_have_exactly_one_winner(self):
+        issued = self.issue_handoff()
+        for identity in ("claim-a", "claim-b"):
+            self.ledger.begin_request(handoff_claim(issued, request_id=identity, player_id=identity), now=1003)
+        def consume(identity):
+            try:
+                return self.ledger.consume_handoff(identity, actor_id=identity, actor_role="player", now=1004)
+            except LedgerError:
+                return None
+        from concurrent.futures import ThreadPoolExecutor
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            results = list(pool.map(consume, ("claim-a", "claim-b")))
+        self.assertEqual(sum(result is not None for result in results), 1)
+
+    def test_handoff_success_cannot_bypass_atomic_transitions(self):
+        issued = self.issue_handoff()
+        self.ledger.begin_request(handoff_claim(issued), now=1003)
+        for identity in ("handoff-1", "claim-1"):
+            with self.assertRaises(LedgerError):
+                self.ledger.complete_request(identity, "completed", {}, now=1004)
+
+    def test_handoff_issuance_requires_active_settled_work_and_eligible_origin(self):
+        self.prepared()
+        value = request("handoff", request_id="handoff-1", checkpoint_ids=[], successor_role="player")
+        self.ledger.begin_request(value, now=1003)
+        with self.assertRaises(LedgerError): self.ledger.issue_handoff("handoff-1", binding=handoff_binding(), now=1004)
+        for origin in ("human", "fault"):
+            with self.assertRaises(LedgerError): self.ledger.issue_handoff("handoff-1", binding=handoff_binding(pause_origin=origin), now=1004)
+        self.ledger.pause(cause="user", reason="User stop", now=1004)
+        with self.assertRaises(LedgerError): self.ledger.issue_handoff("handoff-1", binding=handoff_binding(), now=1005)
+
+    def test_handoff_claim_cannot_spend_cleanup_reserve(self):
+        issued = self.issue_handoff()
+        self.ledger.begin_request(handoff_claim(issued), now=7299)
+        with self.assertRaises(BudgetError):
+            self.ledger.consume_handoff("claim-1", actor_id="replacement-player", actor_role="player", now=7300)
+        self.assertEqual(self.ledger.snapshot(now=7300)["phase"], "handoff")
+
+    def test_handoff_cap_and_actor_chain_survive_reopen(self):
+        self.ledger.activate(epoch=0, player_id="player-test", now=1001)
+        for index in range(16):
+            now = 1002 + index * 4
+            epoch = self.ledger.snapshot(now=now)["epoch"]
+            identity = f"handoff-{index}"
+            self.ledger.begin_request(request("handoff", request_id=identity, epoch=epoch, checkpoint_ids=[], successor_role="player"), now=now)
+            issued = self.ledger.issue_handoff(identity, binding=handoff_binding(), now=now)
+            claim = handoff_claim(issued, request_id=f"claim-{index}", player_id=f"player-{index}")
+            self.ledger.begin_request(claim, now=now+1)
+            self.ledger.consume_handoff(claim["request_id"], actor_id=claim["player_id"], actor_role="player", now=now+1)
+            self.ledger.activate(epoch=issued["epoch"], player_id=claim["player_id"], now=now+2)
+        self.ledger.begin_request(request("handoff", request_id="handoff-overflow", epoch=16, checkpoint_ids=[], successor_role="player"), now=1100)
+        with self.assertRaises(BudgetError): self.ledger.issue_handoff("handoff-overflow", binding=handoff_binding(), now=1100)
+        self.assertEqual(self.reopen(now=1101).snapshot(now=1101)["player_id"], "player-15")
+
+    def test_handoff_result_and_epoch_roll_back_together(self):
+        self.active_request(request("handoff", request_id="handoff-1", checkpoint_ids=[], successor_role="player"))
+        original_put = self.ledger._put
+        def fail_transition(key, value):
+            if key == "state" and value["phase"] == "handoff":
+                raise sqlite3.OperationalError("Injected failure after receipt, before state")
+            return original_put(key, value)
+        with patch.object(self.ledger, "_put", side_effect=fail_transition):
+            with self.assertRaises(LedgerError): self.ledger.issue_handoff("handoff-1", binding=handoff_binding(), now=1002)
+        self.assertEqual(self.ledger.snapshot(now=1002)["epoch"], 0)
+        self.assertIsNone(self.ledger.request("handoff-1")["result"])
+        self.assertIsNotNone(self.ledger._db.execute("SELECT id FROM reservations WHERE id='request:handoff-1'").fetchone())
+        self.assertEqual(self.ledger.issue_handoff("handoff-1", binding=handoff_binding(), now=1003)["epoch"], 1)
+
+    def test_full_storage_preserves_reserved_handoff_and_claim_receipts(self):
+        self.ledger.close()
+        self.directory = Path(self.tmp.name) / "handoff-capacity"
+        with patch("harness.gameplay.mission_ledger.MAX_DATABASE_BYTES", 512 * 1024):
+            self.ledger = MissionLedger(self.directory, admission=self.a, now=1000)
+            self.active_request(request("handoff", request_id="handoff-1", checkpoint_ids=[], successor_role="player"))
+            db = self.ledger._db
+            db.execute("CREATE TABLE storage_pressure (payload BLOB)")
+            def fill():
+                while True:
+                    try: db.execute("INSERT INTO storage_pressure VALUES (zeroblob(4096))")
+                    except sqlite3.OperationalError as error:
+                        self.assertIn("full", str(error))
+                        return
+            fill()
+            issued = self.ledger.issue_handoff("handoff-1", binding=handoff_binding(), now=1002)
+            db.execute("DELETE FROM storage_pressure WHERE rowid IN (SELECT rowid FROM storage_pressure LIMIT 32)")
+            self.ledger.begin_request(handoff_claim(issued), now=1003)
+            fill()
+            receipt = self.ledger.consume_handoff("claim-1", actor_id="replacement-player", actor_role="player", now=1004)
+            self.assertEqual(self.ledger.request("claim-1")["result"], receipt)
+            self.assertEqual(self.reopen(now=1005).snapshot(now=1005)["player_id"], "replacement-player")
+
+    def test_reopen_rejects_typed_but_contradictory_handoff_history(self):
+        issued = self.issue_handoff()
+        self.ledger.begin_request(handoff_claim(issued), now=1003)
+        receipt = self.ledger.consume_handoff("claim-1", actor_id="replacement-player", actor_role="player", now=1004)
+        receipt["actor_role"] = "curator"
+        self.ledger.close()
+        with closing(sqlite3.connect(self.ledger.path)) as connection, connection:
+            connection.execute("UPDATE requests SET result=? WHERE id='claim-1'",
+                               (json.dumps(receipt, sort_keys=True, separators=(",", ":")),))
+        with self.assertRaisesRegex(LedgerError, "actor binding"):
+            MissionLedger(self.directory, now=1005)
+
+    def test_earlier_ledger_format_is_rejected_without_conversion(self):
+        self.ledger.close()
+        with closing(sqlite3.connect(self.ledger.path)) as connection, connection:
+            connection.execute("PRAGMA user_version=1")
+        original = self.ledger.path.read_bytes()
+        with self.assertRaisesRegex(LedgerError, "Unsupported mission ledger version"):
+            MissionLedger(self.directory, now=1001)
+        self.assertEqual(self.ledger.path.read_bytes(), original)
 
     def test_create_reopen_preserves_deadline_scope_and_no_authority(self):
         old = self.ledger.snapshot(now=1000)

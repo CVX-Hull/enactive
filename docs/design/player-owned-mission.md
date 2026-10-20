@@ -175,7 +175,7 @@ boundary. Exact operation payloads are:
 | context | `mission_id`, `query`, `scope`, `max_bytes` (<=32768); returns selected IDs/version and omission counts. |
 | remember / correct | Typed claim/work update; correction names retired derivation IDs, replacement interpretation/support and reason. Clients cannot insert native facts. |
 | skill | The exact skill request; kinds navigate/menu/item/activity/inspect, each with typed goal fields and bounded stop conditions. No callable, shell or arbitrary path. |
-| handoff / claim | Handoff names settled checkpoint/source IDs and intended successor role; claim consumes one-use handoff ID and exact epoch/generation after reconciliation. |
+| handoff / claim | Handoff names settled checkpoint/source IDs and intended successor role; claim consumes its originating request ID with exact epoch, boundary, native Pause origin and host/native generations after reconciliation. Runtime compares its designated actor and role; IDs are audit fields. |
 | lifecycle | `operation` launch/create/save/exit/load/finish, supported observed identity/target when relevant, before-source IDs and explicit remaining limits. No player-supplied process path/PID. |
 | stop | Reason and explicit finishing-versus-immediate-pause intent; always revokes further ordinary dispatch first. |
 
@@ -559,8 +559,25 @@ it does not establish implemented schemas, native fields, gameplay or efficacy.
 The first source slice defines strict `mission/1`/`campaign-memory/1` records in
 [mission_contracts.py](../../harness/gameplay/mission_contracts.py) and single-writer
 accounting in [mission_ledger.py](../../harness/gameplay/mission_ledger.py).
-These modules do not activate the proposed runtime, change native wire3 or issue
-inputs. Their SQLite receipt reservations precede dispatch intent, crash reopening
+These modules do not activate the proposed runtime or issue inputs. The coordinated
+source contract is wire4; native compilation is separate from installation and
+graphical acceptance. SQLite receipt reservations precede dispatch intent, crash reopening
 retains uncertainty/cost and clears authority, and rejected expiry checks retain
 the observed wall-clock watermark. Source-level regression and independent review
 are separate from the future integrated native/graphical acceptance.
+
+Ledger format2 reuses immutable typed handoff/claim request results for up to16
+one-use handoffs, rather than adding a second mutable consumption store. It rejects
+format1. Issuance requires active, settled work and atomically pauses at a new epoch;
+claim changes the recorded actor while remaining paused. Runtime must verify actual
+quiescence, fresh native binding and deliberate readmission; the ledger sends no
+Pause/Resume. Human Pause or reopen invalidates an old issuance without erasing it,
+renewing costs or permanently blocking a later legitimately admitted handoff.
+
+The passive [navigation skill](../../harness/gameplay/navigation.py) projects only
+observed cardinal cells, retains route support and validates each settled step.
+The passive [campaign memory](../../harness/gameplay/campaign_memory.py) reduces
+typed claims and work before retrieval. Old quantities never become current from
+receipt order; missing newest sources remain unknown. Work availability requires
+fresh scoped evidence, while retained output/progress remains historical. Neither
+module is a player, dispatcher or proof of continuity, autonomy or learning benefit.
