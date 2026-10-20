@@ -88,6 +88,13 @@ multiselect, quantities above one, text editing and fallible screenshot control
 remain unsupported by that source component. A highlighted inventory row does
 not prove a chosen item or amount, and confirmation delivery does not prove the
 player's semantic objective.
+The unconnected [owned-process adapter](../harness/native_process.py) launches only
+the fixed prepared exec wrapper after checking root binding, installed binary and
+windowed configuration. It retains the native child across timeout/cancellation,
+accepts no process ID or signal request, and reports process facts separately from
+save/identity/mission outcomes. Runtime lifecycle still must establish fresh native
+readiness and normal exit evidence. Its shared script generator is also used by
+preparation; source tests do not qualify the new adapter in real gameplay.
 The canonical evidence archive can retain an equivalent final preflight without
 promoting it to current or changing navigation's generation. Native-state equality
 requires positively attested scene/menu content; exact-PNG equality also checks

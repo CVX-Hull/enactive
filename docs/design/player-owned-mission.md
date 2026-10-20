@@ -394,7 +394,8 @@ The player chooses ordinary menu options; runtime owns process handles and recor
 them. Native session changes invalidate execution authority/maps until explicit
 fresh observation and supported identity/relocalization.
 
-The registered adapter will launch the fixed prepared wrapper directly: its final
+The [source adapter](../../harness/native_process.py) launches the fixed prepared
+wrapper directly when called: its final
 `exec` makes the owned process become CDDA. Preparation and validation share one
 root-bound script template, so a bundle copied from another checkout cannot use
 that checkout's binary/userdir unnoticed. A zero wrapper exit still needs prior
