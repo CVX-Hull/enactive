@@ -1,0 +1,399 @@
+{
+  "date": "2026-10-20",
+  "scope": "Windowed menu-only engineering component probe, not independent mission or survival acceptance",
+  "source_commit": "fccec853cb5bca90538d792aea6aa0d1a8950af4",
+  "native_built_at": "bc9313ca7f8256f66c43fa012659fb90ccfc953a",
+  "built_binary_sha256": "61d3a132e06201aebfe7bb2f7a83822b937e8dcf28b5b9377b2a99706a17e9a1",
+  "installed_binary_sha256": "c65778e2912230f34b67340a4f2caacd0d5874af24ab964526c436bd686f7720",
+  "portable_python_tests": 614,
+  "admission": {
+    "source_commit": "fccec853cb5bca90538d792aea6aa0d1a8950af4",
+    "started_wall": 1792471144.570848,
+    "limits": {
+      "inputs": 20,
+      "wall_seconds": 600,
+      "frames": 64,
+      "bytes": 134217728
+    },
+    "installed_binary_sha256": "c65778e2912230f34b67340a4f2caacd0d5874af24ab964526c436bd686f7720",
+    "scope": "mainmenu only; no character load/create/save mutation; engineering component probe, not deciding mission"
+  },
+  "results": [
+    {
+      "receipt": "005-exact-tab-right.json",
+      "logical_action_id": "exact-tab-right",
+      "published": true,
+      "native_request_id": "f7e9d10f-59b3-4a29-b45f-0dfb6076bba8",
+      "native_status": "ready",
+      "error": "",
+      "elapsed_seconds": 0.10531050013378263,
+      "require_exact_frame": true
+    },
+    {
+      "receipt": "008-exact-tab-left.json",
+      "logical_action_id": "exact-tab-left",
+      "published": true,
+      "native_request_id": "21c166af-44f4-4e10-b54b-f9c989594444",
+      "native_status": "ready",
+      "error": "",
+      "elapsed_seconds": 0.09928608266636729,
+      "require_exact_frame": true
+    },
+    {
+      "receipt": "011-pause-during-final-preflight.json",
+      "logical_action_id": "pause-during-final-preflight",
+      "published": false,
+      "native_request_id": null,
+      "native_status": "controller_error",
+      "error": "Run lease is stale or input authority was revoked",
+      "elapsed_seconds": 0.03967729210853577,
+      "require_exact_frame": null
+    },
+    {
+      "receipt": "015-changed-informing-image-reject.json",
+      "logical_action_id": "changed-informing-image-reject",
+      "published": false,
+      "native_request_id": null,
+      "native_status": "controller_error",
+      "error": "Final preflight image differs from the informing image",
+      "elapsed_seconds": 0.039241916965693235,
+      "require_exact_frame": null
+    },
+    {
+      "receipt": "020-resize-during-preflight.json",
+      "logical_action_id": "resize-during-preflight",
+      "published": false,
+      "native_request_id": null,
+      "native_status": "controller_error",
+      "error": "Native boundary or frame changed during preflight",
+      "elapsed_seconds": 2.4658246249891818,
+      "require_exact_frame": null
+    },
+    {
+      "receipt": "026-normal-main-menu-quit.json",
+      "logical_action_id": "normal-main-menu-quit",
+      "published": true,
+      "native_request_id": "e4cca10c-f69c-4328-b8ed-6dfa1e744cf1",
+      "native_status": "ready",
+      "error": "",
+      "elapsed_seconds": 0.10056208400055766,
+      "require_exact_frame": true
+    },
+    {
+      "receipt": "030-normal-quit-confirm-yes.json",
+      "logical_action_id": "normal-quit-confirm-yes",
+      "published": true,
+      "native_request_id": "fa877b97-71c6-4c65-b136-79781b9c966c",
+      "native_status": "timeout",
+      "error": "Deadline reached; outcome unknown. Observe to reconcile, then resume.",
+      "elapsed_seconds": 3.0176161248236895,
+      "require_exact_frame": true
+    }
+  ],
+  "closeout": {
+    "open_wait_returncode": 0,
+    "inputs": 11,
+    "elapsed_seconds": 141.07086841622368,
+    "normal_process_exit_observed": true,
+    "server_closed": true,
+    "controller_closed": true,
+    "scope": "menu-only native component evidence, no independent mission"
+  },
+  "retention": {
+    "frames": 19,
+    "frame_bytes": 630387,
+    "private_receipts": [
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/001-initial-main-menu.json",
+        "bytes": 847,
+        "sha256": "dea618566a42bb6d9db54234875df8c1b0fd5986a6b4439a637ff388757e7ed2"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/002-bootstrap-resume.json",
+        "bytes": 849,
+        "sha256": "a3f68217d7f2e46f137e72f7048036f2b209cec503c15e2b16b35720aa1b131c"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/003-exact-tab-right-before.json",
+        "bytes": 849,
+        "sha256": "bf64f868f5fd60632eeb6295b0a1b56331938e61b0161883e87d4c0366047618"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/004-exact-tab-right-actual-preflight.json",
+        "bytes": 2420,
+        "sha256": "0dd14120cc4e2927521bff9188100d5d5ed1a5e85c7eae9dad1d8a6e9476ba4b"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/005-exact-tab-right.json",
+        "bytes": 3041,
+        "sha256": "13baf3c2cbc0fab5e0303eb26a911a50d5d3e468f110687dc5abca3b3b7f2eb4"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/006-exact-tab-left-before.json",
+        "bytes": 849,
+        "sha256": "acac6feccce55a730f479a0fb1b8a48cf6d39886651cd8b25ef0bfcde02d0a58"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/007-exact-tab-left-actual-preflight.json",
+        "bytes": 2420,
+        "sha256": "3ebe074c6c78b16277d1746af2bf9e1a603ec96e82e39ba34b0db4feeb038b2c"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/008-exact-tab-left.json",
+        "bytes": 3040,
+        "sha256": "05750a3c565b68724282464c4a7f2d62f74dbe3526283674b2719bdce6f55221"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/009-pause-during-final-preflight-before.json",
+        "bytes": 849,
+        "sha256": "b82e629c3215ffb09dace2e0f4d54c62a84246877e3ac6b8cd7b77ccf549c0ec"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/010-pause-during-final-preflight-actual-preflight.json",
+        "bytes": 2422,
+        "sha256": "326ee58af09d77c87922b9a71b8caf1043f8d66a1b92a303925931d61bd276da"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/011-pause-during-final-preflight.json",
+        "bytes": 1634,
+        "sha256": "6d7f9b315615ab37947d8325b44214cf86be93a8d26d40fec3832a46e56c556b"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/012-after-negative-pause.json",
+        "bytes": 848,
+        "sha256": "e27bac50d5bf340975008aea82ffda48db209c5b4949459a5ad59436836a58ed"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/013-resume-after-negative-pause.json",
+        "bytes": 849,
+        "sha256": "157c8d12215e46f050d93ca5a1b6ab4dce902852dc55db90c6b74e6216c275cb"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/014-changed-informing-image-reject-before.json",
+        "bytes": 849,
+        "sha256": "6ff5af82b6f7eab7214a3282d4a626ee58fef79405c1c7dc5771b4014dcff4e6"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/015-changed-informing-image-reject.json",
+        "bytes": 371,
+        "sha256": "eaa37bfa598cf8d10a3099f34d89807f77c5655647aea2d1c10c7c84a12e22f2"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/016-before-resize-probe.json",
+        "bytes": 849,
+        "sha256": "8b7875d71f8798306ef33c59e4a6f3cdd809cd8145aedb1540ae3cbfa8c34a70"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/017-resume-before-resize-probe.json",
+        "bytes": 850,
+        "sha256": "1c40cb320272140a76508f24ab26a777d2dcc21c0af30370ac8d5ea724c44d27"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/018-resize-during-preflight-before.json",
+        "bytes": 850,
+        "sha256": "e59fcd202d17364ca53117b4428cdce77ba54668e5d9da18921a0dc456035bad"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/019-resize-during-preflight-actual-preflight.json",
+        "bytes": 2421,
+        "sha256": "49f7fff3e21a29d97b4df0c928a592cc6f154203c46c977863aa49892f150cef"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/020-resize-during-preflight.json",
+        "bytes": 1629,
+        "sha256": "e4f5062034c6d01404daaee4cad8e5176819d7468d2bdb744b6025d1f7a2733d"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/021-after-resize-probe.json",
+        "bytes": 849,
+        "sha256": "034ca5b551ffd473e6a54164e83c9e1b605aefb10cf62f0185393d9458e5e2ae"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/022-restored-window-before-quit.json",
+        "bytes": 849,
+        "sha256": "3b16695ce894ffcf48a81f51acc5ddf73a94627bae29482941a686883d87e22f"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/023-resume-before-normal-quit.json",
+        "bytes": 850,
+        "sha256": "3096cd3e6ddd848b5207e9e4fd76e266d1f0368aa050ba2750c2915eda63633a"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/024-normal-main-menu-quit-before.json",
+        "bytes": 850,
+        "sha256": "9482431c3b15db655162bedcb9a86cfdeefb8114161574d2b51351e9ab6e6180"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/025-normal-main-menu-quit-actual-preflight.json",
+        "bytes": 2421,
+        "sha256": "0470fdec11d9dff6bfedf8709663e13e803f186bf905f7c5d23df5be39194265"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/026-normal-main-menu-quit.json",
+        "bytes": 2912,
+        "sha256": "a0548370951e0db5c0a5b624b13de403854e4ccf2968ca478cc9f24a97a9c81e"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/027-normal-quit-confirmation.json",
+        "bytes": 740,
+        "sha256": "15ca40fa0eaf96f33e62f1cc8dfa8876c5f174cae8c697b0473c8dcea5b6cc5a"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/028-normal-quit-confirm-yes-before.json",
+        "bytes": 740,
+        "sha256": "4ba9b1aeb547d329597966c489aacd440a66d15cada9ad618c6241892f41bdff"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/029-normal-quit-confirm-yes-actual-preflight.json",
+        "bytes": 2298,
+        "sha256": "5ec8dc0c645166ddda92e8e7e7dd667124c26314726735ef729fbff3dfe1c17c"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/030-normal-quit-confirm-yes.json",
+        "bytes": 2101,
+        "sha256": "675aa2b17b449fdd1a5306aca81a8de369f043e39d05654fbcab61b2e3084357"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/031-closeout.json",
+        "bytes": 257,
+        "sha256": "2e965bacd665d3aaf100fd890b035fe4ca85190f4a91c829ac78adb39bea4bbd"
+      },
+      {
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/admission.json",
+        "bytes": 421,
+        "sha256": "f304c1ad8adeb58867934b3448b0513e740baebf73e0072e1c9ebf033198edfa"
+      }
+    ],
+    "private_frames": [
+      {
+        "source_id": "024f62e1a80d30d0c8f192eb23ed14b08bba14acdcebdceb4046ed84750eda67",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/024f62e1a80d30d0c8f192eb23ed14b08bba14acdcebdceb4046ed84750eda67.png",
+        "bytes": 33394,
+        "sha256": "587c39d686bd66c3fb89ceba1707e324a4f1aca464ebe4bf9a4103e7429d703d"
+      },
+      {
+        "source_id": "0eb6dea32005f6b825000d72358a647aaacb62b3e7b6323d80326b69e9df1078",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/0eb6dea32005f6b825000d72358a647aaacb62b3e7b6323d80326b69e9df1078.png",
+        "bytes": 32397,
+        "sha256": "63f322c095fad47d5a1f67909161b90ddd1e5c69c3ba20d0f6c29d5f962c011e"
+      },
+      {
+        "source_id": "14d0e9eae621c893140883dfefd9124e95ea08ba1cd698efb8e7d58f4283bb2f",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/14d0e9eae621c893140883dfefd9124e95ea08ba1cd698efb8e7d58f4283bb2f.png",
+        "bytes": 33394,
+        "sha256": "587c39d686bd66c3fb89ceba1707e324a4f1aca464ebe4bf9a4103e7429d703d"
+      },
+      {
+        "source_id": "1b857ec8757be603c7f175826a0640e86c37e9ad98313634c129bdd295425d11",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/1b857ec8757be603c7f175826a0640e86c37e9ad98313634c129bdd295425d11.png",
+        "bytes": 33394,
+        "sha256": "587c39d686bd66c3fb89ceba1707e324a4f1aca464ebe4bf9a4103e7429d703d"
+      },
+      {
+        "source_id": "41f12f37f51f9379dcd9b091170179288d6fbe82ec8bb1f61e695dda3dfc7d09",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/41f12f37f51f9379dcd9b091170179288d6fbe82ec8bb1f61e695dda3dfc7d09.png",
+        "bytes": 33394,
+        "sha256": "587c39d686bd66c3fb89ceba1707e324a4f1aca464ebe4bf9a4103e7429d703d"
+      },
+      {
+        "source_id": "543abae238182f320f889d22420ddd1e8a72acaf16fa897ef6484640f64b99d7",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/543abae238182f320f889d22420ddd1e8a72acaf16fa897ef6484640f64b99d7.png",
+        "bytes": 33394,
+        "sha256": "587c39d686bd66c3fb89ceba1707e324a4f1aca464ebe4bf9a4103e7429d703d"
+      },
+      {
+        "source_id": "621418d33637fde003e7ac23edfaec53d41bb2d38dea93d00f74f750cb723833",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/621418d33637fde003e7ac23edfaec53d41bb2d38dea93d00f74f750cb723833.png",
+        "bytes": 33394,
+        "sha256": "587c39d686bd66c3fb89ceba1707e324a4f1aca464ebe4bf9a4103e7429d703d"
+      },
+      {
+        "source_id": "7c19dd74bfaa1e718e82ecabb9656c09989a883eaae9146ada8608ab5841c150",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/7c19dd74bfaa1e718e82ecabb9656c09989a883eaae9146ada8608ab5841c150.png",
+        "bytes": 32201,
+        "sha256": "586603b8c582c1bee49fe4fc5c4bcac136dacd9f55c7b90ad28d6eb4a8e8f7e8"
+      },
+      {
+        "source_id": "82231fbc34b129bf9564ae747b6047bc0be6bb3c6595545c1f639bad55a0ff9f",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/82231fbc34b129bf9564ae747b6047bc0be6bb3c6595545c1f639bad55a0ff9f.png",
+        "bytes": 33090,
+        "sha256": "edf761257dec506cfbda283d8fb27a9e0ae9d8edd1d1709715b22f2f58db023b"
+      },
+      {
+        "source_id": "86bded63c06d5242e9ce83e5a3fd6783b0befbb60795e2cde93e0fe70bd23917",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/86bded63c06d5242e9ce83e5a3fd6783b0befbb60795e2cde93e0fe70bd23917.png",
+        "bytes": 33394,
+        "sha256": "587c39d686bd66c3fb89ceba1707e324a4f1aca464ebe4bf9a4103e7429d703d"
+      },
+      {
+        "source_id": "8fc1a742c74a7e5ccd47bb7b6a0bfa495d82ef71fa0e206648435baea5295047",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/8fc1a742c74a7e5ccd47bb7b6a0bfa495d82ef71fa0e206648435baea5295047.png",
+        "bytes": 33090,
+        "sha256": "edf761257dec506cfbda283d8fb27a9e0ae9d8edd1d1709715b22f2f58db023b"
+      },
+      {
+        "source_id": "94d6bb2fa895a0dbe36712dd96c4b7e1e29707197a31a896dee43e88f45bb9d0",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/94d6bb2fa895a0dbe36712dd96c4b7e1e29707197a31a896dee43e88f45bb9d0.png",
+        "bytes": 33394,
+        "sha256": "587c39d686bd66c3fb89ceba1707e324a4f1aca464ebe4bf9a4103e7429d703d"
+      },
+      {
+        "source_id": "b9165e54d636c92691631ad5e858c12116d2e7fc2e2c26cc8dc392cbe6df9f7b",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/b9165e54d636c92691631ad5e858c12116d2e7fc2e2c26cc8dc392cbe6df9f7b.png",
+        "bytes": 33394,
+        "sha256": "587c39d686bd66c3fb89ceba1707e324a4f1aca464ebe4bf9a4103e7429d703d"
+      },
+      {
+        "source_id": "c45e74ef01bc42329156b8800760eecad9b71582d7768d525244deba60f2ffac",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/c45e74ef01bc42329156b8800760eecad9b71582d7768d525244deba60f2ffac.png",
+        "bytes": 33090,
+        "sha256": "edf761257dec506cfbda283d8fb27a9e0ae9d8edd1d1709715b22f2f58db023b"
+      },
+      {
+        "source_id": "dbedc044872db8e0a109d4999fd9ea777c9638694bc10d30f58f7966950e319a",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/dbedc044872db8e0a109d4999fd9ea777c9638694bc10d30f58f7966950e319a.png",
+        "bytes": 33394,
+        "sha256": "587c39d686bd66c3fb89ceba1707e324a4f1aca464ebe4bf9a4103e7429d703d"
+      },
+      {
+        "source_id": "e4a4e2f5f2ecfc1c925a53263dfae5bc6a1e1f79a1b6531f463e29ab53d37e9c",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/e4a4e2f5f2ecfc1c925a53263dfae5bc6a1e1f79a1b6531f463e29ab53d37e9c.png",
+        "bytes": 33394,
+        "sha256": "587c39d686bd66c3fb89ceba1707e324a4f1aca464ebe4bf9a4103e7429d703d"
+      },
+      {
+        "source_id": "e82901e4657a88331ea4e964da763cf125c21ca99b4c5d588c9c5bc849b518b4",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/e82901e4657a88331ea4e964da763cf125c21ca99b4c5d588c9c5bc849b518b4.png",
+        "bytes": 33394,
+        "sha256": "587c39d686bd66c3fb89ceba1707e324a4f1aca464ebe4bf9a4103e7429d703d"
+      },
+      {
+        "source_id": "f350c5591fc4b92cd8eb1f7ab6e251efbbe63f0c0132c7208d53de9a3310fec4",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/f350c5591fc4b92cd8eb1f7ab6e251efbbe63f0c0132c7208d53de9a3310fec4.png",
+        "bytes": 33394,
+        "sha256": "587c39d686bd66c3fb89ceba1707e324a4f1aca464ebe4bf9a4103e7429d703d"
+      },
+      {
+        "source_id": "fa51add94cb4a890f2cd46b6d0b5a52fe8bab41adff4515e978b45ee2becc1f3",
+        "path": ".runtime/research/player-owned-mission-design/native-presentation-probe/evidence/frames/fa51add94cb4a890f2cd46b6d0b5a52fe8bab41adff4515e978b45ee2becc1f3.png",
+        "bytes": 32397,
+        "sha256": "63f322c095fad47d5a1f67909161b90ddd1e5c69c3ba20d0f6c29d5f962c011e"
+      }
+    ],
+    "policy": "Project-local originals retained through relevant issue acceptance and campaign evidence review; no raw local absolute paths published. Historical wire3 bridge/binary retained separately under incidents."
+  },
+  "limits": [
+    "Only menu boundaries; no character load/create/save or normal-game movement/activity test",
+    "Three exact PNG native inputs returned ready; final YES was published but ACK timed out while app exited normally",
+    "Changed-view host hash and host current-frame rejection exercised; late-pixel native comparison rejection not independently isolated",
+    "No general model/throughput/latency or physical takeover atomicity claim",
+    "Controller durable IO may delay Pause under filesystem stall"
+  ],
+  "shutdown_verification": {
+    "native_process_scan": "no cataclysm process",
+    "spectator_port_8766_connect_ex": 61,
+    "terminal_x": "120",
+    "terminal_y": "40",
+    "fullscreen": "no"
+  }
+}
