@@ -19,39 +19,29 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 | Survival pilot and findings | [Pilot report](acceptance/2026-10-18-survival-pilot.md) retains the stopped pre-spawn attempt and its dispositions; #78/#83 own acceptance. |
 | Continuity and first-day rehearsal | [Qualified first-day result](acceptance/2026-10-18-first-day-completion.md) retains actual save/restart/handoff, needs and autonomy evidence plus its failures/unknowns; #79/#80 own acceptance. |
 | Seven-day readiness | [Readiness report](acceptance/2026-10-18-seven-day-readiness.md) records the finite preparation gate and its limits; #81. Readiness does not guarantee campaign success. |
-| Current seven-day path | [020](acceptance/2026-10-19-midpoint-survival.md) accepted days1–3, midpoint restart/reload and player replacement. [024](acceptance/2026-10-19-four-day-survival.md) accepted day four. [025](acceptance/2026-10-19-first-clean-water.md) verified the first250mL clean-water output, not remaining coverage. Days5–7 remain incomplete. [#103](https://github.com/CVX-Hull/enactive/issues/103) is accepted; [#104](https://github.com/CVX-Hull/enactive/issues/104) owns day five and [#129](https://github.com/CVX-Hull/enactive/issues/129) resources/forecast. |
-| Full closeout | Same-character daily evidence, normal midpoint save/restart/reload and player replacement, final normal shutdown, independent complete-campaign review, protected publication/CI, owned cleanup and current Project. #82 stays open until all are proved. |
+| Seven-day functional campaign | [Full report](acceptance/2026-10-19-seven-day-survival.md) owns accepted daily turns, same-character continuity, actual supplies/rest, corrections, costs and limits. All seven daily milestones and normal final runtime shutdown are accepted within their stated functional scope. Earlier closed attempts remain failures. |
+| Closeout | Final normal Save/Quit and native/controller shutdown, independent complete-campaign review, protected candidate/main validation and owned branch cleanup are separate gates. Publication receipts and live status belong in #82/#10 and the PR. |
 
-025's last normal5559025 is alive/Comfortable with blank needs, freshly observed
-1.5Lclean/12rations/500mLuntreated and one owned paused game/controller. Actual live
-slots are null, actors/tools terminal and no queued input. Ordinary small-fire heat,
-one250mL craft and bottle storage were independently qualified; bulk throughput and
-remaining-three-day coverage are unproved. The assessed outdoor work checkpoint
-retains small fire/open-window retreat, not closed shelter or final shutdown.
-Daily outcomes1–4 stay accepted; closed019–025 grant no successor authority. The
-original resource gate was qualified met in023 as a finite cache, not renewable supplies.
+[Water evidence](acceptance/2026-10-19-water-coverage.md) preserves missing-tool and
+crowbar-damage stops, declined storage advice, two heat interruptions and the
+successful small-fuel continuation of the same craft. The two1.5L bulk outputs were
+stored and later used for responsive care. This configuration is not a controlled
+fuel-shape experiment or a guaranteed future supply policy.
 
-The user-approved one-time three-hour extension retained all original clocks, costs,
-input limits and final reserve. 024's [046 decision](changes/046-replan-known-nondelivery.md)
-allowed confirmed no-delivery replanning and finite transient reassessment under
-unchanged guards. Actual failure of the conditional eastern treatment site exhausted
-credible complete-route fit; no automatic northern search or further time follows.
-The user subsequently delegated time extensions to the lead, prioritizing quality
-data for future development. [047](changes/047-quality-data-continuation.md) records
-025's finite two-hour shift with costs/input limits retained. Its first-output
-phase used32/40inputs with no renewal after transient reassessment. The measured
-daily-care subtotal59–63 exceeded the prior55/day forecast.
-[048](changes/048-water-coverage-budget.md) proposes a finite revision; broader
-input-budget delegation remains a decision, not authority supplied by a source file.
-A successor still needs that decision, source/review/checkpoint, fresh actual
-preflight and credible complete-route fit. No routine user time question, reopened
-attempt or automatic actor continuation.
-#129 owns further resources and whole forecast; #75 owns control-fit findings.
-The [operator contract](protocol.md#designated-campaign-operator) records bounded
-passive reassessment; a stricter admission stop still wins. GitHub owns current
-execution stage, estimates and dependencies. Historical reports are evidence, not
-live status or permission to continue. Consolidated protected publication remains
-a separate verification step.
+[050](changes/050-curtain-fuel-and-retained-craft.md) is a closed historical
+admission after completion, not continuing authority. [046](changes/046-replan-known-nondelivery.md)
+and the [operator contract](protocol.md#designated-campaign-operator) retain the
+handoff, unknown-effect and bounded-recovery rules. Future play requires a new
+explicit finite objective, budget, current preflight and actor assignment. No old
+allowance or running chat renews it.
+
+The next bounded item is [#71](https://github.com/CVX-Hull/enactive/issues/71), trace
+extraction and label readiness. See the Project for its current stage and estimate. Use
+actual campaign failures, corrections and uncertainty before selecting memory
+architecture or model comparisons. #75 owns workflow/control maintenance; #40 owns
+general outcome monitoring. Research review remains October24,2026 and control
+maintenance keeps January15,2027 and earlier event triggers. The public Project
+owns changing work estimates and Status/Horizon, not this dated evidence map.
 
 ## Execution ownership
 
@@ -67,7 +57,7 @@ Use the [campaign-driven improvement workflow](project-management.md#campaign-dr
 
 | Area | Backlog owner and revisit rule |
 | --- | --- |
-| Runtime autonomy, continuity and current gameplay gaps | #82 and its current daily child; implement only demonstrated blocking capabilities. Tests, native build and actual graphical gameplay stay separate evidence lanes. |
+| Further runtime, UI and gameplay gaps | #126 owns external-operator display; #128 retains publication-stall recurrence/recovery triggers. Future campaigns need scoped admission and separate native evidence. |
 | Workflow, documentation and control maintenance | [#75](https://github.com/CVX-Hull/enactive/issues/75); reconcile triggered gaps and burden. Keep current contracts concise, link historical evidence, and do not renew due dates through grooming. |
 | Memory | [#70/#71](https://github.com/CVX-Hull/enactive/issues/70); inspect actual player-visible traces before choosing persistent architecture. Actual campaign handoff is separate from a general memory benchmark. |
 | Model tiering and comparison | [#16/#24/#25](https://github.com/CVX-Hull/enactive/issues/16), with #72/#73/#74 as explicit measurement gates. More tiers or paid providers need a measured benefit and authorized configuration. |

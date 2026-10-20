@@ -9,7 +9,8 @@ status: active
 A local harness for real **Cataclysm: Dark Days Ahead** with a normal graphical
 game window and browser spectator console. Codex chooses goals and interprets
 screens; the harness supplies checked inputs, observations and bounded movement.
-An active chat is required for planning. General autonomous survival is not implemented.
+General survival planning requires an active Codex player. An unattended survival
+service is not implemented.
 
 **Start with the [project overview](docs/overview.md)** for what works, limitations,
 the system picture, current direction and decisions. It links to progressively
@@ -29,13 +30,19 @@ deeper design and evidence so you can review the big picture without reading cod
 - [Research](docs/research.md), [environment history](docs/environment.md),
   [third-party provenance](NOTICE.md).
 
+The [seven-day functional campaign](docs/acceptance/2026-10-19-seven-day-survival.md)
+reached168h02m54s alive with needs maintained, ordinary water treatment/rest,
+midpoint save/restart/player handoff and final normal shutdown. It is a supervised
+development trajectory, with failures and uncertain acknowledgments retained.
+One unchanged actual endpoint image accompanies that report.
+
 The [2026-10-17 demonstration](docs/acceptance/2026-10-17-mvp.md) covered supplies,
 item use, exploration, save/reload and a visible-zombie interruption. Dated evidence
 is not live process status or a guarantee of every game state. Pause prevents
 further remote dispatch; an existing native activity may need native interruption.
 
 Git contains small [acceptance provenance](docs/acceptance/2026-10-17-mvp-manifest.json).
-Large screenshots, video and journals remain local under ignored `.runtime/` and
+Large evidence collections, video and journals remain local under ignored `.runtime/` and
 are unavailable in a fresh source checkout. The public repository contains source
 and small review artifacts; no global package installation or scheduled background
 agent is needed. Original work is [MIT licensed](LICENSE); CDDA-derived code and

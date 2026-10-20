@@ -154,7 +154,8 @@
         "C-PORTABLE",
         "C-NATIVE",
         "C-RELEASE",
-        "C-MAINTENANCE"
+        "C-MAINTENANCE",
+        "C-REVIEW"
       ]
     }
   ],
@@ -308,7 +309,8 @@
         "docs/acceptance/2026-10-19-dialogue-stop.md",
         "docs/acceptance/2026-10-19-potable-cache-stop.md",
         "docs/acceptance/2026-10-19-four-day-survival.md",
-        "docs/acceptance/2026-10-19-first-clean-water.md"
+        "docs/acceptance/2026-10-19-first-clean-water.md",
+        "docs/acceptance/2026-10-19-seven-day-survival.md"
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
       "limitations": "Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout.",
@@ -318,20 +320,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-19",
-        "outcome": "025 independently verified one250mL ordinarycleanwaterbatch and terminal5559025; rejectedsite/menuerrors/transientunsupported retained. Days1-4accepted, remainingcoverage/day5-7incomplete.",
-        "scope": "87newinputs=19failedsite+36northernexit+32firstoutput;1555whole/634aggregate/241day5/167life;101current-v3+1archivedgameplay+2control unknowns retained,no newdeliveryunknown/nativebuild.",
+        "outcome": "Qualified seven-day functional endpoint5817774/168h02m54 and normal final Save/Quit/native/controller exit verified; original failures and unknown ACKs retained.",
+        "scope": "Same Ned/Belgium, source99c7/native2095; no new native build. Final2109whole/1188aggregate/171life inputs;104v3+2control+1archived unknowns. Tests and publication are separate lanes.",
         "evidence": [
-          "docs/acceptance/2026-10-19-first-clean-water.md"
+          "docs/acceptance/2026-10-19-seven-day-survival.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-19",
         "effectiveness": "partially_effective",
-        "findings": "Actualframe/stockverification and finitepassivereassessment worked withoutreplay/phase renewal. Repeatedtransientcrafting boundary retained; dailycare59-63routineinputs exceeded55/dayforecast, so currentfull-routeinputfit unproved. Sourceproposal048withholds broaderinputauthority pendinguserdecision; actualsmallbatch isnotbulkcoverage.",
-        "cost": "87chargedinputs plus elapsedlead/operator/reviewwork;32inputfirstbatch includescorrectedselection/unregisteredrequest/transienthandoff; alloldercostsretained, no generalmodel-efficiencyclaim.",
-        "follow_up": "#71 provenance/location/labeldevelopmentcases; #40/#42/#44 transientmonitoring; #75 forecast/controlburden; #104day5/#129resource/full-fit incomplete. Nextreview/researchdates unchanged.",
+        "findings": "Actual-frame/quantity verification, terminal handoffs and deadline reconciliation supported completion. Initial source review accepted wrong sleep predicate/cadence; lead correction preceded new Sleep but not the already informed awake hold. Frozen mistakes and later adjudications remain; controls were partially effective, not uniformly correct.",
+        "cost": "Retained full trajectory costs and independent reviews; existing CLI/native activities/Git/GitHub reused, no per-care-interval source/CI checkpoint, generic monitor, new provider or global setup. Exact model usage/spend unmeasured.",
+        "follow_up": "#71 extraction/label readiness; #40 semantic monitoring; #75 source review/forecast/control burden; #126 external-operator UI. Existing research and periodic/event review dates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-19-first-clean-water.md"
+          "docs/acceptance/2026-10-19-seven-day-survival.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -355,7 +357,8 @@
         "docs/acceptance/2026-10-17-public-workflow.md",
         "docs/acceptance/2026-10-17-public-recovery-evaluation.md",
         "docs/acceptance/2026-10-17-native-recovery-planner.md",
-        "docs/acceptance/2026-10-18-integrated-player.md"
+        "docs/acceptance/2026-10-18-integrated-player.md",
+        "docs/acceptance/2026-10-19-seven-day-survival.md"
       ],
       "failure_response": "Correct misleading flows or guidance and retain consequential limits before milestone acceptance.",
       "limitations": "Human judgment; no automated usability score or user study is claimed. Document links alone do not demonstrate comprehension.",
@@ -364,22 +367,22 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-18",
-        "outcome": "Passed within stated round012 scope; unsuccessful first route, transition uncertainty and development failures retained.",
-        "scope": "Ordinary-window planning, blocked, completed and paused spectator; progress/ownership/reasons and unmeasured usage inspected; timeline labels repaired.",
+        "date": "2026-10-19",
+        "outcome": "Qualified seven-day functional endpoint5817774/168h02m54 and normal final Save/Quit/native/controller exit verified; original failures and unknown ACKs retained.",
+        "scope": "Same Ned/Belgium, source99c7/native2095; no new native build. Final2109whole/1188aggregate/171life inputs;104v3+2control+1archived unknowns. Tests and publication are separate lanes.",
         "evidence": [
-          "docs/acceptance/2026-10-18-integrated-player.md"
+          "docs/acceptance/2026-10-19-seven-day-survival.md"
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-18",
+        "date": "2026-10-19",
+        "effectiveness": "partially_effective",
+        "findings": "Lead inspected actual ordinary-window spectator at final endpoint and shortened overview/work into outcome/limits/links; public unchanged endpoint image inspected. External actor status remains a waypoint-panel gap owned by #126; no user study or automatic comprehension proof.",
+        "cost": "Retained full trajectory costs and independent reviews; existing CLI/native activities/Git/GitHub reused, no per-care-interval source/CI checkpoint, generic monitor, new provider or global setup. Exact model usage/spend unmeasured.",
+        "follow_up": "#71 extraction/label readiness; #40 semantic monitoring; #75 source review/forecast/control burden; #126 external-operator UI. Existing research and periodic/event review dates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-18-integrated-player.md"
-        ],
-        "effectiveness": "effective",
-        "findings": "Integration review exposed post-publication journal classification, persistent-error recovery and duplicate Pause epoch defects; repaired with meaningful regressions. Native guard policy stopped the first route conservatively; #53 tracks policy review.",
-        "cost": "Existing project-local tooling; two disjoint workers, independent review, one player sub-agent, one serialized native runtime. No global setup or separate API spending; Codex usage unmeasured.",
-        "follow_up": "Revisit on lifecycle/receipt/guard changes or failures; #53 guard semantics, #24 comparative evaluation, #40 semantic monitoring, #10 broader tasks and #13 maintenance remain."
+          "docs/acceptance/2026-10-19-seven-day-survival.md"
+        ]
       },
       "next_review": "2027-01-15"
     },
@@ -431,7 +434,7 @@
       "name": "Design and independent change review",
       "mode": "manual",
       "scope": "Consequential designs, implementation, tests, delegation and exceptions.",
-      "mechanism": "Lead owns design/integration and verifies returned evidence; at most two workers use separate project-local worktrees and named disjoint paths, with shared runtime serialized; fresh-context review assesses contracts, risk and maintainability before acceptance. Review new or expanded custom infrastructure across code/docs/workflow/controls against S-CODE: name the existing option, unmet gap, smallest scope, owner/cost and retirement trigger; reject unjustified duplication. Before publication, inspect explicit Git author/committer identities and all new commit messages, including co-author trailers, under S-WORK. Use repository-local Git identity configuration. Before merging a PR whose Issue completion awaits merged-main validation, read gh pr view --json closingIssuesReferences, require an empty list and re-read after removing references. Prose negation is not a parser control; use GitHub computed data, no custom keyword parser.",
+      "mechanism": "Lead owns design/integration and verifies returned evidence; at most two workers use separate project-local worktrees and named disjoint paths, with shared runtime serialized; fresh-context review assesses contracts, risk and maintainability before acceptance. Review new or expanded custom infrastructure across code/docs/workflow/controls against S-CODE: name the existing option, unmet gap, smallest scope, owner/cost and retirement trigger; reject unjustified duplication. Before publication, inspect explicit Git author/committer identities and all new commit messages, including co-author trailers, under S-WORK. Use repository-local Git identity configuration. Before merging a PR whose Issue completion awaits merged-main validation, read gh pr view --json closingIssuesReferences, require an empty list and re-read after removing references. Prose negation is not a parser control; use GitHub computed data, no custom keyword parser. For source-dependent consequential claims, inspect executable predicates, caller cadence, units and defaults against actual outcomes; preserve mistaken rationale and which actions preceded correction.",
       "owner": "lead; reviewer supplies independent findings",
       "trigger": "significant change, new boundary/guarantee/dependency or integration checkpoint",
       "evidence": [
@@ -462,7 +465,8 @@
         "docs/acceptance/2026-10-19-dialogue-stop.md",
         "docs/acceptance/2026-10-19-potable-cache-stop.md",
         "docs/acceptance/2026-10-19-four-day-survival.md",
-        "docs/acceptance/2026-10-19-first-clean-water.md"
+        "docs/acceptance/2026-10-19-first-clean-water.md",
+        "docs/acceptance/2026-10-19-seven-day-survival.md"
       ],
       "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process. Reuse fit and the adequacy of its rationale are semantic judgments; CI does not prove them. Identity configuration prevents inferred defaults but does not inspect file contents or prove a message, branch or remote ref contains no personal information; full-message inspection remains manual.",
@@ -472,20 +476,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-19",
-        "outcome": "025 independently verified one250mL ordinarycleanwaterbatch and terminal5559025; rejectedsite/menuerrors/transientunsupported retained. Days1-4accepted, remainingcoverage/day5-7incomplete.",
-        "scope": "87newinputs=19failedsite+36northernexit+32firstoutput;1555whole/634aggregate/241day5/167life;101current-v3+1archivedgameplay+2control unknowns retained,no newdeliveryunknown/nativebuild.",
+        "outcome": "Qualified seven-day functional endpoint5817774/168h02m54 and normal final Save/Quit/native/controller exit verified; original failures and unknown ACKs retained.",
+        "scope": "Same Ned/Belgium, source99c7/native2095; no new native build. Final2109whole/1188aggregate/171life inputs;104v3+2control+1archived unknowns. Tests and publication are separate lanes.",
         "evidence": [
-          "docs/acceptance/2026-10-19-first-clean-water.md"
+          "docs/acceptance/2026-10-19-seven-day-survival.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-19",
         "effectiveness": "partially_effective",
-        "findings": "Actualframe/stockverification and finitepassivereassessment worked withoutreplay/phase renewal. Repeatedtransientcrafting boundary retained; dailycare59-63routineinputs exceeded55/dayforecast, so currentfull-routeinputfit unproved. Sourceproposal048withholds broaderinputauthority pendinguserdecision; actualsmallbatch isnotbulkcoverage.",
-        "cost": "87chargedinputs plus elapsedlead/operator/reviewwork;32inputfirstbatch includescorrectedselection/unregisteredrequest/transienthandoff; alloldercostsretained, no generalmodel-efficiencyclaim.",
-        "follow_up": "#71 provenance/location/labeldevelopmentcases; #40/#42/#44 transientmonitoring; #75 forecast/controlburden; #104day5/#129resource/full-fit incomplete. Nextreview/researchdates unchanged.",
+        "findings": "Actual-frame/quantity verification, terminal handoffs and deadline reconciliation supported completion. Initial source review accepted wrong sleep predicate/cadence; lead correction preceded new Sleep but not the already informed awake hold. Frozen mistakes and later adjudications remain; controls were partially effective, not uniformly correct.",
+        "cost": "Retained full trajectory costs and independent reviews; existing CLI/native activities/Git/GitHub reused, no per-care-interval source/CI checkpoint, generic monitor, new provider or global setup. Exact model usage/spend unmeasured.",
+        "follow_up": "#71 extraction/label readiness; #40 semantic monitoring; #75 source review/forecast/control burden; #126 external-operator UI. Existing research and periodic/event review dates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-19-first-clean-water.md"
+          "docs/acceptance/2026-10-19-seven-day-survival.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -697,7 +701,8 @@
         "docs/acceptance/2026-10-19-dialogue-stop.md",
         "docs/acceptance/2026-10-19-potable-cache-stop.md",
         "docs/acceptance/2026-10-19-four-day-survival.md",
-        "docs/acceptance/2026-10-19-first-clean-water.md"
+        "docs/acceptance/2026-10-19-first-clean-water.md",
+        "docs/acceptance/2026-10-19-seven-day-survival.md"
       ],
       "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",
@@ -707,20 +712,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-19",
-        "outcome": "025 independently verified one250mL ordinarycleanwaterbatch and terminal5559025; rejectedsite/menuerrors/transientunsupported retained. Days1-4accepted, remainingcoverage/day5-7incomplete.",
-        "scope": "87newinputs=19failedsite+36northernexit+32firstoutput;1555whole/634aggregate/241day5/167life;101current-v3+1archivedgameplay+2control unknowns retained,no newdeliveryunknown/nativebuild.",
+        "outcome": "Qualified seven-day functional endpoint5817774/168h02m54 and normal final Save/Quit/native/controller exit verified; original failures and unknown ACKs retained.",
+        "scope": "Same Ned/Belgium, source99c7/native2095; no new native build. Final2109whole/1188aggregate/171life inputs;104v3+2control+1archived unknowns. Tests and publication are separate lanes.",
         "evidence": [
-          "docs/acceptance/2026-10-19-first-clean-water.md"
+          "docs/acceptance/2026-10-19-seven-day-survival.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-19",
         "effectiveness": "partially_effective",
-        "findings": "Actualframe/stockverification and finitepassivereassessment worked withoutreplay/phase renewal. Repeatedtransientcrafting boundary retained; dailycare59-63routineinputs exceeded55/dayforecast, so currentfull-routeinputfit unproved. Sourceproposal048withholds broaderinputauthority pendinguserdecision; actualsmallbatch isnotbulkcoverage.",
-        "cost": "87chargedinputs plus elapsedlead/operator/reviewwork;32inputfirstbatch includescorrectedselection/unregisteredrequest/transienthandoff; alloldercostsretained, no generalmodel-efficiencyclaim.",
-        "follow_up": "#71 provenance/location/labeldevelopmentcases; #40/#42/#44 transientmonitoring; #75 forecast/controlburden; #104day5/#129resource/full-fit incomplete. Nextreview/researchdates unchanged.",
+        "findings": "Actual-frame/quantity verification, terminal handoffs and deadline reconciliation supported completion. Initial source review accepted wrong sleep predicate/cadence; lead correction preceded new Sleep but not the already informed awake hold. Frozen mistakes and later adjudications remain; controls were partially effective, not uniformly correct.",
+        "cost": "Retained full trajectory costs and independent reviews; existing CLI/native activities/Git/GitHub reused, no per-care-interval source/CI checkpoint, generic monitor, new provider or global setup. Exact model usage/spend unmeasured.",
+        "follow_up": "#71 extraction/label readiness; #40 semantic monitoring; #75 source review/forecast/control burden; #126 external-operator UI. Existing research and periodic/event review dates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-19-first-clean-water.md"
+          "docs/acceptance/2026-10-19-seven-day-survival.md"
         ]
       },
       "next_review": "2027-01-15"

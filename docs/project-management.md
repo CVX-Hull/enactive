@@ -182,11 +182,13 @@ serial short probe–cleanup–amendment–publication cycles. Retire redundant 
 class limits prospectively when their measured cost no longer serves the outcome;
 retain every prior limit/result/cost and finite new total/segment/attempt ceilings.
 Never change user guarantees or original whole ceilings through an internal exception.
-For this survival campaign the user explicitly delegated prospective **time**
-extensions to the lead to prioritize quality data. Record finite revised endpoints,
-reason/forecast and retained costs before input; this delegation does not waive
-safety, renew failed phases, expand input caps silently or authorize provider costs.
-No routine user time-budget question is required within that delegation.
+For this survival campaign the user explicitly delegated **gameplay-related
+extensions**, including prospective time and input budgets, to prioritize quality
+data. Record finite revised ceilings/endpoints, reason/forecast and retained costs
+before input; preserve the effective final cleanup reserve against both whole and
+aggregate limits. This delegation does not waive safety, renew failed phases, reset
+costs or authorize provider spending or permission/global environment changes.
+No routine gameplay-budget question is required within that delegation.
 For unchanged-runtime procedural admissions, review/common checks and a clean Git
 checkpoint precede native acceptance; consolidate protected publication and exact/
 main CI after the cohesive attempt. Do not require a new PR per tactical segment.
