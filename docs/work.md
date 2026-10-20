@@ -56,9 +56,10 @@ separates execution/verification costs and reopened historical proof. This nativ
 qualification provides no character creation, save/reload or mission acceptance.
 Current source adds registered creation/identity adoption and normal save/new-child
 reload through synthetic integration tests, with exact canonical continuity and
-unknown ACKs retained. Native character lifecycle is only partially qualified in
-[native006](acceptance/2026-10-20-native-character-lifecycle.md); exact reload and
-independent use remain open. The [mission design](design/player-owned-mission.md)
+unknown ACKs retained. [Native007](acceptance/2026-10-20-native-lifecycle-qualified.md) qualified ordinary
+creation, counted pickup, a known two-step return, wait/poll, normal save/new-child
+exact reload and final normal stopped Finish. Independent use remains open; the
+Native006 failure and original unknown ACKs stay retained. The [mission design](design/player-owned-mission.md)
 defines the remaining lifecycle, fresh-context and bounded acceptance work; the [trace pilot](acceptance/2026-10-19-memory-trace-pilot.md)
 records actual source/interpretation limits. Neither page claims runtime delivery.
 
@@ -68,8 +69,9 @@ composition; its ground/carried-water corrections and interrupted craft motivate
 source-linked Claims and unfinished Work. Those totals do not establish measured
 speedup or memory efficacy. Lifecycle, normal finish and one-use bound successor retrieval/claim with separately
 charged deliberate readmission now compose in source. Selected item/activity and
-delivery-recovery handling now compose too; next qualify actual native lifecycle and a real
-fresh player-context replacement. Freeze #156 only after integrated checks and native
+delivery-recovery handling now compose too. Native lifecycle is qualified within
+engineering scope; next exercise the actual deciding player and a real fresh
+player-context replacement. Freeze #156 only after integrated checks and native
 preflight; #157 supplies actual mission evidence before #145 readiness. The lead
 owns coupled runtime/ledger integration and the single native runtime. Disjoint
 passive policies may use at most two worktree workers after interface freeze;

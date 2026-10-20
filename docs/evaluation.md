@@ -54,6 +54,19 @@ latency remain unknown. Three session/exit ACK timeouts are separate from those
 successful intervals. Whole engineering wall time includes investigation and
 cannot be used as player or engine throughput.
 
+[Qualification007](acceptance/2026-10-20-native-lifecycle-qualified.md) has106returned
+inputs: median101.72ms, nearest-rank p95337.46ms, maximum6716.55ms. Excluding the
+preselected world-entry input leaves105: median100.50ms, p95336.68ms and
+maximum856.24ms. Its four movement steps span156.61–191.63ms (median182.00ms,
+nearest-rank p95=maximum); this is too small a sample for a general claim. A
+known two-step return reached its last receipt767.54ms after admission, a20key
+world-name batch2173ms, and eight inventory-focus arrows4293ms. Those are
+last-receipt proxies; an interpreted-result terminal timestamp is unavailable.
+Six unknown ACKs remain separate, with effects reconciled. Whole1941.5second
+engineering wall time includes unmeasured planning/tool work and is not throughput.
+The broader ordinary p95 exceeds the proposed250ms target. Profile the tails and
+model/tool/display boundaries before choosing faster models or adding infrastructure.
+
 | Proposed next-campaign target | Measurement / limit |
 | --- | --- |
 | Ordinary movement/menu input p95 ≤250 ms | Original retained preflight-to-terminal ACK intervals; report sample count, rejected/unknown inputs and tails separately |

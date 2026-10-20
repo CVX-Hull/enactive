@@ -82,7 +82,8 @@ Cancellation uses one actually registered QUIT, or TEXT.QUIT for a string editor
 it returns partial for verification and never answers a later question implicitly.
 Typed item selection/count/commit and registered inspection have synthetic runtime
 coverage. Quantity editing belongs only to the item phase whose returned
-MARK_WITH_COUNT opened it. Native editor/selector qualification remains pending.
+MARK_WITH_COUNT opened it. Native007 qualified the selected counted drop/pickup
+path; other selector semantics require their own actual evidence.
 An owned activity poll advances through one bounded observation, including native
 output menus or normal return; no poll sends input or certifies sleep/output.
 Activity control transport preserves terminal ACKs before persistence and sends no
@@ -164,8 +165,12 @@ and narrow Resume-only create/load abort. The abort revokes authority without
 input or rebasing the launch; separate Observe/new exit verifies the paused menu.
 Unique enabled selected admitted-character evidence is checked before reload
 dispatch. No fictitious label, prior-child save or historical proof grants input.
-Common/exact-source checks, rebuilt native qualification and #156 readiness
-still precede the real deciding player/successor mission. Earlier setup reports
+[Native007](acceptance/2026-10-20-native-lifecycle-qualified.md) subsequently
+qualified actual known movement, counted pickup, normal reload and final stopped
+Finish at the rebuilt native. Independent read-only audit verified all287frames
+and retained112charges/six unknown ACKs. Explicit #156 readiness still precedes
+the real deciding player/successor mission; scoped engineering evidence is not
+independence acceptance. Earlier setup reports
 remain linked evidence, not current implementation instructions.
 
 Cached status performs no evidence or memory I/O. It can show the last explicitly

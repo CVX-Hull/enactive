@@ -20,13 +20,14 @@ player sub-agent owns planning, memory use and typed semantic requests within a
 finite mission. The lead owns source integration and acceptance. The live service
 uses one MissionRuntime. Owned windowed launch/untouched-menu exit passed a bounded
 native retest with the first failure retained. Character creation/save/reload, quiescent retained-memory handoff, deliberate
-readmission and normal finish now compose in source tests; native character lifecycle and independent normal-game
-acceptance are still pending. Passive waypoint/planner components remain offline study tools.
+readmission and normal finish now compose in source tests. Native character
+lifecycle passed a scoped engineering qualification; independent normal-game
+acceptance remains pending. Passive waypoint/planner components remain offline study tools.
 Selected item/count/inspection and bounded activity observations now compose in
 source. Activity interruption, exact answers and a separate charged Resume also
 compose in source. Selected delivery reconciliation and separate normal-play
 readmission also compose in source; native lifecycle/selector/activity/recovery
-qualification is still required before independent play.
+qualification remains distinct from independent play.
 The observer now exposes readable historical memory and cumulative charged
 admissions separately from requests, live activity and old results. These counts
 do not measure model usage or prove greater gameplay efficiency. Its
@@ -39,22 +40,19 @@ Resume and bounded continuation share the original root limits; user Pause revok
 eligibility. Missing proof stays stopped. These are source checks, not native
 recovery or independent-player acceptance.
 
-The latest [native006 qualification](acceptance/2026-10-20-native-character-lifecycle.md)
-normally created/saved a character and exited its first process, with visible
-identity/stock memory, counted dropping and a one-minute native wait/poll. It
-stopped before reload selection and exceptionally closed its new second process.
-Navigation near a nonhostile NPC, pickup acquisition, exact reload, final normal
-shutdown and independent player/successor play remain unqualified. Earlier
-[receipt-order and setup reports](acceptance/2026-10-20-native-receipt-order.md)
-retain their distinct failures, scoped passes, unknown ACKs and cleanup.
+The latest [native007 qualification](acceptance/2026-10-20-native-lifecycle-qualified.md)
+normally created Rowan, verified visible identity/stock Claims, counted drop/pickup,
+a genuinely observed two-step return and a one-minute native wait/poll. Normal
+save, new-child exact reload and final normal save/quit/stopped Finish passed.
+Independent player/successor play and meaningful supplies/shelter remain unqualified.
+[Native006](acceptance/2026-10-20-native-character-lifecycle.md) and earlier reports
+retain their failures, unknown ACKs and exceptional cleanup.
 
-Current repairs allow bounded movement with strictly known non-HOSTILE evidence,
-omit a cosmetic inventory-summary echo using CDDA's own selecting predicate, and
-stage reload from the actual world→character-list transition. Exact admitted-row
-checks precede character confirmation. An explicit Resume-only create/load menu
-abort revokes setup without input; separate Observe/new normal exit remain
-necessary. These source corrections require new native qualification; general
-cancellation after other setup inputs remains an explicit owned limitation.
+Current movement uses strictly known non-HOSTILE evidence. Inventory projection
+omits only the engine's non-selecting cosmetic summary. Reload follows the actual
+world→character-list transition and checks the unique enabled selected admitted
+character before dispatch. A narrow Resume-only create/load abort exists in source;
+general setup cancellation remains unsupported and unqualified.
 
 Active observer polling now schedules250ms after each completed status response;
 actual presentation latency still needs native/browser measurement. Fast ordinary
@@ -122,8 +120,8 @@ explain why native integration was selected and when we would reconsider it.
 | Guarded short walks | Limited: cardinal directions, at most eight steps, conservative terrain and hostile/unknown creature stops | [Current contract](protocol.md#closed-loop-play-and-observations) |
 | Planner round trips | One real three-tile comparison used three individual decisions versus one guarded request, retaining per-step checks; not a general speed or safety result | [Timing trial](acceptance/2026-10-17-completion.md#fresh-real-game-timing-probe) |
 | Input authority and takeover | The accepted native-v3 baseline distinguishes ordinary play, menus, activity polls and debug prompts; revoked tokens and old worlds are rejected. Already-committed actions and activities cannot be undone by Pause | [Recovery acceptance](acceptance/2026-10-17-recovery-memory.md) |
-| Retained gameplay evidence and memory | First-campaign traces and reviewed source underpin the new memory/navigation components. Wire4 menu preflight is exercised; independent memory continuity and normal-game wire4 validation remain pending | [Component probe](acceptance/2026-10-20-native-presentation.md), [current evidence contract](protocol.md#passive-gameplay-records-and-evidence) |
-| Mission skill composition | Source integration shares navigation, native menu focus, interpreted controls and bounded text entry through one writer; ordinary prompts preserve original limits. One typed ingress and cached historical memory observer are connected; lifecycle and independent mission acceptance remain pending | [Architecture](architecture.md), [mission design](design/player-owned-mission.md#integrated-runtime-and-admission-gate) |
+| Retained gameplay evidence and memory | First-campaign traces and reviewed source underpin the new memory/navigation components. Wire4 menu preflight is exercised; native character lifecycle passed a scoped qualification; independent memory continuity remains pending | [Component probe](acceptance/2026-10-20-native-presentation.md), [current evidence contract](protocol.md#passive-gameplay-records-and-evidence) |
+| Mission skill composition | Source integration shares navigation, native menu focus, interpreted controls and bounded text entry through one writer; ordinary prompts preserve original limits. One typed ingress and cached historical memory observer are connected; native lifecycle passed within engineering scope; independent mission acceptance remains pending | [Architecture](architecture.md), [mission design](design/player-owned-mission.md#integrated-runtime-and-admission-gate) |
 | Passive movement skills | One proposed step at a time with cumulative route history; version4 permits strictly known non-HOSTILE evidence and separates reached-target verification from another step | [Skill contract](protocol.md#passive-bounded-movement-skills) |
 | Mission input ownership | Nonterminal mission owns HTTP observation/input; exact controller lease gates dispatch; Pause remains available, with disk-stall limits | [Ownership contract](protocol.md#controller-run-ownership) |
 | Passive waypoint supervision | Retained offline library and historical probes; no live task endpoint | [Supervisor contract](protocol.md#passive-waypoint-supervision) |

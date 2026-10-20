@@ -138,10 +138,11 @@ polls and registered activity interruption/answer/resumption now compose in sour
 Selected delivery reconciliation and separate normal-play readmission now compose
 in source; normal finish has source coverage. Unsupported semantic uncertainty
 remains stopped rather than being passed through unknown-delivery reconciliation.
-Native006 qualified only ordinary creation/identity, counted dropping, native
-wait/poll and first normal save/exit; reload/acquisition/navigation and the
-independent mission remain unqualified. Its [report](acceptance/2026-10-20-native-character-lifecycle.md)
-owns the actual limits and exceptional second-child cleanup.
+[Native007](acceptance/2026-10-20-native-lifecycle-qualified.md) qualified ordinary
+creation/identity, counted drop/pickup, a known two-step return, bounded native
+wait/poll, normal save/new-child exact reload and normal final stopped Finish.
+The independent mission remains unqualified. Native006 retains its actual failure
+and exceptional second-child cleanup; later success does not rewrite it.
 Neither synthetic UI tests nor tests assuming identity accept an independent mission. Observe likewise cannot adopt
 an unexplained normal session. Reopening restores neither phase nor input authority.
 An aged lifecycle Resume checkpoint is refreshed inside the registered operation
@@ -267,7 +268,8 @@ Save/reload preserves the initial time anchor, cumulative costs and unknowns;
 new coordinates never inherit old relative vectors. A rejected candidate adoption
 can be explicitly corrected within its original phase/deadline. Reopen verifies
 history but reconstructs no process handle, phase, lineage, lease or queued input.
-Actual native creation/save/load and independent mission acceptance remain pending.
+Native007 qualified the selected actual creation/save/load path. Independent
+mission acceptance and actual fresh-context memory use remain pending.
 
 `lifecycle(operation=finish)` is the sole normal finish route. Stop carries only
 its Pause reason; former Stop `finish` fields and mission/2, mission/3, mission/4 or mission/5 records reject. The
