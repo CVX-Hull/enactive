@@ -359,7 +359,7 @@ def main(argv: list[str] | None = None) -> int:
             (ROOT / "docs/controls.md").write_text(render_map(registry))
             print("Generated docs/controls.md; no gameplay or evidence-byte verification performed.")
         else:
-            print("Governance schemas, mappings, local references, protocol v3 source forms and map freshness: passed.")
+            print("Governance schemas, mappings, local references, current protocol source forms and map freshness: passed.")
         return 0
     except (OSError, ValueError, SyntaxError, SchemaError) as error:
         print(f"Governance failed: {error}", file=sys.stderr)

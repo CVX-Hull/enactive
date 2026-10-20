@@ -544,10 +544,10 @@
     },
     {
       "id": "C-PROTOCOL",
-      "name": "Protocol v3 source agreement",
+      "name": "Current protocol source agreement",
       "mode": "automatic",
       "scope": "Native emitter/validator, controller send/response/stored-request validators, server advertisement, CLI discovery validator, viewer guard and protocol document version.",
-      "mechanism": "Recognize current native observation/control emitters and validators, Python AST request/response literals for both channels, discovery, viewer, evidence schema and document version; require v3 in every bounded source form. Representation changes require checker review.",
+      "mechanism": "Recognize current native observation/control emitters and validators, Python AST request/response literals for both channels, discovery, viewer, evidence schema and document version; require wire4 in every bounded source form. Representation changes require checker review.",
       "owner": "bridge and controller maintainer",
       "trigger": "common command; any protocol representation change requires checker review",
       "evidence": [

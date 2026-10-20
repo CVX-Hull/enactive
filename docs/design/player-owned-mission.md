@@ -603,3 +603,25 @@ typed claims and work before retrieval. Old quantities never become current from
 receipt order; missing newest sources remain unknown. Work availability requires
 fresh scoped evidence, while retained output/progress remains historical. Neither
 module is a player, dispatcher or proof of continuity, autonomy or learning benefit.
+
+### Unconnected runtime core
+
+The reviewed [mission runtime](../../harness/mission_runtime.py) now composes the
+existing controller, ledger, archive, memory and navigation behind one bounded
+writer. It is a source component; the server still uses the current waypoint
+runtime until the coordinated ingress migration. It does not create a second live
+executor. Cached status does no storage work, original costs survive reopening,
+and exact final preflight precedes durable intent and input publication.
+Contradictory publication receipts remain unknown, even if movement occurred.
+
+Start and Observe never launch or Resume. A paused bootstrap needs the registered
+lifecycle adapter. Stop(false) requests Pause and leaves cleanup possible; a busy
+Stop is not admitted under the old epoch. Unsupported interaction, activity,
+lifecycle, handoff and final-finish requests explicitly block in this component.
+Fresh player replacement and independent play remain separate acceptance work.
+
+The [windowed wire4 probe](../acceptance/2026-10-20-native-presentation.md) qualifies
+tested menu presentation/preflight paths. It loaded no character and proves no
+memory or navigation benefit. Its normal process exit retained an unknown final
+ACK. The existing native boundary hook can acknowledge at a rendered activity poll;
+the first-run rest timeout does not establish that the bridge waited for wake.

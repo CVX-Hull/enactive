@@ -238,9 +238,9 @@ Review evidence: [docs/acceptance/2026-10-17-passive-supervisor.md](../docs/acce
 
 Next review: 2027-01-15.
 
-### C-PROTOCOL — Protocol v3 source agreement (automatic)
+### C-PROTOCOL — Current protocol source agreement (automatic)
 
-Native emitter/validator, controller send/response/stored-request validators, server advertisement, CLI discovery validator, viewer guard and protocol document version. Recognize current native observation/control emitters and validators, Python AST request/response literals for both channels, discovery, viewer, evidence schema and document version; require v3 in every bounded source form. Representation changes require checker review.
+Native emitter/validator, controller send/response/stored-request validators, server advertisement, CLI discovery validator, viewer guard and protocol document version. Recognize current native observation/control emitters and validators, Python AST request/response literals for both channels, discovery, viewer, evidence schema and document version; require wire4 in every bounded source form. Representation changes require checker review.
 
 Owner: bridge and controller maintainer. Trigger: common command; any protocol representation change requires checker review.
 Enforcement: Common command fails on version drift or unrecognized source form; each representation has a negative fixture.
