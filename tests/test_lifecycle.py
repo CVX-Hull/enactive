@@ -13,7 +13,7 @@ from harness.gameplay.mission_contracts import canonical
 from harness.gameplay.mission_ledger import LedgerError, MissionLedger
 from tests.test_gameplay_evidence import observation, png
 from tests.test_mission_contracts import admission, claim, request, skill
-from tests.test_mission_ledger import intent
+from tests.test_mission_ledger import intent, published_receipt
 
 
 class LifecycleTests(unittest.TestCase):
@@ -64,7 +64,7 @@ class LifecycleTests(unittest.TestCase):
     def phase(self, root, operation, stage, *sources):
         root_sources = self.ledger.request(root)["request"]["sources"]
         launch_sources = self.ledger.request("launch")["result"]["source_ids"]
-        return dict(schema="mission/5", record_type="PhaseReceipt", origin_request_id=root,
+        return dict(schema="mission/6", record_type="PhaseReceipt", origin_request_id=root,
             phase_kind="lifecycle", operation=operation, stage=stage, epoch=self.ledger.snapshot(now=1000)["epoch"],
             actor_id=self.a.player_id, controller_boot_id="boot-test", operator_pause_generation=0,
             takeover_generation=0, source_ids=list(dict.fromkeys(launch_sources + root_sources + list(sources))),
@@ -103,11 +103,9 @@ class LifecycleTests(unittest.TestCase):
         receipt = dict(logical_action_id=logical, native_request_id=native, transport_disposition=disposition,
             published=True, source_after=None if unknown_operation is not None else after.observation_id,
             **{k: proposed[k] for k in ("kind", "value", "expected_session", "expected_revision", "expected_boundary_id", "source_before", "preflight_source")})
+        receipt.update(published_receipt(native_id=native, logical_id=logical, proposed=proposed, controller_boot_id="boot-test",
+            dispatch_epoch=self.ledger.request(request_id)["epoch"], actor_id=self.a.player_id))
         self.ledger.settle_primitive(logical, disposition, receipt, now=1000)
-        if unknown_operation is not None:
-            self.ledger.reconcile_effect(logical, sources=(before.observation_id, after.observation_id),
-                note=f"Observed lifecycle {unknown_operation} transition after {native}; original ACK remains unknown", now=1000)
-            self.ledger.activate(epoch=self.ledger.snapshot(now=1000)["epoch"], player_id=self.a.player_id, now=1000)
         return logical, native
 
     def transition(self, root, before, after, *, terminal=None, preflight=None, unknown=False):
@@ -115,13 +113,18 @@ class LifecycleTests(unittest.TestCase):
         operation = self.ledger.request(root)["request"]["operation"]
         logical, native = self.primitive(terminal, before, after, value="CONFIRM" if terminal == root else "YES",
             preflight=preflight, unknown_operation=operation if unknown else None)
-        return dict(schema="mission/5", record_type="LifecycleTransition", operation=operation,
+        proof = dict(schema="mission/6", record_type="LifecycleTransition", operation=operation,
             origin_request_id=root, terminal_request_id=terminal, terminal_logical_id=logical, native_request_id=native,
             launch_request_id="launch", launch_id="owned-launch", before_source_id=before.observation_id,
             after_source_id=after.observation_id, origin_epoch=self.ledger.request(root)["epoch"],
             reconciled_epoch=self.ledger.snapshot(now=1000)["epoch"], actor_id=self.a.player_id,
             controller_boot_id="boot-test", operator_pause_generation=0,
             before_takeover_generation=0, after_takeover_generation=0, grants_authority=False)
+        if unknown:
+            self.ledger.reconcile_effect(logical, proof=proof, sources=(before.observation_id, after.observation_id),
+                note=f"Observed lifecycle {operation} transition after {native}; original ACK remains unknown", now=1000)
+            self.ledger.activate(epoch=self.ledger.snapshot(now=1000)["epoch"], player_id=self.a.player_id, now=1000)
+        return proof
 
     def identity(self, identity, subject, source, epoch):
         return claim(id=identity, key=dict(subject=subject, property="identity", unit="name",
@@ -162,7 +165,7 @@ class LifecycleTests(unittest.TestCase):
             self.remember(entry)
         final = root + "-adopt"
         self.lifecycle(final, "create" if epoch == 0 else "load", checkpoint, phase=root, identities=[world_id, character_id])
-        adoption = dict(schema="mission/5", record_type="NormalSessionAdoption", origin_request_id=root,
+        adoption = dict(schema="mission/6", record_type="NormalSessionAdoption", origin_request_id=root,
             transition_result_request_id=transition_id, first_normal_source_id=newer.observation_id,
             world_claim_id=world_id, character_claim_id=character_id, identity_inspect_request_id=inspect_id,
             checkpoint_source_id=checkpoint.observation_id, saved_checkpoint_request_id=saved,
@@ -192,7 +195,7 @@ class LifecycleTests(unittest.TestCase):
         self.complete(terminal, {})
         result_id = root + "-checkpoint"
         self.lifecycle(result_id, "save", menu, phase=root)
-        saved = dict(schema="mission/5", record_type="SavedCheckpoint", origin_request_id=root,
+        saved = dict(schema="mission/6", record_type="SavedCheckpoint", origin_request_id=root,
             transition_result_request_id=result_id, adoption_result_request_id=adopted["result"],
             normal_endpoint_source_id=endpoint.observation_id, menu_source_id=menu.observation_id, grants_authority=False)
         phase = self.phase(root, "save", "complete", confirmation.observation_id, menu.observation_id)
@@ -232,6 +235,31 @@ class LifecycleTests(unittest.TestCase):
         self.assertIsNone(adopted_timeline(self.ledger, self.store))
         self.ingest("menu", category="MAIN_MENU")
         self.assertIsNone(adopted_timeline(self.ledger, self.store))
+
+    def test_orphan_transition_effect_checks_semantics_and_dispatch_before_any_result(self):
+        menu = self.ingest("menu", category="MAIN_MENU")
+        self.lifecycle("launch", "launch")
+        self.complete("launch", dict(native_ready=True, source_ids=[menu.observation_id], process=dict(launch_id="owned-launch")))
+        self.lifecycle("load", "load", menu)
+        after = self.ingest("normal", turn=10)
+        logical, native = self.primitive("load", menu, after, unknown_operation="load")
+        proof = dict(schema="mission/6", record_type="LifecycleTransition", operation="load", origin_request_id="load",
+            terminal_request_id="load", terminal_logical_id=logical, native_request_id=native,
+            launch_request_id="launch", launch_id="owned-launch", before_source_id=menu.observation_id,
+            after_source_id=after.observation_id, origin_epoch=0, reconciled_epoch=1, actor_id=self.a.player_id,
+            controller_boot_id="boot-test", operator_pause_generation=0, before_takeover_generation=0,
+            after_takeover_generation=0, grants_authority=False)
+        for change in (dict(origin_epoch=5), dict(after_takeover_generation=1), dict(actor_id="other-player"),
+                       dict(launch_request_id="missing-launch"), dict(controller_boot_id="other-boot"),
+                       dict(operator_pause_generation=1), dict(reconciled_epoch=2)):
+            with self.subTest(change=change), self.assertRaises(ContractError):
+                self.ledger.reconcile_effect(logical, proof={**proof, **change}, sources=(menu.observation_id, after.observation_id),
+                    note="Contradictory orphan proof", now=1000)
+            self.assertIsNone(self.ledger.primitive(logical)["effect"])
+        self.ledger.reconcile_effect(logical, proof=proof, sources=(menu.observation_id, after.observation_id),
+            note="Actual synthetic transition custody", now=1000)
+        self.assertIsNone(self.ledger.request("load")["result"])
+        self.ledger._verify(self.a)
 
     def test_bad_argument_types(self):
         for value in (None, {}, True):

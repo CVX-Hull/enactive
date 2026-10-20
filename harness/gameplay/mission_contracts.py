@@ -1,4 +1,4 @@
-"""Strict mission/5 data. Parsing never grants a controller capability.
+"""Strict mission/6 data. Parsing never grants a controller capability.
 
 The existing JSON decoder/schema helpers own duplicate, finite-number and strict
 integer validation. Request dictionaries are decoded copies, not mutable aliases.
@@ -15,7 +15,7 @@ from .contracts import (
     json_object, validate_json,
 )
 
-VERSION = "mission/5"
+VERSION = "mission/6"
 MEMORY_VERSION = "campaign-memory/2"
 MAX_REQUEST_BYTES = 65_536
 MAX_CONTEXT_BYTES = 32_768
@@ -188,9 +188,35 @@ _CLAIMED_HANDOFF = _object({
 })
 _READMISSION = _object({
     "schema": {"const": VERSION}, "record_type": {"const": "Readmission"},
+    "mode": {"const": "handoff"},
     "handoff_id": _ID, "claim_request_id": _ID, "player_id": _ID, "epoch": _integer(),
     "post_pause_source_id": _ID, "revalidated_source_id": _ID, "after_source_id": _ID,
     "logical_id": _ID, "grants_authority": {"const": False},
+})
+_RECOVERY_READMISSION = _object({
+    "schema": {"const": VERSION}, "record_type": {"const": "Readmission"},
+    "mode": {"const": "recovery"}, "reconciliation_request_id": _ID,
+    "root_id": _ID, "player_id": _ID, "epoch": _integer(),
+    "post_pause_source_id": _ID, "revalidated_source_id": _ID, "after_source_id": _ID,
+    "logical_id": _ID, "grants_authority": {"const": False},
+})
+_DELIVERY_TERMINAL = _object({
+    "id": _ID, "channel": _enum("ordinary", "control"),
+    "status": _enum("ready", "rejected", "prompt_opened", "not_applicable", "answer_delivered"),
+    "session": _ID, "revision": _integer(), "takeover_generation": _integer(),
+    "boundary_id": _ID, "boundary_kind": _enum("normal_play", "activity_poll", "interrupt_confirmation", "menu", "debug_prompt", "unsupported"),
+    "interrupt_request_id": _nullable(_ID), "control_generation": _integer(), "frame_ok": {"type": "boolean"},
+})
+_DELIVERY_RESOLUTION = _object({
+    "schema": {"const": VERSION}, "record_type": {"const": "DeliveryResolution"},
+    **{key: _ID for key in ("reconciliation_request_id", "original_request_id", "root_id", "logical_id",
+        "native_request_id", "actor_id", "controller_boot_id", "game_anchor_source_id", "before_source_id", "observed_source_id")},
+    "origin_epoch": _integer(), "recovery_epoch": _integer(), "operator_pause_generation": _integer(),
+    "takeover_generation": _integer(), "terminal_source_id": _nullable(_ID),
+    "native_request_json": _text(4096), "collection_started_monotonic": _number(10**12),
+    "collection_deadline_monotonic": _number(10**12), "collection_received_monotonic": _number(10**12),
+    "retirement": _nullable({**_text(128), "pattern": r"^(control-)?cancelled-[A-Za-z0-9_-]+\.json$"}),
+    "terminal": _nullable(_DELIVERY_TERMINAL), "grants_authority": {"const": False},
 })
 _PROMPT_RECEIPT = _object({
     "schema": {"const": VERSION}, "record_type": {"const": "PhaseReceipt"},
@@ -298,7 +324,43 @@ def validate_handoff_result(value: dict, *, claimed: bool = False) -> dict:
 
 
 def validate_readmission(value: dict) -> dict:
-    return _decode(value, _READMISSION)
+    data = json_object(value)
+    return _decode(data, _RECOVERY_READMISSION if data.get("mode") == "recovery" else _READMISSION)
+
+
+def validate_delivery_resolution(value: dict) -> dict:
+    data = _decode(value, _DELIVERY_RESOLUTION, maximum=32_768)
+    native = json_object(data["native_request_json"])
+    if canonical(native) != data["native_request_json"] or len(data["native_request_json"].encode()) > 4096:
+        raise ContractError("Delivery resolution requires bounded canonical native admission")
+    start, end, received = (data[k] for k in ("collection_started_monotonic", "collection_deadline_monotonic", "collection_received_monotonic"))
+    if not start <= received < end <= start + 0.25 or (data["retirement"] is None) == (data["terminal"] is None):
+        raise ContractError("Delivery resolution lacks its exact bounded collection basis")
+    if data["retirement"] is not None and data["terminal_source_id"] is not None:
+        raise ContractError("Unclaimed retirement cannot have a terminal frame")
+    return data
+
+
+def effect_reconciliation(proof: dict, *, sources: tuple[str, ...], note: str) -> dict:
+    """One current envelope for every independently established unknown effect."""
+    if type(proof) is not dict: raise ContractError("Effect reconciliation requires its closed typed proof")
+    return validate_effect_reconciliation(dict(schema=VERSION, record_type="EffectReconciliation",
+        basis=proof.get("record_type"), sources=list(sources), note=note, proof=proof))
+
+
+def validate_effect_reconciliation(value: dict | str) -> dict:
+    data = json_object(value)
+    schemas = {"DeliveryResolution": _DELIVERY_RESOLUTION, "LifecycleTransition": _TRANSITION,
+               "OwnedNormalExit": _SAVED_NORMAL_EXIT if type(data.get("proof")) is dict and data["proof"].get("no_save_required") is False else _NORMAL_EXIT}
+    basis = data.get("basis")
+    if type(basis) is not str or basis not in schemas:
+        raise ContractError("Unknown current effect proof basis")
+    data = _decode(data, _object({"schema": {"const": VERSION}, "record_type": {"const": "EffectReconciliation"},
+        "basis": {"const": basis}, "sources": {**_IDS, "minItems": 1}, "note": _text(1024), "proof": schemas[basis]}), maximum=32_768)
+    validators = {"DeliveryResolution": validate_delivery_resolution, "LifecycleTransition": validate_lifecycle_transition,
+                  "OwnedNormalExit": validate_normal_exit}
+    validators[basis](data["proof"])
+    return data
 
 
 def validate_prompt_result(value: dict, *, request: dict, root: dict, actor_id: str) -> dict:
@@ -629,9 +691,13 @@ def _request_schema(kind: str, data: dict) -> dict:
                          packet_ids={**_array(_ID, 4, 1), "uniqueItems": True},
                          read_source_ids={**_array(_ID, 128), "uniqueItems": True})
         elif kind == "readmit":
-            props.update(handoff_id=_ID, claim_request_id=_ID, sources={**_IDS, "minItems": 1},
+            mode = data.get("mode")
+            if mode not in ("handoff", "recovery"): raise ContractError("Readmission requires an explicit current mode")
+            props.update(mode={"const": mode}, sources={**_IDS, "minItems": 1},
                          expected_session=_ID, expected_revision=_integer(), expected_boundary_id=_ID,
                          limits=_object({**_SKILL_LIMITS["properties"], "primitives": {"const": 1}}))
+            if mode == "handoff": props.update(handoff_id=_ID, claim_request_id=_ID)
+            else: props.update(reconciliation_request_id=_ID, phase_id=_ID, work_id=_nullable(_ID))
         elif kind == "lifecycle":
             props.update(operation=_enum(*LIFECYCLE), world=_text(80), character=_text(80),
                          sources=_IDS, expected_session=_nullable(_ID),

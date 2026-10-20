@@ -21,7 +21,7 @@ from .native_process import NativeProcess
 from .mission_lifecycle import NormalPhase, RegisteredLifecycle
 from .mission_handoff import HandoffEvidenceError, HandoffPhase, RegisteredHandoff
 from .mission_activity import ActivityFeedback, ActivityIntent, ActivityPhase, RegisteredActivity
-from .mission_recovery import RegisteredRecovery
+from .mission_recovery import RecoveryEvidenceError, RecoveryPhase, RegisteredRecovery
 from .gameplay.campaign_memory import CampaignMemory
 from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
 from .gameplay.evidence import MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore
@@ -428,6 +428,8 @@ class MissionRuntime:
         with self._metadata:
             phase = self._prompt_phase
         if phase is None:
+            if self._registered_recovery.continuation_guard(data, before):
+                return None
             if data["phase_id"] is not None or data["skill_kind"] in ("menu", "edit"):
                 raise ControlError("Control requires its actual live owned prompt phase")
             return None
@@ -1283,19 +1285,19 @@ class MissionRuntime:
             expected_request=pending, launch_id=phase.launch.launch_id, exit_request_id=phase.root_id, returncode=0)
         receipt = self._exit_receipt(phase, "complete")
         primitive = self._ledger.primitive(proposal.logical_id)
-        if primitive["state"] == "unknown":
-            self._ledger.reconcile_effect(proposal.logical_id, sources=tuple(receipt["source_ids"]),
-                note=f"Owned normal exit {phase.launch.launch_id} after published YES; ACK remains unknown", now=self._wall())
-        if candidate[3] is not None:
-            # This exact child exited normally and its pending input/effect is
-            # retired. No after-frame can arrive; keep the unknown ACK/charge.
-            self._store.release(candidate[3])
         proof = {"schema": VERSION, "record_type": "OwnedNormalExit", "origin_request_id": phase.root_id,
             "launch_request_id": phase.launch.request_id, "launch_id": phase.launch.launch_id,
             "terminal_logical_id": proposal.logical_id, "native_request_id": candidate[2]["id"],
             "source_ids": receipt["source_ids"], "no_save_required": phase.saved_checkpoint is None, "returncode": 0,
             **({"saved_checkpoint_request_id": phase.saved_checkpoint} if phase.saved_checkpoint is not None else {}),
             "retirement": retirement, "grants_authority": False}
+        if primitive["state"] == "unknown":
+            self._ledger.reconcile_effect(proposal.logical_id, proof=proof, sources=tuple(receipt["source_ids"]),
+                note=f"Owned normal exit {phase.launch.launch_id} after published YES; ACK remains unknown", now=self._wall())
+        if candidate[3] is not None:
+            # This exact child exited normally and its pending input/effect is
+            # retired. No after-frame can arrive; keep the unknown ACK/charge.
+            self._store.release(candidate[3])
         self._exit_phase = None
         self._exit_candidate = None
         self._bindings.clear()
@@ -1491,8 +1493,10 @@ class MissionRuntime:
         disposition, reason = "not_dispatched", "Dispatch not admitted"
         envelope_valid = False
         operator_mark = self._operator_mark()
+        dispatch_actor = self._ledger.snapshot(now=self._wall())["player_id"]
         takeover_generation = self._store.observation(proposal.before)["takeover_generation"]
         game_anchor = (activity.prompt.game_anchor if activity is not None else
+                       self._registered_recovery.continuation.game_anchor if self._registered_recovery.continuation is not None else
                        self._prompt_phase.game_anchor if self._prompt_phase is not None else original)
         control = isinstance(proposal, ActivityIntent)
         image_informed = work.request.get("perception") is not None or lifecycle is not None or activity is not None
@@ -1506,6 +1510,8 @@ class MissionRuntime:
                 self._registered_lifecycle.guard(work, lifecycle, proposal)
             elif isinstance(lifecycle, HandoffPhase):
                 self._registered_handoff.guard(work, lifecycle, proposal)
+            elif isinstance(lifecycle, RecoveryPhase):
+                self._registered_recovery.guard(work, lifecycle, proposal)
             else:
                 self._exit_guard(work, lifecycle, proposal)
         def preflight(observed: dict, received: float) -> None:
@@ -1550,8 +1556,8 @@ class MissionRuntime:
                     generation = self.controller.pause_generation
                 observed = self._store.observation(proposal.before)
                 context = activity or lifecycle
-                mark = context.operator_mark if isinstance(context, (HandoffPhase, ActivityPhase)) else context.launch.operator_mark
-                takeover = context.takeover_generation if isinstance(context, (HandoffPhase, ActivityPhase)) else context.launch.takeover_generation
+                mark = context.operator_mark if isinstance(context, (HandoffPhase, ActivityPhase, RecoveryPhase)) else context.launch.operator_mark
+                takeover = context.takeover_generation if isinstance(context, (HandoffPhase, ActivityPhase, RecoveryPhase)) else context.launch.takeover_generation
                 raw = self.controller.resume_mission(expected_generation=generation,
                     expected_operator_generation=mark[1],
                     expected_controller_boot_id=mark[0],
@@ -1611,6 +1617,10 @@ class MissionRuntime:
             "kind": proposal.kind, "value": proposal.action, "expected_session": proposal.before.session,
             "expected_revision": proposal.before.revision, "expected_boundary_id": proposal.expected_boundary_id,
             "published": raw.get("published") is True if type(raw) is dict else False,
+            "native_request_json": canonical(raw["request"]) if envelope_valid and raw.get("published") is True else None,
+            "dispatch_binding": dict(controller_boot_id=operator_mark[0], operator_pause_generation=operator_mark[1],
+                takeover_generation=takeover_generation, actor_id=dispatch_actor, epoch=work.request["epoch"],
+                game_anchor_source_id=game_anchor.observation_id),
             "transport_disposition": disposition, "source_before": proposal.before.observation_id,
             "preflight_source": None if preflight_source is None else preflight_source.observation_id,
             "source_after": None if after is None else after.observation_id,
@@ -1749,6 +1759,11 @@ class MissionRuntime:
     def _navigate(self, work: _Work) -> tuple[str, dict]:
         data = work.request
         original, binding = self._informing(data)
+        continuation = self._registered_recovery.continuation
+        anchor = original if continuation is None else continuation.game_anchor
+        game_limit = (data["limits"]["game_seconds"] if continuation is None else
+                      self._ledger.request(continuation.root_id)["request"]["limits"]["game_seconds"])
+        work.game_anchor = anchor
         if self._map is None:
             raise EvidenceError("Navigation has no current observed map")
         skill = NavigationSkill(data, self._map)
@@ -1773,6 +1788,7 @@ class MissionRuntime:
             self._check_cancelled(work)
             proposal = skill.propose(self._store, **self._clocks())
             if isinstance(proposal, NavigationOutcome):
+                self._registered_recovery.finish_continuation(work, proposal.disposition)
                 return proposal.disposition, self._navigation_result(proposal)
             self._progress = {"pending_logical_id": proposal.logical_id, "source_before": proposal.before.observation_id}
             if not rotated:
@@ -1786,6 +1802,14 @@ class MissionRuntime:
                     "pending_logical_id": proposal.logical_id, "grants_authority": False}
             outcome = skill.accept(feedback, self._store, **self._clocks())
             self._publish()
+            try:
+                self._game_guard(anchor, game_limit, after=True)
+            except BudgetError as exc:
+                result = self._navigation_result(outcome) if outcome is not None else {
+                    "verified_steps": skill._steps, "source_ids": [self._current.observation_id], "grants_authority": False}
+                self._stop_after_failure(str(exc))
+                result.update(disposition="partial", reason=str(exc), budget_stop=str(exc))
+                return "unknown" if outcome is not None and outcome.disposition == "unknown" else "partial", result
             if self._game_cost > self._admission.limits.game_seconds:
                 self.pause("Observed mission game budget overshot", cause="internal_recovery")
                 self._apply_pauses()
@@ -1794,6 +1818,7 @@ class MissionRuntime:
                 result.update(disposition="partial", reason="Observed mission game budget overshot; cost retained")
                 return "partial", result
             if outcome is not None:
+                self._registered_recovery.finish_continuation(work, outcome.disposition)
                 self._capture_memory(self._current)
                 return outcome.disposition, self._navigation_result(outcome)
 
@@ -1807,6 +1832,7 @@ class MissionRuntime:
         if kind in ("remember", "correct"):
             return "completed", self._memory_request(work)
         if kind == "skill":
+            self._registered_recovery.executable_guard(work.request)
             if self._registered_lifecycle.phase is not None:
                 return self._registered_lifecycle.control(work)
             if self._exit_phase is not None:
@@ -1831,9 +1857,15 @@ class MissionRuntime:
                 return self._poll_activity(work)
             if work.request["skill_kind"] in ("menu", "edit", "interact", "item", "activity", "inspect"):
                 return self._semantic(work)
+        if kind == "reconcile":
+            return self._registered_recovery.reconcile(work)
+        if kind == "readmit" and work.request["mode"] == "recovery":
+            return self._registered_recovery.readmit(work)
         if kind in ("handoff", "claim", "readmit"):
+            self._registered_recovery.executable_guard(work.request)
             return self._handoff(work)
         if kind == "lifecycle":
+            self._registered_recovery.executable_guard(work.request)
             return self._lifecycle(work)
         if kind == "stop":
             self.pause(work.request["reason"], cause="user")
@@ -1887,7 +1919,7 @@ class MissionRuntime:
             disposition, result = "blocked", {"reason": f"{type(exc).__name__}: {exc}"[:1024], "grants_authority": False}
             result["source_ids"] = [] if self._current is None else [self._current.observation_id]
             self._diagnostic = result["reason"]
-            if (data["kind"] not in ("remember", "correct") and not isinstance(exc, HandoffEvidenceError)
+            if (data["kind"] not in ("remember", "correct") and not isinstance(exc, (HandoffEvidenceError, RecoveryEvidenceError))
                     or isinstance(exc, (OSError, LedgerError))):
                 self._stop_after_failure(result["reason"])
         self._rotation = None

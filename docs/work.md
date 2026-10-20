@@ -44,7 +44,7 @@ ownership and observer visibility feed one [supply-and-shelter acceptance #144](
 then a [fresh seven-day assessment #145](https://github.com/CVX-Hull/enactive/issues/145)
 with the engineering lead outside gameplay. Reviewed component readiness permits
 shared native validation; the mission does not wait for component issue closure.
-The current source ingress is mission/5, with coordinated item/activity/inspection
+The current source ingress is mission/6, with coordinated item/activity/inspection
 records and rejection of prior contracts. Native capability qualification remains
 separate from source integration.
 Start/Observe remain read-only until the
@@ -65,8 +65,8 @@ component demonstrations. The first run's2109inputs (171lifecycle) motivate sema
 composition; its ground/carried-water corrections and interrupted craft motivate
 source-linked Claims and unfinished Work. Those totals do not establish measured
 speedup or memory efficacy. Lifecycle, normal finish and one-use bound successor retrieval/claim with separately
-charged deliberate readmission now compose in source. Next compose selected
-item/activity/outcome handling, then qualify actual native lifecycle and a real
+charged deliberate readmission now compose in source. Selected item/activity and
+delivery-recovery handling now compose too; next qualify actual native lifecycle and a real
 fresh player-context replacement. Freeze #156 only after integrated checks and native
 preflight; #157 supplies actual mission evidence before #145 readiness. The lead
 owns coupled runtime/ledger integration and the single native runtime. Disjoint
@@ -108,7 +108,7 @@ correction and handoff boundaries; do not introduce a critic or retrieval call p
 key. Retained facts cannot authorize an input. General lesson promotion or training
 is separate from campaign fact correction.
 
-Common outcome/recovery remains unfinished. Selected item/count/inspection,
+Selected delivery reconciliation/readmission now composes in source. Item/count/inspection,
 activity polls and registered interruption/answer/separate Resume compose in source.
 The activity adapter preserves original consent/limits, known frameless ACKs and
 unknown UUIDs; native activity qualification remains open.
@@ -116,24 +116,30 @@ The passive observer now presents source-linked historical memory, current priva
 activity and cumulative ledger request/admission groups. Model/tool/intervention
 totals remain unmeasured. The [viewer checkpoint](acceptance/2026-10-20-mission-observer.md)
 also records the known-nondelivery memory correction; it does not accept independent
-gameplay or close #141/#144. Common unknown-outcome reconciliation/readmission is
-the next coupled lead-owned implementation before native qualification. Atomic
+gameplay or close #141/#144. The coupled unknown-outcome path now uses typed proof,
+separate charged readmission and original-root continuation. Atomic
 retirement can prove unclaimed custody only for its exact request; an absent inbox
-or later frame alone cannot prove delivery. Preserve original unknown receipts,
-costs, root limits and user Pause when adding that path. Reuse the mission writer,
+or later frame alone cannot prove delivery. Original unknown receipts,
+costs, root limits and user Pause remain intact. It reuses the mission writer,
 ledger, controller and deliberate charged Resume rather than adding an outbox or
-another executor. Any contract change must migrate every caller together.
-Its first source foundation now retains original unknown-dispatch custody and
-reserved evidence capacity, collecting exact unclaimed-retirement or terminal
-evidence once before Observe. Collection leaves the ACK, cost and ledger effect
-unknown and grants no Resume/lease. A missed response remains ambiguous even if
-the next frame looks expected. Typed effect proof, explicit readmission/root
-accounting and native qualification remain the next coupled work, not newly
-completed acceptance. Source/fixture review is distinct from an actual mission.
-#144 records the exact source/test checkpoint, including outstanding failures;
-resolve and review this scope before pulling more implementation work. Publish the
-single contract only after callers, persistence validation, tests and current
-documentation agree. Component tests do not establish native acceptance.
+another executor. Mission/6 and ledger8 migrate every current caller and reject
+old shapes. Original dispatch custody and evidence capacity survive uncertainty;
+one pre-Observe collection retains exact unclaimed retirement or terminal evidence.
+Framed terminal bytes use the original reservation before diagnostic Observe.
+Explicit reconciliation validates the typed basis against the independent original
+receipt and current fresh paused source, retaining the original unknown ACK/cost.
+Separate normal-play readmission charges one Resume; a navigation suffix shares
+the original goal/Work/root, first game-time anchor and cumulative limits. User
+Pause, competing roots, unsupported ownership and unknown Resume cannot renew it.
+A missed response stays ambiguous even if the next frame looks expected. Historical
+proof, including an orphan proof left by a crash, restores no live authority.
+
+The next gate is one reviewed common-check checkpoint, then exact native
+character/item/activity/control/access preflight and #156's finite admission.
+#157/#144 require actual player-owned mission and clean-context memory use before
+#145's readiness decision. Source/fixture review is distinct from that acceptance;
+#144 owns exact checkpoint results and retained failures. Do not pull optional
+features or restart design while these integrated acceptance gates remain open.
 
 The item/count/inspection and activity-poll checkpoint passed local and
 pull-request checks, but its first push CI timed out in two synthetic lifecycle

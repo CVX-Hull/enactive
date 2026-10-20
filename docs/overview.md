@@ -24,16 +24,20 @@ readmission and normal finish now compose in source tests; native character life
 acceptance are still pending. Passive waypoint/planner components remain offline study tools.
 Selected item/count/inspection and bounded activity observations now compose in
 source. Activity interruption, exact answers and a separate charged Resume also
-compose in source. Native lifecycle/selector/activity qualification and common
-semantic outcome/recovery are still required before independent play.
+compose in source. Selected delivery reconciliation and separate normal-play
+readmission also compose in source; native lifecycle/selector/activity/recovery
+qualification is still required before independent play.
 The observer now exposes readable historical memory and cumulative charged
 admissions separately from requests, live activity and old results. These counts
 do not measure model usage or prove greater gameplay efficiency. Its
 [synthetic UI inspection](acceptance/2026-10-20-mission-observer.md) is separate from
 the pending independent native mission.
 Unknown-input custody and available late acknowledgements are now retained before
-Observe can overwrite them. General reconciliation/resumption remains unfinished;
-collection alone leaves the player paused and the original input charged/unknown.
+Observe can overwrite them. Typed proof can resolve that retained uncertainty
+without changing the original charged/unknown delivery receipt. A separate charged
+Resume and bounded continuation share the original root limits; user Pause revokes
+eligibility. Missing proof stays stopped. These are source checks, not native
+recovery or independent-player acceptance.
 
 The [seven-day functional campaign](acceptance/2026-10-19-seven-day-survival.md)
 records the same normally created Ned Meyers / Belgium, ordinary supplies and

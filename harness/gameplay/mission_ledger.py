@@ -19,14 +19,15 @@ from typing import Any
 from .contracts import ContractError, json_object
 from .mission_contracts import (
     VERSION, MissionAdmission, SourceRevalidation, canonical, validate_handoff_binding,
+    effect_reconciliation, validate_effect_reconciliation, validate_delivery_resolution,
     validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption,
     validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission,
 )
 
-DB_VERSION = 7
+DB_VERSION = 8
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
 MAX_RECEIPT_BYTES = 65_536
-MAX_EFFECT_BYTES = 4096
+MAX_EFFECT_BYTES = 32_768
 # SQLite overflow pages reserved in separate rows, released transactionally
 # before storing results. Padding covers page rounding and small state/index edits.
 RESULT_RESERVE = MAX_RECEIPT_BYTES + 16_384
@@ -161,16 +162,7 @@ def _control_mapping(intent: dict, result: dict, *, logical_id: str, native_id: 
 
 
 def _effect(value: dict | str) -> dict:
-    data = json_object(value)
-    if set(data) != {"sources", "note"} or type(data["sources"]) is not list:
-        raise LedgerError("Malformed reconciliation evidence")
-    sources = data["sources"]
-    if not 1 <= len(sources) <= 8:
-        raise LedgerError("Reconciliation requires bounded source identities")
-    for source in sources: _id(source)
-    if len(set(sources)) != len(sources): raise LedgerError("Reconciliation sources must be distinct")
-    if not isinstance(data["note"], str) or not 1 <= len(data["note"]) <= 1024:
-        raise LedgerError("Reconciliation requires a reason")
+    data = validate_effect_reconciliation(value)
     _json(data, MAX_EFFECT_BYTES)
     return data
 
@@ -341,7 +333,8 @@ class MissionLedger:
             if data["kind"] == "readmit":
                 if deadline != self._readmit_deadline(data, admitted_at=admitted_at):
                     raise LedgerError("Original handoff readmission deadline was altered")
-                for linked in (data["handoff_id"], data["claim_request_id"]):
+                for linked in ((data["handoff_id"], data["claim_request_id"]) if data["mode"] == "handoff"
+                               else (data["reconciliation_request_id"],)):
                     self._earlier_request(request_id, linked)
             if data["kind"] in ("handoff", "claim") and deadline != state["deadline"]:
                 raise LedgerError("Original handoff/claim deadline was altered")
@@ -398,6 +391,8 @@ class MissionLedger:
                 raise LedgerError("Terminal primitive lost its receipt")
             if effect is not None and (status != "unknown" or effect != _json(_effect(effect))):
                 raise LedgerError("Corrupt primitive effect evidence")
+            if effect is not None:
+                self._check_effect(logical_id, _effect(effect), actor_id=actor)
             if result is None: expected_reservations[f"receipt:{logical_id}"] = RESULT_RESERVE
             if effect is None and status in ("prepared", "published", "unknown"):
                 expected_reservations[f"effect:{logical_id}"] = EFFECT_RESERVE
@@ -702,6 +697,19 @@ class MissionLedger:
         return {"created": True, "operation": self.request(data["request_id"])}
 
     def _readmit_deadline(self, data: dict, *, admitted_at: float) -> float:
+        if data["mode"] == "recovery":
+            resolved = self.request(data["reconciliation_request_id"])
+            if resolved["request"]["kind"] != "reconcile" or resolved["state"] != "completed" or resolved["result"] is None:
+                raise LedgerError("Recovery readmission requires its completed reconciliation")
+            proof = validate_delivery_resolution(resolved["result"].get("reconciliation"))
+            root = self.request(proof["root_id"])
+            if (data["phase_id"] != proof["root_id"] or data["work_id"] != root["request"].get("work_id")
+                    or data["epoch"] != proof["recovery_epoch"] or proof["observed_source_id"] not in data["sources"]
+                    or data["expected_session"] != json_object(proof["native_request_json"])["session"]):
+                raise LedgerError("Recovery readmission lost its original root/Work/epoch/source")
+            admission = MissionAdmission.from_dict(self._get("admission"))
+            return min(root["deadline"], self._get("state")["deadline"] - admission.cleanup_reserve.wall_seconds,
+                       admitted_at + data["limits"]["wall_seconds"])
         issued = self.request(data["handoff_id"])
         claim = self.request(data["claim_request_id"])
         if (issued["request"]["kind"] != "handoff" or issued["state"] != "completed"
@@ -721,7 +729,7 @@ class MissionLedger:
     @staticmethod
     def _is_phase_root(data: dict) -> bool:
         return data.get("phase_id") is None and (data["kind"] == "lifecycle"
-            or data["kind"] == "skill" and data["skill_kind"] in ("item", "activity", "interact", "inspect"))
+            or data["kind"] == "skill" and data["skill_kind"] in ("navigate", "item", "activity", "interact", "inspect"))
 
     def _phase_parent(self, data: dict, *, before_rowid: int | None = None) -> dict | None:
         """Validate a direct immutable accounting link, never live input authority."""
@@ -739,8 +747,13 @@ class MissionLedger:
         if data.get("work_id") != root.get("work_id"):
             raise LedgerError("Phase child cannot replace its immutable root Work association")
         if data["kind"] == "skill":
-            if data["skill_kind"] not in ("menu", "edit", "interact", "inspect", "item", "activity"):
+            if data["skill_kind"] == "navigate":
+                if root.get("skill_kind") != "navigate" or data["goal"] != root["goal"]:
+                    raise LedgerError("Navigation continuation must keep its exact original goal/scope")
+            elif data["skill_kind"] not in ("menu", "edit", "interact", "inspect", "item", "activity"):
                 raise LedgerError("Phase skill child must be a direct control operation")
+            elif root.get("skill_kind") == "navigate":
+                raise LedgerError("Navigation root permits only its exact navigation suffix")
             if data["skill_kind"] in ("item", "activity"):
                 kind = data["skill_kind"]
                 keys = ("purpose", "label", "quantity", "quantity_unit", "outcome") if kind == "item" else (
@@ -749,6 +762,8 @@ class MissionLedger:
                     raise LedgerError("Semantic child differs from its exact immutable root goal")
             if root.get("skill_kind") == "interact" and data["skill_kind"] == "interact":
                 raise LedgerError("Ordinary interaction returns to normal play before another interaction root")
+        elif data["kind"] == "readmit" and data["mode"] == "recovery":
+            pass  # Exact reconciliation/root correlation is checked by _readmit_deadline.
         elif data["kind"] == "lifecycle":
             if root["kind"] != "lifecycle" or any(data[key] != root[key] for key in ("operation", "world", "character")):
                 raise LedgerError("Lifecycle child differs from its phase root")
@@ -905,14 +920,15 @@ class MissionLedger:
                 self._db.execute("UPDATE requests SET state='unknown' WHERE id=?", (p["request_id"],))
         return self.primitive(logical_id)
 
-    def reconcile_effect(self, logical_id: str, *, sources: tuple[str, ...], note: str, now: float) -> dict:
+    def reconcile_effect(self, logical_id: str, *, proof: dict, sources: tuple[str, ...], note: str, now: float) -> dict:
         """Record controller-verified reconciliation, keeping original ACK unknown."""
         if type(sources) is not tuple: raise LedgerError("Reconciliation sources must be an explicit tuple")
-        effect = _effect({"sources": list(sources), "note": note})
+        effect = _effect(effect_reconciliation(proof, sources=sources, note=note))
         with self._transaction():
             self._touch(now)
             p = self.primitive(logical_id)
             if p["state"] != "unknown": raise LedgerError("Only unknown effects require this reconciliation")
+            self._check_effect(logical_id, effect, actor_id=self._get("state")["player_id"])
             if p["effect"] is not None:
                 if p["effect"] == effect: return p
                 raise LedgerError("Reconciliation is immutable")
@@ -920,12 +936,165 @@ class MissionLedger:
             self._db.execute("UPDATE primitives SET effect=? WHERE id=?", (_json(effect), logical_id))
         return self.primitive(logical_id)
 
+    def _check_effect(self, logical_id: str, effect: dict, *, actor_id: str) -> None:
+        p, proof = self.primitive(logical_id), effect["proof"]
+        intent = p["intent"]
+        if effect["basis"] != "DeliveryResolution":
+            root_row = self.request(proof["origin_request_id"])
+            root = root_row["request"]
+            parent = self.request(p["request_id"])
+            if (proof["terminal_logical_id"] != logical_id or proof["native_request_id"] != p["native_id"]
+                    or p["state"] != "unknown" or root["kind"] != "lifecycle"
+                    or root["phase_id"] is not None
+                    or root["operation"] != (proof["operation"] if effect["basis"] == "LifecycleTransition" else "exit")
+                    or p["request_id"] != (proof["terminal_request_id"] if effect["basis"] == "LifecycleTransition" else p["request_id"])
+                    or (self.request(p["request_id"])["request"].get("phase_id") or p["request_id"]) != root["request_id"]):
+                raise LedgerError("Lifecycle/exit effect lost its exact original primitive")
+            sources = ([proof["before_source_id"], proof["after_source_id"]]
+                       if effect["basis"] == "LifecycleTransition" else proof["source_ids"])
+            if effect["sources"] != sources or intent["source_before"] not in sources:
+                raise LedgerError("Lifecycle/exit effect lost its exact retained sources")
+            launched = self._earlier_request(root["request_id"], proof["launch_request_id"])
+            launch_result = launched["result"] or {}
+            receipt = p["result"] or {}
+            if (launched["request"].get("operation") != "launch" or launched["state"] != "completed"
+                    or launch_result.get("native_ready") is not True
+                    or type(launch_result.get("process")) is not dict
+                    or launch_result["process"].get("launch_id") != proof["launch_id"]
+                    or intent["kind"] != "action" or receipt.get("published") is not True
+                    or any(receipt.get(k) != v for k, v in {
+                        "logical_action_id": logical_id, "native_request_id": p["native_id"],
+                        "transport_disposition": "unknown", **{key: intent[key] for key in
+                            ("kind", "value", "expected_session", "expected_revision", "expected_boundary_id", "source_before", "preflight_source")}
+                    }.items())):
+                raise LedgerError("Orphan lifecycle/exit effect lost its actual owned launch/published input")
+            if effect["basis"] == "LifecycleTransition":
+                if (proof["actor_id"] != actor_id or proof["origin_epoch"] != root_row["epoch"]
+                        or parent["epoch"] != root_row["epoch"] or proof["reconciled_epoch"] != parent["epoch"] + 1
+                        or proof["reconciled_epoch"] > self._get("state")["epoch"]):
+                    raise LedgerError("Orphan lifecycle effect changed its original actor/unknown epoch")
+                binding = receipt.get("dispatch_binding") or {}
+                if any(binding.get(k) != v for k, v in {
+                        "controller_boot_id": proof["controller_boot_id"], "operator_pause_generation": proof["operator_pause_generation"],
+                        "takeover_generation": proof["before_takeover_generation"], "actor_id": actor_id, "epoch": parent["epoch"]}.items()):
+                    raise LedgerError("Orphan lifecycle effect changed its independently captured dispatch custody")
+                if proof["operation"] in ("create", "save"):
+                    question = "Are you SURE you're finished?" if proof["operation"] == "create" else "Save and quit?"
+                    perception = parent["request"].get("perception") or {}
+                    if (intent["value"] != "YES" or perception.get("kind") != "confirmation"
+                            or perception.get("question") != question or parent["request"].get("goal", {}).get("label") != "Yes"):
+                        raise LedgerError("Orphan lifecycle effect lacks its actual exact confirmation")
+                elif intent["value"] not in ("CONFIRM", "UILIST.CONFIRM"):
+                    raise LedgerError("Orphan load effect lacks its registered selection confirmation")
+            elif intent["value"] != "YES" or (parent["request"].get("perception") or {}).get("question") != "Really quit?":
+                raise LedgerError("Orphan exit effect lacks its exact normal-exit confirmation")
+            return
+        owner = self._earlier_request(proof["reconciliation_request_id"], proof["original_request_id"])
+        resolution = self.request(proof["reconciliation_request_id"])
+        root = self.request(proof["root_id"])
+        native = json_object(proof["native_request_json"])
+        if type(native.get("authority")) is not dict or type(native.get("protocol")) is not int or native["protocol"] != 4:
+            raise LedgerError("Delivery proof lacks its original native authority envelope")
+        receipt = p["result"] or {}
+        binding = receipt.get("dispatch_binding") or {}
+        if any(binding.get(k) != v for k, v in {"controller_boot_id": proof["controller_boot_id"],
+                "operator_pause_generation": proof["operator_pause_generation"], "takeover_generation": proof["takeover_generation"],
+                "actor_id": proof["actor_id"], "epoch": proof["origin_epoch"], "game_anchor_source_id": proof["game_anchor_source_id"]}.items()):
+            raise LedgerError("Delivery effect changed its independently captured original dispatch custody")
+        if (resolution["request"]["kind"] != "reconcile"
+                or resolution["request"]["unresolved_request_id"] != proof["original_request_id"]
+                or resolution["request"]["evidence_id"] != proof["observed_source_id"]
+                or resolution["epoch"] != proof["recovery_epoch"] or proof["recovery_epoch"] != owner["epoch"] + 1
+                or proof["origin_epoch"] != owner["epoch"] or proof["actor_id"] != actor_id
+                or owner["request"]["kind"] != "skill"
+                or proof["root_id"] != (owner["request"]["phase_id"] or owner["request"]["request_id"])
+                or owner["request"].get("work_id") != root["request"].get("work_id")
+                or p["request_id"] != proof["original_request_id"] or p["state"] != "unknown"
+                or proof["logical_id"] != logical_id or intent["kind"] == "resume"
+                or p["native_id"] not in (None, proof["native_request_id"])
+                or receipt.get("native_request_json") != proof["native_request_json"]
+                or receipt.get("published") is not True or receipt.get("native_request_id") != proof["native_request_id"]
+                or native.get("id") != proof["native_request_id"] or native.get("kind") != intent["kind"]
+                or native.get("session") != intent["expected_session"]
+                or native.get("authority", {}).get("controller_boot_id") != proof["controller_boot_id"]
+                or intent["source_before"] != proof["before_source_id"]):
+            raise LedgerError("Delivery effect lost its independent original request/root/actor/epoch correlation")
+        if intent["kind"] in ("action", "key"):
+            if (native.get(intent["kind"]) != intent["value"] or native.get("revision") != intent["expected_revision"]
+                    or native.get("boundary_id") != intent["expected_boundary_id"]
+                    or native.get("takeover_generation") != proof["takeover_generation"]):
+                raise LedgerError("Delivery effect contradicts original native intent")
+        elif intent["kind"] == "answer_interrupt" and any(native.get(k) != v for k, v in intent["value"].items()):
+            raise LedgerError("Delivery effect borrowed another interrupt owner/answer")
+        terminal = proof["terminal"]
+        if terminal is not None:
+            ordinary = intent["kind"] in ("action", "key")
+            allowed = {"ready", "rejected"} if ordinary else ({"prompt_opened", "not_applicable", "rejected"}
+                if intent["kind"] == "request_interrupt" else {"answer_delivered", "rejected"})
+            if (terminal["id"] != native["id"] or terminal["channel"] != ("ordinary" if ordinary else "control")
+                    or terminal["status"] not in allowed or terminal["session"] != native["session"]
+                    or terminal["takeover_generation"] != proof["takeover_generation"]
+                    or terminal["revision"] < intent["expected_revision"]
+                    or ordinary and terminal["status"] == "ready" and terminal["revision"] == intent["expected_revision"]
+                    or terminal["status"] == "prompt_opened" and terminal["interrupt_request_id"] != native["id"]):
+                raise LedgerError("Delivery effect terminal is not correlated to the actual input")
+        required = {proof[k] for k in ("before_source_id", "observed_source_id", "game_anchor_source_id")}
+        if proof["terminal_source_id"] is not None: required.add(proof["terminal_source_id"])
+        if set(effect["sources"]) != required:
+            raise LedgerError("Delivery effect omitted or imported source evidence")
+
+    def _check_recovery_result(self, request_id: str, data: dict, result: dict, actor_id: str) -> None:
+        if set(result) != {"reconciliation", "source_ids", "reason", "grants_authority"} or result["grants_authority"] is not False:
+            raise LedgerError("Reconciliation requires its closed read-only result")
+        proof = validate_delivery_resolution(result["reconciliation"])
+        p = self.primitive(proof["logical_id"])
+        effect = None if p["effect"] is None else _effect(p["effect"])
+        if (proof["reconciliation_request_id"] != request_id or data["kind"] != "reconcile"
+                or effect is None or effect["basis"] != "DeliveryResolution"
+                or effect["proof"] != proof or result["source_ids"] != effect["sources"]):
+            raise LedgerError("Reconciliation result differs from its immutable typed effect")
+        self._check_effect(proof["logical_id"], p["effect"], actor_id=actor_id)
+
+    def _check_recovery_readmission(self, request_id: str, data: dict, result: dict, actor_id: str) -> None:
+        if set(result) != {"readmission", "source_ids", "reason", "grants_authority"} or result["grants_authority"] is not False:
+            raise LedgerError("Recovery readmission requires its closed result")
+        proof = validate_readmission(result["readmission"])
+        row = self._earlier_request(request_id, data["reconciliation_request_id"])
+        resolution = validate_delivery_resolution((row["result"] or {}).get("reconciliation"))
+        p = self.primitive(proof["logical_id"])
+        if (proof["mode"] != "recovery" or proof["reconciliation_request_id"] != data["reconciliation_request_id"]
+                or proof["root_id"] != data["phase_id"] or proof["root_id"] != resolution["root_id"]
+                or proof["player_id"] != actor_id or proof["player_id"] != resolution["actor_id"]
+                or proof["epoch"] != data["epoch"] or proof["epoch"] != resolution["recovery_epoch"]
+                or proof["post_pause_source_id"] != resolution["observed_source_id"]
+                or p["request_id"] != request_id or p["intent"]["kind"] != "resume" or p["state"] != "returned"
+                or p["intent"]["source_before"] != proof["revalidated_source_id"]
+                or p["result"] is None or p["result"].get("source_after") != proof["after_source_id"]
+                or p["result"].get("published") is not True
+                or p["result"].get("logical_action_id") != proof["logical_id"]
+                or any(p["result"].get(k) != p["intent"][k] for k in ("kind", "value", "expected_session",
+                    "expected_revision", "expected_boundary_id", "source_before", "preflight_source"))
+                or p["result"].get("transport_disposition") != "returned"
+                or p["result"].get("native_request_id") != p["native_id"]
+                or any(p["intent"][a] != data[b] for a, b in (("expected_session", "expected_session"),
+                    ("expected_revision", "expected_revision"), ("expected_boundary_id", "expected_boundary_id")))
+                or result["source_ids"] != [proof["revalidated_source_id"], proof["after_source_id"]]):
+            raise LedgerError("Recovery readmission lost its exact proof/root/actor/charged Resume")
+
     def _check_prompt_result(self, request_id: str, data: dict, result: dict, *, actor_id: str,
                              request_state: str) -> None:
+        if "reconciliation" in result or data["kind"] == "reconcile" and request_state == "completed":
+            if data["kind"] != "reconcile" or request_state != "completed":
+                raise LedgerError("Delivery resolution requires its completed reconcile operation")
+            self._check_recovery_result(request_id, data, result, actor_id)
+            return
         if "readmission" in result or data["kind"] == "readmit" and request_state == "completed":
             if data["kind"] != "readmit" or request_state != "completed":
                 raise LedgerError("Readmission proof requires its completed readmit request")
             proof = validate_readmission(result.get("readmission"))
+            if data["mode"] == "recovery":
+                self._check_recovery_readmission(request_id, data, result, actor_id)
+                return
             issued = self._earlier_request(request_id, data["handoff_id"])["result"]
             claim = self._earlier_request(request_id, data["claim_request_id"])["result"]
             primitive = self.primitive(proof["logical_id"])
@@ -1097,9 +1266,9 @@ class MissionLedger:
                 raise LedgerError("Creation/save transition requires its explicit exact confirmation")
         elif primitive["intent"]["value"] not in ("CONFIRM", "UILIST.CONFIRM"):
             raise LedgerError("Load transition requires its registered selection confirmation")
-        if primitive["state"] == "unknown" and primitive["effect"] != {
-                "sources": [proof["before_source_id"], proof["after_source_id"]],
-                "note": f"Observed lifecycle {proof['operation']} transition after {proof['native_request_id']}; original ACK remains unknown"}:
+        if primitive["state"] == "unknown" and primitive["effect"] != effect_reconciliation(proof,
+                sources=(proof["before_source_id"], proof["after_source_id"]),
+                note=f"Observed lifecycle {proof['operation']} transition after {proof['native_request_id']}; original ACK remains unknown"):
             raise LedgerError("Lifecycle transition lost its exact independently reconciled effect")
         if primitive["state"] == "returned" and receipt.get("source_after") != proof["after_source_id"]:
             raise LedgerError("Returned lifecycle transition lost its exact after-source")
@@ -1225,9 +1394,9 @@ class MissionLedger:
                 }.items())
                 or primitive["state"] == "unknown" and primitive["effect"] is None):
             raise LedgerError("Normal exit lacks its charged terminal input/effect correlation")
-        if primitive["state"] == "unknown" and primitive["effect"] != {
-                "sources": proof["source_ids"],
-                "note": f"Owned normal exit {proof['launch_id']} after published YES; ACK remains unknown"}:
+        if primitive["state"] == "unknown" and primitive["effect"] != effect_reconciliation(proof,
+                sources=tuple(proof["source_ids"]),
+                note=f"Owned normal exit {proof['launch_id']} after published YES; ACK remains unknown"):
             raise LedgerError("Normal exit effect evidence differs from the exact owned phase")
         if not proof["no_save_required"]:
             _, saved = self._lifecycle_record(root["request_id"], proof["saved_checkpoint_request_id"], "saved_checkpoint")

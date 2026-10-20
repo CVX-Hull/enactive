@@ -8,7 +8,7 @@ review_trigger: Mission interface adoption; implementation or native validation 
 
 This is the design deliverable for [#137](https://github.com/CVX-Hull/enactive/issues/137),
 with implemented component checkpoints and remaining acceptance work below; it
-is not a gameplay admission. The coordinated mission/5 ingress now replaces the
+is not a gameplay admission. The coordinated mission/6 ingress now replaces the
 waypoint runtime. [Architecture](../architecture.md) and [protocol](../protocol.md)
 own current behavior; lifecycle and independent mission acceptance remain pending.
 The [assessment](../research-memory-architecture.md) supplies the research rationale;
@@ -68,7 +68,7 @@ passive contracts/planner/supervisor logic may remain only with current consumer
 and tests. Remove unconsumed execution scaffolding rather than keep two players.
 
 Advance gameplay records together to `gameplay/2` where their shared encoding is
-used; unsupported `gameplay/1` input rejects. Introduce `mission/5` for the strict
+used; unsupported `gameplay/1` input rejects. Introduce `mission/6` for the strict
 mission request/state envelope and `campaign-memory/2` for the durable index.
 Advance the evidence-store metadata to version3 and native observation to wire4
 for the visible-menu field below. Update every active producer/reader/fixture,
@@ -163,7 +163,7 @@ retaining the normal-only gate and calling external keys alongside it is rejecte
 
 ### Request shapes
 
-Every request has `schema=mission/5`, `kind` and a unique `request_id` except read-only
+Every request has `schema=mission/6`, `kind` and a unique `request_id` except read-only
 status/result/context. Mutating existing-mission operations additionally bind
 `mission_id` and `epoch`; input decisions bind the informing session/revision and
 boundary. Exact operation payloads are:
@@ -568,7 +568,7 @@ it does not establish implemented schemas, native fields, gameplay or efficacy.
 
 ### Passive source foundation checkpoint
 
-The first source slice defines strict `mission/5`/`campaign-memory/2` records in
+The current source foundation defines strict `mission/6`/`campaign-memory/2` records in
 [mission_contracts.py](../../harness/gameplay/mission_contracts.py) and single-writer
 accounting in [mission_ledger.py](../../harness/gameplay/mission_ledger.py).
 The ledger and records send no input; MissionRuntime composes the registered
@@ -579,9 +579,9 @@ retains uncertainty/cost and clears authority, and rejected expiry checks retain
 the observed wall-clock watermark. Source-level regression and independent review
 are separate from the future integrated native/graphical acceptance.
 
-Ledger format7 reuses immutable typed handoff/claim request results for up to16
+Ledger format8 reuses immutable typed handoff/claim request results for up to16
 one-use handoffs, rather than adding a second mutable consumption store. It rejects
-formats1/2/3/4/5/6. Issuance requires active, settled work and atomically pauses at a new epoch;
+formats1/2/3/4/5/6/7. Issuance requires active, settled work and atomically pauses at a new epoch;
 claim changes the recorded actor while remaining paused. Runtime must verify actual
 quiescence, fresh native binding and deliberate readmission; the ledger sends no
 Pause/Resume. Human Pause or reopen invalidates an old issuance without erasing it,
@@ -652,7 +652,7 @@ its pending ID. Only native uilist rows are supported by this policy. Inventory
 highlight versus multiselect remains a gap. The separate semantic policy handles
 fallible image controls and text editing; component tests do not qualify native focus.
 
-Ledger format7 accounts Resume as a distinct primitive with null value under an
+Ledger format8 accounts Resume as a distinct primitive with null value under an
 admitted lifecycle/readmission or exact activity-resume request. Activity interruption
 and answers use this same primitive table, exact parent checks and cumulative limits. Its required preflight source, reserved receipt,
 original limits and crash uncertainty use the existing accounting path. The
@@ -676,10 +676,11 @@ ground-versus-carried water corrections motivate explicit Work and effect eviden
 its lifecycle overhead motivates composed controls. Those totals are development
 evidence, not model latency or an efficiency baseline for a different scenario.
 
-Current source uses mission/5, campaign-memory/2 and ledger7. Stop has only a Pause
-reason; NormalFinish is separate. Mission/5 retains bound successor context and
-readmission, adding typed item/activity/inspection phase records and explicit units.
-All current callers, results and fixtures migrate; mission/2, mission/3 and mission/4 requests/admissions reject without
+Current source uses mission/6, campaign-memory/2 and ledger8. Stop has only a Pause
+reason; NormalFinish is separate. Bound successor context and readmission,
+typed item/activity/inspection records and explicit units remain. Mission/6 adds
+the uniform typed effect proof and explicit handoff/recovery readmission modes.
+All current callers, results and fixtures migrate; mission/2, mission/3, mission/4 and mission/5 requests/admissions reject without
 mutation or a compatibility reader. Historical admissions remain evidence; there
 is no automatic import. Native4/gameplay2/archive3 stay unchanged. These contracts
 do not accept independent gameplay; the [protocol](../protocol.md#quiescent-player-replacement)
@@ -729,7 +730,7 @@ that diagnostic reference cannot authorize another input. This remains synthetic
 component verification, with native editor behavior pending. The current mission
 HTTP ingress is connected; owned lifecycle acceptance is not.
 
-Ledger7 validates a direct earlier lifecycle or item/activity/interact/inspect root,
+Ledger8 validates a direct earlier lifecycle or navigate/item/activity/interact/inspect root,
 derives child deadlines from its original deadline, and counts direct-root and child
 inputs together through SQLite's indexed request/primitive join. It checks links,
 original ceilings and counts again on reopen. A partial root receipt remains
@@ -827,3 +828,18 @@ original authority/limits and require semantic verification after native return.
 The [protocol](../protocol.md#selected-item-inspection-and-activity-composition)
 owns current details and the remaining activity-control/runtime gaps. No source
 checkpoint accepts independent gameplay or causal memory/efficiency benefit.
+
+### Selected delivery recovery integration
+
+The current single writer retains original unknown-dispatch custody, independently
+records its canonical native request and dispatch binding, and collects exact
+delivery evidence once before diagnostic Observe. Framed terminal bytes consume
+the original archive reservation before that observation. Explicit reconciliation
+requires captured typed proof and a current fresh paused diagnostic source; the
+immutable unknown ACK and charge remain. Separate normal-play readmission charges
+one Resume. A navigation suffix keeps the original goal/Work/root, first game-time
+anchor and cumulative limits, fencing competing roots and handoff. User Pause
+revokes it; missing proof, unknown Resume and unsupported prompt ownership stay
+stopped. Reopening validates history without restoring private consent. The
+[protocol](../protocol.md#controller-run-ownership) owns the exact current contract.
+Native recovery and independent mission acceptance remain open.

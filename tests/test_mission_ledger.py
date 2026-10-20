@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import patch
 
 from harness.gameplay.contracts import ContractError
-from harness.gameplay.mission_contracts import CleanupReserve, MissionLimits, SourceRevalidation
+from harness.gameplay.mission_contracts import VERSION, CleanupReserve, MissionLimits, SourceRevalidation, canonical
 from harness.gameplay.mission_ledger import BudgetError, LedgerError, MissionLedger
 from tests.test_mission_contracts import admission, binding, claim, request, skill
 
@@ -23,6 +23,48 @@ def intent(**changes):
               "reservation_id": "reservation-1"}
     values.update(changes)
     return values
+
+
+def published_receipt(*, native_id="native-uuid-1", logical_id="logical-1", proposed=None,
+                      controller_boot_id="controller-test", dispatch_epoch=0, actor_id="player-test"):
+    """Pure SQLite correlation fixture, not evidence of actual file custody."""
+    proposed = proposed or intent()
+    native = dict(protocol=4, id=native_id, kind=proposed["kind"], session=proposed["expected_session"],
+        revision=proposed["expected_revision"], boundary_id=proposed["expected_boundary_id"], takeover_generation=0,
+        authority=dict(controller_boot_id=controller_boot_id, counter=1), deadline_ms=1,
+        frame="synthetic.png", require_exact_frame=False, **{proposed["kind"]: proposed["value"]})
+    return dict(published=True, native_request_id=native_id, logical_action_id=logical_id,
+                native_request_json=canonical(native), dispatch_binding=dict(controller_boot_id=controller_boot_id,
+                    operator_pause_generation=0, takeover_generation=0, actor_id=actor_id,
+                    epoch=dispatch_epoch, game_anchor_source_id=proposed["source_before"]))
+
+
+def delivery_resolution(ledger, *, now, logical_id="logical-1"):
+    """Admit a synthetic read-only owner for ledger persistence tests only."""
+    p = ledger.primitive(logical_id)
+    original = ledger.request(p["request_id"])
+    epoch = original["epoch"] + 1
+    identity = "resolve-" + logical_id
+    ledger.begin_request(request("reconcile", request_id=identity, epoch=epoch,
+        unresolved_request_id=p["request_id"], evidence_id="fresh-after", reason="Synthetic exact-custody accounting probe"), now=now)
+    proof = dict(schema=VERSION, record_type="DeliveryResolution", reconciliation_request_id=identity,
+        original_request_id=p["request_id"], root_id=original["request"].get("phase_id") or p["request_id"],
+        logical_id=logical_id, native_request_id=p["native_id"], actor_id=ledger.admission.player_id,
+        origin_epoch=original["epoch"], recovery_epoch=epoch, controller_boot_id="controller-test",
+        operator_pause_generation=0, takeover_generation=0, game_anchor_source_id=p["intent"]["source_before"],
+        before_source_id=p["intent"]["source_before"], observed_source_id="fresh-after", terminal_source_id=None,
+        native_request_json=p["result"]["native_request_json"], collection_started_monotonic=10,
+        collection_deadline_monotonic=10.25, collection_received_monotonic=10.1,
+        retirement="cancelled-timeout-synthetic.json", terminal=None, grants_authority=False)
+    return proof, tuple(dict.fromkeys((p["intent"]["source_before"], "fresh-after")))
+
+
+def reconcile_fixture(ledger, *, now, note):
+    proof, sources = delivery_resolution(ledger, now=now)
+    ledger.reconcile_effect("logical-1", proof=proof, sources=sources, note=note, now=now)
+    ledger.complete_request(proof["reconciliation_request_id"], "completed", dict(
+        reconciliation=proof, source_ids=list(sources), reason=note, grants_authority=False), now=now)
+    return proof
 
 
 def handoff_binding(**changes):
@@ -101,7 +143,7 @@ class LedgerTests(unittest.TestCase):
         issued = self.issue_handoff()
         self.ledger.begin_request(handoff_claim(issued), now=1003)
         self.ledger.consume_handoff("claim-1", actor_id="replacement-player", actor_role="player", now=1004)
-        values = request("readmit", request_id="readmit-1", epoch=issued["epoch"], handoff_id="handoff-1",
+        values = request("readmit", request_id="readmit-1", epoch=issued["epoch"], mode="handoff", handoff_id="handoff-1",
             claim_request_id="claim-1", sources=[issued["post_pause_source_id"]], expected_session=issued["session"],
             expected_revision=issued["revision"], expected_boundary_id=issued["boundary_id"],
             limits=dict(primitives=1, wall_seconds=10, game_seconds=10))
@@ -167,7 +209,7 @@ class LedgerTests(unittest.TestCase):
         self.ledger.settle_primitive(logical_id, "not_dispatched", {"reason": "Synthetic accounting probe"}, now=now)
 
     def prompt_receipt(self, **changes):
-        value = dict(schema="mission/5", record_type="PhaseReceipt", origin_request_id="request-1",
+        value = dict(schema="mission/6", record_type="PhaseReceipt", origin_request_id="request-1",
             phase_kind="interact", operation="open_consume", stage="awaiting_control", epoch=0,
             actor_id="player-test", controller_boot_id="controller-test", operator_pause_generation=0,
             takeover_generation=0, source_ids=["source-1"], continuity=None, grants_authority=False)
@@ -632,7 +674,7 @@ class LedgerTests(unittest.TestCase):
 
     def test_earlier_ledger_format_is_rejected_without_conversion(self):
         self.ledger.close()
-        for version in (1, 2, 3, 4, 5, 6):
+        for version in (1, 2, 3, 4, 5, 6, 7):
             with self.subTest(version=version):
                 with closing(sqlite3.connect(self.ledger.path)) as connection, connection:
                     connection.execute(f"PRAGMA user_version={version}")
@@ -864,12 +906,13 @@ class LedgerTests(unittest.TestCase):
 
     def test_unknown_ack_remains_unknown_after_separate_effect_and_result(self):
         self.prepared(native=True)
-        self.ledger.settle_primitive("logical-1", "unknown", {"status": "timeout"}, now=1004)
+        receipt = {"status": "timeout", **published_receipt()}
+        self.ledger.settle_primitive("logical-1", "unknown", receipt, now=1004)
         with self.assertRaises(LedgerError): self.ledger.complete_request("request-1", "completed", {"goal": "reached"}, now=1005)
-        self.ledger.reconcile_effect("logical-1", sources=("fresh-after",), note="Controller slots settled; effect separately observed", now=1005)
+        reconcile_fixture(self.ledger, note="Controller custody separately established; original ACK remains unknown", now=1005)
         self.ledger.complete_request("request-1", "completed", {"goal": "reached", "delivery": "unknown"}, now=1006)
         self.assertEqual(self.ledger.primitive("logical-1")["state"], "unknown")
-        self.assertEqual(self.ledger.primitive("logical-1")["result"], {"status": "timeout"})
+        self.assertEqual(self.ledger.primitive("logical-1")["result"], receipt)
         with self.assertRaises(LedgerError): self.ledger.settle_primitive("logical-1", "returned", {"status": "ready"}, now=1007)
         self.assertEqual(self.ledger.snapshot(now=1007)["phase"], "paused")
         self.assertEqual(self.reopen().primitive("logical-1")["state"], "unknown")
@@ -910,7 +953,7 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(LedgerError):
             self.ledger.prepare_primitive("observe-only", "bad-input", intent(), now=1003)
         with self.assertRaises(LedgerError):
-            self.ledger.begin_request({"schema": "mission/5", "kind": "status", "mission_id": "mission-test"}, now=1003)
+            self.ledger.begin_request({"schema": "mission/6", "kind": "status", "mission_id": "mission-test"}, now=1003)
         with self.assertRaises(LedgerError):
             self.ledger.begin_request(skill(mission_id="other", goal={"scope": {"mission_id": "other", "session": "native-session", "coordinate_epoch": 0}, "target": [2, -3, 0]}), now=1003)
         self.ledger.close()
@@ -931,7 +974,10 @@ class LedgerTests(unittest.TestCase):
         self.prepared(native=True)
         self.ledger.finish_mission("stopped", request_id=None, epoch=self.ledger.snapshot(now=1004)["epoch"], reason="Retained failed attempt", now=1004)
         self.ledger.settle_primitive("logical-1", "unknown", {"status": "timeout"}, now=1005)
-        self.ledger.reconcile_effect("logical-1", sources=("fresh-after",), note="Separately observed", now=1006)
+        # A stopped mission cannot admit a new reconciliation or regain input.
+        with self.assertRaises(LedgerError):
+            self.ledger.begin_request(request("reconcile", request_id="late-resolution", epoch=1,
+                unresolved_request_id="request-1", evidence_id="fresh-after", reason="Late evidence"), now=1006)
         self.ledger.complete_request("request-1", "unknown", {"delivery": "unknown"}, now=1007)
         state = self.ledger.snapshot(now=1007)
         self.assertEqual((state["phase"], state["reason"]), ("stopped", "Retained failed attempt"))
@@ -989,8 +1035,8 @@ class LedgerTests(unittest.TestCase):
 
     def test_reopen_rejects_corrupt_intent_effect_result_or_reservation(self):
         self.prepared(native=True)
-        self.ledger.settle_primitive("logical-1", "unknown", {"status": "timeout"}, now=1004)
-        self.ledger.reconcile_effect("logical-1", sources=("fresh-after",), note="Observed", now=1005)
+        self.ledger.settle_primitive("logical-1", "unknown", {"status": "timeout", **published_receipt()}, now=1004)
+        reconcile_fixture(self.ledger, note="Synthetic captured custody", now=1005)
         self.ledger.close()
         original = self.ledger.path.read_bytes()
         mutations = ["UPDATE primitives SET intent='{}'", "UPDATE primitives SET effect='{}'",
@@ -1021,7 +1067,9 @@ class LedgerTests(unittest.TestCase):
                     break
             receipt = {"diagnostic": "x" * 60_000}
             self.ledger.settle_primitive("logical-1", "unknown", receipt, now=1004)
-            self.ledger.reconcile_effect("logical-1", sources=("fresh-after",), note="Observed separately", now=1005)
+            with self.assertRaises(LedgerError):
+                self.ledger.begin_request(request("reconcile", request_id="capacity-resolution", epoch=1,
+                    unresolved_request_id="request-1", evidence_id="fresh-after", reason="Storage full"), now=1005)
             self.ledger.complete_request("request-1", "partial", receipt, now=1006)
             self.assertEqual(self.ledger.primitive("logical-1")["result"], receipt)
             self.assertEqual(self.ledger.request("request-1")["result"], receipt)

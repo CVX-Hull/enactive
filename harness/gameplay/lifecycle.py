@@ -10,6 +10,7 @@ from .campaign_memory import CampaignMemory
 from .contracts import ContractError, EvidenceRef, json_object
 from .evidence import EvidenceError, EvidenceStore
 from .mission_contracts import (
+    effect_reconciliation,
     validate_lifecycle_transition, validate_memory_entry,
     validate_normal_adoption, validate_prompt_result, validate_request, validate_saved_checkpoint,
 )
@@ -203,8 +204,8 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
                  and preflight.session == before.session, "Transition preflight is outside its source interval")
         if primitive["state"] == "unknown":
             effect = primitive["effect"] or {}
-            _require(effect == {"sources": [before.observation_id, after.observation_id],
-                     "note": f"Observed lifecycle {proof['operation']} transition after {proof['native_request_id']}; original ACK remains unknown"},
+            _require(effect == effect_reconciliation(proof, sources=(before.observation_id, after.observation_id),
+                     note=f"Observed lifecycle {proof['operation']} transition after {proof['native_request_id']}; original ACK remains unknown"),
                      "Unknown ACK has no independent retained effect")
             for sid in effect["sources"]:
                 source(sid)

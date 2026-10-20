@@ -376,12 +376,12 @@ class CampaignMemoryTests(unittest.TestCase):
         self.assertEqual(packet["work"][0]["unresolved_effects"], ["logical-1"])
         self.assertEqual(packet["work"][0]["observed_output"][0]["quantity"], 6)
         self.assertEqual(packet["claims"][0]["status"], "last_seen")
-        # Independent later effect evidence cannot rewrite the ACK or attribute
-        # aggregate stock to the selected craft.
+        # A later display is not proof of original input delivery. It cannot
+        # clear unknown custody or attribute aggregate stock to this craft.
         after = self.source(32)
-        self.ledger.reconcile_effect("logical-1", sources=(after.observation_id,), note="Later displayed state observed", now=1000)
+        self.assertIsNotNone(after)
         self.assertEqual(self.ledger.primitive("logical-1")["state"], "unknown")
-        self.assertEqual(self.context()["work"][0]["unresolved_effects"], [])
+        self.assertEqual(self.context()["work"][0]["unresolved_effects"], ["logical-1"])
 
     def test_stale_work_clears_available_and_completion_but_retains_historical_output(self):
         ref = self.source()

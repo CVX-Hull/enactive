@@ -266,6 +266,7 @@ class RegisteredHandoff:
             self.phase = None
         issued = r._ledger.request(phase.handoff_id)["result"]
         return "completed", {"readmission": dict(schema=VERSION, record_type="Readmission",
+            mode="handoff",
             handoff_id=phase.handoff_id, claim_request_id=phase.claim_request_id, player_id=actor, epoch=phase.epoch,
             post_pause_source_id=issued["post_pause_source_id"], revalidated_source_id=ref.observation_id,
             after_source_id=feedback.after.observation_id, logical_id=proposal.logical_id, grants_authority=False),

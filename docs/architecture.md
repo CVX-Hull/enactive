@@ -6,8 +6,8 @@ status: active
 
 # Current architecture
 
-Current source contracts are native4, mission/5, campaign-memory/2, gameplay/2,
-evidence archive3 and mission ledger7. One MissionRuntime owns the live mission API.
+Current source contracts are native4, mission/6, campaign-memory/2, gameplay/2,
+evidence archive3 and mission ledger8. One MissionRuntime owns the live mission API.
 The wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.
 Start is source-free and cannot adopt an unrelated already-running character. The
@@ -40,7 +40,7 @@ Pause and native takeover. Role assignment is procedural, not operating-system i
 | --- | --- | --- |
 | Lead / active Codex chat | Objective → frozen admission, reviewed source and acceptance | Owns shared runtime and integration; no ordinary gameplay rescue in the deciding mission |
 | Designated player / general-purpose agent | Visible evidence and memory → typed mission requests, plans and verification | One bounded actor; fresh-context handoff needs quiescence and one-use accounting; no authority from a summary |
-| Mission runtime / harness maintainer | mission/5 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
+| Mission runtime / harness maintainer | mission/6 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
 | Controller / harness maintainer | State-bound command → native request and correlated receipt | Serialized ordinary/control writers, exact process-local lease, Pause revocation and native fences; never edits saves |
 | Native bridge / integration maintainer | Bounded request → actual input, visible metadata and rendered frame | Engine validates outcomes on its game thread; unsupported boundaries cannot claim success |
 | Spectator / viewer maintainer | Frame and mission snapshot → inspectable progress, uncertainty and Pause | Mission Observe uses typed ingress; raw input/Resume/recovery disabled while nonterminal; malformed state stays locked |
@@ -75,13 +75,13 @@ Activity control transport preserves terminal ACKs before persistence and sends 
 Resume. A registered private activity phase now composes internal stop, exact
 interruption/answer and separately charged Resume in source. Unknown delivery stops;
 known ACKs remain delivery evidence without a frame. Actual native qualification
-and common semantic outcome/recovery remain open.
+remains open; already-returned uninterpretable semantic outcomes stay stopped.
 World-generation forms have no tab-focus mapping. On the final character-description
 screen, NEXT_TAB begins character completion and is blocked as ordinary focus;
 returning to a previous tab remains available. World FINALIZE and character finish
 use explicit registered lifecycle stage commits, separate from ordinary focus.
 
-Ledger7 records Resume under admitted lifecycle/readmission or an exact activity
+Ledger8 records Resume under admitted lifecycle/readmission or an exact activity
 resume child, and charges activity controls through the same primitive table.
 Prepare and reopen share parent/answer rules; prior ledger formats reject unchanged.
 The controller's trusted Resume compares controller boot, operator-Pause counter,
@@ -139,10 +139,18 @@ not native mission evidence.
 The private [recovery holder](../harness/mission_recovery.py) now preserves an
 unknown dispatch's original custody and evidence reservation. It collects actual
 controller delivery evidence once before Observe can overwrite it, through the
-existing files/journal and bounded process-local references. Collection restores
-no authority and leaves the ledger unknown. Typed common reconciliation and
-deliberate readmission still require integration; this is not native recovery
-qualification or an additional executor/history store.
+existing files/journal and bounded process-local references. A framed late result
+is archived against its original reservation before diagnostic Observe. Collection
+restores no authority and leaves the ledger unknown. Explicit reconciliation now
+checks typed proof against the independently retained original dispatch receipt
+and a fresh paused diagnostic source. Separate normal-play readmission charges
+one Resume. Navigation continuation retains the original goal, Work, game-time
+anchor and cumulative root limits; competing roots and handoff remain fenced.
+Reopen validates historical proof but restores no private phase or input consent.
+The single current effect envelope and ledger8 reject older shapes rather than
+converting them. This source integration is not native recovery qualification or
+an additional executor/history store. Ambiguous delivery and unsupported semantic
+uncertainty remain stopped; a later expected-looking frame cannot supply proof.
 The [mission design](design/player-owned-mission.md) owns further integration and
 acceptance. Portable source checks, wire4 menu qualification and actual independent
 normal-game play are separate evidence lanes.

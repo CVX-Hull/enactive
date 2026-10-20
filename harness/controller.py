@@ -954,7 +954,8 @@ class Controller:
                     if received >= end:
                         return None  # Filesystem delay cannot earn late proof credit.
                     if proof is not None:
-                        proof.update(received_monotonic=received, grants_authority=False)
+                        proof.update(received_monotonic=received, collection_started_monotonic=started,
+                                     collection_deadline_monotonic=end, grants_authority=False)
                         self._mission_delivery_evidence[key] = copy.deepcopy(proof)
                         while len(self._mission_delivery_evidence) > 60:
                             self._mission_delivery_evidence.pop(next(iter(self._mission_delivery_evidence)))

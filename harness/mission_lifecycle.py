@@ -547,6 +547,7 @@ class RegisteredLifecycle:
         primitive = r._ledger.primitive(candidate.logical_id)
         if primitive["state"] == "unknown":
             r._ledger.reconcile_effect(candidate.logical_id,
+                proof=proof,
                 sources=(proof["before_source_id"], proof["after_source_id"]),
                 note=f"Observed lifecycle {phase.operation} transition after {candidate.native_request['id']}; original ACK remains unknown", now=r._wall())
         phase = replace(phase, checkpoint=candidate.latest_after, epoch=data["epoch"],

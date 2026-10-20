@@ -338,7 +338,7 @@ separates implemented components from remaining independent-play acceptance.
 1. Freeze the exact reviewed candidate, finite objective/scenario/limits/reserve,
    actor, native build and permission preflight before gameplay. The initial
    admission is not authority to adopt an unrelated open character.
-2. Put one current mission/5 record in project `.runtime/mission-requests/record.json`.
+2. Put one current mission/6 record in project `.runtime/mission-requests/record.json`.
    Use `.venv/bin/python -m harness mission-request --request
    .runtime/mission-requests/record.json` from this trusted checkout. The CLI accepts
    a regular bounded JSON file directly in that directory, validates it and sends

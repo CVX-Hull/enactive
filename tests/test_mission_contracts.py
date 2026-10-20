@@ -38,7 +38,7 @@ def claim(**changes):
 
 
 def request(kind="observe", **changes):
-    fields = dict(schema="mission/5", kind=kind, request_id="request-1", mission_id="mission-test", epoch=0)
+    fields = dict(schema="mission/6", kind=kind, request_id="request-1", mission_id="mission-test", epoch=0)
     if kind == "handoff":
         fields.update(unfinished_work_ids=[])
     if kind == "lifecycle":
@@ -123,10 +123,10 @@ class MissionContractTests(unittest.TestCase):
             with self.assertRaises(ContractError): MissionLimits(wall_seconds=value)
 
     def test_closed_requests_and_scope_binding(self):
-        valid = [request(), {"schema": "mission/5", "kind": "start", "request_id": "start-1", "admission": admission().to_dict()},
-                 {"schema": "mission/5", "kind": "status", "mission_id": "mission-test"},
-                 {"schema": "mission/5", "kind": "result", "mission_id": "mission-test", "operation_id": "old-1"},
-                 {"schema": "mission/5", "kind": "context", "handoff": None, "mission_id": "mission-test", "query": "water", "scope": scope(), "max_bytes": 32768},
+        valid = [request(), {"schema": "mission/6", "kind": "start", "request_id": "start-1", "admission": admission().to_dict()},
+                 {"schema": "mission/6", "kind": "status", "mission_id": "mission-test"},
+                 {"schema": "mission/6", "kind": "result", "mission_id": "mission-test", "operation_id": "old-1"},
+                 {"schema": "mission/6", "kind": "context", "handoff": None, "mission_id": "mission-test", "query": "water", "scope": scope(), "max_bytes": 32768},
                  skill(), request("stop", reason="Pause")]
         for value in valid:
             with self.subTest(kind=value["kind"]): self.assertEqual(validate_request(value), value)
@@ -139,7 +139,7 @@ class MissionContractTests(unittest.TestCase):
         self.assertEqual(validate_request(value), value)
         for changed in ({**value, "finish": False}, {**value, "finish": True},
                         {**value, "schema": "mission/2"}, {**value, "schema": "mission/3"},
-                        {**value, "schema": "mission/4"}):
+                        {**value, "schema": "mission/4"}, {**value, "schema": "mission/5"}):
             with self.subTest(changed=changed), self.assertRaises(ContractError):
                 validate_request(changed)
 
@@ -296,8 +296,8 @@ class MissionContractTests(unittest.TestCase):
             with self.assertRaises(ContractError): validate_visible_ui(bad)
 
     def test_duplicate_nonfinite_oversized_and_mutable_alias_inputs_reject(self):
-        for value in ['{"schema":"mission/5","kind":"observe","kind":"stop"}',
-                      '{"schema":"mission/5","kind":"observe","epoch":NaN}',
+        for value in ['{"schema":"mission/6","kind":"observe","kind":"stop"}',
+                      '{"schema":"mission/6","kind":"observe","epoch":NaN}',
                       ' ' * MAX_REQUEST_BYTES + json.dumps(request())]:
             with self.assertRaises(ContractError): validate_request(value)
         original = skill(); parsed = validate_request(original)

@@ -111,7 +111,7 @@ planner and supervisor components below remain source/study tools, not another
 execution ingress. The [mission design](design/player-owned-mission.md) owns the
 chosen records, lifecycle requirements and separate native acceptance.
 
-Authenticated `POST /api/mission` accepts one strict mission/5 record, at most65536
+Authenticated `POST /api/mission` accepts one strict mission/6 record, at most65536
 UTF-8 bytes. It reuses host/origin/token and finite/duplicate-key JSON validation;
 operator command/recovery bodies keep4096-byte limits. Required fields and closed
 variants live in [mission_contracts.py](../harness/gameplay/mission_contracts.py),
@@ -127,7 +127,9 @@ source tests through the real controller, ledger and evidence archive. Quiescent
 successor handoff and deliberately charged readmission also compose in source.
 Selected item/inspection roots, owned quantity editing and one-observation activity
 polls and registered activity interruption/answer/resumption now compose in source.
-Common semantic outcome/recovery still needs integration; normal finish has source coverage.
+Selected delivery reconciliation and separate normal-play readmission now compose
+in source; normal finish has source coverage. Unsupported semantic uncertainty
+remains stopped rather than being passed through unknown-delivery reconciliation.
 Native acceptance remains pending.
 Neither synthetic UI tests nor tests assuming identity accept an independent mission. Observe likewise cannot adopt
 an unexplained normal session. Reopening restores neither phase nor input authority.
@@ -197,11 +199,11 @@ history but reconstructs no process handle, phase, lineage, lease or queued inpu
 Actual native creation/save/load and independent mission acceptance remain pending.
 
 `lifecycle(operation=finish)` is the sole normal finish route. Stop carries only
-its Pause reason; former Stop `finish` fields and mission/2, mission/3 or mission/4 records reject. The
-current mission/5 contract migrates CLI, viewer, requests, results and fixtures
+its Pause reason; former Stop `finish` fields and mission/2, mission/3, mission/4 or mission/5 records reject. The
+current mission/6 contract migrates CLI, viewer, requests, results and fixtures
 without an alias or automatic old-admission import. Native wire4, gameplay/2,
 campaign-memory/2 and archive3 remain unchanged. Prior accepted reports and raw
-mission/2, mission/3 and mission/4 artifacts remain historical evidence, not current request inputs.
+mission/2, mission/3, mission/4 and mission/5 artifacts remain historical evidence, not current request inputs.
 
 Finish sends no Observe, Resume or game input. It requires empty writer/controller/
 native slots, no live phase or unresolved effect, every owned launch's unique
@@ -226,7 +228,7 @@ native final shutdown or the independent mission.
 
 ### Selected item, inspection and activity composition
 
-Mission/5 adds explicit item units (`items` or `charges`) and root/select/commit
+Mission/6 retains explicit item units (`items` or `charges`) and root/select/commit
 steps. The pure [item policy](../harness/gameplay/interactions.py) checks exact
 represented target, native row contradictions, known availability and chosen
 count. A focus batch sends at most eight observed arrows and never confirms.
@@ -286,9 +288,10 @@ Resume is a separate charged activity child, eligible only at a fresh paused
 normal/menu boundary under the original operator mark. It grants no lease until
 its verified return; root/child/mission time and actor fences still apply before
 publishing a new prompt or normal source. A newer user Pause wins throughout.
-Ledger7 rejects earlier formats before mutation; there is no compatibility reader.
+Ledger8 rejects earlier formats before mutation; there is no compatibility reader.
 Reopening restores neither the private phase nor authority. Source tests do not
-qualify native gameplay. Common semantic outcome/recovery remains separate work.
+qualify native gameplay. Already-returned but uninterpretable semantic outcomes
+remain unsupported by delivery reconciliation.
 
 ### Quiescent player replacement
 
@@ -410,13 +413,49 @@ after delayed file reads. Filesystem stalls themselves cannot be interrupted by
 this software deadline. Host locks do not serialize the native response writer;
 an uncaptured terminal result may be overwritten by Observe and stay ambiguous.
 
-The existing journal records the collection and its original capture clock.
-This neither accepts the old response as current, retires pending custody,
-resolves the ledger effect, refunds costs nor sends Resume. User Pause/takeover
-revokes eligibility while retaining uncertain capacity/costs; reopen restores no
-candidate. Registered lifecycle keeps its own transition handling. Typed generic
-reconciliation, reservation disposal and separate charged readmission remain
-unfinished; the declared reconcile request is not yet a general recovery path.
+The existing journal records collection start, deadline and receipt clocks. A
+framed terminal result consumes its original reserved archive capacity before
+Observe changes the current source; unavailable or stale frame bytes stop this
+path. Exact unclaimed retirement or a frameless terminal result releases only its
+unused reservation on explicit reconciliation. Collection alone neither accepts
+the response as current, resolves the ledger effect, refunds cost nor sends Resume.
+
+`reconcile` requires the exact original unresolved request, captured private proof
+and current fresh paused same-session diagnostic source. A later frame or model
+assertion cannot replace missing delivery proof. The uniform closed
+`EffectReconciliation` envelope is bounded to32768bytes and has exactly one typed
+basis: `DeliveryResolution`, `LifecycleTransition` or `OwnedNormalExit`. Write and
+reopen validate its basis semantics and correlate the original request/root/Work,
+actor/epochs, primitive/native mapping, canonical native request, independently
+retained dispatch binding, collection clocks and source IDs. Reconciliation leaves
+the immutable unknown ACK and cumulative charge intact and grants no lease. A
+correctable stale/wrong diagnostic selection allows fresh Observe and a new
+read-only reconciliation request under the same original bounds; authority changes
+or missing proof do not. A proof committed before a crash without its semantic
+receipt cannot authorize readmission. Reopen restores no candidate or consent.
+
+`readmit` has explicit closed `handoff` and `recovery` modes. Recovery names the
+completed reconciliation, original root and Work, exact sources and live binding.
+It requires fresh equivalent normal play, sends one separately charged deliberate
+Resume through the existing writer, then acquires the same actor/epoch lease.
+Menus, editors, confirmations and activities cannot regain private ownership from
+history. Unknown Resume stops without recursive recovery. User Pause/takeover
+revokes eligibility while preserving uncertainty/capacity/costs. Registered
+lifecycle keeps its own transition handling through the same effect envelope.
+
+A navigation suffix names the original root and unchanged goal/scope/Work. Resume
+and suffix share that root's original primitive/wall limits and first game-time
+anchor; checks apply before input and after returned effects. Pending continuation
+fences ordinary competing skill/lifecycle roots and handoff/claim/readmit until a
+verified terminal suffix or explicit stop. Historical phase IDs grant no authority.
+This selected source path does not establish semantic success, native recovery or
+general recovery from already-returned but uninterpretable outcomes.
+
+Mission/6 and ledger8 migrate all current producers, callers and persisted readers
+together. Earlier mission versions, ledger7 and its old untyped effect shape reject
+without conversion. Retain old mission artifacts and saves as evidence; only a
+separately admitted current mission can start anew. Migration never resets input
+costs, renews a stopped attempt or restores execution authority.
 
 ## Transport and state
 
@@ -649,7 +688,7 @@ and journal evidence, granting no authority, replay or inferred resolution.
 
 The lead designates one general-purpose player for a finite mission. It chooses
 plans, interprets evidence, retrieves/updates memory and requests semantic skills
-and registered normal lifecycle through mission/5. The lead owns source/release
+and registered normal lifecycle through mission/6. The lead owns source/release
 acceptance, finite admission, shared runtime custody, escalation and final
 verification. It supplies no ordinary gameplay rescue in the deciding mission.
 Explorers/reviewers never send inputs. Actor names and instructions are workflow
