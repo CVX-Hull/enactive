@@ -2221,11 +2221,12 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     started = time.monotonic()
                     future = pool.submit(self.controller.observe_mission,
                         deadline_monotonic=started + 0.08, timeout=1)
-                    result = future.result(0.5)
+                    result, received = future.result(0.5)
                     self.assertLess(time.monotonic() - started, 0.5)
             finally:
                 self.controller.command_lock.release()
             self.assertEqual(result["status"], "controller_error", result)
+            self.assertIsNone(received)
             self.assertEqual(fake.requests, [])
             self.assertEqual(self.controller._command_work, 0)
             self.assertEqual(self.controller.unknown_outcomes, [])
@@ -2233,13 +2234,15 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
     def test_trusted_observe_deadline_caps_native_publication_and_rejects_bad_clocks(self):
         with FakeBridge(self.controller) as fake:
             deadline = time.monotonic() + 1
-            result = self.controller.observe_mission(deadline_monotonic=deadline, timeout=2)
+            result, received = self.controller.observe_mission(deadline_monotonic=deadline, timeout=2)
             self.assertEqual(result["status"], "ready", result)
+            self.assertIsNotNone(received)
             self.assertEqual(len(fake.requests), 1)
             self.assertLessEqual(fake.requests[0]["deadline_ms"], int(time.time() * 1000) + 1000)
             for invalid in (True, -1, float("nan"), float("inf"), "later"):
-                result = self.controller.observe_mission(deadline_monotonic=invalid)
+                result, received = self.controller.observe_mission(deadline_monotonic=invalid)
                 self.assertEqual(result["status"], "controller_error", (invalid, result))
+                self.assertIsNone(received)
             self.assertEqual(len(fake.requests), 1)
             self.assertEqual(fake.delivered, [])
 

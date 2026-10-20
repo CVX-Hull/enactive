@@ -988,6 +988,8 @@ class MissionLedger:
                     raise LedgerError("Orphan load effect lacks its registered selection confirmation")
             elif intent["value"] != "YES" or not self._exit_confirmation(intent, parent["request"]):
                 raise LedgerError("Orphan exit effect lacks its exact normal-exit confirmation")
+            elif proof["no_save_required"]:
+                self._check_menu_cleanup_sources(proof, root["request_id"])
             return
         owner = self._earlier_request(proof["reconciliation_request_id"], proof["original_request_id"])
         resolution = self.request(proof["reconciliation_request_id"])
@@ -1376,6 +1378,103 @@ class MissionLedger:
         return (refreshed.rule == "exact_png_bytes" and refreshed.original.source_id == view.get("source_id")
                 and refreshed.current.source_id == intent["source_before"])
 
+    def menu_cleanup_resume(self, launch_request_id: str, *, exit_root_id: str | None = None) -> dict | None:
+        """Audit pre-character input history; bytes/live custody remain runtime checks.
+
+        The current exit subtree is outside the cutoff. An earlier exit must have
+        no inputs or a settled deliberate No. A returned Resume is delivery, never
+        gameplay or a saved checkpoint. Unknown/prepared input cannot qualify.
+        """
+        rows = self.request_records()
+        positions = {row["request"]["request_id"]: index for index, row in enumerate(rows)}
+        if launch_request_id not in positions or exit_root_id is not None and exit_root_id not in positions:
+            raise LedgerError("Menu cleanup lost its exact launch/exit root")
+        start = positions[launch_request_id]
+        stop = len(rows) if exit_root_id is None else positions[exit_root_id]
+        if stop <= start:
+            raise LedgerError("Menu cleanup exit precedes its launch")
+        selected = rows[start + 1:stop]
+        selected_ids = {row["request"]["request_id"] for row in selected}
+        indexed = {row["request"]["request_id"]: row for row in rows}
+        primitives = self.primitive_records()
+        setup = []
+        for row in selected:
+            data = row["request"]
+            if data["kind"] == "lifecycle" and data["operation"] in ("create", "load", "save"):
+                if row["state"] in ("accepted", "running", "unknown"):
+                    raise LedgerError("Menu cleanup cannot interrupt unsettled character setup")
+            if data["kind"] == "lifecycle" and data["operation"] == "exit" and data["phase_id"] is None:
+                family = [member for member in selected if member["request"]["request_id"] == data["request_id"]
+                          or member["request"].get("phase_id") == data["request_id"]]
+                identities = {member["request"]["request_id"] for member in family}
+                inputs = [p for p in primitives if p["request_id"] in identities]
+                self._check_prior_menu_exit(family, inputs)
+        for primitive in primitives:
+            if primitive["request_id"] not in selected_ids:
+                continue
+            data = indexed[primitive["request_id"]]["request"]
+            root = indexed[data.get("phase_id") or data["request_id"]]["request"]
+            if root["kind"] == "lifecycle" and root["operation"] == "exit":
+                continue
+            setup.append(primitive)
+        if not setup:
+            return None
+        if len(setup) != 1:
+            raise LedgerError("No-save cleanup permits only one returned setup Resume")
+        primitive = setup[0]
+        owner = indexed[primitive["request_id"]]
+        data, intent, receipt = owner["request"], primitive["intent"], primitive["result"] or {}
+        native = json_object(receipt["native_request_json"]) if receipt.get("native_request_json") else {}
+        binding = receipt.get("dispatch_binding") or {}
+        if (data["kind"] != "lifecycle" or data["operation"] != "create" or data["phase_id"] is not None
+                or primitive["state"] != "returned" or primitive["effect"] is not None
+                or intent["kind"] != "resume" or intent["value"] is not None
+                or primitive["native_id"] is None or receipt.get("published") is not True
+                or receipt.get("transport_disposition") != "returned"
+                or receipt.get("logical_action_id") != primitive["logical_id"]
+                or receipt.get("native_request_id") != primitive["native_id"]
+                or any(receipt.get(key) != intent[key] for key in ("kind", "value", "expected_session",
+                    "expected_revision", "expected_boundary_id", "source_before", "preflight_source"))
+                or not receipt.get("source_after") or receipt.get("received_monotonic") is None
+                or native.get("protocol") != 4 or native.get("kind") != "resume"
+                or native.get("id") != primitive["native_id"] or native.get("require_exact_frame") is not True
+                or native.get("session") != intent["expected_session"]
+                or native.get("revision") != intent["expected_revision"]
+                or native.get("boundary_id") != intent["expected_boundary_id"]
+                or native.get("takeover_generation") != binding.get("takeover_generation")
+                or native.get("authority", {}).get("controller_boot_id") != binding.get("controller_boot_id")
+                or set(binding) != {"controller_boot_id", "operator_pause_generation", "takeover_generation",
+                                    "actor_id", "epoch", "game_anchor_source_id"}
+                or not isinstance(binding.get("controller_boot_id"), str) or not binding["controller_boot_id"]
+                or binding.get("epoch") != owner["epoch"]
+                or binding.get("actor_id") != self._get("admission")["player_id"]
+                or any(type(binding.get(key)) is not int or binding[key] < 0
+                       for key in ("operator_pause_generation", "takeover_generation", "epoch"))):
+            raise LedgerError("Menu cleanup lost its exact returned Resume/native correlation")
+        return primitive
+
+    @staticmethod
+    def _check_prior_menu_exit(family: list[dict], inputs: list[dict]) -> None:
+        if any(member["state"] in ("accepted", "running", "unknown") for member in family):
+            raise LedgerError("Menu cleanup cannot skip an unsettled prior exit")
+        if not inputs:
+            return
+        expected = [("resume", None, "returned"), ("action", "QUIT", "returned"), ("action", "NO", "returned")]
+        actual = [(p["intent"]["kind"], p["intent"]["value"], p["state"]) for p in inputs]
+        final = next(member for member in family if member["request"]["request_id"] == inputs[-1]["request_id"])
+        result, data = final["result"] or {}, final["request"]
+        if (actual != expected or final["state"] != "partial" or result.get("normal_exit_verified") is not False
+                or result.get("phase", {}).get("stage") != "complete"
+                or (data.get("perception") or {}).get("question") != "Really quit?"
+                or data.get("goal", {}).get("label") != "No"):
+            raise LedgerError("Menu cleanup cannot skip an unverified prior exit")
+
+    def _check_menu_cleanup_sources(self, proof: dict, root_id: str) -> None:
+        resume = self.menu_cleanup_resume(proof["launch_request_id"], exit_root_id=root_id)
+        if resume is not None and not {resume["intent"]["source_before"], resume["intent"]["preflight_source"],
+                                      resume["result"]["source_after"]} <= set(proof["source_ids"]):
+            raise LedgerError("No-save exit omitted its returned Resume evidence")
+
     def _check_normal_exit(self, request_id: str, data: dict, result: dict) -> None:
         proof = validate_normal_exit(result["normal_exit"])
         phase = result.get("phase", {})
@@ -1425,6 +1524,8 @@ class MissionLedger:
                 raise LedgerError("Saved-character exit lost its same-child saved checkpoint")
         elif phase.get("no_save_required") is not True:
             raise LedgerError("Untouched-menu exit cannot borrow a saved-character phase")
+        else:
+            self._check_menu_cleanup_sources(proof, root["request_id"])
 
     def complete_request(self, request_id: str, disposition: str, result: dict, *, now: float) -> dict:
         if disposition not in REQUEST_STATES - {"accepted", "running"}: raise LedgerError("Invalid operation result")

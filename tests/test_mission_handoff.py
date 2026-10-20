@@ -100,6 +100,22 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
         self.assertIsNone(self.runtime._lease)
         self.assertIsNone(self.runtime._registered_handoff.phase)
 
+    def test_passive_capture_at_handoff_keeps_the_exact_retained_checkpoint(self):
+        from tests.test_mission_observation_churn import passive_capture
+        self.create()
+        capture = self.runtime._capture_memory
+        def captured(reference):
+            capture(reference)
+            passive_capture(self.controller, self.bridge)
+        with patch.object(self.runtime, "_capture_memory", side_effect=captured):
+            issued = self.handoff()
+        self.assertEqual(issued["state"], "completed", issued)
+        checkpoint = self.runtime._registered_handoff.phase.checkpoint
+        source = self.runtime._store.observation(checkpoint)
+        self.assertNotEqual(source["frame"], self.controller.state["frame"])
+        self.assertEqual(issued["result"]["post_pause_source_id"], checkpoint.observation_id)
+        self.assertIsNone(self.runtime._lease)
+
     def test_predecessor_context_does_not_satisfy_successor_claim(self):
         self.create()
         self.handoff()

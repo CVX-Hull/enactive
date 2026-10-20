@@ -158,6 +158,26 @@ class ActivityRecoveryTests(unittest.TestCase):
         self.assertEqual(self.runtime._ledger.memory_records("work"), ())
         self.runtime._ledger._verify(self.a)
 
+    def test_passive_capture_after_interrupt_ack_preserves_phase_and_receipt(self):
+        from tests.test_mission_observation_churn import passive_capture
+        self.prepare()
+        recover = self.controller.recover_mission
+        originals = []
+        def acknowledged(*args, **kwargs):
+            raw = recover(*args, **kwargs)
+            originals.append(copy.deepcopy(raw))
+            self.assertEqual(raw["result"]["status"], "prompt_opened")
+            passive_capture(self.controller, self.bridge)
+            return raw
+        with patch.object(self.controller, "recover_mission", side_effect=acknowledged):
+            result = self.recovery("interrupt")
+        self.assertEqual(result["state"], "partial", result)
+        self.assertEqual(result["result"]["phase"]["stage"], "interrupt_confirmation")
+        receipt = self.runtime._ledger.primitive_records()[-1]["result"]
+        self.assertEqual(receipt["control"]["result"], originals[0]["result"])
+        self.assertEqual(receipt["received_monotonic"], originals[0]["received_monotonic"])
+        self.assertIsNone(self.runtime._lease)
+
     def test_no_keeps_activity_running_paused_and_observe_never_resumes(self):
         self.prepare()
         self.recovery("interrupt")

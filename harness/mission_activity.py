@@ -12,7 +12,7 @@ from typing import Any
 
 from .controller import ControlError, validate_control_request, validate_control_response
 from .gameplay.contracts import ContractError, EvidenceRef
-from .gameplay.evidence import EvidenceError
+from .gameplay.evidence import EvidenceError, same_native_state
 from .gameplay.mission_ledger import BudgetError
 
 
@@ -255,7 +255,7 @@ class RegisteredActivity:
         native = raw["result"]["state"]
         live = r._live()
         expected_generation = phase.generation + int(native["boundary"]["control_generation"] != phase.control_generation)
-        if (self.phase is not phase or phase.operator_mark != r._operator_mark() or live[0] != native
+        if (self.phase is not phase or phase.operator_mark != r._operator_mark() or not same_native_state(live[0], native)
                 or live[1] != expected_generation or r.controller.transport_error or live[3] is not None or live[5]):
             raise ControlError("Activity ACK retained; later authority or persistence fault blocks continuation")
         owner = raw["request"]["id"] if raw["result"]["status"] == "prompt_opened" else phase.interrupt_id

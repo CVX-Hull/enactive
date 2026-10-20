@@ -82,6 +82,14 @@ absolute monotonic intent/task deadline is checked after queueing/preflight and
 under the publication lock; it bounds both exchanges and the native deadline.
 `observation_snapshot()` returns a copied current observation and original first
 receipt clock. Reading a snapshot does not renew its freshness.
+Passive captures may change transport id, timestamp and frame filename without
+changing native state. Live-versus-retained comparison excludes only those three
+fields; it retains status/error/frame validity and complete semantic/Pause/takeover
+state. This grants no freshness or image equivalence. Immutable ACK/UUID and
+retained preflight correlation remain exact; image-informed inputs retain their
+PNG and native commit checks. Recovery hashes the sampled live PNG outside the
+Pause lock and fences its frame identity. Interruption answers still require their
+exact native frame, so an intervening capture can stop before publication.
 
 The trusted Python-only `preflight` callback receives that copied Observe and
 actual receipt after boundary/lease/image checks, inside the command lock but
@@ -163,8 +171,18 @@ validated committed OwnedNormalExit resolves that launch's historical custody.
 Otherwise attempted/uncertain launches remain unavailable, with no PID adoption.
 Process absence or exit code alone cannot prove a normal save/exit.
 
-Registered `exit` covers the same owned untouched MAIN_MENU or a menu reached by
-this child's validated SavedCheckpoint. The saved branch requires the exact final
+Registered `exit` covers the same owned untouched MAIN_MENU, a verified Resume-only
+pre-character menu, or a menu reached by this child's validated SavedCheckpoint.
+Resume-only eligibility requires exactly one correlated returned creation Resume,
+no other setup input, unknown, transition candidate or normal-play evidence. The
+fresh internally paused menu must retain the immutable launch pixels and expected
+Resume revision/control transition under the original operator/takeover mark.
+Read-only Observe can adopt that private cleanup checkpoint; it grants no input.
+Ledger write/reopen/orphan checks audit the original Resume mapping/source IDs;
+runtime and EvidenceStore own PNG and live-authority checks. An earlier exit must
+have no inputs or its fully settled verified No; pending/unknown exit inputs cannot
+be skipped by a new root. This does not handle arbitrary setup rollback or restore
+consent after user Pause. The saved branch requires the exact final
 normal endpoint and its original first menu source, even after later observations.
 It retains the launch's original operator mark.
 A source-bound root charges distinct Resume and QUIT primitives, then awaits an
@@ -360,6 +378,8 @@ Trusted Python `observe_mission(deadline_monotonic, timeout)` uses the original
 absolute deadline through command-lock admission and native publication. It grants
 no input capability and is absent from public command JSON. A timed queue refusal
 is explicit; it never starts another relative timeout after the root expires.
+It returns the exact response and its original exchange receipt time as a pair.
+Later status captures cannot replace the retained response or renew that receipt.
 
 The CLI exposes `mission-request --request PATH` for a current typed record directly
 in project `.runtime/mission-requests/`, regular JSON only, no symlink/script or

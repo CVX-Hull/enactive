@@ -45,6 +45,13 @@ cleanup and stopped Finish succeeded. Source now refreshes the exact guarded
 checkpoint inside Resume and exit confirmation; native character retesting remains
 required. The failed attempt and its unknown final cleanup ACK stay retained.
 
+[Qualification002](acceptance/2026-10-20-native-capture-churn.md) refreshed Resume
+successfully, then failed before the first menu input on passive capture metadata
+churn. Pre-character normal cleanup also blocked; one exceptional termination was
+needed, with no normal-exit acceptance. Source now distinguishes capture identity
+from native state and supports strictly verified Resume-only cleanup. Real native
+character lifecycle and independent-player acceptance remain pending.
+
 The [seven-day functional campaign](acceptance/2026-10-19-seven-day-survival.md)
 records the same normally created Ned Meyers / Belgium, ordinary supplies and
 water treatment, shelter/rest, midpoint save/restart/exact reload, a genuine

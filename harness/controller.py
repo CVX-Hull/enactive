@@ -20,6 +20,7 @@ from typing import Any, Callable
 
 from harness.movement import DIRECTIONS, MovementBlocked, guard, observed_step
 from harness.gameplay.contracts import ContractError
+from harness.gameplay.evidence import same_native_state
 from harness.gameplay.mission_contracts import PAUSE_ORIGINS, validate_visible_ui
 
 MAX_REQUEST = 4096
@@ -584,11 +585,13 @@ class Controller:
                         self._check_mission_recovery(observed, binding, expected_generation, kind,
                                                      interrupt_request_id)
                     received = observation_receipt["received_monotonic"]
+                    checked_frame = observed["frame"]
 
                     def check_preflight() -> None:
                         self._check_mission_recovery(observed, binding, expected_generation, kind,
                                                      interrupt_request_id)
-                        if self.state != observed or self._pause_snapshot() != pause_snapshot:
+                        if (not same_native_state(self.state, observed) or self.state["frame"] != checked_frame
+                                or self._pause_snapshot() != pause_snapshot):
                             raise ControlError("Native boundary, frame or Pause changed during recovery preflight")
                         if not 0 <= time.monotonic() - received <= 3:
                             raise ControlError("Final preflight observation expired")
@@ -609,6 +612,9 @@ class Controller:
                     # Retention and image I/O cannot hold up operator Pause.
                     if expected_image_sha256 is not None and self._frame_sha256(observed) != expected_image_sha256:
                         raise ControlError("Final preflight image changed during recovery preflight")
+                    checked_frame = self._preflight_capture(observed, expected_image_sha256)
+                    if kind == "answer_interrupt" and checked_frame != observed["frame"]:
+                        raise ControlError("Interruption answer lost its exact native frame before publication")
                     with self.data_lock:
                         check_preflight()
                         authority = self.authority.copy()
@@ -1444,9 +1450,11 @@ class Controller:
         finally:
             self.command_lock.release()
 
-    def observe_mission(self, *, deadline_monotonic: float, timeout: float | None = None) -> dict[str, Any]:
-        """Trusted bounded passive read, including queueing; no JSON authority field."""
-        return self._execute("observe", timeout, {}, None, deadline_monotonic=deadline_monotonic)
+    def observe_mission(self, *, deadline_monotonic: float | None, timeout: float | None = None) -> tuple[dict, float | None]:
+        """Passive read and its exact receipt; later status polling cannot renew it."""
+        receipt = {"received_monotonic": None}
+        result = self._execute("observe", timeout, {}, None, deadline_monotonic=deadline_monotonic, receipt=receipt)
+        return result, receipt["received_monotonic"]
 
     def execute(self, kind: str, *, timeout: float | None = None,
                 expected_generation: int | None = None, **payload: Any) -> dict[str, Any]:
@@ -1575,7 +1583,7 @@ class Controller:
                 if remaining > 0:
                     raise ControlError("Prior request deadline has not passed; wait before reconciliation")
                 self._pause_file()
-            result = self._exchange("observe", timeout, deadline_monotonic=deadline_monotonic)
+            result = self._exchange("observe", timeout, deadline_monotonic=deadline_monotonic, receipt=receipt)
             if result["status"] == "ready":
                 self._reconcile_expired_control(result)
                 with self.data_lock:
@@ -1631,13 +1639,14 @@ class Controller:
                         # A normal storage/capacity/contract failure proves no input
                         # publication. Crashes/BaseException retain durable unknowns.
                         raise ControlError(f"Mission preflight failed: {type(exc).__name__}: {exc}") from exc
+                checked_frame = self._preflight_capture(observed, expected_image_sha256)
                 with self.data_lock:
                     self._check_owner(lease, generation)
                     if (self.control_lock.locked() or self.control_pending is not None
                             or self.pending is not None or any((self.bridge / name).exists() for name in
                             ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
                         raise ControlError("Native or recovery work appeared during preflight")
-                    if self.state != observed:
+                    if not same_native_state(self.state, observed) or self.state["frame"] != checked_frame:
                         raise ControlError("Native boundary or frame changed during preflight")
                     if resume_binding is not None:
                         self._check_mission_resume(observed, resume_binding, generation)
@@ -1673,6 +1682,22 @@ class Controller:
                 else:
                     self.pause_requested = result["paused"]
         return result
+
+    def _preflight_capture(self, observed: dict, expected_image_sha256: str | None) -> str:
+        """Verify a passive replacement frame outside the revocation lock.
+
+        A changed filename is acceptable only with actual identical PNG bytes,
+        never merely because a status record claims the same native boundary.
+        The caller fences this verified filename again before publication.
+        """
+        current, _ = self.observation_snapshot()
+        if not same_native_state(current, observed):
+            raise ControlError("Native state changed during preflight")
+        if current["frame"] != observed["frame"]:
+            expected = expected_image_sha256 or self._frame_sha256(observed)
+            if self._frame_sha256(current) != expected:
+                raise ControlError("Live preflight image differs from the captured image")
+        return current["frame"]
 
     def _frame_sha256(self, observed: dict[str, Any]) -> str:
         """Hash only the actual native immutable frame, outside the data lock."""

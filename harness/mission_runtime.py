@@ -24,7 +24,7 @@ from .mission_activity import ActivityFeedback, ActivityIntent, ActivityPhase, R
 from .mission_recovery import RecoveryEvidenceError, RecoveryPhase, RegisteredRecovery
 from .gameplay.campaign_memory import CampaignMemory
 from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
-from .gameplay.evidence import MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore
+from .gameplay.evidence import MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore, same_native_state
 from .gameplay.interaction import MenuIntent, MenuOutcome, MenuSkill
 from .gameplay.mission_contracts import (
     VERSION, MissionAdmission, SourceBinding, SourceRevalidation, canonical, validate_request,
@@ -553,7 +553,7 @@ class MissionRuntime:
         state, generation, boot = self._check_lease()
         ledger = self._ledger.snapshot(now=self._wall())
         observed = self._store.observation(reference)
-        if state != observed:
+        if not same_native_state(state, observed):
             raise EvidenceError("Source differs from the exact live controller observation")
         return SourceBinding(reference.observation_id, self._admission.mission_id, ledger["epoch"],
             ledger["player_id"], boot, generation, state["takeover_generation"], self._store.authority_generation())
@@ -587,15 +587,14 @@ class MissionRuntime:
         self._check_cancelled(work)
         self._registered_recovery.before_observe(work, deadline_monotonic=deadline_monotonic)
         self._check_cancelled(work)
-        result = (self.controller.execute("observe", timeout=timeout) if deadline_monotonic is None else
-                  self.controller.observe_mission(deadline_monotonic=deadline_monotonic, timeout=timeout))
+        result, received = self.controller.observe_mission(deadline_monotonic=deadline_monotonic, timeout=timeout)
         self._check_cancelled(work)
-        state, received = self.controller.observation_snapshot()
-        if result.get("status") != "ready" or state != result or received is None:
+        state, _ = self.controller.observation_snapshot()
+        if result.get("status") != "ready" or not same_native_state(state, result) or received is None:
             raise ControlError("Fresh exact Observe unavailable; registered lifecycle may be needed")
         if not math.isfinite(received) or received > self._clock():
             raise EvidenceError("Observe lacks a finite original receipt")
-        return state, received
+        return result, received
 
     def _ingest(self, state: dict, received: float, *, reservation=None) -> EvidenceRef:
         reference = self._store.ingest(state, received_monotonic=received, reservation=reservation, **self._clocks())
@@ -705,8 +704,9 @@ class MissionRuntime:
         reference = self._ingest(state, received)
         owned = self._owned_launch
         if (owned is not None and self._native is not None and owned.operator_mark == self._operator_mark()
-                and self._native.status()["running"] and state["category"] == "MAIN_MENU"
-                and state["paused"] and self._store.equivalent(owned.checkpoint, reference, rule="exact_png_bytes")):
+                and self._native.status()["running"] and state["category"] == "MAIN_MENU" and state["paused"]
+                and (self._store.equivalent(owned.checkpoint, reference, rule="exact_png_bytes")
+                     or self._resume_only_menu(owned, reference))):
             self._owned_launch = replace(owned, checkpoint=reference)
             self._record("mission_owned_menu_checkpoint", {"before": owned.checkpoint.observation_id,
                 "after": reference.observation_id, "rule": "exact_png_bytes", "grants_authority": False})
@@ -1099,16 +1099,55 @@ class MissionRuntime:
         if (self._native_facts["launch_id"] != launch.launch_id or not self._native_facts["running"]
                 or self._operator_mark() != launch.operator_mark):
             raise ControlError("Owned menu custody or original operator mark changed")
-        rows = self._ledger.request_records()
-        start = next(index for index, row in enumerate(rows) if row["request"]["request_id"] == launch.request_id)
-        primitive_requests = {p["request_id"] for p in self._ledger.primitive_records()}
-        if (self._registered_lifecycle.normal_after_launch()
-                or any(row["request"]["kind"] == "lifecycle" and row["request"]["operation"] in
-                       ("create", "load", "save") and (row["state"] in ("accepted", "running") or
-                        row["request"]["request_id"] in primitive_requests)
-                       for row in rows[start:])) and self._registered_lifecycle.saved_exit_checkpoint() is None:
-            raise ControlError("Normal gameplay requires its own verified saved checkpoint before menu exit")
+        if self._registered_lifecycle.saved_exit_checkpoint() is None:
+            if self._registered_lifecycle.normal_after_launch():
+                raise ControlError("Normal gameplay requires its own verified saved checkpoint before menu exit")
+            root = self._exit_phase.root_id if self._exit_phase is not None else (
+                self._active.request["request_id"] if self._active is not None
+                and self._active.request.get("operation") == "exit" else None)
+            self._ledger.menu_cleanup_resume(launch.request_id, exit_root_id=root)
         return launch
+
+    def _resume_only_menu(self, launch: _OwnedLaunch, reference: EvidenceRef) -> bool:
+        """Adopt only the internally paused menu after one proven setup Resume.
+
+        Uses immutable launch/dispatch evidence, not caller assertions or process
+        exit codes. It authorizes no input; a separate normal-exit root is needed.
+        """
+        if (self._registered_lifecycle.phase is not None or self._registered_lifecycle.candidate is not None
+                or self._registered_lifecycle.normal_after_launch() or self._exit_candidate is not None
+                or self._lease is not None or self._live()[5]
+                or any((self.controller.bridge / name).exists() for name in
+                       ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
+            return False
+        primitive = self._ledger.menu_cleanup_resume(launch.request_id)
+        if primitive is None:
+            return False
+        intent, receipt = primitive["intent"], primitive["result"]
+        refs = {ref.observation_id: ref for ref in self._store.historical_references}
+        baseline = refs[self._ledger.request(launch.request_id)["result"]["source_ids"][0]]
+        before, preflight, after = (refs[identity] for identity in (
+            intent["source_before"], intent["preflight_source"], receipt["source_after"]))
+        binding = receipt["dispatch_binding"]
+        original, resumed, current = (self._store.observation(ref) for ref in (baseline, after, reference))
+        expected = copy.deepcopy(original)
+        expected.update(revision=before.revision + 1, paused=False, pause_origin="none")
+        expected["boundary"]["control_generation"] += 1
+        paused = copy.deepcopy(expected)
+        paused.update(paused=True, pause_origin="host")
+        ledger = self._ledger.snapshot(now=self._wall())
+        return (launch.operator_mark == self._operator_mark() and ledger["clock_valid"] and not ledger["unreconciled"]
+            and binding["controller_boot_id"] == launch.operator_mark[0]
+            and binding["operator_pause_generation"] == launch.operator_mark[1]
+            and binding["takeover_generation"] == launch.takeover_generation
+            and binding["actor_id"] == ledger["player_id"]
+            and original["category"] == "MAIN_MENU" and not original["in_game"] and original["paused"]
+            and self._store.equivalent(baseline, before, rule="exact_png_bytes")
+            and self._store.equivalent(before, preflight, rule="exact_png_bytes")
+            and same_native_state(expected, resumed) and same_native_state(paused, current)
+            and resumed["id"] == primitive["native_id"]
+            and baseline.frame_sha256 == after.frame_sha256 == reference.frame_sha256
+            and self._store.current_boundary(**self._clocks()) == reference)
 
     def _exit_guard(self, work: _Work, phase: _ExitPhase,
                     proposal: MissionIntent | _ResumeIntent | None = None) -> None:
@@ -1144,12 +1183,16 @@ class MissionRuntime:
     def _exit_receipt(self, phase: _ExitPhase, stage: str) -> dict:
         saved_sources = () if phase.saved_checkpoint is None else (
             self._ledger.request(phase.saved_checkpoint)["result"]["saved_checkpoint"]["menu_source_id"],)
+        resume = (self._ledger.menu_cleanup_resume(phase.launch.request_id, exit_root_id=phase.root_id)
+                  if phase.saved_checkpoint is None else None)
+        resume_sources = () if resume is None else (
+            resume["intent"]["source_before"], resume["intent"]["preflight_source"], resume["result"]["source_after"])
         return {"schema": VERSION, "record_type": "PhaseReceipt", "phase_kind": "lifecycle", "operation": "exit",
             "origin_request_id": phase.root_id, "stage": stage, "epoch": phase.epoch, "actor_id": phase.actor_id,
             "controller_boot_id": phase.launch.operator_mark[0], "operator_pause_generation": phase.launch.operator_mark[1],
             "takeover_generation": phase.launch.takeover_generation,
             "source_ids": list(dict.fromkeys((*self._ledger.request(phase.launch.request_id)["result"]["source_ids"],
-                *saved_sources, phase.launch.checkpoint.observation_id, phase.checkpoint.observation_id))),
+                *saved_sources, *resume_sources, phase.launch.checkpoint.observation_id, phase.checkpoint.observation_id))),
             "continuity": None, "launch_request_id": phase.launch.request_id, "launch_id": phase.launch.launch_id,
             "no_save_required": phase.saved_checkpoint is None,
             **({"saved_checkpoint_request_id": phase.saved_checkpoint} if phase.saved_checkpoint is not None else {}),
@@ -1353,13 +1396,13 @@ class MissionRuntime:
         if original is None or original[1].store_generation != self._store.authority_generation():
             raise EvidenceError("Another observation invalidated this informing source")
         observed = self._store.observation(original[0])
-        if state != observed:
+        if not same_native_state(state, observed):
             raise EvidenceError("Informing source differs from exact live controller state")
         return original
 
     def _rotate(self, work: _Work, proposal: MissionIntent) -> None:
         state, generation, _ = self._check_lease()
-        if self._store.observation(proposal.before) != state:
+        if not same_native_state(self._store.observation(proposal.before), state):
             raise EvidenceError("Proposal before-source is not the exact live controller state")
         self._check_cancelled(work)
         old = self._lease
@@ -1485,7 +1528,7 @@ class MissionRuntime:
                     or result["boundary"]["kind"] not in ("normal_play", "menu", "activity_poll")):
                 raise ContractError("Ready receipt lacks exact advanced same-session source")
             actual, actual_received = self.controller.observation_snapshot()
-            if (actual != result or actual_received is None or actual_received < received
+            if (not same_native_state(actual, result) or actual_received is None or actual_received < received
                     or actual_received > self._clock()):
                 raise ContractError("Ready receipt is not the exact current atomic observation")
             return "returned", "Exact terminal ready receipt; displacement requires independent verification"

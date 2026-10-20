@@ -135,6 +135,16 @@ and preserves the original normal-game time anchor. [Native qualification001](ac
 retains the timing failures and successful normal stopped cleanup; the source
 repair is not a character-lifecycle or independent-mission pass.
 
+Live native comparisons tolerate only capture/transport id, timestamp and filename
+churn, reusing EvidenceStore's state comparison without archiving passive polls.
+Observe keeps its exact response/original receipt; image and input-authority checks
+remain separate. A proven returned-Resume-only startup can adopt a fresh internally
+paused copy of the original menu for a separate normal cleanup root. Ledger audits
+its immutable input lineage; runtime/store verify pixels and live custody.
+[Native qualification002](acceptance/2026-10-20-native-capture-churn.md) exposed
+these defects and required exceptional teardown. Its failure stays retained;
+the source repair still needs a new native qualification.
+
 Cached status performs no evidence or memory I/O. It can show the last explicitly
 requested context packet, including claims, Work, source IDs, omissions and
 dispositions. That packet is historical as of its ID; rendering neither recomputes

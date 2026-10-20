@@ -101,6 +101,18 @@ def _metadata(observation: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in observation.items() if key not in {"id", "status", "error"}}
 
 
+def same_native_state(before: dict | None, after: dict | None) -> bool:
+    """Compare validated native states, excluding only capture/transport identity.
+
+    This proves neither image equality, freshness nor authority. A passive capture
+    must not rewrite an archived source or replace its original receipt clock.
+    """
+    ignored = {"id", "timestamp_ms", "frame"}
+    return (before is not None and after is not None
+            and {key: value for key, value in before.items() if key not in ignored}
+            == {key: value for key, value in after.items() if key not in ignored})
+
+
 def _scene_authority(observation: dict[str, Any]) -> dict[str, Any]:
     # Host Pause changes transport permission, not game facts or scene revision.
     # _metadata still forbids rewriting paused (or anything else) on one frame.
@@ -423,9 +435,7 @@ class EvidenceStore:
         original, actual = self.observation(before), self.observation(after)
         if any(value["status"] != "ready" or value["error"] != "" for value in (original, actual)):
             return False
-        fields = ("session", "revision", "boundary", "category", "actions", "scene", "ui",
-                  "paused", "pause_origin", "takeover_generation", "in_game")
-        if any(original[key] != actual[key] for key in fields):
+        if not same_native_state(original, actual):
             return False
         if rule == "native_state":
             return all((value["boundary"]["kind"] == "normal_play" and value["scene"] is not None)

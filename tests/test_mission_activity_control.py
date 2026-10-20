@@ -113,6 +113,32 @@ class MissionActivityControlTests(unittest.TestCase):
                     self.assert_unpublished(receipt)
                     self.assertEqual(calls, [])
 
+    def test_passive_control_capture_checks_live_pixels_before_publication(self):
+        for changed in (False, True):
+            with self.subTest(changed=changed), FakeBridge(self.controller) as fake, ControlBridge(self.controller) as control:
+                binding = self.prepare(fake)
+                captured = []
+                def preflight(observation, received):
+                    captured.append((copy.deepcopy(observation), received))
+                    live = copy.deepcopy(observation)
+                    live.update(id="", frame=f'frame-{live["session"]}-999.png',
+                                timestamp_ms=int(time.time() * 1000))
+                    (self.controller.bridge / live["frame"]).write_bytes(
+                        b"changed image" if changed else b"informing image")
+                    atomic_json(self.controller.bridge / "state.json", live)
+                    self.controller.status()
+                digest = hashlib.sha256(b"informing image").hexdigest()
+                receipt = self.call(binding, expected_image_sha256=digest, preflight=preflight)
+                self.assertEqual(receipt["preflight"]["observation"], captured[0][0])
+                self.assertEqual(receipt["preflight"]["received_monotonic"], captured[0][1])
+                if changed:
+                    self.assert_unpublished(receipt)
+                    self.assertEqual(control.delivered, [])
+                else:
+                    self.assertTrue(receipt["published"], receipt)
+                    self.assertEqual(receipt["result"]["status"], "prompt_opened")
+                    self.assertEqual(len(control.delivered), 1)
+
     def test_fresh_observe_rejects_changed_source_or_native_authority(self):
         for field in ("revision", "session", "boundary", "takeover_generation", "pause_origin"):
             with self.subTest(field=field), FakeBridge(self.controller) as fake:

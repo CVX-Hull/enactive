@@ -108,6 +108,8 @@ An80ms delayed-publication probe also reproduced a60ms unknown-ACK fixture failu
 before input existed. That functional identity/no-replay test uses its existing
 ordinary timeout, with explicit short expiry tested separately. No production
 deadline, Pause fence, receipt, unknown replay rule or native binary was changed.
-The following corrected checkpoint still needs its common/exact hosted checks
-before qualification002 admission. C-PORTABLE's triggered maintenance records this
-partial effectiveness; January15 and October24 review dates are unchanged.
+The corrected761f183 checkpoint passed its common gate and both exact hosted lanes.
+The [later qualification002](2026-10-20-native-capture-churn.md) records its separately
+reviewed sequencing, new native failures and exceptional cleanup. C-PORTABLE's
+triggered maintenance records partial effectiveness; January15 and October24
+review dates are unchanged.

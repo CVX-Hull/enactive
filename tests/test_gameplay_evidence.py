@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import (
-    CapacityError, EvidenceError, EvidenceStore, MAX_BYTES, MAX_FRAME_BYTES,
+    CapacityError, EvidenceError, EvidenceStore, MAX_BYTES, MAX_FRAME_BYTES, same_native_state,
 )
 
 
@@ -45,6 +45,25 @@ def observation(number=1, *, session="synthetic-world", timestamp_ms=1_000_000):
 
 
 class EvidenceTests(unittest.TestCase):
+    def test_passive_capture_equivalence_excludes_only_transport_and_capture_identity(self):
+        original = observation()
+        captured = deepcopy(original)
+        captured.update(id="another-request", frame="frame-synthetic-world-99.png", timestamp_ms=1_002_000)
+        self.assertTrue(same_native_state(original, captured))
+        self.assertFalse(same_native_state(original, None))
+        for field, value in (("protocol", 3), ("revision", 99), ("session", "other"),
+                ("status", "rejected"), ("error", "native failure"), ("frame_ok", False),
+                ("paused", True), ("pause_origin", "human"), ("takeover_generation", 1),
+                ("actions", ["QUIT"]), ("ui", {}), ("category", "OTHER"), ("in_game", False)):
+            with self.subTest(field=field):
+                altered = {**captured, field: value}
+                self.assertFalse(same_native_state(original, altered))
+        for field in ("scene", "boundary"):
+            with self.subTest(field=field):
+                altered = deepcopy(captured)
+                altered[field]["turn" if field == "scene" else "control_generation"] += 1
+                self.assertFalse(same_native_state(original, altered))
+
     def setUp(self):
         temporary_root = Path(__file__).resolve().parents[1] / ".runtime" / "gameplay-tests"
         temporary_root.mkdir(parents=True, exist_ok=True)

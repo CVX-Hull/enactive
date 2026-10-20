@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from .controller import ControlError
 from .gameplay.contracts import ContractError, EvidenceRef
-from .gameplay.evidence import CapacityReservation, EvidenceError
+from .gameplay.evidence import CapacityReservation, EvidenceError, same_native_state
 from .gameplay.interaction import MenuOutcome, MenuSkill
 from .gameplay.mission_contracts import VERSION, SourceRevalidation
 from .gameplay.mission_ledger import BudgetError, LedgerError
@@ -194,8 +194,7 @@ class RegisteredLifecycle:
         # Controller preflight obtains a newer timestamp/frame path. Exact
         # encoded pixels and complete native state are compared by _dispatch's
         # retained-equivalence callback, not by whole-dictionary clock equality.
-        same_boundary = actual is not None and all(actual[key] == state[key] for key in (
-            "session", "revision", "category", "takeover_generation", "paused", "pause_origin", "boundary"))
+        same_boundary = same_native_state(actual, state)
         if (self.phase is not phase or phase.launch.launch_id != launch.launch_id
                 or phase.epoch != ledger["epoch"] or phase.epoch != work.request["epoch"]
                 or phase.actor_id != ledger["player_id"] or ledger["unreconciled"]

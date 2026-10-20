@@ -134,37 +134,33 @@ Pause, competing roots, unsupported ownership and unknown Resume cannot renew it
 A missed response stays ambiguous even if the next frame looks expected. Historical
 proof, including an orphan proof left by a crash, restores no live authority.
 
-The next gate is one reviewed common-check checkpoint, then exact native
-character/item/activity/control/access preflight and #156's finite admission.
-The [first character qualification](acceptance/2026-10-20-lifecycle-freshness.md)
-failed before primitive admission on an aged creation checkpoint; first quit
-confirmation also stopped on staleness. Registered normal cleanup and stopped
-Finish succeeded. #155/#154's bounded source repair now reuses guarded refresh
-inside Resume, explicit stage commit, save and exit confirmation, preserving
-the save time anchor and validating persisted source lineage. It needs exact
-checks and a separate prospective native retest; the failed admission and original
-costs remain. The lead owns this tight coupled repair with read-only reviews,
-without a new executor, TTL relaxation, source patch during play or overlapping
-implementation workers.
-The lifecycle repair's local1090tests and PR CI passed; its [push CI failed](https://github.com/CVX-Hull/enactive/actions/runs/39437020947)
-on an existing Pause HTTP test's150ms threshold (177ms observed). #154 owns the
-test correction: hold the actual native exchange and require real HTTP Pause to
-revoke control before release, with a bounded deadlock watchdog. This verifies
-independence without treating scheduler/fsync timing as a latency guarantee.
-Production Pause is unchanged. Retain that failed CI; qualification002 remains
-unadmitted until the corrected candidate's common and exact hosted checks pass.
-That correction passed local1090tests and PR CI; its [push CI then failed](https://github.com/CVX-Hull/enactive/actions/runs/39439412837)
-before an activity fixture could claim input within100ms. The deadline regression
-now reaches an actual held claim before advancing an isolated controller clock
-past the original deadline; a renewal negative control must fail. A separate80ms
-delay probe also exposed the same setup race in the unknown-ACK fixture's60ms
-functional timeout. That identity/no-replay case uses the existing functional
-timeout while short expiry stays independently controlled. Production clocks,
-deadlines and input guards are unchanged. Both failures remain retained.
-#157/#144 require actual player-owned mission and clean-context memory use before
-#145's readiness decision. Source/fixture review is distinct from that acceptance;
-#144 owns exact checkpoint results and retained failures. Do not pull optional
-features or restart design while these integrated acceptance gates remain open.
+The preceding761f183 checkpoint passed1090 common Python tests and both
+exact hosted lanes. Earlier push failures in Pause/deadline fixtures remain
+retained in the [qualification001 report](acceptance/2026-10-20-lifecycle-freshness.md),
+with their causal test corrections and limits. Native qualification002 then
+**failed** after one returned Resume: passive capture metadata invalidated the first
+menu binding, and Resume-only startup could not enter normal cleanup. No character
+or world action occurred. One separately proposed exceptional teardown closed the
+child, without OwnedNormalExit/NormalFinish. The [native002 report](acceptance/2026-10-20-native-capture-churn.md)
+retains actual frames,419.284726seconds through the exit-status ledger watermark,
+619.288934seconds through shutdown/reopen, one charged input and one exceptional
+cleanup intervention. No failed attempt or unused allowance is transferred.
+
+The bounded #154/#155 source repair reuses native-state equivalence across live
+capture churn while preserving exact ACK/UUID/preflight records and original
+receipt clocks. Runtime/store verify original pixels and expected Resume transition
+before a fresh internally paused menu can serve a separate normal cleanup root.
+Ledger write/reopen/orphan checks preserve input mapping/source lineage. User Pause,
+unknown Resume, any setup input or unsettled prior exit still rejects cleanup.
+Lead owns these coupled paths, with parallel read-only reviews; overlapping writers
+would not shorten this repair. Required common/exact hosted checks and a separately
+finite qualification003 precede #156 deciding readiness. Engineering native work
+may parallel hosted CI after reviewed common/clean committed source freeze; both
+exact CI lanes remain mandatory before deciding readiness/release/merged delivery.
+#157/#144 then require the actual player-owned memory/skills mission and genuine
+fresh-context replacement before #145's seven-day readiness decision. Optional
+features remain outside that gate. These are the same integrated iteration and
+active goal, not a new component-only outcome or renewed admission.
 
 The item/count/inspection and activity-poll checkpoint passed local and
 pull-request checks, but its first push CI timed out in two synthetic lifecycle

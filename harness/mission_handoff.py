@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from .controller import MAX_WAIT, ControlError
 from .gameplay.contracts import EvidenceRef
 from .gameplay.mission_contracts import VERSION
-from .gameplay.evidence import CapacityError, EvidenceError
+from .gameplay.evidence import CapacityError, EvidenceError, same_native_state
 from .gameplay.mission_ledger import BudgetError, LedgerError
 
 if TYPE_CHECKING:
@@ -105,7 +105,7 @@ class RegisteredHandoff:
         r._capture_memory(ref)
         self._empty(work, mark)
         live = r._live()
-        if live[0] != state:
+        if not same_native_state(live[0], state):
             raise EvidenceError("Handoff source changed before issuance")
         binding = dict(session=ref.session, revision=ref.revision, boundary_id=state["boundary"]["id"],
             pause_generation=live[1], takeover_generation=state["takeover_generation"], pause_origin=state["pause_origin"],
