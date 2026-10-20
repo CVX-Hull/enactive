@@ -128,6 +128,14 @@ Cached status performs no evidence or memory I/O. It can show the last explicitl
 requested context packet, including claims, Work, source IDs, omissions and
 dispositions. That packet is historical as of its ID; rendering neither recomputes
 it nor turns it into current evidence. Unmeasured model cost/latency remains unknown.
+The writer also caches SQLite-derived cumulative request/admission groups and
+the live private activity checkpoint. The viewer separates that checkpoint from
+historical results and makes query-specific memory corrections, unfinished Work,
+source dispositions and omissions readable. It introduces no retrieval/executor
+or second counter store. Known nondelivery does not invalidate memory premises;
+source freshness, scope and unknown-effect checks still apply. The
+[observer inspection](acceptance/2026-10-20-mission-observer.md) uses synthetic data,
+not native mission evidence.
 The [mission design](design/player-owned-mission.md) owns further integration and
 acceptance. Portable source checks, wire4 menu qualification and actual independent
 normal-game play are separate evidence lanes.

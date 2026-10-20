@@ -108,6 +108,33 @@ class LedgerTests(unittest.TestCase):
         values.update(changes)
         return values
 
+    def test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen(self):
+        empty = self.ledger.measured_counts()
+        self.assertEqual(empty, {"operations": {"total": 0, "by_kind": {}, "by_skill": {}, "by_state": {}},
+                                 "primitives": {"charged": 0, "by_state": {}}})
+        self.active_request()
+        self.ledger.prepare_primitive("request-1", "not-sent", intent(), now=1001)
+        self.ledger.settle_primitive("not-sent", "not_dispatched", {"reason": "Preflight stopped"}, now=1001)
+        self.ledger.prepare_primitive("request-1", "uncertain", intent(), now=1001)
+        self.ledger.published("uncertain", "native-uncertain", now=1001)
+        self.ledger.settle_primitive("uncertain", "unknown", {"reason": "No terminal ACK"}, now=1001)
+        self.ledger.complete_request("request-1", "unknown", {"reason": "Needs verification"}, now=1001)
+        epoch = self.ledger.snapshot(now=1001)["epoch"]
+        for index in range(80):
+            identity = f"observe-{index}"
+            self.ledger.begin_request(request("observe", request_id=identity, epoch=epoch), now=1001)
+            self.ledger.complete_request(identity, "completed", {"source_ids": []}, now=1001)
+        with patch.object(self.ledger, "request_records", side_effect=AssertionError("No receipt scan")), \
+             patch.object(self.ledger, "primitive_records", side_effect=AssertionError("No primitive scan")):
+            counts = self.ledger.measured_counts()
+        self.assertEqual(counts, {"operations": {"total": 81, "by_kind": {"observe": 80, "skill": 1},
+            "by_skill": {"navigate": 1}, "by_state": {"completed": 80, "unknown": 1}},
+            "primitives": {"charged": 2, "by_state": {"not_dispatched": 1, "unknown": 1}}})
+        self.assertEqual(counts["primitives"]["charged"], self.ledger.snapshot(now=1001)["spent_inputs"])
+        self.assertEqual(self.reopen(now=1002).measured_counts(), counts)
+        counts["operations"]["by_kind"]["observe"] = 0
+        self.assertEqual(self.ledger.measured_counts()["operations"]["by_kind"]["observe"], 80)
+
     def test_readmission_charges_only_one_resume_and_preserves_original_deadlines(self):
         value = self.readmit_request()
         operation = self.ledger.begin_request(value, now=1005)["operation"]

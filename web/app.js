@@ -18,6 +18,7 @@ let lastFrame = '';
 let localError = '';
 let frameError = '';
 let eventSignature = '';
+let memoryRendering;
 
 function showError(message) {
   $('error').textContent = message;
@@ -294,6 +295,113 @@ function renderLifecycle(mission) {
     'No verified normal exit proof reported'}. Latest primitive receipt ${known(receipt?.native_request_id)} · logical ${known(receipt?.logical_action_id)} · acknowledgment ${known(receipt?.transport_disposition)}. ${matchesExit ?
     'Matches the recorded terminal exit input.' : 'Not correlated with a recorded terminal exit input.'} Acknowledgment and exit effect are separate evidence.`;
 }
+function countMap(value) {
+  return record(value) && Object.values(value).every(count => Number.isSafeInteger(count) && count >= 0);
+}
+function measuredCounts(metrics) {
+  const operations = metrics?.operations;
+  const primitives = metrics?.primitives;
+  const total = value => Object.values(value).reduce((sum, count) => sum + count, 0);
+  return {
+    operations: record(operations) && Number.isSafeInteger(operations.total) && operations.total >= 0 &&
+      ['by_kind', 'by_skill', 'by_state'].every(key => countMap(operations[key])) &&
+      total(operations.by_kind) === operations.total && total(operations.by_state) === operations.total &&
+      total(operations.by_skill) === (operations.by_kind.skill || 0) ? operations : null,
+    primitives: record(primitives) && Number.isSafeInteger(primitives.charged) && primitives.charged >= 0 &&
+      countMap(primitives.by_state) && total(primitives.by_state) === primitives.charged ? primitives : null
+  };
+}
+function labeledCounts(value) {
+  return value ? Object.entries(value).map(([key, count]) => `${key}: ${count}`).join(' · ') || 'none recorded' : 'unavailable';
+}
+function renderActivity(mission) {
+  const phase = mission?.activity_phase;
+  const valid = record(phase) && phase.grants_authority === false && typeof phase.answered === 'boolean' &&
+    [phase.origin_request_id, phase.checkpoint_id, phase.stage].every(recordedId) &&
+    (phase.interrupt_request_id === null || recordedId(phase.interrupt_request_id));
+  $('mission-activity').textContent = valid ?
+    `Private paused activity · ${phase.stage} · request ${phase.origin_request_id} · checkpoint ${phase.checkpoint_id} · interrupt ${known(phase.interrupt_request_id)} · answered: ${phase.answered} · grants no authority` :
+    phase == null ? 'No private activity checkpoint reported' : 'Activity checkpoint unavailable or inconsistent; inspect evidence';
+  const reported = mission?.progress?.phase;
+  $('mission-last-report').textContent = record(reported) ?
+    `Last reported result · ${known(reported.operation)} · ${known(reported.stage)} · historical report, not a live phase or acceptance` :
+    'No result phase reported; inspect retained evidence';
+}
+function memoryList(id, items, limit, describe) {
+  const list = $(id);
+  list.replaceChildren();
+  const add = (title, lines = []) => {
+    const item = document.createElement('li');
+    const heading = document.createElement('strong');
+    heading.textContent = title;
+    item.append(heading);
+    for (const line of lines) {
+      const paragraph = document.createElement('p');
+      paragraph.textContent = line;
+      item.append(paragraph);
+    }
+    list.append(item);
+  };
+  if (!Array.isArray(items)) { add('Unavailable in this packet'); return; }
+  if (!items.length) { add('None included in this query-specific packet'); return; }
+  for (const item of items.slice(0, limit)) {
+    const description = record(item) ? describe(item) : ['Malformed entry; inspect raw context'];
+    add(description[0], description.slice(1));
+  }
+  if (items.length > limit) add(`${items.length - limit} additional entries not summarized; inspect raw context`);
+}
+function memoryValue(value) {
+  const text = known(value);
+  return text.length <= 2048 ? text : `${text.slice(0, 2048)}… [truncated; inspect raw context]`;
+}
+function memoryIds(value) {
+  return Array.isArray(value) ? value.slice(0, 32).map(memoryValue).join(', ') || 'none reported' : 'unavailable';
+}
+function quantities(value) {
+  return Array.isArray(value) ? value.slice(0, 16).map(item => record(item) ?
+    `${memoryValue(item.subject)}: ${memoryValue(item.quantity)} ${memoryValue(item.unit)}` : 'malformed quantity').join('; ') || 'none reported' : 'unavailable';
+}
+function renderMemory(mission) {
+  const memory = mission?.memory_context;
+  const usable = record(memory) && memory.schema === 'campaign-memory/2' && memory.grants_authority === false;
+  $('mission-memory-summary').textContent = usable ?
+    `Historical, query-specific last journaled context · packet ${known(memory.packet_id)} · memory version ${known(memory.memory_version)} · query ${known(memory.query)} · as of ${known(memory.as_of)} · scope ${known(memory.scope)}. Status labels belong to that packet, not the current world. This preview is not current authority and is not recomputed by the viewer.` :
+    `No journaled context preview available${memory == null ? '' : ' (unavailable or inconsistent packet)'}. Memory version ${known(mission?.memory_version)} · last packet ${known(mission?.last_context_id)}.`;
+  const rendering = evidence(memory, 'No memory claims, work or source dispositions available.');
+  // Polls repeat the same historical packet. Preserve scroll/selection while it
+  // is being read; compare content as well as ID so corrections still render.
+  if (rendering === memoryRendering) return;
+  memoryRendering = rendering;
+  $('mission-memory-readable').hidden = !usable;
+  const packet = usable ? memory : {};
+  memoryList('mission-claims', packet.claims, 32, claim => [
+    `${memoryValue(claim.status)} · ${memoryValue(claim.kind)} · ${memoryValue(claim.id)}`,
+    memoryValue(claim.text),
+    `Value: ${memoryValue(claim.value)} · Coverage: ${memoryValue(claim.coverage)}`,
+    `Sources: ${memoryIds(claim.sources)} · Observed: ${memoryValue(claim.observed_time)}`,
+    `Supersedes: ${memoryIds(claim.supersedes)} · Support groups: ${memoryValue(claim.supports)}`
+  ]);
+  memoryList('mission-work', packet.work, 16, work => [
+    `${memoryValue(work.status)} · ${memoryValue(work.intent)} · ${memoryValue(work.id)}`,
+    `Stage: ${memoryValue(work.stage)} · Progress: ${Number.isInteger(work.progress) && work.progress >= 0 && work.progress <= 100 ? `${work.progress}%` : 'unknown'} · Predecessor: ${memoryValue(work.predecessor_work_id)}`,
+    `Available: ${quantities(work.available)} · Committed: ${quantities(work.committed)}`,
+    `Predicted output: ${quantities(work.predicted_output)} · Observed output: ${quantities(work.observed_output)}`,
+    `Next verification: ${memoryValue(work.next_verification)} · Unresolved effects: ${memoryIds(work.unresolved_effects)}`,
+    `Sources: ${memoryIds(work.sources)}`
+  ]);
+  memoryList('mission-sources', packet.sources, 16, source => [
+    `${memoryValue(source.id)} · ${memoryValue(source.status)}`,
+    `Session: ${memoryValue(source.reference?.session)} · Revision: ${memoryValue(source.reference?.revision)} · Turn: ${memoryValue(source.reference?.turn)}`
+  ]);
+  memoryList('mission-dispositions', record(packet.dispositions) ? Object.entries(packet.dispositions).map(([id, reasons]) => ({id, reasons})) : null,
+    48, disposition => [memoryValue(disposition.id), memoryValue(disposition.reasons)]);
+  memoryList('mission-reobservations', packet.reobservations, 48, observation => [
+    `${memoryValue(observation.id)} · ${memoryValue(observation.reason)}`, memoryValue(observation.instruction),
+    `Scope: ${memoryValue(observation.scope)}`
+  ]);
+  $('mission-omissions').textContent = `Omitted claims: ${known(packet.omitted?.claims)} · Work: ${known(packet.omitted?.work)} · Bound exclusions: ${known(packet.omitted?.bounds)} · Reasons: ${known(packet.omitted?.reasons)}. This query-specific packet is not complete campaign memory. Work completion labels are reports, not independent acceptance.`;
+  $('mission-memory').textContent = rendering;
+}
 function renderMission() {
   const {kind, mission} = missionState();
   const available = mission && typeof mission === 'object' && !Array.isArray(mission);
@@ -307,7 +415,11 @@ function renderMission() {
     'No current input lease reported';
   $('mission-operation').textContent = available ? `${mission.active_operation ? known(mission.active_operation) : 'No active operation'} · skill ${mission.skill ? known(mission.skill) : 'none reported'}` : 'No active operation';
   renderLifecycle(available ? mission : null);
-  $('mission-progress').textContent = available ? `${known(mission.spent_inputs)} primitive inputs spent · model decisions unknown` : 'No mission progress';
+  renderActivity(available ? mission : null);
+  const metrics = available ? mission.metrics : null;
+  const counts = measuredCounts(metrics);
+  $('mission-progress').textContent = `${counts.operations ? `${counts.operations.total} retained mission requests` : 'Mission requests: unavailable'} · ${counts.primitives ? `${counts.primitives.charged} charged primitive admissions` : 'Charged primitive admissions: unavailable'}. Requests are not model calls or independent tasks; admissions are not delivered keys.`;
+  $('mission-counts').textContent = `Cumulative retained requests by kind: ${labeledCounts(counts.operations?.by_kind)}. By skill: ${labeledCounts(counts.operations?.by_skill)}. By state: ${labeledCounts(counts.operations?.by_state)}. Charged primitives by state: ${labeledCounts(counts.primitives?.by_state)}. Includes rejected, not_dispatched and unknown primitive admissions. Only ledger-admitted operations are counted; read-only calls and pre-admission rejections are excluded. The recent timeline is not the cumulative counter.`;
   $('mission-next').textContent = available ? known(mission.next_needed_decision) : 'Waiting for an explicitly admitted player mission';
   $('mission-reason').textContent = available ? `${known(mission.pause_cause)} · ${known(mission.reason)}` : 'No mission admitted';
   const freshness = available ? mission.freshness : null;
@@ -325,18 +437,13 @@ function renderMission() {
     'Observer only: missions are admitted outside this viewer. Ordinary controls require current decoded evidence.';
   $('mission-evidence').textContent = kind === 'invalid' ? evidence(mission, 'Mission field missing from status.') : available ? evidence({progress: mission.progress, last_receipt: mission.last_receipt,
     current_source: mission.current_source, unresolved_effects: mission.unresolved_effects,
-    prompt_phase: mission.prompt_phase, lifecycle_phase: mission.lifecycle_phase,
+    prompt_phase: mission.prompt_phase, lifecycle_phase: mission.lifecycle_phase, activity_phase: mission.activity_phase,
     native_process: mission.native_process, diagnostic: mission.diagnostic}, '') : 'No retained mission evidence.';
   $('mission-budgets').textContent = available ? evidence({remaining_limits: mission.remaining_limits,
     cleanup_reserve: mission.cleanup_reserve, configuration: mission.configuration}, '') : 'No mission limits reported.';
-  const metrics = available ? mission.metrics : null;
-  $('mission-usage').textContent = `Harness API spend: ${known(metrics?.harness_api_spend)}. Model calls: unknown. External tokens: ${known(metrics?.external_tokens)}. API quota: ${known(metrics?.api_quota)}. Model time: ${known(metrics?.model_time_seconds)}. External cost: unknown. Interventions: unknown. Game seconds: ${known(metrics?.game_seconds)}. Primitive inputs are not model decisions. Expanded counts remain pending (#143).`;
+  $('mission-usage').textContent = `Harness API spend: ${known(metrics?.harness_api_spend)}. Model requests: unknown. Tool calls: unknown. External tokens: ${known(metrics?.external_tokens)}. API quota: ${known(metrics?.api_quota)}. Model time: ${known(metrics?.model_time_seconds)}. External cost: unknown. Interventions: unknown. Game seconds: ${known(metrics?.game_seconds)}. Usage and remaining budgets do not establish mission outcomes.`;
   $('mission-archive').textContent = evidence(metrics?.archive, 'No archive usage reported.');
-  const memory = available ? mission.memory_context : null;
-  $('mission-memory-summary').textContent = memory ?
-    `Historical, query-specific last journaled context · packet ${known(memory.packet_id)} · memory version ${known(memory.memory_version)} · query ${known(memory.query)}. This preview is not current authority and is not recomputed by the viewer.` :
-    `No journaled context preview available. Memory version ${known(available ? mission.memory_version : null)} · last packet ${known(available ? mission.last_context_id : null)}.`;
-  $('mission-memory').textContent = evidence(memory, 'No memory claims, work or source dispositions available.');
+  renderMemory(available ? mission : null);
 }
 async function recover(kind, choice) {
   let payload;

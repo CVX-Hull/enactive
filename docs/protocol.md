@@ -375,9 +375,29 @@ over; it is not an automatic mission continuation.
 for historical inspection. It is query-specific and includes as-of/version/source
 IDs, tagged claims/work, omissions and dispositions; status never recomputes it or
 claims that its old `current` labels are current now. `spent_inputs` is primitive
-cost, not model decisions. External tokens, model time, quota, spending and
-interventions remain unknown where unavailable. The source cache is not a new
-memory history store. Native/graphical/independent-player acceptance stays separate.
+cost, not model decisions. A known `not_dispatched` or rejected primitive cannot
+change a Claim/Work premise; excluding it from potential effects does not refresh
+an old source, align another session or refund its charged admission. Prepared,
+published, returned and unknown primitives still require outcome assessment.
+
+`metrics.operations` groups all retained ledger requests by kind, skill and current
+state; it excludes read-only calls and pre-admission rejections. `metrics.primitives`
+counts every charged admission by current disposition, including rejection,
+nondelivery and unknowns. SQLite supplies these cumulative projections at mission
+publication; status reads the copied cache, never recent events or journal scans.
+Neither metric counts delivered keys, model requests or independent tasks.
+`model_requests`, `tool_calls` and `interventions` are null until measured. External
+tokens, model time, quota and spending also remain unknown where unavailable.
+
+`activity_phase` is a nullable summary of the current private paused activity:
+origin request, checkpoint, stage, interrupt owner and whether it was answered.
+It grants no authority, clears on Pause/revocation, and cannot be reconstructed
+from `progress.phase`, which is the last reported historical result. The viewer
+separates these records and shows bounded readable memory plus raw context;
+truncated previews direct the reader to that raw packet. Repeated identical
+packets keep their DOM so polling does not reset reading/selection. The source
+cache is not a new memory history store. Native/independent-player acceptance
+stays separate from the [synthetic viewer inspection](acceptance/2026-10-20-mission-observer.md).
 
 ## Transport and state
 

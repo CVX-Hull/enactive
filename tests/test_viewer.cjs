@@ -33,6 +33,7 @@ const missionFixture = {
     "objective": "Supplies and shelter",
     "actor_id": "player-test",
     "prompt_phase": null,
+    "activity_phase": null,
     "active_operation": "context",
     "skill": null,
     "progress": {
@@ -85,6 +86,11 @@ const missionFixture = {
       "effort": "unreported"
     },
     "metrics": {
+      "operations": {"total": 23, "by_kind": {"observe": 4, "skill": 19}, "by_skill": {"activity": 19}, "by_state": {"completed": 20, "blocked": 3}},
+      "primitives": {"charged": 17, "by_state": {"returned": 12, "unknown": 2, "not_dispatched": 2, "rejected": 1}},
+      "model_requests": null,
+      "tool_calls": null,
+      "interventions": null,
       "harness_api_spend": 0,
       "external_tokens": null,
       "api_quota": null,
@@ -207,6 +213,10 @@ function element(id) {
   Object.defineProperty(node, 'innerHTML', {set() { assert.fail('Untrusted viewer content must use textContent'); }});
   elements.set(id, node);
   return node;
+}
+function renderedText(id) {
+  function content(node) { return [node.textContent, ...node.children.map(content)].join(' '); }
+  return content(element(id));
 }
 const pending = [];
 const requests = [];
@@ -471,7 +481,14 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   mission.memory_context.claims[0].text = '<script>sendKey()</script>';
   mission.memory_context.work = [{id: 'work-test', intent: 'Find water', status: 'interrupted',
     sources: ['source-work'], unresolved_effects: ['unknown-effect'], next_verification: 'Inspect source'}];
-  mission.memory_context.dispositions = {'source-work': 'disputed'};
+  mission.memory_context.claims[0].status = 'unknown';
+  mission.memory_context.claims[0].supersedes = ['retired-water-claim'];
+  mission.memory_context.work[0] = {...mission.memory_context.work[0], stage: 'awaiting storage',
+    predecessor_work_id: 'work-predecessor', progress: 40, available: [], committed: [],
+    predicted_output: [{subject: 'clean-water', quantity: 2, unit: 'litre'}], observed_output: []};
+  mission.memory_context.dispositions = {'source-work': ['disputed source; reobserve']};
+  mission.memory_context.reobservations = [{id: 'work-test', reason: 'unknown delivery', instruction: 'Inspect water storage'}];
+  mission.memory_context.sources.push({id: 'source-work', status: 'disputed', reference: null});
   const countBeforeMission = requests.length;
   run('render(input)');
   assert.equal(element('mission-state').textContent, 'ACTIVE');
@@ -479,10 +496,12 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.equal(objective.textContent, mission.objective);
   assert.match(element('mission-player').textContent, /player-test/);
   assert.match(element('mission-operation').textContent, /context-exact/);
-  assert.match(element('mission-progress').textContent, /17 primitive inputs/);
-  assert.match(element('mission-progress').textContent, /model decisions unknown/);
+  assert.match(element('mission-progress').textContent, /23 retained mission requests.*17 charged primitive admissions/);
+  assert.match(element('mission-progress').textContent, /not model calls.*not delivered keys/);
+  assert.match(element('mission-counts').textContent, /by kind.*observe: 4.*skill: 19/);
+  assert.match(element('mission-counts').textContent, /unknown: 2.*not_dispatched: 2.*rejected: 1/);
   assert.match(element('mission-usage').textContent, /Harness API spend: 0/);
-  for (const label of ['Model calls', 'External tokens', 'API quota', 'Model time', 'External cost', 'Interventions']) {
+  for (const label of ['Model requests', 'Tool calls', 'External tokens', 'API quota', 'Model time', 'External cost', 'Interventions']) {
     assert.ok(element('mission-usage').textContent.includes(`${label}: unknown`), label);
   }
   assert.match(element('mission-memory-summary').textContent, /Historical.*query-specific/);
@@ -492,6 +511,18 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.match(element('mission-memory').textContent, /source-work/);
   assert.match(element('mission-memory').textContent, /disputed/);
   assert.match(element('mission-memory').textContent, /"claims": 2/);
+  assert.match(renderedText('mission-claims'), /unknown.*<script>sendKey.*retired-water-claim/s);
+  assert.match(renderedText('mission-work'), /interrupted.*awaiting storage.*40.*work-predecessor/s);
+  assert.match(renderedText('mission-work'), /Next verification.*Inspect source.*unknown-effect/s);
+  assert.match(renderedText('mission-work'), /Predicted output.*clean-water.*2 litre.*Observed output: none reported/s);
+  assert.match(renderedText('mission-sources'), /source-work.*disputed/s);
+  assert.match(renderedText('mission-dispositions'), /source-work.*disputed source/s);
+  assert.match(renderedText('mission-reobservations'), /work-test.*unknown delivery.*Inspect water storage/s);
+  assert.match(element('mission-omissions').textContent, /Omitted claims: 2.*not complete/s);
+  const stableClaim = element('mission-claims').children[0];
+  run('render(input)');
+  assert.equal(element('mission-claims').children[0], stableClaim,
+    'polling the same historical packet must not rebuild a list being read');
   assert.equal(requests.length, countBeforeMission, 'rendering mission/memory must not retrieve or send input');
   assert.ok(sendButtons.every(button => button.disabled));
   assert.equal(element('resume').disabled, true);
@@ -502,6 +533,69 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   for (const kind of ['action', 'key', 'walk', 'resume']) await run(`command('${kind}')`);
   assert.equal(requests.length, countBeforeMission, 'mission-owned viewer cannot submit manual input');
   assert.throws(() => run('recoveryAuthority("request_interrupt")'), /mission/i);
+
+  // Measurements are cumulative producer values; recent events and spent_inputs cannot fill gaps.
+  const measured = mission.metrics;
+  for (const broken of [null, {}, {operations: {total: 0}, primitives: {charged: 0}},
+    {operations: {...measured.operations, total: -1}, primitives: {...measured.primitives, charged: false}}]) {
+    mission.metrics = broken;
+    run('render(input)');
+    assert.match(element('mission-progress').textContent, /Mission requests: unavailable.*Charged primitive admissions: unavailable/);
+    assert.match(element('mission-usage').textContent, /Model requests: unknown.*Tool calls: unknown.*Interventions: unknown/);
+    assert.ok(sendButtons.every(button => button.disabled));
+    assert.equal(element('pause').disabled, false);
+  }
+  mission.metrics = {...measured, operations: {total: 0, by_kind: {}, by_skill: {}, by_state: {}},
+    primitives: {charged: 0, by_state: {}}};
+  run('render(input)');
+  assert.match(element('mission-progress').textContent, /0 retained mission requests.*0 charged primitive admissions/);
+  mission.metrics = measured;
+  for (const broken of [
+    {...measured, operations: {...measured.operations, total: 24}},
+    {...measured, operations: {...measured.operations, by_skill: {activity: 20}}},
+    {...measured, primitives: {...measured.primitives, charged: 18}}
+  ]) {
+    mission.metrics = broken;
+    run('render(input)');
+    assert.match(element('mission-progress').textContent, /unavailable/);
+    assert.equal(requests.length, countBeforeMission);
+  }
+  mission.metrics = measured;
+  mission.activity_phase = {origin_request_id: 'activity-root', checkpoint_id: 'activity-checkpoint',
+    stage: 'awaiting_interrupt_answer', interrupt_request_id: 'interrupt-root', answered: false, grants_authority: false};
+  mission.active_operation = null;
+  mission.progress = {phase: {operation: 'activity', stage: 'poll_returned'}};
+  run('render(input)');
+  assert.match(element('mission-activity').textContent, /Private paused activity.*awaiting_interrupt_answer.*activity-root.*activity-checkpoint.*interrupt-root.*false.*no authority/);
+  assert.match(element('mission-last-report').textContent, /Last reported.*activity.*poll_returned.*not a live phase/);
+  assert.match(element('mission-operation').textContent, /No active operation/);
+  for (const malformed of [[], {}, {...mission.activity_phase, answered: 'false'}, {...mission.activity_phase, grants_authority: true}]) {
+    mission.activity_phase = malformed;
+    run('render(input)');
+    assert.match(element('mission-activity').textContent, /unavailable or inconsistent/);
+    assert.equal(element('resume').disabled, true);
+  }
+  mission.activity_phase = null;
+
+  const savedMemory = structuredClone(mission.memory_context);
+  mission.memory_context.claims = [null, ...Array.from({length: 35}, (_, id) =>
+    ({id: `bounded-${id}`, text: 'x'.repeat(5000), status: 'unknown'}))];
+  mission.memory_context.work[0].progress = null;
+  run('render(input)');
+  assert.match(renderedText('mission-claims'), /Malformed entry/);
+  assert.match(renderedText('mission-claims'), /4 additional entries not summarized/);
+  assert.ok(!renderedText('mission-claims').includes('x'.repeat(2049)));
+  assert.match(renderedText('mission-claims'), /truncated; inspect raw context/);
+  assert.match(renderedText('mission-work'), /Progress: unknown ·/);
+  assert.doesNotMatch(renderedText('mission-work'), /unknown%/);
+  assert.equal(element('mission-claims').children.length, 33);
+  mission.memory_context = {...savedMemory, grants_authority: true};
+  run('render(input)');
+  assert.equal(element('mission-memory-readable').hidden, true);
+  assert.match(element('mission-memory-summary').textContent, /inconsistent packet/);
+  assert.ok(sendButtons.every(button => button.disabled));
+  assert.equal(requests.length, countBeforeMission);
+  mission.memory_context = savedMemory;
 
   // Lifecycle checkpoints remain visible between operations, without inventing a prompt.
   mission.active_operation = null;
@@ -785,7 +879,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.ok(html.indexOf('id="recorded-objective-text"') < html.indexOf('id="frame-shell"'));
   assert.match(html, /Historical, query-specific/);
   assert.match(html, /cannot undo a committed input or cancel an activity/);
-  assert.match(html, /<details><summary>Memory context/);
+  assert.match(html, /<summary>Memory context/);
   for (const id of ['mission-lifecycle', 'mission-process', 'mission-exit']) {
     assert.ok(html.includes(`<dd id="${id}">`), `${id} must exist in the mission facts`);
   }

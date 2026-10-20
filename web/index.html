@@ -38,23 +38,33 @@
           <dt>Player</dt><dd id="mission-player">No player admitted</dd>
           <dt>Mission</dt><dd id="mission-identity">No mission identity</dd>
           <dt>Input lease</dt><dd id="mission-owner">No current input lease reported</dd>
-          <dt>Operation</dt><dd id="mission-operation">No active operation</dd>
+          <dt>Live operation</dt><dd id="mission-operation">No active operation</dd>
+          <dt>Activity</dt><dd id="mission-activity">No private activity checkpoint reported</dd>
           <dt>Lifecycle</dt><dd id="mission-lifecycle">No lifecycle checkpoint reported</dd>
-          <dt>Process</dt><dd id="mission-process">No usable process sample · current liveness unknown</dd>
-          <dt>Exit evidence</dt><dd id="mission-exit">No verified normal exit proof reported</dd>
           <dt>Progress</dt><dd id="mission-progress">No mission progress</dd>
           <dt>Next decision</dt><dd id="mission-next">Waiting for an explicitly admitted player mission</dd>
           <dt>Pause / reason</dt><dd id="mission-reason">No mission admitted</dd>
           <dt>Freshness</dt><dd id="mission-freshness">No mission evidence</dd>
-          <dt>Source</dt><dd id="mission-source">No current mission source</dd>
           <dt>Uncertainty</dt><dd id="mission-unresolved">No mission effects reported</dd>
         </dl>
         <p id="mission-control-note" class="hint">Observer only: missions are admitted outside this viewer.</p>
         <p class="hint">Pause prevents future remote input; it cannot undo a committed input or cancel an activity.</p>
-        <details><summary>Memory context · claims, work and sources</summary><p id="mission-memory-summary" class="hint">No journaled context preview available.</p><p class="hint">Historical, query-specific preview, bounded to 32 KiB by the service. Claims and work retain their statuses, source IDs, omissions and dispositions. It grants no current authority.</p><pre id="mission-memory" tabindex="0">No memory claims, work or source dispositions available.</pre></details>
+        <details open><summary>Memory context · claims, work and sources</summary><p id="mission-memory-summary" class="hint">No journaled context preview available.</p><p class="hint">Historical, query-specific preview, bounded to 32 KiB by the service. Claims and work retain their statuses, source IDs, omissions and dispositions. It grants no current authority.</p><div id="mission-memory-readable" hidden>
+          <p id="mission-omissions" class="hint"></p>
+          <h3>Claims and corrections</h3><ul id="mission-claims" class="memory-list"></ul>
+          <h3>Work and next verification</h3><ul id="mission-work" class="memory-list"></ul>
+          <details><summary>Sources and status dispositions</summary><ul id="mission-sources" class="memory-list"></ul><h3>Dispositions</h3><ul id="mission-dispositions" class="memory-list"></ul></details>
+          <details><summary>Requested reobservations</summary><ul id="mission-reobservations" class="memory-list"></ul></details>
+        </div><details><summary>Raw historical context JSON</summary><pre id="mission-memory" tabindex="0">No memory claims, work or source dispositions available.</pre></details></details>
+        <details><summary>Process, control and source details</summary><dl class="mission-facts">
+          <dt>Last report</dt><dd id="mission-last-report">No result phase reported</dd>
+          <dt>Process</dt><dd id="mission-process">No usable process sample · current liveness unknown</dd>
+          <dt>Exit evidence</dt><dd id="mission-exit">No verified normal exit proof reported</dd>
+          <dt>Source</dt><dd id="mission-source">No current mission source</dd>
+        </dl></details>
         <details><summary>Progress, evidence and last receipt</summary><pre id="mission-evidence" tabindex="0">No retained mission evidence.</pre></details>
         <details><summary>Limits and player configuration</summary><pre id="mission-budgets" tabindex="0">No mission limits reported.</pre></details>
-        <details><summary>Usage, cost and archive</summary><p id="mission-usage" class="hint">Model calls, tokens, quota, time, external cost and interventions: unknown.</p><pre id="mission-archive" tabindex="0">No archive usage reported.</pre></details>
+        <details><summary>Measured usage, unknown costs and archive</summary><p id="mission-counts" class="hint">Cumulative request and admission counts unavailable.</p><p id="mission-usage" class="hint">Model calls, tokens, quota, time, external cost and interventions: unknown.</p><pre id="mission-archive" tabindex="0">No archive usage reported.</pre></details>
         <details><summary>Last mission Observe request</summary><p class="hint">Observe is asynchronous. Admission is not readiness or proof of an effect. Status polling never retries, resumes or sends gameplay input.</p><pre id="mission-result" tabindex="0">No mission Observe request sent.</pre></details>
       </section>
       <section class="panel recovery-panel" aria-labelledby="recovery-heading">

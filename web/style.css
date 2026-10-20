@@ -9,3 +9,14 @@
 .recovery-panel{border-top:2px solid var(--amber)}.recovery-buttons{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.recovery-buttons button{flex:1 1 130px;font-size:12px;white-space:normal}.recovery-panel .hint{overflow-wrap:anywhere}.recovery-panel pre+pre{border-top:1px solid var(--line);margin-top:12px;padding-top:12px}@media(max-width:800px){.recovery-panel{grid-column:1/-1}}
 
 .topbar{position:sticky;top:0;z-index:10;background:var(--bg)}.mission-panel{border-top:2px solid var(--accent);min-width:0}.mission-panel>.panel-heading .badge{margin:0}.mission-panel>p{font-size:13px;overflow-wrap:anywhere}.mission-facts{display:grid;grid-template-columns:78px minmax(0,1fr);gap:9px 12px;font-size:11px;margin:18px 0}.mission-facts dt{color:var(--muted)}.mission-facts dd{margin:0;overflow-wrap:anywhere}.mission-panel pre{max-height:320px;margin-top:12px}.mission-panel .hint{overflow-wrap:anywhere}.mission-panel summary{font-size:11px}.mission-panel details p{margin-bottom:12px}@media(max-width:800px){.mission-panel{grid-column:1/-1}}
+
+/* Keep the observer readable beside the native frame at ordinary window widths. */
+main{grid-template-columns:minmax(0,1fr) minmax(360px,430px)}
+aside{min-width:0}.mission-panel{font-size:13px}.mission-facts{font-size:12px;grid-template-columns:86px minmax(0,1fr);gap:10px 12px}
+.mission-panel .hint,.mission-panel summary{font-size:12px}.mission-panel h3{font-size:12px;margin:16px 0 8px;color:var(--text);font-weight:600}
+.memory-list{list-style:none;margin:0;padding:0;max-height:350px;overflow:auto;overscroll-behavior:contain}
+.memory-list li{border-left:2px solid #475548;padding:8px 10px;margin:0 0 10px;background:#101719;overflow-wrap:anywhere}
+.memory-list strong{font-size:12px;font-weight:550;color:var(--text)}.memory-list p{font-size:12px;line-height:1.6;margin:7px 0 0!important;color:#b3c0bd;white-space:pre-wrap}
+#mission-summary{font-size:16px;line-height:1.5}#mission-control-note{border-left:2px solid var(--amber);padding-left:10px;color:var(--text)}
+@media(max-width:1100px) and (min-width:801px){main{grid-template-columns:minmax(0,1fr) 360px;padding:24px;gap:20px}.panel{padding:16px}.stage-heading{flex-wrap:wrap}}
+@media(max-width:800px){main{display:block}.mission-panel{grid-column:1/-1}.memory-list{max-height:300px}}

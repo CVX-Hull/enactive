@@ -126,9 +126,15 @@ class ActivityRecoveryTests(unittest.TestCase):
         self.assertEqual(result["state"], "partial", result)
         self.assertEqual(result["result"]["phase"]["stage"], "interrupt_confirmation")
         self.assertIsNone(self.runtime._lease)
+        summary = self.runtime.status()["activity_phase"]
+        self.assertEqual(summary["origin_request_id"], "rest-root")
+        self.assertEqual(summary["stage"], "interrupt_confirmation")
+        self.assertFalse(summary["answered"])
+        self.assertFalse(summary["grants_authority"])
         result = self.recovery("answer_interrupt")
         self.assertEqual(result["state"], "partial", result)
         self.assertEqual(result["result"]["phase"]["stage"], "awaiting_readmission")
+        self.assertEqual(self.runtime.status()["activity_phase"]["stage"], "awaiting_readmission")
         primitives = self.runtime._ledger.primitive_records()
         self.assertEqual([x["intent"]["kind"] for x in primitives], ["action", "request_interrupt", "answer_interrupt"])
         answer = primitives[-1]
@@ -145,6 +151,7 @@ class ActivityRecoveryTests(unittest.TestCase):
         self.assertEqual(result["state"], "partial", result)
         self.assertEqual(result["result"]["phase"]["stage"], "complete")
         self.assertIsNone(self.runtime._registered_activity.phase)
+        self.assertIsNone(self.runtime.status()["activity_phase"])
         self.assertIsNotNone(self.runtime._lease)
         self.assertEqual(self.runtime.status()["spent_inputs"], 4)
         self.assertEqual(len([x for x in self.bridge.delivered if x["kind"] == "resume"]), self.resumes_at_start + 1)
@@ -209,10 +216,40 @@ class ActivityRecoveryTests(unittest.TestCase):
         self.assertEqual(self.runtime.status()["pause_cause"], "user")
         self.assertIsNone(self.runtime._lease)
         self.assertIsNone(self.runtime._registered_activity.phase)
+        self.assertIsNone(self.runtime.status()["activity_phase"])
         self.assertEqual(len(self.controls.requests), 1)
         row = self.runtime._ledger.primitive_records()[-1]
         self.assertEqual(row["state"], "returned")
         self.assertEqual(row["result"]["control"]["result"]["status"], "prompt_opened")
+
+    def test_pause_during_summary_build_cannot_republish_old_activity_or_lease(self):
+        self.prepare()
+        self.recovery("interrupt")
+        summary = self.runtime._registered_activity.summary
+        publish = self.runtime._publish
+        interrupted, snapshots = [], []
+        def pause_after_summary():
+            value = summary()
+            if value is not None and not interrupted:
+                interrupted.append(True)
+                self.runtime.pause("Pause between summary build and cache publication")
+            return value
+        def capture_publication():
+            publish()
+            snapshots.append(self.runtime.status())
+        count = len(self.bridge.delivered)
+        with patch.object(self.runtime._registered_activity, "summary", side_effect=pause_after_summary), \
+             patch.object(self.runtime, "_publish", side_effect=capture_publication):
+            req = self.request("observe", request_id="summary-race")
+            self.runtime.command(req)
+            self.settled(req["request_id"])
+        self.assertTrue(interrupted)
+        paused = [snapshot for snapshot in snapshots if snapshot["phase"] == "paused"]
+        self.assertTrue(paused)
+        for snapshot in paused:
+            for key in ("activity_phase", "lease_owner", "prompt_phase", "lifecycle_phase"):
+                self.assertIsNone(snapshot[key], key)
+        self.assertEqual(len(self.bridge.delivered), count)
 
     def test_control_timeout_remains_unknown_and_same_request_never_replays(self):
         self.prepare()

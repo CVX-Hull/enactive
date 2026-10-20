@@ -26,6 +26,11 @@ Selected item/count/inspection and bounded activity observations now compose in
 source. Activity interruption, exact answers and a separate charged Resume also
 compose in source. Native lifecycle/selector/activity qualification and common
 semantic outcome/recovery are still required before independent play.
+The observer now exposes readable historical memory and cumulative charged
+admissions separately from requests, live activity and old results. These counts
+do not measure model usage or prove greater gameplay efficiency. Its
+[synthetic UI inspection](acceptance/2026-10-20-mission-observer.md) is separate from
+the pending independent native mission.
 
 The [seven-day functional campaign](acceptance/2026-10-19-seven-day-survival.md)
 records the same normally created Ned Meyers / Belgium, ordinary supplies and

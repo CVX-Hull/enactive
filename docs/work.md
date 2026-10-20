@@ -112,6 +112,17 @@ Common outcome/recovery remains unfinished. Selected item/count/inspection,
 activity polls and registered interruption/answer/separate Resume compose in source.
 The activity adapter preserves original consent/limits, known frameless ACKs and
 unknown UUIDs; native activity qualification remains open.
+The passive observer now presents source-linked historical memory, current private
+activity and cumulative ledger request/admission groups. Model/tool/intervention
+totals remain unmeasured. The [viewer checkpoint](acceptance/2026-10-20-mission-observer.md)
+also records the known-nondelivery memory correction; it does not accept independent
+gameplay or close #141/#144. Common unknown-outcome reconciliation/readmission is
+the next coupled lead-owned implementation before native qualification. Atomic
+retirement can prove unclaimed custody only for its exact request; an absent inbox
+or later frame alone cannot prove delivery. Preserve original unknown receipts,
+costs, root limits and user Pause when adding that path. Reuse the mission writer,
+ledger, controller and deliberate charged Resume rather than adding an outbox or
+another executor. Any contract change must migrate every caller together.
 #144 records the exact source/test checkpoint, including outstanding failures;
 resolve and review this scope before pulling more implementation work. Publish the
 single contract only after callers, persistence validation, tests and current
@@ -122,8 +133,8 @@ pull-request checks, but its first push CI timed out in two synthetic lifecycle
 tests before their finish assertions. The retained failure is not native evidence.
 A controlled delayed-ACK probe reproduces that fixture limit; the functional
 fixture now uses the existing runtime suite's bounded wait, while deliberately
-withheld acknowledgments still become unknown. Exact-head common and hosted
-checks must verify this correction before the tracker calls the source green.
+withheld acknowledgments still become unknown. The subsequent correction passed the full common gate and both hosted checks;
+the failed run remains evidence rather than native qualification.
 
 The lead owns contracts/runtime/ledger and the sole native runtime. Existing item
 policy and activity transport workers have finished their assigned paths; further

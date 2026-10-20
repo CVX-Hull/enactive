@@ -328,6 +328,34 @@ class CampaignMemoryTests(unittest.TestCase):
         self.assertEqual(self.ledger.primitive("logical-1")["state"], "unknown")
         self.assertIsNone(self.ledger.primitive("logical-1")["effect"])
 
+    def test_known_nondelivery_is_charged_but_does_not_invalidate_current_claim_or_work(self):
+        ref = self.source()
+        self.remember(self.assertion("carried-water", ref))
+        self.remember(self.work(ref, status="active", stage="verify-stock"))
+        self.primitive(ref, state="not_dispatched")
+        packet = self.context()
+        self.assertEqual(packet["claims"][0]["status"], "current")
+        self.assertEqual(packet["work"][0]["status"], "active")
+        self.assertEqual(packet["work"][0]["unresolved_effects"], [])
+        self.assertEqual(self.ledger.snapshot(now=1000)["spent_inputs"], 1)
+        self.assertEqual(self.ledger.primitive("logical-1")["state"], "not_dispatched")
+        self.assertFalse(packet["grants_authority"])
+        # Nondelivery does not refresh an earlier observation or align new scope.
+        self.source(31)
+        stale = self.context()
+        self.assertEqual(stale["claims"][0]["status"], "last_seen")
+        self.assertEqual(stale["work"][0]["status"], "unknown")
+        self.assertNotIn("potentially changed", str(stale["dispositions"]))
+
+    def test_prepared_published_returned_and_unknown_still_invalidate_prior_memory(self):
+        ref = self.source()
+        entry = self.assertion("carried-water", ref)
+        for state in ("prepared", "published", "returned", "unknown"):
+            primitive = {"logical_id": "possibly-changed", "state": state,
+                         "intent": {"expected_session": ref.session, "expected_revision": ref.revision}}
+            with self.subTest(state=state):
+                self.assertEqual(self.memory._effects(entry, {ref.observation_id: ref}, (primitive,)), ["possibly-changed"])
+
     def test_pending_water_progress_ground_output_and_carried_stock_are_distinct(self):
         before = self.source()
         first = self.work(before)

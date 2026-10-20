@@ -276,7 +276,7 @@ class MissionRuntime:
             self._rotation = None
             if self._snapshot is not None and self._snapshot["phase"] not in TERMINAL:
                 self._snapshot.update(phase="paused", pause_cause=cause, reason=reason, lease_owner=None,
-                    prompt_phase=None, lifecycle_phase=None,
+                    prompt_phase=None, lifecycle_phase=None, activity_phase=None,
                     epoch=self._snapshot["epoch"] + 1, next_needed_decision="Explicit supported readmission required")
         return result
 
@@ -296,6 +296,7 @@ class MissionRuntime:
             return
         state = self._ledger.snapshot(now=self._wall())
         usage = self._store.usage()
+        measured = self._ledger.measured_counts()
         limits, reserve = self._admission.limits, self._admission.cleanup_reserve
         active = self._active.request if self._active is not None else None
         current_available = self._current is not None
@@ -314,6 +315,7 @@ class MissionRuntime:
             "lifecycle_phase": self._registered_lifecycle.summary() if self._exit_phase is None else {
                 "origin_request_id": self._exit_phase.root_id, "operation": "exit",
                 "checkpoint_id": self._exit_phase.checkpoint.observation_id, "grants_authority": False},
+            "activity_phase": self._registered_activity.summary(),
             "active_operation": None if active is None else active.get("request_id", active["kind"]),
             "skill": self._skill, "progress": copy.deepcopy(self._progress),
             "last_receipt": copy.deepcopy(self._last_receipt),
@@ -335,12 +337,14 @@ class MissionRuntime:
                 "Registered lifecycle/readmission needed" if state["phase"] == "admitted" else
                 "Explicit supported transition required", "grants_authority": False,
             "configuration": asdict(self._admission.configuration),
-            "metrics": {"harness_api_spend": 0, "external_tokens": None, "api_quota": None,
+            "metrics": {**measured, "model_requests": None, "tool_calls": None, "interventions": None,
+                "harness_api_spend": 0, "external_tokens": None, "api_quota": None,
                 "model_time_seconds": None, "game_seconds": self._game_cost, "archive": usage},
             "diagnostic": self._diagnostic}
         with self._metadata:
             if self._pending_pauses and self._snapshot is not None:
-                for key in ("phase", "epoch", "pause_cause", "reason", "next_needed_decision"):
+                for key in ("phase", "epoch", "pause_cause", "reason", "next_needed_decision",
+                            "lease_owner", "prompt_phase", "lifecycle_phase", "activity_phase"):
                     value[key] = self._snapshot[key]
             self._snapshot = value
 

@@ -231,7 +231,8 @@ class CampaignMemory:
         affected = []
         for primitive in primitives:
             intent = primitive["intent"]
-            if intent["expected_session"] != entry["scope"]["session"] or primitive["state"] == "rejected":
+            if (intent["expected_session"] != entry["scope"]["session"]
+                    or primitive["state"] in ("rejected", "not_dispatched")):
                 continue
             if not sources or any(ref.revision <= intent["expected_revision"] for ref in sources):
                 affected.append(primitive["logical_id"])

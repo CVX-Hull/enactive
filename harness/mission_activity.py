@@ -65,6 +65,20 @@ class RegisteredActivity:
     def revoke(self):
         self.phase = None
 
+    def summary(self):
+        """Private live checkpoint only; a reported receipt cannot restore it."""
+        phase = self.phase
+        if phase is None:
+            return None
+        kind = phase.checkpoint.boundary_kind
+        stage = ("awaiting_observation" if phase.needs_observation else
+                 "interrupt_confirmation" if kind == "interrupt_confirmation" else
+                 "activity_poll" if kind == "activity_poll" else "awaiting_readmission")
+        return {"origin_request_id": phase.prompt.root_id,
+                "checkpoint_id": phase.checkpoint.observation_id, "stage": stage,
+                "interrupt_request_id": phase.interrupt_id, "answered": phase.answered,
+                "grants_authority": False}
+
     def guard(self, work, phase: ActivityPhase, proposal=None):
         r = self.runtime
         r._check_cancelled(work)

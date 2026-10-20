@@ -573,6 +573,38 @@ class MissionLedger:
                     "unreconciled": self._db.execute("SELECT count(*) FROM primitives WHERE state='unknown' AND effect IS NULL").fetchone()[0],
                     "grants_authority": False}
 
+    def measured_counts(self) -> dict:
+        """Cumulative retained rows, not delivered keys, tasks or model calls.
+
+        The mission writer caches this projection on publication. Viewer polling
+        must not scan receipts, journal files or the bounded recent event buffer.
+        No new counter/history is maintained alongside SQLite's source records.
+        """
+        with self._mutex:
+            if self._db is None: raise LedgerError("Ledger is closed")
+            rows = self._db.execute("""
+                SELECT 'by_kind',json_extract(payload,'$.kind'),count(*) FROM requests
+                    GROUP BY json_extract(payload,'$.kind')
+                UNION ALL
+                SELECT 'by_skill',json_extract(payload,'$.skill_kind'),count(*) FROM requests
+                    WHERE json_extract(payload,'$.kind')='skill'
+                    GROUP BY json_extract(payload,'$.skill_kind')
+                UNION ALL
+                SELECT 'by_state',state,count(*) FROM requests GROUP BY state
+                UNION ALL
+                SELECT 'primitives',state,count(*) FROM primitives GROUP BY state
+            """).fetchall()
+        operations = {"total": 0, "by_kind": {}, "by_skill": {}, "by_state": {}}
+        primitives = {"charged": 0, "by_state": {}}
+        for dimension, label, count in rows:
+            if dimension == "primitives":
+                primitives["by_state"][label] = count
+                primitives["charged"] += count
+            else:
+                operations[dimension][label] = count
+                if dimension == "by_kind": operations["total"] += count
+        return {"operations": operations, "primitives": primitives}
+
     def _touch(self, now, *, dispatch=False, cleanup=False):
         now = _clock(now)
         state = self._get("state")

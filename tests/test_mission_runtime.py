@@ -441,6 +441,23 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.runtime.status()["memory_context"], packet)
         self.assertFalse(packet["grants_authority"])
 
+    def test_observer_metrics_are_copied_cumulative_publication_not_status_io(self):
+        self.start()
+        navigation = self.navigation()
+        self.runtime.command(navigation)
+        self.settled(navigation["request_id"])
+        status = self.runtime.status()
+        counts = self.runtime._ledger.measured_counts()
+        for key in ("operations", "primitives"):
+            self.assertEqual(status["metrics"][key], counts[key])
+        self.assertEqual(status["metrics"]["primitives"]["charged"], status["spent_inputs"])
+        for key in ("model_requests", "tool_calls", "interventions"):
+            self.assertIsNone(status["metrics"][key])
+        with patch.object(self.runtime._ledger, "measured_counts", side_effect=AssertionError("Status must use cache")), \
+             patch.object(self.runtime._ledger, "snapshot", side_effect=AssertionError("Status must not query ledger")):
+            status["metrics"]["operations"]["total"] = -1
+            self.assertEqual(self.runtime.status()["metrics"]["operations"], counts["operations"])
+
     def test_interaction_unknown_delivery_cannot_open_prompt(self):
         self.bridge.value["actions"].append("open")
         self.start()
