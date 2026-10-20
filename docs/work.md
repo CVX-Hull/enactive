@@ -19,33 +19,29 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 | Survival pilot and findings | [Pilot report](acceptance/2026-10-18-survival-pilot.md) retains the stopped pre-spawn attempt and its dispositions; #78/#83 own acceptance. |
 | Continuity and first-day rehearsal | [Qualified first-day result](acceptance/2026-10-18-first-day-completion.md) retains actual save/restart/handoff, needs and autonomy evidence plus its failures/unknowns; #79/#80 own acceptance. |
 | Seven-day readiness | [Readiness report](acceptance/2026-10-18-seven-day-readiness.md) records the finite preparation gate and its limits; #81. Readiness does not guarantee campaign success. |
-| Current seven-day path | [020](acceptance/2026-10-19-midpoint-survival.md) accepted days1–3, midpoint restart/reload and player replacement. [024](acceptance/2026-10-19-four-day-survival.md) accepted day four. [025](acceptance/2026-10-19-first-clean-water.md) verified the first250mL clean-water output, not remaining coverage. Days5–7 remain incomplete. [#103](https://github.com/CVX-Hull/enactive/issues/103) is accepted; [#104](https://github.com/CVX-Hull/enactive/issues/104) owns day five and [#129](https://github.com/CVX-Hull/enactive/issues/129) resources/forecast. |
-| Full closeout | Same-character daily evidence, normal midpoint save/restart/reload and player replacement, final normal shutdown, independent complete-campaign review, protected publication/CI, owned cleanup and current Project. #82 stays open until all are proved. |
+| Seven-day functional campaign | [Full report](acceptance/2026-10-19-seven-day-survival.md) owns accepted daily turns, same-character continuity, actual supplies/rest, corrections, costs and limits. All seven daily milestones and normal final runtime shutdown are accepted within their stated functional scope. Earlier closed attempts remain failures. |
+| Closeout | Final normal Save/Quit and native/controller shutdown, independent complete-campaign review, protected candidate/main validation and owned branch cleanup are separate gates. Publication receipts and live status belong in #82/#10 and the PR. |
 
-[026–028](acceptance/2026-10-19-water-coverage.md) collected3Lraw and stored one1.5L
-clean batch. A further six-portion craft stopped twice when heat disappeared; it
-remains SAME59%wielded, no second output. Fresh stock3Lclean/500mLfree raw/12rations;
-craft-bound water is not usable stock. Latest normal5562641 is healthy/Comfortable;
-one owned game/controller paused, actual slots null/all tools terminal/noqueue.
-Residual stick+ashes remain on old unlit[9,-13]; marked source[7,-13]empty. Days1–4
-accepted; days5–7 and remaining coverage incomplete.
+[Water evidence](acceptance/2026-10-19-water-coverage.md) preserves missing-tool and
+crowbar-damage stops, declined storage advice, two heat interruptions and the
+successful small-fuel continuation of the same craft. The two1.5L bulk outputs were
+stored and later used for responsive care. This configuration is not a controlled
+fuel-shape experiment or a guaranteed future supply policy.
 
-[050](changes/050-curtain-fuel-and-retained-craft.md) now proposes ordinary CUT salvage
-of that residual stick into small fuel, existing marked-source feeding, ONE ignition
-and SAMEcraft continuation:≤65inputs/25minutes, actual yield≥5 gate. User-delegated
-prospective100input extension keeps time endpoints/original clocks/costs/reserve.
-No new curtain/search/bash/newrecipe/replacementingredients/automatic renewal.
-Actual tool/target/yield, heat, capacity and complete-route fit remain gates.
+[050](changes/050-curtain-fuel-and-retained-craft.md) is a closed historical
+admission after completion, not continuing authority. [046](changes/046-replan-known-nondelivery.md)
+and the [operator contract](protocol.md#designated-campaign-operator) retain the
+handoff, unknown-effect and bounded-recovery rules. Future play requires a new
+explicit finite objective, budget, current preflight and actor assignment. No old
+allowance or running chat renews it.
 
-A successor needs source/review/common checks/clean checkpoint, fresh actual
-preflight, explicit actor assignment and credible complete-route fit. The
-[operator contract](protocol.md#designated-campaign-operator) governs handoff,
-unknown effects and bounded recovery. [046](changes/046-replan-known-nondelivery.md)
-records confirmed non-delivery versus game refusal; [047](changes/047-quality-data-continuation.md)
-and [048](changes/048-water-coverage-budget.md) preserve earlier allocation decisions.
-#129 owns resources/forecast and #75 control-fit findings. GitHub owns current
-execution stage, estimates and dependencies; historical reports grant no authority.
-Consolidated protected publication is a separate verification step.
+The next bounded item is [#71](https://github.com/CVX-Hull/enactive/issues/71), trace
+extraction and label readiness. See the Project for its current stage and estimate. Use
+actual campaign failures, corrections and uncertainty before selecting memory
+architecture or model comparisons. #75 owns workflow/control maintenance; #40 owns
+general outcome monitoring. Research review remains October24,2026 and control
+maintenance keeps January15,2027 and earlier event triggers. The public Project
+owns changing work estimates and Status/Horizon, not this dated evidence map.
 
 ## Execution ownership
 
@@ -61,7 +57,7 @@ Use the [campaign-driven improvement workflow](project-management.md#campaign-dr
 
 | Area | Backlog owner and revisit rule |
 | --- | --- |
-| Runtime autonomy, continuity and current gameplay gaps | #82 and its current daily child; implement only demonstrated blocking capabilities. Tests, native build and actual graphical gameplay stay separate evidence lanes. |
+| Further runtime, UI and gameplay gaps | #126 owns external-operator display; #128 retains publication-stall recurrence/recovery triggers. Future campaigns need scoped admission and separate native evidence. |
 | Workflow, documentation and control maintenance | [#75](https://github.com/CVX-Hull/enactive/issues/75); reconcile triggered gaps and burden. Keep current contracts concise, link historical evidence, and do not renew due dates through grooming. |
 | Memory | [#70/#71](https://github.com/CVX-Hull/enactive/issues/70); inspect actual player-visible traces before choosing persistent architecture. Actual campaign handoff is separate from a general memory benchmark. |
 | Model tiering and comparison | [#16/#24/#25](https://github.com/CVX-Hull/enactive/issues/16), with #72/#73/#74 as explicit measurement gates. More tiers or paid providers need a measured benefit and authorized configuration. |

@@ -303,7 +303,11 @@ manifests in Git; large local artifacts need hashes, location and retention rule
 Absence of local media on a fresh checkout is disclosed, not evidence of a failed
 game test. Never call a historical observation a current verification. Select
 critical controls for negative-case tests demonstrating detection of violations.
-Controls: C-GOVERNANCE, C-PORTABLE, C-NATIVE, C-RELEASE, C-MAINTENANCE.
+For source-dependent consequential claims, inspect executable predicates and their
+callers, cadence, units and defaults; a comment or agent citation does not prove
+behavior. Preserve mistaken rationale, corrections and which dependent actions
+actually occurred. Review against actual outcomes rather than retrofitting success.
+Controls: C-GOVERNANCE, C-PORTABLE, C-NATIVE, C-RELEASE, C-MAINTENANCE, C-REVIEW.
 
 ## Workflow and maintenance
 

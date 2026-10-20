@@ -12,7 +12,13 @@ the user watches through a good graphical interface, supported by an understanda
 enforced and maintainable engineering system. Carry work through implementation,
 independent review and a real graphical gameplay demonstration.
 
-## Active continuation: seven-day survival
+## Seven-day survival milestone
+
+The [dated campaign acceptance](acceptance/2026-10-19-seven-day-survival.md) records
+seven accepted daily milestones through168h02m54s, normal midpoint reload/player
+replacement and final normal shutdown, with failures and limitations preserved.
+Publication verification belongs in the linked PR/Issues; maintenance and broader
+research capabilities remain ongoing work.
 
 The user extended the goal to complete the entire
 [seven-day campaign path](work.md#campaign-delivery-path), outcome
@@ -131,12 +137,13 @@ memory or policy benefit remains a separate evaluation obligation.
 
 ## Quality-driven campaign evidence
 
-On2026-10-19 the user delegated time extensions to the lead, emphasizing quality
-data for future development. Retain the seven-day objective while using finite
+On 2026-10-19, the user delegated finite gameplay time and input extensions to the
+lead, emphasizing quality data for future development. Retain the seven-day objective while using finite
 prospective phase budgets and actual evidence: hypotheses/prerequisites, input,
 feedback, verified outcome, uncertainty, costs, corrections and applicability.
-The lead may adjust time without routine user budget questions; no reset of
-spent costs, silent input-cap expansion, automatic actor renewal, safety waiver,
+The lead may prospectively revise finite time and input budgets without routine
+user budget questions, with explicit reviewed scope, ceilings and forecast. No reset
+of spent costs, silent cap expansion, automatic actor renewal, safety waiver,
 paid provider spending or global-environment changes follows. Negative results
 remain useful data and remain failures of their tested claim. Existing records
 and Issues own this work; avoid duplicate trace/tracker infrastructure.

@@ -19,54 +19,30 @@ It needs an active Codex player to choose plans and interpret scenes. A dedicate
 player sub-agent can act as a bounded campaign operator while the lead supervises;
 the waypoint planner has a separate candidate-only role.
 The service executes an explicitly started waypoint task with per-step feedback;
-without a player response it stops on a deadline. General survival is not implemented.
-The[earlier resource discovery](acceptance/2026-10-18-daylight-practice.md) verified
-phone-off daylight and partial medical practice on Ned Meyers/Belgium, then stopped
-before a complete remaining-day fit. It remains qualified historical evidence.
+without a player response it stops on a deadline. General survival planning comes
+from the active Codex player.
 
-The [functional survival report](acceptance/2026-10-19-functional-survival.md)
-verifies two days alive on normally created Ned Meyers / Belgium.
-[020 accepted day three](acceptance/2026-10-19-midpoint-survival.md), normal midpoint
-native restart/exact saved-turn reload and genuine fresh F ordinary-input
-replacement. [021 stopped](acceptance/2026-10-19-treatment-stop.md) after confirming
-raw water and a boiling tool but no heat, and retreating from a distant hostile.
-[024 accepted day four](acceptance/2026-10-19-four-day-survival.md) at5558422,
-96h00m22 after the original start, after failed floor rest, successful bench wake
-and adaptation to interrupted upstairs waiting. Days five through seven remain
-incomplete. [025 verified the first250mL clean-water batch](acceptance/2026-10-19-first-clean-water.md)
-using ordinary outdoor fire, boiling and bottle storage. [026–028](acceptance/2026-10-19-water-coverage.md)
-then collected 3 L of additional raw water, retained missing-tool and crowbar-damage
-stops, and qualified marked ground fuel. After declining a storage warning for a 3.5 L batch,
-the player verified empty bottles and completed a smaller 1.5 L batch and stored all of it.
-The second batch stopped twice when heat disappeared; it remains the SAME unfinished
-six-portion craft, now59% and wielded, with no second output. Fresh stock is
-**3 L clean water, 500 mL free raw water and 12 rations**; six raw portions remain
-committed to the craft. Days5–7 and remaining coverage are incomplete.
+The [seven-day functional campaign](acceptance/2026-10-19-seven-day-survival.md)
+records the same normally created Ned Meyers / Belgium, ordinary supplies and
+water treatment, shelter/rest, midpoint save/restart/exact reload, a genuine
+player replacement and final normal shutdown. It reached168h02m54s, healthy and
+Comfortable with displayed needs clear. The owned runtime is closed; future play
+needs a new explicit admission.
+This is one supervised development campaign under revised finite admissions;
+earlier failures and uncertain acknowledgments remain. It establishes neither a
+general autonomous survival policy nor a controlled model-performance result.
 
-Latest normal5562641 shows a healthy, comfortable character with no displayed needs
-at the outdoor work position. One owned game/controller is paused, actual live slots
-null, all actors/tools terminal/noqueue. A residual stick and ashes remain on the
-unlit old fire tile; the marked source is empty. The phone is off; the north window
-is open without curtains. Final shutdown and lifecycle ACKs remain qualified.
+[#71](https://github.com/CVX-Hull/enactive/issues/71) owns evidence/memory readiness,
+[#40](https://github.com/CVX-Hull/enactive/issues/40) outcome monitoring and
+[#75](https://github.com/CVX-Hull/enactive/issues/75) workflow/control improvements.
+The [work map](work.md) links current priorities and the retained campaign lineage.
+[Operator permissions](operator-permissions.md) distinguishes tested literal CLI
+access from rule activation and actor instructions from security isolation.
 
-[#129](https://github.com/CVX-Hull/enactive/issues/129) owns resources/fit; [work](work.md)
-links the path. All028 assignments are closed. [050](changes/050-curtain-fuel-and-retained-craft.md)
-proposes ordinary CUT salvage of that residual stick into small pieces for the
-existing marked fuel source, ONE ignition and continuation of the SAME craft.
-Actual tool/target/yield/heat/capacity and complete-route fit remain gates; source
-findings do not guarantee yield or burn time. The user delegates finite gameplay
-input/time extensions for quality data.050 adds100inputs prospectively while keeping
-time endpoints, original clocks, all costs/unknowns and final reserve unchanged.
-[049](changes/049-distinct-fuel-study.md) is historical. [046](changes/046-replan-known-nondelivery.md)
-and the [operator contract](protocol.md#designated-campaign-operator) govern known
-non-delivery, bounded recovery and handoff. These manual controls are not general
-monitoring. Stable literal CLI access worked without recurring human approval;
-no broader permission rule or Codex restart was required.
-
-The [project goal](goal.md) records the original MVP and active seven-day campaign
-continuation. The [MVP completion audit](acceptance/2026-10-17-completion.md) maps
+The [project goal](goal.md) records the original MVP and seven-day campaign
+requirements. The [MVP completion audit](acceptance/2026-10-17-completion.md) maps
 the original scope to implemented outcomes, independent review and dated gameplay
-evidence; it does not establish the campaign continuation.
+evidence; the later campaign has its own evidence above.
 Direction and constraints live in the [charter](charter.md). This page summarizes
 current behavior; detailed promises live in [architecture](architecture.md).
 
@@ -110,9 +86,9 @@ explain why native integration was selected and when we would reconsider it.
 | Run input ownership | Explicit task owns input; competing remote inputs reject; Pause immediately revokes further dispatch | [Ownership contract](protocol.md#controller-run-ownership) |
 | Waypoint task supervision | Explicit start, fresh stage planning, verified steps, visible stops and continuation with original history/budgets | [Supervisor contract](protocol.md#passive-waypoint-supervision) |
 | Player planning handoff | Active-chat player returns bounded candidates; slow decisions require fresh evidence revalidation. Missing/stale replies stop; chat usage remains unmeasured | [Planner contract](protocol.md#bounded-injected-planner) |
-| Dedicated gameplay operator | Two real input phases consumed carried water, conserved rations and handed off paused for lead inspection; one saved-character result, no resupply or survival guarantee | [Operator acceptance](acceptance/2026-10-18-campaign-operator.md) |
+| Dedicated gameplay operator | Bounded ordinary campaign play with lead admission, corrections and terminal handoffs; no general survival guarantee | [Campaign evidence](acceptance/2026-10-19-seven-day-survival.md) |
 | Evaluation records | Passive versioned outcome/cost recorder and offline summaries; external planning and future adapters are not automatically measured | [Evaluation guide](evaluation.md) |
-| Autonomous survival | Not implemented; Codex remains the planner | [Current scope](architecture.md#scope-and-responsibilities) |
+| Unattended survival service | Not implemented; an active Codex player remains the planner | [Current scope](architecture.md#scope-and-responsibilities) |
 | Reproducible installation | Fresh build demonstrated on this Mac; other hosts remain unverified | [Setup](setup.md), [historical provenance](acceptance/2026-10-17-mvp-manifest.json) |
 | Engineering assurance | Portable checks, source checks and review; native gameplay is a separate validation lane | [Control map](controls.md) |
 
@@ -136,94 +112,24 @@ intermediate-obstacle stopping and Pause/continuation, including failures.
 
 ## Current direction and decisions
 
-The original consolidated MVP goal is verified within its stated boundaries. Its
-[audit](acceptance/2026-10-17-completion.md) records planner-loop timing and reuse
-comparisons. The [foundation increment](acceptance/2026-10-17-foundation-implementation.md)
-adds native input authority and passive evidence; it does not add autonomous play. The documentation [brief](changes/002-documentation-review.md)
-explains the visual explanations, lifecycle records and maintenance checks.
-Current priorities are in [work](work.md). The integrated player uses the accepted
-native authority, evidence, skills, planner and supervisor components in one
-explicit task lifecycle. The spectator shows the current leg, verified progress,
-next check and stop reason; deeper evidence and unknown usage remain inspectable.
-The [integration brief](changes/012-integrated-player.md) explains the player
-arrangement; [round 012 acceptance](acceptance/2026-10-18-integrated-player.md) records
-two completed native tasks, Pause/continuation and the unsuccessful first route. Comparative model efficiency, generic semantic
-monitoring and broader survival remain separately tracked follow-ups.
+The original MVP and campaign are scoped milestones, with dated evidence and
+limits. [Work](work.md) links accepted outcomes, failures and future decisions.
+The campaign-driven [improvement workflow](project-management.md#campaign-driven-improvement)
+routes observed pain points to owned work and later verification. It is manual
+engineering; continuous policy learning remains unimplemented.
 
-The [seven-day target](https://github.com/CVX-Hull/enactive/issues/10) remains open:
-a normally created fresh character, essential needs/shelter/rest and meaningful
-supply/travel choices, normal save/restart and actual player-context replacement,
-with watchable graphics and user Pause. The user must not supply routine keys or
-rescue. [Work](work.md#campaign-delivery-path) links the full retained lineage,
-including failed, assisted and partial attempts.
+The next memory and [monitoring design](design/outcome-monitoring.md) must use
+actual trajectories while distinguishing observations, fallible judgments and
+unknowns. The [representation study](research-memory-representations.md) and
+[monitoring review](research-outcome-monitoring.md) provide research, not gameplay
+proof. Model-tier comparisons retain explicit data and measurement gates; no paid
+provider is configured. Prefer existing native activities, Git and GitHub over new
+simulators, history systems or trackers without a demonstrated gap.
 
-The [qualified development first day](acceptance/2026-10-18-first-day-completion.md)
-reached24h14m29s alive without human rescue. Endpoint Thirsty, unknown exact sleep
-duration, nine lifecycle ACKs and two cleanup deadline deviations remain explicit.
-The [two-phase operator result](acceptance/2026-10-18-campaign-operator.md) verified
-carried-water consumption, ration conservation and paused lead inspection with
-13delegated inputs; it did not establish water resupply or seven-day feasibility.
-[Operator permissions](operator-permissions.md) separates tested rules from live
-activation and actor instructions from actual security isolation.
-
-[Readiness #81](acceptance/2026-10-18-seven-day-readiness.md) then accepted a frozen
-finite protocol, actual actor/native preflight and seven owned daily outcomes.
-The [first deciding campaign](acceptance/2026-10-18-seven-day-stop.md) normally
-created Ned Meyers/Belgium and collected supplies, but stopped after13game seconds
-on an approval rejection after a guarded-walk stop lacked a fresh verified player
-observation. The rejection was honored and normal Save/Quit preserved the partial;
-48charges include the denied request and cleanup. No first-day/seven-day success.
-The [walk correction](acceptance/2026-10-18-walk-reassessment.md) now retains the
-actual stop observation and freezes input until explicit fresh Observe/Resume.
-Its native zero-step probe passed after an earlier unexercised load probe;17combined
-charges and zero game advance, with lifecycle ACKs still unknown. Broader permissions
-were unnecessary. Further campaign play requires prospective admission, not unused
-allowance from the stopped attempt.
-
-The [integrated003 partial](acceptance/2026-10-18-integrated-day1.md) secured more
-supplies and boiling/fuel materials but stopped before day1: a local heat plan did
-not fit the complete remaining day within its input allowance. Normal cleanup
-retained259whole charges,119elapsed game seconds and all unknowns. Further play
-requires a prospective complete-day plan and allocation; no seven-day result yet.
-
-Campaigns expose concrete memory, planning, monitoring and UI needs. The
-[review workflow](project-management.md#campaign-driven-improvement) routes observed
-problems into owned bounded improvements and checks their effect in later play.
-This is manual engineering; continuous policy learning remains unimplemented,
-and one successful campaign cannot establish causal improvement or reliability.
-
-The [memory study](research-memory-representations.md) compares six mathematical
-and engineering views, with reproducible simulations and negative results. It
-recommends traceable evidence, explicit applicability, simple replay/query
-baselines and offline evaluated lessons. The next step is a bounded visible-trace
-benchmark; persistent memory, continuous policy improvement and new model tiers
-remain unimplemented. [Study evidence](acceptance/2026-10-18-memory-representations.md).
-
-The [tiered-gameplay proposal](research-tiered-gameplay.md) explores a capable
-planner, bounded skills and feedback, with additional model tiers conditional on
-measured benefit. Its [tracked outcome](https://github.com/CVX-Hull/enactive/issues/16)
-links the design, implementation and evaluation work; it is not current gameplay
-capability.
-
-The [outcome-monitoring design](design/outcome-monitoring.md) explains the next
-architectural extension: distinguish exact visible facts from fallible semantic
-judgments, keep unknowns explicit, and choose between another observation,
-stronger reasoning, plan repair or operator help. Its
-[evidence review](research-outcome-monitoring.md) includes October 2026 research.
-This remains proposed behavior, not an implemented general monitor.
-
-The accepted foundation design specifies [native operator recovery](design/native-control.md)
-and [waypoint-and-return gameplay](design/gameplay.md). Its
-[brief](changes/004-gameplay-foundation.md) explains the source findings, ownership
-and verification gates. Boundary/session authority and typed evidence are now
-implemented, along with scoped operator activity interruption and debug continuation.
-The integrated runtime connects waypoint execution to the active-chat player;
-a separately paid model API is not configured. The [implementation brief](changes/005-foundation-implementation.md)
-explains the accepted slice and its limits.
-
-No platform migration or new hosted service is being proposed. We will reopen
-platform and transport choices when requirements or measured maintenance costs
-justify it, using the [decision records](decisions/002-local-contract.md).
+No platform migration or hosted service is proposed. Revisit choices when measured
+capability or maintenance cost justifies it; [ADRs](decisions/002-local-contract.md)
+record alternatives and reversal triggers. Research review remains October24,2026;
+control maintenance keeps its recorded dates and earlier event triggers.
 
 ## How you stay in control of the project
 

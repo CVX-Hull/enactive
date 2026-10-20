@@ -1,11 +1,11 @@
 ---
 owner: lead
 date: 2026-10-19
-scope: Same-character026–028 raw collection, failed plans, fuel setup and stored bulk output
+scope: Same-character026–028 collection, failures and two stored bulk outputs
 status: historical
 ---
 
-# Raw water collected; first bulk treatment stored
+# Water collection and treatment — failures and completed batches
 
 026 used clean source8ea0c70320ef076a38b1c3b93889dad2d9d3ad4e;027 used clean
 a29bac9fa3f32ffd7aa3ff69842ec077c1c9b27e.028 used0df4a67997abd5c23792bfd19f2634b41356aec8
@@ -13,9 +13,12 @@ for the bench study and a582ab719fb9f0c880d547946bc967912953342f for ground setu
 the storage-warning study;5e5da45808082a732ea042f93132e7b22ffe6d80
 for container inspection and the first stored bulk batch. All used unchanged
 native2095b718f470fa01b5a98ae6a1a8a3b5cd62d171597c7e11d34f199f0edcd69b.
+Small-piece completion later used99c7a7b82228c5eee664c3a55078ee41e6a91798.
 Same normally created Ned Meyers/Belgium, originalT05212800, remained windowed with
-the project userdir. Days1–4 stay accepted; days5–7 remain incomplete. This is
-ordinary collection and verified1.5L bulk treatment, not a survival-day pass.
+the project userdir. Dated sections retain the state and failures at their stops;
+the later section verifies both1.5L outputs stored. Subsequent days5–7 and final
+lifecycle are accepted separately in the [full campaign report](2026-10-19-seven-day-survival.md).
+Resource results alone do not pass a survival day.
 No game-engine patch, new provider, global setup, hidden-state/save access or
 human gameplay rescue was introduced. Routine gameplay approval was unnecessary.
 
@@ -269,7 +272,40 @@ Exact4179 push39333804418/PR39333809625 CI passed, separate from native gameplay
 No new native build.050's revised small-piece salvage proposal is prospective;
 closed curtain/heat assignments grant no authority to reignite or continue.
 
-## Data, CI and remaining acceptance
+## 028 small-piece fuel completed the retained craft
+
+Under99c7a7b82228c5eee664c3a55078ee41e6a91798, actual273 ordinary pocket-knife
+CUT salvage yielded **ten splinters**, rather than treating the source estimate of
+eight or nine as guaranteed.284 verified nine at the marked source and286 one
+starter with ashes on the old fire tile; the work tile stayed clear.293 was the
+one ignition, lighter91.296 continued the SAME59% six-portion craft;297 produced
+clean water(hot)(6), without new ingredients or another recipe. Three separately
+observed bottle fills299/301/303 reduced output6→4→2→normal. Fresh304 verified
+**4.5L clean/500mL free raw/12rations**, with no observed output loss or consumption.
+
+307 showed seven pieces at the source;309 showed small fire, burnt splinter and
+ashes. This supports this particular working configuration, not a measured burn
+quantity/duration or a controlled causal fuel-shape comparison. The retained craft
+already had59% progress; quantities and elapsed conditions differed from failures.
+Later fire/fuel state was not inspected from the basement.
+
+F311Pause312Status/FINAL and lead313–315 established supported paused normal
+5563338/rev1761/[8,-13], green/Comfortable/blank needs/SafeON, actual null slots,
+terminal tools and no queue. Independent review checked counters, frame hashes,
+actual output/stock pixels and unchanged unknowns.48inputs cost1082.369seconds at
+the recorded operator-terminal timestamp. The frozen outcome initially used the
+last Status REQUEST time,1049.354seconds; a separate adjudication corrects that
+cost while preserving the original bytes. No cost was refunded or clock reset.
+Totals1880whole/959aggregate/566day5/167lifecycle;215current028 and **412combined
+025–028 resource inputs** are frozen. Later care scope is not a resource counter.
+
+Normal452checks and exact99c7 push39336211897/PR39336217419 CI passed separately
+from unchanged native2095 gameplay; no new native build occurred. Remaining-care
+outcomes, actual supplies consumed and final lifecycle belong to the
+[full campaign report](2026-10-19-seven-day-survival.md). Resource findings alone do
+not accept a survival day. Closed earlier studies retain their failures.
+
+## Data and separate acceptance lanes
 
 The [manifest](2026-10-19-water-coverage-manifest.json) binds selected local receipts,
 frames, ledgers, preflights, checkpoints, recorders and frozen outcomes for026/027 and028 bench/ground/storage/inspection snapshots.
@@ -277,11 +313,11 @@ Local-only artifacts are not supplied on a fresh checkout; hashes bind bytes, no
 semantic truth or representativeness. This is correlated development data, not a
 held-out benchmark, model comparison, training result or causal-learning claim.
 Existing#71 owns source/route-memory extraction, #40 monitoring and#75 forecast/
-control burden; #129/#104 own resources/day five. Bashing yielded no salvage;
-ground-source stoking and one stored1.5L batch are qualified. Further heat duration
-and remaining potable coverage are unproved.
+control burden. #129/#104 own the resource/day-five acceptance dispositions.
+Bashing yielded no salvage; both bulk outputs were later stored. Future heat
+quantity/duration and general resource reliability remain unproved.
 
-451portable tests and diagram/governance/viewer checks passed before each segment,
+Earlier451portable tests and diagram/governance/viewer checks passed,
 including normal checkpoint hooks. An initial invalid document-status value failed
 metadata checking and was corrected before026admission. No new native build occurred.
 Exacta29PRCI39321483681passed; pushCI39321467937failed one empty-unknown assertion.
@@ -292,5 +328,6 @@ no production deadline/guard. Normal full452checks then passed before028; exact0
 PRCI39324268075 passed. The original failed run and causal uncertainty are retained.
 Later source changes still require their own checks/CI. Native outcomes cannot substitute for CI.
 
-Days5–7, remaining potable coverage, final normal lifecycle, independent whole review,
-protected final publication/main CI and owned cleanup remain incomplete.
+The resource lane is complete within these recorded scenarios. Actual remaining
+care, final shutdown and whole-campaign qualifications are in the full report;
+protected publication/main validation has its own PR/Issue evidence.

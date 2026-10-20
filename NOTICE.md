@@ -75,3 +75,9 @@ identifies CC BY-SA 3.0. Game imagery in the screenshot retains
 [CC BY-SA 3.0](https://creativecommons.org/licenses/by-sa/3.0/); it is not covered
 by the project's MIT grant. The screenshot captures the historical renderer and
 spectator, without alteration of the depicted game artwork.
+
+The additional [seven-day endpoint image](docs/assets/seven-day-endpoint-2026-10-19.png)
+is an unchanged actual CDDA/UltiCa capture from 2026-10-19. Its source and byte identity
+are recorded in the [campaign report](docs/acceptance/2026-10-19-seven-day-survival.md)
+and manifest. It retains the same upstream game/art attribution and CC BY-SA 3.0
+terms above, and is not covered by the project's MIT grant.

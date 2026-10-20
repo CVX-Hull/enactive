@@ -2,11 +2,11 @@
 owner: lead
 date: 2026-10-19
 scope: Small-piece fuel, retained craft continuation and remaining care
-status: active
+status: historical
 review_trigger: Actual salvage/fuel/craft result, complete-route fit or authority change
 ---
 
-# Salvage the residual stick and finish the retained craft
+# Residual-stick salvage and remaining-care admission
 
 ## Evidence and decision
 
@@ -122,3 +122,15 @@ and #75 control/forecast maintenance retain the interrupted-craft and fuel lesso
 Use existing Git/Issues and native salvage/marked fueling rather than inventing a
 fuel simulator, planner or history framework. Consolidate unchanged care evidence
 for final publication; do not create a source checkpoint per tactical interval.
+
+## Recorded disposition
+
+The distinct small-piece part completed the SAME retained craft and stored all
+1.5L output:48inputs/1082.369seconds,4.5Lclean/500mLraw/12rations. Resource412combined
+inputs are frozen; failed curtain/heat branches remain failures. Bounded responsive
+care subsequently accepted days5–7. A source-reading error, revoked B rest, C's
+uncertain acknowledgment and all costs remain explicit in the
+[full campaign report](../acceptance/2026-10-19-seven-day-survival.md).
+Final normal Save/Quit/native+controller exit is verified. Every assignment and
+this admission are closed; unused limits grant no future authority. There was no
+source checkpoint per unchanged tactical care interval.
