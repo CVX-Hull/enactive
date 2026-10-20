@@ -1159,9 +1159,11 @@ class MissionRuntime:
                 raise ContractError("Native request frame differs from its final preflight")
             proof_time = proof["received_monotonic"]
             if (type(proof_time) not in (int, float) or not math.isfinite(proof_time)
-                    or proof_time < 0 or proof_time > self._clock()
-                    or raw["published"] and self._clock() - proof_time > 3):
+                    or proof_time < 0 or proof_time > self._clock()):
                 raise ContractError("Preflight receipt lacks its original finite clock")
+            # Controller checks freshness at publication. A terminal timeout can
+            # arrive later than that window; it cannot invalidate the historical
+            # preflight correlation or renew the source for another input.
             if preflight is None:
                 if request is not None or raw["published"]:
                     raise ContractError("Published input lacks retained preflight source")

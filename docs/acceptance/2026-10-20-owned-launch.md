@@ -2,10 +2,10 @@
 owner: lead
 status: historical
 date: 2026-10-20
-scope: Registered owned launch source composition and absolute-deadline passive observation; no real game launched
+scope: Registered owned launch/exit source and windowed native qualification; failed attempt retained
 ---
 
-# Registered launch without identity adoption
+# Owned launch and normal menu exit
 
 The mission runtime now implements lifecycle `launch` through the existing fixed
 NativeProcess adapter. It accepts only a source-free root and the admission's
@@ -112,3 +112,46 @@ contracts, syntax, document stewardship/links, governance and pinned diagram
 receipts. Nineteen new mission-exit cases and nineteen controller-retirement cases
 cover composition and faults. Actual native launch/exit is not established by
 these portable results.
+
+## Native qualification001: failed host exit proof
+
+Source9f7595d802e092aba82eb8c2f1cc4be5c2ca94f7 and unchanged installed native4
+SHA c65778e2912230f34b67340a4f2caacd0d5874af24ab964526c436bd686f7720
+ran one prospectively bounded windowed engineering attempt. Limits were8inputs/
+600wallseconds/64frames/128MiB with2inputs/60seconds/8frames/32MiB reserved.
+No world/character was created, loaded or saved. This was not the deciding mission.
+
+Owned launch returned a fresh paused real MAIN_MENU. The exit root charged Resume
+and Quit and returned the actual Really quit? confirmation. After inspecting it,
+the operator used explicit Observe and an equal-PNG check before one semantic Yes.
+An initial client admission response was mistaken for settled observation and
+contained no current source; that client attempt failed before sending input. The
+operator then awaited a genuinely settled fresh checkpoint. No Yes was replayed.
+
+![Owned windowed main menu, no character loaded](assets/owned-menu-qualification-001/main-menu.png)
+
+![Actual owned normal quit confirmation before the explicit Yes](assets/owned-menu-qualification-001/quit-confirmation.png)
+
+Final native request e7605b57-d1ea-4003-bd78-0d1967892e23 timed out after
+3021ms and remains unknown. The host incorrectly required the original preflight
+receipt to remain younger than3seconds at terminal return; its timing check then
+prevented correlated normal-exit proof/retirement. At graceful service close the
+exact retained child reported normal code0 and process absence was verified.
+**The qualification remains failed:** process exit is separate from its missing
+committed lifecycle proof, and the immutable operation/effect is not repaired.
+The source/time failure, unknown input, original durable admission and unavailable
+custody on reopening remain evidence. No hidden cleanup input or signal was used.
+
+Cost through controller close was3primitive inputs,208.733wallseconds and9retained
+frames/298856bytes. Walltime includes inspection/client orchestration, not measured
+model inference latency. External tokens remain unknown. Game cost has no anchor;
+no zero-second normal game is inferred. Game and server are closed; persisted
+mission is paused because the normal finish adapter is not implemented, conferring
+no continuing input authority. [Sanitized result and image hashes](assets/owned-menu-qualification-001/result.json).
+
+A new3.05second fake-bridge regression failed the original source, then passed the
+minimal correction: enforce freshness at publication, preserve original finite
+preflight time/correlation at late terminal return. Independent review also reran
+both takeover regressions. This is a source repair, not a retrospective pass or
+freshness renewal. Any native retest needs a separate frozen candidate, prospective
+attempt and retained cumulative failure/cost accounting.

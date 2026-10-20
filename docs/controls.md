@@ -42,7 +42,7 @@ Active and deprecated controls fail after their due date. Event triggers can req
 | Control | Lifecycle | Last exercise | Maintenance review | Effectiveness | Next review |
 | --- | --- | --- | --- | --- | --- |
 | C-PORTABLE | active | 2026-10-18 | 2026-10-18 | unassessed | 2027-01-15 |
-| C-RUNTIME | active | 2026-10-18 | 2026-10-18 | unassessed | 2027-01-15 |
+| C-RUNTIME | active | 2026-10-20 | 2026-10-18 | unassessed | 2027-01-15 |
 | C-NATIVE | active | 2026-10-19 | 2026-10-19 | partially_effective | 2027-01-15 |
 | C-USABILITY | active | 2026-10-19 | 2026-10-19 | partially_effective | 2027-01-15 |
 | C-BOUNDARY | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
@@ -96,9 +96,9 @@ Coverage gap: Portable tests use fake bridges and explicitly mocked identity bou
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-18. Outcome: Targeted native zero-step hold/reassessment passed; prior campaign failure and first unexercised probe retained.
-Scope: Actual walk012 stop0/literal observation/original clock/exact terminal; status013 frozen/Pause, Resume014 blocked, Observe015/Resume016/inventory017/cancel018.
-Exercise evidence: [docs/acceptance/2026-10-18-walk-reassessment.md](../docs/acceptance/2026-10-18-walk-reassessment.md).
+Last exercise: 2026-10-20. Outcome: Owned-menu qualification001 failed: valid owned launch and Resume/Quit, unknown terminal Yes and exact child code0; historical preflight-age check prevented committed exit proof. Original failure retained; no campaign success.
+Scope: One windowed engineering attempt;3inputs/208.733wallseconds/9frames298856bytes; no creation/load/save or normal game anchor. Services closed, admission paused and unknown preserved.
+Exercise evidence: [docs/acceptance/2026-10-20-owned-launch.md](../docs/acceptance/2026-10-20-owned-launch.md).
 
 Maintenance review: 2026-10-18. Effectiveness: unassessed.
 Findings: Reuse of existing frozen/Pause/generation mechanisms closes this known next-input path. Semantic interpretation, partial-walk native reliability and campaign-wide accounting remain limited; unknown ACKs stay unknown.

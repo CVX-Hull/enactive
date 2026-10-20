@@ -378,3 +378,25 @@ class MissionExitTests(unittest.TestCase):
                     db.execute("UPDATE requests SET result=? WHERE id='confirmation'", (canonical(result),))
                 with self.assertRaises(LedgerError):
                     MissionLedger(target, now=time.time(), admission=self.a)
+
+    def test_terminal_timeout_can_outlive_preflight_freshness_without_losing_exit_correlation(self):
+        self.ready()
+        self.begin_exit()
+        self.controller.timeout = 3.05
+        request = self.confirmation()
+        response = self.runtime.command(request)
+        self.assertEqual(response["status"], "accepted", response)
+        end = time.monotonic() + 5
+        while time.monotonic() < end:
+            result = self.runtime.command(dict(schema="mission/2", kind="result", mission_id=self.a.mission_id,
+                operation_id=request["request_id"]))["operation"]
+            if result["result"] is not None:
+                break
+            time.sleep(0.02)
+        self.assertEqual(result["state"], "completed", result)
+        primitive = self.runtime._ledger.primitive(result["result"]["normal_exit"]["terminal_logical_id"])
+        self.assertEqual(primitive["state"], "unknown")
+        self.assertIn("Deadline reached", primitive["result"]["reason"])
+        self.assertIsNotNone(primitive["effect"])
+        self.assertIsNone(self.controller.pending)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 3)

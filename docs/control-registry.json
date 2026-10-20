@@ -265,11 +265,11 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-18",
-        "outcome": "Targeted native zero-step hold/reassessment passed; prior campaign failure and first unexercised probe retained.",
-        "scope": "Actual walk012 stop0/literal observation/original clock/exact terminal; status013 frozen/Pause, Resume014 blocked, Observe015/Resume016/inventory017/cancel018.",
+        "date": "2026-10-20",
+        "outcome": "Owned-menu qualification001 failed: valid owned launch and Resume/Quit, unknown terminal Yes and exact child code0; historical preflight-age check prevented committed exit proof. Original failure retained; no campaign success.",
+        "scope": "One windowed engineering attempt;3inputs/208.733wallseconds/9frames298856bytes; no creation/load/save or normal game anchor. Services closed, admission paused and unknown preserved.",
         "evidence": [
-          "docs/acceptance/2026-10-18-walk-reassessment.md"
+          "docs/acceptance/2026-10-20-owned-launch.md"
         ]
       },
       "maintenance_review": {

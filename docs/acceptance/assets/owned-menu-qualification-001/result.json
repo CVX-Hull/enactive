@@ -1,0 +1,30 @@
+{
+  "classification": "failed engineering component qualification; no normal-play acceptance",
+  "source_commit": "9f7595d802e092aba82eb8c2f1cc4be5c2ca94f7",
+  "native_sha256": "c65778e2912230f34b67340a4f2caacd0d5874af24ab964526c436bd686f7720",
+  "launch_id": "026eda81147549b3a05fb9082fb3ced5",
+  "native_request_id": "e7605b57-d1ea-4003-bd78-0d1967892e23",
+  "input_ack": "unknown",
+  "owned_child_returncode": 0,
+  "normal_exit_proof_committed": false,
+  "spent_inputs": 3,
+  "wall_seconds_through_service_close": 208.733,
+  "archive_frames": 9,
+  "archive_bytes": 298856,
+  "world_or_character_created_loaded_saved": false,
+  "services_closed": true,
+  "persisted_mission_phase": "paused",
+  "future_authority": false,
+  "assets": [
+    {
+      "path": "main-menu.png",
+      "source_id": "0f596b4f6b8508eabc38c6177124fdeb76eb91fe0eb71aba6aa6cea0b29f9291",
+      "sha256": "f149d7742cdc1aaf5f3b382dfea8cc795f37733350e8397eb3d511b79d1ffa33"
+    },
+    {
+      "path": "quit-confirmation.png",
+      "source_id": "d6cb13041f2abd1f9f40fdd6af0ba7fef13a2244a64cfca3fd0f2ba4f3064144",
+      "sha256": "6975868fcbd42a671a14e5773d23b0286ba60493c8d939142e41c06072e32045"
+    }
+  ]
+}
