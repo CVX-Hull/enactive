@@ -59,16 +59,35 @@ The [mission design](design/player-owned-mission.md) also has passive source
 components: [contracts](../harness/gameplay/mission_contracts.py),
 [SQLite accounting](../harness/gameplay/mission_ledger.py),
 [observed navigation](../harness/gameplay/navigation.py) and
-[campaign memory](../harness/gameplay/campaign_memory.py). They produce bounded data
+[campaign memory](../harness/gameplay/campaign_memory.py), plus the bounded
+[native-row menu policy](../harness/gameplay/interaction.py). They produce bounded data
 and record uncertainty; none owns input or replaces the live runtime below yet.
-Ledger format3 rejects prior databases. Its typed immutable request results retain
+Ledger format4 rejects prior databases. Its typed immutable request results retain
 one-use handoff issuance/consumption without restoring a lease or Resume on reopen.
+Resume is a distinct primitive with no action/key value and an admitted lifecycle
+parent. It uses the same prepublication intent, receipt reservation and input cost
+as ordinary inputs. A crash preserves its uncertainty and charge without replay.
 Unknown primitive and operation receipts share one revocation transition; a late
 receipt preserves an already recorded user/takeover Pause cause and epoch.
 Typed source revalidation distinguishes the original request evidence, a deliberately
 refreshed proposal source and the actual final-preflight source required by a
 prepared intent. These records remain data; runtime must verify live actor/lease
 and generation bindings before input.
+The unconnected [mission runtime core](../harness/mission_runtime.py) composes
+these components but has no live server ingress yet. Start/Observe never launch
+or Resume; missing semantic/lifecycle adapters block explicitly. The controller's
+trusted mission Resume boundary returns the same correlated receipt as ordinary
+mission inputs, with an original deadline and final-preflight callback before
+publication. Its paused-frame, pause-origin and unchanged-sentinel checks are
+controller preflight conditions. Native commit retains its existing authority,
+session/revision/boundary/takeover/frame/deadline fences; diagnostic pause origin
+is not a new native compare-and-swap field.
+The menu policy uses attested visible uilist rows and registered focus actions,
+with one final CONFIRM followed by required player verification. Inventory
+multiselect, quantities above one, text editing and fallible screenshot control
+remain unsupported by that source component. A highlighted inventory row does
+not prove a chosen item or amount, and confirmation delivery does not prove the
+player's semantic objective.
 The canonical evidence archive can retain an equivalent final preflight without
 promoting it to current or changing navigation's generation. Native-state equality
 requires positively attested scene/menu content; exact-PNG equality also checks

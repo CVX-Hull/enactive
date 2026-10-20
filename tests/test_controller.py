@@ -1276,7 +1276,8 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
         snapshot = self.controller.status(); state = snapshot["state"]
         return {"expected_generation": snapshot["pause_generation"], "expected_session": state["session"],
                 "expected_revision": state["revision"], "expected_boundary_id": state["boundary"]["id"],
-                "expected_takeover_generation": state["takeover_generation"], "expected_pause_origin": state["pause_origin"]}
+                "expected_takeover_generation": state["takeover_generation"], "expected_pause_origin": state["pause_origin"],
+                "logical_action_id": "mission-resume", "deadline_monotonic": time.monotonic() + 2}
 
     def test_interaction_lease_accepts_supported_menu_key_without_movement_permission(self):
         with FakeBridge(self.controller) as fake:
@@ -1327,7 +1328,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     fake.value.update(takeover_generation=1, pause_origin="human")
                 else: self.controller.pause()
                 result = self.controller.resume_mission(**binding)
-                self.assertNotEqual(result["status"], "ready")
+                self.assertNotEqual(result["result"]["status"], "ready")
                 self.assertFalse(any(r["kind"]=="resume" for r in fake.requests))
                 self.assertTrue(self.controller.pause_requested)
             self.controller.close(); self.controller=Controller(self.root, timeout=2)
@@ -1337,9 +1338,324 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
         with FakeBridge(self.controller) as fake:
             self.assertEqual(self.controller.execute("observe")["status"], "ready")
             result = self.controller.resume_mission(**self.mission_resume_binding())
-            self.assertEqual(result["status"], "ready")
+            self.assertEqual(result["result"]["status"], "ready")
             self.assertIsNone(self.controller.status()["mission_lease"])
             self.assertEqual([r["kind"] for r in fake.delivered], ["resume"])
+
+    def mission_resume(self, **changes):
+        return self.controller.resume_mission(**{**self.mission_resume_binding(), **changes})
+
+    def test_mission_resume_requires_logical_identity_and_original_deadline(self):
+        with FakeBridge(self.controller) as fake:
+            self.controller.execute("observe")
+            for missing in ("logical_action_id", "deadline_monotonic"):
+                binding = self.mission_resume_binding()
+                del binding[missing]
+                with self.subTest(missing=missing), self.assertRaises(TypeError):
+                    self.controller.resume_mission(**binding)
+            for changes in ({"logical_action_id": ""}, {"logical_action_id": 1},
+                            {"logical_action_id": "x" * 129}, {"deadline_monotonic": True},
+                            {"deadline_monotonic": float("nan")}, {"deadline_monotonic": float("inf")},
+                            {"deadline_monotonic": -1}, {"deadline_monotonic": 0},
+                            {"expected_generation": True}, {"expected_revision": True},
+                            {"expected_takeover_generation": -1}, {"expected_session": ""},
+                            {"expected_boundary_id": ""}, {"expected_pause_origin": []}, {"expected_image_sha256": "A" * 64},
+                            {"preflight": 1}):
+                with self.subTest(changes=changes):
+                    envelope = self.mission_resume(**changes)
+                    self.assertEqual(envelope["result"]["status"], "controller_error")
+                    self.assertFalse(envelope["published"])
+                    self.assertIsNone(envelope["request"])
+            self.assertFalse(any(r["kind"] == "resume" for r in fake.requests))
+
+    def test_mission_resume_callback_retains_exact_paused_normal_or_menu_preflight(self):
+        for menu in (False, True):
+            with self.subTest(menu=menu), FakeBridge(self.controller) as fake:
+                if menu:
+                    fake.value.update(category="UILIST", scene=None)
+                    fake.value["boundary"]["kind"] = "menu"
+                self.controller.execute("observe")
+                image = b"synthetic resume image, not a rendered PNG"
+                (fake.bridge / fake.value["frame"]).write_bytes(image)
+                digest = hashlib.sha256(image).hexdigest()
+                sentinel = fake.bridge / "pause"
+                before = sentinel.stat()
+                captured = []
+                def preflight(observation, received):
+                    self.assertTrue(self.controller.command_lock.locked())
+                    self.assertFalse(self.controller.data_lock._is_owned())
+                    self.assertEqual(list(self.controller.admissions.glob("*.json")), [])
+                    self.assertFalse(any(r["kind"] == "resume" for r in fake.requests))
+                    self.assertTrue(observation["paused"])
+                    self.assertEqual(observation["id"], fake.requests[-1]["id"])
+                    self.assertEqual(sentinel.stat(), before)
+                    captured.append((copy.deepcopy(observation), received))
+                    observation["revision"] = 999
+                def before_gate(bridge, request):
+                    if request["kind"] == "resume":
+                        self.assertEqual(sentinel.stat(), before)
+                fake.before_gate = before_gate
+                envelope = self.mission_resume(expected_image_sha256=digest, preflight=preflight)
+                self.assertEqual(set(envelope), {"logical_action_id", "request", "result", "published",
+                                               "received_monotonic", "preflight"})
+                self.assertEqual(envelope["logical_action_id"], "mission-resume")
+                self.assertEqual(envelope["result"]["status"], "ready")
+                self.assertTrue(envelope["published"])
+                self.assertEqual(len(captured), 1)
+                self.assertEqual(envelope["preflight"], {"observation": captured[0][0],
+                    "received_monotonic": captured[0][1], "expected_image_sha256": digest})
+                request = envelope["request"]
+                self.assertEqual(request["kind"], "resume")
+                self.assertEqual(str(uuid.UUID(request["id"])), request["id"])
+                self.assertEqual(request["id"], envelope["result"]["id"])
+                self.assertNotEqual(request["id"], captured[0][0]["id"])
+                self.assertTrue(request["require_exact_frame"])
+                self.assertNotIn("pause_origin", request)
+                self.assertGreaterEqual(envelope["received_monotonic"], captured[0][1])
+                self.assertFalse(sentinel.exists())
+                self.assertIsNone(self.controller._mission_lease)
+                events = [json.loads(line) for line in self.controller.journal.read_text().splitlines()]
+                self.assertEqual(events[-1]["request"]["kind"], "mission_receipt")
+                self.assertEqual(events[-1]["outcome"], envelope)
+                self.controller.pause()
+
+    def test_mission_resume_initial_cas_and_unpaused_state_never_call_callback(self):
+        for fault in ("host", "session", "revision", "boundary", "takeover", "origin", "unpaused", "lease", "pending"):
+            with self.subTest(fault=fault), FakeBridge(self.controller) as fake:
+                self.controller.execute("observe")
+                binding = self.mission_resume_binding()
+                calls = []
+                if fault == "host": self.controller.pause()
+                elif fault == "session": fake.value["session"] = "new-session"
+                elif fault == "revision": fake.value["revision"] += 1
+                elif fault == "boundary": fake.value["boundary"]["id"] = "new-boundary"
+                elif fault == "takeover": fake.value["takeover_generation"] += 1
+                elif fault == "origin": fake.value["pause_origin"] = "human"
+                elif fault in ("unpaused", "lease"):
+                    self.controller.execute("resume")
+                    binding = self.mission_resume_binding()
+                    if fault == "lease": self.acquire()
+                elif fault == "pending": self.controller.pending = {"kind": "observe", "id": "pending"}
+                before = len(fake.delivered)
+                envelope = self.controller.resume_mission(**binding, preflight=lambda *args: calls.append(args))
+                self.assertFalse(envelope["published"])
+                self.assertIsNone(envelope["request"])
+                self.assertEqual(calls, [])
+                self.assertEqual(len(fake.delivered), before)
+                self.controller.pending = None
+                self.controller.state = None
+                self.controller.pause()
+
+    def test_mission_resume_after_callback_rechecks_all_authority_and_sentinel_changes(self):
+        faults = ("host", "origin", "takeover", "session", "boundary", "frame", "revision", "unpaused",
+                  "deadline", "monotonic_age", "wall_age", "control_lock", "control_pending", "control_slot",
+                  "pending", "claimed", "sentinel_touch", "sentinel_rewrite", "sentinel_replace",
+                  "sentinel_remove", "sentinel_create")
+        for fault in faults:
+            with self.subTest(fault=fault), FakeBridge(self.controller) as fake:
+                self.controller.execute("observe")
+                sentinel = fake.bridge / "pause"
+                if fault == "sentinel_create": sentinel.unlink()
+                clock = SimpleNamespace(value=time.monotonic(), wall=time.time())
+                proxy = SimpleNamespace(monotonic=lambda: clock.value, time=lambda: clock.wall, sleep=time.sleep)
+                # Keep this observation paused even when testing an initially absent sentinel.
+                original_exchange = self.controller._exchange
+                def exchange(kind, *args, **kwargs):
+                    if kind == "observe" and fault == "sentinel_create": sentinel.touch()
+                    observed = original_exchange(kind, *args, **kwargs)
+                    if kind == "observe" and fault == "sentinel_create": sentinel.unlink()
+                    return observed
+                def preflight(*args):
+                    if fault == "host": self.controller.pause()
+                    elif fault == "deadline": clock.value += 2
+                    elif fault == "monotonic_age": clock.value += 3.01
+                    elif fault == "wall_age": clock.wall += 3.01
+                    elif fault == "control_lock": self.controller.control_lock.acquire()
+                    elif fault == "control_pending": self.controller.control_pending = {"id": "pending"}
+                    elif fault == "control_slot": (fake.bridge / "control.json").write_text("{}")
+                    elif fault == "pending": self.controller.pending = {"kind": "observe", "id": "pending"}
+                    elif fault == "claimed": (fake.bridge / "claimed.json").write_text("{}")
+                    elif fault == "sentinel_remove": sentinel.unlink()
+                    elif fault == "sentinel_create": sentinel.touch()
+                    elif fault == "sentinel_replace":
+                        replacement = fake.bridge / "replacement-pause"
+                        replacement.write_bytes(sentinel.read_bytes())
+                        replacement.replace(sentinel)
+                    elif fault in ("sentinel_touch", "sentinel_rewrite"):
+                        before = sentinel.stat()
+                        if fault == "sentinel_rewrite":
+                            sentinel.write_bytes(sentinel.read_bytes())
+                            # Restore mtime: ctime must still expose a same-content rewrite.
+                            os.utime(sentinel, ns=(before.st_atime_ns, before.st_mtime_ns))
+                            self.assertNotEqual(sentinel.stat().st_ctime_ns, before.st_ctime_ns)
+                        else:
+                            os.utime(sentinel, ns=(before.st_atime_ns, before.st_mtime_ns + 1_000_000))
+                    else:
+                        changed = copy.deepcopy(self.controller.state)
+                        if fault == "origin": changed["pause_origin"] = "human"
+                        elif fault == "takeover": changed["takeover_generation"] += 1
+                        elif fault == "session": changed["session"] = "new-world"
+                        elif fault == "boundary": changed["boundary"]["id"] = "new-boundary"
+                        elif fault == "frame": changed["frame"] = "frame-game-test-2.png"
+                        elif fault == "revision": changed["revision"] += 1
+                        elif fault == "unpaused": changed["paused"] = False
+                        self.controller._accept(changed)
+                try:
+                    with patch("harness.controller.time", proxy), patch.object(self.controller, "_exchange", side_effect=exchange):
+                        envelope = self.mission_resume(preflight=preflight,
+                            deadline_monotonic=clock.value + (2 if fault == "deadline" else 10))
+                    self.assertIsNotNone(envelope["preflight"])
+                    self.assertFalse(envelope["published"])
+                    self.assertIsNone(envelope["request"])
+                    self.assertTrue(self.controller.frozen)
+                    self.assertEqual(self.controller.unknown_outcomes, [])
+                    self.assertFalse(any(r["kind"] == "resume" for r in fake.requests))
+                finally:
+                    if fault == "control_lock": self.controller.control_lock.release()
+                    self.controller.control_pending = None
+                    self.controller.pending = None
+                    for name in ("control.json", "claimed.json"):
+                        (fake.bridge / name).unlink(missing_ok=True)
+                    self.controller.state = None
+
+    def test_mission_resume_pause_completes_while_callback_is_blocked(self):
+        entered, release = threading.Event(), threading.Event()
+        with FakeBridge(self.controller) as fake:
+            self.controller.execute("observe")
+            def preflight(*args):
+                entered.set()
+                if not release.wait(2): raise AssertionError("callback not released")
+            with ThreadPoolExecutor(2) as pool:
+                future = pool.submit(self.mission_resume, preflight=preflight)
+                try:
+                    self.assertTrue(entered.wait(1))
+                    self.assertEqual(pool.submit(self.controller.pause).result(1)["status"], "pause_requested")
+                    self.assertFalse(future.done())
+                finally:
+                    release.set()
+                envelope = future.result(2)
+            self.assertFalse(envelope["published"])
+            self.assertIsNone(envelope["request"])
+            self.assertFalse(any(r["kind"] == "resume" for r in fake.requests))
+
+    def test_mission_resume_queued_deadline_or_new_pause_wins_before_callback(self):
+        for fault in ("deadline", "pause"):
+            with self.subTest(fault=fault), FakeBridge(self.controller) as fake:
+                self.controller.execute("observe")
+                binding = self.mission_resume_binding()
+                clock = SimpleNamespace(value=time.monotonic())
+                proxy = SimpleNamespace(monotonic=lambda: clock.value, time=time.time, sleep=time.sleep)
+                binding["deadline_monotonic"] = clock.value + 1
+                calls = []
+                self.controller.command_lock.acquire()
+                try:
+                    with patch("harness.controller.time", proxy), ThreadPoolExecutor(1) as pool:
+                        future = pool.submit(self.controller.resume_mission, **binding,
+                            preflight=lambda *args: calls.append(args))
+                        try:
+                            end = time.monotonic() + 1
+                            while not self.controller._command_work and time.monotonic() < end:
+                                time.sleep(0.001)
+                            self.assertEqual(self.controller._command_work, 1)
+                            if fault == "deadline": clock.value = binding["deadline_monotonic"]
+                            else: self.controller.pause()
+                        finally:
+                            self.controller.command_lock.release()
+                        envelope = future.result(2)
+                finally:
+                    if self.controller.command_lock.locked(): self.controller.command_lock.release()
+                self.assertFalse(envelope["published"])
+                self.assertIsNone(envelope["request"])
+                self.assertEqual(calls, [])
+                self.assertFalse(any(r["kind"] == "resume" for r in fake.requests))
+
+    def test_mission_resume_final_image_failure_prevents_callback_and_input(self):
+        image = b"synthetic resume image"
+        for fault in ("changed", "missing", "oversized", "foreign"):
+            with self.subTest(fault=fault), FakeBridge(self.controller) as fake:
+                self.controller.execute("observe")
+                path = fake.bridge / fake.value["frame"]
+                if fault == "changed": path.write_bytes(image + b"changed")
+                elif fault == "missing": path.unlink(missing_ok=True)
+                elif fault == "oversized":
+                    with path.open("wb") as stream: stream.truncate(32 * 1024 * 1024 + 1)
+                elif fault == "foreign":
+                    fake.value["frame"] = "frame-other-session-1.png"
+                    (fake.bridge / fake.value["frame"]).write_bytes(image)
+                calls = []
+                envelope = self.mission_resume(expected_image_sha256=hashlib.sha256(image).hexdigest(),
+                    preflight=lambda *args: calls.append(args))
+                self.assertFalse(envelope["published"])
+                self.assertIsNone(envelope["request"])
+                self.assertEqual(calls, [])
+                self.assertTrue(self.controller.frozen)
+                self.assertFalse(any(r["kind"] == "resume" for r in fake.requests))
+
+    def test_mission_resume_callback_crash_does_not_fabricate_determinate_receipt(self):
+        class SyntheticCrash(BaseException):
+            pass
+        with FakeBridge(self.controller) as fake:
+            self.controller.execute("observe")
+            def crash(*args): raise SyntheticCrash("simulated interruption after intent preparation")
+            with self.assertRaises(SyntheticCrash):
+                self.mission_resume(preflight=crash)
+            self.assertFalse(any(r["kind"] == "resume" for r in fake.requests))
+            events = [json.loads(line) for line in self.controller.journal.read_text().splitlines()]
+            self.assertFalse(any(event["request"]["kind"] == "mission_receipt" for event in events))
+            self.assertEqual(self.controller._command_work, 0)
+
+    def test_mission_resume_persistent_callback_storage_failure_keeps_all_diagnostics(self):
+        with FakeBridge(self.controller) as fake:
+            self.controller.execute("observe")
+            failed = threading.Event()
+            original_fsync = os.fsync
+            attempts = []
+            def fsync(fd):
+                if failed.is_set(): raise OSError(errno.ENOSPC, "persistent disk full")
+                return original_fsync(fd)
+            def pause():
+                attempts.append("pause")
+                raise OSError(errno.ENOSPC, "sentinel unavailable")
+            def preflight(*args):
+                failed.set()
+                raise OSError(errno.ENOSPC, "resume archive unavailable")
+            with patch("harness.controller.os.fsync", side_effect=fsync), patch.object(self.controller, "_pause_file", side_effect=pause):
+                envelope = self.mission_resume(preflight=preflight)
+            self.assertEqual(envelope["result"]["status"], "controller_error")
+            self.assertFalse(envelope["published"])
+            self.assertIsNone(envelope["request"])
+            self.assertIsNone(envelope["received_monotonic"])
+            for text in ("resume archive unavailable", "authority revocation", "Pause sentinel", "sentinel unavailable",
+                         "mission receipt persistence", "persistent disk full"):
+                self.assertIn(text, envelope["result"]["error"])
+            self.assertEqual(attempts, ["pause"])
+            self.assertTrue(self.controller.frozen)
+            self.assertTrue(self.controller.pause_requested)
+            self.assertEqual(self.controller.transport_error, envelope["result"]["error"])
+            self.assertEqual(self.controller.last_result, envelope["result"])
+            self.assertEqual(self.controller.unknown_outcomes, [])
+            self.assertFalse(any(r["kind"] == "resume" for r in fake.requests))
+
+    def test_mission_resume_published_timeout_or_storage_failure_is_unknown_without_replay(self):
+        for fault in ("timeout", "storage"):
+            with self.subTest(fault=fault), FakeBridge(self.controller,
+                    behavior=lambda bridge, request: fault != "timeout" or request["kind"] != "resume") as fake:
+                self.controller.execute("observe")
+                original = atomic_json
+                def publish(path, value, **callbacks):
+                    original(path, value, **callbacks)
+                    if fault == "storage" and path.name == "request.json" and value["kind"] == "resume":
+                        raise OSError("post-publication flush failure")
+                with patch("harness.controller.atomic_json", side_effect=publish):
+                    envelope = self.mission_resume(timeout=0.2)
+                self.assertTrue(envelope["published"])
+                self.assertEqual(envelope["request"]["kind"], "resume")
+                self.assertEqual(envelope["result"]["status"], "timeout" if fault == "timeout" else "controller_error")
+                self.assertTrue(self.controller.unknown_outcomes)
+                self.assertEqual(self.controller.unknown_outcomes[-1]["request"]["id"], envelope["request"]["id"])
+                self.assertFalse(self.mission_resume()["published"])
+                self.assertLessEqual(sum(r["kind"] == "resume" for r in fake.requests), 1)
+                self.controller.pending = None
 
     def test_mission_lease_exact_identity_status_and_release(self):
         from dataclasses import FrozenInstanceError, replace
@@ -2350,7 +2666,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(self.controller.execute("walk", direction="east", steps=2, **self.expect())["status"], "complete")
             self.controller.pause()
             self.assertEqual(self.controller.execute("observe")["status"], "ready")
-            self.assertEqual(self.controller.resume_mission(**self.mission_resume_binding())["status"], "ready")
+            self.assertEqual(self.controller.resume_mission(**self.mission_resume_binding())["result"]["status"], "ready")
             for request in fake.delivered:
                 with self.subTest(kind=request["kind"]):
                     fields = {"protocol", "id", "kind", "deadline_ms", "session", "revision", "boundary_id",

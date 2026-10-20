@@ -22,7 +22,7 @@ from .mission_contracts import (
     validate_handoff_result, validate_memory_entry, validate_request,
 )
 
-DB_VERSION = 3
+DB_VERSION = 4
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
 MAX_RECEIPT_BYTES = 65_536
 MAX_EFFECT_BYTES = 4096
@@ -76,7 +76,7 @@ def _intent(value: dict | str) -> dict:
     data = json_object(value)
     expected = {"kind", "value", "expected_session", "expected_revision", "expected_boundary_id",
                 "source_before", "preflight_source", "revalidation", "reservation_id"}
-    if set(data) != expected or data["kind"] not in ("action", "key"):
+    if set(data) != expected or data["kind"] not in ("action", "key", "resume"):
         raise LedgerError("Primitive intent fields do not match")
     for key in ("expected_session", "expected_boundary_id", "source_before", "preflight_source", "reservation_id"): _id(data[key])
     if data["revalidation"] is not None:
@@ -85,7 +85,10 @@ def _intent(value: dict | str) -> dict:
             raise LedgerError("Revalidation current source differs from the proposal before-source")
     if type(data["expected_revision"]) is not int or data["expected_revision"] < 0:
         raise LedgerError("Primitive requires exact observed revision")
-    if not isinstance(data["value"], str) or not 1 <= len(data["value"]) <= 160:
+    if data["kind"] == "resume":
+        if data["value"] is not None:
+            raise LedgerError("Resume has no action/key value")
+    elif not isinstance(data["value"], str) or not 1 <= len(data["value"]) <= 160:
         raise LedgerError("Primitive requires bounded action/key")
     return data
 
@@ -282,12 +285,15 @@ class MissionLedger:
             _id(logical_id)
             if native_id is not None: _id(native_id)
             if status not in PRIMITIVE_STATES: raise LedgerError("Corrupt primitive state")
-            if intent != _json(_intent(intent)): raise LedgerError("Noncanonical primitive intent")
+            data = _intent(intent)
+            if intent != _json(data): raise LedgerError("Noncanonical primitive intent")
             parent = self.request(request_id)
             if parent["request"]["kind"] not in ("skill", "lifecycle"):
                 raise LedgerError("Primitive lost its executable parent")
+            if data["kind"] == "resume" and parent["request"]["kind"] != "lifecycle":
+                raise LedgerError("Resume requires an admitted lifecycle parent")
             actor = next(player for epoch, player in reversed(actors) if epoch <= parent["epoch"])
-            self._check_revalidation(json_object(intent), parent["epoch"], stored.mission_id,
+            self._check_revalidation(data, parent["epoch"], stored.mission_id,
                                      informing_sources=parent["request"]["sources"], actor_id=actor)
             if status == "prepared" and native_id is not None or status == "published" and native_id is None:
                 raise LedgerError("Corrupt publication identity")
@@ -583,6 +589,8 @@ class MissionLedger:
             request = self.request(request_id)
             if request["request"]["kind"] not in ("skill", "lifecycle"):
                 raise LedgerError("Only an admitted skill/lifecycle can propose input")
+            if data["kind"] == "resume" and request["request"]["kind"] != "lifecycle":
+                raise LedgerError("Resume requires an admitted lifecycle parent")
             if now >= request["deadline"]:
                 raise BudgetError("Original operation deadline expired")
             count = self._db.execute("SELECT count(*) FROM primitives WHERE request_id=?", (request_id,)).fetchone()[0]

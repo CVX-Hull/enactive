@@ -394,6 +394,15 @@ The player chooses ordinary menu options; runtime owns process handles and recor
 them. Native session changes invalidate execution authority/maps until explicit
 fresh observation and supported identity/relocalization.
 
+The registered adapter will launch the fixed prepared wrapper directly: its final
+`exec` makes the owned process become CDDA. Preparation and validation share one
+root-bound script template, so a bundle copied from another checkout cannot use
+that checkout's binary/userdir unnoticed. A zero wrapper exit still needs prior
+fresh native readiness and normal save/menu/exit evidence. The `open -W` waiter in
+the engineering probe provides no native exit-code guarantee. Earlier direct
+wrapper launch had weaker desktop-app binding; actual window/spectator/bridge
+readiness is required, while desktop-tool binding is not a gameplay dependency.
+
 Initial admission may exist before a native child or scene. `launch` owns the
 fixed wrapper handle and records an internal-bootstrap operation, then awaits a
 fresh paused main-menu frame. Only that exact launch/create/load operation can
@@ -566,9 +575,9 @@ retains uncertainty/cost and clears authority, and rejected expiry checks retain
 the observed wall-clock watermark. Source-level regression and independent review
 are separate from the future integrated native/graphical acceptance.
 
-Ledger format3 reuses immutable typed handoff/claim request results for up to16
+Ledger format4 reuses immutable typed handoff/claim request results for up to16
 one-use handoffs, rather than adding a second mutable consumption store. It rejects
-formats1/2. Issuance requires active, settled work and atomically pauses at a new epoch;
+formats1/2/3. Issuance requires active, settled work and atomically pauses at a new epoch;
 claim changes the recorded actor while remaining paused. Runtime must verify actual
 quiescence, fresh native binding and deliberate readmission; the ledger sends no
 Pause/Resume. Human Pause or reopen invalidates an old issuance without erasing it,
@@ -619,6 +628,23 @@ lifecycle adapter. Stop(false) requests Pause and leaves cleanup possible; a bus
 Stop is not admitted under the old epoch. Unsupported interaction, activity,
 lifecycle, handoff and final-finish requests explicitly block in this component.
 Fresh player replacement and independent play remain separate acceptance work.
+
+The [native-row menu policy](../../harness/gameplay/interaction.py) can propose a
+bounded sequence of actual `UILIST.UP`/`UILIST.DOWN` actions to an exact visible
+enabled label, followed by one CONFIRM. Focus checks follow the advanced native
+boundary and one attributed archive promotion. Confirmation returns partial with
+verification required; contradictory after-state retains unknown delivery and
+its pending ID. Only native uilist rows and quantity1 are supported. Inventory
+highlight versus multiselect, text editors and fallible screenshot controls remain
+separate gaps; this component cannot substitute for them.
+
+Ledger format4 accounts Resume as a distinct primitive with null value under an
+admitted lifecycle request. Its required preflight source, reserved receipt,
+original limits and crash uncertainty use the existing accounting path. The
+controller supplies the same correlated six-field envelope for mission Resume,
+requires an actual paused frame and keeps the unchanged Pause sentinel through
+preflight. A newer touch/rewrite/removal or host Pause stops publication. These
+components do not yet implement the registered lifecycle policy or its admission.
 
 The [windowed wire4 probe](../acceptance/2026-10-20-native-presentation.md) qualifies
 tested menu presentation/preflight paths. It loaded no character and proves no

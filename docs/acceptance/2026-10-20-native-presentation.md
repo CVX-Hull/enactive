@@ -54,6 +54,10 @@ byte-mismatch rejection and normal-game wire4 movement/activity/save/reload stil
 need their own evidence. No general latency, autonomy or learning benefit follows
 from this probe. Controller disk stalls can delay Pause's serialized durable work;
 the measured successful Pause does not remove that limit.
+The recorded zero belongs to the `open -W` bundle waiter, not CDDA's exit status.
+Ordinary Quit/YES and subsequent process absence establish the observed exit
+effect; abnormal native-exit status propagation was not tested. The registered
+lifecycle adapter must distinguish waiter status from an owned native process.
 
 ## Stopped bridge cutover and retention
 

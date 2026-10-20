@@ -851,15 +851,22 @@ class Controller:
                     expected_image_sha256=expected_image_sha256, preflight=preflight)
             except _MissionPreflightFailure as exc:
                 preflight_failed = True
-                receipt["result"] = {"status": "controller_error", "error": str(exc)}
-                # Memory authority was stopped under the command lock. Each
-                # durable stop is independent: disk failure cannot skip Pause.
-                with self.data_lock:
-                    for label, operation in (("authority revocation", self._revoke), ("Pause sentinel", self._pause_file)):
-                        try:
-                            operation()
-                        except OSError as persistence_error:
-                            receipt["result"]["error"] += f"; {label} failed: {persistence_error}"
+                self._stop_mission_preflight(receipt, exc)
+        return self._finish_mission_receipt(receipt, preflight_failed)
+
+    def _stop_mission_preflight(self, receipt: dict[str, Any], exc: ControlError) -> None:
+        receipt["result"] = {"status": "controller_error", "error": str(exc)}
+        # Memory authority was stopped under the command lock. Each durable
+        # stop is independent: disk failure cannot skip Pause.
+        with self.data_lock:
+            for label, operation in (("authority revocation", self._revoke), ("Pause sentinel", self._pause_file)):
+                try:
+                    operation()
+                except OSError as persistence_error:
+                    receipt["result"]["error"] += f"; {label} failed: {persistence_error}"
+
+    def _finish_mission_receipt(self, receipt: dict[str, Any], preflight_failed: bool) -> dict[str, Any]:
+        logical_action_id = receipt["logical_action_id"]
         if type(logical_action_id) is str:
             try:
                 self._record({"kind": "mission_receipt", "logical_action_id": logical_action_id}, receipt)
@@ -882,7 +889,9 @@ class Controller:
     def resume_mission(self, *, expected_generation: int, expected_session: str,
                        expected_revision: int, expected_boundary_id: str,
                        expected_takeover_generation: int, expected_pause_origin: str,
-                       timeout: float | None = None) -> dict[str, Any]:
+                       logical_action_id: str, deadline_monotonic: float, timeout: float | None = None,
+                       expected_image_sha256: str | None = None,
+                       preflight: Callable[[dict[str, Any], float], None] | None = None) -> dict[str, Any]:
         """CAS for runtime-admitted bootstrap/lifecycle/recovery, never a lease resume.
 
         Runtime must establish the admitted phase and cause. Exact observed values
@@ -892,15 +901,60 @@ class Controller:
         binding = {"session": expected_session, "revision": expected_revision,
                    "boundary_id": expected_boundary_id, "takeover_generation": expected_takeover_generation,
                    "pause_origin": expected_pause_origin}
-        if (type(expected_generation) is not int or expected_generation < 0
+        receipt = {"logical_action_id": logical_action_id, "request": None, "result": None,
+                   "published": False, "received_monotonic": None, "preflight": None}
+        preflight_failed = False
+        if (type(logical_action_id) is not str or not 1 <= len(logical_action_id) <= 128
+                or type(deadline_monotonic) not in (int, float) or not 0 <= deadline_monotonic <= 1e12):
+            receipt["result"] = {"status": "controller_error", "error": "Invalid mission identity or deadline"}
+        elif (type(expected_generation) is not int or expected_generation < 0
                 or type(expected_revision) is not int or expected_revision < 0
                 or type(expected_takeover_generation) is not int or expected_takeover_generation < 0
                 or not isinstance(expected_session, str) or not expected_session
                 or not isinstance(expected_boundary_id, str) or not expected_boundary_id
-                or expected_pause_origin not in PAUSE_ORIGINS):
-            return {"status": "controller_error", "error": "Malformed mission continuation binding"}
-        return self._execute("resume", timeout, {}, None, expected_generation=expected_generation,
-                             resume_binding=binding)
+                or type(expected_pause_origin) is not str or expected_pause_origin not in PAUSE_ORIGINS):
+            receipt["result"] = {"status": "controller_error", "error": "Malformed mission continuation binding"}
+        else:
+            try:
+                receipt["result"] = self._execute("resume", timeout, {}, None, expected_generation=expected_generation,
+                    resume_binding=binding, deadline_monotonic=deadline_monotonic, receipt=receipt,
+                    expected_image_sha256=expected_image_sha256, preflight=preflight)
+            except _MissionPreflightFailure as exc:
+                preflight_failed = True
+                self._stop_mission_preflight(receipt, exc)
+        return self._finish_mission_receipt(receipt, preflight_failed)
+
+    def _check_mission_resume(self, observed: dict[str, Any] | None,
+                              binding: dict[str, Any], generation: int) -> None:
+        """Trusted host CAS under data_lock; native keeps its existing commit fences."""
+        self._check_owner(None, generation)
+        if self.closed or generation != self.pause_generation:
+            raise ControlError("Mission continuation superseded by host Pause or takeover")
+        if (self.control_lock.locked() or self.control_pending is not None or self.pending is not None
+                or any((self.bridge / name).exists() for name in
+                       ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
+            raise ControlError("Native or recovery work is pending for mission Resume")
+        if observed is None:
+            raise ControlError("Mission Resume requires a current paused observation")
+        validate_state(observed)
+        self._expect(observed, binding["session"], binding["revision"])
+        self._expect_boundary(observed, binding["boundary_id"])
+        if (observed["takeover_generation"] != binding["takeover_generation"]
+                or observed["pause_origin"] != binding["pause_origin"]):
+            raise ControlError("Mission continuation superseded by a native pause/takeover event")
+        age = int(time.time() * 1000) - observed["timestamp_ms"]
+        supported = (observed["boundary"]["kind"] == "menu" or
+                     observed["boundary"]["kind"] == "normal_play" and observed["in_game"] and observed["scene"] is not None)
+        if (observed["status"] != "ready" or observed["error"] or not observed["paused"] or not supported
+                or not observed["frame_ok"] or not observed["frame"] or not -1000 <= age <= 3000):
+            raise ControlError("Mission Resume requires a fresh successful paused normal-play or supported menu frame")
+
+    def _pause_snapshot(self) -> tuple[int, int, int, int, int] | None:
+        try:
+            value = (self.bridge / "pause").stat()
+        except FileNotFoundError:
+            return None
+        return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
 
     def execute(self, kind: str, *, timeout: float | None = None, **payload: Any) -> dict[str, Any]:
         return self._execute(kind, timeout, payload, None)
@@ -1010,6 +1064,11 @@ class Controller:
                     raise ControlError("Control is frozen; explicitly observe to reconcile first")
                 if kind != "resume" and self.pause_requested:
                     raise ControlError("Paused; explicitly resume before sending inputs")
+        if resume_binding is not None:
+            with self.data_lock:
+                if (self.pending is not None or any((self.bridge / name).exists() for name in
+                        ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
+                    raise ControlError("Native or recovery work is pending for mission Resume")
         if kind == "observe":
             # A fresh observe is safe after the prior deadline plus our pause sentinel.
             if self.pending is not None:
@@ -1046,11 +1105,8 @@ class Controller:
         if kind != "resume":
             self._expect(observed, payload.get("expected_session"), payload.get("expected_revision"))
         elif resume_binding is not None:
-            self._expect(observed, resume_binding["session"], resume_binding["revision"])
-            self._expect_boundary(observed, resume_binding["boundary_id"])
-            if (observed["takeover_generation"] != resume_binding["takeover_generation"]
-                    or observed["pause_origin"] != resume_binding["pause_origin"]):
-                raise ControlError("Mission continuation superseded by a native pause/takeover event")
+            with self.data_lock:
+                self._check_mission_resume(observed, resume_binding, generation)
         if lease is not None:
             self._expect_boundary(observed, payload.get("expected_boundary_id"))
             if lease.operation == "navigate":
@@ -1060,8 +1116,9 @@ class Controller:
                 self._walk_guard(observed, dx, dy)
         if kind == "action" and payload["action"] not in observed["actions"]:
             raise ControlError("Action is not registered in the current input context")
-        if lease is not None:
+        if lease is not None or resume_binding is not None:
             try:
+                pause_snapshot = self._pause_snapshot() if resume_binding is not None else None
                 if expected_image_sha256 is not None and self._frame_sha256(observed) != expected_image_sha256:
                     raise ControlError("Final preflight image differs from the informing image")
                 received = observation_receipt["received_monotonic"]
@@ -1081,9 +1138,16 @@ class Controller:
                             or self.pending is not None or any((self.bridge / name).exists() for name in
                             ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
                         raise ControlError("Native or recovery work appeared during preflight")
-                    if (self.state != observed or (self.bridge / "pause").exists()):
+                    if self.state != observed:
                         raise ControlError("Native boundary or frame changed during preflight")
-                    self._mission_frame(observed, lease.operation)
+                    if resume_binding is not None:
+                        self._check_mission_resume(observed, resume_binding, generation)
+                        if self._pause_snapshot() != pause_snapshot:
+                            raise ControlError("Pause sentinel changed during mission Resume preflight")
+                    else:
+                        if (self.bridge / "pause").exists():
+                            raise ControlError("Native boundary or frame changed during preflight")
+                        self._mission_frame(observed, lease.operation)
                     if not 0 <= time.monotonic() - received <= 3:
                         raise ControlError("Final preflight observation expired")
                     if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:

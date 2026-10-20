@@ -251,7 +251,7 @@ class LedgerTests(unittest.TestCase):
 
     def test_earlier_ledger_format_is_rejected_without_conversion(self):
         self.ledger.close()
-        for version in (1, 2):
+        for version in (1, 2, 3):
             with self.subTest(version=version):
                 with closing(sqlite3.connect(self.ledger.path)) as connection, connection:
                     connection.execute(f"PRAGMA user_version={version}")
@@ -296,6 +296,46 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(row, ("prepared", None))
         self.assertEqual(state["spent_inputs"], 1)
         self.assertFalse(self.ledger.snapshot(now=1002)["grants_authority"])
+
+    def test_resume_is_charged_before_publication_and_crash_retains_unknown(self):
+        lifecycle = request("lifecycle", operation="create", world="test-world", character="test-person",
+            sources=["source-1"], expected_session="native-session", expected_revision=30,
+            expected_boundary_id="boundary-1", limits={"primitives": 2, "wall_seconds": 120, "game_seconds": 3600})
+        self.active_request(lifecycle)
+        resume = intent(kind="resume", value=None)
+        self.ledger.prepare_primitive("request-1", "resume-1", resume, now=1002)
+        with closing(sqlite3.connect(self.ledger.path)) as reader:
+            encoded, state, native_id = reader.execute(
+                "SELECT intent,state,native_id FROM primitives WHERE id='resume-1'").fetchone()
+            self.assertEqual(json.loads(encoded), resume)
+            self.assertEqual((state, native_id), ("prepared", None))
+            persisted = json.loads(reader.execute("SELECT value FROM metadata WHERE key='state'").fetchone()[0])
+            self.assertEqual(persisted["spent_inputs"], 1)
+        reopened = self.reopen(now=1003)
+        self.assertEqual(reopened.primitive("resume-1")["state"], "unknown")
+        self.assertEqual(reopened.snapshot(now=1003)["spent_inputs"], 1)
+        self.assertFalse(reopened.snapshot(now=1003)["grants_authority"])
+        self.assertFalse(reopened.prepare_primitive("request-1", "resume-1", resume, now=1003)["created"])
+        with self.assertRaises(LedgerError):
+            reopened.prepare_primitive("request-1", "resume-retry", resume, now=1003)
+
+    def test_resume_cannot_borrow_a_skill_or_action_value(self):
+        self.active_request()
+        for value in (intent(kind="resume", value="RESUME"), intent(kind="resume", value=None), intent(value=None)):
+            with self.subTest(value=value), self.assertRaises(LedgerError):
+                self.ledger.prepare_primitive("request-1", "invalid-resume", value, now=1002)
+        self.assertEqual(self.ledger.snapshot(now=1002)["spent_inputs"], 0)
+
+    def test_reopen_rejects_resume_tampered_under_skill_parent(self):
+        self.prepared()
+        self.ledger.close()
+        with closing(sqlite3.connect(self.ledger.path)) as connection, connection:
+            connection.execute("UPDATE primitives SET intent=? WHERE id='logical-1'",
+                (json.dumps(intent(kind="resume", value=None), sort_keys=True, separators=(",", ":")),))
+        original = self.ledger.path.read_bytes()
+        with self.assertRaisesRegex(LedgerError, "Resume requires an admitted lifecycle parent"):
+            MissionLedger(self.directory, now=1003)
+        self.assertEqual(self.ledger.path.read_bytes(), original)
 
     def test_prepared_intent_requires_actual_preflight_and_scoped_refresh(self):
         self.active_request()
