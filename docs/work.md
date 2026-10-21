@@ -12,6 +12,15 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 
 ## Current integrated checkpoint
 
+The next selected delivery is [discovery, learning and the fresh campaign](changes/057-discovery-learning-campaign.md):
+mixed interaction#176, player-derived procedures#177, nonblocking reflection#178,
+observer/measurement follow-through#143/#164, then actual seven-day assessment#145.
+The [procedure/exchange boundary](design/procedure-learning.md) has passed scoped
+design review; its pure procedure interface is frozen, while the remaining exact
+runtime/native integration still needs freezing. It adds no current input,
+learning or run authority. Bounded disjoint briefs precede worker dispatch. The accepted024
+baseline and historical attempts below remain evidence, not a new admission.
+
 [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) has
 independently verified original gameplay outcomes: supplies/needs, six credited
 navigation steps including a three-step return, genuine replan/corrections,

@@ -149,7 +149,10 @@ untouched; do not claim complete keyboard emulation from a schema alone.
 ## Delivery and evidence
 
 The proposed coordinated migration is native5, mission/9, ledger11 and evidence
-archive4, with campaign-memory/3 and gameplay/2 record shapes unchanged. Start
+archive4, with campaign-memory/4 for the selected procedure/reflection integration
+and gameplay/2 record shapes unchanged. The [procedure boundary](procedure-learning.md)
+and [delivery057](../changes/057-discovery-learning-campaign.md) own that combined
+selection; no procedure support follows from native input alone. Start
 from the current mission/8 and ledger10 navigation-menu contract; those current
 versions do not implement this proposal. Migrate
 all current producers, callers, strict validators, correlation/reopen rules,
