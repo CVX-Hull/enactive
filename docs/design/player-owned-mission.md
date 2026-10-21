@@ -849,8 +849,12 @@ Pause remains independent. Rendering issues no gameplay/memory operation.
 Explicit dismissal is a rowless fallible view of the actual question, paired only
 with Cancel/dismissed. It selects the exact registered action: TEXT.QUIT in
 STRING_INPUT, UILIST.QUIT in UILIST, WORLDGEN_CONFIRM.QUIT in WORLDGEN_CONFIRM_DIALOG,
-and QUIT in other supported contexts. No other action is tried when registration
-is absent. One input returns partial for verification; it cannot alias NO or answer
+and QUIT in other supported contexts. A rowless POPUP_WAIT with exactly
+ANY_INPUT/COORDINATE, excluding only the pinned producer's ubiquitous
+toggle_language_to_en, uses one existing SPACE key. Registered QUIT retains
+cancellation; other missing/extra controls or represented choices block. This
+uses the same image-bound phase and budgets. One input returns partial for
+verification; it cannot alias NO or answer
 a later prompt. General setup-abort lifecycle remains unsupported beyond its narrow
 existing branch, even when one cancel action can open a separate confirmation.
 

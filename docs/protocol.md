@@ -411,9 +411,13 @@ children. This minimum is not a guarantee that a larger task fits its chosen cap
 Semantic menu dismissal selects exactly one action by captured context:
 `STRING_INPUT` → `TEXT.QUIT`, `UILIST` → `UILIST.QUIT`,
 `WORLDGEN_CONFIRM_DIALOG` → `WORLDGEN_CONFIRM.QUIT`, otherwise the existing `QUIT`.
-That action must actually be registered in the selected evidence; missing actions
-block with zero proposals, without trying a different alias, NO, confirmation or
-raw key. A delivered dismissal returns partial for verification and never answers
+That action must actually be registered in the selected evidence. The sole key
+case is a rowless `POPUP_WAIT` whose registered actions, excluding only the pinned
+producer's ubiquitous `toggle_language_to_en`, are exactly `ANY_INPUT` and
+`COORDINATE`: explicit dismissal sends one existing `SPACE` key. A registered
+`QUIT` retains cancellation instead. Other missing actions, extra controls or
+represented choices block with zero proposals; no aliases or answers are guessed.
+A delivered dismissal returns partial for verification and never answers
 a newly opened question. Upstream UILIST cancellation is conditional; category
 admission alone does not establish that cancellation is enabled. First worldgen
 cancel support does not implement a general setup-abort lifecycle.

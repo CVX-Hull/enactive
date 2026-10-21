@@ -120,8 +120,12 @@ including after a recovered suffix; no automatic answer or route retry occurs.
 After normal return, the player can choose a new plan from current evidence.
 Cancellation selects one exact registered action: TEXT.QUIT for STRING_INPUT,
 UILIST.QUIT for UILIST, WORLDGEN_CONFIRM.QUIT for WORLDGEN_CONFIRM_DIALOG, otherwise
-QUIT. Missing registration blocks without trying another alias. The result is
-partial for verification and never answers a later question implicitly. Supporting
+QUIT. A rowless POPUP_WAIT with exactly ANY_INPUT/COORDINATE after excluding the
+pinned producer's ubiquitous toggle_language_to_en instead uses one existing SPACE
+key. Registered QUIT retains cancellation; other missing/extra controls or rows
+block without guessing. Exact-image preflight and original phase limits still
+apply. The result is partial for verification and never answers a later question
+implicitly. Supporting
 one worldgen cancel action does not implement the whole setup-abort workflow.
 Typed item selection/count/commit and registered inspection have synthetic runtime
 coverage. Quantity editing belongs only to the item phase whose returned

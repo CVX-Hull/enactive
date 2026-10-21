@@ -364,6 +364,65 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.runtime.status()["spent_inputs"], 2)
         self.assertEqual([r.get("action") for r in self.bridge.delivered if r["kind"] == "action"], ["open", "TEXT.QUIT"])
 
+    def popup_acknowledgement(self, *, effect=None, **changes):
+        root, _ = self.open_direction(prompt=dict(category="POPUP_WAIT",
+            actions=["toggle_language_to_en", "ANY_INPUT", "COORDINATE"]), effect=effect, **changes)
+        child = self.control("menu", dict(purpose="Acknowledge empty consume notice", label="Cancel", outcome="dismissed"),
+            phase_id=root["request_id"], perception=dict(kind="dismissal", basis="player_interpretation",
+            source_id=self.runtime.status()["current_source"]["observation_id"], question="You have nothing to consume."))
+        return root, child
+
+    def test_any_key_popup_uses_exact_image_and_original_phase_then_returns_to_normal(self):
+        normal = copy.deepcopy(self.bridge.value["scene"])
+        def dismiss(bridge, request):
+            if request.get("kind") == "key" and request.get("key") == "SPACE":
+                bridge.value.update(scene=normal, ui=None, category="DEFAULTMODE", actions=["UP", "DOWN", "LEFT", "RIGHT"])
+                bridge.value["boundary"].update(kind="normal_play", id="popup-return")
+            return True
+        root, child = self.popup_acknowledgement(effect=dismiss)
+        deadline = self.runtime._ledger.request(root["request_id"])["deadline"]
+        self.runtime.command(child)
+        operation = self.settled(child["request_id"])
+        self.assertEqual(operation["state"], "partial", operation)
+        self.assertTrue(operation["result"]["verification_required"])
+        self.assertEqual(operation["result"]["phase"]["stage"], "complete")
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime._ledger.request(root["request_id"])["deadline"], deadline)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        keys = [r for r in self.bridge.delivered if r["kind"] == "key"]
+        self.assertEqual([r["key"] for r in keys], ["SPACE"])
+        self.assertTrue(keys[0]["require_exact_frame"])
+
+    def test_any_key_popup_acknowledgement_keeps_following_popup_without_second_input(self):
+        root, child = self.popup_acknowledgement()
+        self.runtime.command(child)
+        operation = self.settled(child["request_id"])
+        self.assertEqual(operation["state"], "partial", operation)
+        self.assertTrue(operation["result"]["verification_required"])
+        self.assertEqual(operation["result"]["phase"]["stage"], "awaiting_control")
+        self.assertEqual(self.runtime._prompt_phase.root_id, root["request_id"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertEqual([r["key"] for r in self.bridge.delivered if r["kind"] == "key"], ["SPACE"])
+
+    def test_any_key_popup_pause_blocks_without_a_key(self):
+        _, child = self.popup_acknowledgement()
+        self.runtime.pause("User paused before popup acknowledgement")
+        self.wait(lambda: not self.runtime._pending_pauses)
+        charged = self.runtime.status()["spent_inputs"]
+        response = self.runtime.command(child)
+        if response["status"] == "accepted":
+            self.assertEqual(self.settled(child["request_id"])["state"], "blocked")
+        self.assertEqual(self.runtime.status()["spent_inputs"], charged)
+        self.assertFalse([r for r in self.bridge.delivered if r["kind"] == "key"])
+
+    def test_any_key_popup_original_budget_blocks_without_a_key(self):
+        root, child = self.popup_acknowledgement(limits=dict(primitives=1, wall_seconds=120, game_seconds=1200))
+        self.runtime.command(child)
+        operation = self.settled(child["request_id"])
+        self.assertEqual(operation["state"], "blocked", operation)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+        self.assertFalse([r for r in self.bridge.delivered if r["kind"] == "key"])
+
     def native_choices(self, *, effect=None, **changes):
         ui = dict(purpose="uilist", title="Choices", rows=[
             dict(id=f"row-{n}", text=text, enabled=True, hotkey=None)

@@ -13,6 +13,81 @@ from tests.test_gameplay_evidence import observation, png
 
 
 class SemanticControlTests(unittest.TestCase):
+    def test_any_key_popup_acknowledgement_is_one_key_with_unverified_effect(self):
+        for language_action in ([], ["toggle_language_to_en"]):
+            for after_kind in ("same_popup", "question", "normal"):
+                with self.subTest(language_action=language_action, after_kind=after_kind):
+                    actions = language_action + ["ANY_INPUT", "COORDINATE"]
+                    before = self.frame(category="POPUP_WAIT", actions=actions)
+                    skill = self.skill(before, view=self.view(before, kind="dismissal"),
+                        goal=dict(purpose="Acknowledge visible notice", label="Cancel", outcome="dismissed"))
+                    intent = self.propose(skill)
+                    self.assertIsInstance(intent, ControlIntent)
+                    self.assertEqual((intent.kind, intent.action), ("key", "SPACE"))
+                    if after_kind == "same_popup":
+                        # A new returned observation may show the same pixels;
+                        # reusing the old evidence as a return would be unknown.
+                        after = self.frame(category="POPUP_WAIT", actions=actions, same=before)
+                    else:
+                        after = self.frame(normal=after_kind == "normal", category="YESNO", actions=["YES", "NO"])
+                    outcome = self.accept(skill, intent, after)
+                    self.assertEqual((outcome.disposition, outcome.proposed_count), ("partial", 1))
+                    self.assertTrue(outcome.verification_required)
+                    self.assertIsNone(outcome.pending_logical_id)
+                    self.assertIs(self.propose(skill), outcome)
+
+    def test_popup_acknowledgement_does_not_guess_ambiguous_or_other_controls(self):
+        for category, actions in (("POPUP_WAIT", ["ANY_INPUT"]),
+                                  ("POPUP_WAIT", ["COORDINATE"]),
+                                  ("POPUP_WAIT", ["ANY_INPUT", "COORDINATE", "CONFIRM"]),
+                                  ("POPUP_WAIT", ["toggle_language_to_en", "ANY_INPUT", "COORDINATE", "UNKNOWN"]),
+                                  ("OTHER", ["ANY_INPUT", "COORDINATE"]),
+                                  ("YESNO", ["ANY_INPUT", "COORDINATE", "YES", "NO"])):
+            with self.subTest(category=category, actions=actions):
+                before = self.frame(category=category, actions=actions)
+                skill = self.skill(before, view=self.view(before, kind="dismissal"),
+                    goal=dict(purpose="Close visible prompt", label="Cancel", outcome="dismissed"))
+                outcome = self.propose(skill)
+                self.assertEqual((outcome.disposition, outcome.proposed_count), ("blocked", 0))
+
+    def test_any_key_popup_with_represented_choices_is_not_acknowledged(self):
+        before = self.frame(category="POPUP_WAIT", actions=["toggle_language_to_en", "ANY_INPUT", "COORDINATE"],
+            change=lambda value: value.update(ui=dict(purpose="uilist", title="Choose", rows=[
+                dict(id="choice", text="Yes", enabled=True, hotkey=None)], selected="choice",
+                filter=None, count=None, coverage="rendered_rows_only")))
+        skill = self.skill(before, view=self.view(before, kind="dismissal"),
+            goal=dict(purpose="Close visible prompt", label="Cancel", outcome="dismissed"))
+        outcome = self.propose(skill)
+        self.assertEqual((outcome.disposition, outcome.proposed_count), ("blocked", 0))
+
+    def test_any_key_popup_unknown_delivery_is_terminal_without_replay(self):
+        before = self.frame(category="POPUP_WAIT", actions=["toggle_language_to_en", "ANY_INPUT", "COORDINATE"])
+        skill = self.skill(before, view=self.view(before, kind="dismissal"),
+            goal=dict(purpose="Close visible notice", label="Cancel", outcome="dismissed"))
+        intent = self.propose(skill)
+        outcome = self.accept(skill, intent, disposition="unknown")
+        self.assertEqual((outcome.disposition, outcome.proposed_count), ("unknown", 1))
+        self.assertEqual(outcome.pending_logical_id, intent.logical_id)
+        self.assertIs(self.propose(skill), outcome)
+
+    def test_any_key_popup_changed_source_pixels_block_before_proposal(self):
+        before = self.frame(category="POPUP_WAIT", actions=["toggle_language_to_en", "ANY_INPUT", "COORDINATE"])
+        skill = self.skill(before, view=self.view(before, kind="dismissal"),
+            goal=dict(purpose="Close visible notice", label="Cancel", outcome="dismissed"))
+        # Deliberately corrupt this test's owned archive; real archives are
+        # read-only. No historical/native evidence is modified.
+        Path(before.frame_path).chmod(0o600)
+        Path(before.frame_path).write_bytes(png(b"changed visible prompt"))
+        outcome = self.propose(skill)
+        self.assertEqual((outcome.disposition, outcome.proposed_count), ("blocked", 0))
+
+    def test_popup_with_registered_quit_uses_quit_instead_of_an_acknowledgement_key(self):
+        before = self.frame(category="POPUP_WAIT", actions=["toggle_language_to_en", "ANY_INPUT", "COORDINATE", "QUIT"])
+        skill = self.skill(before, view=self.view(before, kind="dismissal"),
+            goal=dict(purpose="Cancel visible popup", label="Cancel", outcome="dismissed"))
+        intent = self.propose(skill)
+        self.assertEqual((intent.kind, intent.action), ("action", "QUIT"))
+
     def test_dismissal_uses_one_actual_registered_action_without_effect_credit(self):
         for category, action in (("INVENTORY", "QUIT"), ("STRING_INPUT", "TEXT.QUIT"), ("YESNO", "QUIT"),
                                  ("UILIST", "UILIST.QUIT"), ("WORLDGEN_CONFIRM_DIALOG", "WORLDGEN_CONFIRM.QUIT")):

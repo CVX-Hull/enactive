@@ -157,6 +157,17 @@ root. Mission/8 and ledger10 migrate current callers together; native4/archive3
 are unchanged. Source checks do not accept another native mission or its normal
 ending. All failed attempts remain closed; original #144 outcomes still apply.
 
+Independent018 passed host-refresh admission and reached owned ordinary play,
+four navigation steps including a direction change, and 30 minutes of sheltered
+waiting. It then stopped at “You have nothing to consume.”: the no-choice
+POPUP_WAIT registers ANY_INPUT/COORDINATE plus the ubiquitous language action, but
+no QUIT. The player stopped and permanently quiesced; ordered exceptional native
+then controller shutdown preserved all files. Its 84 charges (83 returned, 1 unknown
+creation ACK), 57 requests and 215 frames remain; food, usable 500mL water, correction,
+successor and normal ending are unverified. The [popup acknowledgement repair](changes/056-any-key-popup-acknowledgement.md)
+reuses one existing image-bound SPACE key under the original phase; #139 owns the
+control and #144 the unchanged complete mission. No failed attempt resumes.
+
 The [development-first workflow](project-management.md#development-first-delivery)
 now distinguishes targeted development runs from formal acceptance. The next
 meaningful integration checkpoint remains the complete mission below; repeated

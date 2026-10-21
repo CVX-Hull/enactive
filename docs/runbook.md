@@ -403,7 +403,10 @@ separates implemented components from remaining independent-play acceptance.
    process replacement is not evidence that a fresh model context read the memory.
 6. Owned menus support bounded focusing, literal text and direction/confirmation
    handling. Dismissal uses its exact registered context action (TEXT.QUIT,
-   UILIST.QUIT, WORLDGEN_CONFIRM.QUIT or ordinary QUIT), returns partial for effect
+   UILIST.QUIT, WORLDGEN_CONFIRM.QUIT or ordinary QUIT). A rowless any-key
+   POPUP_WAIT supports one SPACE acknowledgement under the exact signature in
+   [the protocol](protocol.md); other controls are never guessed. Dismissal returns
+   partial for effect
    verification and never automatically answers a new prompt. Original
    root/child limits and unknowns stay recorded. Untouched-menu exit uses its owned
    lifecycle root and an explicit interpreted confirmation child. It is not a
