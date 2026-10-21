@@ -264,6 +264,12 @@ fails. Fragment anchors, raw HTML links and external web availability are not ch
 tests require permission to bind loopback; a sandbox denial is a failed check,
 not permission to skip those tests.
 
+The prepared keyboard-driven game uses CDDA's `ENABLE_MOUSE=false` in its
+project userdir, alongside `FULLSCREEN=no`. Owned launch rejects missing, duplicate
+or enabled mouse options. This prevents native menu hover from silently changing
+selection between exact captures. Keyboard takeover and browser Pause remain;
+no global input preference or image-validation rule changes.
+
 For fast development checkpoints, `.githooks/pre-commit` runs
 `.venv/bin/python tools/check.py --fast`: syntax/lint, import contracts, JS syntax,
 document structure/links, governance and whitespace, without behavioral tests or

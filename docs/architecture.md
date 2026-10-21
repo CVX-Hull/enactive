@@ -44,7 +44,9 @@ Historical artifacts are retained as evidence without being accepted as runtime 
 ## Scope and responsibilities
 
 The [overview](overview.md) provides the user-facing system picture. One local
-macOS game and one controller are supported. The designated active Codex player
+macOS game and one controller are supported. Prepared keyboard-driven launch
+requires project-local `ENABLE_MOUSE=false` and `FULLSCREEN=no`; native-image
+validation and keyboard/user Pause remain unchanged. The designated active Codex player
 chooses plans, interprets visible outcomes and requests bounded semantic operations.
 It uses the single [mission ingress](protocol.md#integrated-mission-lifecycle).
 The lead owns admission, source integration and final verification. The user retains

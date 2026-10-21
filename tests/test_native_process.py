@@ -37,7 +37,8 @@ class NativeProcessTests(unittest.TestCase):
         self.native.write_bytes(b"prepared native fixture, not an executable game")
         self.native.chmod(0o755)
         self.sha = hashlib.sha256(self.native.read_bytes()).hexdigest()
-        self.options.write_text(json.dumps([{"name": "FULLSCREEN", "value": "no"}]))
+        self.options.write_text(json.dumps([{"name": "FULLSCREEN", "value": "no"},
+                                           {"name": "ENABLE_MOUSE", "value": "false"}]))
         self.clock = Clock()
         self.child = Mock(spec=["pid", "poll", "wait", "kill", "terminate", "send_signal"])
         self.child.pid = 1234
@@ -252,6 +253,16 @@ class NativeProcessTests(unittest.TestCase):
             with self.subTest(options=options):
                 self.options.write_text(json.dumps(options))
                 with self.assertRaisesRegex(NativeProcessError, "options|FULLSCREEN"):
+                    self.launch()
+        self.popen.assert_not_called()
+
+    def test_keyboard_driven_launch_requires_exactly_one_mouse_disabled_option(self):
+        for mouse in ([], [{"name": "ENABLE_MOUSE", "value": "true"}],
+                      [{"name": "ENABLE_MOUSE", "value": False}],
+                      [{"name": "ENABLE_MOUSE", "value": "false"}] * 2):
+            with self.subTest(mouse=mouse):
+                self.options.write_text(json.dumps([{"name": "FULLSCREEN", "value": "no"}, *mouse]))
+                with self.assertRaisesRegex(NativeProcessError, "ENABLE_MOUSE=false"):
                     self.launch()
         self.popen.assert_not_called()
 

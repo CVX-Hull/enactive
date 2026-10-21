@@ -24,7 +24,7 @@ def prepare(binary: Path) -> None:
     config.mkdir(parents=True, exist_ok=True)
     options_path = config / "options.json"
     options = json.loads(options_path.read_text()) if options_path.exists() else []
-    values = {"FULLSCREEN": "no", "TERMINAL_X": "120", "TERMINAL_Y": "40",
+    values = {"FULLSCREEN": "no", "ENABLE_MOUSE": "false", "TERMINAL_X": "120", "TERMINAL_Y": "40",
               "TURN_DURATION": "0.0", "USE_LANG": "en"}
     for name, value in values.items():
         existing = next((item for item in options if item["name"] == name), None)

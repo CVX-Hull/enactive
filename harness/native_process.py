@@ -158,6 +158,9 @@ class NativeProcess:
         fullscreen = [item for item in values if item.get("name") == "FULLSCREEN"]
         if len(fullscreen) != 1 or fullscreen[0].get("value") != "no":
             raise NativeProcessError("Prepared options require exactly one FULLSCREEN=no")
+        mouse = [item for item in values if item.get("name") == "ENABLE_MOUSE"]
+        if len(mouse) != 1 or mouse[0].get("value") != "false":
+            raise NativeProcessError("Prepared keyboard-driven options require exactly one ENABLE_MOUSE=false")
         if native.stat().st_size > MAX_NATIVE_BYTES:
             raise NativeProcessError("Prepared native size exceeds limit")
         digest = hashlib.sha256()
