@@ -10,6 +10,7 @@ import unittest
 from unittest.mock import patch
 
 from harness.mission_client import MissionClient
+from harness.gameplay.contracts import ContractError
 from harness.player_tools import PlayerTools
 from harness.server import Server
 from tests import test_mission_creation as creation
@@ -83,6 +84,32 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(result["transport"], "delivered", result)
         self.assertTrue(result["settled"], result)
         return result["response"]["operation"]
+
+    def test_invalid_confirmation_label_is_local_and_correctable_in_same_phase(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        self.run_request(self.control("world-form", "Create World"))
+        self.run_request(self.lifecycle("world-finalize", parent="create"))
+        selected, _ = self.player.call("enactive_snapshot", {})
+        before = deepcopy(self.runtime.status())
+        delivered = deepcopy(self.bridge.delivered)
+        arguments = dict(snapshot_id=selected["snapshot_id"], request_id="world-uppercase-yes",
+            scope="lifecycle", source_id=selected["source"]["reference"]["observation_id"],
+            supporting_source_ids=[], intent=dict(skill_kind="menu",
+                goal=dict(purpose="confirmation", label="YES", outcome="activated"),
+                perception=dict(kind="confirmation", question="Are you SURE you're finished?"), work_id=None),
+            limits=dict(primitives=32, wall_seconds=900, game_seconds=3600), wait_seconds=15)
+        with patch.object(self.player.client, "submit", wraps=self.player.client.submit) as submit:
+            with self.assertRaisesRegex(ContractError, "typed direction/confirmation"):
+                self.player.call("enactive_skill", arguments)
+            submit.assert_not_called()
+        after = self.runtime.status()
+        for field in ("epoch", "lifecycle_phase", "spent_inputs", "current_source", "lease_owner"):
+            self.assertEqual(after[field], before[field], field)
+        self.assertEqual(self.bridge.delivered, delivered)
+        corrected = self.run_request(self.control("world-corrected-yes", "Yes",
+            question="Are you SURE you're finished?"))
+        self.assertEqual(corrected["state"], "partial", corrected)
 
     def test_creation_successor_readmission_save_new_child_reload_and_normal_finish(self):
         self.create()

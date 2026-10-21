@@ -193,6 +193,9 @@ class SDKTransportTests(unittest.TestCase):
                 rejected = await client.call_tool("unlisted_shell_tool", {"command": "must not run"})
                 self.assertTrue(rejected.is_error)
                 self.assertIn("Unknown player tool", rejected.content[0].text)
+                self.assertIsNone(rejected.structured_content)
+                self.assertEqual(len(rejected.content), 1)
+                self.assertEqual(rejected.content[0].type, "text")
         asyncio.run(exercise())
 
 

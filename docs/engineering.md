@@ -187,6 +187,11 @@ Choose intent, finite limits, scope and support IDs explicitly. Specialized memo
 handoff and recovery use their same current receiver schemas. Request retention,
 serialization, bounded result collection and actual-image presentation belong to
 software; routine player-authored files/private scripts are not the operating path.
+Consume the standard MCP result envelope: retain and surface text, images and
+`isError` before inspecting optional `structuredContent`. Never discard an error
+by assuming a success-only payload. Tool errors alone do not prove nondelivery;
+collect the original operation when delivery is uncertain. Reuse the official SDK
+and existing ingress tests rather than creating another result protocol.
 Never carry individual fields across a focus change or replay an uncertain action.
 The protocol's binding checks and portable/native evidence enforce consistency;
 review still checks that the chosen source supports the player's interpretation.

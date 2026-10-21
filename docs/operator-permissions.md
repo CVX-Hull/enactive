@@ -127,6 +127,13 @@ reachable through the ordinary tool path; first-use failures still stop new play
    Reload only when the supported host path requires it, not repeatedly after
    unchanged verified setup. An ambiguous result queries its original operation;
    it never authorizes another action POST.
+   Preserve the complete standard MCP reply before extracting optional
+   `structuredContent`; surface every returned text/image block and `isError`.
+   The [MCP result contract](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)
+   permits text-only tool errors. Do not overwrite the retained
+   reply with an absent success payload or infer nondelivery from `isError` alone.
+   For changed presentation instructions, verify a harmless read-only error once
+   alongside the snapshot; this requires neither mutating probes nor a host reload.
 4. Any recurring gameplay approval review is a setup defect. Stop new gameplay,
    retain the actual event and diagnose the supported project configuration and
    managed-policy boundary. Honor a denial; do not change transports to evade it,

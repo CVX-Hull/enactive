@@ -129,6 +129,16 @@ also rejects that representation mismatch only after all live eligibility fences
 without refresh, inferred interpretation or phase renewal. Native-state equality
 is unchanged; source regressions are distinct from the next full mission.
 
+Independent015 stopped at world confirmation when its result-handling expression
+lost the original tool reply. The original lookup returned unknown; no replay or
+normal ending is claimed. Ordered owned shutdown preserved all evidence.
+[#164](https://github.com/CVX-Hull/enactive/issues/164) now also owns standard MCP
+error presentation: structured data is optional, so retain text/images and error
+status before interpreting a success payload. Source reproduction proves the
+supplied uppercase confirmation label is refused before submission and remains
+correctable in the same phase; it cannot recover the missing original reply.
+Existing SDK/ingress tests and S-AGENT cover this without another result protocol.
+
 The [development-first workflow](project-management.md#development-first-delivery)
 now distinguishes targeted development runs from formal acceptance. The next
 meaningful integration checkpoint remains the complete mission below; repeated
