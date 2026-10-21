@@ -462,8 +462,13 @@ selection coverage before a distinct commit. Known extra selected rows contradic
 a summary omitting them and stop confirmation. Single-selection consume supports
 one native unit. Actual acquisition, consumption or storage is not inferred.
 
-Inspection opens one registered inventory/consume/needs/look/messages/map/identity
-screen and owns its returned controls. Item, activity, inspection and interaction
+Inspection requests one registered inventory/consume/needs/look/messages/map/identity
+action and owns its returned controls. Consume inspection uses the default-bound
+`eat` action and its all-items selector, also used by item-consume roots; the
+separate by-type `open_consume` menu has no default key binding. This is one chosen
+engine action, with no automatic alias/fallback or consumption credit. CDDA may
+return another outcome (both consume entry points first try `eat_here`); interpret
+the actual result before further input. Item, activity, inspection and interaction
 children retain the original root Work association, deadlines and cumulative input
 ceiling. Phase receipts name their actual kind/operation and restore no authority.
 A refused later proposal cannot erase an earlier delivered edit; partial effects

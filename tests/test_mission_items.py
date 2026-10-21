@@ -153,6 +153,40 @@ class MissionItemTests(unittest.TestCase):
         self.assertEqual(result["state"], "blocked", result)
         self.assertEqual(len(self.bridge.delivered), before)
 
+    def test_consume_inspection_uses_bound_all_items_selector_and_can_cancel(self):
+        # Pinned DEFAULTMODE binds eat, while advertising open_consume without
+        # a default key. Registration alone does not prove an executable action.
+        self.bridge.value["actions"].extend(["eat", "open_consume"])
+        self.start()
+        delivered_before = len(self.bridge.delivered)
+        normal = copy.deepcopy(self.bridge.value["scene"])
+        def behavior(bridge, request):
+            if request.get("action") == "open_consume":
+                bridge.value["revision"] -= 1
+                bridge.value.update(status="rejected", error="action has no single-key binding in current mode")
+            elif request.get("action") == "eat":
+                self.inventory()
+            elif request.get("action") == "QUIT":
+                bridge.value.update(category="DEFAULTMODE", scene=normal, ui=None, actions=["eat", "open_consume"])
+                bridge.value["boundary"].update(kind="normal_play", id="consume-inspection-return")
+            return True
+        self.bridge.behavior = behavior
+        root = self.control("inspect", dict(purpose="consume"), request_id="inspect-consume",
+            limits=dict(primitives=2, wall_seconds=120, game_seconds=1200))
+        opened = self.send(root)
+        self.assertEqual(opened["state"], "partial", opened)
+        self.assertEqual(opened["result"]["phase"]["phase_kind"], "inspect")
+        source = self.runtime.status()["current_source"]["observation_id"]
+        closed = self.send(self.control("menu", dict(purpose="Close actual consume choices", label="Cancel", outcome="dismissed"),
+            phase_id=root["request_id"], perception=dict(kind="dismissal", basis="player_interpretation",
+                source_id=source, question="Visible consume selector"), request_id="close-consume"))
+        self.assertEqual(closed["state"], "partial", closed)
+        self.assertEqual(closed["result"]["phase"]["stage"], "complete")
+        self.assertEqual([r.get("action") for r in self.bridge.delivered[delivered_before:]], ["eat", "QUIT"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.runtime._ledger._verify(self.a)
+
     def test_inspection_root_opens_and_dismisses_without_claiming_inventory(self):
         self.bridge.value["actions"].append("inventory")
         self.start()

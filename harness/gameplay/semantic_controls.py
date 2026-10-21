@@ -98,7 +98,7 @@ class SemanticControlSkill:
             if data["goal"]["step"] != "start":
                 raise _ControlBlocked("Activity poll/recovery is owned by the registered runtime phase")
             return {"wait": "wait", "rest": "sleep", "craft": "craft"}[data["goal"]["operation"]]
-        return {"inventory": "inventory", "consume": "open_consume", "needs": "player_data", "look": "look",
+        return {"inventory": "inventory", "consume": "eat", "needs": "player_data", "look": "look",
                 "messages": "messages", "map": "map", "character_identity": "player_data"}[data["goal"]["purpose"]]
 
     def _bind(self, store: EvidenceStore) -> None:
