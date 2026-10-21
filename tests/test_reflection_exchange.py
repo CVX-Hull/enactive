@@ -187,6 +187,48 @@ class ReflectionValidationTests(unittest.TestCase):
 
 
 class ReflectiveExchangeTests(unittest.TestCase):
+    def test_temporary_seal_and_finishing_hide_jobs_with_original_bounded_wait(self):
+        for sealed, phase in ((True, "active"), (False, "finishing")):
+            with self.subTest(sealed=sealed, phase=phase):
+                exchange = ReflectiveExchange()
+                original = wrapper(state="claimed", claimed_at=1000., deadline=1060.)
+                publish(exchange, phase=phase, jobs=[original])
+                if sealed:
+                    exchange.seal_ingress(permanent=False)
+                with patch.object(reflection, "monotonic", side_effect=[100., 101., 103., 106.]), \
+                        patch.object(exchange._condition, "wait") as wait:
+                    results = []
+                    reader = threading.Thread(target=lambda: results.append(exchange.next_job(
+                        mission_id="mission-a", reflector_id="reflector-a", wait_seconds=5)))
+                    reader.start()
+                    reader.join(2)
+                self.assertFalse(reader.is_alive())
+                self.assertEqual(results, [{"status": "idle", "grants_authority": False}])
+                self.assertEqual([call.args for call in wait.call_args_list], [(4.,), (2.,)])
+                exchange.reopen_ingress()
+                publish(exchange, phase="paused", jobs=[original])
+                self.assertEqual(exchange.next_job(mission_id="mission-a", reflector_id="reflector-a")["job"], original)
+
+    def test_permanent_seal_cannot_downgrade_or_reopen(self):
+        exchange = ReflectiveExchange()
+        publish(exchange)
+        exchange.seal_ingress(permanent=True)
+        exchange.seal_ingress(permanent=False)
+        publish(exchange, phase="paused")
+        with self.assertRaisesRegex(ContractError, "cannot be reopened"):
+            exchange.reopen_ingress()
+        self.assertFalse(exchange.offer(command())["admitted"])
+        self.assertEqual(exchange.next_job(mission_id="mission-a", reflector_id="reflector-a")["status"], "closed")
+
+    def test_terminal_publication_closes_and_cannot_reopen(self):
+        for phase in ("completed", "failed", "stopped"):
+            with self.subTest(phase=phase):
+                exchange = ReflectiveExchange()
+                publish(exchange, phase=phase)
+                with self.assertRaisesRegex(ContractError, "cannot be reopened"):
+                    exchange.reopen_ingress()
+                self.assertEqual(exchange.next_job(mission_id="mission-a", reflector_id="reflector-a")["status"], "closed")
+
     def test_restore_original_receipts_without_requeue_and_seal_new_ingress(self):
         exchange = ReflectiveExchange()
         original = command()
@@ -196,7 +238,7 @@ class ReflectiveExchangeTests(unittest.TestCase):
         self.assertEqual(receipt["result"], outcome)
         self.assertEqual(exchange.drain(lambda body: self.fail("Restoration requeued a body")), 0)
         self.assertEqual(exchange.offer(original), receipt)
-        exchange.seal_ingress()
+        exchange.seal_ingress(permanent=True)
         self.assertEqual(exchange.offer(command("new"))["admitted"], False)
         self.assertEqual(exchange.collect(original["command_id"]), receipt)
         self.assertEqual(exchange.next_job(mission_id="mission-a", reflector_id="reflector-a")["status"], "closed")
@@ -288,15 +330,15 @@ class ReflectiveExchangeTests(unittest.TestCase):
                 exchange.drain(lambda body: result)
             self.assertEqual(exchange.collect("command-1")["status"], "unknown")
 
-    def test_passive_wait_allows_writer_work_offer_and_finishing_wakes(self):
+    def test_passive_wait_survives_temporary_seal_and_permanent_close_wakes(self):
         exchange = ReflectiveExchange()
         publish(exchange, jobs=[])
-        waiting = threading.Event()
+        waiting, resealed = threading.Event(), threading.Event()
         original_wait = exchange._condition.wait
         results = []
 
         def notified_wait(timeout=None):
-            waiting.set()
+            (resealed if exchange._sealed else waiting).set()
             return original_wait(timeout)
 
         with patch.object(exchange._condition, "wait", side_effect=notified_wait):
@@ -309,7 +351,32 @@ class ReflectiveExchangeTests(unittest.TestCase):
                 game_work = []
                 self.assertEqual(exchange.drain(lambda body: game_work.append("boundary") or {}), 1)
                 self.assertEqual(game_work, ["boundary"])
+                exchange.seal_ingress(permanent=False)
+                self.assertTrue(resealed.wait(2))
+                self.assertEqual(results, [])
                 publish(exchange, phase="finishing", jobs=[])
+                exchange.seal_ingress(permanent=True)
+            finally:
+                reader.join(2)
+        self.assertFalse(reader.is_alive())
+        self.assertEqual(results, [{"status": "closed", "grants_authority": False}])
+
+    def test_terminal_publication_wakes_passive_wait(self):
+        exchange = ReflectiveExchange()
+        publish(exchange, jobs=[])
+        waiting = threading.Event()
+        original_wait = exchange._condition.wait
+        results = []
+        def notified_wait(timeout=None):
+            waiting.set()
+            return original_wait(timeout)
+        with patch.object(exchange._condition, "wait", side_effect=notified_wait):
+            reader = threading.Thread(target=lambda: results.append(exchange.next_job(
+                mission_id="mission-a", reflector_id="reflector-a", wait_seconds=15)))
+            reader.start()
+            try:
+                self.assertTrue(waiting.wait(2))
+                publish(exchange, phase="stopped", jobs=[])
             finally:
                 reader.join(2)
         self.assertFalse(reader.is_alive())

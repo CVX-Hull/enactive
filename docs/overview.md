@@ -46,6 +46,11 @@ but failed on lifecycle-root submission validation. The later003attempt failed
 before normal adoption on control timing; #184/#185 own timing and advisory
 transport repairs. All three attempts are closed failures. Their partial results
 gain no normal-ending or coherent-mission credit.
+The subsequent004run ended normally after actual successor application and exact
+save/restart/reload. Its complete learning qualification is under independent
+audit. #187 repairs a separately reproduced advisory-finalization race: temporary
+sealing must not terminate the learner. Source tests and protected publication
+remain separate from graphical acceptance and the fresh seven-day campaign.
 
 The official MCP SDK adapter constructs and retains requests, collects original
 results and presents exact images over the existing mission ingress. Both024

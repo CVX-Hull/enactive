@@ -29,10 +29,16 @@ before admission without losing authority. Both attempts are closed failures.
 The subsequent003attempt failed before normal adoption:48requests/89primitives,
 218frames, no adopted game-time. [#184](https://github.com/CVX-Hull/enactive/issues/184)
 owns new-control deadlines versus source age; [#185](https://github.com/CVX-Hull/enactive/issues/185)
-owns valid Unicode advisory jobs overflowing their HTTP envelope. Both have source
-repairs under verification; all003actors/processes are closed. Normal lifecycle
-and the coherent learning mission remain unqualified. The fresh seven-day
-assessment remains pending. Source checks issue no run authority. The accepted024
+owns valid advisory jobs exceeding their HTTP envelope through serialization
+overhead. The retained003job is ASCII-only; Unicode expansion is a separate
+regression case, and the exact failed wire body remains unavailable. All003actors
+and processes are closed. New004ended through normal save/restart/reload and final
+shutdown with178primitives/148requests/467frames/1845game seconds; its full learning
+qualification is under independent audit. All004actors/processes are closed.
+[#187](https://github.com/CVX-Hull/enactive/issues/187) repairs reversible advisory
+finishing, the exact82bdd10CI failure, in the subsequent source checkpoint.
+Independent source review and focused tests passed; full checks remain separate.
+The coherent learning verdict and fresh seven-day assessment remain pending. Source checks issue no run authority. The accepted024
 baseline and historical attempts below remain evidence, not a new admission.
 
 [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) has

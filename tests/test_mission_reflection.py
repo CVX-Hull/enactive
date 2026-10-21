@@ -110,10 +110,50 @@ class ReflectionCompositionTests(unittest.TestCase):
         for _ in range(5):
             self.reflection.tick()
         self.assertEqual(self.ledger.path.read_bytes(), before)
-        self.reflection.finish()
+        self.reflection.finish(permanent=True)
         self.assertEqual(self.ledger.reflection_records()[0][0]["state"], "unknown")
         self.assertEqual(self.reflection.exchange.offer(command("new"))["admitted"], False)
         self.assertEqual(self.reflection.exchange.next_job(mission_id="mission-a", reflector_id="reflector-a")["status"], "closed")
+
+    def test_cancel_finish_preserves_original_commands_jobs_costs_and_windows(self):
+        self.settled(1)
+        job = self.schedule()
+        exchange = self.reflection.exchange
+        exchange.offer(command(job_id=job["id"]))
+        self.reflection.tick()
+        receipt = exchange.collect("command-1")
+        claimed = self.ledger.reflection_records()
+        charged = self.ledger.snapshot(now=self.wall)
+        self.reflection.finish(permanent=False)
+        settled = self.ledger.reflection_records()
+        self.assertEqual(settled, (({**claimed[0][0], "state": "unknown"},), claimed[1]))
+        self.assertEqual(exchange.next_job(mission_id="mission-a", reflector_id="reflector-a")["status"], "idle")
+        self.reflection.cancel_finish()
+        self.assertEqual(self.ledger.reflection_records(), settled)
+        self.assertEqual(self.ledger.snapshot(now=self.wall), charged)
+        self.ledger._verify(self.a)
+        self.assertEqual(exchange.collect("command-1"), receipt)
+        self.assertEqual(exchange.offer(command(job_id=job["id"])), receipt)
+        exchange.offer(command("new-claim", job_id=job["id"]))
+        self.reflection.tick()
+        self.assertEqual(exchange.collect("new-claim")["result"]["status"], "rejected")
+        self.assertEqual(self.ledger.reflection_records(), settled)
+        self.assertEqual(self.ledger.snapshot(now=self.wall), charged)
+
+    def test_completed_publishes_phase_without_scheduling_or_replay_on_reset(self):
+        self.settled(1)
+        self.ledger.begin_finishing(epoch=0, reason="Testing reversible finish", now=self.wall)
+        request = dict(schema="mission/9", kind="observe", request_id="request-1", mission_id="mission-a", epoch=0)
+        self.reflection.completed(request, "completed")
+        self.assertEqual(self.reflection.summary()["phase"], "finishing")
+        self.assertEqual(self.ledger.reflection_records(), ((), ()))
+        self.ledger.pause(cause="internal_recovery", reason="Testing failed finish", now=self.wall)
+        self.reflection.completed(request, "completed")
+        self.assertEqual(self.reflection.summary()["phase"], "paused")
+        self.reflection.reset()
+        self.assertEqual(self.reflection.summary()["phase"], "paused")
+        self.assertEqual(self.reflection.summary()["unreviewed_requests"], 1)
+        self.assertEqual(self.ledger.reflection_records(), ((), ()))
 
     def test_context_omissions_remain_exact_and_single_oversized_result_does_not_stop_play(self):
         self.r._admission = replace(self.a, learning=replace(self.a.learning,

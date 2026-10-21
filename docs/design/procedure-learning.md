@@ -110,10 +110,13 @@ Advisory claim/source/submit/result tools bypass the active-player lock and neve
 Observe. The result tool collects an original stable command without requiring a
 volatile claimed-job handle. A committed semantic refusal is exposed with its
 original reason; it cannot fault gameplay or become a claimed packet. Storage
-failure remains a fault. Before terminal sealing, ingress closes and queued
-commands drain; offered/claimed work becomes unreviewed/unknown with its original
-cost. A canceled finish can reopen ingress, without renewing old work. Actual
-host-actor quiescence needs separate evidence, not an expired clock or a DB label.
+failure remains a fault. Finalization temporarily seals ingress and drains queued
+commands; offered/claimed work becomes unreviewed/unknown with its original cost.
+A canceled finish can reopen healthy nonterminal ingress without renewing old
+work, including when the terminal ledger write refuses its original deadline.
+Temporary sealing suppresses jobs but preserves bounded waiting/`idle`; only a
+terminal phase or permanent writer shutdown reports `closed`. Actual host-actor
+quiescence needs separate evidence, not an expired clock or a DB label.
 
 At admission assign one general-purpose advisory Codex agent, with no game-input
 role, and freeze finite job/pending/context/source/output/time limits. The lead may
@@ -290,9 +293,11 @@ or late result grants Resume.
 At normal finishing, stop issuing/claiming new advisory work, drain already
 received bounded results and record unresolved/expired jobs with their original
 costs. Never wait for a late suggestion before saving/quitting the game. The
-advisory agent sees the closed cutoff through its next task/result call and
-quiesces; late bodies receive an explicit closed-cutoff disposition, not a new
-accepted memory revision. Retain original claimed-time/known elapsed/unknown
+advisory agent keeps its bounded wait while finalization is reversible. A
+terminal mission phase or permanent shutdown supplies the `closed` cutoff through
+its next-job call, after which it quiesces; temporary sealing alone supplies no
+termination signal. Late bodies receive an explicit closing/closed refusal, not a
+new accepted memory revision. Retain original claimed-time/known elapsed/unknown
 remaining computation separately; no refund or fabricated exact model duration.
 Verify advisory quiescence before final controller/storage closure and immutable
 library hashing. If computation cannot terminate within its declared bounds,

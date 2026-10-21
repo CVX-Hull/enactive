@@ -25,8 +25,12 @@ repair, preserving immutable rejected history and real authority checks. The lat
 closed with48requests/89charged primitives(88returned,1unknown),218frames/5,242,316bytes
 and no adopted game-time; owned exceptional exit is not normal ending. #184/#185
 repair control deadlines and valid advisory jobs whose old HTTP encoding exceeded
-the transport cap. A coherent
-learning mission and fresh campaign remain pending. Earlier failures
+the transport cap. That exact retained job is ASCII-only: whitespace suffices for
+overflow; Unicode is a separate regression. Normal004subsequently closed with
+178primitives/148requests/467frames/1845game seconds and actual successor/reload
+evidence under independent audit. #187 repairs the separate advisory-finishing
+publication/rollback defect exposed by exact82bdd10CI, with independent review and
+focused tests. A coherent learning verdict and fresh campaign remain pending. Earlier failures
 remain failures, including the empty-popup mapping,
 handoff/reference errors and item-activity return defect.
 

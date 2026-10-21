@@ -33,7 +33,7 @@ _ID = {**_text(128), "pattern": r"^[A-Za-z0-9][A-Za-z0-9_-]*$",
 _SOURCE = _object({"mission_id": _ID, "source_id": _ID})
 _PHASES = ("admitted", "active", "paused", "reconciling", "handoff", "finishing",
            "completed", "failed", "stopped")
-_CLOSED_PHASES = frozenset(("finishing", "completed", "failed", "stopped"))
+_CLOSED_PHASES = frozenset(("completed", "failed", "stopped"))
 _JOB_STATES = ("offered", "claimed", "completed", "expired", "unknown", "unreviewed")
 _EXECUTABLE = frozenset(("observe", "skill", "lifecycle", "reconcile", "handoff",
                          "claim", "readmit", "stop"))
@@ -208,6 +208,7 @@ class ReflectiveExchange:
         self._view: list[dict[str, Any]] = []
         self._proposal_view: list[str] = []
         self._sealed = False
+        self._terminated = False
 
     def _bind_writer(self) -> None:
         writer = current_thread()
@@ -236,7 +237,7 @@ class ReflectiveExchange:
                 if previous["digest"] != digest:
                     raise ContractError("Conflicting body for an immutable reflection command ID")
                 return deepcopy(previous["outcome"])
-            if self._sealed or self._phase in ("completed", "failed", "stopped") or (
+            if self._sealed or self._phase in _CLOSED_PHASES or (
                     self._phase == "finishing" and body["kind"] == "claim"):
                 return {"status": "rejected", "admitted": False, "command_id": identity,
                         "reason": "Reflection admission is closing", "grants_authority": False}
@@ -313,18 +314,19 @@ class ReflectiveExchange:
             job = self._jobs.get(job_id)
             return job is not None and {"mission_id": mission_id, "source_id": source_id} in job["sources"]
 
-    def seal_ingress(self) -> None:
-        """Stop new advisory bodies before draining and sealing durable history."""
+    def seal_ingress(self, *, permanent: bool) -> None:
+        """Stop new bodies; only permanent closure also terminates passive readers."""
         with self._condition:
             self._bind_writer()
             self._sealed = True
+            self._terminated = self._terminated or permanent
             self._condition.notify_all()
 
     def reopen_ingress(self) -> None:
         """Cancel a preterminal seal; original jobs/results/windows stay unchanged."""
         with self._condition:
             self._bind_writer()
-            if self._phase in ("completed", "failed", "stopped"):
+            if self._terminated or self._phase in _CLOSED_PHASES:
                 raise ContractError("A terminal reflective exchange cannot be reopened")
             self._sealed = False
             self._condition.notify_all()
@@ -453,12 +455,13 @@ class ReflectiveExchange:
             while True:
                 if self._scope is not None and self._scope != (mission_id, reflector_id):
                     return {"status": "idle", "grants_authority": False}
-                if self._sealed or self._phase in _CLOSED_PHASES:
+                if self._terminated or self._phase in _CLOSED_PHASES:
                     return {"status": "closed", "grants_authority": False}
-                for wrapper in self._view:
-                    if wrapper["state"] in ("offered", "claimed"):
-                        return {"status": wrapper["state"], "job": deepcopy(wrapper),
-                                "grants_authority": False}
+                if not self._sealed and self._phase != "finishing":
+                    for wrapper in self._view:
+                        if wrapper["state"] in ("offered", "claimed"):
+                            return {"status": wrapper["state"], "job": deepcopy(wrapper),
+                                    "grants_authority": False}
                 remaining = end - monotonic()
                 if remaining <= 0:
                     return {"status": "idle", "grants_authority": False}

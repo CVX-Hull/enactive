@@ -1162,16 +1162,16 @@ class MissionRuntime:
             if self._pending_pauses or self._operator_mark() != work.finish_mark:
                 raise _Cancelled("Normal finish superseded before terminal persistence")
         disposition = result["normal_finish"]["disposition"]
-        self._registered_reflection.finish()
         try:
+            self._registered_reflection.finish(permanent=False)
             self._finish_guard(work)
+            self._ledger.finish_mission(disposition, epoch=work.finish_epoch,
+                request_id=work.request["request_id"],
+                reason="Player-reported objective completion" if disposition == "completed" else "Normal cleanup; objective completion unclaimed",
+                now=self._wall())
         except (_Cancelled, ControlError, BudgetError):
             self._registered_reflection.cancel_finish()
             raise
-        self._ledger.finish_mission(disposition, epoch=work.finish_epoch,
-            request_id=work.request["request_id"],
-            reason="Player-reported objective completion" if disposition == "completed" else "Normal cleanup; objective completion unclaimed",
-            now=self._wall())
         self._record("mission_normal_finish", result)
         self._native, self._native_owner, self._owned_launch = None, None, None
 
@@ -2328,7 +2328,7 @@ class MissionRuntime:
             self._cancel_queue()
             try:
                 self._apply_pauses()
-                self._registered_reflection.finish()
+                self._registered_reflection.finish(permanent=True)
                 if self._native is not None:
                     self._native_facts = self._native.status()
                     verified = self._ledger is not None and any(row["state"] == "completed" and row["result"] is not None

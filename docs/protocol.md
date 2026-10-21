@@ -914,11 +914,18 @@ volatile claimed-job cache. Advisory source reads do not populate the player's
 source-read cache. Candidate proposals never auto-adopt, Resume or confer input
 authority; the player owns adoption, applicability and later choices.
 
-Normal finalization seals advisory ingress before draining received commands and
-settling offered/claimed bookkeeping as unreviewed/unknown. It preserves costs
-and original outcomes, and does not claim the host actor actually stopped.
-A canceled preterminal finish reopens advisory ingress without renewing old jobs;
-ordinary Save/Exit/Load does not seal it. Terminal history accepts no late writes.
+Normal finalization temporarily seals advisory ingress before draining received
+commands and settling offered/claimed bookkeeping as unreviewed/unknown. It
+preserves costs and original outcomes, and does not claim the host actor stopped.
+While finishing or temporarily sealed, next-job reads offer no work and retain
+their original bounded wait before returning `idle`. Only a terminal mission phase
+or permanent writer shutdown returns `closed`; temporary sealing never tells an
+advisory actor to terminate. A canceled preterminal finish, including refusal at
+the authoritative terminal ledger write, reopens healthy nonterminal ingress
+without renewing old jobs. The settled advisory phase is published before the
+Finish result becomes collectable. Storage faults and already committed terminal
+history never reopen. Ordinary Save/Exit/Load does not seal advisory ingress.
+Permanent shutdown wakes waiting readers; terminal history accepts no late writes.
 Actual host concurrency, actor quiescence and real discovery/reuse/counterexample/
 fresh-context/overlapping-play qualifications remain separate delivery057 work.
 

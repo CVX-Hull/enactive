@@ -81,6 +81,9 @@ class RegisteredReflection:
             self._urgent |= disposition not in ("completed", "partial")
         elif request["kind"] in ("reconcile", "handoff", "claim", "readmit", "stop"):
             self._urgent = True
+        # Publish the settled phase before its operation becomes collectable;
+        # the next idle tick may run after an advisory reader.
+        self._publish()
 
     def _publish(self) -> None:
         r = self.runtime
@@ -213,11 +216,11 @@ class RegisteredReflection:
                 procedures = heads[:16]
         return False
 
-    def finish(self) -> None:
+    def finish(self, *, permanent: bool) -> None:
         """Close admission and settle bookkeeping, without asserting actor quiescence."""
         if self.exchange is None:
             return
-        self.exchange.seal_ingress()
+        self.exchange.seal_ingress(permanent=permanent)
         self.exchange.drain(self._apply)
         self.runtime._ledger.settle_reflection(now=self.runtime._wall())
         self._jobs, self._proposals = self.runtime._ledger.reflection_records()
