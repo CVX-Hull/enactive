@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 
 from .controller import ControlError
 from .gameplay.contracts import ContractError, EvidenceRef
-from .gameplay.evidence import CapacityReservation, EvidenceError, same_native_state
+from .gameplay.evidence import MAX_FRAME_BYTES, CapacityReservation, EvidenceError, same_native_state
 from .gameplay.interaction import MenuOutcome, MenuSkill
 from .gameplay.mission_contracts import VERSION, SourceRevalidation
 from .gameplay.mission_ledger import BudgetError, LedgerError
@@ -419,6 +419,39 @@ class RegisteredLifecycle:
         r, data, phase = self.runtime, work.request, self.phase
         if phase is None or data["phase_id"] != phase.root_id or data["work_id"] is not None:
             raise ControlError("Lifecycle child lost its direct root or imported unrelated Work")
+        if (data["skill_kind"] == "inspect" and data["goal"]["purpose"] == "character_identity"
+                and phase.operation in ("create", "load") and phase.stage == "awaiting_identity"
+                and r._store.observation(phase.checkpoint)["paused"]):
+            # A missing explicit readmission is a request precondition, not
+            # consent to activate or a reason to discard a healthy private phase.
+            if r._ledger.snapshot(now=r._wall())["phase"] != "paused":
+                raise ControlError("Paused identity inspection requires its paused reconciled lifecycle")
+            self.guard(work, phase, diagnostic=True)
+            self._binding_request(work, phase.checkpoint)
+            current, _ = r._store.inspect_current_boundary(**r._clocks())
+            if current != phase.checkpoint or r.controller._frame_sha256(r._live()[0]) != current.frame_sha256:
+                raise EvidenceError("Paused identity request lost its current source or exact native pixels")
+            for identity in data["sources"]:
+                self._source(identity)
+            r._deadline(work, current)
+            ledger = r._ledger.snapshot(now=r._wall())
+            counts = r._ledger.measured_counts()["primitives"]
+            if (ledger["remaining_inputs"] <= r._admission.cleanup_reserve.inputs
+                    or counts["charged"] >= r._admission.limits.primitive_mappings
+                    or r._game_cost is not None and r._game_cost >= r._admission.limits.game_seconds):
+                raise BudgetError("Paused identity request cannot bypass exhausted mission limits")
+            with r._ledger._mutex:
+                root = r._ledger.request(phase.root_id)
+                if r._ledger._phase_primitive_count(phase.root_id) >= root["request"]["limits"]["primitives"]:
+                    raise BudgetError("Original lifecycle phase primitive limit exhausted")
+            r._capacity(frames=2, byte_count=2 * MAX_FRAME_BYTES)
+            r._store.preflight_retention()
+            r._check_cancelled(work)
+            return "blocked", {"reason": "Identity inspection requires explicit readmission first: use "
+                "enactive_lifecycle with lifecycle scope, the same create/load operation and root, "
+                "and no identity Claims or Work. That separate call charges Resume. No input was sent; "
+                "the original paused phase and limits remain. Submit a NEW explicit request.",
+                "source_ids": [phase.checkpoint.observation_id], "grants_authority": False}
         self.guard(work, phase)
         self._binding_request(work, phase.checkpoint)
         if data["skill_kind"] == "inspect":
@@ -546,11 +579,13 @@ class RegisteredLifecycle:
         ledger = r._ledger.snapshot(now=r._wall())
         transition = None if phase.transition_request is None else r._ledger.request(phase.transition_request)
         if (data["identity_claim_ids"] or data["work_id"] is not None
+                or ledger["phase"] != "paused"
                 or ledger["epoch"] != phase.epoch or data["epoch"] != phase.epoch
                 or ledger["player_id"] != phase.actor_id or ledger["unreconciled"]
                 or transition is None or transition["state"] != "completed"
                 or transition["result"].get("lifecycle_transition", {}).get("after_source_id") != phase.first_normal.observation_id):
             raise ControlError("Identity readmission requires the already committed exact transition/effect")
+        self.guard(work, phase, diagnostic=True)
         r._ledger.activate(epoch=phase.epoch, player_id=phase.actor_id, now=r._wall())
         phase = self._refresh(work, phase)
         phase = self._resume(work, phase)

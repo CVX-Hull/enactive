@@ -5,7 +5,10 @@ not bypass creation, adoption, handoff, source, claim or normal-ending guards.
 Replacing PlayerTools tests disposable client context, not a fresh model agent.
 """
 from copy import deepcopy
+from contextlib import ExitStack
 from dataclasses import replace
+import json
+from pathlib import Path
 import threading
 import unittest
 from unittest.mock import patch
@@ -161,6 +164,105 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(self.runtime._ledger.request("character-yes"), original_unknown)
         self.runtime._ledger._verify(self.a)
 
+    def test_premature_identity_refusal_does_not_conceal_integrity_or_budget_faults(self):
+        for fault in ("uncommitted_transition", "wrong_actor", "takeover", "changed_pixels",
+                      "wrong_source", "process_lost", "published", "retention", "active_ledger", "root_budget"):
+            with self.subTest(fault=fault):
+                case = StructuredLifecycleTests("test_premature_identity_inspection_preserves_phase_for_explicit_readmission")
+                case.setUp()
+                try:
+                    world, _ = case.paused_identity()
+                    case.observe("identity-checkpoint")
+                    owner = case.runtime._registered_lifecycle.phase
+                    request = case.control("faulted-premature-inspection", "Character", kind="inspect")
+                    with ExitStack() as faults:
+                        if fault == "uncommitted_transition":
+                            case.runtime._registered_lifecycle.phase = replace(owner, transition_request="character-yes")
+                        elif fault == "wrong_actor":
+                            case.runtime._registered_lifecycle.phase = replace(owner, actor_id="another-player")
+                        elif fault == "takeover":
+                            with case.controller.data_lock:
+                                case.controller.state["takeover_generation"] += 1
+                        elif fault == "changed_pixels":
+                            # Corrupt only the disposable fixture's native frame,
+                            # not a historical/native mission archive.
+                            state = case.runtime._live()[0]
+                            Path(case.controller.bridge / state["frame"]).write_bytes(b"\x89PNG\r\n\x1a\nchanged live pixels")
+                        elif fault == "wrong_source":
+                            request["sources"] = [world.observation_id]
+                        elif fault == "process_lost":
+                            case.process_state.update(running=False, returncode=1, outcome="exited")
+                        elif fault == "published":
+                            primitive = case.runtime._ledger.primitive_records()[0]
+                            case.runtime._ledger._db.execute("UPDATE primitives SET state='published' WHERE id=?",
+                                (primitive["logical_id"],))
+                        elif fault == "retention":
+                            case.runtime._store.max_frames = case.runtime._store.usage()["frames"]
+                        elif fault == "active_ledger":
+                            case.runtime._ledger.activate(epoch=owner.epoch, player_id=owner.actor_id, now=case.runtime._wall())
+                        else:
+                            root_limit = case.runtime._ledger.request("create")["request"]["limits"]["primitives"]
+                            faults.enter_context(patch.object(case.runtime._ledger, "_phase_primitive_count", return_value=root_limit))
+                        before = case.runtime.status()["spent_inputs"]
+                        delivered = len(case.bridge.delivered)
+                        response = case.runtime.command(request)
+                        self.assertEqual(response["status"], "accepted", response)
+                        blocked = case.settled(request["request_id"])
+                        self.assertEqual(blocked["state"], "blocked", blocked)
+                        self.assertNotIn("Identity inspection requires explicit readmission first", blocked["result"]["reason"])
+                        self.assertEqual(case.runtime.status()["spent_inputs"], before)
+                        self.assertEqual(len(case.bridge.delivered), delivered)
+                        self.assertIsNone(case.runtime._lease)
+                        self.assertIsNone(case.runtime._registered_lifecycle.phase)
+                finally:
+                    case.doCleanups()
+
+    def test_identity_readmission_revalidates_complete_proof_before_activation(self):
+        for field, value in (("actor_id", "another-player"), ("native_request_id", "00000000-0000-4000-8000-000000000000")):
+            with self.subTest(field=field):
+                case = StructuredLifecycleTests("test_premature_identity_inspection_preserves_phase_for_explicit_readmission")
+                case.setUp()
+                try:
+                    _, original_unknown = case.paused_identity()
+                    proof = deepcopy(case.runtime._ledger.request("transition")["result"])
+                    proof["lifecycle_transition"][field] = value
+                    # Deliberate corruption of this disposable test ledger only.
+                    case.runtime._ledger._db.execute("UPDATE requests SET result=? WHERE id='transition'", (json.dumps(proof),))
+                    charged = case.runtime.status()["spent_inputs"]
+                    delivered = len(case.bridge.delivered)
+                    with patch.object(case.runtime._ledger, "activate", wraps=case.runtime._ledger.activate) as activate:
+                        blocked = case.run_request(case.lifecycle("bad-proof-readmit", parent="create"))
+                        self.assertEqual(blocked["state"], "blocked", blocked)
+                        activate.assert_not_called()
+                    self.assertEqual(case.runtime.status()["spent_inputs"], charged)
+                    self.assertEqual(len(case.bridge.delivered), delivered)
+                    self.assertIsNone(case.runtime._lease)
+                    self.assertEqual(case.runtime._ledger.request("character-yes"), original_unknown)
+                finally:
+                    case.doCleanups()
+
+    def test_aged_paused_precondition_feedback_neither_refreshes_nor_grants_authority(self):
+        self.paused_identity()
+        phase = self.runtime._registered_lifecycle.phase
+        charged, delivered = self.runtime.status()["spent_inputs"], len(self.bridge.delivered)
+        request = self.control("aged-premature-inspection", "Character", kind="inspect")
+        # Source age alone need not destroy a paused private phase just to
+        # explain a missing step. Dispatch still needs its own fresh preflight.
+        # Advance only this disposable runtime's clocks and keep them forward
+        # through teardown; do not patch freshness or cause a clock rollback.
+        clock, wall = self.runtime._clock, self.runtime._wall
+        self.runtime._clock = lambda: clock() + 4
+        self.runtime._wall = lambda: wall() + 4
+        blocked = self.run_request(request)
+        self.assertEqual(blocked["state"], "blocked", blocked)
+        self.assertIn("explicit readmission first", blocked["result"]["reason"])
+        self.assertFalse(self.runtime.status()["freshness"]["fresh"])
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertEqual(self.runtime._current, phase.checkpoint)
+        self.assertEqual(self.runtime.status()["spent_inputs"], charged)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertIsNone(self.runtime._lease)
+
     def test_paused_identity_observation_still_rejects_real_scope_and_custody_faults(self):
         for fault in ("uncommitted_transition", "wrong_actor", "wrong_epoch", "takeover", "changed_pixels",
                       "process_lost", "prepared", "published", "capacity"):
@@ -249,3 +351,33 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         adopted = self.run_request(self.lifecycle("adopt", parent="create", claims=[world_id, character_id]))
         self.assertEqual(adopted["state"], "completed", adopted)
         self.assertEqual(self.runtime._ledger.request("character-yes"), original_unknown)
+
+    def test_premature_identity_inspection_preserves_phase_for_explicit_readmission(self):
+        _, original_unknown = self.paused_identity()
+        self.observe("identity-checkpoint")
+        phase = self.runtime._registered_lifecycle.phase
+        before = self.runtime.status()
+        root_deadline = self.runtime._ledger.request("create")["deadline"]
+        delivered = len(self.bridge.delivered)
+        request = self.control("premature-identity-inspect", "Character", kind="inspect")
+        blocked = self.run_request(request)
+        self.assertEqual(blocked["state"], "blocked", blocked)
+        self.assertIn("enactive_lifecycle", blocked["result"]["reason"])
+        self.assertIn("readmission", blocked["result"]["reason"])
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        after = self.runtime.status()
+        for field in ("epoch", "phase", "pause_cause", "spent_inputs", "lease_owner"):
+            self.assertEqual(after[field], before[field], field)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertEqual(self.runtime._ledger.request("create")["deadline"], root_deadline)
+        self.assertEqual(self.run_request(request), blocked)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+
+        readmitted = self.run_request(self.lifecycle("identity-readmit", parent="create"))
+        self.assertEqual(readmitted["state"], "completed", readmitted)
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"] + 1)
+        inspected = self.run_request(self.control("identity-inspect-after-readmit", "Character", kind="inspect"))
+        self.assertEqual(inspected["state"], "completed", inspected)
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"] + 2)
+        self.assertEqual(self.runtime._ledger.request("character-yes"), original_unknown)
+        self.runtime._ledger._verify(self.a)

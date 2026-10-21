@@ -160,7 +160,13 @@ retains its pending identity and charge; it is never blindly replayed.
 After a committed create/load transition, a still-paused identity phase supports
 diagnostic Observe under its exact historical effect and live owned lineage.
 This refreshes evidence without activation or a lease. The existing ledger proof
-validator is reused; only the diagnostic checkpoint advances, while first-normal
+validator is reused, including before explicit readmission activates the ledger.
+A premature exact identity inspection can instead return a zero-input missing-step
+explanation after proof, source/image, ownership, quiescence and original resource
+guards; the private paused phase stays intact. It neither refreshes an aged source
+nor grants a lease. A new explicit same-root create/load lifecycle call separately
+charges Resume before inspection; genuine faults still stop. Only the diagnostic
+checkpoint advances during Observe, while first-normal
 provenance, original budgets and the separately charged explicit Resume remain.
 No phase is reconstructed from historical records on reopen.
 

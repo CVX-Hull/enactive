@@ -168,6 +168,20 @@ successor and normal ending are unverified. The [popup acknowledgement repair](c
 reuses one existing image-bound SPACE key under the original phase; #139 owns the
 control and #144 the unchanged complete mission. No failed attempt resumes.
 
+Independent019 then reconciled its unknown creation ACK and refreshed the paused
+identity checkpoint, but requested inspection before explicit lifecycle
+readmission. That zero-input request hit an active-only guard and cleared the
+phase. It is failed and closed: 64 charges (63 returned, 1 reconciled unknown),
+37 requests and 160 frames, with no adopted identity, mission or normal-ending
+acceptance. The player permanently quiesced; exact owned child termination
+preceded controller closure and all files remain. #155/#164 own the corrected
+precondition feedback and explicit-step guidance. Current source retains an
+eligible paused phase after a precise zero-input refusal and validates the full
+committed transition proof before readmission activation. No automatic Resume or
+old-run repair follows. #176/#177/#178 separately retain organic interaction,
+procedure learning and asynchronous reflection acceptance from these failures;
+these are planned capabilities, not implemented learning.
+
 The [development-first workflow](project-management.md#development-first-delivery)
 now distinguishes targeted development runs from formal acceptance. The next
 meaningful integration checkpoint remains the complete mission below; repeated

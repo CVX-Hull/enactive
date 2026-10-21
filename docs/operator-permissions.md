@@ -242,9 +242,14 @@ can submit a new corrected request; software neither invents the view nor switch
 adapters automatically. Genuine authority/evidence/budget faults still stop.
 
 Choose a whole returned snapshot/source consistently after focus changes. For
-provisional identity inspection, select inspect/character_identity and lifecycle
-scope to retain the creation/load root. Lifecycle confirmations and editor intent
-also retain that root. Supporting diagnostic source IDs are explicit. Initial
+provisional identity after committed create/load transition reconciliation, first
+call enactive_lifecycle with lifecycle scope, the same create/load operation and
+root, and no identity Claims or Work. This separate readmission charges Resume;
+Observe and effect reconciliation do not. Then select inspect/character_identity
+with lifecycle scope. Premature eligible inspection returns a zero-input
+explanation and retains the original phase; use a NEW explicit request for the
+missing step. Actual source/ownership/Pause/proof/budget faults still stop.
+Lifecycle confirmations and editor intent also retain that root. Supporting diagnostic source IDs are explicit. Initial
 activity interruption uses the prompt summary; answer/readmission use the exact
 activity checkpoint, which may differ from current_source. Memory content,
 support groups and truthful handoff source-read declarations remain the player's

@@ -306,6 +306,21 @@ Exact PNG/native equivalence, original refresh deadlines, game and capacity chec
 still apply. Repeated diagnostic refreshes change only the checkpoint and retained
 evidence costs. They cannot Resume, adopt identity or reconstruct a reopened phase;
 the next explicit same-root lifecycle child still charges its own Resume.
+Use `enactive_lifecycle` with lifecycle scope, the same create/load operation and
+root, and no identity Claims or Work; then request inspect/character_identity in
+that lifecycle scope. The separate readmission validates the complete committed
+transition/effect proof before activation and dispatch.
+
+A premature exact identity-inspection request can return a correctable zero-input
+refusal while retaining that private paused phase. This requires the same proof,
+owned process/operator/actor/epoch, quiescent delivery, exact current source and
+native PNG, support integrity, original deadlines/game/root/input/mapping limits
+and retention/cleanup headroom. No refresh, activation, lease or Resume occurs.
+An aged intact checkpoint may explain the missing prerequisite without becoming
+fresh; a NEW explicit lifecycle request still performs its full refresh and input
+preflight. Wrong metadata/support, changed pixels, user Pause/takeover, unsettled
+input, uncommitted proof, lost child or exhausted limits keep stopping behavior.
+An immutable blocked result is never reinterpreted as permission or success.
 
 NormalSessionAdoption requires directly supported, undisputed admitted world and
 character Claims, the exact identity inspection, owned transition and current

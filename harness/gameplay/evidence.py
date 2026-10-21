@@ -675,6 +675,12 @@ class EvidenceStore:
         """Check worst-case capacity without claiming a reservation or dispatch guarantee."""
         if self.current_boundary(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms) != before:
             raise EvidenceError("Dispatch before-frame must be current retained evidence")
+        self.preflight_retention()
+
+    @_serialized
+    def preflight_retention(self) -> None:
+        """Check existing capacity/reservation guards without refreshing or authorizing input."""
+        self._open()
         if self._reservation is not None:
             raise CapacityError("An unresolved dispatch already reserves after evidence")
         self._capacity(MAX_FRAME_BYTES, None)
