@@ -61,8 +61,10 @@ exhausted an undersized creation-phase budget; the
 [seventh](acceptance/2026-10-20-independent-mission-seventh-attempt.md) stopped at
 a source-freshness race before editor input. [#168](https://github.com/CVX-Hull/enactive/issues/168)
 owns that repair. Independent008 then stopped at an uncommitted world-form Finish;
-[#170](https://github.com/CVX-Hull/enactive/issues/170) owns that API trap. All attempts
-remain closed. Another full finite mission is required.
+[#170](https://github.com/CVX-Hull/enactive/issues/170) owns that API trap. Current
+source rejects generic Finish activation before input and directs the player to
+the registered stage commit, preserving its phase. Actual independent use remains
+unverified. All attempts remain closed. Another full finite mission is required.
 
 Current source distinguishes raw assertions from combined Work views and checks
 complete handoff retrieval capacity before relinquishing control. Actual fresh

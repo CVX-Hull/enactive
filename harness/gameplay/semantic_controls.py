@@ -261,6 +261,13 @@ class SemanticControlSkill:
         target = targets[0]
         if goal["outcome"] == "inspected": return ()
         if target == selected:
+            # CONFIRM on the world's Finish row opens the same question as
+            # FINALIZE, but cannot establish the registered lifecycle stage.
+            # Keep this a correctable zero-input outcome, like character finish.
+            if (state["category"] == "WORLDGEN_CONFIRM_DIALOG" and goal["label"] == "Finish"
+                    and goal["outcome"] == "activated"):
+                raise _ControlBlocked("World Finish requires an explicit lifecycle create stage commit "
+                    "with the current source and existing phase_id; no input was dispatched")
             return (("action", "CONFIRM"),) if goal["outcome"] == "activated" else ()
         direction = 1 if target > selected else -1
         # In CDDA's description screen NEXT_TAB starts character completion;

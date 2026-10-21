@@ -127,6 +127,23 @@ class SemanticControlTests(unittest.TestCase):
         self.assertIsInstance(result, ControlOutcome)
         self.assertEqual((result.disposition, result.proposed_count), ("blocked", 0))
 
+    def test_world_finish_remains_focusable_but_activation_requires_lifecycle(self):
+        before = self.frame(category="WORLDGEN_CONFIRM_DIALOG", actions=["UP", "DOWN", "CONFIRM", "FINALIZE"])
+        rows = [dict(label="World name", enabled=True), dict(label="Finish", enabled=True)]
+        for label, selected, outcome, action in (("Finish", 0, "focused", "DOWN"),
+                                               ("World name", 0, "activated", "CONFIRM"),
+                                               ("Finish", 1, "activated", None)):
+            with self.subTest(label=label, selected=selected, outcome=outcome):
+                skill = self.skill(before, view=self.view(before, rows=rows, selected=selected),
+                    goal=dict(purpose="World setup", label=label, outcome=outcome))
+                result = self.propose(skill)
+                if action is None:
+                    self.assertEqual((result.disposition, result.proposed_count), ("blocked", 0))
+                    self.assertIn("lifecycle create stage commit", result.reason)
+                else:
+                    self.assertIsInstance(result, ControlIntent)
+                    self.assertEqual(result.action, action)
+
     def test_character_finish_cannot_be_proposed_as_tab_focus(self):
         before = self.frame(category="NEW_CHAR_DESCRIPTION", actions=["PREV_TAB", "NEXT_TAB"])
         skill = self.skill(before, view=self.view(before, control="tabs"),

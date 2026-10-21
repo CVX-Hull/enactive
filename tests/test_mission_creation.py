@@ -272,6 +272,45 @@ class MissionCreationFixture:
 
 
 class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
+    def test_world_finish_refusal_preserves_phase_for_registered_stage_commit(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        self.run_request(self.control("world-form", "Create World"))
+        original_behavior = self.bridge.behavior
+
+        def actual_finish(bridge, request):
+            # Actual008's CONFIRM at the interpreted selected Finish row opens
+            # YESNO, not the name editor supplied by the general fixture.
+            if bridge.value["category"] == "WORLDGEN_CONFIRM_DIALOG" and request.get("action") == "CONFIRM":
+                self.stage = "world-confirmation"
+                self.menu("YESNO", ["YES", "NO"])
+                return True
+            return original_behavior(bridge, request)
+
+        self.bridge.behavior = actual_finish
+        phase = self.runtime._registered_lifecycle.phase
+        root = self.runtime._ledger.request("create")
+        spent = self.runtime.status()["spent_inputs"]
+        delivered = len(self.bridge.delivered)
+        refused = self.run_request(self.control("uncommitted-world-finish", "Finish"))
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertEqual(refused["result"]["proposals"], 0)
+        self.assertIn("create stage commit", refused["result"]["reason"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertFalse(any(r["kind"] != "observe" for r in self.bridge.delivered[delivered:]))
+        self.assertEqual(self.current()[1]["category"], "WORLDGEN_CONFIRM_DIALOG")
+        current = self.runtime._registered_lifecycle.phase
+        self.assertEqual((current.root_id, current.stage, current.actor_id, current.epoch),
+                         (phase.root_id, phase.stage, phase.actor_id, phase.epoch))
+        self.assertEqual(self.runtime._ledger.request("create")["deadline"], root["deadline"])
+        committed = self.run_request(self.lifecycle("registered-world-finish", parent="create"))
+        self.assertEqual(committed["state"], "partial", committed)
+        self.assertEqual(self.current()[1]["category"], "YESNO")
+        self.assertEqual(self.bridge.delivered[-1]["action"], "FINALIZE")
+        answered = self.run_request(self.control("world-yes", "Yes", question="Are you SURE you're finished?"))
+        self.assertEqual(answered["state"], "partial", answered)
+        self.assertEqual(self.current()[1]["category"], "MAIN_MENU")
+
     def test_fresh_editor_source_is_revalidated_before_it_can_expire_at_dispatch(self):
         self.ready()
         self.run_request(self.lifecycle("create"))

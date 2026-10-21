@@ -126,6 +126,9 @@ World-generation forms have no tab-focus mapping. On the final character-descrip
 screen, NEXT_TAB begins character completion and is blocked as ordinary focus;
 returning to a previous tab remains available. World FINALIZE and character finish
 use explicit registered lifecycle stage commits, separate from ordinary focus.
+Interpreted activation of the selected world Finish row returns a correctable
+zero-input result directing the player to its existing create stage commit; it
+keeps the lifecycle phase and original limits available.
 
 Ledger9 records Resume under admitted lifecycle/readmission or an exact activity
 resume child, and charges activity controls through the same primitive table.
