@@ -19,6 +19,61 @@ Independent013's unbound consume action demonstrates a catalogue/binding trap;
 it does not demonstrate mouse support or general learning. Player-learned
 procedures (#177) and background reflection (#178) remain separate work.
 
+## Prefer visible targets over coordinates
+
+Select the highest useful supported abstraction: gameplay skill, visible UI
+target/action, then raw key/text/coordinate input where needed. This is a default
+preference, not a ban on player exploration. The player should ask to activate a
+visible control; software can resolve an ordinary hotkey, navigation/confirmation
+or click without asking the model to calculate every pixel or motion/down/up.
+
+There is already a partial foundation. The [native exporter](../../native/cdda_harness.cpp)
+publishes at most32 rendered rows with presentation-local ID, text, enabled state,
+displayed hotkey when available and selection. [MenuSkill](../../harness/gameplay/interaction.py)
+can target a unique enabled displayed label through bounded registered navigation
+and confirmation. The [item policy](../../harness/gameplay/interactions.py) and
+[interpreted controls](../../harness/gameplay/semantic_controls.py) cover additional
+limited selections/editors. These shortcuts require no new hit boxes. They do not
+provide a general widget tree: row rectangles/roles are absent, filter/count
+attestation is incomplete, and IDs are not stable item identities.
+
+For uncovered clickable controls, investigate source-bound visible target handles
+using the existing rendered-UI exporter. A future handle would resolve one visible,
+enabled, unoccluded control and its applicable action or hit point in the current
+presentation. Duplicate labels need an observed distinguishing context; clipping,
+overlays, stale/reordered lists and unknown actionability must not select a hidden
+or different item. Keep the declared root and finite limits during resolution.
+Discovery of an offscreen control must use ordinary observed scrolling/navigation,
+not enumeration of hidden inventory or widget internals as player knowledge.
+
+The browser analogy is [Playwright's locators](https://playwright.dev/docs/locators)
+and [actionability checks](https://playwright.dev/docs/actionability): identify a
+control by user-facing attributes and check it before acting. CDDA's SDL/ImGui and
+curses-style views do not have a browser DOM, so Playwright cannot directly operate
+them. Reuse the principle and our current adapters before building another locator
+language. Bounded waiting may retry preconditions; uncertain game input is never
+retried. A request cannot silently retarget a changed scene or new list entry.
+
+Reuse candidate: [Dear ImGui Test Engine](https://github.com/ocornut/imgui_test_engine)
+provides named item operations and input injection; its
+[implementation](https://github.com/ocornut/imgui_test_engine/blob/main/imgui_test_engine/imgui_te_context.cpp)
+also performs automatic navigation/scrolling and some internal UI adjustments.
+Evaluate a version compatible with pinned ImGui1.91.5, its
+[own license](https://github.com/ocornut/imgui_test_engine/blob/main/imgui_test_engine/LICENSE.txt),
+visible-only exposure and per-input accounting before adoption. It is not currently
+installed and does not cover CDDA's entire mixed UI. Its autonomous action sequences
+cannot become a second writer or bypass freshness, budgets, Pause or unknown
+delivery handling. A thin exporter/resolver is justified only for concrete gaps
+the existing adapters or a suitably bounded library do not cover; lead owns that
+integration and revisits reuse if coverage grows. No dependency is selected yet.
+
+Raw input remains available for novel screens, keyboard-only actions and spatial
+game interactions without a suitable visible control. Retain the chosen target,
+resolution basis and actual input/result evidence automatically. Procedure memory
+should retain meaningful goals and scoped control descriptions, then resolve them
+from current evidence; it must not replay old row IDs or coordinates in a new
+context. Target activation is delivery, not acquisition or other game success.
+
 ## Selected boundary
 
 Extend the existing `enactive_skill` with `skill_kind=direct`. The player selects
@@ -104,8 +159,9 @@ Lead owns coupled Python integration, tests, documentation, shared build/runtime
 and final verification. After interface review, one worker may own only native
 bridge/header, upstream pin and patcher in a separate project-local worktree.
 Worker syntax/apply checks are source evidence, not a build or gameplay result.
-The existing upstream/controller/schema/ledger tooling covers the requirement;
-no new input framework, event bus or history system is justified.
+Existing controller/schema/ledger tooling owns dispatch and accounting; the reuse
+probe determines the remaining widget-targeting gap. No separate input executor,
+event bus or history system is justified.
 
 Focused regressions cover strict events/Unicode/modifiers/coordinates, exact
 source binding, root/Work/budget continuity across control styles, conservative
@@ -116,7 +172,13 @@ non-unit scaling, key/text/click effects and release, stale/out-of-bounds refusa
 physical hover/takeover and owned cleanup. Preserve failures and unverified host
 telemetry; mocks cannot satisfy these checks.
 
-Then a new finite player-owned development mission exercises actual discovery
+Prioritize qualification of the selected target/action paths and use coordinate
+fallback when it is actually needed; generic mouse completeness is not a blanket
+new gate for an otherwise supported #144 mission. Full #176 completion still
+requires its declared click capability and evidence, or an explicit scoped product
+decision; a key-only implementation is not relabeled complete mouse support.
+
+A new finite player-owned development mission exercises actual discovery
 and all original #144 supplies, shelter/rest, memory correction, fresh-context
 handoff and normal same-character save/reload/final ending. Source changes happen
 only after quiescence and runtime closure. No old failed admission resumes.
