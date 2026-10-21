@@ -191,6 +191,56 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertIsNone(selected["mission"]["coordinate_scope"])
         self.assertFalse(selected["mission"]["grants_authority"])
 
+    def test_handoff_readmission_observe_source_refusal_can_be_explicitly_corrected(self):
+        self.create()
+        self.remember_work()
+        issued = self.run_request(self.operation("handoff", "handoff",
+            checkpoint_ids=[self.runtime._current.observation_id], unfinished_work_ids=["pending"],
+            successor_role="player"))["result"]
+        self.player = PlayerTools(MissionClient(self.controller.root))
+        selected, _ = self.player.call("enactive_snapshot", {})
+        scope = {key: selected["mission"]["coordinate_scope"][key] for key in ("session", "coordinate_epoch")}
+        context, _ = self.player.call("enactive_context", dict(snapshot_id=selected["snapshot_id"],
+            intent=dict(scope=scope, query="unfinished", max_bytes=131072,
+                handoff=dict(handoff_id="handoff", prospective_player_id="successor", actor_role="player"))))
+        packet = context["response"]["context"]["packet"]
+        for identity in set(issued["checkpoint_ids"] + [issued["post_pause_source_id"]]):
+            self.player.call("enactive_source", dict(mission_id=self.a.mission_id, source_id=identity))
+        self.assertEqual(self.run_request(handoff.MissionHandoffTests.claim(self, packet))["state"], "completed")
+        self.observe("after-claim-observe")
+        selected, _ = self.player.call("enactive_snapshot", {})
+        newer = selected["source"]["reference"]["observation_id"]
+        self.assertNotEqual(newer, issued["post_pause_source_id"])
+        phase = self.runtime._registered_handoff.phase
+        before = self.runtime.status()
+        delivered = deepcopy(self.bridge.delivered)
+        arguments = dict(snapshot_id=selected["snapshot_id"], request_id="wrong-observe-source", wait_seconds=3,
+            source_id=newer, intent=dict(mode="handoff", handoff_id="handoff", claim_request_id="claim",
+                limits=dict(primitives=1, wall_seconds=30, game_seconds=10)))
+        refused, _ = self.player.call("enactive_readmit", arguments)
+        self.assertEqual(refused["response"]["status"], "rejected")
+        self.assertIn("Select issued post-Pause source " + issued["post_pause_source_id"], refused["response"]["reason"])
+        self.assertIn("before admission", refused["response"]["reason"])
+        self.assertIs(self.runtime._registered_handoff.phase, phase)
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
+        self.assertEqual(self.runtime.status()["epoch"], before["epoch"])
+        self.assertEqual(self.runtime.status()["phase"], "paused")
+        self.assertIsNone(self.runtime._lease)
+        self.assertEqual(self.bridge.delivered, delivered)
+        with self.assertRaisesRegex(ContractError, "Unknown semantic request"):
+            self.runtime._ledger.request("wrong-observe-source")
+        historical = handoff.MissionHandoffTests.readmit(self)
+        historical["sources"] = [newer]
+        with self.assertRaisesRegex(ContractError, "Readmission lost its exact issued post-Pause source"):
+            self.runtime._ledger._readmit_deadline(historical, admitted_at=self.runtime._wall())
+        # The adapter retains the rejected draft; correction uses a NEW ID.
+        arguments.update(request_id="corrected-issued-source", source_id=issued["post_pause_source_id"])
+        corrected, _ = self.player.call("enactive_readmit", arguments)
+        self.assertEqual(corrected["response"]["operation"]["state"], "completed", corrected)
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"] + 1)
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertEqual(self.runtime._lease.actor_id, "successor")
+
     def test_disputed_normal_source_cannot_publish_coordinate_scope(self):
         self.create()
         selected, _ = self.player.call("enactive_snapshot", {})

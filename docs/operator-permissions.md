@@ -251,6 +251,15 @@ index or authority. A retained `diagnostic` string can describe an earlier refus
 request after later success; current operation errors and ownership/provenance
 checks establish actionability, not the historical string alone.
 
+For handoff readmission, select the issuance's original `post_pause_source_id`,
+which the successor already inspected for its claim. A separate Observe is not a
+prerequisite and its returned source does not replace that issued ID. Readmission
+does its own bounded refresh and charges Resume separately. The exact-source
+selection refusal occurs before admission/input and names the required ID;
+correct it with a NEW explicit request only while the original handoff is still
+eligible. User Pause, unknown delivery or lost ownership cannot be repaired by
+selecting another source.
+
 For provisional identity after committed create/load transition reconciliation, first
 call enactive_lifecycle with lifecycle scope, the same create/load operation and
 root, and no identity Claims or Work. This separate readmission charges Resume;

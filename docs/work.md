@@ -198,6 +198,21 @@ nullable passive `coordinate_scope` from adopted session continuity, separate fr
 actor epoch; no claim, refresh, Resume, restored failed run or native acceptance
 follows. Current persisted/tool argument contracts remain unchanged.
 
+Independent021 then qualified actual fresh-context required-Work retrieval,
+eleven retained source-image reads and one-use claim through the new scope
+metadata. The successor issued Observe and selected that new source for separate
+readmission; the ledger required the original issued post-Pause ID and refused
+before admission, with no Resume. The actor stopped and permanently quiesced;
+ordered exceptional child/controller shutdown preserved all files. It remains
+failed/closed with111charges (109returned,1unknown,1rejected),84requests,
+290frames and1810canonical game seconds; successful readmission and normal ending
+remain unaccepted. #164/#144 own precise pre-admission source-selection feedback
+and a new complete mission. The source guard still rejects replacement/mismatched
+bindings; its missing-issued-ID explanation now identifies the prerequisite and
+known nondelivery without granting authority or changing any format. A new
+corrected request is possible only under the unchanged original live guards and
+deadlines. No failed attempt resumes.
+
 The [development-first workflow](project-management.md#development-first-delivery)
 now distinguishes targeted development runs from formal acceptance. The next
 meaningful integration checkpoint remains the complete mission below; repeated

@@ -688,7 +688,7 @@ class MissionLedger:
                 if now >= root["deadline"]: raise BudgetError("Original phase deadline expired")
                 deadline = min(deadline, root["deadline"])
             if data["kind"] == "readmit":
-                deadline = self._readmit_deadline(data, admitted_at=now)
+                deadline = self._readmit_deadline(data, admitted_at=now, admitting=True)
                 if now >= deadline:
                     raise BudgetError("Readmission cannot renew issuance/claim/ordinary deadlines")
             self._db.execute("INSERT INTO requests(id,payload,digest,epoch,state,admitted_at,deadline) VALUES (?,?,?,?,'accepted',?,?)",
@@ -696,7 +696,7 @@ class MissionLedger:
             self._reserve(f"request:{data['request_id']}", RESULT_RESERVE)
         return {"created": True, "operation": self.request(data["request_id"])}
 
-    def _readmit_deadline(self, data: dict, *, admitted_at: float) -> float:
+    def _readmit_deadline(self, data: dict, *, admitted_at: float, admitting: bool = False) -> float:
         if data["mode"] == "recovery":
             resolved = self.request(data["reconciliation_request_id"])
             if resolved["request"]["kind"] != "reconcile" or resolved["state"] != "completed" or resolved["result"] is None:
@@ -719,9 +719,18 @@ class MissionLedger:
                 or admitted_at < claim["admitted_at"]):
             raise LedgerError("Readmission requires its exact prior completed handoff/claim")
         handoff = issued["result"]
-        if (handoff["post_pause_source_id"] not in data["sources"] or any(data[a] != handoff[b] for a, b in
-                (("expected_session", "session"), ("expected_revision", "revision"), ("expected_boundary_id", "boundary_id")))):
+        if any(data[a] != handoff[b] for a, b in
+                (("expected_session", "session"), ("expected_revision", "revision"), ("expected_boundary_id", "boundary_id"))):
             raise LedgerError("Readmission lost its exact issued post-Pause source")
+        if handoff["post_pause_source_id"] not in data["sources"]:
+            if not admitting:
+                # Historical validation cannot assert that delivery never happened.
+                raise LedgerError("Readmission lost its exact issued post-Pause source")
+            raise LedgerError("Select issued post-Pause source " + handoff["post_pause_source_id"]
+                + "; a later Observe source cannot replace it. This request was refused before admission; "
+                "no Resume or input was attempted. Correct with a NEW request ID only if the original "
+                "claimed handoff remains eligible. Readmission performs its own bounded fresh Observe; "
+                "no prerequisite Observe is needed.")
         admission = MissionAdmission.from_dict(self._get("admission"))
         return min(issued["deadline"], claim["deadline"], self._get("state")["deadline"] - admission.cleanup_reserve.wall_seconds,
                    admitted_at + data["limits"]["wall_seconds"])

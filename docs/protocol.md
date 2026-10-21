@@ -624,7 +624,13 @@ for another explicit request within unchanged limits. Other authority failures s
 
 `readmit` is a separate executable request linked to the exact completed claim and
 issuance, with one primitive and finite wall/game limits. Its deadline is the minimum
-of issuance, claim, ordinary mission allowance and its own cap. It freshly observes
+of issuance, claim, ordinary mission allowance and its own cap. Select the original
+issued `post_pause_source_id`, even if a separate Observe returned a newer source
+after claim; readmission performs its own bounded refresh. If the native binding
+matches but that issued source is omitted, the ledger refuses before admission
+with the exact required ID and no input. An explicit NEW corrected request remains
+subject to all original live handoff, source, Pause and resource guards; this
+feedback grants no eligibility or Resume. It freshly observes
 and compares exact paused native state/encoded pixels, retains that new source,
 bounds the initial Observe command-lock/native wait by that same deadline (and
 the controller's existing15-second ceiling), charges one Resume before publication,
