@@ -8,7 +8,9 @@ from __future__ import annotations
 from collections import OrderedDict
 from copy import deepcopy
 from dataclasses import dataclass
+import hashlib
 import threading
+import time
 import uuid
 
 from .gameplay.contracts import ContractError, _object, json_object, validate_json
@@ -16,6 +18,7 @@ from .gameplay.mission_contracts import (
     VERSION, SKILLS, perception_schema, request_schema, validate_request,
 )
 from .gameplay.mission_requests import compose_request
+from .gameplay.reflection import proposal_schema, validate_command, validate_job, validate_proposal
 from .mission_client import MissionClient
 
 
@@ -101,6 +104,21 @@ def tool_specs() -> tuple[ToolSpec, ...]:
     context["properties"]["scope"] = _without(context["properties"]["scope"], "mission_id")
     specs.append(ToolSpec("enactive_context", "Retrieve complete current memory/provenance; choose explicit successor binding for required Work. Does not claim or Resume.",
         _object(dict(snapshot_id=identity, intent=context)), True))
+    proposal = proposal_schema()["properties"]
+    reflection_scope = dict(mission_id=identity, reflector_id=identity)
+    specs.extend((
+        ToolSpec("enactive_reflect_next", "Advisory actor only: get and durably claim bounded original work. Compute only when status is claimed. Pending, busy or unknown grants no permission to compute; no gameplay input or automatic model work.",
+            _object({**reflection_scope, "wait_seconds": wait})),
+        ToolSpec("enactive_reflect_submit", "Advisory actor only: submit explicitly authored candidates/notes/reason for a cached claimed job. Software preserves original headers; request_id is immutable. Corrected output requires a new request_id. No automatic memory adoption or gameplay.",
+            _object({**reflection_scope, "job_id": identity, "request_id": identity, "wait_seconds": wait,
+                **{field: proposal[field] for field in ("candidates", "notes", "reason")}})),
+        ToolSpec("enactive_reflect_source", "Advisory actor only: read an allowlisted original image from a cached claimed job. Never Observe; this presentation cannot serve as a deciding player's source-read declaration.",
+            _object({**reflection_scope, "job_id": identity, "source_id": identity}), True),
+        ToolSpec("enactive_reflect_result", "Collect an original advisory command by its stable ID, including after adapter restart. Never submits or claims work; unavailable remains unknown.",
+            _object({**reflection_scope, "command_id": identity, "wait_seconds": wait}), True),
+        ToolSpec("enactive_advice", "Deciding player: passively read one exact advisory proposal. Missing is explicit; proposal data grants no current authority and is never automatically accepted.",
+            _object(dict(mission_id=identity, proposal_id=identity)), True),
+    ))
     return tuple(specs)
 
 
@@ -112,6 +130,8 @@ class PlayerTools:
         self.sources: OrderedDict[tuple[str, str], dict] = OrderedDict()
         self.specs = {spec.name: spec for spec in tool_specs()}
         self._lock = threading.Lock()
+        self._reflection_lock = threading.Lock()
+        self._reflection_jobs: OrderedDict[tuple[str, str, str], dict] = OrderedDict()
 
     @staticmethod
     def _remember(cache: OrderedDict, key, value):
@@ -185,12 +205,101 @@ class PlayerTools:
             raise ContractError("Unknown player tool")
         data = json_object(arguments)
         validate_json(data, self.specs[name].schema)
+        if name in ("enactive_reflect_next", "enactive_reflect_submit", "enactive_reflect_source", "enactive_reflect_result", "enactive_advice"):
+            return self._reflection_call(name, data)
         if not self._lock.acquire(blocking=False):
             raise ContractError("Another player tool is active; collect its original operation before continuing")
         try:
             return self._call(name, data)
         finally:
             self._lock.release()
+
+    @staticmethod
+    def _claim_id(mission_id: str, job_id: str) -> str:
+        return "claim-" + hashlib.sha256((mission_id + "\0" + job_id).encode()).hexdigest()
+
+    def _reflection_job(self, mission_id: str, reflector_id: str, job_id: str) -> dict:
+        with self._reflection_lock:
+            original = self._reflection_jobs.get((mission_id, reflector_id, job_id))
+            if original is None:
+                raise ContractError("Original claimed job handle unavailable; explicitly retrieve and verify its durable claim")
+            return deepcopy(original)
+
+    @staticmethod
+    def _claim_wrapper(job: dict, receipt: dict, command_id: str) -> dict:
+        if (receipt.get("status") != "committed" or receipt.get("admitted") is not True
+                or receipt.get("command_id") != command_id or receipt.get("grants_authority") is not False):
+            raise ContractError("Reflection claim requires its original committed receipt")
+        result = receipt.get("result")
+        number = {"type": "number", "minimum": 0}
+        validate_json(result, _object(dict(job_id={"const": job["id"]}, state={"const": "claimed"},
+            claimed_at=number, deadline=number, charged_seconds={"type": "number", "exclusiveMinimum": 0, "maximum": 180},
+            measurement={"type": "string", "maxLength": 1024}, grants_authority={"const": False})))
+        if result["deadline"] != result["claimed_at"] + result["charged_seconds"]:
+            raise ContractError("Reflection claim changed its original window/deadline")
+        return dict(job=job, state="claimed", claimed_at=result["claimed_at"], deadline=result["deadline"])
+
+    def _reflection_call(self, name: str, data: dict) -> tuple[dict, bytes | None]:
+        # Every network/wait/image operation is outside both cache and active
+        # input locks. Only short immutable-handle copies take the cache lock.
+        if name == "enactive_advice":
+            return self.client.reflection_advice(**data), None
+        if name == "enactive_reflect_result":
+            return self.client.reflection_collect(**data), None
+        mission_id, reflector_id = data["mission_id"], data["reflector_id"]
+        if name == "enactive_reflect_next":
+            deadline = time.monotonic() + data["wait_seconds"]
+            offered = self.client.reflection_next(mission_id, reflector_id, wait_seconds=data["wait_seconds"])
+            if offered["status"] in ("idle", "closed"):
+                return offered, None
+            job = validate_job(offered["job"]["job"])
+            if (job["mission_id"], job["reflector_id"]) != (mission_id, reflector_id):
+                raise ContractError("Reflection job belongs to another mission/reflector")
+            identity = self._claim_id(mission_id, job["id"])
+            wait = max(0., deadline - time.monotonic())
+            if offered["status"] == "claimed":
+                claim = self.client.reflection_collect(mission_id, reflector_id, identity, wait_seconds=wait)
+            else:
+                command = validate_command(dict(schema="reflection/1", kind="claim", command_id=identity,
+                    mission_id=mission_id, reflector_id=reflector_id, job_id=job["id"]))
+                claim = self.client.reflection_command(command, wait_seconds=wait)
+            if claim["status"] != "committed":
+                # Do not leak an offered packet as permission to start compute.
+                return claim, None
+            if claim.get("result", {}).get("status") == "rejected":
+                validate_json(claim["result"], _object(dict(status={"const": "rejected"},
+                    reason={"type": "string", "minLength": 1, "maxLength": 1024}, grants_authority={"const": False})))
+                return claim, None
+            wrapper = self._claim_wrapper(job, claim, identity)
+            if offered["status"] == "claimed" and wrapper != offered["job"]:
+                raise ContractError("Reflection job wrapper differs from its original claim")
+            output = dict(status="claimed", job=wrapper, claim=claim, grants_authority=False)
+            key = (mission_id, reflector_id, job["id"])
+            with self._reflection_lock:
+                previous = self._reflection_jobs.get(key)
+                if previous is not None and previous != output:
+                    raise ContractError("Conflicting immutable reflection job/claim handle")
+                self._reflection_jobs[key] = deepcopy(output)
+                self._reflection_jobs.move_to_end(key)
+                while len(self._reflection_jobs) > 64:
+                    self._reflection_jobs.popitem(last=False)
+            return output, None
+        original = self._reflection_job(mission_id, reflector_id, data["job_id"])
+        job = original["job"]["job"]
+        if name == "enactive_reflect_source":
+            if dict(mission_id=mission_id, source_id=data["source_id"]) not in job["sources"]:
+                raise ContractError("Reflection source is outside the original claimed job allowlist")
+            # Deliberately bypass source(), which populates player presentation
+            # handles used by active-input and fresh-context handoff contracts.
+            return self.client.reflection_source(mission_id, reflector_id, job["id"], data["source_id"])
+        proposal = validate_proposal(dict(schema="reflection/1", record_type="ReflectionProposal",
+            id="proposal-" + hashlib.sha256(data["request_id"].encode()).hexdigest(),
+            job_id=job["id"], mission_id=job["mission_id"], reflector_id=job["reflector_id"],
+            epoch=job["epoch"], cutoff_sequence=job["through_sequence"], memory_version=job["memory_version"],
+            **{field: data[field] for field in ("candidates", "notes", "reason")}), job)
+        command = validate_command(dict(schema="reflection/1", kind="submit", command_id=data["request_id"],
+            mission_id=mission_id, reflector_id=reflector_id, job_id=job["id"], proposal=proposal))
+        return self.client.reflection_command(command, wait_seconds=data["wait_seconds"]), None
 
     def _call(self, name: str, data: dict) -> tuple[dict, bytes | None]:
         if name == "enactive_start":

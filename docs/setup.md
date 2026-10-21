@@ -112,6 +112,11 @@ default, network policy or managed requirements. Re-run read-only after a move o
 tool change and deliberately review a conflicting old table rather than retaining
 two configurations.
 
+The current generated catalogue has20 named tools, including advisory
+claim/source/submit/original-result collection and passive advice. Complete context,
+reflection-job and advice replies have explicit output limits to preserve bounded
+records. These project settings do not prove the running host loaded new names.
+
 The [official MCP setup](https://learn.chatgpt.com/docs/extend/mcp) documents
 project configuration and host loading. Confirm the active chat has loaded the
 server/tool catalogue after the supported reload/restart. A separate CLI diagnostic

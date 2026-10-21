@@ -18,6 +18,10 @@ from .gameplay.contracts import MAX_JSON_BYTES, json_object
 from .gameplay.contracts import canonical
 from .gameplay.mission_contracts import MAX_REQUEST_BYTES, VERSION, validate_request
 from .gameplay.mission_requests import _source_binding
+from .gameplay.reflection import (
+    MAX_COMMAND_BYTES, MAX_JOB_BYTES, MAX_PROPOSAL_BYTES, MAX_RESULT_BYTES,
+    validate_command, validate_job, validate_proposal,
+)
 
 _CONFIG_BYTES = 64 * 1024
 _FRAME_BYTES = 32 * 1024 * 1024
@@ -150,9 +154,10 @@ class MissionClient:
         except (OSError, HTTPException, ValueError):
             raise MissionClientError("Response unavailable or exceeds its byte limit") from None
 
-    def _json(self, path: str, *, data: bytes | None = None, timeout: float = _HTTP_SECONDS) -> dict:
+    def _json(self, path: str, *, data: bytes | None = None, timeout: float = _HTTP_SECONDS,
+              maximum: int = MAX_JSON_BYTES) -> dict:
         try:
-            return json_object(self._fetch(path, data=data, timeout=timeout))
+            return json_object(self._fetch(path, data=data, timeout=timeout, maximum=maximum))
         except (OSError, URLError, HTTPException, ValueError, TypeError):
             raise MissionClientError("Mission response unavailable or invalid") from None
 
@@ -163,20 +168,23 @@ class MissionClient:
     def _stage(self, request: dict, payload: bytes) -> bool:
         mission_id = request["admission"]["mission_id"] if request["kind"] == "start" else request["mission_id"]
         identity = hashlib.sha256((mission_id + "\0" + request["request_id"]).encode()).hexdigest()
-        name = f"mc-{identity}.json"
+        return self._stage_payload("mission-requests", f"mc-{identity}.json", payload, MAX_REQUEST_BYTES)
+
+    def _stage_payload(self, folder: str, name: str, payload: bytes, maximum: int) -> bool:
+        # Both callers derive folder/name internally, never from a caller path.
         try:
             with self._runtime() as runtime:
                 try:
-                    os.mkdir("mission-requests", mode=0o700, dir_fd=runtime)
+                    os.mkdir(folder, mode=0o700, dir_fd=runtime)
                     os.fsync(runtime)
                 except FileExistsError:
                     pass
-                with _directory("mission-requests", parent=runtime) as directory:
+                with _directory(folder, parent=runtime) as directory:
                     try:
                         descriptor = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
                             0o600, dir_fd=directory)
                     except FileExistsError:
-                        if _regular_bytes(directory, name, MAX_REQUEST_BYTES, private=True) != payload:
+                        if _regular_bytes(directory, name, maximum, private=True) != payload:
                             raise MissionClientError("Request identity already staged with different or incomplete payload")
                         return False
                     # Retain a partial file on any failure: a later call must not
@@ -249,8 +257,11 @@ class MissionClient:
         # Reuse current ID validation without allowing a path or caller URL.
         validate_request(dict(schema=VERSION, kind="result", mission_id=mission_id, operation_id=source_id))
         query = urlencode(dict(mission_id=mission_id, source_id=source_id))
+        return self._retained_source("/api/mission/", query, source_id)
+
+    def _retained_source(self, prefix: str, query: str, source_id: str) -> tuple[dict, bytes]:
         try:
-            metadata = self._json("/api/mission/source?" + query)
+            metadata = self._json(prefix + "source?" + query)
             if (set(metadata) != {"reference", "observation", "disposition", "grants_authority"}
                     or metadata["disposition"] not in ("retained", "disputed")
                     or metadata["grants_authority"] is not False):
@@ -258,10 +269,147 @@ class MissionClient:
             identity, _ = _source_binding(metadata)
             if identity != source_id:
                 raise MissionClientError("Source identity differs from requested source")
-            image = self._fetch("/api/mission/frame?" + query, maximum=_FRAME_BYTES)
+            image = self._fetch(prefix + "frame?" + query, maximum=_FRAME_BYTES)
             if (not image.startswith(b"\x89PNG\r\n\x1a\n")
                     or hashlib.sha256(image).hexdigest() != metadata["reference"]["frame_sha256"]):
                 raise MissionClientError("Source frame differs from retained reference")
             return metadata, image
         except (OSError, URLError, HTTPException, ValueError, TypeError, KeyError):
             raise MissionClientError("Exact retained source unavailable or invalid") from None
+
+    @staticmethod
+    def _reflection_scope(mission_id: str, reflector_id: str, job_id: str = "read",
+                          command_id: str = "read") -> dict:
+        return validate_command(dict(schema="reflection/1", kind="claim", mission_id=mission_id,
+            reflector_id=reflector_id, job_id=job_id, command_id=command_id))
+
+    @staticmethod
+    def _reflection_unknown(command_id: str) -> dict:
+        # Missing is not evidence of zero admission after an uncertain POST.
+        return dict(status="unknown", admitted=None, command_id=command_id,
+            reason="Original reflection receipt unavailable or invalid; collect only",
+            grants_authority=False)
+
+    def _reflection_receipt(self, path: str, command_id: str, *, payload: bytes | None = None,
+                            timeout: float = _HTTP_SECONDS) -> dict:
+        try:
+            response = self._json(path, data=payload, timeout=timeout, maximum=MAX_RESULT_BYTES + 2048)
+            if (not {"status", "admitted", "command_id", "grants_authority"} <= response.keys()
+                    or response.keys() - {"status", "admitted", "command_id", "grants_authority", "result", "reason"}
+                    or response["command_id"] != command_id or response["grants_authority"] is not False
+                    or type(response["admitted"]) is not bool
+                    or response["status"] not in ("pending", "committed", "busy", "unknown", "rejected", "missing")
+                    or "reason" in response and (type(response["reason"]) is not str or len(response["reason"]) > 2048)
+                    or "result" in response and (type(response["result"]) is not dict
+                        or len(canonical(response["result"]).encode()) > MAX_RESULT_BYTES)):
+                raise MissionClientError("Invalid reflection receipt")
+            if (response["status"] == "missing"
+                    or response["status"] in ("pending", "committed") and not response["admitted"]
+                    or response["status"] == "busy" and response["admitted"]
+                    or response["status"] == "committed" and "result" not in response):
+                raise MissionClientError("Unavailable reflection receipt")
+            return response
+        except (MissionClientError, UnicodeError):
+            return self._reflection_unknown(command_id)
+
+    def reflection_command(self, command: dict, *, wait_seconds: float = 10) -> dict:
+        """Stage an advisory command once; uncertainty permits only collection.
+
+        Only an explicit zero-admission busy claim can be retried, at most three
+        attempts within this call's original deadline. Submissions never retry.
+        """
+        wait = _wait(wait_seconds)
+        body = validate_command(command)
+        payload = canonical(body).encode()
+        identity = hashlib.sha256((body["mission_id"] + "\0" + body["command_id"]).encode()).hexdigest()
+        if not self._stage_payload("reflection-commands", f"rc-{identity}.json", payload, MAX_COMMAND_BYTES):
+            return self.reflection_collect(body["mission_id"], body["reflector_id"], body["command_id"], wait_seconds=wait)
+        deadline = time.monotonic() + wait
+        for attempt in range(3):
+            remaining = deadline - time.monotonic()
+            timeout = min(_HTTP_SECONDS, max(.001, remaining)) if wait else _HTTP_SECONDS
+            response = self._reflection_receipt("/api/reflection/command", body["command_id"], payload=payload, timeout=timeout)
+            remaining = deadline - time.monotonic()
+            if (response["status"] != "busy" or body["kind"] != "claim"
+                    or response["admitted"] is not False or attempt == 2 or remaining <= 0):
+                break
+            time.sleep(min(.1 * (attempt + 1), remaining))
+            if time.monotonic() >= deadline:
+                return response
+        remaining = deadline - time.monotonic()
+        if response["status"] == "pending" and remaining > 0:
+            return self.reflection_collect(body["mission_id"], body["reflector_id"], body["command_id"], wait_seconds=remaining)
+        return response
+
+    def reflection_collect(self, mission_id: str, reflector_id: str, command_id: str, *, wait_seconds: float = 10) -> dict:
+        """Read the original advisory receipt without posting any command."""
+        wait = _wait(wait_seconds)
+        self._reflection_scope(mission_id, reflector_id, command_id=command_id)
+        path = "/api/reflection/result?" + urlencode(dict(mission_id=mission_id, reflector_id=reflector_id, command_id=command_id))
+        deadline = time.monotonic() + wait
+        while True:
+            remaining = deadline - time.monotonic()
+            timeout = min(_HTTP_SECONDS, max(.001, remaining)) if wait else _HTTP_SECONDS
+            response = self._reflection_receipt(path, command_id, timeout=timeout)
+            remaining = deadline - time.monotonic()
+            if response["status"] != "pending" or remaining <= 0:
+                return response
+            time.sleep(min(.1, remaining))
+            if time.monotonic() >= deadline:
+                return response
+
+    def reflection_next(self, mission_id: str, reflector_id: str, *, wait_seconds: float = 0) -> dict:
+        """Read/wait for bounded cached work; this read never claims a job."""
+        wait = _wait(wait_seconds)
+        self._reflection_scope(mission_id, reflector_id)
+        query = urlencode(dict(mission_id=mission_id, reflector_id=reflector_id, wait_seconds=wait))
+        response = self._json("/api/reflection/next?" + query, timeout=wait + _HTTP_SECONDS,
+            maximum=MAX_JOB_BYTES + 2048)
+        if response.get("grants_authority") is not False:
+            raise MissionClientError("Invalid reflection job response")
+        if response.get("status") in ("idle", "closed") and set(response) == {"status", "grants_authority"}:
+            return response
+        try:
+            if set(response) != {"status", "job", "grants_authority"} or response["status"] not in ("offered", "claimed"):
+                raise ValueError
+            wrapper = response["job"]
+            if (type(wrapper) is not dict or set(wrapper) != {"job", "state", "claimed_at", "deadline"}
+                    or wrapper["state"] != response["status"]):
+                raise ValueError
+            job = validate_job(wrapper["job"])
+            if (job["mission_id"], job["reflector_id"]) != (mission_id, reflector_id):
+                raise ValueError
+            if wrapper["state"] == "offered":
+                if wrapper["claimed_at"] is not None or wrapper["deadline"] is not None:
+                    raise ValueError
+            elif (any(type(wrapper[key]) not in (int, float) or not math.isfinite(wrapper[key]) or wrapper[key] < 0
+                      for key in ("claimed_at", "deadline")) or wrapper["deadline"] <= wrapper["claimed_at"]):
+                raise ValueError
+        except (KeyError, TypeError, ValueError):
+            raise MissionClientError("Invalid reflection job response") from None
+        return response
+
+    def reflection_source(self, mission_id: str, reflector_id: str, job_id: str, source_id: str) -> tuple[dict, bytes]:
+        """Read an exact job source; never Observe or use the player source path."""
+        self._reflection_scope(mission_id, reflector_id, job_id, source_id)
+        query = urlencode(dict(mission_id=mission_id, reflector_id=reflector_id, job_id=job_id, source_id=source_id))
+        return self._retained_source("/api/reflection/", query, source_id)
+
+    def reflection_advice(self, mission_id: str, proposal_id: str) -> dict:
+        """Read one passive proposal; it is never accepted memory or authority."""
+        validate_request(dict(schema=VERSION, kind="result", mission_id=mission_id, operation_id=proposal_id))
+        query = urlencode(dict(mission_id=mission_id, proposal_id=proposal_id))
+        response = self._json("/api/reflection/proposal?" + query, maximum=MAX_PROPOSAL_BYTES + 2048)
+        if (set(response) == {"status", "grants_authority"} and response["status"] == "missing"
+                and response["grants_authority"] is False):
+            return response
+        try:
+            if (set(response) != {"status", "proposal", "grants_authority"}
+                    or response["status"] != "available" or response["grants_authority"] is not False):
+                raise ValueError
+            proposal = validate_proposal(response["proposal"])
+            if (proposal["mission_id"], proposal["id"]) != (mission_id, proposal_id):
+                raise ValueError
+        except (KeyError, TypeError, ValueError):
+            raise MissionClientError("Invalid reflection advice response") from None
+        return response

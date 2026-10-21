@@ -1,17 +1,18 @@
 ---
-title: Proposed active play and asynchronous reflection
+title: Active play and asynchronous reflection substrate
 ---
-flowchart LR
+flowchart TB
   accTitle: One active player acts while a background learner proposes evidence-linked procedures
-  accDescr: The active player uses skills or direct interaction through one existing writer to windowed CDDA. Retained visible evidence feeds a background trajectory learner. Advisory proposals return to the active player and accepted scoped revisions go through the serialized memory writer. The background learner has no input authority. User Pause independently blocks dispatch. These are proposed logical responsibilities, not implemented new processes.
+  accDescr: One active player uses skills or ordinary input through the existing writer to windowed CDDA. Original receipts feed a bounded job mailbox. An advisory agent claims jobs and returns source linked proposals outside all input locks. Only the active player adopts procedure revisions through the existing memory writer. User Pause remains independent. The source and synthetic transport are implemented; actual concurrent graphical use remains a separate acceptance gate.
   P["Active player<br/>plan, act, observe, correct"] --> I["Skills or direct interaction"]
   I --> W["One existing input writer"]
   W --> G["Windowed CDDA"]
   G --> E["Canonical visible evidence<br/>receipts and unfinished Work"]
   E --> P
-  E -. "Bounded trajectory snapshot" .-> R["Background reflection<br/>compare and propose procedures"]
+  E -. "Original cutoff and omissions" .-> Q["Bounded cached jobs<br/>claim and result collection"]
+  Q -. "No input lock or model wait" .-> R["Advisory agent<br/>compare and propose procedures"]
   R -. "Versioned advice, warnings<br/>questions and retractions" .-> P
-  P -. "Use/defer/test result<br/>and counterexamples" .-> R
+  P -. "Automatic use and outcome links<br/>optional interpretation" .-> E
   P --> M["Serialized accepted<br/>advisory-memory revision"]
   M --> E
   U["User Pause"] --> W

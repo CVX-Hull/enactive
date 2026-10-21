@@ -32,9 +32,11 @@ results automatically; adoption remains a player judgment over scoped data.
 The historical library reads pinned closed archives without restoring old-world
 facts or execution handles. See [the current contract](protocol.md#ordinary-discovery-and-procedure-data).
 The new native binary has passed its local build; graphical qualification remains
-pending. Reflection data/mailbox and durable bookkeeping are implementation
-components; software scheduling, adapter integration and actual overlapping play
-are still pending. None establishes real procedural learning or a new campaign.
+pending. Reflection now has software scheduling and structured advisory tools over
+the existing server/writer. Local HTTP tests show independent advisory waiting
+and synthetic navigation; actual concurrent host actors, overlapping graphical
+play and normal learner shutdown remain pending. None establishes real procedural
+learning or a new campaign.
 
 The harness-enabled SDL ImGui context uses the library's steady text-caret setting.
 It preserves exact image validation without treating cosmetic blink as stable

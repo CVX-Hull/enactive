@@ -22,6 +22,7 @@ from .mission_lifecycle import NormalPhase, RegisteredLifecycle
 from .mission_handoff import HandoffEvidenceError, HandoffPhase, RegisteredHandoff
 from .mission_activity import ActivityFeedback, ActivityIntent, ActivityPhase, RegisteredActivity
 from .mission_recovery import RecoveryEvidenceError, RecoveryPhase, RegisteredRecovery
+from .mission_reflection import RegisteredReflection
 from .gameplay.campaign_memory import CampaignMemory
 from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
 from .gameplay.evidence import MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore, same_native_state
@@ -114,7 +115,7 @@ class MissionRuntime:
         self._active: _Work | None = None
         self._ledger: MissionLedger | None = None
         self._store: EvidenceStore | None = None
-        self._presentation_store: tuple[str, EvidenceStore] | None = None
+        self._presentation_store: tuple[str, EvidenceStore, CampaignMemory] | None = None
         self._memory: CampaignMemory | None = None
         self._admission: MissionAdmission | None = None
         self._lease: MissionLease | None = None
@@ -145,6 +146,7 @@ class MissionRuntime:
         self._registered_handoff = RegisteredHandoff(self)
         self._registered_activity = RegisteredActivity(self)
         self._registered_recovery = RegisteredRecovery(self)
+        self._registered_reflection = RegisteredReflection(self)
         self._thread = threading.Thread(target=self._work, name="mission-runtime", daemon=True)
         self._thread.start()
 
@@ -180,10 +182,31 @@ class MissionRuntime:
             if self._closed.is_set() or binding is None:
                 raise EvidenceError("No matching admitted evidence store")
             store = binding[1]
-            memory = self._memory
+            memory = binding[2]
         if binding[0] != mission_id:
+            if memory.library is None:
+                raise EvidenceError("No matching admitted evidence store or pinned procedure library")
             return memory.procedure_source(mission_id, source_id)
         return store.export_source(source_id)
+
+    def reflection_command(self, value: dict) -> dict:
+        from .gameplay.reflection import validate_command
+        command = validate_command(value)
+        exchange = self._registered_reflection.current(command["mission_id"], command["reflector_id"])
+        return exchange.offer(command)
+
+    def reflection_result(self, *, mission_id: str, reflector_id: str, command_id: str) -> dict:
+        return self._registered_reflection.current(mission_id, reflector_id).collect(command_id)
+
+    def reflection_next(self, *, mission_id: str, reflector_id: str, wait_seconds: float = 0) -> dict:
+        return self._registered_reflection.current(mission_id, reflector_id).next_job(
+            mission_id=mission_id, reflector_id=reflector_id, wait_seconds=wait_seconds)
+
+    def reflection_proposal(self, *, mission_id: str, proposal_id: str) -> dict:
+        return self._registered_reflection.current(mission_id).proposal(mission_id=mission_id, proposal_id=proposal_id)
+
+    def reflection_source(self, **selection) -> tuple[dict, bytes]:
+        return self._registered_reflection.source(**selection)
 
     def command(self, request: dict | str | bytes) -> dict:
         try:
@@ -342,6 +365,7 @@ class MissionRuntime:
                 "origin_request_id": self._exit_phase.root_id, "operation": "exit",
                 "checkpoint_id": self._exit_phase.checkpoint.observation_id, "grants_authority": False},
             "activity_phase": self._registered_activity.summary(),
+            "reflection": self._registered_reflection.summary(),
             "active_operation": None if active is None else active.get("request_id", active["kind"]),
             "skill": self._skill, "progress": copy.deepcopy(self._progress),
             "last_receipt": copy.deepcopy(self._last_receipt),
@@ -374,7 +398,7 @@ class MissionRuntime:
                             "lease_owner", "prompt_phase", "lifecycle_phase", "activity_phase"):
                     value[key] = self._snapshot[key]
             self._snapshot = value
-            self._presentation_store = (self._admission.mission_id, self._store)
+            self._presentation_store = (self._admission.mission_id, self._store, self._memory)
 
     def _apply_pauses(self) -> bool:
         with self._metadata:
@@ -708,6 +732,7 @@ class MissionRuntime:
         self._registered_activity.revoke()
         self._registered_recovery.reset()
         self._mission_deadline = ledger.snapshot(now=self._wall())["deadline"]
+        self._registered_reflection.reset()
         return ledger.snapshot(now=self._wall())["phase"] == "admitted"
 
     def _bootstrap(self, work: _Work) -> dict:
@@ -1137,6 +1162,12 @@ class MissionRuntime:
             if self._pending_pauses or self._operator_mark() != work.finish_mark:
                 raise _Cancelled("Normal finish superseded before terminal persistence")
         disposition = result["normal_finish"]["disposition"]
+        self._registered_reflection.finish()
+        try:
+            self._finish_guard(work)
+        except (_Cancelled, ControlError, BudgetError):
+            self._registered_reflection.cancel_finish()
+            raise
         self._ledger.finish_mission(disposition, epoch=work.finish_epoch,
             request_id=work.request["request_id"],
             reason="Player-reported objective completion" if disposition == "completed" else "Normal cleanup; objective completion unclaimed",
@@ -2248,6 +2279,7 @@ class MissionRuntime:
             self._diagnostic = f"Finish report retained; terminal transition withheld: {exc}"[:1024]
             self._stop_after_failure(self._diagnostic)
         self._progress = result
+        self._registered_reflection.completed(data, disposition)
         self._publish()
         self._cache_operation(operation)
 
@@ -2257,6 +2289,7 @@ class MissionRuntime:
                 try:
                     if self._apply_pauses():
                         self._publish()
+                    self._registered_reflection.tick()
                     work = self._queue.get(timeout=0.05)
                 except Empty:
                     continue
@@ -2281,6 +2314,7 @@ class MissionRuntime:
                     self._queue.task_done()
                     try:
                         self._apply_pauses()
+                        self._registered_reflection.tick()
                         self._publish()
                     except Exception as exc:
                         self._fault(exc)
@@ -2288,6 +2322,7 @@ class MissionRuntime:
             self._cancel_queue()
             try:
                 self._apply_pauses()
+                self._registered_reflection.finish()
                 if self._native is not None:
                     self._native_facts = self._native.status()
                     verified = self._ledger is not None and any(row["state"] == "completed" and row["result"] is not None

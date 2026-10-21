@@ -14,8 +14,10 @@ maintains the project, without becoming the tactical or reflective model.
 Current main `811c14f365441da641d5e2b7a5cd6bdb620f38f1` is the accepted
 [024 baseline](../acceptance/2026-10-21-independent-supply-shelter.md).
 Its source, actual gameplay, exact candidate/main CI and closure are accepted in
-#144/PR158. General raw interaction, reusable procedures and reflection are still
-missing. Earlier failures remain failures, including the empty-popup mapping,
+#144/PR158. General raw interaction, reusable procedures and reflection were
+missing at that baseline. The source checkpoint below implements their substrate;
+actual graphical learning and a fresh campaign remain pending. Earlier failures
+remain failures, including the empty-popup mapping,
 handoff/reference errors and item-activity return defect.
 
 This brief owns the integrated boundary and acceptance, not another live tracker.
@@ -45,10 +47,12 @@ tick a box; retain genuine partial/changed conditions and their disposition.
 
 The first implementation checkpoint coordinates native5/mission9/ledger11/
 archive4/memory4, ordinary input, immutable procedure revisions, pinned historical
-library, complete procedure handoff and the observer. Reflection record validation,
-bounded passive mailbox and SQLite bookkeeping are source components; scheduling,
-official adapter integration, actual advisory actor concurrency and lifecycle
-quiescence are still pending. The native build passed, but no new graphical run
+library, complete procedure handoff and the observer. Reflection now composes the
+bounded passive mailbox, separate SQLite bookkeeping, coalesced writer scheduling
+and structured MCP claim/source/submit/result/advice tools. Real local HTTP tests
+cover concurrent waiting and useful synthetic navigation, durable refusal and
+restart collection; they do not qualify actual host actor concurrency or lifecycle
+quiescence. The native build passed, but no new graphical run
 or seven-day acceptance is implied. Focused tests and source review remain
 separate from actual game evidence and final protected CI.
 
@@ -107,12 +111,12 @@ helps this work, with new admission provenance and no rollback/old authority.
 
 ## Maintenance and current status
 
-This is a selected design brief under review, not an activated contract or run.
-Current native4/mission8/ledger10/archive3/campaign-memory3 remains authoritative.
-The proposed integrated migration is native5/mission9/ledger11/archive4 and
-campaign-memory4, with separate procedure/1 records. Migrate all current callers,
-validators, persisted formats, SDK schemas and guidance together; reject old
-runtime versions and preserve historical evidence without granting authority.
+This active delivery brief records implementation, not an accepted graphical run.
+Current source uses native5/mission9/ledger11/archive4/campaign-memory4, with
+procedure/1 and reflection/1 records. The installed wrapper and actual loaded
+host catalogue must match before new play. Current callers, validators, persisted
+formats, SDK schemas and guidance migrate together; old runtime versions reject
+and historical evidence grants no authority.
 
 Use S-ARCH/S-AGENT/S-CODE/S-WORK/S-MIGRATION and existing C-REVIEW/C-PORTABLE/
 C-NATIVE/C-USABILITY/C-RELEASE. Add regressions for actual new boundaries rather

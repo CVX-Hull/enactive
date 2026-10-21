@@ -77,6 +77,11 @@ def publish(exchange, *, phase="active", jobs=None, proposals=None, **changes):
 
 
 class ReflectionValidationTests(unittest.TestCase):
+    def test_adapter_schema_is_defensive(self):
+        first = reflection.proposal_schema()
+        first["properties"].clear()
+        self.assertIn("candidates", reflection.proposal_schema()["properties"])
+
     def test_real_current_validators_and_defensive_copy(self):
         self.assertEqual(validate_request(job()["trajectory"][0]["request"])["schema"], "mission/9")
         self.assertEqual(validate_procedure(procedure())["schema"], "procedure/1")
@@ -182,6 +187,29 @@ class ReflectionValidationTests(unittest.TestCase):
 
 
 class ReflectiveExchangeTests(unittest.TestCase):
+    def test_restore_original_receipts_without_requeue_and_seal_new_ingress(self):
+        exchange = ReflectiveExchange()
+        original = command()
+        outcome = dict(status="rejected", reason="Original known refusal", grants_authority=False)
+        exchange.restore([dict(command=original, result=outcome, received_at=1000.)])
+        receipt = exchange.collect(original["command_id"])
+        self.assertEqual(receipt["result"], outcome)
+        self.assertEqual(exchange.drain(lambda body: self.fail("Restoration requeued a body")), 0)
+        self.assertEqual(exchange.offer(original), receipt)
+        exchange.seal_ingress()
+        self.assertEqual(exchange.offer(command("new"))["admitted"], False)
+        self.assertEqual(exchange.collect(original["command_id"]), receipt)
+        self.assertEqual(exchange.next_job(mission_id="mission-a", reflector_id="reflector-a")["status"], "closed")
+
+    def test_cached_source_allowlist_never_broadens_to_another_job_or_mission(self):
+        exchange = ReflectiveExchange()
+        publish(exchange)
+        select = dict(mission_id="mission-a", reflector_id="reflector-a", job_id="job-1", source_id="source-1")
+        self.assertTrue(exchange.source_allowed(**select))
+        for changes in (dict(mission_id="another"), dict(reflector_id="another"),
+                        dict(job_id="another"), dict(source_id="another")):
+            self.assertFalse(exchange.source_allowed(**(select | changes)))
+
     def test_stable_duplicates_conflict_full_zero_admission_and_lost_collector(self):
         exchange = ReflectiveExchange(max_operations=2)
         first = exchange.offer(command())

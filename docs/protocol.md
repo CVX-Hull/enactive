@@ -855,9 +855,38 @@ aggregate128-source bound. Source-read declarations and retrieval are evidence
 of presentation/selection, not proof of attention or causal improvement.
 
 The [procedure/exchange design](design/procedure-learning.md) owns the asynchronous
-integration contract. Its reflective runtime and real discovery/reuse/counterexample/
-fresh-context/overlapping-play qualifications are separate pending delivery057
-work; freezing data shapes alone does not establish those outcomes.
+integration contract. One private RegisteredReflection composes a per-admission
+passive mailbox/cache with the existing writer and SQLite ledger. Four routine
+root skill decisions coalesce a job; failures, recovery and handoff boundaries
+can trigger earlier work. Each job retains original request/result order and
+cutoff, memory version, bounded sources/procedures and explicit omissions.
+Interrupted missing results and individually oversized rows remain omitted
+original evidence rather than preventing subsequent review. Pending overload
+coalesces future work; exhausting finite reflection limits leaves it unreviewed.
+
+The existing loopback server exposes authenticated `/api/reflection/command`,
+`result`, `next`, `source`, `frame` and `proposal` routes. Passive reads/waits use
+cached data and retained source images without the input queue/lock or Observe.
+Only the existing writer applies claims/submissions. Claims charge their original
+finite wall window without refund; software receipt time judges submission
+lateness separately from writer queue delay. Rejected advisory commands retain
+zero-input outcomes; storage faults remain faults. Original command receipts
+restore into a passive cache without requeueing. No model computation runs there.
+
+Structured tools expose `enactive_reflect_next`, `enactive_reflect_source`,
+`enactive_reflect_submit`, `enactive_reflect_result` and `enactive_advice`.
+The result tool collects an original command ID even after an adapter loses its
+volatile claimed-job cache. Advisory source reads do not populate the player's
+source-read cache. Candidate proposals never auto-adopt, Resume or confer input
+authority; the player owns adoption, applicability and later choices.
+
+Normal finalization seals advisory ingress before draining received commands and
+settling offered/claimed bookkeeping as unreviewed/unknown. It preserves costs
+and original outcomes, and does not claim the host actor actually stopped.
+A canceled preterminal finish reopens advisory ingress without renewing old jobs;
+ordinary Save/Exit/Load does not seal it. Terminal history accepts no late writes.
+Actual host concurrency, actor quiescence and real discovery/reuse/counterexample/
+fresh-context/overlapping-play qualifications remain separate delivery057 work.
 
 
 The game enables the bridge only when CDDA_HARNESS_DIR names an existing private

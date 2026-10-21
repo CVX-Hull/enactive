@@ -13,7 +13,7 @@ from harness import __main__ as cli
 
 class DiscoveryTests(unittest.TestCase):
     def test_mixed_or_missing_protocol_never_contacts_service(self):
-        for version in (None, 1, 2, 3, 5, True, 4.0, "4"):
+        for version in (None, 1, 2, 3, 4, 6, True, 5.0, "5"):
             with self.subTest(version=version):
                 config = {"port": 8766, "token": "local", "protocol": version}
                 output = StringIO()

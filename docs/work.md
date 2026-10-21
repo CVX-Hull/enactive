@@ -18,8 +18,10 @@ observer/measurement follow-through#143/#164, then actual seven-day assessment#1
 The [procedure/exchange boundary](design/procedure-learning.md) has passed scoped
 design review. Native5 ordinary input, current host migration, procedure memory/
 library/handoff and observer changes have source implementations; the native build
-passed. Reflection records/mailbox/SQLite components still need software scheduling,
-official adapter and actual host integration. Graphical learning and both deciding
+passed. Reflection now has coalesced writer scheduling and structured advisory
+claim/source/submit/result/advice tools. Synthetic real-HTTP integration and
+independent review cover their boundaries; actual host catalogue activation and
+concurrent actors remain pending. Graphical learning and both deciding
 missions remain pending. These source checks issue no run authority. The accepted024
 baseline and historical attempts below remain evidence, not a new admission.
 

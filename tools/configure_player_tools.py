@@ -20,7 +20,8 @@ def configuration(root: Path) -> dict:
         enabled=True, enabled_tools=[spec.name for spec in tool_specs()],
         default_tools_approval_mode="approve", startup_timeout_sec=10,
         tool_timeout_sec=60,
-        tools={"enactive_context": {"output_token_limit": 131072}})
+        tools={name: {"output_token_limit": 131072} for name in (
+            "enactive_context", "enactive_reflect_next", "enactive_advice")})
 
 
 def configure(root: Path, *, write=False) -> dict:
@@ -44,7 +45,9 @@ def configure(root: Path, *, write=False) -> dict:
     for key, value in expected.items():
         if key != "tools":
             lines.append(key + " = " + json.dumps(value, ensure_ascii=False) + "\n")
-    lines.extend([f"\n[mcp_servers.{SERVER}.tools.enactive_context]\n", "output_token_limit = 131072\n"])
+    for name, options in expected["tools"].items():
+        lines.extend([f"\n[mcp_servers.{SERVER}.tools.{name}]\n",
+                      "output_token_limit = " + str(options["output_token_limit"]) + "\n"])
     value = before + "".join(lines).encode()
     # Confirm TOML structure, including exact preservation of unrelated settings.
     after = tomllib.loads(value.decode())

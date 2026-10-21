@@ -5,10 +5,46 @@ import unittest
 from unittest.mock import patch
 
 from harness.mission_runtime import MissionRuntime
+from harness.gameplay.mission_contracts import LearningPolicy
+from harness.gameplay.mission_ledger import BudgetError
+from tests.test_reflection_exchange import procedure
 from tests.test_mission_creation import MissionCreationFixture
 
 
 class MissionFinishTests(MissionCreationFixture, unittest.TestCase):
+    def test_finish_deadline_failure_after_advisory_seal_does_not_disable_learner(self):
+        self.a = replace(self.a, learning=LearningPolicy(procedure()["environment"], reflector_id="reflector-a"))
+        self.untouched_exit()
+        reflection = self.runtime._registered_reflection
+        original = self.runtime._finish_guard
+        def expire_after_seal(work):
+            if reflection.exchange._sealed:
+                raise BudgetError("Original finish/mission wall deadline expired")
+            return original(work)
+        with patch.object(self.runtime, "_finish_guard", side_effect=expire_after_seal):
+            operation = self.finish()
+        self.assertEqual(operation["state"], "completed", operation)
+        self.assertEqual(self.runtime.status()["phase"], "paused")
+        self.assertFalse(self.runtime._closed.is_set())
+        self.assertEqual(reflection.exchange.next_job(mission_id=self.a.mission_id,
+            reflector_id="reflector-a")["status"], "idle")
+
+    def test_pause_during_advisory_seal_keeps_future_reflection_available(self):
+        self.a = replace(self.a, learning=LearningPolicy(procedure()["environment"], reflector_id="reflector-a"))
+        self.untouched_exit()
+        reflection = self.runtime._registered_reflection
+        original = reflection.finish
+        def pause_after_seal():
+            original()
+            self.runtime.pause()
+        with patch.object(reflection, "finish", side_effect=pause_after_seal):
+            operation = self.finish()
+        self.assertEqual(operation["state"], "completed", operation)
+        self.assertEqual(self.runtime.status()["phase"], "paused")
+        self.assertFalse(self.runtime._closed.is_set())
+        self.assertEqual(reflection.exchange.next_job(mission_id=self.a.mission_id,
+            reflector_id="reflector-a")["status"], "idle")
+
     def remember_work(self, identity="objective", *, source=None, status="completed", intent=None):
         source = source or self.runtime._current
         entry = dict(schema="campaign-memory/4", record_type="Work", id="objective-work", predecessor_work_id=None,

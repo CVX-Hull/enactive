@@ -299,7 +299,7 @@ an incident archive and document the explicit transition to a fresh bridge with
 unresolved work still tracked. No replay or save editing is permitted. Historical
 reports and journals stay immutable; they need no runtime reader.
 
-Build manifests require `schema_version: 1`; evidence stores require store version 3.
+Build manifests require `schema_version: 1`; current evidence stores require store version 4.
 Never just relabel an unknown file. A reviewed one-time build-manifest migration
 must first verify workspace ownership, pinned source/headers and binary hashes,
 then record before/after hashes. Alternatively preserve the old manifest/workspace
@@ -307,13 +307,16 @@ and use a fresh extraction. Permanent setup/startup paths only read current form
 Remove temporary converters after recording their operation. Roll back only as a
 coordinated system with a validated data transition, never by enabling a fallback.
 
-For the wire-v4 cutover, archive the stopped bridge with original hashes under
+The historical wire-v4 cutover archived the stopped bridge with original hashes under
 `.runtime/incidents/` and start a fresh bridge. Do not relabel old requests. Carry
 unresolved identities as verified `incident/1` references in
 `historical-incidents.json`; startup validates referenced bytes without parsing
 old protocol records. These remain visible historical unknowns and grant no
-execution permission. Evidence store format 3 accepts only current-v4 observations;
-archive earlier stores and start new task stores, preserving original metadata.
+execution permission. Its evidence format3 accepted native4 observations.
+For the current native5/mission9/ledger11/archive4/memory4 cutover, apply the same
+stopped, hash-inventoried incident archive procedure. Preserve prior mission
+ledgers/archives as historical evidence; do not relabel them as eligible procedure
+libraries or restore their execution authority. Current stores accept native5 only.
 
 ## Passive skill acceptance
 

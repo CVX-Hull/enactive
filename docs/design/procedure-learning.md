@@ -98,8 +98,22 @@ by software at ingress and retained separately from writer-drain time: a timely
 submission must not become late because a game operation delayed bookkeeping.
 Unknown computation and omitted/unreviewed work remain explicit. Exact cutoff/
 source checks and immutable command/result correlation apply on reopen too.
-These data/cache/SQLite components do not yet establish the runtime scheduling,
-official host integration or actual nonblocking-play qualification below.
+The source implementation now integrates this mailbox with RegisteredReflection,
+the existing writer/server and structured MCP tools. Four routine root skill
+decisions coalesce work; failed/unknown results and recovery/handoff boundaries
+can trigger earlier review. Context selection preserves original omissions when
+interrupted results are absent or individual records cannot fit. Reopening
+reconstructs pending coverage from the ledger. Actual official host integration
+and nonblocking graphical play remain separate qualifications below.
+
+Advisory claim/source/submit/result tools bypass the active-player lock and never
+Observe. The result tool collects an original stable command without requiring a
+volatile claimed-job handle. A committed semantic refusal is exposed with its
+original reason; it cannot fault gameplay or become a claimed packet. Storage
+failure remains a fault. Before terminal sealing, ingress closes and queued
+commands drain; offered/claimed work becomes unreviewed/unknown with its original
+cost. A canceled finish can reopen ingress, without renewing old work. Actual
+host-actor quiescence needs separate evidence, not an expired clock or a DB label.
 
 At admission assign one general-purpose advisory Codex agent, with no game-input
 role, and freeze finite job/pending/context/source/output/time limits. The lead may

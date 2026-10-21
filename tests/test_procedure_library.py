@@ -60,6 +60,8 @@ class ProcedureLibraryTests(unittest.TestCase):
             db.execute("CREATE TABLE requests(id TEXT PRIMARY KEY,payload TEXT,digest TEXT,state TEXT,result TEXT)")
             db.execute("CREATE TABLE primitives(id TEXT PRIMARY KEY,request_id TEXT,intent TEXT,state TEXT,result TEXT,effect TEXT)")
             db.execute("CREATE TABLE memory(sequence INTEGER PRIMARY KEY,event_id TEXT UNIQUE,entry_type TEXT,record_id TEXT,body TEXT)")
+            db.execute("CREATE TABLE reflection_jobs(state TEXT NOT NULL)")
+            db.execute("CREATE TABLE reflection_commands(id TEXT PRIMARY KEY)")
             db.execute("INSERT INTO metadata VALUES ('admission',?)", (canonical(admission(
                 mission_id=mission, learning=LearningPolicy.from_dict(learning)).to_dict()),))
             db.execute("INSERT INTO metadata VALUES ('state',?)", (canonical({"phase": "stopped"}),))
@@ -148,6 +150,14 @@ class ProcedureLibraryTests(unittest.TestCase):
                         [{**pin, "mission_id": "current"}], [{**pin, "mission_id": "bad\n"}]):
             with self.subTest(sources=sources), self.assertRaises(ContractError):
                 self.library(*sources)
+
+    def test_terminal_library_rejects_still_open_reflective_work(self):
+        directory, _, _, _ = self.archive()
+        for state in ("offered", "claimed", "invented"):
+            pin = self.edit_db(directory, "INSERT INTO reflection_jobs VALUES (?)", (state,))
+            with self.subTest(state=state), self.assertRaisesRegex(ContractError, "reflection admission"):
+                self.library(pin)
+            self.edit_db(directory, "DELETE FROM reflection_jobs")
 
     def test_hash_schema_versions_and_nonterminal_closure_refuse(self):
         directory, _, _, original = self.archive()

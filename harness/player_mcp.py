@@ -38,7 +38,7 @@ def make_server(player: PlayerTools) -> Server:
             return types.CallToolResult(is_error=True, content=[types.TextContent(type="text", text=str(exc)[:1024])])
 
     server = Server("enactive-player", version="1.0.0",
-        instructions="Use only the explicitly designated player's admitted mission. Choose intent, source and limits; software retains requests and collects results. Never replay uncertain input. User Pause remains independent.",
+        instructions="Use only your explicitly designated role and admitted mission. The deciding player chooses gameplay intent, sources and limits. One advisory actor uses only enactive_reflect_next/submit/source/result, computes only after a durable claimed result, and submits candidate data without game input or memory adoption. The deciding player reads enactive_advice and owns adoption. These procedural roles are not security isolation. Software retains requests and original results; never replay uncertain input. User Pause remains independent.",
         on_list_tools=list_tools, on_call_tool=call_tool,
         get_tool_input_schema=lambda name: player.specs[name].schema if name in player.specs else None)
     server.middleware.clear()  # No optional telemetry/exporters in this local adapter.

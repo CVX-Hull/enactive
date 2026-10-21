@@ -2,12 +2,14 @@
 from pathlib import Path
 from copy import deepcopy
 from dataclasses import replace
+import sqlite3
 import tempfile
 import unittest
 
 from harness.gameplay.contracts import ContractError, canonical
 from harness.gameplay.mission_contracts import LearningPolicy, ReflectionLimits
-from harness.gameplay.mission_ledger import BudgetError, MissionLedger
+from harness.gameplay.mission_ledger import (BudgetError, LedgerError, MissionLedger,
+    ReflectionBudgetRefusal, ReflectionRefusal)
 from tests.test_mission_contracts import admission
 from tests.test_reflection_exchange import command, job, procedure, proposal
 
@@ -23,15 +25,15 @@ class ReflectionLedgerTests(unittest.TestCase):
         self.ledger = MissionLedger(self.path, admission=self.admission, now=1000)
         self.addCleanup(lambda: self.ledger.close())
 
-    def offer(self, number=1):
+    def offer(self, number=1, *, now=1000):
         request = dict(schema="mission/9", kind="observe", request_id=f"request-{number}", mission_id="mission-a", epoch=0)
         result = dict(source_ids=[f"source-{number}"], grants_authority=False, flag=1)
-        self.ledger.begin_request(request, now=1000)
-        self.ledger.complete_request(request["request_id"], "completed", result, now=1000)
+        self.ledger.begin_request(request, now=now)
+        self.ledger.complete_request(request["request_id"], "completed", result, now=now)
         value = job(id=f"job-{number}", memory_version=0, after_sequence=number-1, through_sequence=number,
             included_request_ids=[request["request_id"]], trajectory=[dict(request=request, state="completed", result=result)],
             sources=[dict(mission_id="mission-a", source_id=f"source-{number}")])
-        return self.ledger.append_reflection_job(value, now=1000)
+        return self.ledger.append_reflection_job(value, now=now)
 
     def submission(self, **changes):
         value = command("submit-1", submit=True)
@@ -103,7 +105,7 @@ class ReflectionLedgerTests(unittest.TestCase):
         self.ledger.apply_reflection(command(), now=1001)
         with self.assertRaises(ContractError):
             self.ledger.apply_reflection(command(job_id="unknown-job"), now=1002)
-        with self.assertRaises(ContractError):
+        with self.assertRaises(ReflectionRefusal):
             self.ledger.apply_reflection(self.submission(cutoff_sequence=2), now=1002)
         self.assertEqual(self.ledger.reflection_records()[1], ())
         self.assertEqual(self.ledger.memory_records("procedure"), ())
@@ -157,3 +159,185 @@ class ReflectionLedgerTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "proposal identity"):
             self.ledger.apply_reflection(second, now=1004)
         self.ledger._verify_reflection(extended, self.ledger.snapshot(now=1004))
+
+
+    def test_rejected_unknown_job_is_durable_idempotent_and_does_not_charge_work(self):
+        self.offer()
+        value = command(job_id="unknown-job")
+        before_jobs = self.ledger._db.execute("SELECT * FROM reflection_jobs").fetchall()
+        with self.assertRaises(ReflectionRefusal):
+            self.ledger.apply_reflection(value, now=1001, received_at=1000.5)
+        original = self.ledger.record_reflection_rejection(value, "No original job", now=1001, received_at=1000.5)
+        self.assertEqual(original, dict(status="rejected", reason="No original job", grants_authority=False))
+        self.assertEqual(self.ledger.record_reflection_rejection(value, "Later reason", now=1002, received_at=1002), original)
+        self.assertEqual(self.ledger.apply_reflection(value, now=1002), original)
+        expected = (dict(command=value, result=original, received_at=1000.5),)
+        self.assertEqual(self.ledger.reflection_command_records(), expected)
+        self.assertEqual(self.ledger._db.execute("SELECT * FROM reflection_jobs").fetchall(), before_jobs)
+        self.assertEqual(self.ledger.memory_records("procedure"), ())
+        self.assertEqual(self.ledger.snapshot(now=1002)["spent_inputs"], 0)
+        with self.assertRaisesRegex(ContractError, "identity changed"):
+            self.ledger.record_reflection_rejection(command(), "Conflict", now=1002, received_at=1002)
+        self.assertEqual(self.ledger.reflection_command_records(), expected)
+        self.ledger.close()
+        self.ledger = MissionLedger(self.path, now=1002)
+        self.assertEqual(self.ledger.reflection_command_records(), expected)
+        self.assertEqual(self.ledger.record_reflection_rejection(value, "After reopen", now=1003, received_at=1003), original)
+
+    def test_rejection_requires_exact_valid_admitted_body_reason_and_receipt(self):
+        invalid = [command() | {"extra": True}, command(schema="reflection/0"),
+                   command(mission_id="foreign"), command(reflector_id="foreign")]
+        for value in invalid:
+            with self.subTest(value=value), self.assertRaises(ContractError):
+                self.ledger.record_reflection_rejection(value, "Refused", now=1001, received_at=1001)
+        for reason in ("", "x" * 1025, None):
+            with self.subTest(reason=reason), self.assertRaises(ContractError):
+                self.ledger.record_reflection_rejection(command(), reason, now=1001, received_at=1001)
+        for received_at in (1002, -1, float("nan"), True):
+            with self.subTest(received_at=received_at), self.assertRaises(ContractError):
+                self.ledger.record_reflection_rejection(command(), "Refused", now=1001, received_at=received_at)
+        self.assertEqual(self.ledger.reflection_command_records(), ())
+
+    def test_rejection_retention_cap_includes_accepted_commands(self):
+        self.offer()
+        accepted = self.ledger.apply_reflection(command(), now=1001)
+        for number in range(127):
+            self.ledger.record_reflection_rejection(command(f"refused-{number}", job_id="unknown-job"),
+                "No original job", now=1002, received_at=1002)
+        self.assertEqual(len(self.ledger.reflection_command_records()), 128)
+        with self.assertRaises(BudgetError):
+            self.ledger.record_reflection_rejection(command("overflow", job_id="unknown-job"),
+                "No original job", now=1003, received_at=1003)
+        self.assertEqual(self.ledger.record_reflection_rejection(command(), "Already retained", now=1003, received_at=1003), accepted)
+        with self.assertRaises(ReflectionBudgetRefusal):
+            self.ledger.apply_reflection(command("overflow"), now=1003)
+        self.assertEqual(self.ledger.snapshot(now=1003)["spent_inputs"], 0)
+        self.ledger._verify_reflection(self.admission, self.ledger.snapshot(now=1003))
+
+    def test_restoration_returns_copies_of_original_commands_results_and_receipts(self):
+        self.offer()
+        self.ledger.apply_reflection(command(), now=1001, received_at=1000.5)
+        self.ledger.apply_reflection(self.submission(), now=1003, received_at=1002)
+        original = self.ledger.reflection_command_records()
+        changed = self.ledger.reflection_command_records()
+        changed[0]["result"]["deadline"] = 9999
+        changed[0]["received_at"] = 9999
+        changed[1]["command"]["proposal"]["notes"][0]["text"] = "Changed copy"
+        self.assertEqual(self.ledger.reflection_command_records(), original)
+        self.ledger.close()
+        self.ledger = MissionLedger(self.path, now=1004)
+        self.assertEqual(self.ledger.reflection_command_records(), original)
+
+    def test_reopen_refuses_tampered_rejection_records(self):
+        value = command(job_id="unknown-job")
+        result = self.ledger.record_reflection_rejection(value, "No original job", now=1001, received_at=1000.5)
+        original = (canonical(value), canonical(result), 1000.5)
+        tampered = [(canonical(value), canonical(result | changes), 1000.5)
+                    for changes in (dict(reason=""), dict(reason="x" * 1025), dict(reason=3),
+                                    dict(grants_authority=0), dict(extra=True), dict(status="accepted"))]
+        tampered += [(canonical(value | {"reflector_id": "foreign"}), original[1], 1000.5),
+                     (canonical(value | {"mission_id": "foreign"}), original[1], 1000.5),
+                     (original[0] + " ", original[1], 1000.5),
+                     (original[0], original[1] + " ", 1000.5),
+                     (original[0], original[1], 1002)]
+        for payload, output, receipt in tampered:
+            with self.subTest(payload=payload, output=output, receipt=receipt):
+                self.ledger._db.execute("UPDATE reflection_commands SET payload=?,result=?,received_at=?", (payload, output, receipt))
+                with self.assertRaises(ContractError):
+                    self.ledger._verify_reflection(self.admission, self.ledger.snapshot(now=1001))
+        self.ledger._db.execute("UPDATE reflection_commands SET payload=?,result=?,received_at=?", original)
+        self.ledger._verify_reflection(self.admission, self.ledger.snapshot(now=1001))
+        self.ledger._db.execute("UPDATE reflection_commands SET result=?", (canonical(result | dict(grants_authority=True)),))
+        self.ledger.close()
+        with self.assertRaises(ContractError):
+            MissionLedger(self.path, now=1002)
+
+    def test_rejections_cannot_replace_original_accepted_claim_or_submission_coverage(self):
+        self.offer()
+        self.ledger.apply_reflection(command(), now=1001)
+        self.ledger.apply_reflection(self.submission(), now=1002)
+        original = self.ledger.reflection_command_records()
+        rejected = canonical(dict(status="rejected", reason="Refused", grants_authority=False))
+        for row in original:
+            identity = row["command"]["command_id"]
+            with self.subTest(identity=identity):
+                self.ledger._db.execute("UPDATE reflection_commands SET result=? WHERE id=?", (rejected, identity))
+                with self.assertRaisesRegex(ContractError, "lost its original durable"):
+                    self.ledger._verify_reflection(self.admission, self.ledger.snapshot(now=1002))
+                self.ledger._db.execute("UPDATE reflection_commands SET result=? WHERE id=?", (canonical(row["result"]), identity))
+        self.ledger._verify_reflection(self.admission, self.ledger.snapshot(now=1002))
+
+    def test_terminal_settlement_preserves_original_windows_charges_and_results(self):
+        self.offer()
+        self.offer(2)
+        accepted = self.ledger.apply_reflection(command(), now=1001)
+        before = self.ledger._db.execute("SELECT payload,claimed_at,deadline,charged_seconds,proposal FROM reflection_jobs ORDER BY sequence").fetchall()
+        self.ledger.finish_mission("stopped", epoch=0, request_id=None, reason="Synthetic ending", now=1002)
+        self.assertEqual([row["state"] for row in self.ledger.reflection_records()[0]], ["unknown", "unreviewed"])
+        self.assertEqual(self.ledger._db.execute("SELECT payload,claimed_at,deadline,charged_seconds,proposal FROM reflection_jobs ORDER BY sequence").fetchall(), before)
+        self.assertEqual(self.ledger.reflection_command_records()[0]["result"], accepted)
+        self.ledger._verify_reflection(self.admission, self.ledger.snapshot(now=1002))
+        sealed = self.ledger.path.read_bytes()
+        self.ledger.settle_reflection(now=1003)
+        self.ledger.expire_reflection(now=1200)
+        self.assertEqual(self.ledger.apply_reflection(command(), now=1200), accepted)
+        for call in (lambda: self.ledger.apply_reflection(self.submission(), now=1200),
+                     lambda: self.ledger.record_reflection_rejection(command("late"), "Closed", now=1200, received_at=1200)):
+            with self.assertRaisesRegex(ContractError, "Sealed terminal"):
+                call()
+        self.assertEqual(self.ledger.path.read_bytes(), sealed)
+        self.ledger.close()
+        self.ledger = MissionLedger(self.path, now=1200)
+        self.assertEqual([row["state"] for row in self.ledger.reflection_records()[0]], ["unknown", "unreviewed"])
+        self.assertEqual(self.ledger.reflection_command_records()[0]["result"], accepted)
+
+    def test_explicit_settlement_leaves_completed_proposals_and_receipts_unchanged(self):
+        self.offer()
+        self.ledger.apply_reflection(command(), now=1001)
+        self.ledger.apply_reflection(self.submission(), now=1002)
+        self.offer(2, now=1002)
+        before = self.ledger.reflection_command_records()
+        proposal_before = self.ledger.reflection_records()[1]
+        self.ledger.settle_reflection(now=1003)
+        jobs, proposals = self.ledger.reflection_records()
+        self.assertEqual([row["state"] for row in jobs], ["completed", "unreviewed"])
+        self.assertEqual(proposals, proposal_before)
+        self.assertEqual(self.ledger.reflection_command_records(), before)
+        self.ledger._verify_reflection(self.admission, self.ledger.snapshot(now=1003))
+
+    def test_semantic_refusal_is_distinct_from_storage_and_clock_failure(self):
+        self.offer()
+        with self.assertRaises(ReflectionRefusal):
+            self.ledger.apply_reflection(command(job_id="missing"), now=1001)
+        with self.assertRaises(ReflectionRefusal):
+            self.ledger.apply_reflection(command() | {"extra": True}, now=1001)
+        for now, receipt in ((float("nan"), 1001), (1000, 1002), (999, 999)):
+            with self.subTest(now=now, receipt=receipt), self.assertRaises(LedgerError) as raised:
+                self.ledger.apply_reflection(command(), now=now, received_at=receipt)
+            self.assertNotIsInstance(raised.exception, ReflectionRefusal)
+        self.ledger._db.execute("CREATE TEMP TRIGGER refuse_claim BEFORE UPDATE ON reflection_jobs BEGIN SELECT RAISE(ABORT, 'controlled storage failure'); END")
+        with self.assertRaises(LedgerError) as raised:
+            self.ledger.apply_reflection(command(), now=1001)
+        self.assertNotIsInstance(raised.exception, ReflectionRefusal)
+        self.assertIsInstance(raised.exception.__cause__, sqlite3.Error)
+        self.assertEqual(self.ledger.reflection_command_records(), ())
+
+
+    def test_terminal_settlement_and_state_change_are_one_transaction(self):
+        self.offer()
+        self.offer(2)
+        self.ledger.apply_reflection(command(), now=1001)
+        before_jobs = self.ledger._db.execute("SELECT * FROM reflection_jobs").fetchall()
+        before_commands = self.ledger.reflection_command_records()
+        self.ledger._db.execute("CREATE TEMP TRIGGER refuse_settlement BEFORE UPDATE ON reflection_jobs WHEN NEW.state='unreviewed' BEGIN SELECT RAISE(ABORT, 'controlled settlement failure'); END")
+        with self.assertRaisesRegex(LedgerError, "controlled settlement failure"):
+            self.ledger.finish_mission("stopped", epoch=0, request_id=None, reason="Synthetic ending", now=1002)
+        self.assertNotIn(self.ledger.snapshot(now=1002)["phase"], ("stopped", "failed", "completed"))
+        self.assertEqual(self.ledger._db.execute("SELECT * FROM reflection_jobs").fetchall(), before_jobs)
+        self.assertEqual(self.ledger.reflection_command_records(), before_commands)
+        self.ledger._db.execute("DROP TRIGGER refuse_settlement")
+        self.ledger.finish_mission("stopped", epoch=0, request_id=None, reason="Synthetic ending", now=1002)
+        self.ledger._db.execute("UPDATE reflection_jobs SET state='claimed' WHERE id='job-1'")
+        self.ledger.close()
+        with self.assertRaisesRegex(ContractError, "job identity/cutoff/state"):
+            MissionLedger(self.path, now=1003)

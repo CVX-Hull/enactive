@@ -55,6 +55,14 @@ class BudgetError(LedgerError):
     """Original budget/reserve cannot admit another side effect."""
 
 
+class ReflectionRefusal(LedgerError):
+    """A semantic advisory refusal that may be retained as a zero-input result."""
+
+
+class ReflectionBudgetRefusal(BudgetError, ReflectionRefusal):
+    """A semantic advisory allowance refusal, distinct from storage/clock failure."""
+
+
 def _id(value: Any) -> None:
     if not isinstance(value, str) or not value or len(value) > 128 or not value[0].isalnum() or not all(c.isascii() and (c.isalnum() or c in "_-") for c in value):
         raise LedgerError("Identifier must be bounded ASCII letters/digits/_/-")
@@ -1677,6 +1685,7 @@ class MissionLedger:
                     raise LedgerError("Mission completion requires its immutable NormalFinish report")
                 if completed[-1]["request"]["request_id"] != self.request_records()[-1]["request"]["request_id"]:
                     raise LedgerError("Mission completion cannot reuse an older finish report")
+            self._settle_reflection()
             state.update(phase=disposition, reason=reason)
             self._put("state", state)
         return self.snapshot(now=now)
@@ -1754,6 +1763,59 @@ class MissionLedger:
                     proposals.append(json_object(proposal))
             return tuple(jobs), tuple(proposals)
 
+    def reflection_command_records(self) -> tuple[dict, ...]:
+        """Read original durable advisory receipts for writer cache restoration."""
+        from .reflection import validate_command
+        with self._mutex:
+            return tuple(dict(command=validate_command(payload), result=json_object(result),
+                              received_at=float(received_at))
+                         for payload, result, received_at in self._db.execute(
+                             "SELECT payload,result,received_at FROM reflection_commands ORDER BY rowid"))
+
+    def record_reflection_rejection(self, value: dict, reason: str, *, now: float, received_at: float) -> dict:
+        """Retain an admitted command's semantic refusal without work/input charges."""
+        from .reflection import validate_command
+        now, received_at = _clock(now), _clock(received_at)
+        if received_at > now:
+            raise LedgerError("Advisory ingress time cannot be after writer drain time")
+        command = validate_command(value)
+        policy = self.admission.learning
+        if (policy is None or command["mission_id"] != self.admission.mission_id
+                or command["reflector_id"] != policy.reflector_id):
+            raise LedgerError("Reflective command actor/mission was not admitted")
+        if not isinstance(reason, str) or not 1 <= len(reason) <= 1024:
+            raise LedgerError("Reflection refusal requires a bounded reason")
+        with self._transaction():
+            old = self._db.execute("SELECT payload,result FROM reflection_commands WHERE id=?",
+                (command["command_id"],)).fetchone()
+            if old:
+                if old[0] != canonical(command):
+                    raise LedgerError("Reflective command identity changed")
+                return json_object(old[1])
+            if self._get("state")["phase"] in TERMINAL:
+                raise LedgerError("Sealed terminal mission accepts no late advisory writes")
+            self._touch(now)
+            if self._db.execute("SELECT count(*) FROM reflection_commands").fetchone()[0] >= 128:
+                raise BudgetError("Reflective command retention exhausted")
+            result = dict(status="rejected", reason=reason, grants_authority=False)
+            self._db.execute("INSERT INTO reflection_commands(id,payload,result,received_at) VALUES (?,?,?,?)",
+                (command["command_id"], canonical(command), canonical(result), received_at))
+        return result
+
+    def _settle_reflection(self) -> None:
+        """Use the caller's writer transaction; elapsed model computation is unknown."""
+        self._db.execute("UPDATE reflection_jobs SET state='unknown' WHERE state='claimed'")
+        self._db.execute("UPDATE reflection_jobs SET state='unreviewed' WHERE state='offered'")
+
+    def settle_reflection(self, *, now: float) -> None:
+        """Close outstanding advisory work before sealing, without renewing windows."""
+        with self._mutex:
+            if self._get("state")["phase"] in TERMINAL:
+                return
+            with self._transaction():
+                self._touch(now)
+                self._settle_reflection()
+
     def _reflection_trace(self, job: dict) -> None:
         """Compare job data with original durable rows, never model-written history."""
         rows = self._db.execute("SELECT rowid,payload,state,result FROM requests WHERE rowid>? AND rowid<=? ORDER BY rowid",
@@ -1768,6 +1830,9 @@ class MissionLedger:
             raise LedgerError("Reflection coverage must retain its original omitted request count")
         ordered = []
         linked_sources = set()
+        primitives_by_request = {}
+        for primitive in self.primitive_records():
+            primitives_by_request.setdefault(primitive["request_id"], []).append(primitive)
         for row in job["trajectory"]:
             identity = row["request"]["request_id"]
             if identity not in original or canonical(original[identity][1]) != canonical(row):
@@ -1775,12 +1840,11 @@ class MissionLedger:
             ordered.append(original[identity][0])
             linked_sources.update(row["request"].get("sources", ()))
             linked_sources.update(row["result"].get("source_ids", ()))
-            for primitive in self.primitive_records():
-                if primitive["request_id"] == identity:
-                    linked_sources.update(primitive["intent"][key] for key in ("source_before", "preflight_source"))
-                    receipt = primitive["result"] or {}
-                    linked_sources.update(receipt[key] for key in ("source_before", "preflight_source", "source_after")
-                                          if receipt.get(key) is not None)
+            for primitive in primitives_by_request.get(identity, ()):
+                linked_sources.update(primitive["intent"][key] for key in ("source_before", "preflight_source"))
+                receipt = primitive["result"] or {}
+                linked_sources.update(receipt[key] for key in ("source_before", "preflight_source", "source_after")
+                                      if receipt.get(key) is not None)
         if ordered != sorted(ordered):
             raise LedgerError("Reflection trajectory changed original request order")
         if any(source["mission_id"] != job["mission_id"] or source["source_id"] not in linked_sources
@@ -1837,55 +1901,61 @@ class MissionLedger:
         received_at = _clock(now if received_at is None else received_at)
         if received_at > now:
             raise LedgerError("Advisory ingress time cannot be after writer drain time")
-        command = validate_command(value)
+        try:
+            command = validate_command(value)
+        except ContractError as exc:
+            raise ReflectionRefusal(str(exc)) from exc
         policy = self.admission.learning
         if (policy is None or command["mission_id"] != self.admission.mission_id
                 or command["reflector_id"] != policy.reflector_id):
-            raise LedgerError("Reflective command actor/mission was not admitted")
+            raise ReflectionRefusal("Reflective command actor/mission was not admitted")
         with self._transaction():
             old = self._db.execute("SELECT payload,result FROM reflection_commands WHERE id=?", (command["command_id"],)).fetchone()
             if old:
                 if old[0] != canonical(command):
-                    raise LedgerError("Reflective command identity changed")
+                    raise ReflectionRefusal("Reflective command identity changed")
                 return json_object(old[1])
+            if self._get("state")["phase"] in TERMINAL:
+                raise ReflectionRefusal("Sealed terminal mission accepts no late advisory writes")
             state = self._touch(now)
-            if state["phase"] in TERMINAL:
-                raise LedgerError("Sealed terminal mission accepts no late advisory writes")
             if self._db.execute("SELECT count(*) FROM reflection_commands").fetchone()[0] >= 128:
-                raise BudgetError("Reflective command retention exhausted")
+                raise ReflectionBudgetRefusal("Reflective command retention exhausted")
             row = self._db.execute("SELECT payload,state,claimed_at,deadline,proposal FROM reflection_jobs WHERE id=?", (command["job_id"],)).fetchone()
             if row is None:
-                raise LedgerError("Reflective command has no original job")
+                raise ReflectionRefusal("Reflective command has no original job")
             job = json_object(row[0])
             result = {"job_id": job["id"], "grants_authority": False}
             limits = policy.reflection_limits
             if command["kind"] == "claim":
                 if row[1] != "offered" or state["phase"] == "finishing" or now >= state["deadline"]:
-                    raise LedgerError("Reflection job cannot be claimed or renewed")
+                    raise ReflectionRefusal("Reflection job cannot be claimed or renewed")
                 reserved = float(min(limits.job_seconds, state["deadline"] - now))
                 spent = self._db.execute("SELECT coalesce(sum(charged_seconds),0) FROM reflection_jobs").fetchone()[0]
                 if spent + reserved > limits.total_seconds:
-                    raise BudgetError("Original reflective claim-window allowance exhausted")
+                    raise ReflectionBudgetRefusal("Original reflective claim-window allowance exhausted")
                 self._db.execute("UPDATE reflection_jobs SET state='claimed',claimed_at=?,deadline=?,charged_seconds=? WHERE id=?",
                     (now, now + reserved, reserved, job["id"]))
                 result.update(state="claimed", claimed_at=now, deadline=now + reserved, charged_seconds=reserved,
                     measurement="Conservative claimed wall window; model compute/tokens unknown")
             else:
-                proposal = validate_proposal(command["proposal"], job)
+                try:
+                    proposal = validate_proposal(command["proposal"], job)
+                except ContractError as exc:
+                    raise ReflectionRefusal(str(exc)) from exc
                 if row[2] is None or row[1] not in ("claimed", "expired", "unknown"):
-                    raise LedgerError("Proposal needs its original claimed job")
+                    raise ReflectionRefusal("Proposal needs its original claimed job")
                 if row[4] is not None:
-                    raise LedgerError("A claimed job retains one immutable proposal")
+                    raise ReflectionRefusal("A claimed job retains one immutable proposal")
                 if self._db.execute("SELECT 1 FROM reflection_jobs WHERE json_extract(proposal,'$.id')=?",
                                     (proposal["id"],)).fetchone():
-                    raise LedgerError("A proposal identity belongs to one immutable original job")
+                    raise ReflectionRefusal("A proposal identity belongs to one immutable original job")
                 if len(canonical(proposal).encode()) > limits.result_bytes:
-                    raise BudgetError("Proposal exceeds its original result allowance")
+                    raise ReflectionBudgetRefusal("Proposal exceeds its original result allowance")
                 if any(candidate["mission_id"] != job["mission_id"] or candidate["environment"] != dict(policy.environment)
                        for candidate in proposal["candidates"]):
-                    raise LedgerError("Proposal candidate changed admitted owner/environment")
+                    raise ReflectionRefusal("Proposal candidate changed admitted owner/environment")
                 if received_at < row[2]:
-                    raise LedgerError("Advisory output predates its original claim")
+                    raise ReflectionRefusal("Advisory output predates its original claim")
                 late = received_at > row[3] or row[1] == "unknown"
                 self._db.execute("UPDATE reflection_jobs SET state=?,proposal=? WHERE id=?",
                     ("expired" if late else "completed", canonical(proposal), job["id"]))
@@ -1911,7 +1981,8 @@ class MissionLedger:
             if (job["id"] != identity or payload != canonical(job) or job["mission_id"] != admission.mission_id
                     or job["reflector_id"] != policy.reflector_id or job["after_sequence"] != previous
                     or job_state not in ("offered", "claimed", "completed", "expired", "unknown", "unreviewed")
-                    or job["epoch"] > state["epoch"]):
+                    or job["epoch"] > state["epoch"]
+                    or state["phase"] in TERMINAL and job_state in ("offered", "claimed")):
                 raise LedgerError("Corrupt reflective job identity/cutoff/state")
             self._reflection_trace(job)
             if claimed is None:
@@ -1944,9 +2015,17 @@ class MissionLedger:
             result = json_object(encoded_result)
             if (command["command_id"] != identity or payload != canonical(command) or canonical(result) != encoded_result
                     or command["mission_id"] != admission.mission_id or policy is None
-                    or command["reflector_id"] != policy.reflector_id or command["job_id"] not in by_id
+                    or command["reflector_id"] != policy.reflector_id
                     or received_at > state["last_wall"]):
                 raise LedgerError("Corrupt reflective command identity/result")
+            if result.get("status") == "rejected":
+                if (set(result) != {"status", "reason", "grants_authority"}
+                        or result["grants_authority"] is not False
+                        or not isinstance(result["reason"], str) or not 1 <= len(result["reason"]) <= 1024):
+                    raise LedgerError("Corrupt reflective rejection result")
+                continue
+            if command["job_id"] not in by_id:
+                raise LedgerError("Reflective command has no original job")
             job, job_state, claimed, deadline, cost, proposal = by_id[command["job_id"]]
             if command["kind"] == "claim":
                 expected = dict(job_id=job["id"], grants_authority=False, state="claimed", claimed_at=claimed,

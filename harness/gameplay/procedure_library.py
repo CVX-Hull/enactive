@@ -253,9 +253,9 @@ class ProcedureLibrary:
             if (database.execute("PRAGMA user_version").fetchone() != (11,)
                     or database.execute("PRAGMA quick_check").fetchmany(2) != [("ok",)]):
                 raise ProcedureLibraryError("Unsupported or corrupt historical mission ledger")
-            required = {"metadata", "requests", "primitives", "memory"}
+            required = {"metadata", "requests", "primitives", "memory", "reflection_jobs", "reflection_commands"}
             tables = {name for name, kind, sql in database.execute(
-                "SELECT name,type,sql FROM sqlite_schema WHERE name IN ('metadata','requests','primitives','memory')")
+                "SELECT name,type,sql FROM sqlite_schema WHERE name IN ('metadata','requests','primitives','memory','reflection_jobs','reflection_commands')")
                 if kind == "table" and sql.upper().startswith("CREATE TABLE ")}
             if tables != required:
                 raise ProcedureLibraryError("Historical ledger requires ordinary retained tables")
@@ -267,6 +267,9 @@ class ProcedureLibrary:
             state = _object(metadata["state"])
             if admission.mission_id != mission or state.get("phase") not in _TERMINAL:
                 raise ProcedureLibraryError("Library requires the current admission and a terminal mission")
+            reflection = self._rows(database, "SELECT state FROM reflection_jobs", 64)
+            if any(row[0] not in ("completed", "expired", "unknown", "unreviewed") for row in reflection):
+                raise ProcedureLibraryError("Historical reflection admission must be closed before library use")
             learning = admission.learning
             if learning is None:
                 self._dependencies[mission], self._environments[mission] = {}, None

@@ -85,6 +85,8 @@ class SupervisorTests(unittest.TestCase):
                  "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT"],
                  "status": "ready", "error": "", "paused": False,
                  "timestamp_ms": self.clocks()["now_timestamp_ms"], "frame_ok": True,
+                 "frame_geometry": {"window_width": 800, "window_height": 600,
+                    "output_width": 800, "output_height": 600, "viewport": [0, 0, 800, 600]},
                  "frame": f"frame-{session}-{self.number}.png", "in_game": True,
                  "boundary": {"kind": "normal_play", "id": "boundary", "control_generation": 0,
                               "recovery_operations": [], "interrupt_request_id": None},

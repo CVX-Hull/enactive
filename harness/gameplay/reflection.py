@@ -71,6 +71,11 @@ _WRAPPER_SCHEMA = _object({
 })
 
 
+def proposal_schema() -> dict[str, Any]:
+    """Return an independent current proposal schema for structured adapters."""
+    return deepcopy(_PROPOSAL_SCHEMA)
+
+
 def _bounded(value: dict | str | bytes, maximum: int, label: str) -> dict[str, Any]:
     result = json_object(value)
     try:
@@ -202,6 +207,7 @@ class ReflectiveExchange:
         self._proposals: dict[str, dict[str, Any]] = {}
         self._view: list[dict[str, Any]] = []
         self._proposal_view: list[str] = []
+        self._sealed = False
 
     def _bind_writer(self) -> None:
         writer = current_thread()
@@ -230,6 +236,10 @@ class ReflectiveExchange:
                 if previous["digest"] != digest:
                     raise ContractError("Conflicting body for an immutable reflection command ID")
                 return deepcopy(previous["outcome"])
+            if self._sealed or self._phase in ("completed", "failed", "stopped") or (
+                    self._phase == "finishing" and body["kind"] == "claim"):
+                return {"status": "rejected", "admitted": False, "command_id": identity,
+                        "reason": "Reflection admission is closing", "grants_authority": False}
             if self._pending >= self._pending_limit or len(self._operations) >= self._max_operations:
                 reason = "pending_limit" if self._pending >= self._pending_limit else "operation_limit"
                 return {"status": "busy", "admitted": False, "command_id": identity,
@@ -260,6 +270,64 @@ class ReflectiveExchange:
                 return deepcopy(previous["outcome"])
             return {"status": "missing", "admitted": False, "command_id": command_id,
                     "grants_authority": False}
+
+    def restore(self, records: Sequence[dict]) -> None:
+        """Hydrate verified durable receipts on the writer, without requeueing work."""
+        self._bind_writer()
+        if not isinstance(records, (list, tuple)) or len(records) > self._max_operations:
+            raise ContractError("Reflection receipt restoration exceeds its finite bound")
+        restored = {}
+        scope = self._scope
+        for record in records:
+            if type(record) is not dict or set(record) != {"command", "result", "received_at"}:
+                raise ContractError("Reflection restoration requires exact durable receipt data")
+            body = validate_command(record["command"])
+            result = _bounded(record["result"], MAX_RESULT_BYTES, "Reflection durable result")
+            receipt = record["received_at"]
+            if type(receipt) not in (int, float) or not math.isfinite(receipt) or not 0 <= receipt <= 1e12:
+                raise ContractError("Reflection durable receipt has an invalid software clock")
+            selected = (body["mission_id"], body["reflector_id"])
+            if scope is not None and selected != scope:
+                raise ContractError("Reflection restored receipt changes original scope")
+            scope = selected
+            identity = body["command_id"]
+            if identity in restored:
+                raise ContractError("Duplicate restored reflection command identity")
+            restored[identity] = {"digest": _digest(body), "received_at": float(receipt),
+                "outcome": {"status": "committed", "admitted": True,
+                    "command_id": identity, "result": result, "grants_authority": False}}
+        with self._condition:
+            if self._operations or self._pending:
+                raise ContractError("Reflection receipt restoration requires a fresh cache")
+            self._operations = restored
+            self._scope = scope
+
+    def source_allowed(self, *, mission_id: str, reflector_id: str,
+                       job_id: str, source_id: str) -> bool:
+        """Authorize only a retained current-mission image in an original job."""
+        for identity in (mission_id, reflector_id, job_id, source_id):
+            _identity(identity)
+        with self._condition:
+            if self._scope != (mission_id, reflector_id):
+                return False
+            job = self._jobs.get(job_id)
+            return job is not None and {"mission_id": mission_id, "source_id": source_id} in job["sources"]
+
+    def seal_ingress(self) -> None:
+        """Stop new advisory bodies before draining and sealing durable history."""
+        with self._condition:
+            self._bind_writer()
+            self._sealed = True
+            self._condition.notify_all()
+
+    def reopen_ingress(self) -> None:
+        """Cancel a preterminal seal; original jobs/results/windows stay unchanged."""
+        with self._condition:
+            self._bind_writer()
+            if self._phase in ("completed", "failed", "stopped"):
+                raise ContractError("A terminal reflective exchange cannot be reopened")
+            self._sealed = False
+            self._condition.notify_all()
 
     def drain(self, apply: Callable[[dict], dict], *, max_operations: int = 2) -> int:
         """Run at most two callbacks on the existing writer, outside the lock.
@@ -385,7 +453,7 @@ class ReflectiveExchange:
             while True:
                 if self._scope is not None and self._scope != (mission_id, reflector_id):
                     return {"status": "idle", "grants_authority": False}
-                if self._phase in _CLOSED_PHASES:
+                if self._sealed or self._phase in _CLOSED_PHASES:
                     return {"status": "closed", "grants_authority": False}
                 for wrapper in self._view:
                     if wrapper["state"] in ("offered", "claimed"):

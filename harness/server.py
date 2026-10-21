@@ -14,6 +14,7 @@ from .controller import Controller, MAX_REQUEST, MAX_WAIT, RECOVERY_KINDS, atomi
 from .gameplay.contracts import json_object
 from .gameplay.mission_contracts import MAX_REQUEST_BYTES, validate_request
 from .gameplay.mission_ledger import TERMINAL
+from .gameplay.reflection import MAX_COMMAND_BYTES, validate_command as validate_reflection_command
 
 
 def validate_recovery(body: dict[str, Any]) -> None:
@@ -122,6 +123,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         path = urlsplit(self.path).path
         controller = self.server.controller
+        if path.startswith("/api/reflection/"):
+            self._reflection_get(path)
+            return
         if path in {"/api/mission/source", "/api/mission/frame"}:
             supplied = self.headers.get("X-CDDA-Token", "")
             if not hmac.compare_digest(supplied.encode("utf-8"), controller.token.encode("ascii")):
@@ -176,6 +180,9 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self) -> None:
         if not self._trusted():
+            return
+        if self.path == "/api/reflection/command":
+            self._reflection_post()
             return
         if self.path not in {"/api/command", "/api/recovery", "/api/mission"}:
             self._json(404, {"error": "Unknown endpoint"})
@@ -258,3 +265,69 @@ class Handler(BaseHTTPRequestHandler):
                    if self.path == "/api/recovery" else {"ready", "recorded", "pause_requested", "complete"})
         code = 200 if result["status"] in success else 409
         self._json(code, result)
+
+    def _reflection_token(self) -> bool:
+        supplied = self.headers.get("X-CDDA-Token", "")
+        if not hmac.compare_digest(supplied.encode("utf-8"), self.server.controller.token.encode("ascii")):
+            self._json(403, {"error": "Valid local controller token required"})
+            return False
+        return True
+
+    def _reflection_get(self, path: str) -> None:
+        if not self._reflection_token():
+            return
+        fields = {
+            "/api/reflection/next": {"mission_id", "reflector_id", "wait_seconds"},
+            "/api/reflection/result": {"mission_id", "reflector_id", "command_id"},
+            "/api/reflection/proposal": {"mission_id", "proposal_id"},
+            "/api/reflection/source": {"mission_id", "reflector_id", "job_id", "source_id"},
+            "/api/reflection/frame": {"mission_id", "reflector_id", "job_id", "source_id"},
+        }
+        if path not in fields:
+            self._json(404, {"error": "Unknown advisory endpoint"})
+            return
+        try:
+            query = parse_qs(urlsplit(self.path).query, strict_parsing=True)
+            if set(query) != fields[path] or any(len(values) != 1 for values in query.values()):
+                raise ValueError("Advisory selection fields must match exactly")
+            args = {key: values[0] for key, values in query.items()}
+            if any(re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", value) is None
+                   for key, value in args.items() if key != "wait_seconds"):
+                raise ValueError("Advisory identities must be bounded ASCII")
+            mission = self.server.mission
+            if path.endswith("/next"):
+                args["wait_seconds"] = float(args["wait_seconds"])
+                result = mission.reflection_next(**args)
+            elif path.endswith("/result"):
+                result = mission.reflection_result(**args)
+            elif path.endswith("/proposal"):
+                result = mission.reflection_proposal(**args)
+            else:
+                metadata, data = mission.reflection_source(**args)
+                if path.endswith("/frame"):
+                    self._send(200, data, "image/png")
+                else:
+                    self._json(200, metadata)
+                return
+            self._json(200, result)
+        except (OSError, ValueError, TypeError) as exc:
+            self._json(409, {"status": "rejected", "reason": str(exc)[:1024], "grants_authority": False})
+
+    def _reflection_post(self) -> None:
+        # Advisory ingress never acquires the game ingress lock or input queue.
+        if not self._reflection_token():
+            return
+        if self.headers.get("Content-Type", "").split(";")[0].strip().lower() != "application/json":
+            self._json(415, {"error": "Use application/json"})
+            return
+        try:
+            length = int(self.headers.get("Content-Length", "-1"))
+            if self.headers.get("Transfer-Encoding") or not 0 < length <= MAX_COMMAND_BYTES:
+                self._json(413, {"error": "Advisory command exceeds its finite body bound"})
+                return
+            self.connection.settimeout(3)
+            body = validate_reflection_command(self.rfile.read(length))
+            result = self.server.mission.reflection_command(body)
+            self._json(200 if result["status"] in ("pending", "committed") else 409, result)
+        except (OSError, ValueError, TypeError, RecursionError) as exc:
+            self._json(409, {"status": "rejected", "reason": str(exc)[:1024], "grants_authority": False})
