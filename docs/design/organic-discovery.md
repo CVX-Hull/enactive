@@ -85,6 +85,14 @@ matching build and focused native proof. A small key-only prototype is not mouse
 completion; a successful click is not autonomous skill learning. Current full
 supply/shelter/memory/handoff/normal-lifecycle acceptance is preserved.
 
+## Active play and background reflection
+
+The [asynchronous-reflection proposal](asynchronous-reflection.md) develops the
+active-player/background-learning split, two-way signals, eventual revision,
+stale-advice and cost controls, and a focused primary-source cross-check. Software
+should own the exchange; the engineering lead is not the player's slow path.
+This does not deploy a reflector or change existing admissions.
+
 ## Development, evaluation and maintenance
 
 Use the [development-first workflow](../project-management.md#development-first-delivery)

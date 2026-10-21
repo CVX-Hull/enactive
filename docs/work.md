@@ -133,6 +133,10 @@ architecture/research and distinguishes current support from future changes.
 owns the input design; [player-learned procedures #177](https://github.com/CVX-Hull/enactive/issues/177)
 owns the separate functional memory/abstraction baseline. Neither is a claim of
 current autonomy or a requirement to adopt optional training/curator infrastructure.
+The [asynchronous-reflection design](design/asynchronous-reflection.md) and
+[exchange #178](https://github.com/CVX-Hull/enactive/issues/178) specify proposed
+player-owned background learning, automatic feedback and evidence-linked revision;
+the engineering lead must not become the player's slow reasoning path.
 
 ## Selected independent-player iteration
 

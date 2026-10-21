@@ -11,6 +11,11 @@ seven-day run. This is a research assessment and proposed direction, **not an
 implemented memory system or a new gameplay admission**. [Architecture](architecture.md)
 and [protocol](protocol.md) remain the current contracts.
 
+A [focused October20 follow-up](design/asynchronous-reflection.md) assesses active
+play versus background reflection, automatic feedback and eventual revision. It
+adds scoped research/design questions without renewing this assessment or claiming
+a deployed learner.
+
 ## Decision for the owner
 
 **Change the integration and lifetime of memory, while keeping the guarded execution

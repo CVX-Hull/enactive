@@ -51,6 +51,16 @@ is retained, changed or in conflict, source applicability limits and unverified
 assumptions in the existing brief/design. C-REVIEW checks that crosswalk; links alone
 do not establish agreement or research currency. Keep current behavior distinct
 from proposals and retire superseded guidance when implementation changes.
+For agent/memory boundaries, identify the active and background paths, automatic
+bookkeeping versus model judgment, two-way feedback, version/applicability rules
+and resource costs. Reuse actual receipts for observable events; distinguish
+context exposure, explicit selection, delivery, observed effect, interpreted
+success and causal usefulness. Preserve unknown attribution. Design autonomous
+play so software/player roles own routine reasoning and learning; the engineering
+lead must not become the slow path or a per-procedure approver. Advisory learning
+may remain provisional and revisable; current authority and delivery accounting
+must not depend on eventual correctness. C-REVIEW checks these distinctions;
+functional behavior and claims of improvement need their separate evidence.
 Controls: C-BOUNDARY, C-REVIEW, C-GOVERNANCE.
 
 ## S-PROTOCOL Command and observation authority
