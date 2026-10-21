@@ -522,10 +522,11 @@ as an exact freeze. A stopped deciding
 attempt cannot be silently resumed or relabeled; a repaired candidate needs a
 new assessment. Native fault probes stay separate.
 
-Use the actual player CLI twice for harmless status/observe permission preflight;
-new mission entry points require narrow project-rule matching/loading verification,
-not a global allow setting or recurring approval per action. Record which facts
-are unexposed. Deliberate Pause/control tests are declared separately; prohibited
+Use the actual designated player's preapproved structured tools for a harmless
+live snapshot when the actor/setup changes; reuse unchanged verified permission
+setup. New entry points require narrow project matching/loading verification,
+not a global allow setting, repeated preflight gauntlet or approval per action.
+Record which facts are unexposed. Deliberate Pause/control tests are declared separately; prohibited
 engineering gameplay rescue invalidates independence even if safety cleanup succeeds.
 
 Show objective/skill/progress, current versus last-seen/inferred memory, pending
@@ -550,6 +551,12 @@ Split #139 into visible-menu observation, selected item interaction, bounded nat
 activity; #142 into shared contracts/capability/ledger foundation, single mission
 runtime and registered lifecycle/context handoff; #144 into candidate/preflight readiness and independent deciding mission.
 These are real component/review boundaries, not a PR or budget renewal per action.
+The [development-first workflow](../project-management.md#development-first-delivery)
+allows frozen finite development play after fast/focused checks; full review/CI
+qualifies the coherent result afterward. It does not require another complete run
+solely because review followed play. Original outcome, independence, source-freeze,
+resources and honest evidence still determine acceptance; held-out claims retain
+their separate prospective conditions.
 Keep parent aggregates Backlog/L until children exist and interfaces are reviewed.
 Component candidates may stay Validation while shared acceptance runs; only #137
 and bounded #71 closure are initial design/source gates. No full memory benchmark,

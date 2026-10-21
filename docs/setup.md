@@ -264,8 +264,17 @@ fails. Fragment anchors, raw HTML links and external web availability are not ch
 tests require permission to bind loopback; a sandbox denial is a failed check,
 not permission to skip those tests.
 
-The same command is used by `.githooks/pre-commit` and
-[the portable CI job](../.github/workflows/check.yml). CI tests only the
+For fast development checkpoints, `.githooks/pre-commit` runs
+`.venv/bin/python tools/check.py --fast`: syntax/lint, import contracts, JS syntax,
+document structure/links, governance and whitespace, without behavioral tests or
+browser-based diagram rendering. Run relevant focused tests separately.
+[Development-first delivery](project-management.md#development-first-delivery) owns
+when full checks and independent review gate formal acceptance.
+
+[The portable CI job](../.github/workflows/check.yml) keeps the full default command
+on PRs and pushes to main. It cancels superseded PR runs, without cancelling
+running main checks, and avoids duplicate feature-branch push/PR jobs. Required PR
+checks have no path filters. CI tests only the
 controller/setup/documentation lane on Linux; it makes no native compilation or
 real-game claim. The hook is opt-in and setup does not change Git configuration.
 To enable it for this repository, run:

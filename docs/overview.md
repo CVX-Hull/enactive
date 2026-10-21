@@ -60,7 +60,9 @@ bounded mapping repair. The [sixth attempt](acceptance/2026-10-20-independent-mi
 exhausted an undersized creation-phase budget; the
 [seventh](acceptance/2026-10-20-independent-mission-seventh-attempt.md) stopped at
 a source-freshness race before editor input. [#168](https://github.com/CVX-Hull/enactive/issues/168)
-owns that repair. Another full finite mission is required.
+owns that repair. Independent008 then stopped at an uncommitted world-form Finish;
+[#170](https://github.com/CVX-Hull/enactive/issues/170) owns that API trap. All attempts
+remain closed. Another full finite mission is required.
 
 Current source distinguishes raw assertions from combined Work views and checks
 complete handoff retrieval capacity before relinquishing control. Actual fresh
@@ -180,6 +182,18 @@ public `walk` remains conservative after each step.
 the gates remaining before a comparative experiment. Its
 [acceptance](acceptance/2026-10-18-waypoint-readiness.md) records real completion,
 intermediate-obstacle stopping and Pause/continuation, including failures.
+
+## How development reaches acceptance
+
+We develop a useful behavior through targeted checks and finite real play, then
+qualify the coherent result. Fast commit checks and focused tests support development;
+full review, portable CI and native/graphical proof gate formal acceptance and merge.
+An early failure is retained with a short finding and used to improve the system;
+it does not require a fresh acceptance-report package before the next development
+attempt. Source, budgets, ownership and user Pause stay controlled in every run.
+The [checkpoint table](project-management.md#development-first-delivery) explains
+what is required when. Development progress never substitutes for the full mission
+outcome or silently becomes a held-out assessment.
 
 ## Current direction and decisions
 

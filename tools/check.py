@@ -2,6 +2,7 @@
 """Portable controller checks; native compilation/gameplay are separate acceptance."""
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 import shutil
 import subprocess
@@ -48,7 +49,11 @@ def run(command: list[str], **kwargs) -> None:
     subprocess.run(command, cwd=ROOT, check=True, **kwargs)
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--fast", action="store_true",
+                        help="Checkpoint structure/lint checks only; no behavioral tests or diagram rendering")
+    args = parser.parse_args(argv)
     import_linter = Path(sys.executable).parent / "lint-imports"
     if not import_linter.is_file():
         raise ValueError(f"Import Linter is missing beside {sys.executable}; use the project .venv with requirements-dev.lock installed (see docs/setup.md)")
@@ -69,13 +74,17 @@ def main() -> int:
         raise ValueError("\n".join(errors))
     print("Required documents and local Markdown file links: passed", flush=True)
     run([sys.executable, "-m", "tools.documents"])
-    run([sys.executable, "tools/diagrams.py"])
     run([sys.executable, "tools/governance.py"])
-    run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"])
-    run([node, "tests/test_viewer.cjs"])
+    if not args.fast:
+        run([sys.executable, "tools/diagrams.py"])
+        run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"])
+        run([node, "tests/test_viewer.cjs"])
     run(["git", "diff", "--check"])
     run(["git", "diff", "--cached", "--check"])
-    print("Portable checks passed. Native build and real gameplay were not tested.")
+    if args.fast:
+        print("Fast checkpoint checks passed. Behavioral tests, rendered diagrams, native build and real gameplay were not run.")
+    else:
+        print("Portable checks passed. Native build and real gameplay were not tested.")
     return 0
 
 

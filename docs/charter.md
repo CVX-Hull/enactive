@@ -69,6 +69,10 @@ code is needed when reuse cannot satisfy the requirement. Avoid speculative fram
 Maintain one current contract per boundary. Migrate the whole system together;
 do not carry backward-compatibility paths or mixed-version operation.
 
+Reduce uncertainty through meaningful working slices and real development play
+before paying for comprehensive qualification. Match assurance to the claim and
+consequence; preserve failures and strengthen acceptance once the behavior composes.
+
 ## P-KNOWLEDGE Maintain trustworthy knowledge and evidence
 
 Facts have one authoritative home. Current guidance, proposals, historical

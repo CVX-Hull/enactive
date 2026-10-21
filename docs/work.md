@@ -71,9 +71,10 @@ speedup or memory efficacy. Lifecycle, normal finish and one-use bound successor
 charged deliberate readmission now compose in source. Selected item/activity and
 delivery-recovery handling now compose too. Native lifecycle is qualified within
 engineering scope; next exercise the actual deciding player and a real fresh
-player-context replacement. Freeze #156 only after integrated checks and native
-preflight; #157 supplies actual mission evidence before #145 readiness. The lead
-owns coupled runtime/ledger integration and the single native runtime. Disjoint
+player-context replacement. Freeze #156 for each finite run after applicable
+fast/focused and native readiness checks; full review/CI qualify formal acceptance
+under the development-first workflow below. #157 supplies actual mission evidence
+before #145 readiness. The lead owns coupled runtime/ledger integration and the single native runtime. Disjoint
 passive policies may use at most two worktree workers after interface freeze;
 read-only source/evidence reviews can run alongside them. No budget, due date or
 closed attempt renews through this delivery sequence.
@@ -95,6 +96,19 @@ entry-refresh repair, regression/review/CI and a new full mission. All original
 supplies/rest/memory/succession/normal lifecycle objectives remain; no old attempt
 resumes. The seventh cleanup also retains a controller-before-child-exit ordering
 defect and an unknown child exit code.
+
+Independent008 also stopped before ordinary play: generic world-form Finish opened
+a confirmation outside its registered lifecycle stage. [#170](https://github.com/CVX-Hull/enactive/issues/170)
+owns the bounded API repair. [#144](https://github.com/CVX-Hull/enactive/issues/144)
+retains concise closure/costs; no old run resumes. [#169](https://github.com/CVX-Hull/enactive/issues/169)
+tracks development-first workflow activation and maintenance.
+
+The [development-first workflow](project-management.md#development-first-delivery)
+now distinguishes targeted development runs from formal acceptance. The next
+meaningful integration checkpoint remains the complete mission below; repeated
+menu failures retain short findings and raw artifacts without a full new review/CI
+cycle before every attempt. Full qualification and protected main remain required
+for acceptance, with all original outcomes unchanged.
 
 ## Selected independent-player iteration
 

@@ -353,7 +353,12 @@ The [mission contract](protocol.md#integrated-mission-lifecycle) and strict sour
 schema own the supported records; the [design](design/player-owned-mission.md)
 separates implemented components from remaining independent-play acceptance.
 
-1. Freeze the exact reviewed candidate, finite objective/scenario/limits/reserve,
+1. Declare development or formal-acceptance purpose under
+   [development-first delivery](project-management.md#development-first-delivery).
+   Development uses fast/focused checks; formal acceptance of its result needs
+   review and successful exact full CI, which may follow the unchanged run.
+   Freeze the exact source commit,
+   finite objective/scenario/limits/reserve,
    actor, native build and permission preflight before gameplay. The initial
    admission is not authority to adopt an unrelated open character.
    Validate proposed fresh world/character names against the actual edit-goal
@@ -407,7 +412,9 @@ separates implemented components from remaining independent-play acceptance.
    actual independent-player and fresh-successor outcomes remain required.
 7. Pause prevents further admission, without undoing an input or native activity.
    Honor user Pause/takeover; do not auto-Resume or restore a phase from disk. A
-   stopped deciding attempt remains stopped. Normal cleanup, actual fresh-context
+   stopped deciding attempt remains stopped. Retain its original artifacts and
+   concise closure/finding note; consolidate reporting at the integration checkpoint.
+   Normal cleanup, actual fresh-context
    replacement and full mission acceptance are separately required.
 
 The lead owns source/integration/admission and verification. The deciding player

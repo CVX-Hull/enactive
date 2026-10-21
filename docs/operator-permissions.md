@@ -101,8 +101,11 @@ complete-outcome feasibility assessment, not a policy-file edit.
 The lead owns permission readiness before ordinary input. A recorder that requires
 admitted metadata must receive only a bounded passive preflight assignment first;
 that setup assignment authorizes no keys, actions or Resume. Repeat this check when
-the checkout, command entry point, recorder, player, Codex version or permission
-configuration changes; reuse the verified setup otherwise.
+the checkout location, command/tool entry point, recorder, player, Codex version
+or permission configuration changes; reuse the verified setup otherwise. A new
+attempt on the unchanged verified actor/tool setup does not require another policy
+loading exercise or arbitrary repeated status calls. Confirm the live service is
+reachable through the ordinary tool path; first-use failures still stop new play.
 
 1. Use the reviewed structured Enactive MCP tools for the designated player.
    Verify the exact project-only server command/cwd and fifteen named enabled
@@ -113,9 +116,10 @@ configuration changes; reuse the verified setup otherwise.
    absent project trust or ancestor trust alone is not activation evidence.
    Keep changes narrow and project-scoped; preserve unrelated/global settings.
 3. Inspect the actual host catalogue, then have the actual designated actor make
-   two harmless live snapshot calls. Before ordinary movement, exercise owned
-   bootstrap semantic/result/image/memory/lifecycle through the same tools in the
-   finite admission. Continue autonomously only if those calls incur no human or
+   a harmless live snapshot call for a new/changed actor or setup. Verify semantic,
+   result/image, memory and lifecycle access at their natural first use in the
+   finite admission; do not add a separate mutating-tool gauntlet before movement.
+   Continue autonomously only if actual calls incur no human or
    automatic review event; no lead per-action critic is required. Report missing
    host telemetry honestly. A rule match, fresh diagnostic process, successful
    approved call or absence of a visible prompt alone proves less. Reuse existing

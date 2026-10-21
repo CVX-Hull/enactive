@@ -165,9 +165,9 @@
       "name": "Portable regression lane",
       "mode": "automatic",
       "scope": "Controller, HTTP adapter, setup and spectator regressions. Includes gameplay record validation and bounded evidence retention using synthetic observations. Passive planner/skill/supervisor composition, continuation and uncertainty are covered by real-component synthetic fixtures.",
-      "mechanism": "Common command compiles Python, runs selected Ruff correctness diagnostics, Import Linter contracts, JavaScript syntax checks, Python tests and delayed-image viewer tests; markdown-it-py parses document links/images before contained file-target checks; diff whitespace is checked. Structured player tests exercise fixed HTTP transport, stable request fencing, exact archive images, semantic operations and SDK stdio text/structured/image framing.",
+      "mechanism": "Explicit --fast checkpoint command compiles Python, runs Ruff correctness diagnostics, Import Linter contracts, JS syntax, markdown-it-py link/image targets, document stewardship, governance and diff whitespace. Relevant focused behavioral tests remain a lead-selected obligation. The default full command additionally renders diagrams, runs all Python tests and delayed-image viewer regressions. Structured player tests cover fixed HTTP transport, stable requests, archive images and SDK framing, not real host behavior.",
       "owner": "maintainer",
-      "trigger": "each integration checkpoint and configured CI event",
+      "trigger": "Fast structural checks on each configured local commit; focused tests on affected behavior; full portable checks at coherent integration/formal acceptance and PR/main CI events",
       "evidence": [
         "tools/check.py",
         "tests/test_controller.py",
@@ -207,11 +207,12 @@
         "tests/test_mission_client.py",
         "tests/test_player_tools.py",
         "tests/test_player_tools_lifecycle.py",
-        "docs/changes/051-structured-player-tools.md"
+        "docs/changes/051-structured-player-tools.md",
+        "docs/changes/054-development-first-delivery.md"
       ],
       "failure_response": "Preserve failure output, fix the cause and rerun before claiming portable acceptance.",
-      "limitations": "Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing. SDK fixtures do not establish actual Codex host loading, absence of approval review, a fresh model context or native gameplay.",
-      "enforcement": "Common command and opt-in local hook; main also requires the observed GitHub Actions controller check (app 15368) with strict freshness under active ruleset 25346774. Local hooks remain bypassable; dated hosted/probe evidence is in Enactive migration acceptance (original public-workflow results remain historical).",
+      "limitations": "Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing. SDK fixtures do not establish actual Codex host loading, absence of approval review, a fresh model context or native gameplay. Fast mode deliberately omits behavioral tests, viewer regressions and rendered diagrams; focused-test selection and development-versus-acceptance classification require lead judgment. A check started or cancelled is not a passing check.",
+      "enforcement": "Opt-in project-local pre-commit hook runs --fast. Actions controller job runs full default checks for all PRs and pushes to main; no required-job path filters. GitHub concurrency cancels superseded PR runs only. Main retains strict Actions-app15368 controller requirement under ruleset25346774. Hooks remain bypassable; a fast pass never establishes behavioral/full portable acceptance. Hosted activation evidence is recorded in the issue/PR after the configuration is exercised.",
       "status": "active",
       "rationale": null,
       "replacement": null,
@@ -228,12 +229,13 @@
       "maintenance_review": {
         "date": "2026-10-20",
         "effectiveness": "partially_effective",
-        "findings": "Native008 qualified world/Save malformed-local-question rejection, new exact corrected requests, identity/adoption and normal save/exit/stopped Finish through a fresh operator. Independent001 remains failed and independent mission acceptance open. Exact PR CI exposed a wall-age fixture sampled before its actual frame; independent review confirmed production fencing and the observed-frame-based test correction. Passive default-sandbox GET access did not prove Start execution mode; explicit existing authorized mode worked without rule expansion. Actual stopped viewer retains a stale question alongside stopped mission state; terminal clarity remains owned.",
+        "findings": "Native008 qualified world/Save malformed-local-question rejection, new exact corrected requests, identity/adoption and normal save/exit/stopped Finish through a fresh operator. Independent001 remains failed and independent mission acceptance open. Exact PR CI exposed a wall-age fixture sampled before its actual frame; independent review confirmed production fencing and the observed-frame-based test correction. Passive default-sandbox GET access did not prove Start execution mode; explicit existing authorized mode worked without rule expansion. Actual stopped viewer retains a stale question alongside stopped mission state; terminal clarity remains owned. Development-first formalization separates inexpensive structural checkpoints and targeted real iteration from full portable assurance. Default-full command remains; focused mode/invalid-syntax tests cover the split. Actual hosted trigger and full-suite evidence remain pending until this candidate is pushed.",
         "cost": "Native008 retains 67 charges (64 returned, 3 unchanged unknown ACKs), 43 requests, 165 verified PNGs/4696397bytes and517.490972757seconds through terminal watermark; zero canonical game-seconds, no exceptional cleanup. Earlier runs retain separate costs. Existing writer, ledger, CLI mode, profiler candidates and independent reviews reused; no new framework/global setup. Model/tool/display costs remain unknown.",
-        "follow_up": "#156 new finite deciding readiness only after coherent fixture/report checkpoint and exact CI; #157/#144 actual independent mission/successor; #145 seven-day readiness. #154 staged timing and history-growth profile; #143 terminal display clarity; #75 fixture clocks/access-mode/control burden. October24 and January15 dates unchanged.",
+        "follow_up": "#156/#157/#144: frozen finite development runs follow fast/focused checks; full portable/exact CI and independent evidence review qualify formal acceptance. Verify the fast/full distinction and actual hosted triggers; use concise development findings and consolidated acceptance evidence. #145 seven-day readiness; #154 timing/history growth; #143 terminal clarity; #75 control burden. October24 and January15 dates unchanged.",
         "evidence": [
           "docs/acceptance/2026-10-20-confirmation-correction.md",
-          "docs/acceptance/2026-10-20-independent-mission-first-attempt.md"
+          "docs/acceptance/2026-10-20-independent-mission-first-attempt.md",
+          "docs/changes/054-development-first-delivery.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -333,7 +335,7 @@
         "effectiveness": "partially_effective",
         "findings": "Native008 qualified world/Save malformed-local-question rejection, new exact corrected requests, identity/adoption and normal save/exit/stopped Finish through a fresh operator. Independent001 remains failed and independent mission acceptance open. Exact PR CI exposed a wall-age fixture sampled before its actual frame; independent review confirmed production fencing and the observed-frame-based test correction. Passive default-sandbox GET access did not prove Start execution mode; explicit existing authorized mode worked without rule expansion. Actual stopped viewer retains a stale question alongside stopped mission state; terminal clarity remains owned. Independent007 exposed fresh-at-entry/stale-at-dispatch control fencing. Reuse existing operation-entry captures and typed lineage across analogous paths; keep source/request/time anchors, ownership, Pause, capacity and final freshness checks. Deterministic regressions remain distinct from native acceptance.",
         "cost": "Native008 retains 67 charges (64 returned, 3 unchanged unknown ACKs), 43 requests, 165 verified PNGs/4696397bytes and517.490972757seconds through terminal watermark; zero canonical game-seconds, no exceptional cleanup. Earlier runs retain separate costs. Existing writer, ledger, CLI mode, profiler candidates and independent reviews reused; no new framework/global setup. Model/tool/display costs remain unknown.",
-        "follow_up": "#168 common/exact CI and new full #156/#157/#144 deciding mission; #145 resulting seven-day readiness. #166 actual successor/normal lifecycle review-free verification; #143 terminal/phase-budget visibility. Existing October24 and January15 dates unchanged.",
+        "follow_up": "#168/#156/#157/#144: re-exercise changed paths in frozen finite development runs after relevant checks; full checks/review qualify formal mission acceptance. #145 seven-day readiness; #166 actual successor/normal-lifecycle review-free verification; #143 terminal clarity. October24 and January15 dates unchanged.",
         "evidence": [
           "docs/acceptance/2026-10-20-confirmation-correction.md",
           "docs/acceptance/2026-10-20-independent-mission-first-attempt.md",
@@ -410,7 +412,7 @@
         "effectiveness": "partially_effective",
         "findings": "Native owner coverage existed, but semantic confirmation duplicated a narrower category assumption. Actual stopped sound question exposed that gap. Preserve the failed run and extend only the known Yes/No query mapping; original rest/root/source/Pause checks remain. No ordinary lead/user rescue or native rebuild is justified by this host-only correction.",
         "cost": "Independent005 retains72requests/107charges/276verifiedframes; the dated report owns full clock/unknown/cleanup costs. Source correction focused81tests/14.698s and independent read-only source/data/pixel review; full new common/CI remain separate. Existing engine actions, writer, SQLite, archive, MCP SDK and Git/GitHub reused; no native rebuild or global setup.",
-        "follow_up": "#167 complete common/exact CI and a new full #156/#157/#144 deciding mission; #165 actual fresh Work successor, #166 remaining successor/lifecycle review-free verification; #138/#143/#164 meaningful bounded targets and honest latency. #145 seven-day readiness; #75 maintain active recipes/control coverage. October24 and January15 dates unchanged.",
+        "follow_up": "#167/#156/#157/#144: use finite development runs to reach the complete mission, preserving original criteria; full checks/review and actual native evidence qualify acceptance. #165 actual fresh Work successor; #166 remaining successor/lifecycle review-free verification; #138/#143/#164 meaningful targets and honest latency. #145 seven-day readiness; #75 active recipes/control coverage. October24 and January15 dates unchanged.",
         "evidence": [
           "docs/acceptance/2026-10-20-independent-mission-fifth-attempt.md",
           "docs/changes/052-distraction-confirmation.md",
@@ -516,7 +518,7 @@
       "name": "Design and independent change review",
       "mode": "manual",
       "scope": "Consequential designs, implementation, tests, delegation and exceptions.",
-      "mechanism": "Lead owns design/integration and verifies returned evidence; at most two workers use separate project-local worktrees and named disjoint paths, with shared runtime serialized; fresh-context review assesses contracts, risk and maintainability before acceptance. Review new or expanded custom infrastructure across code/docs/workflow/controls against S-CODE: name the existing option, unmet gap, smallest scope, owner/cost and retirement trigger; reject unjustified duplication. Before publication, inspect explicit Git author/committer identities and all new commit messages, including co-author trailers, under S-WORK. Use repository-local Git identity configuration. Before merging a PR whose Issue completion awaits merged-main validation, read gh pr view --json closingIssuesReferences, require an empty list and re-read after removing references. Prose negation is not a parser control; use GitHub computed data, no custom keyword parser. For source-dependent consequential claims, inspect executable predicates, caller cadence, units and defaults against actual outcomes; preserve mistaken rationale and which actions preceded correction. For changed native boundaries, compare synthetic category/action/row/transition assumptions with the pinned producer and retained visible frames; reject fictional UI labels used to arm control state. Reuse the existing regression/native lanes; do not infer native support from passing mocks.",
+      "mechanism": "Lead owns design/integration and verifies returned evidence; at most two workers use separate project-local worktrees and named disjoint paths, with shared runtime serialized; fresh-context review assesses contracts, risk and maintainability before acceptance. Review new or expanded custom infrastructure across code/docs/workflow/controls against S-CODE: name the existing option, unmet gap, smallest scope, owner/cost and retirement trigger; reject unjustified duplication. Before publication, inspect explicit Git author/committer identities and all new commit messages, including co-author trailers, under S-WORK. Use repository-local Git identity configuration. Before merging a PR whose Issue completion awaits merged-main validation, read gh pr view --json closingIssuesReferences, require an empty list and re-read after removing references. Prose negation is not a parser control; use GitHub computed data, no custom keyword parser. For source-dependent consequential claims, inspect executable predicates, caller cadence, units and defaults against actual outcomes; preserve mistaken rationale and which actions preceded correction. For changed native boundaries, compare synthetic category/action/row/transition assumptions with the pinned producer and retained visible frames; reject fictional UI labels used to arm control state. Reuse the existing regression/native lanes; do not infer native support from passing mocks. Development-first delivery places cohesive independent implementation/test/evidence review at integration/acceptance; consequential new boundaries retain earlier design/risk review. No routine readiness reviewer or per-action critic is added to ordinary development play. A complete unchanged unassisted development run can support its prospective functional outcome after exact-source checks/review; it is never retroactively relabeled held-out evidence.",
       "owner": "lead; reviewer supplies independent findings",
       "trigger": "significant change, new boundary/guarantee/dependency or integration checkpoint",
       "evidence": [
@@ -554,7 +556,8 @@
         "docs/acceptance/2026-10-20-independent-mission-first-attempt.md",
         "docs/acceptance/2026-10-20-confirmation-correction.md",
         "docs/acceptance/2026-10-20-independent-mission-fifth-attempt.md",
-        "docs/changes/052-distraction-confirmation.md"
+        "docs/changes/052-distraction-confirmation.md",
+        "docs/changes/054-development-first-delivery.md"
       ],
       "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process. Reuse fit and the adequacy of its rationale are semantic judgments; CI does not prove them. Identity configuration prevents inferred defaults but does not inspect file contents or prove a message, branch or remote ref contains no personal information; full-message inspection remains manual. Fixture realism is a manual source/evidence judgment; common tests cannot prove it.",
@@ -574,13 +577,14 @@
       "maintenance_review": {
         "date": "2026-10-20",
         "effectiveness": "partially_effective",
-        "findings": "Review checked actual registered query semantics, one-answer accounting, original root/deadline and no false rest credit. It also caught an active-looking historical CLI recipe that contradicted MCP-only player guidance; the corrected document now separates historical/engineering commands from the current player path. Aggregate source tests alone would not prove that semantic consistency.",
+        "findings": "Review checked actual registered query semantics, one-answer accounting, original root/deadline and no false rest credit. It also caught an active-looking historical CLI recipe that contradicted MCP-only player guidance; the corrected document now separates historical/engineering commands from the current player path. Aggregate source tests alone would not prove that semantic consistency. Repeated menu failures show that full pre-play review/check cycles can dominate useful gameplay. Review should challenge API misuse traps and disproportionate controls, not answer every gameplay action or require another run merely to change its label.",
         "cost": "Independent005 retains72requests/107charges/276verifiedframes; the dated report owns full clock/unknown/cleanup costs. Source correction focused81tests/14.698s and independent read-only source/data/pixel review; full new common/CI remain separate. Existing engine actions, writer, SQLite, archive, MCP SDK and Git/GitHub reused; no native rebuild or global setup.",
-        "follow_up": "#167 complete common/exact CI and a new full #156/#157/#144 deciding mission; #165 actual fresh Work successor, #166 remaining successor/lifecycle review-free verification; #138/#143/#164 meaningful bounded targets and honest latency. #145 seven-day readiness; #75 maintain active recipes/control coverage. October24 and January15 dates unchanged.",
+        "follow_up": "#167/#156/#157/#144: focused checks and frozen finite development runs precede consolidated independent integration/acceptance review; applicable authority, delivery, identity, Pause and budget failures still block affected play. #165 actual fresh Work successor; #166 remaining review-free verification; #138/#143/#164 meaningful targets/latency; #145 seven-day readiness; #75 control maintenance. October24 and January15 dates unchanged.",
         "evidence": [
           "docs/acceptance/2026-10-20-independent-mission-fifth-attempt.md",
           "docs/changes/052-distraction-confirmation.md",
-          "docs/operator-permissions.md"
+          "docs/operator-permissions.md",
+          "docs/changes/054-development-first-delivery.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -725,10 +729,10 @@
       "id": "C-RELEASE",
       "name": "Exact candidate and evidence review",
       "mode": "manual",
-      "scope": "Checkpoint/release scope, source provenance and validation lanes.",
-      "mechanism": "Inspect staged diff and candidate identity, run common checks against exact candidate, review pins/open exceptions and require relevant native probes for affected claims. Git owns tracked-source identity: commit before native acceptance and use commit/tree/diff/PR; hash external artifacts instead of maintaining per-source history.",
+      "scope": "Development checkpoint provenance and formal acceptance/release source identity and validation lanes.",
+      "mechanism": "Inspect staged diff and public identity before each checkpoint; fast structural and applicable focused tests support a frozen finite development run. Before formal acceptance/merge, resolve independent review, verify full portable/exact PR CI, pins/exceptions and relevant native/graphical outcomes. A complete unchanged development run may supply prospective functional evidence after qualification, without becoming held-out data. Git owns source identity: commit before each native run, use commit/tree/diff/PR and hash external artifacts rather than building source history.",
       "owner": "lead or releasing maintainer",
-      "trigger": "checkpoint, release or support claim",
+      "trigger": "Development source checkpoint; comprehensive qualification at integrated acceptance, merge, release or new support claim",
       "evidence": [
         "docs/setup.md#evidence-and-releases",
         "docs/engineering.md",
@@ -736,9 +740,10 @@
         "native/upstream.json",
         "docs/acceptance/2026-10-17-public-workflow.md",
         "docs/acceptance/2026-10-18-waypoint-readiness.md",
-        "docs/acceptance/2026-10-18-enactive-migration.md"
+        "docs/acceptance/2026-10-18-enactive-migration.md",
+        "docs/changes/054-development-first-delivery.md"
       ],
-      "failure_response": "Hold the affected acceptance/release claim until failed or unexecuted required lanes are resolved or scope is explicitly reduced.",
+      "failure_response": "Block affected development on applicable authority/identity/Pause/budget/delivery/migration/cleanup failures. Hold formal acceptance/release until required failed or unexecuted lanes are resolved; preserve original outcomes and limits. Pending unrelated full CI is not an automatic development gate.",
       "limitations": "Working-tree hooks do not prove a partially staged candidate. Hosted source/check enforcement does not establish native gameplay, semantic review or release authority. No tag or release automation is installed; administrators can later change rules. GitHub requires association with an opened PR, not use of its merge button; a passing PR head can be pushed and recognized as merged. A required-PR rejection probe needs a CI-passing commit with no PR.",
       "enforcement": "Main requires a PR, the Actions-bound controller check and resolved conversations; no force-push/deletion or configured bypass. Lead still owns native/release acceptance. Zero required human approvals is an explicit single-account limit; agent review is not human approval.",
       "status": "active",
@@ -755,12 +760,13 @@
       "maintenance_review": {
         "date": "2026-10-18",
         "evidence": [
-          "docs/acceptance/2026-10-18-waypoint-readiness.md"
+          "docs/acceptance/2026-10-18-waypoint-readiness.md",
+          "docs/changes/054-development-first-delivery.md"
         ],
         "effectiveness": "partially_effective",
-        "findings": "Exact runtime hashes, unchanged native binary, scoped portable and real native lanes recorded; immutable official Node24 action identities verified. Hosted candidate/main checks, warning resolution and active rules require separate publication readback; no new enforcement probe or human approval claimed. Round014 ad-hoc source hashes are retained history; current standard now requires a Git checkpoint before future native acceptance, avoiding parallel source inventories.",
+        "findings": "Exact runtime hashes, unchanged native binary, scoped portable and real native lanes recorded; immutable official Node24 action identities verified. Hosted candidate/main checks, warning resolution and active rules require separate publication readback; no new enforcement probe or human approval claimed. Round014 ad-hoc source hashes are retained history; current standard now requires a Git checkpoint before future native acceptance, avoiding parallel source inventories. User-directed development-first checkpoints retain protected formal acceptance while avoiding full local+duplicate hosted checks before every short attempt. A passing exact hosted full suite can satisfy portable qualification; no redundant local rerun is required solely for ceremony.",
         "cost": "Existing project-local tooling; one worker, read-only source sweeps and independent reviews, lead integration and one serialized native session. Failed repairs and first planner timeout retained; Codex usage and sustained review cost unmeasured.",
-        "follow_up": "Lead completes #13/#53/#56 only after protected exact candidate/main publication verification; #75 owns next workflow/dependency/runner/control release/failure/resumption trigger or 2027-01-15 review. #26 retains October24 research review. #24 stays blocked by #72/#73/#74; do not renew unrelated dates."
+        "follow_up": "Lead completes #13/#53/#56 only after protected exact candidate/main publication verification; #75 owns next workflow/dependency/runner/control release/failure/resumption trigger or 2027-01-15 review. #26 retains October24 research review. #24 stays blocked by #72/#73/#74; do not renew unrelated dates. Development-first delivery: verify fast/full distinction and actual hosted triggers; use concise development findings and consolidated acceptance evidence. Existing review dates are unchanged."
       },
       "next_review": "2027-01-15"
     },
@@ -769,7 +775,7 @@
       "name": "Drift, recovery and retention review",
       "mode": "manual",
       "scope": "Active guidance, dependency/research freshness, failure evidence and project-owned cleanup.",
-      "mechanism": "Review active guidance/visuals, controls and dependencies on changed behavior/failure/release/resumption and within recorded periodic dates. Record findings, effectiveness, cost and follow-up in registry with dated evidence; promote repeated defects into tests or revise/retire controls. C-GOVERNANCE detects elapsed due dates when invoked. Revisit custom tools/processes and rejected reuse choices on upstream support/capability, requirement, defect or upkeep changes; replace or retire duplication under the existing owner/record.",
+      "mechanism": "Review active guidance/visuals, controls and dependencies on changed behavior/failure/release/resumption and within recorded periodic dates. Record findings, effectiveness, cost and follow-up in registry with dated evidence; promote repeated defects into tests or revise/retire controls. C-GOVERNANCE detects elapsed due dates when invoked. Revisit custom tools/processes and rejected reuse choices on upstream support/capability, requirement, defect or upkeep changes; replace or retire duplication under the existing owner/record. At meaningful integration/closeout checkpoints compare useful gameplay reached with available verification/review/waiting time, recurring failures, escaped regressions and interventions. Simplify costly low-yield steps or strengthen targeted checks from evidence; do not create a new tracker, scheduler or arbitrary numerical quota.",
       "owner": "maintainer; lead tracks active work",
       "trigger": "behavior/control failure, release, resumed work or active-development review interval",
       "evidence": [
@@ -800,7 +806,8 @@
         "docs/changes/052-distraction-confirmation.md",
         "docs/acceptance/2026-10-20-independent-mission-sixth-attempt.md",
         "docs/acceptance/2026-10-20-independent-mission-seventh-attempt.md",
-        "docs/changes/053-operation-entry-refresh.md"
+        "docs/changes/053-operation-entry-refresh.md",
+        "docs/changes/054-development-first-delivery.md"
       ],
       "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",
@@ -820,16 +827,17 @@
       "maintenance_review": {
         "date": "2026-10-20",
         "effectiveness": "partially_effective",
-        "findings": "Actual primary-player tool use replaced manual staging/polling without visible routine review events; invisible host telemetry stays unknown. The run still used single-step navigation goals and failed before rest, so maintain meaningful-target guidance and do not claim efficiency. Clarified lead lifecycle implementation/custody versus player registered lifecycle; future full acceptance and proper scoped cleanup remain owned. Independent006 requires whole-root allocation guidance, not relaxed budgets. Independent007 requires entry freshness repair and actual child termination verification before controller closure. Later OS absence cannot repair missing exit custody. Current-doc contradictions were repaired; follow-up uses existing Issues and source checks.",
+        "findings": "Actual primary-player tool use replaced manual staging/polling without visible routine review events; invisible host telemetry stays unknown. The run still used single-step navigation goals and failed before rest, so maintain meaningful-target guidance and do not claim efficiency. Clarified lead lifecycle implementation/custody versus player registered lifecycle; future full acceptance and proper scoped cleanup remain owned. Independent006 requires whole-root allocation guidance, not relaxed budgets. Independent007 requires entry freshness repair and actual child termination verification before controller closure. Later OS absence cannot repair missing exit custody. Current-doc contradictions were repaired; follow-up uses existing Issues and source checks. Entry-refresh verification included full runs of394.183s and396.567s plus CI before independent008 stopped after120.819780s of setup. This scoped burden motivates fast/focused development and consolidated reporting; it is not a controlled performance result. The latest stopped attempt needs a short retained finding, not a fresh report/review package before iteration.",
         "cost": "Independent005 retains72requests/107charges/276verifiedframes; the dated report owns full clock/unknown/cleanup costs. Source correction focused81tests/14.698s and independent read-only source/data/pixel review; full new common/CI remain separate. Existing engine actions, writer, SQLite, archive, MCP SDK and Git/GitHub reused; no native rebuild or global setup.",
-        "follow_up": "#168 reviewed source/common/exact CI and a new full mission; #164/#143 root-budget visibility, #166 actual successor/lifecycle review-free verification; #145 readiness and #75 documentation/cleanup maintenance. No maintenance date or allowance renewed.",
+        "follow_up": "#168/#156/#157/#144: preserve failures and use fast/focused frozen development iterations before consolidated full acceptance. #75 reviews useful gameplay reached against available verification/waiting/rework costs and escaped defects at meaningful checkpoints; simplify or strengthen targeted controls from evidence. #145 seven-day readiness. Existing October24 and January15 triggers are unchanged.",
         "evidence": [
           "docs/acceptance/2026-10-20-independent-mission-fifth-attempt.md",
           "docs/changes/052-distraction-confirmation.md",
           "docs/operator-permissions.md",
           "docs/acceptance/2026-10-20-independent-mission-sixth-attempt.md",
           "docs/acceptance/2026-10-20-independent-mission-seventh-attempt.md",
-          "docs/changes/053-operation-entry-refresh.md"
+          "docs/changes/053-operation-entry-refresh.md",
+          "docs/changes/054-development-first-delivery.md"
         ]
       },
       "next_review": "2027-01-15"

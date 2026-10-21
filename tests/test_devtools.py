@@ -1,11 +1,14 @@
 """Exercise our tool configuration against isolated source and document fixtures."""
 import os
+from contextlib import redirect_stdout
+import io
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from tools import check
 
@@ -124,6 +127,32 @@ class DevToolTests(unittest.TestCase):
         self.assertEqual(len(errors), 2, errors)
         self.assertTrue(any("docs/missing.md" in error for error in errors))
         self.assertTrue(any("../outside.png" in error for error in errors))
+
+    def test_fast_and_full_commands_keep_distinct_acceptance_scope(self):
+        for arguments, full in ((["--fast"], False), ([], True)):
+            with self.subTest(arguments=arguments):
+                output = io.StringIO()
+                with patch.object(check, "ROOT", self.root), \
+                        patch.object(check, "check_documents", return_value=[]), \
+                        patch.object(check, "run") as commands, redirect_stdout(output):
+                    self.assertEqual(check.main(arguments), 0)
+                executed = [call.args[0] for call in commands.call_args_list]
+                self.assertEqual(any("unittest" in command for command in executed), full)
+                self.assertEqual(any("tools/diagrams.py" in command for command in executed), full)
+                self.assertEqual(any("tests/test_viewer.cjs" in command for command in executed), full)
+                self.assertTrue(any("tools/governance.py" in command for command in executed))
+                self.assertTrue(any("ruff" in command for command in executed))
+                self.assertEqual("Portable checks passed." in output.getvalue(), full)
+                if not full:
+                    self.assertIn("Behavioral tests, rendered diagrams, native build and real gameplay were not run.",
+                                  output.getvalue())
+
+    def test_fast_checkpoint_rejects_invalid_python_before_reporting_success(self):
+        self.write("controller.py", "def broken(:\n")
+        output = io.StringIO()
+        with patch.object(check, "ROOT", self.root), redirect_stdout(output), self.assertRaises(SyntaxError):
+            check.main(["--fast"])
+        self.assertNotIn("checks passed", output.getvalue())
 
 
 if __name__ == "__main__":
