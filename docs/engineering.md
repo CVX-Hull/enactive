@@ -291,6 +291,13 @@ Status owns execution stage: Backlog, Ready, In progress, Review, Validation, Do
 Blocked work retains its stage and records the condition, owner and next action.
 Deferred work needs a reason and revisit trigger. Cancelled or duplicate issues
 are closed as not planned and excluded from accepted delivery counts.
+At meaningful discussion, research, review and delivery checkpoints, reconcile
+actionable findings into the existing Issues/Project. Record an accountable owner,
+next action, acceptance and dependencies; disposition duplicates or deferrals.
+Update affected principles, standards, controls and authoritative guidance when
+the finding changes their meaning or implementation. A chat promise or proposal
+is not a delivered control. C-REVIEW checks this reconciliation; no separate action
+tracker or automatic semantic-completeness claim is added.
 Before publishing commits, verify the intended public author/committer identity
 and full messages, including co-author trailers. Use explicit repository-local Git
 configuration as described in [setup](setup.md#choose-an-explicit-git-identity);

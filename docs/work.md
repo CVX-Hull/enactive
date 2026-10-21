@@ -138,6 +138,24 @@ The [asynchronous-reflection design](design/asynchronous-reflection.md) and
 player-owned background learning, automatic feedback and evidence-linked revision;
 the engineering lead must not become the player's slow reasoning path.
 
+The following map connects that discussion to owned work; live sequencing and
+estimates remain in Issues/Project. Proposed capability is not deployed behavior.
+
+| Follow-through | Owner and acceptance boundary |
+| --- | --- |
+| Mixed skills, keys/text and deliberate clicks [#176](https://github.com/CVX-Hull/enactive/issues/176) | Lead integrates the existing writer; resolve native mouse/geometry design, coordinate migration and qualify actual input before new independent use. Unknown semantics remain distinct from unknown delivery. |
+| Player-derived, revisable procedure memory [#177](https://github.com/CVX-Hull/enactive/issues/177) | Lead owns the substrate; player owns abstraction/test/reuse under a prospectively declared policy. Demonstrate reuse, counterexample revision and fresh-context retrieval; do not substitute campaign facts or a fixed catalogue. |
+| Background reflection and automatic feedback [#178](https://github.com/CVX-Hull/enactive/issues/178) | Software owns bounded orchestration and observed bookkeeping; player/learner own semantic judgment. Show useful play while advice is pending, stale/conflicting advice handling and evidence-driven revision without lead curation. Exposure, selection, delivery and success stay distinct. |
+| Cheaper repeat discovery [#175](https://github.com/CVX-Hull/enactive/issues/175) | Lead designs ordinary save/load starting baselines across new development admissions; preserve failures and costs, with new authority and finite limits. Current failed missions cannot resume. |
+| Proportionate review and upkeep [#169](https://github.com/CVX-Hull/enactive/issues/169), [#75](https://github.com/CVX-Hull/enactive/issues/75) | Lead applies decision/risk-selected review, updates authoritative artifacts and control sources, and checks their cost/drift at existing triggers. No mandatory swarm, per-key critic or new review scheduler. |
+| Benefit and advanced learning studies [#146](https://github.com/CVX-Hull/enactive/issues/146), [#27](https://github.com/CVX-Hull/enactive/issues/27) | Separate optional comparisons with declared data/cost/transfer conditions; functional procedure/reflection delivery does not prove improvement or require training. |
+
+The relevant S-ARCH/S-AGENT/S-WORK/S-DOCS requirements and C-REVIEW already cover
+ownership, prior-document cross-checks, feedback attribution and artifact upkeep.
+Automated C-GOVERNANCE checks structure/freshness; it cannot prove backlog
+completeness, research applicability or semantic correctness. Implementation
+regressions and native/mission evidence must establish the proposed behaviors.
+
 ## Selected independent-player iteration
 
 Deliver one integrated supply-and-shelter mission (#144), followed by #145's

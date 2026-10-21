@@ -40,6 +40,18 @@ outcome, risks/blockers, decisions needed and evidence links. Give consequences
 in plain language; implementation detail belongs behind links. Routine authorized
 work continues; changed user constraints or substantial commitments need user input.
 
+Reconcile actionable discussion, research, review and campaign findings at those
+checkpoints. Prefer updating an existing issue; create a new one only for distinct
+owned work. Give each finding an implementation/follow-up, duplicate, deferred or
+rejected disposition with its reason, next action/acceptance and dependencies.
+Link affected design, principles/standards/controls, procedures and evidence;
+update their authoritative sources when applicable, including generated controls
+through the registry. Preserve current-versus-proposed status and unverified lanes.
+C-REVIEW checks this coverage and C-MAINTENANCE revisits drift under existing
+triggers. A review finding is not fixed because it was filed, and a document is
+not accurate merely because it has a recent date. This uses GitHub and the current
+document/control system, without another tracker, parser or per-action ceremony.
+
 ## Development-first delivery
 
 Get a coherent behavior working through real use, then qualify it. The lead selects

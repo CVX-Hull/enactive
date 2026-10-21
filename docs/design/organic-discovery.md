@@ -59,6 +59,11 @@ the current contracts and guidance together.
 
 ## Interaction implementation questions
 
+The [selected mixed-input design](mixed-input.md) resolves the proposed ingress,
+root/activity ownership, native geometry/mouse handling and migration/validation
+lanes. It remains a proposal; the questions below describe why qualification is
+necessary rather than implying current support.
+
 Reuse the existing key/action injection, mission writer, primitive ledger,
 controller and official MCP adapter. The native bridge already constructs engine
 keyboard events, but current mission/tool schemas restrict what a player may
