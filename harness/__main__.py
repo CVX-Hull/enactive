@@ -11,7 +11,8 @@ from urllib.error import HTTPError, URLError
 from urllib.request import Request, build_opener, ProxyHandler
 
 from .controller import Controller, ControlError, MAX_WAIT, RECOVERY_KINDS, read_json
-from .gameplay.mission_contracts import MAX_REQUEST_BYTES, canonical, validate_request
+from .gameplay.contracts import canonical
+from .gameplay.mission_contracts import MAX_REQUEST_BYTES, validate_request
 from .server import Server
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -81,7 +82,7 @@ def command_parser() -> argparse.ArgumentParser:
             recovery.add_argument("--choice", choices=("YES", "NO"), required=True)
     mission = commands.add_parser("mission-request", help="Submit one current typed mission record; admission is not effect completion")
     mission.add_argument("--request", type=Path, required=True,
-                         help="One mission/8 JSON file directly in this project's .runtime/mission-requests")
+                         help="One mission/9 JSON file directly in this project's .runtime/mission-requests")
     return parser
 
 
@@ -129,8 +130,8 @@ def main() -> int:
         return 0
     try:
         config = read_json(ROOT / ".runtime" / "bridge" / "controller.json")
-        if config is not None and (type(config.get("protocol")) is not int or config["protocol"] != 4):
-            raise ControlError("Unsupported service protocol; restart a matching native-v4 controller")
+        if config is not None and (type(config.get("protocol")) is not int or config["protocol"] != 5):
+            raise ControlError("Unsupported service protocol; restart a matching native-v5 controller")
         if config is None or type(config.get("port")) is not int or not 1 <= config["port"] <= 65535 or not isinstance(config.get("token"), str):
             raise ControlError("Service configuration missing; run python3 -m harness serve")
         base = f'http://127.0.0.1:{config["port"]}'

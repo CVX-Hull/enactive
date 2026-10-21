@@ -120,9 +120,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(runtime.calls, [])
         self.assertIsNone(json.loads(self.request()[1])["mission"])
         runtime.snapshot = dict(mission_id="mission-test", phase="active", epoch=0, memory_context=None)
-        payloads = [dict(schema="mission/8", kind="start", request_id="start-1", admission=admission().to_dict()),
-                    mission_record(), dict(schema="mission/8",kind="status",mission_id="mission-test"),
-                    dict(schema="mission/8",kind="result",mission_id="mission-test",operation_id="observe-1")]
+        payloads = [dict(schema="mission/9", kind="start", request_id="start-1", admission=admission().to_dict()),
+                    mission_record(), dict(schema="mission/9",kind="status",mission_id="mission-test"),
+                    dict(schema="mission/9",kind="result",mission_id="mission-test",operation_id="observe-1")]
         for payload in payloads:
             code, body, _ = self.mission(payload)
             self.assertEqual(code, 200, body)
@@ -228,7 +228,7 @@ class ServerTests(unittest.TestCase):
                 waiting = pool.submit(self.post, {"kind":"resume"})
                 try:
                     self.assertTrue(entered.wait(1))
-                    start = dict(schema="mission/8", kind="start", request_id="start-1", admission=admission().to_dict())
+                    start = dict(schema="mission/9", kind="start", request_id="start-1", admission=admission().to_dict())
                     self.assertEqual(self.mission(start)[0], 409, "Start cannot pass raw ownership using a stale snapshot")
                     self.assertEqual(self.server.mission.calls, [])
                     self.assertEqual(self.post({"kind":"pause"})[0], 200)
@@ -245,7 +245,7 @@ class ServerTests(unittest.TestCase):
             entered.set()
             self.assertTrue(release.wait(3))
             return {"status":"accepted", "mission":None}
-        start = dict(schema="mission/8", kind="start", request_id="start-1", admission=admission().to_dict())
+        start = dict(schema="mission/9", kind="start", request_id="start-1", admission=admission().to_dict())
         with patch.object(self.server.mission, "command", side_effect=delayed_start), ThreadPoolExecutor() as pool:
             waiting = pool.submit(self.mission, start)
             try:
@@ -507,7 +507,7 @@ class ServerTests(unittest.TestCase):
         path = self.controller.bridge / "controller.json"
         self.assertEqual(path.stat().st_mode & 0o777, 0o600)
         self.assertEqual(json.loads(path.read_text())["token"], self.controller.token)
-        self.assertEqual(json.loads(path.read_text())["protocol"], 4)
+        self.assertEqual(json.loads(path.read_text())["protocol"], 5)
 
     def test_token_required_and_not_in_url(self):
         self.assertEqual(self.post({"kind": "pause"}, **{"X-CDDA-Token": "wrong"})[0], 403)

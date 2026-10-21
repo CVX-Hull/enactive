@@ -1,7 +1,7 @@
 ---
 owner: lead
 review_trigger: Discovery/learning scope, interfaces, ownership or actual campaign findings change
-status: proposed
+status: active
 ---
 
 # Discovery, procedure learning and the next campaign
@@ -42,6 +42,15 @@ from learning and campaign acceptance. Do not manufacture a gameplay failure to
 tick a box; retain genuine partial/changed conditions and their disposition.
 
 ## Reuse and tradeoffs
+
+The first implementation checkpoint coordinates native5/mission9/ledger11/
+archive4/memory4, ordinary input, immutable procedure revisions, pinned historical
+library, complete procedure handoff and the observer. Reflection record validation,
+bounded passive mailbox and SQLite bookkeeping are source components; scheduling,
+official adapter integration, actual advisory actor concurrency and lifecycle
+quiescence are still pending. The native build passed, but no new graphical run
+or seven-day acceptance is implied. Focused tests and source review remain
+separate from actual game evidence and final protected CI.
 
 Keep CDDA's ordinary UI/activities, existing native bridge, controller, single
 MissionRuntime, strict JSON Schema validation, SQLite ledger/evidence archive,

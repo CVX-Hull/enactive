@@ -21,6 +21,7 @@ import uuid
 from typing import Any, Callable
 
 from .mission_contracts import PAUSE_ORIGINS, visible_ui_schema, validate_visible_ui
+from .native_input import geometry_schema, validate_geometry
 from .contracts import (
     ContractError, EvidenceRef, Fact, Interpretation, Vector, _BOUNDARY, _ID,
     _INT, _VECTOR, MAX_JSON_BYTES, _pairs, _reject_constant, _array, _integer, _object, _text, json_object, validate_json,
@@ -47,7 +48,7 @@ _SCENE = _object({
         "required": ["dx", "dy", "visible"], "additionalProperties": False}, 8, 8),
 })
 _OBSERVATION = _object({
-    "protocol": {"type": "integer", "const": 4},
+    "protocol": {"type": "integer", "const": 5},
     "pause_origin": {"enum": list(PAUSE_ORIGINS)}, "takeover_generation": _INT,
     "ui": {"anyOf": [visible_ui_schema(), {"type": "null"}]}, "id": _text(128, empty=True),
     "session": {**_ID, "pattern": "^[A-Za-z0-9_-]+$"}, "revision": _INT,
@@ -55,6 +56,7 @@ _OBSERVATION = _object({
     "status": {"enum": ["ready", "rejected", "dispatched"]}, "error": _text(4096, empty=True),
     "paused": {"type": "boolean"}, "timestamp_ms": _INT, "frame_ok": {"type": "boolean"},
     "frame": _text(300, empty=True), "in_game": {"type": "boolean"},
+    "frame_geometry": {"anyOf": [geometry_schema(), {"type": "null"}]},
     "boundary": _object({"kind": _BOUNDARY, "id": _ID, "control_generation": _INT,
                           "recovery_operations": {"type": "array", "maxItems": 1, "uniqueItems": True,
                                                   "items": {"enum": ["request_interrupt", "answer_interrupt", "continue_debug_once"]}},
@@ -116,7 +118,7 @@ def same_native_state(before: dict | None, after: dict | None) -> bool:
 def _scene_authority(observation: dict[str, Any]) -> dict[str, Any]:
     # Host Pause changes transport permission, not game facts or scene revision.
     # _metadata still forbids rewriting paused (or anything else) on one frame.
-    return {key: observation[key] for key in ("scene", "ui", "boundary", "category", "actions", "in_game", "takeover_generation")}
+    return {key: observation[key] for key in ("scene", "ui", "boundary", "category", "actions", "in_game", "takeover_generation", "frame_geometry")}
 
 
 def _validate_observation(value: dict[str, Any] | str | bytes) -> dict[str, Any]:
@@ -124,6 +126,7 @@ def _validate_observation(value: dict[str, Any] | str | bytes) -> dict[str, Any]
     validate_json(observation, _OBSERVATION)
     if observation["status"] == "dispatched" or observation["frame_ok"] is not True:
         raise EvidenceError("A failed or unfinished capture is missing evidence")
+    validate_geometry(observation["frame_geometry"])
     validate_visible_ui(observation["ui"])
     kind = observation["boundary"]["kind"]
     if kind == "normal_play":
@@ -272,7 +275,7 @@ class EvidenceStore:
                     raise EvidenceError("Invalid evidence manifest")
                 value = json.loads(manifest.read_bytes(), parse_constant=_reject_constant, object_pairs_hook=_pairs)
                 if (type(value) is not dict or set(value) != {"store_version", "entries", "session", "retired_sessions", "blocked", "disputed"}
-                        or type(value["store_version"]) is not int or value["store_version"] != 3
+                        or type(value["store_version"]) is not int or value["store_version"] != 4
                         or type(value["entries"]) is not list or len(value["entries"]) > MAX_FRAMES
                         or type(value["retired_sessions"]) is not list or len(value["retired_sessions"]) > MAX_FRAMES
                         or any(type(s) is not str or not 1 <= len(s) <= 128 for s in value["retired_sessions"])
@@ -320,7 +323,7 @@ class EvidenceStore:
         self._usage()
 
     def _manifest(self) -> dict[str, Any]:
-        return {"store_version": 3, "session": self._session, "retired_sessions": self._retired_sessions,
+        return {"store_version": 4, "session": self._session, "retired_sessions": self._retired_sessions,
                  "blocked": self._blocked, "disputed": self._disputed,
                  "entries": [{"reference": item.reference.to_dict(), "observation": item.observation,
                               "initial_lag_seconds": item.initial_lag_seconds} for item in self._entries.values()]}

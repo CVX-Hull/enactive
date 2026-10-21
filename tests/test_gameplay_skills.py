@@ -36,7 +36,7 @@ class MovementSkillTests(unittest.TestCase):
               timestamp=1_000_000, session="world", revision=None, change=None,
               reservation=None):
         self.number += 1
-        value = {"protocol": 4, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "native-observe-is-not-logical-action",
+        value = {"protocol": 5, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "native-observe-is-not-logical-action",
                  "session": session, "revision": self.number if revision is None else revision,
                  "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT"],
                  "status": "ready", "error": "", "paused": False,

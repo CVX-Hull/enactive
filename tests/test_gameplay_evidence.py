@@ -1,4 +1,4 @@
-"""Synthetic native-v4 observations only; never real CDDA/pipeline acceptance."""
+"""Synthetic native-v5 observations only; never real CDDA/pipeline acceptance."""
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
 import base64
@@ -30,11 +30,13 @@ def black_png():
 
 
 def observation(number=1, *, session="synthetic-world", timestamp_ms=1_000_000):
-    return {"protocol": 4, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "", "session": session, "revision": number,
+    return {"protocol": 5, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "", "session": session, "revision": number,
             "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT"],
             "status": "ready", "error": "", "paused": False,
             "timestamp_ms": timestamp_ms, "frame_ok": True,
             "frame": f"frame-{session}-{number}.png", "in_game": True,
+            "frame_geometry": {"window_width": 1, "window_height": 1,
+                               "output_width": 1, "output_height": 1, "viewport": [0, 0, 1, 1]},
             "boundary": {"kind": "normal_play", "id": "boundary-1", "control_generation": 0,
                          "recovery_operations": [], "interrupt_request_id": None},
             "scene": {"provenance": "player-visible input boundary", "position": [0, 0, 0], "turn": 4,
@@ -702,7 +704,7 @@ class EvidenceTests(unittest.TestCase):
     def test_wire_version_unknown_fields_bool_int_and_boundary_extra_fields_reject(self):
         changes = (
             lambda v: v.update(protocol=1), lambda v: v.update(protocol=2),
-            lambda v: v.update(protocol=3), lambda v: v.update(protocol=5), lambda v: v.update(protocol=True),
+            lambda v: v.update(protocol=4), lambda v: v.update(protocol=6), lambda v: v.update(protocol=True),
             lambda v: v.update(protocol=3.0), lambda v: v.update(revision=True),
             lambda v: v.update(revision=1.0), lambda v: v.update(timestamp_ms=True),
             lambda v: v.update(hidden_position=[1, 2, 3]), lambda v: v.pop("boundary"),
@@ -938,7 +940,7 @@ class EvidenceTests(unittest.TestCase):
         self.store.close()
         manifest = self.directory / "evidence.json"
         original = manifest.read_bytes()
-        for version in (None, 0, 1, 2, 4, True, 3.0):
+        for version in (None, 0, 1, 2, 3, 5, True, 4.0):
             with self.subTest(version=version):
                 value = json.loads(original)
                 if version is None:

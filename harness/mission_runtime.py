@@ -26,9 +26,8 @@ from .gameplay.campaign_memory import CampaignMemory
 from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
 from .gameplay.evidence import MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore, same_native_state
 from .gameplay.interaction import MenuIntent, MenuOutcome, MenuSkill
-from .gameplay.mission_contracts import (
-    VERSION, MissionAdmission, SourceBinding, SourceRevalidation, canonical, validate_request,
-)
+from .gameplay.contracts import canonical
+from .gameplay.mission_contracts import VERSION, MissionAdmission, SourceBinding, SourceRevalidation, validate_request
 from .gameplay.mission_ledger import BudgetError, LedgerError, MissionLedger, TERMINAL
 from .gameplay.navigation import NavigationIntent, NavigationOutcome, NavigationSkill, ObservedMap
 from .gameplay.semantic_controls import ControlIntent, ControlOutcome, SemanticControlSkill
@@ -178,9 +177,12 @@ class MissionRuntime:
         """Indexed historical presentation only; never Observe, reconcile or resume."""
         with self._metadata:
             binding = self._presentation_store
-            if self._closed.is_set() or binding is None or binding[0] != mission_id:
+            if self._closed.is_set() or binding is None:
                 raise EvidenceError("No matching admitted evidence store")
             store = binding[1]
+            memory = self._memory
+        if binding[0] != mission_id:
+            return memory.procedure_source(mission_id, source_id)
         return store.export_source(source_id)
 
     def command(self, request: dict | str | bytes) -> dict:
@@ -232,7 +234,7 @@ class MissionRuntime:
                 rejection = "An unfinished input operation already owns the writer"
             elif (self._prompt_phase is not None and kind in ("skill", "lifecycle") and
                     (kind != "skill" or data["phase_id"] != self._prompt_phase.root_id
-                     or data["skill_kind"] not in ("menu", "edit", "inspect", "item", "activity"))):
+                     or data["skill_kind"] not in ("menu", "edit", "inspect", "item", "activity", "direct"))):
                 rejection = "An owned prompt requires its exact phase and supported control child"
             elif (self._exit_phase is not None and kind in ("skill", "lifecycle") and
                     (kind != "skill" or data["phase_id"] != self._exit_phase.root_id or data["skill_kind"] != "menu")):
@@ -358,6 +360,7 @@ class MissionRuntime:
                 "last_sample": copy.deepcopy(self._native_facts),
                 "unresolved_custody_requests": list(self._lost_process_custody), "restored_from_disk": False},
             "next_needed_decision": "Player semantic decision" if state["phase"] == "active" else
+                "Mission ended; historical evidence only" if state["phase"] in TERMINAL else
                 "Registered lifecycle/readmission needed" if state["phase"] == "admitted" else
                 "Explicit supported transition required", "grants_authority": False,
             "configuration": asdict(self._admission.configuration),
@@ -455,11 +458,20 @@ class MissionRuntime:
             if data["phase_id"] is not None or data["skill_kind"] in ("menu", "edit"):
                 raise ControlError("Control requires its actual live owned prompt phase")
             return None
-        if data["phase_id"] != phase.root_id or data["skill_kind"] not in ("menu", "edit", "inspect", "item", "activity"):
+        if data["phase_id"] != phase.root_id or data["skill_kind"] not in ("menu", "edit", "inspect", "item", "activity", "direct"):
             raise ControlError("An owned prompt permits only its explicit control children")
         root = self._ledger.request(phase.root_id)["request"]
-        if data["skill_kind"] in ("item", "activity") and data["skill_kind"] != root["skill_kind"]:
+        if (data["skill_kind"] == "item" and root["skill_kind"] != "item"
+                or data["skill_kind"] == "activity" and root["skill_kind"] not in ("activity", "direct")):
             raise ControlError("Semantic control cannot borrow another root kind")
+        if data["skill_kind"] == "activity":
+            if ((root["skill_kind"] == "direct") != (data["goal"]["operation"] == "direct")):
+                raise ControlError("Activity child must preserve its original semantic or ordinary operation")
+            if data["goal"]["interrupt_allowed"] and not root["goal"].get("interrupt_allowed", False):
+                raise ControlError("Activity child cannot enlarge its root interruption consent")
+        if (data["skill_kind"] == "direct" and data["goal"]["interrupt_allowed"]
+                and not root["goal"].get("interrupt_allowed", False)):
+            raise ControlError("Direct child cannot enlarge its root interruption consent")
         if root["skill_kind"] == "item":
             if data["skill_kind"] == "edit" and (not phase.quantity_editor
                     or data["goal"]["purpose"] != "quantity"
@@ -486,7 +498,7 @@ class MissionRuntime:
         root = self._ledger.request(phase.root_id)["request"]
         kind = root["skill_kind"]
         return {"schema": VERSION, "record_type": "PhaseReceipt", "origin_request_id": phase.root_id,
-            "phase_kind": kind, "operation": "navigate" if kind == "navigate" else root["goal"][
+            "phase_kind": kind, "operation": "direct" if kind == "direct" else "navigate" if kind == "navigate" else root["goal"][
                 "action" if kind == "interact" else "operation" if kind == "activity" else "purpose"], "stage": stage,
             "epoch": phase.epoch, "actor_id": phase.actor_id, "controller_boot_id": phase.controller_boot_id,
             "operator_pause_generation": phase.operator_generation, "takeover_generation": phase.takeover_generation,
@@ -494,7 +506,7 @@ class MissionRuntime:
             "continuity": None, "grants_authority": False}
 
     def _advance_prompt(self, work: _Work, before: EvidenceRef, after: EvidenceRef,
-                        *, action: str | None = None) -> _PromptPhase | None:
+                        *, action: str | dict | None = None) -> _PromptPhase | None:
         phase = self._prompt_guard(work.request, before)
         if phase is None:
             return None
@@ -503,10 +515,14 @@ class MissionRuntime:
             entering_editor = (self._store.observation(before)["category"] != "STRING_INPUT"
                                and self._store.observation(after)["category"] == "STRING_INPUT")
             if entering_editor:
-                if (work.request["skill_kind"] != "item" or work.request["goal"]["step"] != "select"
+                if work.request["skill_kind"] == "direct":
+                    # Ordinary exploration supplies no typed-count attestation.
+                    quantity_editor = False
+                elif (work.request["skill_kind"] != "item" or work.request["goal"]["step"] != "select"
                         or action != "MARK_WITH_COUNT"):
                     raise ControlError("Item quantity editor lacks its exact returned count-opening input")
-                quantity_editor = True
+                else:
+                    quantity_editor = True
             elif self._store.observation(after)["category"] != "STRING_INPUT":
                 quantity_editor = False
         advanced = replace(phase, checkpoint=after, quantity_editor=quantity_editor)
@@ -659,7 +675,17 @@ class MissionRuntime:
         with self._metadata:
             self._operations.clear()
         self._diagnostic, self._progress, self._last_receipt = None, None, None
-        self._memory = CampaignMemory(ledger, store)
+        library = None
+        try:
+            if admission.learning is not None:
+                from .gameplay.procedure_library import ProcedureLibrary
+                library = ProcedureLibrary(self.controller.root,
+                    [asdict(source) for source in admission.learning.library_sources], current_mission_id=admission.mission_id)
+            self._memory = CampaignMemory(ledger, store, library)
+        except Exception:
+            if library is not None:
+                library.close()
+            raise
         self._bindings, self._map, self._lease, self._current, self._rotation = {}, None, None, None, None
         self._clear_prompt()
         self._owned_launch, self._exit_phase, self._exit_candidate = None, None, None
@@ -673,7 +699,7 @@ class MissionRuntime:
             except EvidenceError as exc:
                 self._diagnostic = f"Historic game time unprovable: {exc}"[:1024]
                 self._game_cost = None
-        self._memory_version = max((r["sequence"] for k in ("claim", "work", "decision")
+        self._memory_version = max((r["sequence"] for k in ("claim", "work", "decision", "procedure")
                                    for r in ledger.memory_records(k)), default=0)
         self._last_context_id = None
         self._last_memory_context = None
@@ -793,7 +819,7 @@ class MissionRuntime:
         if phase.checkpoint.boundary_kind != "activity_poll":
             raise ControlError("Activity poll requires its actual owned activity boundary")
         if data["kind"] == "skill":
-            if root["request"].get("skill_kind") != "activity":
+            if root["request"].get("skill_kind") not in ("activity", "direct"):
                 raise ControlError("Typed activity polling requires its original activity root; use Observe for other owned activities")
             self._prompt_guard(data, phase.checkpoint)
             observed = self._store.observation(phase.checkpoint)
@@ -892,8 +918,8 @@ class MissionRuntime:
 
     def _memory_request(self, work: _Work) -> dict:
         self._check_cancelled(work)
-        if work.request["entry_type"] == "work" and self._registered_handoff.phase is not None:
-            raise HandoffEvidenceError("Work updates are frozen during handoff; retrieve/claim/readmit first")
+        if work.request["entry_type"] in ("work", "procedure") and self._registered_handoff.phase is not None:
+            raise HandoffEvidenceError("Work/procedure adoption is frozen during handoff; retrieve/claim/readmit first")
         if work.request["entry_type"] == "decision" and work.request["entry"]["packet_id"] not in self._issued_packets:
             raise ContractError("Decision requires a durably issued context wrapper")
         result = self._memory.apply(work.request, now=self._wall())
@@ -1606,7 +1632,7 @@ class MissionRuntime:
         actual = self._live()[0]
         if not same_native_state(actual, observed):
             raise EvidenceError("Inconsistent request cannot bypass changed native source state")
-        image_informed = (missing_native_rows or data["perception"] is not None or self._registered_lifecycle.phase is not None
+        image_informed = (data["skill_kind"] == "direct" or missing_native_rows or data["perception"] is not None or self._registered_lifecycle.phase is not None
             or self._exit_phase is not None or self._registered_activity.phase is not None
             or data["skill_kind"] == "activity" and data["goal"]["step"] in ("interrupt", "answer_interrupt", "resume"))
         if image_informed and self.controller._frame_sha256(actual) != current.frame_sha256:
@@ -1650,7 +1676,7 @@ class MissionRuntime:
             expected = {"kind": proposal.kind, "session": proposal.before.session,
                 "revision": proposal.before.revision, "boundary_id": proposal.expected_boundary_id}
             if proposal.kind != "resume":
-                expected[proposal.kind] = proposal.action
+                expected["input" if proposal.kind == "direct" else proposal.kind] = proposal.action
             if any(request.get(key) != value for key, value in expected.items()) or not isinstance(request.get("id"), str):
                 raise ContractError("Mission native request does not correlate with logical proposal")
             if request.get("require_exact_frame") is not image_informed:
@@ -1738,7 +1764,8 @@ class MissionRuntime:
                        self._registered_recovery.continuation.game_anchor if self._registered_recovery.continuation is not None else
                        self._prompt_phase.game_anchor if self._prompt_phase is not None else original)
         control = isinstance(proposal, ActivityIntent)
-        image_informed = work.request.get("perception") is not None or lifecycle is not None or activity is not None
+        image_informed = (proposal.kind == "direct" or work.request.get("perception") is not None
+                          or lifecycle is not None or activity is not None)
         rule = "exact_png_bytes" if image_informed else "native_state"
         def guard() -> None:
             nonlocal game_budget_exhausted
@@ -1940,7 +1967,8 @@ class MissionRuntime:
         state, received = self._observe_native(work, deadline_monotonic=self._deadline(work, original))
         current = self._ingest(state, received)
         refreshed = self._binding(current)
-        relation = SourceRevalidation(binding, refreshed, "exact_png_bytes" if data["perception"] is not None else "native_state")
+        relation = SourceRevalidation(binding, refreshed, "exact_png_bytes"
+            if data["skill_kind"] == "direct" or data["perception"] is not None else "native_state")
         skill.revalidate(relation, self._store, **self._clocks())
         self._record("mission_revalidation", relation.to_dict())
         self._publish_source(current, authoritative=True)
@@ -1973,7 +2001,7 @@ class MissionRuntime:
                 if outcome is None:
                     self._publish()
                     continue
-                if (data["phase_id"] is None and data["skill_kind"] in ("interact", "item", "activity", "inspect") and outcome.disposition == "partial"
+                if (data["phase_id"] is None and data["skill_kind"] in ("interact", "item", "activity", "inspect", "direct") and outcome.disposition == "partial"
                         and feedback.transport_disposition == "returned" and feedback.after is not None):
                     receipt_phase = self._open_prompt(work, original, feedback.after, mark)
             result = self._control_result(outcome)
@@ -2086,6 +2114,12 @@ class MissionRuntime:
         if kind in ("remember", "correct"):
             return "completed", self._memory_request(work)
         if kind == "skill":
+            if work.request["procedure"] is not None:
+                try:
+                    self._memory.select_procedure(work.request["procedure"])
+                except ContractError as exc:
+                    return "blocked", {"reason": "Procedure selection refused before input: " + str(exc),
+                        "source_ids": list(work.request["sources"]), "grants_authority": False}
             self._registered_recovery.executable_guard(work.request)
             rejection = self._skill_draft_rejection(work)
             if rejection is not None:
@@ -2112,7 +2146,7 @@ class MissionRuntime:
                 return self._navigate(work)
             if work.request["skill_kind"] == "activity" and work.request["goal"]["step"] == "poll":
                 return self._poll_activity(work)
-            if work.request["skill_kind"] in ("menu", "edit", "interact", "item", "activity", "inspect"):
+            if work.request["skill_kind"] in ("menu", "edit", "interact", "item", "activity", "inspect", "direct"):
                 return self._semantic(work)
         if kind == "reconcile":
             return self._registered_recovery.reconcile(work)
@@ -2190,6 +2224,12 @@ class MissionRuntime:
             operation = committed
             disposition, result = operation["state"], operation["result"]
         else:
+            if data["kind"] == "skill":
+                root = data if data["phase_id"] is None else self._ledger.request(data["phase_id"])["request"]
+                selection = root.get("procedure")
+                result["procedure_use"] = (None if selection is None else {
+                    **selection, "root_request_id": root["request_id"], "inherited": root is not data,
+                    "grants_authority": False})
             operation = self._ledger.complete_request(data["request_id"], disposition, result, now=self._wall())
         try:
             self._registered_lifecycle.after_commit(work, disposition, result)
@@ -2309,6 +2349,8 @@ class MissionRuntime:
         with self._metadata:
             self._presentation_store = None
         try:
+            if self._memory is not None and self._memory.library is not None:
+                self._memory.library.close()
             if self._store is not None:
                 self._store.close()
         finally:

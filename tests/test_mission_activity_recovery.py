@@ -60,7 +60,7 @@ class ActivityControls:
                     status = "prompt_opened"
                 else:
                     native = copy.deepcopy(value)
-                    native.update(frame_ok=False, frame="")
+                    native.update(frame_ok=False, frame="", frame_geometry=None)
                     if req["choice"] == "YES":
                         case.return_normal()
                     else:
@@ -72,7 +72,7 @@ class ActivityControls:
                 if self.after_commit:
                     self.after_commit(req)
                 if self.publish:
-                    atomic_json(bridge / "control-response.json", dict(protocol=4, id=req["id"],
+                    atomic_json(bridge / "control-response.json", dict(protocol=5, id=req["id"],
                         status=status, error="", state=native))
         except BaseException as exc:
             self.failures.append(exc)

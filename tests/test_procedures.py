@@ -6,7 +6,7 @@ import unittest
 from jsonschema import Draft202012Validator
 
 from harness.gameplay.contracts import ContractError
-from harness.gameplay.mission_contracts import canonical
+from harness.gameplay.contracts import canonical
 from harness.gameplay.procedures import (
     procedure_schema, project_procedures, validate_procedure,
 )

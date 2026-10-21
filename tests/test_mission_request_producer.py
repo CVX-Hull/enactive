@@ -4,7 +4,8 @@ import unittest
 
 from harness.gameplay.contracts import ContractError, EvidenceRef
 from harness.gameplay.evidence import _identity
-from harness.gameplay.mission_contracts import canonical, validate_request
+from harness.gameplay.contracts import canonical
+from harness.gameplay.mission_contracts import validate_request
 from harness.gameplay.mission_requests import compose_request
 from tests.test_gameplay_evidence import observation
 
@@ -30,7 +31,7 @@ def snapshot(**changes):
 
 def skill(kind="inspect", **changes):
     value = dict(kind="skill", skill_kind=kind, goal=dict(purpose="inventory"),
-                 work_id=None, perception=None)
+                 work_id=None, perception=None, procedure=None)
     value.update(changes)
     return value
 
@@ -64,7 +65,7 @@ class MissionRequestProducerTests(unittest.TestCase):
         supports = ["explicit-support"]
         before = deepcopy((self.status, self.source, self.limits, intent, supports))
         result = self.compose(intent, supporting_source_ids=supports)
-        expected = dict(schema="mission/8", mission_id="mission-test", epoch=3,
+        expected = dict(schema="mission/9", mission_id="mission-test", epoch=3,
             request_id="new-request", phase_id=None, sources=[self.source["reference"]["observation_id"],
             "explicit-support"], expected_session="synthetic-world", expected_revision=1,
             expected_boundary_id="boundary-1", limits=self.limits, **intent)

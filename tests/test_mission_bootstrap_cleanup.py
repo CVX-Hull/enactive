@@ -9,7 +9,7 @@ import unittest
 from unittest.mock import patch
 
 from harness.gameplay.evidence import EvidenceError
-from harness.gameplay.mission_contracts import canonical
+from harness.gameplay.contracts import canonical
 from harness.gameplay.mission_ledger import LedgerError, MissionLedger
 from harness.mission_runtime import MissionRuntime
 from tests.test_mission_creation import MissionCreationFixture

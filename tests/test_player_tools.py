@@ -7,6 +7,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest.mock import Mock
 
 from harness.gameplay.contracts import ContractError
 from harness.mission_client import MissionClient
@@ -48,7 +49,7 @@ class PlayerHTTPTests(unittest.TestCase):
             limits=dict(primitives=1, wall_seconds=30, game_seconds=10),
             intent=dict(skill_kind="navigate", goal=dict(scope=dict(mission_id=self.a.mission_id,
                 session=source["session"], coordinate_epoch=0), target=[1, 0, 0]),
-                work_id=None, perception=None))
+                work_id=None, perception=None, procedure=None))
 
     def test_one_semantic_call_returns_settlement_exact_image_and_duplicate_never_moves_twice(self):
         player = self.player()
@@ -174,6 +175,23 @@ class ProjectConfigurationTests(unittest.TestCase):
 
 
 class SDKTransportTests(unittest.TestCase):
+    def test_qualified_procedure_claim_requires_original_source_presentation(self):
+        client = _FixtureClient()
+        client.collect = Mock(return_value={"transport": "uncertain", "response": None})
+        player = PlayerTools(client)
+        player.snapshots["chosen-snapshot"] = {"mission_id": "current-mission", "epoch": 1}
+        arguments = dict(snapshot_id="chosen-snapshot", request_id="claim-with-procedure", wait_seconds=0,
+            intent=dict(handoff_id="issued-handoff", player_id="fresh-player", actor_role="campaign-player",
+                packet_ids=["issued-packet"], read_source_ids=["post-pause"],
+                read_procedure_sources=[{"mission_id": "history-mission", "source_id": "original-image"}]))
+        with self.assertRaisesRegex(ContractError, "selected exact source"):
+            player.call("enactive_claim", arguments)
+        client.collect.assert_not_called()
+        player.source("history-mission", "original-image")
+        with self.assertRaisesRegex(ContractError, "retained completed handoff"):
+            player.call("enactive_claim", arguments)
+        client.collect.assert_called_once()
+
     def test_actual_stdio_handshake_catalog_and_combined_result(self):
         from mcp import Client
         from mcp.client.stdio import StdioServerParameters

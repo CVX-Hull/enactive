@@ -21,12 +21,17 @@ from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import CapacityError, EvidenceError
 
 
+def frame_geometry():
+    return {"window_width": 1, "window_height": 1, "output_width": 1,
+            "output_height": 1, "viewport": [0, 0, 1, 1]}
+
+
 def state(request_id="", *, revision=1, **changes):
-    value = {"protocol": 4, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": request_id, "session": "game-test", "revision": revision,
+    value = {"protocol": 5, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": request_id, "session": "game-test", "revision": revision,
              "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT", "INVENTORY"],
              "status": "ready", "error": "", "paused": False,
              "timestamp_ms": int(time.time() * 1000), "frame_ok": True, "in_game": True,
-             "frame": "frame-game-test-1.png",
+             "frame": "frame-game-test-1.png", "frame_geometry": frame_geometry(),
              "boundary": {"kind": "normal_play", "id": "game-test-b1", "control_generation": 0,
                           "recovery_operations": [], "interrupt_request_id": None},
              "scene": {"position": [0, 0, 0], "turn": 1, "visible_creatures": [],
@@ -34,6 +39,8 @@ def state(request_id="", *, revision=1, **changes):
                                       "terrain": "t_floor", "furniture": "f_null"}
                                      for dx, dy in [(0, -1), (0, 1), (-1, 0), (1, 0)]]}}
     value.update(changes)
+    if not value["frame_ok"] and "frame_geometry" not in changes:
+        value["frame_geometry"] = None
     return value
 
 
@@ -81,27 +88,29 @@ class FakeBridge:
                 kind = request["kind"]
                 if self.before_gate is not None:
                     self.before_gate(self, request)
-                if kind in {"key", "action", "resume"} and (
+                if kind in {"key", "action", "direct", "resume"} and (
                         request.get("authority") != read_json(self.bridge / "authority.json")
                         or self.value["boundary"]["kind"] not in {"normal_play", "menu"}):
                     self.value.update(status="rejected", error="authority revoked or unsupported boundary")
                     (self.bridge / "claimed.json").unlink(missing_ok=True)
                     self.publish(self.value.copy())
                     continue
-                if kind in {"key", "action", "resume"}:
+                if kind in {"key", "action", "direct", "resume"}:
                     self.delivered.append(request)
                 if kind == "resume":
                     (self.bridge / "pause").unlink(missing_ok=True)
                     self.value["paused"] = False
                     self.value["boundary"]["control_generation"] += 1
                     self.value["revision"] += 1
-                if kind in {"key", "action"}:
+                if kind in {"key", "action", "direct"}:
                     self.value["revision"] += 1
                     self.value["status"] = "dispatched"
                     self.value["frame_ok"] = False
+                    self.value["frame_geometry"] = None
                     self.publish(self.value.copy())
                     self.value["status"] = "ready"
                     self.value["frame_ok"] = True
+                    self.value["frame_geometry"] = frame_geometry()
                     movement = {"UP": (0, -1), "DOWN": (0, 1), "LEFT": (-1, 0), "RIGHT": (1, 0)}
                     if request.get("action") in movement:
                         dx, dy = movement[request["action"]]
@@ -181,12 +190,12 @@ class ControlBridge:
                                                generation=generation, revision=value["revision"] + 1)
                         result = "prompt_opened"
                     else:
-                        value.update(paused=True, revision=value["revision"] + 1, frame_ok=False, frame="")
+                        value.update(paused=True, revision=value["revision"] + 1, frame_ok=False, frame="", frame_geometry=None)
                         value["boundary"]["control_generation"] = generation
                         result = "answer_delivered" if request["kind"] == "answer_interrupt" else "dismissal_delivered"
                     if self.after_commit:
                         self.after_commit(self, request)
-                response = {"protocol": 4, "id": request["id"], "status": result,
+                response = {"protocol": 5, "id": request["id"], "status": result,
                             "error": "revoked" if result == "rejected" else "", "state": value}
                 (self.bridge / "control-claimed.json").unlink(missing_ok=True)
                 if self.publish_result:
@@ -226,7 +235,7 @@ class ControllerTests(unittest.TestCase):
     def test_control_envelopes_are_exact_v4_and_prompt_owner_is_mandatory(self):
         value = recovery_state("interrupt_confirmation", owner=str(uuid.uuid4()))
         validate_state(value)
-        response = {"protocol": 4, "id": value["boundary"]["interrupt_request_id"],
+        response = {"protocol": 5, "id": value["boundary"]["interrupt_request_id"],
                     "status": "prompt_opened", "error": "", "state": value}
         validate_control_response(response)
         for mutate in (lambda v: v.update(protocol=2), lambda v: v.update(extra=1),
@@ -236,7 +245,7 @@ class ControllerTests(unittest.TestCase):
             mutate(broken)
             with self.assertRaises(ControlError):
                 validate_control_response(broken)
-        request = {"protocol": 4, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
+        request = {"protocol": 5, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
                    "control_generation": 1, "authority": {"controller_boot_id": "boot", "counter": 1},
                    "created_ms": 1000, "deadline_ms": 3000}
         validate_control_request(request)
@@ -399,8 +408,8 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
             self.assertEqual(read_json(admission), request)
             (self.controller.bridge / "control.json").rename(self.controller.bridge / "control-claimed.json")
             value = recovery_state("debug_prompt", generation=1, revision=4)
-            value.update(frame_ok=False, frame="")
-            response = {"protocol": 4, "id": request["id"], "status": "dispatched", "error": "", "state": value}
+            value.update(frame_ok=False, frame="", frame_geometry=None)
+            response = {"protocol": 5, "id": request["id"], "status": "dispatched", "error": "", "state": value}
             atomic_json(self.controller.bridge / "control-response.json", response)
             (self.controller.bridge / "control-claimed.json").unlink()
             process.kill()
@@ -437,7 +446,7 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
     def test_orphan_control_claim_and_malformed_passive_state_fail_closed(self):
         self.controller.close()
         created = int(time.time() * 1000)
-        request = {"protocol": 4, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
+        request = {"protocol": 5, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
                    "control_generation": 0, "authority": {"controller_boot_id": "boot", "counter": 1},
                    "created_ms": created, "deadline_ms": created + 2000}
         path = self.controller.bridge / "control-claimed.json"
@@ -465,7 +474,7 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
             result = self.controller.recover("continue_debug_once", timeout=0.04, **self.recovery_expect())
             self.assertEqual(result["status"], "unknown")
             request = fake.requests[0]
-        original = {"protocol": 4, "id": "ordinary-unknown", "kind": "action", "action": "UP",
+        original = {"protocol": 5, "id": "ordinary-unknown", "kind": "action", "action": "UP",
                     "session": "game-test", "revision": 1, "deadline_ms": 1,
                     "boundary_id": "game-test-b1", "takeover_generation": 0,
                     "frame": "frame-game-test-1.png", "require_exact_frame": False,
@@ -473,8 +482,8 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
         self.controller.pending = original.copy()
         atomic_json(self.controller.admissions / "ordinary-unknown.json", original)
         value = recovery_state("debug_prompt", generation=request["control_generation"] + 1)
-        value.update(frame_ok=False, frame="")
-        atomic_json(self.controller.bridge / "control-response.json", {"protocol": 4, "id": request["id"],
+        value.update(frame_ok=False, frame="", frame_geometry=None)
+        atomic_json(self.controller.bridge / "control-response.json", {"protocol": 5, "id": request["id"],
                     "status": "dismissal_delivered", "error": "", "state": value})
         self.controller.status()
         self.assertEqual(self.controller.control_pending["id"], request["id"])
@@ -528,14 +537,14 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
 
     def test_startup_rejects_unsupported_stored_versions_and_preserves_evidence(self):
         self.controller.close()
-        request = {"protocol": 4, "id": "uncertain", "kind": "action", "action": "UP",
+        request = {"protocol": 5, "id": "uncertain", "kind": "action", "action": "UP",
                    "session": "world", "revision": 1, "boundary_id": "world-b1", "takeover_generation": 0, "deadline_ms": 1,
                    "frame": "frame-world-1.png", "require_exact_frame": False,
                    "authority": {"controller_boot_id": "old-boot", "counter": 1}}
         bridge = self.controller.bridge
         for relative in ("admissions/uncertain.json", "claimed.json", "response.json"):
             path = bridge / relative
-            for version in (None, 1, 2, 3, 5, True, 4.0):
+            for version in (None, 1, 2, 3, 4, 6, True, 5.0):
                 with self.subTest(path=relative, version=version):
                     value = state() if relative == "response.json" else request.copy()
                     if version is None:
@@ -570,7 +579,7 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
         for index in range(61):
             request_id = f"retained-{index:03d}"
             atomic_json(self.controller.admissions / f"{request_id}.json",
-                        {"protocol": 4, "id": request_id, "kind": "action", "action": "UP",
+                        {"protocol": 5, "id": request_id, "kind": "action", "action": "UP",
                          "session": "world", "revision": 1, "boundary_id": "world-b1", "takeover_generation": 0, "deadline_ms": 1,
                          "frame": "frame-world-1.png", "require_exact_frame": False,
                          "authority": {"controller_boot_id": "old-boot", "counter": 1}})
@@ -772,7 +781,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
     def test_startup_pauses_retires_and_never_replays(self):
         self.controller.close()
         bridge = self.root / ".runtime" / "bridge"
-        atomic_json(bridge / "request.json", {"protocol": 4, "kind": "key", "key": "x", "id": "old",
+        atomic_json(bridge / "request.json", {"protocol": 5, "kind": "key", "key": "x", "id": "old",
             "session": "world", "revision": 1, "boundary_id": "world-b1", "takeover_generation": 0, "deadline_ms": 1,
             "frame": "frame-world-1.png", "require_exact_frame": False,
             "authority": {"controller_boot_id": "old-boot", "counter": 1}})
@@ -1107,7 +1116,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
     def test_walk_retains_ready_response_without_available_frame(self):
         with FakeBridge(self.controller) as fake:
             self.ready()
-            fake.value.update(frame_ok=False, frame="")
+            fake.value.update(frame_ok=False, frame="", frame_geometry=None)
             result = self.controller.execute("walk", direction="east", steps=1, **self.expect())
             self.assertEqual((result["status"], result["steps"]), ("stopped", 0))
             self.assertEqual(result["observation"], fake.value)
@@ -1317,6 +1326,47 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
         values = {"mission_id": "task-test", "epoch": 0, "actor_id": "supervisor", "operation": "navigate",
                   "expected_boundary_id": self.controller.state["boundary"]["id"], **self.expect(), **changes}
         return self.controller.acquire_mission(**values)
+
+    def test_direct_mission_uses_exact_image_and_closed_input_payload(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            image = b"synthetic exact informing image"
+            (fake.bridge / fake.value["frame"]).write_bytes(image)
+            lease = self.acquire(operation="interaction")
+            direct = dict(type="click", button="left", x=0, y=0, geometry=frame_geometry())
+            receipt = self.mission_dispatch(lease, kind="direct", value=direct,
+                expected_image_sha256=hashlib.sha256(image).hexdigest())
+            self.assertEqual(receipt["result"]["status"], "ready")
+            self.assertEqual(receipt["request"]["input"], direct)
+            self.assertNotIn("direct", receipt["request"])
+            self.assertTrue(receipt["request"]["require_exact_frame"])
+            self.assertEqual(sum(request["kind"] == "direct" for request in fake.delivered), 1)
+            self.controller._validate_stored_request(receipt["request"])
+            for changes in (dict(protocol=4), dict(require_exact_frame=False), dict(input={"type": "text", "text": "ab"})):
+                with self.subTest(changes=changes), self.assertRaises(ControlError):
+                    self.controller._validate_stored_request(receipt["request"] | changes)
+
+    def test_direct_cannot_use_external_or_navigation_authority_or_changed_geometry(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            image = b"synthetic informing image"
+            (fake.bridge / fake.value["frame"]).write_bytes(image)
+            direct = dict(type="click", button="left", x=0, y=0, geometry=frame_geometry())
+            self.assertEqual(self.controller.execute("direct", input=direct)["status"], "controller_error")
+            navigation = self.acquire()
+            receipt = self.mission_dispatch(navigation, kind="direct", value=direct,
+                expected_image_sha256=hashlib.sha256(image).hexdigest())
+            self.assertFalse(receipt["published"])
+            self.assertIn("interaction lease", receipt["result"]["error"])
+            lease = self.acquire(replace=navigation, operation="interaction")
+            no_image = self.mission_dispatch(lease, kind="direct", value=direct)
+            self.assertFalse(no_image["published"])
+            changed = direct | dict(geometry=frame_geometry() | dict(window_width=2))
+            receipt = self.mission_dispatch(lease, kind="direct", value=changed,
+                expected_image_sha256=hashlib.sha256(image).hexdigest())
+            self.assertFalse(receipt["published"])
+            self.assertIn("geometry", receipt["result"]["error"])
+            self.assertFalse(any(request["kind"] == "direct" for request in fake.requests))
 
     def mission_resume_binding(self):
         snapshot = self.controller.status(); state = snapshot["state"]
@@ -2817,7 +2867,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     self.assertEqual(set(request), {"protocol", "id", "kind", "deadline_ms"})
 
     def test_current_stored_input_requires_frame_and_strict_boolean_without_old_reader(self):
-        request = {"protocol": 4, "id": "restore", "kind": "action", "action": "UP", "deadline_ms": 1,
+        request = {"protocol": 5, "id": "restore", "kind": "action", "action": "UP", "deadline_ms": 1,
             "session": "world", "revision": 1, "boundary_id": "world-b1", "takeover_generation": 0,
             "authority": {"controller_boot_id": "boot", "counter": 1},
             "frame": "frame-world-1.png", "require_exact_frame": False}

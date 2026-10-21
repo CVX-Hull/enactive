@@ -6,7 +6,7 @@ status: active
 
 # Bridge and guarded-play contract
 
-Protocol version: 4.
+Protocol version: 5.
 
 This is the detailed current contract supporting [architecture](architecture.md).
 Authority rules are [S-PROTOCOL](engineering.md#s-protocol-command-and-observation-authority).
@@ -55,7 +55,7 @@ and blocks raw input/recovery. The viewer displays mission ownership; a model ca
 never holds controller locks. Only registered mission operations can request a
 lease; service startup, admission and transport Resume never establish identity.
 
-A leased call submits one registered action or permitted key, using native-v4
+A leased call submits one registered action or permitted key, using native-v5
 observation and input checks. Intended boundary and human takeover generation are
 bound in native action/key/resume requests and checked at native commit. The original command admission generation and exact live lease
 are checked around queueing/preflight and immediately before atomic publication.
@@ -140,7 +140,7 @@ planner and supervisor components below remain source/study tools, not another
 execution ingress. The [mission design](design/player-owned-mission.md) owns the
 chosen records, lifecycle requirements and separate native acceptance.
 
-Authenticated `POST /api/mission` accepts one strict mission/8 record, at most65536
+Authenticated `POST /api/mission` accepts one strict mission/9 record, at most65536
 UTF-8 bytes. It reuses host/origin/token and finite/duplicate-key JSON validation;
 operator command/recovery bodies keep4096-byte limits. Required fields and closed
 variants live in [mission_contracts.py](../harness/gameplay/mission_contracts.py),
@@ -458,10 +458,9 @@ existing admission and establishes no native survival outcome.
 `lifecycle(operation=finish)` is the sole normal finish route. Stop carries only
 its Pause reason; former Stop `finish` fields and mission/2, mission/3, mission/4,
 mission/5, mission/6 or mission/7 records reject. The
-current mission/8 contract migrates CLI, viewer, requests, results and fixtures
+current mission/9 contract migrates CLI, viewer, requests, results and fixtures
 without an alias or automatic old-admission import. Campaign memory advances to
-campaign-memory/3 and SQLite to ledger10. Native wire4, gameplay/2 and archive3
-remain unchanged. Prior accepted reports and raw older mission/memory/ledger
+campaign-memory/4 and SQLite to ledger11. Native wire5 and archive4 migrate together; gameplay/2 remains unchanged. Prior accepted reports and raw older mission/memory/ledger
 artifacts remain historical evidence, not current request inputs. Closed failed
 missions stay closed; a new admission uses a new mission directory, with no
 automatic old-state import or restored authority.
@@ -490,7 +489,7 @@ native final shutdown or the independent mission.
 ### Selected item, inspection and activity composition
 
 A returned navigation input may open an ordinary in-game menu in the same session.
-Mission/8 records a `navigate` PhaseReceipt (`operation=navigate`) and terminal
+Mission/9 records a `navigate` PhaseReceipt (`operation=navigate`) and terminal
 partial result, retaining the verified prefix and last verified route position.
 The menu has no scene; the opening input receives no displacement credit or retry.
 Inspection uses the existing menu outcome `inspected`, with no input; standalone
@@ -506,7 +505,7 @@ and reopen; historical records restore no private phase or input authority. The
 [repair brief](changes/055-navigation-menu-interruption.md) records rationale and
 qualification limits.
 
-Mission/8 retains explicit item units (`items` or `charges`) and root/select/commit
+Mission/9 retains explicit item units (`items` or `charges`) and root/select/commit
 steps. The pure [item policy](../harness/gameplay/interactions.py) checks exact
 represented target, native row contradictions, known availability and chosen
 count. A focus batch sends at most eight observed arrows and never confirms.
@@ -797,7 +796,7 @@ verified terminal suffix or explicit stop. Historical phase IDs grant no authori
 This selected source path does not establish semantic success, native recovery or
 general recovery from already-returned but uninterpretable outcomes.
 
-Mission/8 and ledger10 migrate all current producers, callers and persisted readers
+Mission/9 and ledger11 migrate all current producers, callers and persisted readers
 together. Earlier mission versions, ledger7 and its old untyped effect shape reject
 without conversion. Retain old mission artifacts and saves as evidence; only a
 separately admitted current mission can start anew. Migration never resets input
@@ -805,19 +804,74 @@ costs, renews a stopped attempt or restores execution authority.
 
 ## Transport and state
 
+### Ordinary discovery and procedure data
+
+Mission9 adds `skill_kind=direct` to the existing writer. Its closed goal contains
+`input`, `intent`, `expected` and `interrupt_allowed`. Input is one explicit
+ASCII/named key with modifiers, one left/right click bound to the exact retained
+PNG geometry, or at most24 printable BMP text scalars in an owned ordinary menu.
+Text expands into separately charged scalars with fresh feedback and stops on
+changed structure, identical pixels, lost authority or uncertain delivery. There
+is no implicit Enter. Unsupported supplementary Unicode refuses before input in
+the pinned16-bit widget build. Every direct primitive requires exact-PNG
+preflight, including a current native geometry comparison for clicks.
+
+Direct roots require an adopted normal character. Ordinary prompt children retain
+the original root, Work and cumulative limits. Direct input cannot borrow
+lifecycle/navigation authority or establish typed quantity proof. Activity
+children of a direct root use operation`direct`, the original expected outcome,
+time ceiling and interruption consent; they do not invent wait/rest/craft success.
+A returned input is partial work requiring the player's semantic verification.
+Native delivery uncertainty retains the same pause/collection/no-replay policy.
+The [mixed-input design](design/mixed-input.md) specifies mappings and native
+qualification; source/component checks are not real graphical acceptance.
+
+Every skill record has nullable`procedure`. A selected root names owning mission,
+immutable revision ID, root use ID and its applicability judgment. The structured
+producer derives the use ID from the original request ID. Children must use null
+and inherit the root selection; changing style cannot replace it. Original
+requests, root links, primitives, results and cumulative costs provide automatic
+usage feedback. Neither an input ACK nor that linkage proves semantic success.
+
+Admission has required nullable`learning`. A policy freezes the exact environment,
+at most4 closed library mission pins (ledger/index SHA256), advisory actor and
+finite reflection limits. Procedure/1 records live in the existing immutable
+memory table. Full qualified ancestry resolves heads; branches/missing parents
+refuse. Episodes must join actual settled request/source evidence. Candidates can
+be tested; disputed/retired heads are inspectable and cannot be newly selected.
+The current player judges descriptive applicability; memory grants no authority.
+
+The read-only library uses SQLite over hash-verified bytes, shared archive locks
+and derived project paths. It never reopens a runtime writer, restores a phase or
+imports old-world Claims/Work as current facts. Only current ledger11/archive4
+input is eligible; older campaign artifacts remain historical evidence.
+
+Campaign-memory4 replaces placeholder lesson IDs with qualified procedure refs,
+records, source requirements and explicit omissions. Decisions retain selected
+procedure support. Complete handoff fit checks include every procedure head and
+its evidence, reserving room for the future post-Pause frame. Claim declarations
+include`read_procedure_sources` alongside current-world source reads, within one
+aggregate128-source bound. Source-read declarations and retrieval are evidence
+of presentation/selection, not proof of attention or causal improvement.
+
+The [procedure/exchange design](design/procedure-learning.md) owns the asynchronous
+integration contract. Its reflective runtime and real discovery/reuse/counterexample/
+fresh-context/overlapping-play qualifications are separate pending delivery057
+work; freezing data shapes alone does not establish those outcomes.
+
 
 The game enables the bridge only when CDDA_HARNESS_DIR names an existing private
-directory. Version 4 uses atomic JSON files and PNG snapshots, avoiding another
+directory. Version 5 uses atomic JSON files and PNG snapshots, avoiding another
 server thread in CDDA. Each channel admits one live request at a time; the host holds a
 process lock for both writers. Gameplay and recovery retain separate identities. Requests carry protocol, unique id, session, expected revision, intended boundary,
 human takeover generation,
 kind and payload. Size is bounded to 4096 bytes. World entry and exit replace the
 session, including a same-process save/reload; relative coordinates belong to that
 world lifetime. Stale session/revision commands are rejected, never replayed.
-Producer, controller, discovery, CLI, viewer and evidence validation require v4.
+Producer, controller, discovery, CLI, viewer and evidence validation require v5.
 Older and unknown versions are rejected; there is no fallback.
 
-Commands: observe, key, action, pause, resume. Observe is side-effect-free in
+Commands: observe, key, action, direct, pause, resume. Observe is side-effect-free in
 gameplay terms. Key is one ASCII character or named navigation key, never an
 unbounded string/macro. Action chooses a binding registered in the active input
 context. Registered actions may have no usable single-key binding in the current
@@ -835,6 +889,18 @@ committing input; a claimed request with an obsolete, missing or malformed token
 is rejected. Pause after that commit cannot undo input. Native control generation
 and the host token are separate authorities; controller run leases use this same
 revocation mechanism.
+
+Every observation has required`frame_geometry`: null when`frame_ok=false`,
+otherwise positive window/output width and height (maximum16384 each) and a
+four-integer viewport`[x,y,width,height]` within the full output. Width/height
+must be positive and total output at most16777216 pixels. Native capture retains
+the full default render output in a matching allocation. Direct click geometry
+must equal that retained geometry and the final current geometry; its PNG pixel
+maps separately to engine window coordinates and widget output coordinates.
+The harness uses an internal synthetic pointer, never moves the Mac pointer or
+requests focus, and consumes balanced widget press/release through bounded normal
+render frames. Postcommit consumption failure is dispatched/unknown with fault
+Pause, never a known zero-input rejection or a later success acknowledgment.
 
 The SDL input loop pumps normal events while polling. RAII scopes span
 `input_context::handle_input`, including retries and nested contexts. An explicit
@@ -1006,7 +1072,7 @@ remains exclusive to normal play. Recovery is polled before ordinary requests,
 even while an ordinary response is pending, after native input and Pause handling.
 
 A control response has exactly `protocol`, `id`, `status`, `error`, `state`; `state`
-is the ordinary current-v4 observation shape. `dispatched` is nonterminal.
+is the ordinary current-v5 observation shape. `dispatched` is nonterminal.
 `prompt_opened` requires an actual fresh owned confirmation frame.
 `answer_delivered` and `dismissal_delivered` report input delivery, even if no new
 successful frame is available. `not_applicable` and `rejected` report no applicable
@@ -1042,7 +1108,7 @@ and journal evidence, granting no authority, replay or inferred resolution.
 
 The lead designates one general-purpose player for a finite mission. It chooses
 plans, interprets evidence, retrieves/updates memory and requests semantic skills
-and registered normal lifecycle through mission/8. The lead owns source/release
+and registered normal lifecycle through mission/9. The lead owns source/release
 acceptance, finite admission, shared runtime custody, escalation and final
 verification. It supplies no ordinary gameplay rescue in the deciding mission.
 Explorers/reviewers never send inputs. Actor names and instructions are workflow
@@ -1139,7 +1205,7 @@ claims. JSON is bounded to 1 MiB. The injected planner below consumes these reco
 the runtime above connects the passive planner, supervisor and bounded skill.
 Broader task formation remains outside this [first slice](design/gameplay.md).
 
-[EvidenceStore](../harness/gameplay/evidence.py) retains successful native-v4
+[EvidenceStore](../harness/gameplay/evidence.py) retains successful native-v5
 normal/menu/activity/recovery/unsupported diagnostic frames with their actual
 coverage. `current()` requires a positively marked normal scene for movement;
 `current_boundary()` checks freshness/integrity without granting input permission.

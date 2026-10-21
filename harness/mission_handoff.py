@@ -121,10 +121,12 @@ class RegisteredHandoff:
                     "unknown reference: " + unknown + ". Refused before stopping input; no handoff issued. "
                     "Select actual retained source IDs and submit a NEW request if still eligible.")
             unfinished = self._unfinished(status)
-            r._memory.context(r._coordinate_scope(before), "Complete unfinished Work for successor",
+            packet = r._memory.context(r._coordinate_scope(before), "Complete unfinished Work for successor",
                 max_bytes=MAX_HANDOFF_CONTEXT_BYTES - HANDOFF_CONTEXT_RESERVE,
                 required_work_ids=frozenset(unfinished), support_source_ids=tuple(data["checkpoint_ids"]),
                 source_status=status, cache=False, **r._clocks())
+            if len(packet["sources"]) + len(packet["procedure_sources"]) >= MAX_HANDOFF_SOURCES:
+                raise CapacityError("Complete handoff must reserve support for its future post-Pause frame")
             if set(data["unfinished_work_ids"]) != unfinished:
                 raise HandoffEvidenceError(
                     "Handoff must identify every unfinished Work item, without extras or truncation. "
@@ -265,6 +267,16 @@ class RegisteredHandoff:
             raise HandoffEvidenceError("Claim read declarations must cover checkpoints/retained Work support and refer to issued sources")
         for identity in data["read_source_ids"]:
             retained(identity)
+        required_procedures = {tuple(sorted(source.items())) for packet in packets for source in packet["procedure_sources"]}
+        declared_procedures = {tuple(sorted(source.items())) for source in data["read_procedure_sources"]}
+        if declared_procedures != required_procedures:
+            raise HandoffEvidenceError("Claim must declare exact complete procedure support from issued packets")
+        if len(data["read_source_ids"]) + len(declared_procedures) > MAX_HANDOFF_SOURCES:
+            raise HandoffEvidenceError("Claim aggregate current/historical source bound exceeded")
+        for source in data["read_procedure_sources"]:
+            metadata, _ = r._memory.procedure_source(source["mission_id"], source["source_id"])
+            if metadata["disposition"] != "retained":
+                raise HandoffEvidenceError("Claim procedure support is no longer retained")
         self.guard(work, phase, ledger_phase="handoff")
         result = r._ledger.consume_handoff(data["request_id"], actor_id=data["player_id"], actor_role=data["actor_role"], now=r._wall())
         with r._metadata:

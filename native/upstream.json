@@ -24,6 +24,7 @@
     "src/uilist.cpp": "32974a71c267151e62cc3b3440932bb9d99764cad5195fb2c071a0dc16b7e0cf",
     "src/inventory_ui.cpp": "56fa04a2196580ddb8bd1fb4834bdaaa58eb536e8ffdf2a2d5415ee4a9889aaf",
     "src/ui_manager.cpp": "b13ae76ea817a2bc2bf0d231517fe68f77de1f582923c1da004c88a214c90b02",
-    "src/cata_imgui.cpp": "1846dbce1559f854392f0aa0e631d64232b0503e34e55e0d7ebdbea97340d8b6"
+    "src/cata_imgui.cpp": "1846dbce1559f854392f0aa0e631d64232b0503e34e55e0d7ebdbea97340d8b6",
+    "src/third-party/imgui/imgui_impl_sdl2.cpp": "beb4ef8415e1e09df14df3f6d2c90dd90f292d3c2e64d0366fab2630ef76b2ed"
   }
 }

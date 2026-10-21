@@ -53,6 +53,8 @@ def tool_specs() -> tuple[ToolSpec, ...]:
     for kind in SKILLS:
         schema = _without(request_schema("skill", skill_kind=kind), *ordinary_headers)
         schema["properties"]["perception"] = {"$ref": "#/$defs/perception"}
+        schema["properties"]["procedure"]["anyOf"] = [value if value.get("type") == "null" else
+            _without(value, "use_id") for value in schema["properties"]["procedure"]["anyOf"]]
         skill_intents.append(schema)
     skill = _object({**common, "scope": {"enum": ["new_root", "prompt", "lifecycle", "activity"]},
         "source_id": nullable_id, "supporting_source_ids": refs,
@@ -77,7 +79,7 @@ def tool_specs() -> tuple[ToolSpec, ...]:
     # derives only the common envelope; memory provenance remains player-authored.
     for kind in ("remember", "correct"):
         variants = [_without(request_schema(kind, entry_type=entry), *headers, "kind")
-                    for entry in (("claim",) if kind == "correct" else ("claim", "work", "decision"))]
+                    for entry in (("claim",) if kind == "correct" else ("claim", "work", "decision", "procedure"))]
         specs.append(ToolSpec("enactive_" + kind,
             "Write explicit evidence-linked memory through the existing ledger. No automatic lesson promotion or invented support.",
             _object({**common, "intent": {"anyOf": variants}})))
@@ -218,6 +220,8 @@ class PlayerTools:
                 scope=data["scope"], source=source, supporting_source_ids=data["supporting_source_ids"])
         else:
             if kind == "claim":
+                for source in intent["read_procedure_sources"]:
+                    self._source(source["mission_id"], source["source_id"])
                 issued = self.client.collect(snapshot["mission_id"], intent["handoff_id"], wait_seconds=0)
                 operation = (issued.get("response") or {}).get("operation")
                 if (issued["transport"] != "delivered" or operation is None

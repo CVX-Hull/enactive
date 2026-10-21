@@ -445,7 +445,7 @@ class MissionActivityControlTests(unittest.TestCase):
             value = copy.deepcopy(self.controller.state)
             value["revision"] += 1
             value["boundary"]["control_generation"] = request["control_generation"] + 1
-            atomic_json(self.controller.bridge / "control-response.json", dict(protocol=4, id=request["id"],
+            atomic_json(self.controller.bridge / "control-response.json", dict(protocol=5, id=request["id"],
                 status="dispatched", error="", state=value))
             self.assertTrue(seen.wait(1))
         with FakeBridge(self.controller) as fake, ControlBridge(self.controller, after_commit=progress):

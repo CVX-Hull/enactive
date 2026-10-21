@@ -82,6 +82,25 @@ both verify original bytes and neither refreshes native state or authority.
 
 ## Bounded asynchronous work
 
+The source checkpoint freezes`reflection/1` job/proposal/command records in
+`harness/gameplay/reflection.py`. A job keeps its exact current request/result
+trajectory, request cutoff, accepted-memory version, at most8 qualified images
+and16 procedures, with explicit request/source/procedure omissions. Bounds remain
+at most64 jobs,2 pending bodies (including a callback in flight),32 requests and
+64KiB input per job,32KiB output,180s per claimed window and3600s aggregate.
+SQLite job/command records use their own sequence; they never increment accepted
+memory. A full conservative claim window stays charged, with observed elapsed
+wall time recorded separately and actual model compute/tokens unknown.
+
+The standard-library mailbox/Condition holds no input or database lock while
+waiting. Only the existing writer drains short callbacks. Receipt time is captured
+by software at ingress and retained separately from writer-drain time: a timely
+submission must not become late because a game operation delayed bookkeeping.
+Unknown computation and omitted/unreviewed work remain explicit. Exact cutoff/
+source checks and immutable command/result correlation apply on reopen too.
+These data/cache/SQLite components do not yet establish the runtime scheduling,
+official host integration or actual nonblocking-play qualification below.
+
 At admission assign one general-purpose advisory Codex agent, with no game-input
 role, and freeze finite job/pending/context/source/output/time limits. The lead may
 provide only its role/interface/references and initial assignment. Subsequent work

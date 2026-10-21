@@ -17,14 +17,10 @@ import threading
 from typing import Any
 
 from .contracts import ContractError, json_object
-from .mission_contracts import (
-    VERSION, MissionAdmission, SourceRevalidation, canonical, validate_handoff_binding,
-    effect_reconciliation, validate_effect_reconciliation, validate_delivery_resolution,
-    validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption,
-    validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission,
-)
+from .contracts import canonical
+from .mission_contracts import VERSION, MissionAdmission, SourceRevalidation, validate_handoff_binding, effect_reconciliation, validate_effect_reconciliation, validate_delivery_resolution, validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption, validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission
 
-DB_VERSION = 10
+DB_VERSION = 11
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
 MAX_RECEIPT_BYTES = 65_536
 MAX_EFFECT_BYTES = 32_768
@@ -46,6 +42,8 @@ _DDL = (
     "CREATE TABLE memory (sequence INTEGER PRIMARY KEY, event_id TEXT UNIQUE NOT NULL, entry_type TEXT NOT NULL, record_id TEXT NOT NULL, body TEXT NOT NULL)",
     "CREATE INDEX memory_record ON memory (entry_type, record_id, sequence)",
     "CREATE TABLE reservations (id TEXT PRIMARY KEY, space BLOB NOT NULL)",
+    "CREATE TABLE reflection_jobs (sequence INTEGER PRIMARY KEY, id TEXT UNIQUE NOT NULL, payload TEXT NOT NULL, state TEXT NOT NULL, claimed_at REAL, deadline REAL, charged_seconds REAL NOT NULL, proposal TEXT)",
+    "CREATE TABLE reflection_commands (id TEXT PRIMARY KEY, payload TEXT NOT NULL, result TEXT NOT NULL, received_at REAL NOT NULL)",
 )
 
 
@@ -79,7 +77,7 @@ def _intent(value: dict | str) -> dict:
     data = json_object(value)
     expected = {"kind", "value", "expected_session", "expected_revision", "expected_boundary_id",
                 "source_before", "preflight_source", "revalidation", "reservation_id"}
-    if set(data) != expected or data["kind"] not in ("action", "key", "resume", "request_interrupt", "answer_interrupt"):
+    if set(data) != expected or data["kind"] not in ("action", "key", "direct", "resume", "request_interrupt", "answer_interrupt"):
         raise LedgerError("Primitive intent fields do not match")
     for key in ("expected_session", "expected_boundary_id", "source_before", "preflight_source", "reservation_id"): _id(data[key])
     if data["revalidation"] is not None:
@@ -91,6 +89,9 @@ def _intent(value: dict | str) -> dict:
     if data["kind"] in ("resume", "request_interrupt"):
         if data["value"] is not None:
             raise LedgerError("Resume/interrupt request has no action/key value")
+    elif data["kind"] == "direct":
+        from .native_input import validate_input
+        validate_input(data["value"])
     elif data["kind"] == "answer_interrupt":
         value = data["value"]
         if type(value) is not dict or set(value) != {"interrupt_request_id", "choice"} or value["choice"] not in ("YES", "NO"):
@@ -108,6 +109,8 @@ def _primitive_parent(intent: dict, request: dict) -> None:
     activity = (request["kind"] == "skill" and request["skill_kind"] == "activity"
                 and request["phase_id"] is not None)
     kind = intent["kind"]
+    if kind == "direct" and (request["kind"] != "skill" or request["skill_kind"] != "direct"):
+        raise LedgerError("Direct input requires its exact ordinary skill parent")
     if kind in ("request_interrupt", "answer_interrupt"):
         step = "interrupt" if kind == "request_interrupt" else "answer_interrupt"
         if not activity or request["goal"]["step"] != step or not request["goal"]["interrupt_allowed"]:
@@ -221,6 +224,8 @@ class MissionLedger:
                     state = self._get("state")
                     self._db.execute("UPDATE primitives SET state='unknown' WHERE state IN ('prepared','published')")
                     self._db.execute("UPDATE requests SET state='unknown' WHERE state IN ('accepted','running')")
+                    self._db.execute("UPDATE reflection_jobs SET state='unknown' WHERE state='claimed'")
+                    self._db.execute("UPDATE reflection_jobs SET state='unreviewed' WHERE state='offered'")
                     state["epoch"] += 1
                     if state["phase"] not in TERMINAL:
                         state["phase"] = "paused"
@@ -348,15 +353,20 @@ class MissionLedger:
         if self._db.execute("SELECT count(*) FROM requests").fetchone()[0] > stored.limits.requests:
             raise LedgerError("Request retention exceeded")
         work_lineage = {}
+        procedures = []
         for event_id, entry_type, record_id, body in self._db.execute("SELECT event_id,entry_type,record_id,body FROM memory ORDER BY sequence"):
             _id(event_id)
             entry = validate_memory_entry(body, entry_type)
-            if entry["id"] != record_id or entry["scope"]["mission_id"] != stored.mission_id:
+            if entry["id"] != record_id or (entry["mission_id"] if entry_type == "procedure" else entry["scope"]["mission_id"]) != stored.mission_id:
                 raise LedgerError("Corrupt semantic record scope")
+            if entry_type == "procedure":
+                self._check_procedure_lineage(entry, procedures, stored)
+                procedures.append(entry)
             if entry_type == "work":
                 self._check_work_lineage(entry, work_lineage)
                 work_lineage[entry["id"]] = entry
         issued, consumed = self._handoffs(state=state)
+        self._verify_reflection(stored, state)
         actors = [(0, stored.player_id)] + sorted((issued[identity]["epoch"], self.request(claim)["result"]["player_id"])
                                                  for identity, claim in consumed.items())
         for request_id, payload, result, status in self._db.execute("SELECT id,payload,result,state FROM requests WHERE result IS NOT NULL"):
@@ -467,7 +477,7 @@ class MissionLedger:
         return {"schema": VERSION, "record_type": "ClaimedHandoff", "handoff_id": data["handoff_id"],
                 "mission_id": data["mission_id"], "player_id": data["player_id"],
                 "actor_role": role, "epoch": data["epoch"], "packet_ids": data["packet_ids"],
-                "read_source_ids": data["read_source_ids"], "grants_authority": False}
+                "read_source_ids": data["read_source_ids"], "read_procedure_sources": data["read_procedure_sources"], "grants_authority": False}
 
     @staticmethod
     def _claim_binding(data: dict, handoff: dict) -> None:
@@ -671,6 +681,10 @@ class MissionLedger:
                 raise LedgerError("Request belongs to another mission/epoch")
             if data["kind"] == "skill" and data["skill_kind"] not in self.admission.allowed_skills:
                 raise LedgerError("Skill not admitted")
+            if data["kind"] == "skill" and data["procedure"] is not None:
+                if self._db.execute("SELECT 1 FROM requests WHERE json_extract(payload,'$.procedure.use_id')=?",
+                                    (data["procedure"]["use_id"],)).fetchone():
+                    raise LedgerError("A procedure use identity belongs to one immutable skill root")
             if data["kind"] == "lifecycle":
                 if data["operation"] not in self.admission.allowed_lifecycle:
                     raise LedgerError("Lifecycle operation not admitted")
@@ -738,7 +752,7 @@ class MissionLedger:
     @staticmethod
     def _is_phase_root(data: dict) -> bool:
         return data.get("phase_id") is None and (data["kind"] == "lifecycle"
-            or data["kind"] == "skill" and data["skill_kind"] in ("navigate", "item", "activity", "interact", "inspect"))
+            or data["kind"] == "skill" and data["skill_kind"] in ("navigate", "item", "activity", "interact", "inspect", "direct"))
 
     def _phase_parent(self, data: dict, *, before_rowid: int | None = None) -> dict | None:
         """Validate a direct immutable accounting link, never live input authority."""
@@ -759,11 +773,21 @@ class MissionLedger:
             if data["skill_kind"] == "navigate":
                 if root.get("skill_kind") != "navigate" or data["goal"] != root["goal"]:
                     raise LedgerError("Navigation continuation must keep its exact original goal/scope")
-            elif data["skill_kind"] not in ("menu", "edit", "interact", "inspect", "item", "activity"):
+            elif data["skill_kind"] not in ("menu", "edit", "interact", "inspect", "item", "activity", "direct"):
                 raise LedgerError("Phase skill child must be a direct control operation")
             elif root.get("skill_kind") == "navigate" and data["skill_kind"] not in ("menu", "edit"):
                 raise LedgerError("Navigation root permits only its exact suffix or ordinary menu/editor controls")
-            if data["skill_kind"] in ("item", "activity"):
+            if data["skill_kind"] == "direct":
+                if root["kind"] != "skill" or root["skill_kind"] not in ("interact", "item", "inspect", "activity", "direct"):
+                    raise LedgerError("Direct child cannot borrow lifecycle or navigation authority")
+                if data["goal"]["interrupt_allowed"] and not root["goal"].get("interrupt_allowed", False):
+                    raise LedgerError("Direct child cannot enlarge original interruption consent")
+            if data["skill_kind"] == "activity" and root.get("skill_kind") == "direct":
+                if (data["goal"]["operation"] != "direct" or data["goal"]["target"] != root["goal"]["expected"]
+                        or data["goal"]["game_seconds"] > root["limits"]["game_seconds"]
+                        or data["goal"]["interrupt_allowed"] and not root["goal"]["interrupt_allowed"]):
+                    raise LedgerError("Ordinary activity child changed its original intent, time or consent")
+            elif data["skill_kind"] in ("item", "activity"):
                 kind = data["skill_kind"]
                 keys = ("purpose", "label", "quantity", "quantity_unit", "outcome") if kind == "item" else (
                     "operation", "target", "game_seconds", "interrupt_allowed")
@@ -1004,7 +1028,7 @@ class MissionLedger:
         resolution = self.request(proof["reconciliation_request_id"])
         root = self.request(proof["root_id"])
         native = json_object(proof["native_request_json"])
-        if type(native.get("authority")) is not dict or type(native.get("protocol")) is not int or native["protocol"] != 4:
+        if type(native.get("authority")) is not dict or type(native.get("protocol")) is not int or native["protocol"] != 5:
             raise LedgerError("Delivery proof lacks its original native authority envelope")
         receipt = p["result"] or {}
         binding = receipt.get("dispatch_binding") or {}
@@ -1030,8 +1054,8 @@ class MissionLedger:
                 or native.get("authority", {}).get("controller_boot_id") != proof["controller_boot_id"]
                 or intent["source_before"] != proof["before_source_id"]):
             raise LedgerError("Delivery effect lost its independent original request/root/actor/epoch correlation")
-        if intent["kind"] in ("action", "key"):
-            if (native.get(intent["kind"]) != intent["value"] or native.get("revision") != intent["expected_revision"]
+        if intent["kind"] in ("action", "key", "direct"):
+            if (native.get("input" if intent["kind"] == "direct" else intent["kind"]) != intent["value"] or native.get("revision") != intent["expected_revision"]
                     or native.get("boundary_id") != intent["expected_boundary_id"]
                     or native.get("takeover_generation") != proof["takeover_generation"]):
                 raise LedgerError("Delivery effect contradicts original native intent")
@@ -1039,7 +1063,7 @@ class MissionLedger:
             raise LedgerError("Delivery effect borrowed another interrupt owner/answer")
         terminal = proof["terminal"]
         if terminal is not None:
-            ordinary = intent["kind"] in ("action", "key")
+            ordinary = intent["kind"] in ("action", "key", "direct")
             allowed = {"ready", "rejected"} if ordinary else ({"prompt_opened", "not_applicable", "rejected"}
                 if intent["kind"] == "request_interrupt" else {"answer_delivered", "rejected"})
             if (terminal["id"] != native["id"] or terminal["channel"] != ("ordinary" if ordinary else "control")
@@ -1445,7 +1469,7 @@ class MissionLedger:
                 or any(receipt.get(key) != intent[key] for key in ("kind", "value", "expected_session",
                     "expected_revision", "expected_boundary_id", "source_before", "preflight_source"))
                 or not receipt.get("source_after") or receipt.get("received_monotonic") is None
-                or native.get("protocol") != 4 or native.get("kind") != "resume"
+                or native.get("protocol") != 5 or native.get("kind") != "resume"
                 or native.get("id") != primitive["native_id"] or native.get("require_exact_frame") is not True
                 or native.get("session") != intent["expected_session"]
                 or native.get("revision") != intent["expected_revision"]
@@ -1670,7 +1694,8 @@ class MissionLedger:
         """Immutable typed storage; semantic reduction belongs to campaign memory."""
         _id(event_id)
         data = validate_memory_entry(entry, entry_type)
-        if data["scope"]["mission_id"] != self.admission.mission_id: raise LedgerError("Memory belongs to another mission")
+        if (data["mission_id"] if entry_type == "procedure" else data["scope"]["mission_id"]) != self.admission.mission_id:
+            raise LedgerError("Memory belongs to another mission")
         encoded = _json(data)
         with self._transaction():
             self._touch(now)
@@ -1678,19 +1703,272 @@ class MissionLedger:
             if old:
                 if old[1:] != (entry_type, encoded): raise LedgerError("Memory event identity reused")
                 return old[0]
-            maximum = {"claim": 2048, "work": 256, "decision": 2048}[entry_type]
+            maximum = {"claim": 2048, "work": 256, "decision": 2048, "procedure": 256}[entry_type]
             if self._db.execute("SELECT count(*) FROM memory WHERE entry_type=?", (entry_type,)).fetchone()[0] >= maximum:
                 raise BudgetError("Memory event retention limit reached")
             if entry_type != "work" and self._db.execute("SELECT 1 FROM memory WHERE entry_type=? AND record_id=?", (entry_type, data["id"])).fetchone():
                 raise LedgerError("An immutable assertion/decision identity cannot be overwritten")
             if entry_type == "work":
                 self._check_work_lineage(data, {row["entry"]["id"]: row["entry"] for row in self.memory_records("work")})
+            if entry_type == "procedure":
+                self._check_procedure_lineage(data, [row["entry"] for row in self.memory_records("procedure")], self.admission)
             cursor = self._db.execute("INSERT INTO memory(event_id,entry_type,record_id,body) VALUES (?,?,?,?)", (event_id, entry_type, data["id"], encoded))
             return cursor.lastrowid
 
     def memory_records(self, entry_type: str) -> tuple[dict, ...]:
-        if entry_type not in ("claim", "work", "decision"): raise LedgerError("Unknown memory type")
+        if entry_type not in ("claim", "work", "decision", "procedure"): raise LedgerError("Unknown memory type")
         with self._mutex:
             if self._db is None: raise LedgerError("Ledger is closed")
             return tuple({"sequence": row[0], "event_id": row[1], "entry": json_object(row[2])}
                          for row in self._db.execute("SELECT sequence,event_id,body FROM memory WHERE entry_type=? ORDER BY sequence", (entry_type,)))
+
+    @staticmethod
+    def _check_procedure_lineage(entry: dict, previous: list[dict], admission: MissionAdmission) -> None:
+        policy = admission.learning
+        if policy is None or entry["environment"] != dict(policy.environment):
+            raise LedgerError("Procedure requires its exact admitted learning environment")
+        parent = entry["parent"]
+        family = [record for record in previous if record["procedure_id"] == entry["procedure_id"]]
+        if parent is None:
+            if family or entry["revision"] != 1:
+                raise LedgerError("Procedure family must have one first revision")
+        else:
+            if any(record["parent"] == parent for record in previous):
+                raise LedgerError("Procedure ancestry cannot branch")
+            if parent["mission_id"] == admission.mission_id:
+                matches = [record for record in previous if record["id"] == parent["revision_id"]]
+                if (not matches or matches[0]["procedure_id"] != entry["procedure_id"]
+                        or matches[0]["revision"] + 1 != entry["revision"]):
+                    raise LedgerError("Procedure parent must be an earlier consecutive family revision")
+            elif parent["mission_id"] not in {source.mission_id for source in policy.library_sources}:
+                raise LedgerError("Historical procedure parent must be explicitly admitted")
+
+    def reflection_records(self) -> tuple[tuple[dict, ...], tuple[dict, ...]]:
+        """Original advisory jobs/proposals, on a sequence separate from memory."""
+        with self._mutex:
+            jobs, proposals = [], []
+            for payload, state, claimed, deadline, proposal in self._db.execute(
+                    "SELECT payload,state,claimed_at,deadline,proposal FROM reflection_jobs ORDER BY sequence"):
+                jobs.append(dict(job=json_object(payload), state=state, claimed_at=claimed, deadline=deadline))
+                if proposal is not None:
+                    proposals.append(json_object(proposal))
+            return tuple(jobs), tuple(proposals)
+
+    def _reflection_trace(self, job: dict) -> None:
+        """Compare job data with original durable rows, never model-written history."""
+        rows = self._db.execute("SELECT rowid,payload,state,result FROM requests WHERE rowid>? AND rowid<=? ORDER BY rowid",
+            (job["after_sequence"], job["through_sequence"])).fetchall()
+        original = {}
+        for sequence, payload, state, result in rows:
+            request = json_object(payload)
+            if request["kind"] not in ("start", "remember", "correct"):
+                original[request["request_id"]] = (sequence, dict(request=request, state=state,
+                    result=None if result is None else json_object(result)))
+        if len(original) - len(job["trajectory"]) != job["omitted_requests"]:
+            raise LedgerError("Reflection coverage must retain its original omitted request count")
+        ordered = []
+        linked_sources = set()
+        for row in job["trajectory"]:
+            identity = row["request"]["request_id"]
+            if identity not in original or canonical(original[identity][1]) != canonical(row):
+                raise LedgerError("Reflection trajectory differs from its original settled request/result")
+            ordered.append(original[identity][0])
+            linked_sources.update(row["request"].get("sources", ()))
+            linked_sources.update(row["result"].get("source_ids", ()))
+            for primitive in self.primitive_records():
+                if primitive["request_id"] == identity:
+                    linked_sources.update(primitive["intent"][key] for key in ("source_before", "preflight_source"))
+                    receipt = primitive["result"] or {}
+                    linked_sources.update(receipt[key] for key in ("source_before", "preflight_source", "source_after")
+                                          if receipt.get(key) is not None)
+        if ordered != sorted(ordered):
+            raise LedgerError("Reflection trajectory changed original request order")
+        if any(source["mission_id"] != job["mission_id"] or source["source_id"] not in linked_sources
+               for source in job["sources"]):
+            raise LedgerError("Reflection source is unrelated to its original trajectory")
+
+    def append_reflection_job(self, value: dict, *, now: float) -> dict:
+        from .reflection import validate_job
+        job = validate_job(value)
+        policy = self.admission.learning
+        if policy is None or policy.reflector_id != job["reflector_id"] or job["mission_id"] != self.admission.mission_id:
+            raise LedgerError("Reflection actor/mission was not admitted")
+        limits = policy.reflection_limits
+        if (len(job["trajectory"]) > limits.requests_per_job or len(job["sources"]) > limits.sources_per_job
+                or len(canonical(job).encode()) > limits.context_bytes):
+            raise BudgetError("Reflection job exceeds its frozen context bounds")
+        with self._transaction():
+            state = self._touch(now)
+            if state["phase"] in TERMINAL | {"finishing"} or now >= state["deadline"]:
+                raise LedgerError("Reflection cannot start after finishing or expiry")
+            prior = self._db.execute("SELECT payload FROM reflection_jobs WHERE id=?", (job["id"],)).fetchone()
+            if prior:
+                if prior[0] != canonical(job):
+                    raise LedgerError("Reflection job identity cannot change")
+                return job
+            counts = self._db.execute("SELECT count(*),coalesce(sum(state IN ('offered','claimed')),0) FROM reflection_jobs").fetchone()
+            if counts[0] >= limits.jobs or counts[1] >= limits.pending:
+                raise BudgetError("Reflection job/pending allowance exhausted")
+            previous = self._db.execute("SELECT coalesce(max(json_extract(payload,'$.through_sequence')),0) FROM reflection_jobs").fetchone()[0]
+            current = self._db.execute("SELECT coalesce(max(rowid),0) FROM requests").fetchone()[0]
+            memory = self._db.execute("SELECT coalesce(max(sequence),0) FROM memory").fetchone()[0]
+            if (job["after_sequence"] != previous or job["through_sequence"] != current
+                    or job["epoch"] != state["epoch"] or job["memory_version"] != memory):
+                raise LedgerError("Reflection job must name the actual current cutoff/version")
+            self._reflection_trace(job)
+            self._db.execute("INSERT INTO reflection_jobs(id,payload,state,charged_seconds) VALUES (?,?,'offered',0)",
+                (job["id"], canonical(job)))
+        return job
+
+    def expire_reflection(self, *, now: float) -> None:
+        with self._mutex:
+            if self._get("state")["phase"] in TERMINAL:
+                return
+            with self._transaction():
+                state = self._touch(now)
+                self._db.execute("UPDATE reflection_jobs SET state='expired' WHERE state='claimed' AND deadline<?", (now,))
+                if state["phase"] == "finishing":
+                    self._db.execute("UPDATE reflection_jobs SET state='unreviewed' WHERE state='offered'")
+
+    def apply_reflection(self, value: dict, *, now: float, received_at: float | None = None) -> dict:
+        """Short writer-only bookkeeping; reserves finite claim windows, never input."""
+        from .reflection import validate_command, validate_proposal
+        now = _clock(now)
+        received_at = _clock(now if received_at is None else received_at)
+        if received_at > now:
+            raise LedgerError("Advisory ingress time cannot be after writer drain time")
+        command = validate_command(value)
+        policy = self.admission.learning
+        if (policy is None or command["mission_id"] != self.admission.mission_id
+                or command["reflector_id"] != policy.reflector_id):
+            raise LedgerError("Reflective command actor/mission was not admitted")
+        with self._transaction():
+            old = self._db.execute("SELECT payload,result FROM reflection_commands WHERE id=?", (command["command_id"],)).fetchone()
+            if old:
+                if old[0] != canonical(command):
+                    raise LedgerError("Reflective command identity changed")
+                return json_object(old[1])
+            state = self._touch(now)
+            if state["phase"] in TERMINAL:
+                raise LedgerError("Sealed terminal mission accepts no late advisory writes")
+            if self._db.execute("SELECT count(*) FROM reflection_commands").fetchone()[0] >= 128:
+                raise BudgetError("Reflective command retention exhausted")
+            row = self._db.execute("SELECT payload,state,claimed_at,deadline,proposal FROM reflection_jobs WHERE id=?", (command["job_id"],)).fetchone()
+            if row is None:
+                raise LedgerError("Reflective command has no original job")
+            job = json_object(row[0])
+            result = {"job_id": job["id"], "grants_authority": False}
+            limits = policy.reflection_limits
+            if command["kind"] == "claim":
+                if row[1] != "offered" or state["phase"] == "finishing" or now >= state["deadline"]:
+                    raise LedgerError("Reflection job cannot be claimed or renewed")
+                reserved = float(min(limits.job_seconds, state["deadline"] - now))
+                spent = self._db.execute("SELECT coalesce(sum(charged_seconds),0) FROM reflection_jobs").fetchone()[0]
+                if spent + reserved > limits.total_seconds:
+                    raise BudgetError("Original reflective claim-window allowance exhausted")
+                self._db.execute("UPDATE reflection_jobs SET state='claimed',claimed_at=?,deadline=?,charged_seconds=? WHERE id=?",
+                    (now, now + reserved, reserved, job["id"]))
+                result.update(state="claimed", claimed_at=now, deadline=now + reserved, charged_seconds=reserved,
+                    measurement="Conservative claimed wall window; model compute/tokens unknown")
+            else:
+                proposal = validate_proposal(command["proposal"], job)
+                if row[2] is None or row[1] not in ("claimed", "expired", "unknown"):
+                    raise LedgerError("Proposal needs its original claimed job")
+                if row[4] is not None:
+                    raise LedgerError("A claimed job retains one immutable proposal")
+                if self._db.execute("SELECT 1 FROM reflection_jobs WHERE json_extract(proposal,'$.id')=?",
+                                    (proposal["id"],)).fetchone():
+                    raise LedgerError("A proposal identity belongs to one immutable original job")
+                if len(canonical(proposal).encode()) > limits.result_bytes:
+                    raise BudgetError("Proposal exceeds its original result allowance")
+                if any(candidate["mission_id"] != job["mission_id"] or candidate["environment"] != dict(policy.environment)
+                       for candidate in proposal["candidates"]):
+                    raise LedgerError("Proposal candidate changed admitted owner/environment")
+                if received_at < row[2]:
+                    raise LedgerError("Advisory output predates its original claim")
+                late = received_at > row[3] or row[1] == "unknown"
+                self._db.execute("UPDATE reflection_jobs SET state=?,proposal=? WHERE id=?",
+                    ("expired" if late else "completed", canonical(proposal), job["id"]))
+                result.update(state="expired" if late else "completed", proposal_id=proposal["id"],
+                    observed_claim_elapsed_seconds=received_at - row[2], late=late,
+                    measurement="Observed claim-to-submit wall elapsed; model compute/tokens unknown")
+            self._db.execute("INSERT INTO reflection_commands(id,payload,result,received_at) VALUES (?,?,?,?)",
+                (command["command_id"], canonical(command), canonical(result), received_at))
+        return result
+
+    def _verify_reflection(self, admission: MissionAdmission, state: dict) -> None:
+        from .reflection import validate_job, validate_command, validate_proposal
+        rows = self._db.execute("SELECT id,payload,state,claimed_at,deadline,charged_seconds,proposal FROM reflection_jobs ORDER BY sequence").fetchall()
+        policy = admission.learning
+        if rows and (policy is None or policy.reflector_id is None):
+            raise LedgerError("Unadmitted reflective history")
+        if len(rows) > (0 if policy is None else policy.reflection_limits.jobs):
+            raise LedgerError("Reflective history exceeds frozen job count")
+        previous, spent, proposals = 0, 0, set()
+        by_id = {}
+        for identity, payload, job_state, claimed, deadline, cost, proposal in rows:
+            job = validate_job(payload)
+            if (job["id"] != identity or payload != canonical(job) or job["mission_id"] != admission.mission_id
+                    or job["reflector_id"] != policy.reflector_id or job["after_sequence"] != previous
+                    or job_state not in ("offered", "claimed", "completed", "expired", "unknown", "unreviewed")
+                    or job["epoch"] > state["epoch"]):
+                raise LedgerError("Corrupt reflective job identity/cutoff/state")
+            self._reflection_trace(job)
+            if claimed is None:
+                if deadline is not None or cost != 0 or job_state not in ("offered", "unreviewed") or proposal is not None:
+                    raise LedgerError("Unclaimed reflection cannot assert computation or output")
+            else:
+                _clock(claimed); _clock(deadline)
+                if (not 0 < cost <= policy.reflection_limits.job_seconds or deadline != claimed + cost
+                        or job_state in ("offered", "unreviewed") or claimed < state["started_at"]):
+                    raise LedgerError("Original reflective claim window changed")
+                spent += cost
+            if proposal is not None:
+                output = validate_proposal(proposal, job)
+                if output["id"] in proposals or proposal != canonical(output) or job_state not in ("completed", "expired"):
+                    raise LedgerError("Corrupt reflective proposal identity/state")
+                proposals.add(output["id"])
+            elif job_state == "completed":
+                raise LedgerError("Completed reflection lost its proposal")
+            previous = job["through_sequence"]
+            by_id[identity] = (job, job_state, claimed, deadline, cost, proposal)
+        if policy is not None and spent > policy.reflection_limits.total_seconds:
+            raise LedgerError("Original reflective wall-window allowance changed")
+        commands = self._db.execute("SELECT id,payload,result,received_at FROM reflection_commands").fetchall()
+        if len(commands) > 128:
+            raise LedgerError("Reflective command retention exceeded")
+        claims, submissions = set(), set()
+        for identity, payload, encoded_result, received_at in commands:
+            _clock(received_at)
+            command = validate_command(payload)
+            result = json_object(encoded_result)
+            if (command["command_id"] != identity or payload != canonical(command) or canonical(result) != encoded_result
+                    or command["mission_id"] != admission.mission_id or policy is None
+                    or command["reflector_id"] != policy.reflector_id or command["job_id"] not in by_id
+                    or received_at > state["last_wall"]):
+                raise LedgerError("Corrupt reflective command identity/result")
+            job, job_state, claimed, deadline, cost, proposal = by_id[command["job_id"]]
+            if command["kind"] == "claim":
+                expected = dict(job_id=job["id"], grants_authority=False, state="claimed", claimed_at=claimed,
+                    deadline=deadline, charged_seconds=cost,
+                    measurement="Conservative claimed wall window; model compute/tokens unknown")
+                if claimed is None or received_at > claimed or job["id"] in claims or canonical(result) != canonical(expected):
+                    raise LedgerError("Reflective claim receipt contradicts its original window")
+                claims.add(job["id"])
+            else:
+                if proposal is None or canonical(command["proposal"]) != proposal or job["id"] in submissions:
+                    raise LedgerError("Reflective submission contradicts its immutable original output")
+                output = validate_proposal(proposal, job)
+                elapsed = result.get("observed_claim_elapsed_seconds")
+                _clock(elapsed)
+                expected = dict(job_id=job["id"], grants_authority=False, state=job_state, proposal_id=output["id"],
+                    observed_claim_elapsed_seconds=elapsed, late=job_state == "expired",
+                    measurement="Observed claim-to-submit wall elapsed; model compute/tokens unknown")
+                if (claimed is None or elapsed != received_at - claimed
+                        or job_state == "completed" and elapsed > cost or canonical(result) != canonical(expected)):
+                    raise LedgerError("Reflective submission receipt changed its original elapsed time/state")
+                submissions.add(job["id"])
+        if claims != {identity for identity, row in by_id.items() if row[2] is not None}:
+            raise LedgerError("Claimed reflection lost its original durable command")
+        if submissions != {identity for identity, row in by_id.items() if row[5] is not None}:
+            raise LedgerError("Reflective output lost its original durable submission")

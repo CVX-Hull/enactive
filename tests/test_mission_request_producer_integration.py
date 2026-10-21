@@ -17,7 +17,7 @@ from tests import test_mission_activity_recovery as activity
 def compose(case, raw, scope, *, source=None, supports=()):
     """Reuse fixture semantic choices, discard all handwritten wire bindings."""
     intent = {key: deepcopy(raw[key]) for key in
-        ("kind", "skill_kind", "goal", "perception", "work_id", "operation", "world",
+        ("kind", "skill_kind", "goal", "perception", "procedure", "work_id", "operation", "world",
          "character", "identity_claim_ids") if key in raw}
     if intent.get("perception") is not None:
         intent["perception"].pop("source_id", None)
@@ -78,7 +78,7 @@ class ProducerLifecycleIntegrationTests(ProducedCreationFixture, unittest.TestCa
 
         self.bridge.behavior = item_menu
         intent = dict(kind="skill", skill_kind="inspect", goal=dict(purpose="inventory"),
-                      work_id=None, perception=None)
+                      work_id=None, perception=None, procedure=None)
         limits = dict(primitives=8, wall_seconds=120, game_seconds=60)
 
         def request(identity, intent, scope):
@@ -92,12 +92,12 @@ class ProducerLifecycleIntegrationTests(ProducedCreationFixture, unittest.TestCa
         menu = dict(kind="skill", skill_kind="menu", work_id=None,
             goal=dict(purpose="Inspect actual represented item", label="pocket knife", outcome="activated"),
             perception=dict(kind="menu", basis="player_interpretation", control="vertical",
-                rows=[dict(label="pocket knife", enabled=True)], selected=0, question=""))
+                rows=[dict(label="pocket knife", enabled=True)], selected=0, question=""), procedure=None)
         self.assertEqual(self.run_request(request("item", menu, "prompt"))["state"], "partial")
         for identity in ("item-dismiss", "inventory-dismiss"):
             intent = dict(kind="skill", skill_kind="menu", work_id=None,
                 goal=dict(purpose="Return from current menu", label="Cancel", outcome="dismissed"),
-                perception=dict(kind="dismissal", basis="player_interpretation", question="Current item menu"))
+                perception=dict(kind="dismissal", basis="player_interpretation", question="Current item menu"), procedure=None)
             result = self.run_request(request(identity, intent, "prompt"))
             self.assertEqual(result["state"], "partial", result)
         values = [r["intent"]["value"] for r in self.runtime._ledger.primitive_records()

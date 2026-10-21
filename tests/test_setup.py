@@ -52,6 +52,10 @@ class SetupTests(unittest.TestCase):
                 '                        ui.default_cursor();\n'
                 '                        ui.redraw_cb( ui );\n}\n'),
             "src/uilist.cpp": ('void uilist_impl::draw_controls()\n{\n'
+                '    if( mouse.hidekb && !cursor_shown ) {\n'
+                '        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;\n'
+                '    } else {\n'
+                '        ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;\n    }\n'
                 '                    for( int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++ ) {\n'
                 '                        auto entry = parent.entries[parent.fentries[i]];\n'
                 '                        bool is_selected = i == parent.fselected;\n'
@@ -123,8 +127,17 @@ class SetupTests(unittest.TestCase):
                 'void unrelated() { query_popup().context( "OTHER_QUERY" ).query(); }\n'),
             "src/debug.cpp": "    for( bool stop = false; !stop; ) {\n        ui_manager::redraw();\n}",
             "src/main.cpp": "        while( !do_turn() ) {}",
+            "src/third-party/imgui/imgui_impl_sdl2.cpp": (
+                '#include "imgui.h"\n'
+                'static void ImGui_ImplSDL2_UpdateMouseData(float x_scale, float y_scale)\n{\n}\n'
+                'static void ImGui_ImplSDL2_UpdateMouseCursor()\n{\n}\n'
+                '            if (window_event == SDL_WINDOWEVENT_ENTER) {}\n'
+                '    if (bd->MouseLastLeaveFrame && bd->MouseLastLeaveFrame >= ImGui::GetFrameCount() && bd->MouseButtonsDown == 0) {}\n'),
             "src/sdltiles.cpp": ("    while( SDL_PollEvent( &ev ) ) {\n        imclient->process_input( &ev );\n}\n"
                 "    SDL_RenderPresent( renderer.get() );\n"
+                "    if( mouse.enabled ) {\n"
+                "        ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;\n}\n"
+                "    SDL_GetMouseState( &last_input.mouse_pos.x, &last_input.mouse_pos.y );\n"
                 "input_event input_manager::get_input_event( const keyboard_mode preferred_keyboard_mode )\n{\n"
                 "    if( inputdelay < 0 ) {\n        do {\n" + "CheckMessages();\n" * (4 if extra_poll else 3) +
                 "}\n}\nbool gamepad_available() {}"),
@@ -146,13 +159,14 @@ class SetupTests(unittest.TestCase):
         return subprocess.run([sys.executable, str(repository / "tools/patch_game.py"), str(source)],
                               text=True, capture_output=True, check=False)
 
-    def test_native_v4_patch_is_repeatable_and_scopes_exact_input_paths(self):
+    def test_native_v5_patch_is_repeatable_and_scopes_exact_input_paths(self):
         repository, source = self.patch_fixture()
         first = self.run_patch(repository, source)
         self.assertEqual(first.returncode, 0, first.stderr)
         expected = {path.relative_to(source): path.read_bytes()
                     for path in source.rglob("*") if path.is_file()}
-        for name in ("ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp", "cata_imgui.cpp", "inventory_ui.cpp"):
+        for name in ("ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp", "cata_imgui.cpp", "inventory_ui.cpp",
+                     "third-party/imgui/imgui_impl_sdl2.cpp"):
             (source / "src" / name).write_text("stale patched contents")
         second = self.run_patch(repository, source)
         self.assertEqual(second.returncode, 0, second.stderr)
@@ -216,6 +230,120 @@ class SetupTests(unittest.TestCase):
         self.assertNotIn('capture_frame(', encoder)
         self.assertNotIn('SDL_RenderReadPixels(', encoder)
 
+    def test_native_direct_schema_translation_and_commit_guards(self):
+        native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
+        self.assertIn('integer_member( request, "protocol" ) != 5', native)
+        self.assertNotIn('integer_member( request, "protocol" ) != 4', native)
+        direct = native[native.index('direct_input direct_event('):native.index('bool uuid_id(')]
+        for guard in ('input.size() != 3', 'input.size() != 2', 'input.size() != 5',
+                      'modifiers.size() > 3', '!explicit_modifiers.insert(',
+                      'single_printable_scalar( text )', 'geometry != saved_geometry',
+                      'x >= geometry->output_width', 'y >= geometry->output_height',
+                      'MouseInput::LeftButtonReleased', 'MouseInput::RightButtonReleased'):
+            self.assertIn(guard, direct)
+        for forbidden in ('sdl_keysym_to_curses(', 'SDL_GetKeyboardState(', 'handle_arrow_combo(',
+                          'feed_imgui(', 'process_input(', 'LeftButtonPressed', 'RightButtonPressed'):
+            self.assertNotIn(forbidden, direct)
+        poll = native[native.index('bool poll( keyboard_mode'):]
+        self.assertLess(poll.index('direct = direct_event('), poll.index('ordinary_commit_gate( request, false );'))
+        self.assertLess(poll.index('ordinary_commit_gate( request, false );'), poll.index('feed_direct_imgui( *direct );'))
+        self.assertIn('kind == "direct" && !request.get_bool( "require_exact_frame" )', poll)
+        gate = native[native.index('void ordinary_commit_gate('):native.index('input_event action_event(')]
+        self.assertIn('current_frame_geometry() != saved_geometry', gate)
+        self.assertIn('cached_frame_geometry() != saved_geometry', gate)
+        self.assertLess(gate.index('current_frame_geometry() != saved_geometry'), gate.index('exact_frame_gate();'))
+        self.assertLess(gate.index('exact_frame_gate();'), gate.rindex('current_frame_geometry() != saved_geometry'))
+        self.assertIn('out.member( "frame_geometry" )', native)
+        scalar = native[native.index('int single_printable_scalar('):native.index('std::optional<frame_geometry> input_geometry(')]
+        for guard in ('text.size() > 4', 'UTF8_getch( text )', 'code > 0x10ffff',
+                      'code >= 0xd800 && code <= 0xdfff', 'code < 32', 'code >= 127 && code <= 159',
+                      'code == 0x2028', 'code == 0x2029', 'utf32_to_utf8( code ) != text',
+                      'code > IM_UNICODE_CODEPOINT_MAX'):
+            self.assertIn(guard, scalar)
+        self.assertIn('x * geometry->window_width / geometry->output_width', direct)
+        self.assertIn('y * geometry->window_height / geometry->output_height', direct)
+        self.assertIn('event.widget_position = point( static_cast<int>( x ), static_cast<int>( y ) )', direct)
+        self.assertIn('event.widget_modifiers = event.engine.modifiers', direct)
+        self.assertIn("event.widget_key - 'a' + 1", direct)
+        self.assertIn('arrow && ( ctrl || shift )', direct)
+
+    def test_direct_widget_completion_is_bounded_and_failure_stays_unknown(self):
+        repository, source = self.patch_fixture()
+        result = self.run_patch(repository, source)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        sdl = (source / "src/sdltiles.cpp").read_text()
+        legacy = sdl[sdl.index('void cdda_harness::feed_imgui('):sdl.index('void cdda_harness::feed_direct_imgui(')]
+        self.assertNotIn('feed_direct_imgui(', legacy)
+        self.assertNotIn('ConfigInputTrickleEventQueue', legacy)
+        direct = sdl[sdl.index('void cdda_harness::feed_direct_imgui('):]
+        for guard in ('restore_on_out_of_scope restore_trickle( io.ConfigInputTrickleEventQueue )',
+                      'io.ConfigInputTrickleEventQueue = true', 'attempt < 8',
+                      'ui_manager::redraw();', 'refresh_display();',
+                      'observed.EventId == terminal.EventId', 'GImGui->InputEventsQueue.empty()',
+                      'pressed_frame < consumed_frame', '!io.MouseDown[terminal.MouseButton.Button]',
+                      '!ImGui::GetKeyData( terminal.Key.Key )->Down'):
+            self.assertIn(guard, direct)
+        self.assertNotIn('ImGui::NewFrame(', direct)
+        self.assertNotIn('ClearInput', direct)
+        self.assertIn('if( !cdda_harness::enabled() && mouse.hidekb && !cursor_shown )',
+                      (source / "src/uilist.cpp").read_text())
+        native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
+        poll = native[native.index('bool poll( keyboard_mode'):]
+        self.assertLess(poll.index('direct_committed = true;'), poll.index('feed_direct_imgui( *direct );'))
+        fault = poll[poll.index('if( direct_committed )'):poll.index('publish( id, "rejected", e.what() );')]
+        for guard in ('paused = true', 'pause_origin = "fault"', 'pause_file();',
+                      'publish( id, "dispatched", e.what(), false )', 'return false;'):
+            self.assertIn(guard, fault)
+
+    def test_semantic_modifier_release_and_direct_click_text_normalization(self):
+        repository, source = self.patch_fixture()
+        result = self.run_patch(repository, source)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        sdl = (source / "src/sdltiles.cpp").read_text()
+        legacy = sdl[sdl.index('void cdda_harness::feed_imgui('):sdl.index('void cdda_harness::feed_direct_imgui(')]
+        release = legacy[legacy.index('key.type = SDL_KEYUP;'):]
+        self.assertLess(release.index('key.key.keysym.mod = KMOD_NONE;'), release.index('imclient->process_input( &key );'))
+        direct = sdl[sdl.index('void cdda_harness::feed_direct_imgui('):]
+        for modifier in ('Ctrl', 'Alt', 'Shift', 'Super'):
+            self.assertIn(f'io.AddKeyEvent( ImGuiMod_{modifier}, false )', direct)
+            self.assertIn(f'!io.Key{modifier}', direct)
+        self.assertLess(direct.index('io.AddKeyEvent( ImGuiMod_Shift, false )'), direct.index('SDL_Event mouse = {}'))
+        self.assertIn('empty() && released && modifiers_released', direct)
+        self.assertNotIn('SDL_GetKeyboardState(', direct)
+
+    def test_native_pointer_geometry_and_physical_filtering(self):
+        repository, source = self.patch_fixture()
+        result = self.run_patch(repository, source)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        sdl = (source / "src/sdltiles.cpp").read_text()
+        self.assertLess(sdl.index('cdda_harness::human_input();'), sdl.index('ev.type == SDL_MOUSEMOTION'))
+        self.assertIn('if( !cdda_harness::enabled() )', sdl)
+        self.assertIn('if( mouse.enabled || cdda_harness::enabled() )', sdl)
+        capture = sdl[sdl.index('void cdda_harness::capture_frame()'):sdl.index('bool cdda_harness::write_frame(')]
+        for guard in ('SDL_GetRenderTarget( renderer.get() ) != nullptr', '16777216',
+                      'geometry->output_width, geometry->output_height', 'frame_presented('):
+            self.assertIn(guard, capture)
+        self.assertIn('SDL_WINDOW_MINIMIZED', sdl)
+        self.assertIn('16384', sdl)
+        self.assertIn('SDL_SetRenderTarget( renderer.get(), target )', sdl)
+        direct = sdl[sdl.index('void cdda_harness::feed_direct_imgui('):]
+        for event in ('SDL_MOUSEMOTION', 'SDL_MOUSEBUTTONDOWN', 'SDL_MOUSEBUTTONUP'):
+            self.assertIn(event, direct)
+        self.assertIn('event.widget_position.x', direct)
+        self.assertIn('key.key.keysym.mod = KMOD_NONE', sdl)
+        backend = (source / "src/third-party/imgui/imgui_impl_sdl2.cpp").read_text()
+        for function in ('ImGui_ImplSDL2_UpdateMouseData(float x_scale, float y_scale)',
+                         'ImGui_ImplSDL2_UpdateMouseCursor()'):
+            self.assertIn(function + '\n{\n    if (cdda_harness::enabled()) return;', backend)
+        self.assertIn('!cdda_harness::enabled() && bd->MouseLastLeaveFrame', backend)
+        restored = backend.replace('#include "../../cdda_harness.h"\n', '').replace(
+            '\n    if (cdda_harness::enabled()) return;', '').replace(
+            '            if (cdda_harness::enabled() && (window_event == SDL_WINDOWEVENT_ENTER ||\n'
+            '                window_event == SDL_WINDOWEVENT_LEAVE)) return true;\n', '').replace(
+            '!cdda_harness::enabled() && bd->MouseLastLeaveFrame', 'bd->MouseLastLeaveFrame')
+        original = source / ".harness-originals/src/third-party/imgui/imgui_impl_sdl2.cpp"
+        self.assertEqual(restored, original.read_text())
+
     def test_visible_ui_hooks_are_at_actual_clipped_and_paged_renderers(self):
         repository, source = self.patch_fixture()
         original_inventory = (source / "src/inventory_ui.cpp").read_text()
@@ -254,10 +382,10 @@ class SetupTests(unittest.TestCase):
         manager = (source / "src/ui_manager.cpp").read_text()
         self.assertIn('cdda_harness::ui_redraw( ui.is_on_top );\n                        ui.redraw_cb( ui );', manager)
 
-    def test_native_v4_commit_and_presented_ui_guards(self):
+    def test_native_v5_commit_and_presented_ui_guards(self):
         # Source-lane checks establish executable guard placement, not C++ execution.
         native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
-        self.assertIn('out.member( "protocol", 4 )', native)
+        self.assertIn('out.member( "protocol", 5 )', native)
         self.assertNotIn(r'\"protocol\":3', native)
         self.assertIn('out.member( "pause_origin", pause_origin )', native)
         self.assertIn('out.member( "takeover_generation", takeover_generation )', native)
@@ -342,7 +470,8 @@ class SetupTests(unittest.TestCase):
         self.assertLess(poll.index('ordinary_commit_gate( request, false );'), poll.index('++revision;\n        pending = id;'))
 
     def test_patch_rejects_changed_render_owner_hashes_and_anchors(self):
-        for name in ("src/uilist.cpp", "src/inventory_ui.cpp", "src/ui_manager.cpp", "src/cata_imgui.cpp"):
+        for name in ("src/uilist.cpp", "src/inventory_ui.cpp", "src/ui_manager.cpp", "src/cata_imgui.cpp",
+                     "src/third-party/imgui/imgui_impl_sdl2.cpp"):
             for change in ("hash", "missing", "duplicate"):
                 with self.subTest(owner=name, change=change), tempfile.TemporaryDirectory() as temporary:
                     self.root = Path(temporary)

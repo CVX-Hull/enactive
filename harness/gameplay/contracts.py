@@ -104,6 +104,12 @@ def validate_json(value: dict[str, Any], schema: dict[str, Any]) -> None:
         raise ContractError(f"{path}: {exc.message}") from exc
 
 
+
+def canonical(value: dict[str, Any]) -> str:
+    """Canonical finite JSON for hashing, never shell quoting or authority."""
+    return json.dumps(json_object(value), sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False, allow_nan=False)
+
 def _strict_numbers(value: Any, node: dict[str, Any], root: dict[str, Any]) -> None:
     if "$ref" in node:
         node = root["$defs"][node["$ref"].rsplit("/", 1)[1]]

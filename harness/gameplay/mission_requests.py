@@ -1,4 +1,4 @@
-"""Compose ordinary mission/8 requests from explicit passive context.
+"""Compose ordinary mission/9 requests from explicit passive context.
 
 No I/O, refresh, source selection or execution occurs here. Supplied dictionaries
 can establish metadata consistency, never archive membership, PNG integrity,
@@ -6,6 +6,8 @@ ownership, freshness or permission to dispatch. The receiver retains those check
 Memory, handoff and recovery readmission use their existing specialized ingress.
 """
 from __future__ import annotations
+
+import hashlib
 
 from .contracts import ContractError, EvidenceRef, json_object
 from .evidence import _identity, _validate_observation
@@ -56,7 +58,7 @@ def _selected_phase(snapshot: dict, scope: str, intent: dict, primary: str | Non
     if scope != "lifecycle":
         if intent["kind"] != "skill":
             raise ContractError("Prompt/activity scopes support skill children only")
-        supported = ("activity",) if scope == "activity" else ("menu", "edit", "inspect", "item", "activity")
+        supported = ("activity",) if scope == "activity" else ("menu", "edit", "inspect", "item", "activity", "direct")
         if intent.get("skill_kind") not in supported:
             raise ContractError("Selected scope does not support this skill child")
     else:
@@ -103,6 +105,10 @@ def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: di
     data = json_object(intent)
     if _DERIVED & data.keys():
         raise ContractError("Intent must omit derived request headers and limits")
+    if data.get("procedure") is not None:
+        if type(data["procedure"]) is not dict or "use_id" in data["procedure"]:
+            raise ContractError("Select a procedure revision/applicability; software derives its root use ID")
+        data["procedure"]["use_id"] = "use-" + hashlib.sha256(request_id.encode()).hexdigest()
     if data.get("kind") not in ("skill", "lifecycle"):
         raise ContractError("Producer supports skill and lifecycle intent only")
     view = data.get("perception")

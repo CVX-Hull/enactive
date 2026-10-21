@@ -13,7 +13,7 @@ from tests.test_mission_contracts import claim
 
 class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
     def operation(self, kind, identity, **fields):
-        return dict(schema="mission/8", kind=kind, request_id=identity, mission_id=self.a.mission_id,
+        return dict(schema="mission/9", kind=kind, request_id=identity, mission_id=self.a.mission_id,
                     epoch=self.runtime.status()["epoch"], **fields)
 
     def handoff(self, **fields):
@@ -25,7 +25,7 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
     def context(self, *, binding=True, query="unfinished supplies shelter"):
         phase = self.runtime._registered_handoff.phase
         ref = phase.checkpoint
-        result = self.runtime.command(dict(schema="mission/8", kind="context", mission_id=self.a.mission_id,
+        result = self.runtime.command(dict(schema="mission/9", kind="context", mission_id=self.a.mission_id,
             scope=dict(mission_id=self.a.mission_id, session=ref.session, coordinate_epoch=0),
             query=query, max_bytes=32768, handoff=dict(handoff_id="handoff", prospective_player_id="successor",
                 actor_role="player") if binding else None))
@@ -38,7 +38,7 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
             packet_ids=[packet["packet_id"]], read_source_ids=issued["checkpoint_ids"] + [issued["post_pause_source_id"]],
             expected_session=issued["session"], expected_revision=issued["revision"], expected_boundary_id=issued["boundary_id"],
             expected_pause_origin=issued["pause_origin"], takeover_generation=issued["takeover_generation"],
-            pause_generation=issued["pause_generation"])
+            pause_generation=issued["pause_generation"], read_procedure_sources=[])
         fields.update(changes)
         return self.operation("claim", identity, **fields)
 
@@ -50,7 +50,7 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
 
     def remember_work(self, *, status="active", identity="pending", event="work", intent=None, sources=None):
         ref, _ = self.current()
-        entry = dict(schema="campaign-memory/3", record_type="Work", id=identity, predecessor_work_id=None,
+        entry = dict(schema="campaign-memory/4", record_type="Work", id=identity, predecessor_work_id=None,
             intent=intent or "unfinished supplies shelter", scope=dict(mission_id=self.a.mission_id, session=ref.session, coordinate_epoch=0),
             stage="pending", progress=25, available=[], committed=[], predicted_output=[], observed_output=[],
             unresolved_effects=[], sources=[ref.observation_id] if sources is None else sources,

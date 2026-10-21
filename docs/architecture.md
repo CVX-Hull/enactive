@@ -6,16 +6,16 @@ status: active
 
 # Current architecture
 
-Current source contracts are native4, mission/8, campaign-memory/3, gameplay/2,
-evidence archive3 and mission ledger10. One MissionRuntime owns the live mission API.
-The wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
+Current source contracts are native5, mission/9, campaign-memory/4, gameplay/2,
+evidence archive4 and mission ledger11. One MissionRuntime owns the live mission API.
+The prior wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.
 Start is source-free and cannot adopt an unrelated already-running character. The
 registered lifecycle must verify owned launch and admitted world/character before
 normal-play authority or a game-time anchor can be established. This is not yet an
 accepted autonomous survival service. Earlier [foundation](acceptance/2026-10-17-foundation-implementation.md)
 and [MVP](acceptance/2026-10-17-mvp.md) reports retain their dated contract scopes.
-Protocol version: 4.
+Protocol version: 5.
 
 The [independent024 result](acceptance/2026-10-21-independent-supply-shelter.md)
 exercises the integrated supply/shelter, durable memory, actual fresh successor and
@@ -23,6 +23,18 @@ normal same-character lifecycle path on deciding source502ca0f. It is bounded
 development evidence, not unattended seven-day survival or learned-procedure
 support. Final publication/CI and the [prospective seven-day assessment](acceptance/2026-10-21-independent-seven-day-readiness.md)
 have separate gates. Earlier qualifications below retain their historical scope.
+
+[Delivery057](changes/057-discovery-learning-campaign.md) now adds source for
+ordinary key/text/click discovery and source-linked procedural memory. It retains
+the existing mission writer, native input transport, SQLite history and image
+archive. A root's explicit procedure selection joins its actual child inputs and
+results automatically; adoption remains a player judgment over scoped data.
+The historical library reads pinned closed archives without restoring old-world
+facts or execution handles. See [the current contract](protocol.md#ordinary-discovery-and-procedure-data).
+The new native binary has passed its local build; graphical qualification remains
+pending. Reflection data/mailbox and durable bookkeeping are implementation
+components; software scheduling, adapter integration and actual overlapping play
+are still pending. None establishes real procedural learning or a new campaign.
 
 The harness-enabled SDL ImGui context uses the library's steady text-caret setting.
 It preserves exact image validation without treating cosmetic blink as stable
@@ -44,7 +56,7 @@ All project-controlled boundaries follow
 [S-MIGRATION](engineering.md#s-migration-one-current-contract-coordinated-migration):
 one current contract, with producers, consumers, persisted formats and guidance
 migrated together. There is no runtime compatibility layer or downgrade. Current
-native wire v4, gameplay records `gameplay/2`, evidence store version 3 and build
+native wire v5, gameplay records `gameplay/2`, evidence store version 4 and build
 manifest version 1 name separate contracts, not alternate versions of one interface.
 Historical artifacts are retained as evidence without being accepted as runtime input.
 
@@ -96,7 +108,7 @@ owns the exact source/byte bounds and later evidence-loss limits.
 | Lead / active Codex chat | Objective → frozen admission, reviewed source and acceptance | Owns shared runtime and integration; no ordinary gameplay rescue in the deciding mission |
 | Designated player / general-purpose agent | Visible evidence and memory → typed mission requests, plans and verification | One bounded actor; fresh-context handoff needs quiescence and one-use accounting; no authority from a summary |
 | Structured player adapter / harness maintainer | Explicit semantic arguments and returned handles → existing ingress, settled result and exact PNG | No capability, source refresh, replay, automatic Resume or new ledger; actual host review-free proof remains separate |
-| Mission runtime / harness maintainer | mission/8 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
+| Mission runtime / harness maintainer | mission/9 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
 | Controller / harness maintainer | State-bound command → native request and correlated receipt | Serialized ordinary/control writers, exact process-local lease, Pause revocation and native fences; never edits saves |
 | Native bridge / integration maintainer | Bounded request → actual input, visible metadata and rendered frame | Engine validates outcomes on its game thread; unsupported boundaries cannot claim success |
 | Spectator / viewer maintainer | Frame and mission snapshot → inspectable progress, uncertainty and Pause | Mission Observe uses typed ingress; raw input/Resume/recovery disabled while nonterminal; malformed state stays locked |
@@ -297,7 +309,7 @@ and a fresh paused diagnostic source. Separate normal-play readmission charges
 one Resume. Navigation continuation retains the original goal, Work, game-time
 anchor and cumulative root limits; competing roots and handoff remain fenced.
 Reopen validates historical proof but restores no private phase or input consent.
-The single current effect envelope and ledger10 reject older shapes rather than
+The single current effect envelope and ledger11 reject older shapes rather than
 converting them. This source integration is not native recovery qualification or
 an additional executor/history store. Ambiguous delivery and unsupported semantic
 uncertainty remain stopped; a later expected-looking frame cannot supply proof.

@@ -10,7 +10,7 @@ from mcp.server.lowlevel import Server
 from mcp.server.stdio import stdio_server
 
 from .gameplay.contracts import ContractError
-from .gameplay.mission_contracts import canonical
+from .gameplay.contracts import canonical
 from .mission_client import MissionClient
 from .player_tools import PlayerTools
 

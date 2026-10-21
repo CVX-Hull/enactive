@@ -111,7 +111,7 @@ const missionFixture = {
       "fresh": true
     },
     "memory_context": {
-      "schema": "campaign-memory/3",
+      "schema": "campaign-memory/4",
       "record_type": "Context",
       "packet_id": "packet-ac1dc299c52ffc7544309613bc667c06c4745ecc3f830ee3f9f79f01a5e23134",
       "scope": {
@@ -142,7 +142,7 @@ const missionFixture = {
           },
           "received_time": 1792476831563,
           "record_type": "Claim",
-          "schema": "campaign-memory/3",
+          "schema": "campaign-memory/4",
           "scope": {
             "coordinate_epoch": 0,
             "mission_id": "mission-test",
@@ -189,7 +189,7 @@ const missionFixture = {
           }
         }
       ],
-      "lesson_ids": [],
+      "procedures": [], "procedure_refs": [], "procedure_sources": [],
       "dispositions": {},
       "omitted": {
         "claims": 2,
@@ -218,24 +218,29 @@ function renderedText(id) {
   function content(node) { return [node.textContent, ...node.children.map(content)].join(' '); }
   return content(element(id));
 }
+let monotonic = 0;
+const presentationCallbacks = [];
 const pending = [];
 const requests = [];
 const sendButtons = [element('action-send'), element('key-send'), element('walk-send')];
 class DeferredImage {
+  naturalWidth = 800;
+  naturalHeight = 600;
   decode() { return new Promise((resolve, reject) => pending.push({resolve, reject})); }
   replaceWith(other) { elements.set('frame', other); }
 }
-const context = vm.createContext({crypto: {randomUUID}, Image: DeferredImage, document: {
+const context = vm.createContext({performance: {now: () => monotonic}, requestAnimationFrame: callback => presentationCallbacks.push(callback), crypto: {randomUUID}, Image: DeferredImage, document: {
   getElementById: element, querySelector: () => ({content: 'test-token'}),
   querySelectorAll: selector => selector === '.send' ? sendButtons : [], createElement: () => element(Symbol()), activeElement: null
 }, fetch: (url, options) => new Promise((resolve, reject) => requests.push({url, options, resolve, reject})), setTimeout() {}});
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8'), context);
 const run = source => vm.runInContext(source, context);
-function render(revision, frame, changes = {}) {
+function render(revision, frame, changes = {}, apply = true) {
   context.input = {connection: 'fresh', age_ms: 0, pause_requested: false, frozen: false,
-    mission: null, latency_ms: 10, goal: '', events: [], state: {protocol: 4, pause_origin: 'none', takeover_generation: 0, ui: null, boundary: {kind: 'normal_play', id: 'b-normal', control_generation: 0, recovery_operations: [], interrupt_request_id: null}, timestamp_ms: Date.now(), session: 'test', revision, frame,
-      frame_ok: true, status: 'ready', actions: [], ...changes}};
-  run('render(input)');
+    mission: null, latency_ms: 10, goal: '', events: [], state: {protocol: 5, pause_origin: 'none', takeover_generation: 0, ui: null, boundary: {kind: 'normal_play', id: 'b-normal', control_generation: 0, recovery_operations: [], interrupt_request_id: null}, timestamp_ms: Date.now(), session: 'test', revision, frame,
+      frame_ok: true, frame_geometry: {window_width: 800, window_height: 600, output_width: 800, output_height: 600, viewport: [0, 0, 800, 600]}, status: 'ready', actions: [], ...changes}};
+  if (changes.frame_ok === false && !Object.hasOwn(changes, 'frame_geometry')) context.input.state.frame_geometry = null;
+  if (apply) run('render(input)');
 }
 const tick = () => new Promise(setImmediate);
 function boundary(kind, generation = 1, owner = null) {
@@ -298,6 +303,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   render(6, 'frame-1-1-6.png');
   await decode(); // Obsolete image may not replace the last displayed frame.
   assert.equal(run('displayed.revision'), 3);
+  assert.equal(run('observerMeasurementSnapshot().frames.at(-2).outcome'), 'superseded');
   await decode();
   assert.equal(run('authority().expected_revision'), 6);
   for (const kind of ['activity_poll', 'debug_prompt', 'unsupported', 'interrupt_confirmation']) {
@@ -309,9 +315,43 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   render(8, 'frame-menu.png', {boundary: {kind: 'menu'}});
   await decode();
   assert.equal(run('authority().expected_revision'), 8);
-  render(9, 'frame-old.png', {protocol: 2});
+  // Required geometry and protocol guards reject metadata before requesting a PNG.
+  const geometry = structuredClone(context.input.state.frame_geometry);
+  const malformedGeometry = [undefined, null, [], {}, {...geometry, window_width: 0},
+    {...geometry, extra: 1},
+    {...geometry, output_height: 16385}, {...geometry, output_width: true},
+    {...geometry, window_height: 1.5}, {...geometry, output_width: 16384, output_height: 16384},
+    {...geometry, viewport: [-1, 0, 10, 10]}, {...geometry, viewport: [0, 0, 0, 10]},
+    {...geometry, viewport: [799, 0, 2, 10]}, {...geometry, viewport: [0, 599, 10, 2]},
+    {...geometry, viewport: [0, 0, 800, 600, 0]}, {...geometry, viewport: [0, 0, 1.5, 10]}];
+  for (const [index, value] of malformedGeometry.entries()) {
+    const pendingCount = pending.length;
+    render(9, `bad-geometry-${index}.png`, {frame_geometry: value});
+    assert.equal(pending.length, pendingCount, 'malformed geometry must not start decode');
+    assert.throws(() => run('authority()'), /Wait for/);
+    assert.equal(element('resume').disabled, true);
+    assert.match(element('error').textContent, /protocol 5|geometry/i);
+    assert.equal(element('pause').disabled, false);
+  }
+  render(9, 'frame-old.png', {protocol: 4});
+  assert.equal(pending.length, 0, 'native4 has no supported decode path');
+  assert.throws(() => run('authority()'), /Wait for/);
+  render(9, 'no-frame-with-geometry.png', {frame_ok: false, frame_geometry: geometry});
+  assert.throws(() => run('authority()'), /Wait for/);
+  render(9, 'valid-after-bad.png');
   await decode();
-  assert.throws(() => run('authority()'), /native control/);
+  assert.equal(run('authority().expected_revision'), 9);
+  assert.doesNotMatch(element('error').textContent, /protocol 5|geometry/i);
+  render(9, 'mismatched-dimensions.png', {frame_geometry: {...geometry, output_width: 801}});
+  await decode();
+  assert.throws(() => run('authority()'), /Wait for/);
+  assert.match(element('error').textContent, /PNG dimensions disagree/);
+  render(9, 'disconnected-during-decode.png');
+  context.input.connection = 'disconnected';
+  run('render(input)');
+  await decode();
+  assert.equal(element('resume').disabled, true);
+  assert.match(element('frame-note').textContent, /DISCONNECTED/);
   // Same revision/frame cannot transfer boundary or generation authority after native takeover.
   const activity = boundary('activity_poll');
   render(10, 'activity.png', {boundary: activity});
@@ -332,6 +372,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   render(11, 'bad-decode.png', {boundary: activity});
   pending.shift().reject(new Error('bad PNG'));
   await tick();
+  assert.equal(run('observerMeasurementSnapshot().frames.at(-1).outcome'), 'decode_failed');
   assert.equal(element('recovery-interrupt').hidden, true);
   assert.match(element('error').textContent, /could not be loaded/);
   render(11, 'bad-decode.png', {boundary: activity});
@@ -470,7 +511,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.match(element('recovery-evidence').textContent, /restored-control/);
   assert.match(element('recovery-result').textContent, /Delivery unknown/);
   assert.equal(element('recovery-debug').disabled, true);
-  // Mission observation uses the current mission/8 contract, with no admission controls.
+  // Mission observation uses the current mission/9 contract, with no admission controls.
   run('recoveryNeedsObserve = false');
   render(30, 'mission-current.png');
   context.input.mission = structuredClone(missionFixture);
@@ -589,10 +630,12 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.match(renderedText('mission-work'), /Progress: unknown ·/);
   assert.doesNotMatch(renderedText('mission-work'), /unknown%/);
   assert.equal(element('mission-claims').children.length, 33);
-  mission.memory_context = {...savedMemory, grants_authority: true};
-  run('render(input)');
-  assert.equal(element('mission-memory-readable').hidden, true);
-  assert.match(element('mission-memory-summary').textContent, /inconsistent packet/);
+  for (const unsupported of [{...savedMemory, grants_authority: true}, {...savedMemory, schema: 'campaign-memory/3'}]) {
+    mission.memory_context = unsupported;
+    run('render(input)');
+    assert.equal(element('mission-memory-readable').hidden, true);
+    assert.match(element('mission-memory-summary').textContent, /inconsistent packet/);
+  }
   assert.ok(sendButtons.every(button => button.disabled));
   assert.equal(requests.length, countBeforeMission);
   mission.memory_context = savedMemory;
@@ -637,7 +680,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.ok(sendButtons.every(button => button.disabled));
   context.input.connection = 'disconnected';
 
-  const normalExit = {schema: 'mission/8', record_type: 'OwnedNormalExit',
+  const normalExit = {schema: 'mission/9', record_type: 'OwnedNormalExit',
     origin_request_id: 'exit-root', launch_request_id: 'launch-root', launch_id: 'launch-test',
     terminal_logical_id: 'exit-logical', native_request_id: 'exit-native', source_ids: ['exit-checkpoint'],
     no_save_required: true, returncode: 0, grants_authority: false,
@@ -657,7 +700,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
     normal_exit: {...normalExit, no_save_required: false, saved_checkpoint_request_id: 'saved-checkpoint'}};
   run('render(input)');
   assert.match(element('mission-exit').textContent, /saved checkpoint saved-checkpoint/);
-  const finish = {schema: 'mission/8', record_type: 'NormalFinish', final_source_id: 'final-checkpoint',
+  const finish = {schema: 'mission/9', record_type: 'NormalFinish', final_source_id: 'final-checkpoint',
     normal_exit_result_request_id: 'exit-result', completed_work_event_id: 'objective-event',
     disposition: 'completed', grants_authority: false};
   mission.progress = {normal_finish: finish};
@@ -686,6 +729,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
     'a later Observe result cannot reconstruct a missing exit proof from the process sample');
   mission.progress = exitProgress;
   for (const malformed of [{...normalExit, returncode: false}, {...normalExit, grants_authority: true},
+    {...normalExit, schema: 'mission/8'},
     {...normalExit, source_ids: []}, {...normalExit, retirement: []},
     {...normalExit, retirement: {...normalExit.retirement, native_request_id: null}},
     {...normalExit, retirement: {...normalExit.retirement, retired_pending: false}},
@@ -752,7 +796,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   const observeMission = request('/api/mission', 'observe');
   const payload = JSON.parse(observeMission.options.body);
   assert.deepEqual(Object.keys(payload).sort(), ['schema', 'kind', 'request_id', 'mission_id', 'epoch'].sort());
-  assert.equal(payload.schema, 'mission/8');
+  assert.equal(payload.schema, 'mission/9');
   assert.equal(payload.mission_id, 'mission-test');
   assert.equal(payload.epoch, 7);
   assert.match(payload.request_id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
@@ -803,6 +847,16 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   await statusReply();
   assert.match(element('mission-result').textContent, /unknown.*do not retry/is);
   assert.equal(requests.length, 0, 'response loss must not trigger a retry or Resume');
+  // Reconnect refreshes status only, preserving the uncertain Observe result.
+  run('void refresh()');
+  request('/api/status').reject(new Error('Still disconnected'));
+  await tick();
+  assert.equal(element('resume').disabled, true);
+  assert.ok(sendButtons.every(button => button.disabled));
+  run('void refresh()');
+  await statusReply();
+  assert.match(element('mission-result').textContent, /unknown.*do not retry/is);
+  assert.equal(requests.length, 0, 'reconnect cannot replay a lost POST');
 
   // Unknown/malformed phases and identities fail closed rather than falling back to ordinary Observe.
   for (const malformed of [{...mission, phase: 'unknown'}, {...mission, phase: null}, {...mission, phase: {}},
@@ -825,6 +879,26 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   run('render(input)');
   assert.ok(sendButtons.every(button => button.disabled));
   assert.equal(element('resume').disabled, true);
+  const terminal = context.input.mission;
+  terminal.lease_owner = null;
+  terminal.unresolved_effects = [];
+  terminal.native_process = {last_sample: {running: true, outcome: 'running'}, unresolved_custody_requests: []};
+  context.input.frozen = true;
+  context.input.connection = 'disconnected';
+  run('render(input)');
+  assert.match(element('control-state').textContent, /MISSION COMPLETED.*HISTORY.*DISCONNECTED/);
+  assert.doesNotMatch(element('control-state').textContent, /UNRECONCILED|READY/);
+  assert.match(element('mission-owner').textContent, /No input lease.*reported snapshot/i);
+  assert.match(element('mission-unresolved').textContent, /0 unresolved effect.*reported snapshot/i);
+  assert.match(element('mission-process').textContent, /Historical last sample.*running: true.*current liveness unknown/);
+  assert.match(element('mission-control-note').textContent, /history.*owns no execution/i);
+  assert.match(renderedText('mission-work'), /Historical Work status.*interrupted/s);
+  delete terminal.lease_owner;
+  delete terminal.unresolved_effects;
+  run('render(input)');
+  assert.match(element('mission-owner').textContent, /unknown/i);
+  assert.match(element('mission-unresolved').textContent, /unknown/i);
+  assert.doesNotMatch(element('mission-unresolved').textContent, /0 unresolved/);
   // A genuinely fresh decoded frame restores ordinary safeguards for terminal history.
   render(32, 'terminal-history.png');
   await decode();
@@ -876,8 +950,54 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   await statusReply();
   assert.equal(requests.length, 0);
 
+  // Timing uses one local monotonic clock, frame identity and a bounded snapshot.
+  requests.length = 0;
+  run('recoveryNeedsObserve = false');
+  monotonic = 100;
+  run('void refresh()');
+  monotonic = 130;
+  render(40, 'measured.png', {}, false);
+  await statusReply();
+  assert.equal(element('resume').disabled, true, 'status receipt cannot stand in for decode');
+  monotonic = 150;
+  await decode();
+  monotonic = 160;
+  presentationCallbacks.splice(0).forEach(callback => callback(monotonic));
+  const snapshot = JSON.parse(run('JSON.stringify(observerMeasurementSnapshot())'));
+  const frameTiming = snapshot.frames.at(-1);
+  assert.equal(snapshot.clock, 'browser performance.now() milliseconds');
+  assert.equal(snapshot.status.at(-1).status_round_trip_ms, 30);
+  assert.equal(frameTiming.decode_ms, 20);
+  assert.equal(frameTiming.status_to_dom_ms, 20);
+  assert.equal(frameTiming.presentation_opportunity_ms, 160);
+  assert.equal(frameTiming.frame, 'measured.png');
+  assert.match(frameTiming.frame_identity, /measured.png/);
+  assert.equal(frameTiming.status_sequence, snapshot.status.at(-1).sequence);
+  assert.match(element('observer-measurements').textContent, /measured.png/);
+  context.input.state.timestamp_ms = Date.now() - 5000;
+  run('render(input)');
+  assert.equal(run('observerMeasurementSnapshot().displayed_frame_fresh'), false,
+    'successful decode metrics do not imply continuing freshness');
+  assert.equal(element('resume').disabled, true);
+  for (let index = 0; index < 40; index++) {
+    monotonic += 1;
+    run('void refresh()');
+    await statusReply();
+  }
+  assert.equal(run('observerMeasurementSnapshot().status.length'), 32);
+  assert.equal(requests.length, 0);
+  for (let index = 0; index < 40; index++) {
+    render(50 + index, `bounded-timing-${index}.png`);
+    monotonic += 1;
+    await decode();
+    presentationCallbacks.splice(0).forEach(callback => callback(monotonic));
+  }
+  assert.equal(run('observerMeasurementSnapshot().frames.length'), 32);
+  assert.equal(requests.length, 0, 'local timing cannot submit remote requests');
+
   const html = fs.readFileSync(path.join(__dirname, '../web/index.html'), 'utf8');
   const app = fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8');
+  assert.match(html, /id="observer-timing-note">.*not native capture or end-to-end player latency/);
   assert.match(html, /<section class="recorded-objective" aria-labelledby="recorded-objective-heading">/);
   assert.match(html, /id="recorded-objective-text" tabindex="0">No objective recorded\.</);
   assert.ok(html.indexOf('id="recorded-objective-text"') < html.indexOf('id="frame-shell"'));
@@ -888,5 +1008,5 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
     assert.ok(html.includes(`<dd id="${id}">`), `${id} must exist in the mission facts`);
   }
   assert.doesNotMatch(html + app, /api\/gameplay|task-form|task-start|task-continue|task-abandon|goal-form|mission_lease|renderGameplay/);
-  console.log('Viewer regressions passed: decoded authority and freshness; mission observation, exact IDs/epoch, history and malformed status; lifecycle checkpoints, historical process samples and separate exit/ACK evidence; safe memory/usage rendering; independent Pause and ordinary recovery; no implicit input, Resume or retry.');
+  console.log('Viewer regressions passed: native5 geometry and decoded authority/freshness; mission9 observation and memory4 history; terminal snapshot versus historical uncertainty; reconnect without replay; bounded monotonic status/decode/presentation timing; independent Pause and ordinary recovery; no implicit input, Resume or retry.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

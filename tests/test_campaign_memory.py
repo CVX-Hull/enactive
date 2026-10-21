@@ -17,7 +17,8 @@ from unittest.mock import patch
 from harness.gameplay.campaign_memory import CampaignMemory
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import CapacityError, EvidenceStore
-from harness.gameplay.mission_contracts import MEMORY_VERSION, VERSION, canonical, validate_memory_entry, validate_work_view
+from harness.gameplay.contracts import canonical
+from harness.gameplay.mission_contracts import MEMORY_VERSION, VERSION, validate_memory_entry, validate_work_view
 from harness.gameplay.mission_ledger import LedgerError, MissionLedger
 from tests.test_gameplay_evidence import observation, png
 from tests.test_mission_contracts import admission, claim, request, scope, skill
@@ -561,7 +562,7 @@ class CampaignMemoryTests(unittest.TestCase):
         self.assertEqual(packet["work"][0]["status"], "unknown")
         decision = dict(schema=MEMORY_VERSION, record_type="Decision", id="large-closure-decision",
             packet_id=packet["packet_id"], scope=scope(), query=packet["query"], memory_version=packet["memory_version"],
-            claim_ids=[], work_ids=["water-craft"], source_ids=sorted(expected), lesson_ids=[],
+            claim_ids=[], work_ids=["water-craft"], source_ids=sorted(expected), procedure_refs=[], procedure_sources=[],
             omitted=packet["omitted"]["claims"]+packet["omitted"]["work"], reason="Retain every premise before replanning")
         self.assertEqual(self.memory.record_decision(decision, now=1000)["entry"], decision)
 
@@ -596,9 +597,9 @@ class CampaignMemoryTests(unittest.TestCase):
         entry = {"schema": MEMORY_VERSION, "record_type": "Decision", "id": "choice", "scope": scope(),
             "packet_id": packet["packet_id"], "query": packet["query"], "memory_version": packet["memory_version"],
             "claim_ids": [c["id"] for c in packet["claims"]], "work_ids": [],
-            "source_ids": [s["id"] for s in packet["sources"]], "lesson_ids": [],
+            "source_ids": [s["id"] for s in packet["sources"]], "procedure_refs": [], "procedure_sources": [],
             "omitted": packet["omitted"]["claims"] + packet["omitted"]["work"], "reason": "Check carried water"}
-        for changes in [{"packet_id": "unissued-packet"}, {"memory_version": 999}, {"source_ids": []}, {"claim_ids": ["b"]}, {"lesson_ids": ["new-policy"]}]:
+        for changes in [{"packet_id": "unissued-packet"}, {"memory_version": 999}, {"source_ids": []}, {"claim_ids": ["b"]}, {"procedure_refs": ["new-policy"]}]:
             with self.assertRaises(ContractError): self.memory.record_decision({**entry, **changes}, now=1000)
         result = self.memory.record_decision(entry, now=1000)
         self.assertEqual(result["packet_id"], packet["packet_id"])

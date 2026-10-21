@@ -16,7 +16,7 @@
   </header>
   <main>
     <section class="stage" aria-label="Native game view">
-      <div class="stage-heading"><div><span class="eyebrow">THE WORLD, AS SEEN BY THE PLAYER</span><h1>Live game view <span id="control-state" class="badge">PAUSED · UNRECONCILED</span></h1></div><span id="category" class="mono">—</span></div>
+      <div class="stage-heading"><div><span class="eyebrow">THE WORLD, AS SEEN BY THE PLAYER</span><h1>Game view <span id="control-state" class="badge">WAITING FOR STATUS</span></h1></div><span id="category" class="mono">—</span></div>
       <section class="recorded-objective" aria-labelledby="recorded-objective-heading">
         <h2 id="recorded-objective-heading" class="eyebrow">Recorded objective</h2>
         <p id="recorded-objective-text" tabindex="0">No objective recorded.</p>
@@ -26,8 +26,9 @@
         <div id="frame-placeholder" class="placeholder"><span class="placeholder-mark">◇</span><strong>Waiting for the game</strong><span>Start CDDA with the project bridge enabled,<br>then observe an input boundary.</span></div>
         <span id="frame-note" class="frame-note">NO NATIVE FRAME</span>
       </div>
-      <div class="stage-footer"><span><span class="dot small"></span> ORIGINAL TILES RENDERER</span><span id="latency">Latency —</span><span id="position">Player position —</span></div>
+      <div class="stage-footer"><span><span class="dot small"></span> ORIGINAL TILES RENDERER</span><span id="latency">Controller response —</span><span id="position">Player position —</span></div>
       <div id="error" class="error" role="alert" hidden></div>
+      <details class="evidence"><summary>Local observer timing · last 32 samples per stage</summary><p id="observer-timing-note">Browser monotonic intervals cover status response, image fetch/decode, DOM replacement and the next animation callback. A callback is a presentation opportunity, not proof of screen paint. These are not native capture or end-to-end player latency measurements. Failed and superseded samples are retained while this page stays open.</p><pre id="observer-measurements" tabindex="0">No local samples yet.</pre></details>
       <details class="evidence"><summary>Control and observation details</summary><p>One input at a time. A ready response means the engine returned to input. Check the scene to verify the intended result.</p><p>Native keyboard input pauses remote control. A pause cannot undo an input already dispatched.</p></details>
     </section>
     <aside>
@@ -37,7 +38,7 @@
         <dl class="mission-facts" aria-live="polite">
           <dt>Player</dt><dd id="mission-player">No player admitted</dd>
           <dt>Mission</dt><dd id="mission-identity">No mission identity</dd>
-          <dt>Input lease</dt><dd id="mission-owner">No current input lease reported</dd>
+          <dt>Input lease</dt><dd id="mission-owner">Input lease unknown; waiting for status</dd>
           <dt>Live operation</dt><dd id="mission-operation">No active operation</dd>
           <dt>Activity</dt><dd id="mission-activity">No private activity checkpoint reported</dd>
           <dt>Lifecycle</dt><dd id="mission-lifecycle">No lifecycle checkpoint reported</dd>
@@ -45,14 +46,15 @@
           <dt>Next decision</dt><dd id="mission-next">Waiting for an explicitly admitted player mission</dd>
           <dt>Pause / reason</dt><dd id="mission-reason">No mission admitted</dd>
           <dt>Freshness</dt><dd id="mission-freshness">No mission evidence</dd>
-          <dt>Uncertainty</dt><dd id="mission-unresolved">No mission effects reported</dd>
+          <dt>Effects snapshot</dt><dd id="mission-unresolved">Unknown unresolved effects; waiting for status</dd>
         </dl>
         <p id="mission-control-note" class="hint">Observer only: missions are admitted outside this viewer.</p>
         <p class="hint">Pause prevents future remote input; it cannot undo a committed input or cancel an activity.</p>
         <details open><summary>Memory context · claims, work and sources</summary><p id="mission-memory-summary" class="hint">No journaled context preview available.</p><p class="hint">Historical, query-specific preview, bounded to 32 KiB by the service. Claims and work retain their statuses, source IDs, omissions and dispositions. It grants no current authority.</p><div id="mission-memory-readable" hidden>
           <p id="mission-omissions" class="hint"></p>
           <h3>Claims and corrections</h3><ul id="mission-claims" class="memory-list"></ul>
-          <h3>Work and next verification</h3><ul id="mission-work" class="memory-list"></ul>
+          <h3>Historical Work and recorded next verification</h3><ul id="mission-work" class="memory-list"></ul>
+          <h3>Advisory procedures and revisions</h3><p class="hint">Scoped player-authored data; current applicability and game outcomes still need verification.</p><ul id="mission-procedures" class="memory-list"></ul>
           <details><summary>Sources and status dispositions</summary><ul id="mission-sources" class="memory-list"></ul><h3>Dispositions</h3><ul id="mission-dispositions" class="memory-list"></ul></details>
           <details><summary>Requested reobservations</summary><ul id="mission-reobservations" class="memory-list"></ul></details>
         </div><details><summary>Raw historical context JSON</summary><pre id="mission-memory" tabindex="0">No memory claims, work or source dispositions available.</pre></details></details>

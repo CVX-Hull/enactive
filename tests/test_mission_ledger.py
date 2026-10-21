@@ -11,7 +11,8 @@ import unittest
 from unittest.mock import patch
 
 from harness.gameplay.contracts import ContractError
-from harness.gameplay.mission_contracts import VERSION, CleanupReserve, MissionLimits, SourceRevalidation, canonical
+from harness.gameplay.contracts import canonical
+from harness.gameplay.mission_contracts import VERSION, CleanupReserve, MissionLimits, SourceRevalidation
 from harness.gameplay.mission_ledger import BudgetError, LedgerError, MissionLedger
 from tests.test_mission_contracts import admission, binding, claim, request, skill
 
@@ -29,7 +30,7 @@ def published_receipt(*, native_id="native-uuid-1", logical_id="logical-1", prop
                       controller_boot_id="controller-test", dispatch_epoch=0, actor_id="player-test"):
     """Pure SQLite correlation fixture, not evidence of actual file custody."""
     proposed = proposed or intent()
-    native = dict(protocol=4, id=native_id, kind=proposed["kind"], session=proposed["expected_session"],
+    native = dict(protocol=5, id=native_id, kind=proposed["kind"], session=proposed["expected_session"],
         revision=proposed["expected_revision"], boundary_id=proposed["expected_boundary_id"], takeover_generation=0,
         authority=dict(controller_boot_id=controller_boot_id, counter=1), deadline_ms=1,
         frame="synthetic.png", require_exact_frame=False, **{proposed["kind"]: proposed["value"]})
@@ -81,7 +82,7 @@ def handoff_claim(issuance, **changes):
         packet_ids=["packet-1"], read_source_ids=[issuance["post_pause_source_id"]],
         expected_session=issuance["session"], expected_revision=issuance["revision"],
         expected_boundary_id=issuance["boundary_id"], expected_pause_origin=issuance["pause_origin"],
-        pause_generation=issuance["pause_generation"], takeover_generation=issuance["takeover_generation"])
+        pause_generation=issuance["pause_generation"], takeover_generation=issuance["takeover_generation"], read_procedure_sources=[])
     values.update(changes)
     return values
 
@@ -209,7 +210,7 @@ class LedgerTests(unittest.TestCase):
         self.ledger.settle_primitive(logical_id, "not_dispatched", {"reason": "Synthetic accounting probe"}, now=now)
 
     def prompt_receipt(self, **changes):
-        value = dict(schema="mission/8", record_type="PhaseReceipt", origin_request_id="request-1",
+        value = dict(schema="mission/9", record_type="PhaseReceipt", origin_request_id="request-1",
             phase_kind="interact", operation="open_consume", stage="awaiting_control", epoch=0,
             actor_id="player-test", controller_boot_id="controller-test", operator_pause_generation=0,
             takeover_generation=0, source_ids=["source-1"], continuity=None, grants_authority=False)
@@ -996,7 +997,7 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(LedgerError):
             self.ledger.prepare_primitive("observe-only", "bad-input", intent(), now=1003)
         with self.assertRaises(LedgerError):
-            self.ledger.begin_request({"schema": "mission/8", "kind": "status", "mission_id": "mission-test"}, now=1003)
+            self.ledger.begin_request({"schema": "mission/9", "kind": "status", "mission_id": "mission-test"}, now=1003)
         with self.assertRaises(LedgerError):
             self.ledger.begin_request(skill(mission_id="other", goal={"scope": {"mission_id": "other", "session": "native-session", "coordinate_epoch": 0}, "target": [2, -3, 0]}), now=1003)
         self.ledger.close()

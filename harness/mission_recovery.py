@@ -11,7 +11,8 @@ from dataclasses import dataclass, replace
 from .controller import ControlError
 from .gameplay.contracts import EvidenceRef
 from .gameplay.evidence import CapacityReservation, EvidenceError
-from .gameplay.mission_contracts import VERSION, canonical, validate_delivery_resolution
+from .gameplay.contracts import canonical
+from .gameplay.mission_contracts import VERSION, validate_delivery_resolution
 from .gameplay.mission_ledger import BudgetError
 
 

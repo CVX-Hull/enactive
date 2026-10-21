@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from harness.gameplay.mission_ledger import MissionLedger
-from harness.gameplay.mission_contracts import canonical
+from harness.gameplay.contracts import canonical
 from harness.gameplay.contracts import ContractError
 from tests import test_mission_runtime as fixtures
 

@@ -12,7 +12,7 @@ from .contracts import (
     ContractError, _array, _enum, _integer, _nullable, _object, _text,
     json_object, validate_json,
 )
-from .mission_contracts import canonical
+from .contracts import canonical
 
 VERSION = "procedure/1"
 MAX_PROCEDURE_BYTES = 32_768

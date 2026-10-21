@@ -9,7 +9,7 @@ from harness.gameplay.campaign_memory import CampaignMemory
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import EvidenceError, EvidenceStore
 from harness.gameplay.lifecycle import adopted_timeline, candidate_timeline
-from harness.gameplay.mission_contracts import canonical
+from harness.gameplay.contracts import canonical
 from harness.gameplay.mission_ledger import LedgerError, MissionLedger
 from tests.test_gameplay_evidence import observation, png
 from tests.test_mission_contracts import admission, claim, request, skill
@@ -64,7 +64,7 @@ class LifecycleTests(unittest.TestCase):
     def phase(self, root, operation, stage, *sources):
         root_sources = self.ledger.request(root)["request"]["sources"]
         launch_sources = self.ledger.request("launch")["result"]["source_ids"]
-        return dict(schema="mission/8", record_type="PhaseReceipt", origin_request_id=root,
+        return dict(schema="mission/9", record_type="PhaseReceipt", origin_request_id=root,
             phase_kind="lifecycle", operation=operation, stage=stage, epoch=self.ledger.snapshot(now=1000)["epoch"],
             actor_id=self.a.player_id, controller_boot_id="boot-test", operator_pause_generation=0,
             takeover_generation=0, source_ids=list(dict.fromkeys(launch_sources + root_sources + list(sources))),
@@ -113,7 +113,7 @@ class LifecycleTests(unittest.TestCase):
         operation = self.ledger.request(root)["request"]["operation"]
         logical, native = self.primitive(terminal, before, after, value="CONFIRM" if terminal == root else "YES",
             preflight=preflight, unknown_operation=operation if unknown else None)
-        proof = dict(schema="mission/8", record_type="LifecycleTransition", operation=operation,
+        proof = dict(schema="mission/9", record_type="LifecycleTransition", operation=operation,
             origin_request_id=root, terminal_request_id=terminal, terminal_logical_id=logical, native_request_id=native,
             launch_request_id="launch", launch_id="owned-launch", before_source_id=before.observation_id,
             after_source_id=after.observation_id, origin_epoch=self.ledger.request(root)["epoch"],
@@ -165,7 +165,7 @@ class LifecycleTests(unittest.TestCase):
             self.remember(entry)
         final = root + "-adopt"
         self.lifecycle(final, "create" if epoch == 0 else "load", checkpoint, phase=root, identities=[world_id, character_id])
-        adoption = dict(schema="mission/8", record_type="NormalSessionAdoption", origin_request_id=root,
+        adoption = dict(schema="mission/9", record_type="NormalSessionAdoption", origin_request_id=root,
             transition_result_request_id=transition_id, first_normal_source_id=newer.observation_id,
             world_claim_id=world_id, character_claim_id=character_id, identity_inspect_request_id=inspect_id,
             checkpoint_source_id=checkpoint.observation_id, saved_checkpoint_request_id=saved,
@@ -195,7 +195,7 @@ class LifecycleTests(unittest.TestCase):
         self.complete(terminal, {})
         result_id = root + "-checkpoint"
         self.lifecycle(result_id, "save", menu, phase=root)
-        saved = dict(schema="mission/8", record_type="SavedCheckpoint", origin_request_id=root,
+        saved = dict(schema="mission/9", record_type="SavedCheckpoint", origin_request_id=root,
             transition_result_request_id=result_id, adoption_result_request_id=adopted["result"],
             normal_endpoint_source_id=endpoint.observation_id, menu_source_id=menu.observation_id, grants_authority=False)
         phase = self.phase(root, "save", "complete", confirmation.observation_id, menu.observation_id)
@@ -243,7 +243,7 @@ class LifecycleTests(unittest.TestCase):
         self.lifecycle("load", "load", menu)
         after = self.ingest("normal", turn=10)
         logical, native = self.primitive("load", menu, after, unknown_operation="load")
-        proof = dict(schema="mission/8", record_type="LifecycleTransition", operation="load", origin_request_id="load",
+        proof = dict(schema="mission/9", record_type="LifecycleTransition", operation="load", origin_request_id="load",
             terminal_request_id="load", terminal_logical_id=logical, native_request_id=native,
             launch_request_id="launch", launch_id="owned-launch", before_source_id=menu.observation_id,
             after_source_id=after.observation_id, origin_epoch=0, reconciled_epoch=1, actor_id=self.a.player_id,

@@ -63,6 +63,11 @@ replace_once(source / "src/ui_manager.cpp",
     '                        cdda_harness::ui_redraw( ui.is_on_top );\n'
     '                        ui.redraw_cb( ui );')
 
+# This renderer rewrites NoMouse dynamically after keyboard input. Preserve
+# synthetic pointer consumption consistently, without changing physical options.
+replace_once(source / "src/uilist.cpp", '    if( mouse.hidekb && !cursor_shown ) {',
+    '    if( !cdda_harness::enabled() && mouse.hidekb && !cursor_shown ) {')
+
 # The ImGui clipper can force an offscreen selected entry into DisplayStart/End.
 # Attest only text within the actual window/column clip rectangle. Partial glyphs
 # and multiline labels are omitted; a clipped right suffix is never exported.
@@ -245,7 +250,38 @@ replace_once(source / "src/sdltiles.cpp",
     '            ev.type == SDL_MOUSEBUTTONDOWN || ev.type == SDL_MOUSEWHEEL ||\n'
     '            ev.type == SDL_CONTROLLERBUTTONDOWN ) {\n'
     '            cdda_harness::human_input();\n        }\n'
+    '        if( cdda_harness::enabled() && ( ev.type == SDL_MOUSEMOTION ||\n'
+    '            ev.type == SDL_MOUSEBUTTONDOWN || ev.type == SDL_MOUSEBUTTONUP ||\n'
+    '            ev.type == SDL_MOUSEWHEEL ) ) { continue; }\n'
     '        imclient->process_input( &ev );')
+# ImGui must consume the queued synthetic pointer consistently across frames,
+# including when the wrapper's physical mouse option is disabled.
+replace_once(source / "src/sdltiles.cpp", '    if( mouse.enabled ) {\n'
+    '        ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;',
+    '    if( mouse.enabled || cdda_harness::enabled() ) {\n'
+    '        ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;')
+replace_once(source / "src/sdltiles.cpp",
+    '    SDL_GetMouseState( &last_input.mouse_pos.x, &last_input.mouse_pos.y );',
+    '    if( !cdda_harness::enabled() ) {\n'
+    '        SDL_GetMouseState( &last_input.mouse_pos.x, &last_input.mouse_pos.y );\n'
+    '    }')
+# Suppress backend polling/capture/warp/cursor manipulation and physical window
+# enter/leave pointer resets. Non-harness behavior uses the original code.
+backend = source / "src/third-party/imgui/imgui_impl_sdl2.cpp"
+replace_once(backend, '#include "imgui.h"',
+    '#include "../../cdda_harness.h"\n#include "imgui.h"')
+for function in ('ImGui_ImplSDL2_UpdateMouseData(float x_scale, float y_scale)',
+                 'ImGui_ImplSDL2_UpdateMouseCursor()'):
+    replace_once(backend, 'static void ' + function + '\n{',
+        'static void ' + function + '\n{\n    if (cdda_harness::enabled()) return;')
+replace_once(backend,
+    '            if (window_event == SDL_WINDOWEVENT_ENTER)',
+    '            if (cdda_harness::enabled() && (window_event == SDL_WINDOWEVENT_ENTER ||\n'
+    '                window_event == SDL_WINDOWEVENT_LEAVE)) return true;\n'
+    '            if (window_event == SDL_WINDOWEVENT_ENTER)')
+replace_once(backend,
+    '    if (bd->MouseLastLeaveFrame && bd->MouseLastLeaveFrame >= ImGui::GetFrameCount() && bd->MouseButtonsDown == 0)',
+    '    if (!cdda_harness::enabled() && bd->MouseLastLeaveFrame && bd->MouseLastLeaveFrame >= ImGui::GetFrameCount() && bd->MouseButtonsDown == 0)')
 replace_once(source / "src/sdltiles.cpp", '    if( inputdelay < 0 ) {\n        do {',
     '    cdda_harness::boundary();\n\n    if( inputdelay < 0 ) {\n        do {')
 replace_once(source / "src/sdltiles.cpp", '    SDL_RenderPresent( renderer.get() );',
@@ -271,33 +307,83 @@ if 'cdda_harness::poll(' not in section:
     path.write_text(text)
 
 adapter = r'''
+#include "third-party/imgui/imgui_internal.h"
+#include "third-party/imgui/imgui_impl_sdl2.h"
+
 namespace
 {
 SDL_Surface_Ptr harness_presented_frame;
+std::optional<cdda_harness::frame_geometry> harness_presented_geometry;
+
+std::optional<cdda_harness::frame_geometry> default_target_geometry()
+{
+    if( !window || !renderer || ( SDL_GetWindowFlags( window.get() ) & SDL_WINDOW_MINIMIZED ) ||
+        SDL_GetRenderTarget( renderer.get() ) != nullptr ) { return std::nullopt; }
+    cdda_harness::frame_geometry geometry;
+    SDL_GetWindowSize( window.get(), &geometry.window_width, &geometry.window_height );
+    if( SDL_GetRendererOutputSize( renderer.get(), &geometry.output_width, &geometry.output_height ) != 0 ) {
+        return std::nullopt;
+    }
+    for( int dimension : { geometry.window_width, geometry.window_height,
+                          geometry.output_width, geometry.output_height } ) {
+        if( dimension <= 0 || dimension > 16384 ) { return std::nullopt; }
+    }
+    if( static_cast<long long>( geometry.output_width ) * geometry.output_height > 16777216 ) {
+        return std::nullopt;
+    }
+    SDL_Rect viewport;
+    SDL_RenderGetViewport( renderer.get(), &viewport );
+    if( viewport.x < 0 || viewport.y < 0 || viewport.w <= 0 || viewport.h <= 0 ||
+        static_cast<long long>( viewport.x ) + viewport.w > geometry.output_width ||
+        static_cast<long long>( viewport.y ) + viewport.h > geometry.output_height ) { return std::nullopt; }
+    geometry.viewport = { viewport.x, viewport.y, viewport.w, viewport.h };
+    return geometry;
+}
+}
+
+std::optional<cdda_harness::frame_geometry> cdda_harness::cached_frame_geometry()
+{
+    return harness_presented_geometry;
+}
+
+std::optional<cdda_harness::frame_geometry> cdda_harness::current_frame_geometry()
+{
+    if( !renderer ) { return std::nullopt; }
+    SDL_Texture *target = SDL_GetRenderTarget( renderer.get() );
+    if( target && SDL_SetRenderTarget( renderer.get(), nullptr ) != 0 ) { return std::nullopt; }
+    const auto geometry = default_target_geometry();
+    if( target && SDL_SetRenderTarget( renderer.get(), target ) != 0 ) { return std::nullopt; }
+    return geometry;
 }
 
 void cdda_harness::capture_frame()
 {
-    if( !enabled() ) {
-        return;
+    if( !enabled() ) { return; }
+    harness_presented_geometry.reset();
+    // Capture only the full default output target. Its dimensions, not the
+    // viewport dimensions, bound the allocation and the full-target read.
+    const auto geometry = SDL_GetRenderTarget( renderer.get() ) != nullptr ?
+                          std::nullopt : default_target_geometry();
+    if( geometry && static_cast<long long>( geometry->output_width ) * geometry->output_height <= 16777216 ) {
+        if( !harness_presented_frame || harness_presented_frame->w != geometry->output_width ||
+            harness_presented_frame->h != geometry->output_height ) {
+            harness_presented_frame = CreateRGBSurface( 0, geometry->output_width, geometry->output_height,
+                                       32, 0, 0, 0, 0 );
+        }
+        if( harness_presented_frame && SDL_RenderReadPixels( renderer.get(), nullptr,
+                harness_presented_frame->format->format, harness_presented_frame->pixels,
+                harness_presented_frame->pitch ) == 0 ) {
+            harness_presented_geometry = geometry;
+        }
     }
-    SDL_Rect viewport;
-    SDL_RenderGetViewport( renderer.get(), &viewport );
-    if( !harness_presented_frame || harness_presented_frame->w != viewport.w ||
-        harness_presented_frame->h != viewport.h ) {
-        harness_presented_frame = CreateRGBSurface( 0, viewport.w, viewport.h, 32, 0, 0, 0, 0 );
-    }
-    if( harness_presented_frame && SDL_RenderReadPixels( renderer.get(), nullptr,
-            harness_presented_frame->format->format, harness_presented_frame->pixels,
-            harness_presented_frame->pitch ) != 0 ) {
-        harness_presented_frame.reset();
-    }
+    if( !harness_presented_geometry ) { harness_presented_frame.reset(); }
     cdda_harness::frame_presented( static_cast<bool>( harness_presented_frame ) );
 }
 
 bool cdda_harness::write_frame( const std::string &filename )
 {
-    return harness_presented_frame && IMG_SavePNG( harness_presented_frame.get(), filename.c_str() ) == 0;
+    return harness_presented_frame && harness_presented_geometry &&
+           IMG_SavePNG( harness_presented_frame.get(), filename.c_str() ) == 0;
 }
 
 void cdda_harness::feed_imgui( const input_event &event )
@@ -338,7 +424,109 @@ void cdda_harness::feed_imgui( const input_event &event )
     }
     key.type = SDL_KEYUP;
     key.key.state = SDL_RELEASED;
+    // A semantic shortcut releases its logical modifiers with the key.
+    key.key.keysym.mod = KMOD_NONE;
     imclient->process_input( &key );
+}
+
+void cdda_harness::feed_direct_imgui( const direct_input &event )
+{
+    ImGuiIO &io = ImGui::GetIO();
+    restore_on_out_of_scope restore_trickle( io.ConfigInputTrickleEventQueue );
+    io.ConfigInputTrickleEventQueue = true;
+    if( event.type != direct_input::kind::key ) {
+        // Click/text carry no modifiers. Queue normalization before their
+        // effects, using normal ImGui consumption rather than physical state.
+        io.AddKeyEvent( ImGuiMod_Ctrl, false );
+        io.AddKeyEvent( ImGuiMod_Alt, false );
+        io.AddKeyEvent( ImGuiMod_Shift, false );
+        io.AddKeyEvent( ImGuiMod_Super, false );
+    }
+    const auto consume = [&]() {
+        if( GImGui->InputEventsQueue.empty() ) {
+            throw std::runtime_error( "direct widget input was not queued" );
+        }
+        const ImGuiInputEvent terminal = GImGui->InputEventsQueue.back();
+        int pressed_frame = -1;
+        int consumed_frame = -1;
+        // The pinned backend can separate motion, key/modifier and text events.
+        // Eight normal frames bound completion without a nested input loop.
+        for( int attempt = 0; attempt < 8; ++attempt ) {
+            const int before = ImGui::GetFrameCount();
+            ui_manager::redraw();
+            refresh_display();
+            const int frame = ImGui::GetFrameCount();
+            if( frame <= before ) { continue; }
+            for( const ImGuiInputEvent &observed : GImGui->InputEventsTrail ) {
+                if( terminal.Type == ImGuiInputEventType_MouseButton &&
+                    observed.Type == terminal.Type && observed.MouseButton.Button == terminal.MouseButton.Button &&
+                    observed.MouseButton.Down ) { pressed_frame = frame; }
+                if( terminal.Type == ImGuiInputEventType_Key && observed.Type == terminal.Type &&
+                    observed.Key.Key == terminal.Key.Key && observed.Key.Down ) { pressed_frame = frame; }
+                if( observed.EventId == terminal.EventId ) { consumed_frame = frame; }
+            }
+            const bool text = terminal.Type == ImGuiInputEventType_Text;
+            const bool modifiers_released = !io.KeyCtrl && !io.KeyAlt && !io.KeyShift && !io.KeySuper;
+            const bool released = text ||
+                ( terminal.Type == ImGuiInputEventType_MouseButton && !terminal.MouseButton.Down &&
+                  !io.MouseDown[terminal.MouseButton.Button] ) ||
+                ( terminal.Type == ImGuiInputEventType_Key && !terminal.Key.Down &&
+                  !ImGui::GetKeyData( terminal.Key.Key )->Down );
+            if( consumed_frame >= 0 && GImGui->InputEventsQueue.empty() && released && modifiers_released &&
+                ( text || ( pressed_frame >= 0 && pressed_frame < consumed_frame ) ) ) { return; }
+        }
+        throw std::runtime_error( "normal widget frames did not consume balanced direct input" );
+    };
+    if( event.type == direct_input::kind::click ) {
+        SDL_Event mouse = {};
+        mouse.type = SDL_MOUSEMOTION;
+        mouse.motion.windowID = SDL_GetWindowID( window.get() );
+        mouse.motion.x = event.widget_position.x;
+        mouse.motion.y = event.widget_position.y;
+        ImGui_ImplSDL2_ProcessEvent( &mouse );
+        mouse = {};
+        mouse.type = SDL_MOUSEBUTTONDOWN;
+        mouse.button.windowID = SDL_GetWindowID( window.get() );
+        mouse.button.button = event.right_button ? SDL_BUTTON_RIGHT : SDL_BUTTON_LEFT;
+        mouse.button.x = event.widget_position.x;
+        mouse.button.y = event.widget_position.y;
+        mouse.button.state = SDL_PRESSED;
+        mouse.button.clicks = 1;
+        ImGui_ImplSDL2_ProcessEvent( &mouse );
+        mouse.type = SDL_MOUSEBUTTONUP;
+        mouse.button.state = SDL_RELEASED;
+        ImGui_ImplSDL2_ProcessEvent( &mouse );
+        consume();
+        return;
+    }
+    SDL_Event key = {};
+    key.type = SDL_KEYDOWN;
+    key.key.windowID = SDL_GetWindowID( window.get() );
+    key.key.state = SDL_PRESSED;
+    key.key.keysym.sym = event.widget_key;
+    key.key.keysym.scancode = SDL_GetScancodeFromKey( event.widget_key );
+    key.key.keysym.mod = event.widget_modifiers.count( keymod_t::shift ) ? KMOD_SHIFT : KMOD_NONE;
+    if( event.widget_modifiers.count( keymod_t::ctrl ) ) {
+        key.key.keysym.mod |= KMOD_CTRL;
+    }
+    if( event.widget_modifiers.count( keymod_t::alt ) ) {
+        key.key.keysym.mod |= KMOD_ALT;
+    }
+    if( event.type == direct_input::kind::key ) { ImGui_ImplSDL2_ProcessEvent( &key ); }
+    if( !event.widget_text.empty() ) {
+        SDL_Event text = {};
+        text.type = SDL_TEXTINPUT;
+        text.text.windowID = SDL_GetWindowID( window.get() );
+        SDL_strlcpy( text.text.text, event.widget_text.c_str(), sizeof( text.text.text ) );
+        ImGui_ImplSDL2_ProcessEvent( &text );
+    }
+    key.type = SDL_KEYUP;
+    key.key.state = SDL_RELEASED;
+    // Release logical modifiers too, so a shortcut cannot leave ImGui's
+    // queued Ctrl/Alt/Shift state held for a later text or click operation.
+    key.key.keysym.mod = KMOD_NONE;
+    if( event.type == direct_input::kind::key ) { ImGui_ImplSDL2_ProcessEvent( &key ); }
+    consume();
 }
 '''
 text = path.read_text()

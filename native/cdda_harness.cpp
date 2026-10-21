@@ -21,6 +21,7 @@
 
 #include "avatar.h"
 #include "calendar.h"
+#include "catacharset.h"
 #include "game.h"
 #include "input.h"
 #include "input_context.h"
@@ -31,6 +32,7 @@
 #include "output.h"
 #include "sdltiles.h"
 #include "ui_manager.h"
+#include "third-party/imgui/imgui.h"
 
 namespace cdda_harness
 {
@@ -148,6 +150,7 @@ std::string frame_session;
 int frame_revision = -1;
 long long frame_ms = 0;
 bool saved_frame_ok = false;
+std::optional<frame_geometry> saved_geometry;
 std::optional<fs::file_time_type> own_pause_time;
 struct visible_row {
     std::string text;
@@ -286,7 +289,7 @@ void write_observation( JsonOut &out, const std::string &id, const std::string &
                         const std::string &error, bool frame_ok, const std::string &published_frame )
 {
     out.start_object();
-    out.member( "protocol", 4 );
+    out.member( "protocol", 5 );
     out.member( "id", id );
     out.member( "session", session );
     out.member( "revision", revision );
@@ -308,6 +311,18 @@ void write_observation( JsonOut &out, const std::string &id, const std::string &
     out.member( "timestamp_ms", frame_ok ? presented_ms : now_ms() );
     out.member( "frame_ok", frame_ok );
     out.member( "frame", published_frame );
+    out.member( "frame_geometry" );
+    if( frame_ok && saved_geometry ) {
+        out.start_object();
+        out.member( "window_width", saved_geometry->window_width );
+        out.member( "window_height", saved_geometry->window_height );
+        out.member( "output_width", saved_geometry->output_width );
+        out.member( "output_height", saved_geometry->output_height );
+        out.member( "viewport", saved_geometry->viewport );
+        out.end_object();
+    } else {
+        out.write_null();
+    }
     out.member( "boundary" );
     out.start_object();
     out.member( "kind", kind_name( current_kind ) );
@@ -340,6 +355,7 @@ bool publish( const std::string &id, const std::string &status,
     std::string published_frame;
     if( capture ) {
         saved_frame_ok = false;
+        saved_geometry.reset();
         // Present and copy this boundary's current render buffer. A cached front
         // buffer from an earlier prompt must never acquire a new timestamp.
         ui_manager::redraw();
@@ -357,6 +373,7 @@ bool publish( const std::string &id, const std::string &status,
             frame_revision = revision;
             frame_ms = presented_ms;
             saved_frame_ok = true;
+            saved_geometry = cached_frame_geometry();
             retained_frames.push_back( frame_name );
             if( retained_frames.size() > 120 ) {
                 std::error_code ignored;
@@ -389,7 +406,7 @@ void publish_control( const std::string &id, const std::string &status,
     std::ifstream snapshot( path( "state.json" ) );
     std::ofstream stream( path( "control-response.json.tmp" ) );
     stream.exceptions( std::ios::badbit | std::ios::failbit );
-    stream << "{\"protocol\":4,\"id\":";
+    stream << "{\"protocol\":5,\"id\":";
     { JsonOut out( stream ); out.write( id ); }
     stream << ",\"status\":";
     { JsonOut out( stream ); out.write( status ); }
@@ -568,6 +585,11 @@ void ordinary_commit_gate( const TextJsonObject &request, bool resuming )
     if( !resuming && ( paused || fs::exists( path( "pause" ) ) ) ) {
         throw std::runtime_error( "pause interrupted dispatch" );
     }
+    if( request.get_string( "kind" ) == "direct" &&
+        ( !saved_geometry || current_frame_geometry() != saved_geometry ||
+          cached_frame_geometry() != saved_geometry ) ) {
+        throw std::runtime_error( "direct input requires unchanged attested frame geometry" );
+    }
     if( request.get_bool( "require_exact_frame" ) ) {
         exact_frame_gate();
     }
@@ -586,6 +608,11 @@ void ordinary_commit_gate( const TextJsonObject &request, bool resuming )
     if( !resuming && ( paused || fs::exists( path( "pause" ) ) ) ) {
         throw std::runtime_error( "pause interrupted dispatch" );
     }
+    // A window size/scale change during PNG comparison must also refuse before
+    // committing the already-translated input, even without a processed event.
+    if( request.get_string( "kind" ) == "direct" && current_frame_geometry() != saved_geometry ) {
+        throw std::runtime_error( "frame geometry changed before input commit" );
+    }
 }
 input_event action_event( const std::string &action, keyboard_mode mode, bool confirmation = false )
 {
@@ -603,6 +630,163 @@ input_event action_event( const std::string &action, keyboard_mode mode, bool co
         throw std::runtime_error( "recovery action has no usable single-key binding" );
     }
     return *binding;
+}
+// The host additionally checks Unicode printability categories. Native checks
+// canonical UTF-8 and scalar/control structure without locale or Unicode tables.
+int single_printable_scalar( const std::string &text )
+{
+    if( text.empty() || text.size() > 4 ) {
+        throw std::runtime_error( "text must be one printable Unicode scalar" );
+    }
+    const uint32_t code = UTF8_getch( text );
+    if( code > 0x10ffff || ( code >= 0xd800 && code <= 0xdfff ) ||
+        code < 32 || ( code >= 127 && code <= 159 ) || code == 0x2028 || code == 0x2029 ||
+        utf32_to_utf8( code ) != text ) {
+        throw std::runtime_error( "text must be one canonical noncontrol Unicode scalar" );
+    }
+    // The pinned widget build uses ImWchar16. Refuse before dispatch instead
+    // of allowing its UTF-8 decoder to silently substitute U+FFFD.
+    if( code > IM_UNICODE_CODEPOINT_MAX ) {
+        throw std::runtime_error( "Unicode scalar exceeds the pinned widget range" );
+    }
+    return static_cast<int>( code );
+}
+std::optional<frame_geometry> input_geometry( const TextJsonObject &input )
+{
+    const TextJsonObject geometry = input.get_object( "geometry" );
+    if( geometry.size() != 5 || !geometry.has_array( "viewport" ) ) {
+        throw std::runtime_error( "unsupported frame geometry" );
+    }
+    frame_geometry result;
+    const auto dimension = [&]( const std::string &name ) {
+        const long long value = integer_member( geometry, name );
+        if( value <= 0 || value > 16384 ) { throw std::runtime_error( "invalid geometry dimension" ); }
+        return static_cast<int>( value );
+    };
+    result.window_width = dimension( "window_width" );
+    result.window_height = dimension( "window_height" );
+    result.output_width = dimension( "output_width" );
+    result.output_height = dimension( "output_height" );
+    if( static_cast<long long>( result.output_width ) * result.output_height > 16777216 ) {
+        throw std::runtime_error( "frame pixel limit exceeded" );
+    }
+    TextJsonArray viewport = geometry.get_array( "viewport" );
+    if( viewport.size() != 4 ) { throw std::runtime_error( "invalid viewport" ); }
+    // Validate raw tokens as integer literals; upstream's integer reader alone
+    // also accepts scientific notation, which this wire contract rejects.
+    TextJsonIn *raw = geometry.get_raw( "viewport" );
+    raw->start_array();
+    for( size_t index = 0; index < 4; ++index ) {
+        raw->eat_whitespace();
+        const int begin = raw->tell();
+        const int64_t number = raw->get_int64();
+        const int end = raw->tell();
+        for( int offset = begin; offset < end; ++offset ) {
+            raw->seek( offset );
+            const char ch = raw->peek();
+            if( ch == ',' || ch == ']' || std::isspace( static_cast<unsigned char>( ch ) ) ) { break; }
+            if( ch < '0' || ch > '9' ) { throw std::runtime_error( "viewport requires nonnegative integer literals" ); }
+        }
+        raw->seek( end );
+        if( number < 0 || number > 16384 ) { throw std::runtime_error( "invalid viewport coordinate" ); }
+        result.viewport[index] = static_cast<int>( number );
+    }
+    if( !raw->end_array() ) { throw std::runtime_error( "invalid viewport length" ); }
+    if( result.viewport[2] <= 0 || result.viewport[3] <= 0 ||
+        result.viewport[0] + result.viewport[2] > result.output_width ||
+        result.viewport[1] + result.viewport[3] > result.output_height ) {
+        throw std::runtime_error( "viewport outside output" );
+    }
+    return result;
+}
+direct_input direct_event( const TextJsonObject &input, keyboard_mode mode )
+{
+    direct_input event;
+    const std::string type = input.get_string( "type" );
+    if( type == "key" ) {
+        if( input.size() != 3 || !input.has_array( "modifiers" ) ) {
+            throw std::runtime_error( "unsupported direct key shape" );
+        }
+        const std::string key = input.get_string( "key" );
+        // key_event is pure; unlike SDL's keychar translator it never reads
+        // held physical keys or touches arrow-combination state.
+        event.engine = key_event( key, keyboard_mode::keycode );
+        TextJsonArray modifiers = input.get_array( "modifiers" );
+        if( modifiers.size() > 3 ) { throw std::runtime_error( "too many key modifiers" ); }
+        std::set<keymod_t> explicit_modifiers;
+        for( const std::string modifier : modifiers ) {
+            keymod_t parsed;
+            if( modifier == "CTRL" ) { parsed = keymod_t::ctrl; }
+            else if( modifier == "ALT" ) { parsed = keymod_t::alt; }
+            else if( modifier == "SHIFT" ) { parsed = keymod_t::shift; }
+            else { throw std::runtime_error( "unsupported key modifier" ); }
+            if( !explicit_modifiers.insert( parsed ).second ) {
+                throw std::runtime_error( "duplicate key modifier" );
+            }
+        }
+        for( keymod_t modifier : explicit_modifiers ) {
+            event.engine.modifiers.insert( modifier );
+        }
+        event.widget_key = event.engine.get_first_input();
+        event.widget_modifiers = event.engine.modifiers;
+        const bool ctrl = event.engine.modifiers.count( keymod_t::ctrl );
+        const bool alt = event.engine.modifiers.count( keymod_t::alt );
+        const bool shift = event.engine.modifiers.count( keymod_t::shift );
+        const bool printable = ( key.size() == 1 && key[0] >= 32 && key[0] <= 126 ) || key == "SPACE";
+        int glyph = event.widget_key;
+        if( printable && shift ) {
+            const std::string base = "`1234567890-=[]\\;',./";
+            const std::string shifted = "~!@#$%^&*()_+{}|:\"<>?";
+            const auto index = base.find( static_cast<char>( glyph ) );
+            if( glyph >= 'a' && glyph <= 'z' ) { glyph -= 'a' - 'A'; }
+            else if( index != std::string::npos ) { glyph = shifted[index]; }
+        }
+        if( printable && !ctrl && !alt ) { event.widget_text = std::string( 1, static_cast<char>( glyph ) ); }
+        if( mode == keyboard_mode::keychar ) {
+            const bool arrow = key == "UP" || key == "DOWN" || key == "LEFT" || key == "RIGHT";
+            if( alt || ( arrow && ( ctrl || shift ) ) ||
+                ( ctrl && ( event.widget_key < 'a' || event.widget_key > 'z' ) ) ||
+                ( shift && !printable && key != "TAB" ) ) {
+                throw std::runtime_error( "unsupported keychar modifier combination" );
+            }
+            event.engine = key_event( key, mode );
+            event.engine.text = event.widget_text;
+            if( ctrl ) { event.engine.sequence[0] = event.widget_key - 'a' + 1; }
+            else if( printable ) { event.engine.sequence[0] = glyph; }
+            else if( shift && key == "TAB" ) { event.engine.sequence[0] = KEY_BTAB; }
+        } else {
+            event.engine.text = event.widget_text;
+        }
+    } else if( type == "text" ) {
+        if( input.size() != 2 ) { throw std::runtime_error( "unsupported direct text shape" ); }
+        const std::string text = input.get_string( "text" );
+        const int code = single_printable_scalar( text );
+        event.type = direct_input::kind::text;
+        event.engine = input_event( code, input_event_t::keyboard_char );
+        event.engine.text = text;
+        event.widget_text = text;
+    } else if( type == "click" ) {
+        if( input.size() != 5 ) { throw std::runtime_error( "unsupported direct click shape" ); }
+        const std::string button = input.get_string( "button" );
+        if( button != "left" && button != "right" ) { throw std::runtime_error( "unsupported click button" ); }
+        const auto geometry = input_geometry( input );
+        const long long x = integer_member( input, "x" );
+        const long long y = integer_member( input, "y" );
+        if( !geometry || geometry != saved_geometry || x < 0 || y < 0 ||
+            x >= geometry->output_width || y >= geometry->output_height ) {
+            throw std::runtime_error( "click requires matching geometry and an in-frame pixel" );
+        }
+        event.type = direct_input::kind::click;
+        event.right_button = button == "right";
+        event.engine = input_event( event.right_button ? MouseInput::RightButtonReleased : MouseInput::LeftButtonReleased,
+                                    input_event_t::mouse );
+        event.engine.mouse_pos = point( static_cast<int>( x * geometry->window_width / geometry->output_width ),
+                                       static_cast<int>( y * geometry->window_height / geometry->output_height ) );
+        event.widget_position = point( static_cast<int>( x ), static_cast<int>( y ) );
+    } else {
+        throw std::runtime_error( "unsupported direct input type" );
+    }
+    return event;
 }
 bool uuid_id( const std::string &id )
 {
@@ -650,7 +834,7 @@ bool poll_control( keyboard_mode mode, input_event &event )
         else if( kind != "request_interrupt" ) { throw std::runtime_error( "unsupported control kind" ); }
         const long long created = integer_member( request, "created_ms" );
         const long long deadline = integer_member( request, "deadline_ms" );
-        if( request.size() != fields || integer_member( request, "protocol" ) != 4 ||
+        if( request.size() != fields || integer_member( request, "protocol" ) != 5 ||
             created < 0 || created > now_ms() + 1000 || deadline != created + 2000 || deadline < now_ms() ) {
             throw std::runtime_error( "unsupported control envelope or expired request" );
         }
@@ -1009,6 +1193,7 @@ bool poll( keyboard_mode mode, input_event &event )
     }
     last_poll = now_ms();
     std::string id;
+    bool direct_committed = false;
     try {
         if( fs::exists( path( "pause" ) ) &&
             ( !paused || !own_pause_time || fs::last_write_time( path( "pause" ) ) != *own_pause_time ) ) {
@@ -1057,7 +1242,7 @@ bool poll( keyboard_mode mode, input_event &event )
         if( id.empty() || id.size() > 80 || !seen_ids.insert( id ).second ) {
             throw std::runtime_error( "invalid or duplicate request id" );
         }
-        if( integer_member( request, "protocol" ) != 4 ) {
+        if( integer_member( request, "protocol" ) != 5 ) {
             throw std::runtime_error( "unsupported protocol" );
         }
         const std::string kind = request.get_string( "kind" );
@@ -1106,7 +1291,14 @@ bool poll( keyboard_mode mode, input_event &event )
         if( current_kind != boundary_kind::normal_play && current_kind != boundary_kind::menu ) {
             throw std::runtime_error( "boundary does not permit ordinary input" );
         }
-        if( kind == "key" ) {
+        if( kind == "direct" && !request.get_bool( "require_exact_frame" ) ) {
+            throw std::runtime_error( "direct input requires exact frame preflight" );
+        }
+        std::optional<direct_input> direct;
+        if( kind == "direct" ) {
+            direct = direct_event( request.get_object( "input" ), mode );
+            event = direct->engine;
+        } else if( kind == "key" ) {
             event = key_event( request.get_string( "key" ), mode );
         } else if( kind == "action" ) {
             const std::string action = request.get_string( "action" );
@@ -1130,13 +1322,32 @@ bool poll( keyboard_mode mode, input_event &event )
         pending = id;
         publish( id, "dispatched", "", false );
         fs::remove( path( "claimed.json" ) );
-        feed_imgui( event );
+        if( direct ) {
+            direct_committed = true;
+            feed_direct_imgui( *direct );
+        }
+        else { feed_imgui( event ); }
         return true;
     } catch( const std::exception &e ) {
         event = input_event();
         pending.clear();
         std::error_code ignored;
         fs::remove( path( "claimed.json" ), ignored );
+        // Widget delivery can already have effects before its bounded frame
+        // completion fails. Preserve the nonterminal dispatched receipt so the
+        // host records unknown delivery; never publish a zero-input rejection
+        // or a later ready ACK for this original request.
+        if( direct_committed ) {
+            paused = true;
+            pause_origin = "fault";
+            try {
+                pause_file();
+                publish( id, "dispatched", e.what(), false );
+            } catch( const std::exception &fault ) {
+                std::fprintf( stderr, "CDDA direct delivery fault: %s\n", fault.what() );
+            }
+            return false;
+        }
         try {
             publish( id, "rejected", e.what() );
         } catch( const std::exception &publication_error ) {

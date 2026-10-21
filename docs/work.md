@@ -16,9 +16,11 @@ The next selected delivery is [discovery, learning and the fresh campaign](chang
 mixed interaction#176, player-derived procedures#177, nonblocking reflection#178,
 observer/measurement follow-through#143/#164, then actual seven-day assessment#145.
 The [procedure/exchange boundary](design/procedure-learning.md) has passed scoped
-design review; its pure procedure interface is frozen, while the remaining exact
-runtime/native integration still needs freezing. It adds no current input,
-learning or run authority. Bounded disjoint briefs precede worker dispatch. The accepted024
+design review. Native5 ordinary input, current host migration, procedure memory/
+library/handoff and observer changes have source implementations; the native build
+passed. Reflection records/mailbox/SQLite components still need software scheduling,
+official adapter and actual host integration. Graphical learning and both deciding
+missions remain pending. These source checks issue no run authority. The accepted024
 baseline and historical attempts below remain evidence, not a new admission.
 
 [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) has
@@ -75,7 +77,7 @@ ownership and observer visibility feed one [supply-and-shelter acceptance #144](
 then a [fresh seven-day assessment #145](https://github.com/CVX-Hull/enactive/issues/145)
 with the engineering lead outside gameplay. Reviewed component readiness permits
 shared native validation; the mission does not wait for component issue closure.
-The current source ingress is mission/8, with coordinated item/activity/inspection
+The accepted024 source ingress was mission/8, with coordinated item/activity/inspection
 records and rejection of prior contracts. Native capability qualification remains
 separate from source integration.
 Start/Observe remain read-only until the

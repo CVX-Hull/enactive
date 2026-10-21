@@ -15,6 +15,7 @@ from .contracts import ContractError, EvidenceRef, PrimitiveResult
 from .evidence import EvidenceError, EvidenceStore
 from .mission_contracts import SourceRevalidation, validate_request
 from .interactions import check_visible_row_agreement, item_selection_plan
+from .native_input import validate_input
 
 _CHARACTER = frozenset({"NEW_CHAR_POINTS", "NEW_CHAR_STATS", "NEW_CHAR_TRAITS", "NEW_CHAR_PROFESSIONS",
                         "NEW_CHAR_SKILLS", "NEW_CHAR_SCENARIOS", "NEW_CHAR_DESCRIPTION"})
@@ -28,8 +29,8 @@ _CONFIRMATIONS = frozenset({"YESNO", "CANCEL_ACTIVITY_OR_IGNORE_QUERY"})
 @dataclass(frozen=True)
 class ControlIntent:
     logical_id: str
-    kind: Literal["action", "key"]
-    action: str
+    kind: Literal["action", "key", "direct"]
+    action: str | dict
     before: EvidenceRef
     expected_boundary_id: str
     revalidation: SourceRevalidation | None = None
@@ -43,7 +44,7 @@ class ControlOutcome:
     evidence: tuple[EvidenceRef, ...]
     pending_logical_id: str | None
     verification_required: bool
-    basis: Literal["native_rows", "player_interpretation", "registered_action"]
+    basis: Literal["native_rows", "player_interpretation", "registered_action", "ordinary_input"]
     revalidation: SourceRevalidation | None = None
 
 
@@ -55,12 +56,13 @@ class SemanticControlSkill:
     """One immutable request; explicit clocks and retained feedback, no executor."""
     def __init__(self, request: dict | str | bytes):
         data = validate_request(request)
-        if (data["kind"] != "skill" or data["skill_kind"] not in ("menu", "edit", "interact", "item", "activity", "inspect")
+        if (data["kind"] != "skill" or data["skill_kind"] not in ("menu", "edit", "interact", "item", "activity", "inspect", "direct")
                 or data["skill_kind"] == "menu" and data["perception"] is None):
             raise ContractError("Semantic controls require edit/interact or an interpreted menu request")
         self._request = data
         self._logical_prefix = "control-" + hashlib.sha256(data["request_id"].encode()).hexdigest()
-        self._basis = "registered_action" if self._normal_root() else "player_interpretation"
+        self._basis = ("ordinary_input" if data["skill_kind"] == "direct" else
+                       "registered_action" if self._normal_root() else "player_interpretation")
         self._store: EvidenceStore | None = None
         self._sources: tuple[EvidenceRef, ...] = ()
         self._start: EvidenceRef | None = None
@@ -73,12 +75,13 @@ class SemanticControlSkill:
         self._pending: ControlIntent | None = None
         self._terminal: ControlOutcome | None = None
         self._revalidation: SourceRevalidation | None = None
-        self._plan: tuple[tuple[str, str], ...] = ()
+        self._plan: tuple[tuple[str, str | dict], ...] = ()
         self._index = 0
 
     def _normal_root(self) -> bool:
         data = self._request
-        return data["skill_kind"] in ("interact", "inspect") or (
+        return (data["skill_kind"] == "direct" and data["phase_id"] is None
+                or data["skill_kind"] in ("interact", "inspect")) or (
             data["skill_kind"] in ("item", "activity") and data["goal"]["step"] == "start")
 
     def _root_action(self) -> str:
@@ -151,7 +154,7 @@ class SemanticControlSkill:
     def _control_shape(state: dict) -> dict:
         ui = state["ui"]
         return {**{key: state[key] for key in ("session", "category", "actions", "scene", "paused",
-                                               "pause_origin", "takeover_generation", "in_game")},
+                                               "pause_origin", "takeover_generation", "in_game", "frame_geometry")},
                 "boundary": {key: value for key, value in state["boundary"].items() if key != "id"},
                 "ui": None if ui is None else {key: value for key, value in ui.items() if key != "selected"}}
 
@@ -170,7 +173,7 @@ class SemanticControlSkill:
         receipt.__post_init__()
         if (receipt.original.mission_id, receipt.original.epoch) != (self._request["mission_id"], self._request["epoch"]):
             raise ContractError("Semantic-control refresh must match its exact mission and epoch")
-        if not self._normal_root() and receipt.rule != "exact_png_bytes":
+        if (not self._normal_root() or self._request["skill_kind"] == "direct") and receipt.rule != "exact_png_bytes":
             raise EvidenceError("Player image interpretations require exact_png_bytes refresh")
         self._clocks(now_monotonic, now_timestamp_ms)
         self._bind(store)
@@ -320,7 +323,20 @@ class SemanticControlSkill:
         self._scan_sources(store)
         self._ready(state)
         kind = self._request["skill_kind"]
-        if kind == "menu":
+        if kind == "direct":
+            if (state["boundary"]["kind"] not in ("normal_play", "menu")
+                    or self._normal_root() and state["boundary"]["kind"] != "normal_play"):
+                raise _ControlBlocked("Direct input requires normal play or its owned ordinary menu")
+            direct = validate_input(self._request["goal"]["input"], text_limit=24)
+            if direct["type"] == "text":
+                if state["boundary"]["kind"] != "menu":
+                    raise _ControlBlocked("Direct text requires its owned ordinary menu")
+                plan = tuple(("direct", {"type": "text", "text": char}) for char in direct["text"])
+            else:
+                if direct["type"] == "click" and direct["geometry"] != state["frame_geometry"]:
+                    raise _ControlBlocked("Click geometry differs from its exact informing frame")
+                plan = (("direct", direct),)
+        elif kind == "menu":
             plan = self._menu_plan(state)
         elif kind == "edit":
             plan = self._edit_plan(state)
@@ -439,9 +455,11 @@ class SemanticControlSkill:
             self._pending = None
             self._checkpoint, self._generation = current, expected_generation
             self._index += 1
-            one_effect = (self._normal_root() or pending.action in
+            direct = self._request["skill_kind"] == "direct"
+            one_effect = (direct and self._request["goal"]["input"]["type"] != "text" or
+                          not direct and (self._normal_root() or pending.action in
                           ("CONFIRM", "TEXT.CONFIRM", "MARK_WITH_COUNT") or self._request["perception"]["kind"] in
-                          ("direction", "confirmation", "dismissal"))
+                          ("direction", "confirmation", "dismissal")))
             self._budget(current, now_monotonic, completing=True)
             if one_effect:
                 return self._finish("Input returned; player verification of the semantic effect is required",

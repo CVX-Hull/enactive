@@ -35,7 +35,9 @@ The successor actually received all seven required retained images; their output
 hashes match the archive. Claim and separate charged readmission preserve original
 costs and limits. Retrieved memory never grants input authority. Actual image
 presentation and independent continuation do not prove mental attention or causal
-usefulness. Learned reusable procedures and background reflection remain proposed.
+usefulness. Delivery057 adds source for reusable procedural records and a pinned
+read-only library; real procedural learning and background reflective play remain
+unqualified, with runtime reflection integration still pending.
 
 The official MCP SDK adapter constructs and retains requests, collects original
 results and presents exact images over the existing mission ingress. Both024

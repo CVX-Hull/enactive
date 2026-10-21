@@ -22,6 +22,7 @@ from harness.movement import DIRECTIONS, MovementBlocked, guard, observed_step
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import same_native_state
 from harness.gameplay.mission_contracts import PAUSE_ORIGINS, validate_visible_ui
+from harness.gameplay.native_input import validate_geometry, validate_input
 
 MAX_REQUEST = 4096
 MAX_WAIT = 15.0
@@ -101,11 +102,11 @@ def validate_state(value: dict[str, Any], request_id: str | None = None) -> None
                 "actions": list, "status": str, "error": str, "paused": bool,
                 "timestamp_ms": int, "frame_ok": bool, "in_game": bool, "frame": str,
                 "pause_origin": str, "takeover_generation": int}
-    if type(value.get("protocol")) is not int or value["protocol"] != 4:
+    if type(value.get("protocol")) is not int or value["protocol"] != 5:
         raise ControlError("Unsupported response protocol; observe after fixing the bridge")
     if request_id is not None and value.get("id") != request_id:
         raise ControlError("Response id does not match request")
-    if (set(value) != set(required) | {"protocol", "boundary", "scene", "ui"}
+    if (set(value) != set(required) | {"protocol", "boundary", "scene", "ui", "frame_geometry"}
             or any(type(value.get(key)) is not expected for key, expected in required.items())):
         raise ControlError("Malformed native response fields")
     if (not value["session"] or value["revision"] < 0
@@ -116,8 +117,12 @@ def validate_state(value: dict[str, Any], request_id: str | None = None) -> None
         raise ControlError("Malformed native takeover metadata")
     try:
         validate_visible_ui(value["ui"])
+        if value["frame_ok"]:
+            validate_geometry(value["frame_geometry"])
+        elif value["frame_geometry"] is not None:
+            raise ContractError("Unattested frame cannot assert geometry")
     except ContractError as exc:
-        raise ControlError(f"Malformed visible UI: {exc}") from exc
+        raise ControlError(f"Malformed visible evidence: {exc}") from exc
     if value["status"] == "dispatched" and value["frame_ok"]:
         raise ControlError("Dispatched response cannot assert a fresh frame")
     boundary = value.get("boundary")
@@ -165,7 +170,7 @@ def validate_control_request(request: dict[str, Any]) -> None:
         valid_id = str(uuid.UUID(request.get("id", ""))) == request.get("id")
     except (ValueError, TypeError, AttributeError):
         valid_id = False
-    if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 4
+    if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 5
             or not valid_id or len(request["id"]) > 80
             or not isinstance(request.get("session"), str) or not request["session"]
             or type(request.get("control_generation")) is not int or request["control_generation"] < 0
@@ -181,7 +186,7 @@ def validate_control_request(request: dict[str, Any]) -> None:
 
 def validate_control_response(value: dict[str, Any], request_id: str | None = None) -> None:
     if (set(value) != {"protocol", "id", "status", "error", "state"}
-            or type(value.get("protocol")) is not int or value["protocol"] != 4
+            or type(value.get("protocol")) is not int or value["protocol"] != 5
             or not isinstance(value.get("id"), str) or not value["id"]
             or not isinstance(value.get("status"), str) or value["status"] not in CONTROL_TERMINAL | {"dispatched"}
             or not isinstance(value.get("error"), str) or not isinstance(value.get("state"), dict)
@@ -259,7 +264,7 @@ class Controller:
                 admission = read_json(path)
                 if admission is not None:
                     self._restore_request(admission, "startup found unresolved durable admission; never replay")
-                    if admission["kind"] in {"key", "action", "resume"}:
+                    if admission["kind"] in {"key", "action", "direct", "resume"}:
                         restored_input_ids.add(admission["id"])
             inbox = read_json(self.bridge / "request.json")
             if inbox is not None:
@@ -284,7 +289,7 @@ class Controller:
             claimed = read_json(self.bridge / "claimed.json")
             if claimed is not None:
                 self._restore_request(claimed, "startup found claimed request")
-                if claimed["kind"] in {"key", "action", "resume"}:
+                if claimed["kind"] in {"key", "action", "direct", "resume"}:
                     restored_input_ids.add(claimed["id"])
             response = read_json(self.bridge / "response.json")
             if response is not None:
@@ -460,7 +465,7 @@ class Controller:
                 if kind not in boundary["recovery_operations"]:
                     raise ControlError("Recovery operation is not advertised at this boundary")
                 created = int(time.time() * 1000)
-                request = {"protocol": 4, "id": str(uuid.uuid4()), "kind": kind, "session": state["session"],
+                request = {"protocol": 5, "id": str(uuid.uuid4()), "kind": kind, "session": state["session"],
                            "control_generation": boundary["control_generation"], "authority": self.authority.copy(),
                            "created_ms": created, "deadline_ms": created + 2000}
                 if kind != "request_interrupt":
@@ -619,7 +624,7 @@ class Controller:
                         check_preflight()
                         authority = self.authority.copy()
                     created = int(time.time() * 1000)
-                    request = {"protocol": 4, "id": str(uuid.uuid4()), "kind": kind,
+                    request = {"protocol": 5, "id": str(uuid.uuid4()), "kind": kind,
                                "session": observed["session"], "control_generation": expected_control_generation,
                                "authority": authority, "created_ms": created, "deadline_ms": created + 2000}
                     if kind == "answer_interrupt":
@@ -768,9 +773,9 @@ class Controller:
     def _validate_stored_request(request: dict[str, Any]) -> None:
         fields = {"protocol", "id", "kind", "deadline_ms"}
         kind = request.get("kind")
-        if not isinstance(kind, str) or kind not in {"observe", "pause", "resume", "key", "action"}:
+        if not isinstance(kind, str) or kind not in {"observe", "pause", "resume", "key", "action", "direct"}:
             raise ControlError("Unsupported stored request kind; migrate or archive offline")
-        if kind in {"resume", "key", "action"}:
+        if kind in {"resume", "key", "action", "direct"}:
             fields |= {"session", "revision", "boundary_id", "takeover_generation", "authority", "frame", "require_exact_frame"}
             authority = request.get("authority")
             if (not isinstance(request.get("session"), str) or not request["session"]
@@ -787,7 +792,15 @@ class Controller:
             fields.add(kind)
             if not isinstance(request.get(kind), str) or not request[kind]:
                 raise ControlError("Malformed stored input; migrate or archive offline")
-        if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 4
+        if kind == "direct":
+            fields.add("input")
+            try:
+                validate_input(request.get("input"))
+            except ContractError as exc:
+                raise ControlError(f"Malformed stored direct input: {exc}") from exc
+            if request["require_exact_frame"] is not True:
+                raise ControlError("Direct input requires exact informing-frame equality")
+        if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 5
                 or not isinstance(request.get("id"), str) or not request["id"]
                 or type(request.get("deadline_ms")) is not int):
             raise ControlError("Unsupported stored request format; migrate or archive offline")
@@ -825,7 +838,7 @@ class Controller:
         atomic_json(self.bridge / "authority.json", self.authority)
 
     def _unknown(self, request: dict[str, Any], reason: str) -> None:
-        if request.get("kind") not in {"key", "action", "resume"}:
+        if request.get("kind") not in {"key", "action", "direct", "resume"}:
             return
         if any(item["request"].get("id") == request.get("id") for item in self.unknown_outcomes):
             return
@@ -876,7 +889,7 @@ class Controller:
             validate_control_request(request)
         else:
             self._validate_stored_request(request)
-            if request["kind"] not in {"action", "key", "resume"}:
+            if request["kind"] not in {"action", "key", "direct", "resume"}:
                 raise ControlError("Delivery proof requires an admitted input")
         try:
             exact_id = str(uuid.UUID(request["id"])) == request["id"]
@@ -1028,7 +1041,7 @@ class Controller:
             timeout = min(timeout, deadline_monotonic - started)
             if timeout <= 0:
                 return {"status": "controller_error", "error": "Original dispatch deadline expired before publication"}
-        request = {"protocol": 4, "id": request_id, "kind": kind,
+        request = {"protocol": 5, "id": request_id, "kind": kind,
                    "deadline_ms": int(time.time() * 1000 + timeout * 1000), **payload}
         if kind not in {"observe", "pause"}:
             if self.state is None:
@@ -1050,7 +1063,7 @@ class Controller:
             if (self.bridge / "request.json").exists():
                 raise ControlError("Unresolved bridge request; observe to reconcile")
             with self.data_lock:
-                if kind in {"key", "action", "resume"}:
+                if kind in {"key", "action", "direct", "resume"}:
                     self._check_owner(lease, generation)
                     if self.control_lock.locked() or self.control_pending is not None:
                         raise ControlError("Recovery is pending; ordinary input is blocked")
@@ -1099,7 +1112,7 @@ class Controller:
                     if observation_receipt is not None and response["status"] != "dispatched":
                         observation_receipt["received_monotonic"] = received_monotonic
                     terminal_received = response["status"] != "dispatched"
-                    if (response["status"] == "ready" and kind in {"key", "action", "resume"}
+                    if (response["status"] == "ready" and kind in {"key", "action", "direct", "resume"}
                             and (response["session"] != request["session"]
                                  or response["revision"] <= request["revision"])):
                         raise ControlError("Ready response has stale or changed session/revision")
@@ -1303,23 +1316,23 @@ class Controller:
                 or self.closed or self.frozen or self.pause_requested):
             raise ControlError("Run lease is stale or input authority was revoked")
 
-    def execute_mission(self, lease: MissionLease, *, kind: str, value: str, expected_session: str,
+    def execute_mission(self, lease: MissionLease, *, kind: str, value: str | dict, expected_session: str,
                         expected_revision: int, expected_boundary_id: str, logical_action_id: str,
                         deadline_monotonic: float, timeout: float | None = None,
                         expected_image_sha256: str | None = None,
                         preflight: Callable[[dict[str, Any], float], None] | None = None) -> dict[str, Any]:
-        """One registered action/key with its exact logical/native receipt."""
+        """One ordinary input with its exact logical/native receipt."""
         receipt = {"logical_action_id": logical_action_id, "request": None, "result": None,
                    "published": False, "received_monotonic": None, "preflight": None}
         preflight_failed = False
         if (type(logical_action_id) is not str or not 1 <= len(logical_action_id) <= 128
                 or type(deadline_monotonic) not in (int, float)
-                or not 0 <= deadline_monotonic <= 1e12 or lease is None or kind not in ("action", "key")):
+                or not 0 <= deadline_monotonic <= 1e12 or lease is None or kind not in ("action", "key", "direct")):
             receipt["result"] = {"status": "controller_error", "error": "Invalid mission identity, kind, deadline or lease"}
         else:
             try:
                 receipt["result"] = self._execute(kind, timeout,
-                    {kind: value, "expected_session": expected_session,
+                    {"input" if kind == "direct" else kind: value, "expected_session": expected_session,
                      "expected_revision": expected_revision, "expected_boundary_id": expected_boundary_id}, lease,
                     deadline_monotonic=deadline_monotonic, receipt=receipt,
                     expected_image_sha256=expected_image_sha256, preflight=preflight)
@@ -1486,10 +1499,17 @@ class Controller:
                 raise ControlError("Mission continuation superseded by host Pause or takeover")
             if self.closed:
                 raise ControlError("Controller is closed")
-            if not isinstance(kind, str) or kind not in {"observe", "pause", "resume", "goal", "key", "action", "walk"}:
+            if not isinstance(kind, str) or kind not in {"observe", "pause", "resume", "goal", "key", "action", "walk", "direct"}:
                 raise ControlError("Unknown command")
-            if set(payload) - {"key", "action", "direction", "steps", "text", "expected_session", "expected_revision", "expected_boundary_id"}:
+            if set(payload) - {"key", "action", "direction", "steps", "text", "input", "expected_session", "expected_revision", "expected_boundary_id"}:
                 raise ControlError("Unknown command fields")
+            if kind == "direct":
+                if lease is None or lease.operation != "interaction" or expected_image_sha256 is None:
+                    raise ControlError("Direct input requires an exact-image mission interaction lease")
+                try:
+                    payload["input"] = validate_input(payload.get("input"))
+                except ContractError as exc:
+                    raise ControlError(f"Invalid direct input: {exc}") from exc
             if kind == "pause":
                 return self.pause()
             if isinstance(wait, bool) or not isinstance(wait, (int, float)) or not 0 < wait <= MAX_WAIT:
@@ -1561,9 +1581,9 @@ class Controller:
         with self.data_lock:
             if kind != "observe":
                 self._check_owner(lease, generation)
-            if kind in {"key", "action", "resume"} and (self.control_lock.locked() or self.control_pending is not None):
+            if kind in {"key", "action", "direct", "resume"} and (self.control_lock.locked() or self.control_pending is not None):
                 raise ControlError("Recovery is pending; ordinary input is blocked")
-            if kind in {"key", "action", "resume"} and generation != self.pause_generation:
+            if kind in {"key", "action", "direct", "resume"} and generation != self.pause_generation:
                 return {"status": "pause_requested", "error": "Queued resume superseded by a later pause"}
         if kind != "observe":
             with self.data_lock:
@@ -1600,7 +1620,7 @@ class Controller:
             return observed
         with self.data_lock:
             self._check_owner(lease, generation)
-            if kind in {"key", "action", "resume"} and generation != self.pause_generation:
+            if kind in {"key", "action", "direct", "resume"} and generation != self.pause_generation:
                 return {"status": "pause_requested", "error": "Resume superseded by a later pause"}
             if lease is not None:
                 self._mission_frame(observed, lease.operation)
@@ -1623,6 +1643,9 @@ class Controller:
                 self._walk_guard(observed, dx, dy)
         if kind == "action" and payload["action"] not in observed["actions"]:
             raise ControlError("Action is not registered in the current input context")
+        if (kind == "direct" and payload["input"]["type"] == "click"
+                and payload["input"]["geometry"] != observed["frame_geometry"]):
+            raise ControlError("Click geometry differs from the exact informing frame")
         if lease is not None or resume_binding is not None:
             try:
                 pause_snapshot = self._pause_snapshot() if resume_binding is not None else None
@@ -1667,7 +1690,8 @@ class Controller:
                     self._mission_lease = None
                     self.transport_error = str(exc)
                 raise _MissionPreflightFailure(str(exc)) from exc
-        primitive = {kind: payload[kind]} if kind in {"key", "action"} else {}
+        primitive = ({"input": payload["input"]} if kind == "direct" else
+                     {kind: payload[kind]} if kind in {"key", "action"} else {})
         result = self._exchange(kind, timeout, generation=generation, lease=lease, session=observed["session"],
                                 revision=observed["revision"], boundary_id=observed["boundary"]["id"],
                                 takeover_generation=observed["takeover_generation"], deadline_monotonic=deadline_monotonic,

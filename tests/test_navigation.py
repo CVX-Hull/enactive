@@ -50,7 +50,7 @@ class NavigationTests(unittest.TestCase):
                          "coordinate_epoch": 0}, "target": list(target)}, sources=[before.observation_id],
                      expected_session="world", expected_revision=before.revision,
                      expected_boundary_id=self.store.observation(before)["boundary"]["id"],
-                     limits={"primitives": 32, "wall_seconds": 120, "game_seconds": 100})
+                     limits={"primitives": 32, "wall_seconds": 120, "game_seconds": 100}, procedure=None)
         value.update(changes)
         return value
 

@@ -102,7 +102,7 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
             scope="lifecycle", source_id=selected["source"]["reference"]["observation_id"],
             supporting_source_ids=[], intent=dict(skill_kind="menu",
                 goal=dict(purpose="confirmation", label="YES", outcome="activated"),
-                perception=dict(kind="confirmation", question="Are you SURE you're finished?"), work_id=None),
+                perception=dict(kind="confirmation", question="Are you SURE you're finished?"), work_id=None, procedure=None),
             limits=dict(primitives=32, wall_seconds=900, game_seconds=3600), wait_seconds=15)
         with patch.object(self.player.client, "submit", wraps=self.player.client.submit) as submit:
             with self.assertRaisesRegex(ContractError, "typed direction/confirmation"):
@@ -423,7 +423,7 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
                         case.runtime._store.max_frames = case.runtime._store.usage()["frames"]
                     before = case.runtime.status()["spent_inputs"]
                     delivered = len(case.bridge.delivered)
-                    result = case.run_request(dict(schema="mission/8", kind="observe", request_id="bad-identity-observe",
+                    result = case.run_request(dict(schema="mission/9", kind="observe", request_id="bad-identity-observe",
                         mission_id=case.a.mission_id, epoch=case.runtime.status()["epoch"]))
                     self.assertEqual(result["state"], "blocked", result)
                     self.assertEqual(case.runtime.status()["spent_inputs"], before)

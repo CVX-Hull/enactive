@@ -14,11 +14,10 @@ from typing import Any, Callable
 
 from .contracts import ContractError, EvidenceRef, json_object
 from .evidence import CapacityError, EvidenceError, EvidenceStore
-from .mission_contracts import (
-    MAX_CONTEXT_BYTES, MAX_HANDOFF_CONTEXT_BYTES, MAX_HANDOFF_SOURCES,
-    MEMORY_VERSION, VERSION, canonical, validate_memory_entry, validate_work_view, validate_request,
-)
+from .contracts import canonical
+from .mission_contracts import MAX_CONTEXT_BYTES, MAX_HANDOFF_CONTEXT_BYTES, MAX_HANDOFF_SOURCES, MEMORY_VERSION, VERSION, validate_memory_entry, validate_work_view, validate_request
 from .mission_ledger import MissionLedger
+from .procedures import project_procedures
 
 MAX_CLAIMS = 32
 MAX_WORK = 16
@@ -65,10 +64,94 @@ class CampaignMemory:
     after restart callers retrieve again. The durable Decision's frozen fields
     retain its exact version/query and selected IDs, without a second packet log.
     """
-    def __init__(self, ledger: MissionLedger, store: EvidenceStore):
+    def __init__(self, ledger: MissionLedger, store: EvidenceStore, library=None):
         self.ledger = ledger
         self.store = store
+        self.library = library
         self._packets: list[dict] = []
+        self._procedure_heads()
+
+    def _procedure_records(self) -> tuple[dict, ...]:
+        return (() if self.library is None else self.library.records()) + tuple(
+            row["entry"] for row in self.ledger.memory_records("procedure"))
+
+    def _procedure_heads(self) -> dict[str, dict]:
+        records = self._procedure_records()
+        policy = self.ledger.admission.learning
+        if (records and policy is None or policy is not None and policy.library_sources and self.library is None):
+            raise ContractError("Procedure retrieval requires its admitted library and environment")
+        if policy is not None and any(record["environment"] != dict(policy.environment) for record in records):
+            raise ContractError("Procedure history crosses its admitted environment")
+        return project_procedures(records)
+
+    @staticmethod
+    def _procedure_ref(entry: dict) -> dict:
+        return {"mission_id": entry["mission_id"], "revision_id": entry["id"]}
+
+    def procedure_source(self, mission_id: str, source_id: str) -> tuple[dict, bytes]:
+        if mission_id == self.ledger.admission.mission_id:
+            return self.store.export_source(source_id)
+        if self.library is None:
+            raise ContractError("Historical procedure evidence is not admitted")
+        return self.library.source(mission_id, source_id)
+
+    def _procedure_support(self, entry: dict) -> set[tuple[str, str]]:
+        """Validate complete ancestry and actual episode joins; never semantic truth."""
+        records = self._procedure_records()
+        by_id = {(record["mission_id"], record["id"]): record for record in records}
+        chain = [entry]
+        current = entry
+        while current["parent"] is not None:
+            parent = current["parent"]
+            current = by_id[(parent["mission_id"], parent["revision_id"])]
+            chain.append(current)
+        sources: set[tuple[str, str]] = set()
+        primitives = self.ledger.primitive_records()
+        for record in chain:
+            for episode in record["support"] + record["counterexamples"]:
+                mission = episode["mission_id"]
+                if mission == self.ledger.admission.mission_id:
+                    linked = set()
+                    for identity in episode["request_ids"]:
+                        request = self.ledger.request(identity)
+                        if request["state"] in ("accepted", "running"):
+                            raise ContractError("Procedure evidence requires a settled original request")
+                        linked.update(request["request"].get("sources", ()))
+                        linked.update((request["result"] or {}).get("source_ids", ()))
+                        for primitive in primitives:
+                            if primitive["request_id"] != identity:
+                                continue
+                            if (primitive["state"] in ("prepared", "published")
+                                    or primitive["state"] == "unknown" and primitive["effect"] is None):
+                                raise ContractError("Procedure episode has unresolved original input effects")
+                            linked.update(primitive["intent"][key] for key in ("source_before", "preflight_source"))
+                            receipt = primitive["result"] or {}
+                            linked.update(receipt[key] for key in ("source_before", "preflight_source", "source_after")
+                                          if receipt.get(key) is not None)
+                    if not set(episode["source_ids"]) <= linked:
+                        raise ContractError("Procedure evidence is unrelated to its cited requests")
+                else:
+                    if self.library is None:
+                        raise ContractError("Procedure episode mission is not admitted")
+                    self.library.validate_episode(episode)
+                for source in episode["source_ids"]:
+                    qualified = (mission, source)
+                    if qualified in sources:
+                        continue
+                    metadata, _ = self.procedure_source(*qualified)
+                    if metadata["disposition"] != "retained":
+                        raise ContractError("Disputed procedure evidence is ineligible")
+                    sources.add(qualified)
+        return sources
+
+    def select_procedure(self, selection: dict) -> dict:
+        heads = self._procedure_heads()
+        chosen = next((entry for entry in heads.values() if self._procedure_ref(entry) == {
+            key: selection[key] for key in ("mission_id", "revision_id")}), None)
+        if chosen is None or chosen["status"] not in ("candidate", "active"):
+            raise ContractError("Select an eligible current procedure revision, with scoped applicability")
+        self._procedure_support(chosen)
+        return _copy(chosen)
 
     def _scope(self, scope: dict) -> dict:
         scope = validate_request({"schema": VERSION, "kind": "context", "handoff": None,
@@ -132,6 +215,18 @@ class CampaignMemory:
         entry, kind = data["entry"], data["entry_type"]
         if kind == "decision":
             return self.record_decision(entry, now=now)
+        if kind == "procedure":
+            if self.ledger.admission.learning is None:
+                raise ContractError("Procedure adaptation is not admitted")
+            if entry["environment"] != dict(self.ledger.admission.learning.environment):
+                raise ContractError("Procedure environment differs from frozen admission")
+            existing = self._procedure_records()
+            # Immutable duplicate retry may return its original event, never a new head.
+            same = [record for record in existing if (record["mission_id"], record["id"]) == (entry["mission_id"], entry["id"])]
+            project_procedures(existing if same else (*existing, entry))
+            self._procedure_support(entry)
+            sequence = self.ledger.append_memory(data["request_id"], kind, entry, now=now)
+            return _copy({"memory_version": sequence, "entry": entry, "grants_authority": False})
         if kind == "claim":
             claims = {row["entry"]["id"]: row["entry"] for row in self.ledger.memory_records("claim")}
             retired = set(data.get("retired_ids", []))
@@ -169,7 +264,7 @@ class CampaignMemory:
         scene = observation["scene"]
         entries = []
         existing = {row["entry"]["id"]: row["entry"] for row in self.ledger.memory_records("claim")}
-        sequence = max((row["sequence"] for kind in ("claim", "work", "decision")
+        sequence = max((row["sequence"] for kind in ("claim", "work", "decision", "procedure")
                         for row in self.ledger.memory_records(kind)), default=0)
         if scene is not None:
             facts = [("player-position", "local-coordinate", {"quantity": None, "state": canonical({"position": scene["position"]})}),
@@ -305,7 +400,7 @@ class CampaignMemory:
                           "scope": scope, "query": query, "max_bytes": min(max_bytes, MAX_CONTEXT_BYTES)})
         _clock(now_monotonic)
         _wall_clock(now_timestamp_ms)
-        rows = {kind: self.ledger.memory_records(kind) for kind in ("claim", "work", "decision")}
+        rows = {kind: self.ledger.memory_records(kind) for kind in ("claim", "work", "decision", "procedure")}
         version = max((row["sequence"] for records in rows.values() for row in records), default=0)
         claims = {r["entry"]["id"]: r["entry"] for r in rows["claim"]}
         refs = self._references()
@@ -399,8 +494,8 @@ class CampaignMemory:
         packet: dict[str, Any] = {"schema": MEMORY_VERSION, "record_type": "Context", "packet_id": "",
             "scope": scope, "query": query, "memory_version": version,
             "as_of": {"timestamp_ms": now_timestamp_ms, "monotonic": now_monotonic},
-            "claims": [], "work": [], "sources": [], "lesson_ids": [], "dispositions": {},
-            "omitted": {"claims": len(claims), "work": len(work), "bounds": 0, "reasons": {}},
+            "claims": [], "work": [], "sources": [], "procedures": [], "procedure_refs": [], "procedure_sources": [], "dispositions": {},
+            "omitted": {"claims": len(claims), "work": len(work), "procedures": len(self._procedure_heads()), "bounds": 0, "reasons": {}},
             "reobservations": [], "grants_authority": False}
         selected: set[str] = set()
         selected_sources: set[str] = set(support_source_ids)
@@ -528,7 +623,36 @@ class CampaignMemory:
                 if complete:
                     raise CapacityError("Complete handoff packet byte limit; no omission")
                 omit("packet byte limit", 1)
-        if not packet["claims"] and not packet["work"]:
+        heads = list(self._procedure_heads().values())
+        heads.sort(key=lambda entry: (-sum(term in canonical(entry).lower() for term in terms), entry["procedure_id"]))
+        for entry in heads:
+            if not complete and terms and not any(term in canonical(entry).lower() for term in terms):
+                continue
+            try:
+                support = self._procedure_support(entry)
+            except (ContractError, OSError) as exc:
+                if complete:
+                    raise CapacityError("Complete procedure context has unavailable support: " + str(exc)) from exc
+                omit("procedure support unavailable: " + str(exc)[:256], 1)
+                continue
+            qualified = {(source["mission_id"], source["source_id"]) for source in packet["procedure_sources"]} | support
+            if len(packet["procedures"]) >= 16 or len(qualified) + len(selected_sources) > source_limit:
+                if complete:
+                    raise CapacityError("Complete handoff procedure/source bound exhausted; no omission")
+                omit("procedure/source limit", 1)
+                continue
+            candidate = _copy(packet)
+            candidate["procedures"].append(entry)
+            candidate["procedure_refs"].append(self._procedure_ref(entry))
+            candidate["procedure_sources"] = [{"mission_id": mission, "source_id": source} for mission, source in sorted(qualified)]
+            candidate["omitted"]["procedures"] = len(heads) - len(candidate["procedures"])
+            if fits(candidate):
+                packet = candidate
+            elif complete:
+                raise CapacityError("Complete handoff procedure packet byte limit; no omission")
+            else:
+                omit("procedure packet byte limit", 1)
+        if not packet["claims"] and not packet["work"] and not packet["procedures"]:
             packet["reobservations"] = [{"scope": scope, "reason": "No supported matching memory fits this packet",
                 "instruction": "Inspect current visible coverage for: " + query}]
         packet = finish(packet)
@@ -540,16 +664,23 @@ class CampaignMemory:
         return _copy(packet)
 
     def record_decision(self, entry: dict, *, now: float) -> dict:
-        """Retain actual selected packet references; lessons remain frozen/empty."""
+        """Retain actual selected references and qualified procedure support."""
         _clock(now)
         entry = validate_memory_entry(entry, "decision", player=True)
         matches = [p for p in self._packets if all(entry[k] == p[k] for k in ("packet_id", "scope", "query", "memory_version"))
-                   and entry["omitted"] == p["omitted"]["claims"] + p["omitted"]["work"]]
+                   and entry["omitted"] == p["omitted"]["claims"] + p["omitted"]["work"] + p["omitted"]["procedures"]]
         for packet in matches:
             if (set(entry["claim_ids"]) <= {c["id"] for c in packet["claims"]}
                     and set(entry["work_ids"]) <= {w["id"] for w in packet["work"]}
                     and set(entry["source_ids"]) <= {s["id"] for s in packet["sources"]}
-                    and entry["lesson_ids"] == packet["lesson_ids"]):
+                    and all(ref in packet["procedure_refs"] for ref in entry["procedure_refs"])
+                    and all(source in packet["procedure_sources"] for source in entry["procedure_sources"])):
+                procedure_sources = set()
+                for procedure in packet["procedures"]:
+                    if self._procedure_ref(procedure) in entry["procedure_refs"]:
+                        procedure_sources.update(self._procedure_support(procedure))
+                if not procedure_sources <= {(source["mission_id"], source["source_id"]) for source in entry["procedure_sources"]}:
+                    raise ContractError("Decision must retain its selected procedure dependency closure")
                 chosen = [c for c in packet["claims"] if c["id"] in entry["claim_ids"]]
                 chosen += [w for w in packet["work"] if w["id"] in entry["work_ids"]]
                 needed = {source for item in chosen for source in item["sources"]}

@@ -13,6 +13,44 @@ from tests.test_gameplay_evidence import observation, png
 
 
 class SemanticControlTests(unittest.TestCase):
+    def test_direct_key_returns_partial_without_semantic_credit_or_replay(self):
+        before = self.frame(normal=True)
+        goal = dict(input=dict(type="key", key="x", modifiers=[]), intent="Explore visible control",
+                    expected="An interaction appears", interrupt_allowed=False)
+        control = self.skill(before, skill_kind="direct", goal=goal)
+        intent = self.propose(control)
+        self.assertEqual((intent.kind, intent.action), ("direct", goal["input"]))
+        after = self.frame(category="UNFAMILIAR", actions=["ANY_INPUT"])
+        outcome = self.accept(control, intent, after)
+        self.assertEqual((outcome.disposition, outcome.basis), ("partial", "ordinary_input"))
+        self.assertTrue(outcome.verification_required)
+        self.assertIs(self.propose(control), outcome)
+
+    def test_direct_text_is_individually_proposed_and_stops_on_changed_context(self):
+        before = self.frame(category="UNFAMILIAR", actions=["ANY_INPUT"])
+        goal = dict(input=dict(type="text", text="éx"), intent="Enter visible text",
+                    expected="Text is visible", interrupt_allowed=False)
+        control = self.skill(before, skill_kind="direct", goal=goal, phase_id="root")
+        first = self.propose(control)
+        self.assertEqual(first.action, dict(type="text", text="é"))
+        self.assertIsNone(self.accept(control, first, self.frame(category="UNFAMILIAR", actions=["ANY_INPUT"])))
+        second = self.propose(control)
+        self.assertEqual(second.action, dict(type="text", text="x"))
+        outcome = self.accept(control, second, self.frame(normal=True))
+        self.assertEqual(outcome.disposition, "partial")
+        self.assertTrue(outcome.verification_required)
+        self.assertIs(self.propose(control), outcome)
+
+    def test_direct_click_requires_retained_geometry_and_exact_image_refresh(self):
+        before = self.frame(normal=True)
+        geometry = self.store.observation(before)["frame_geometry"]
+        goal = dict(input=dict(type="click", button="left", x=0, y=0,
+                              geometry=geometry | dict(window_width=2)),
+                    intent="Explore visible target", expected="Target responds", interrupt_allowed=False)
+        control = self.skill(before, skill_kind="direct", goal=goal)
+        outcome = self.propose(control)
+        self.assertEqual((outcome.disposition, outcome.proposed_count), ("blocked", 0))
+
     def test_any_key_popup_acknowledgement_is_one_key_with_unverified_effect(self):
         for language_action in ([], ["toggle_language_to_en"]):
             for after_kind in ("same_popup", "question", "normal"):
@@ -164,7 +202,7 @@ class SemanticControlTests(unittest.TestCase):
                     goal=goal or dict(purpose="Choose", label="3", outcome="activated"),
                     sources=[before.observation_id], expected_session=before.session, expected_revision=before.revision,
                     expected_boundary_id=self.store.observation(before)["boundary"]["id"],
-                    limits=dict(primitives=32, wall_seconds=120, game_seconds=100)) | changes
+                    limits=dict(primitives=32, wall_seconds=120, game_seconds=100), procedure=None) | changes
 
     def propose(self, skill):
         return skill.propose(self.store, **self.clocks)

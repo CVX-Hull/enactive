@@ -80,7 +80,7 @@ class SupervisorTests(unittest.TestCase):
         self.number += 1
         turn = getattr(self, "last_turn", 10) if turn is None else turn
         self.last_turn = turn
-        value = {"protocol": 4, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "observe-is-not-action", "session": session,
+        value = {"protocol": 5, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "observe-is-not-action", "session": session,
                  "revision": self.number if revision is None else revision,
                  "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT"],
                  "status": "ready", "error": "", "paused": False,

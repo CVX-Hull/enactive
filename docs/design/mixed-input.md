@@ -232,7 +232,9 @@ The closed input shapes are:
   events start different drag behavior and are not this operation. No held button, pointer warp, OS focus,
   drag, wheel or extra implicit navigation.
 
-Host validation uses one scalar and Python's `str.isprintable()`. Native validation
+Host validation uses one scalar and Python's `str.isprintable()`, limited to the
+pinned widget build's16-bit Unicode range. Supplementary scalars refuse before
+input rather than becoming a replacement glyph. Native validation
 independently rejects invalid/overlong UTF-8, surrogates/out-of-range scalars,
 C0/C1 controls and U2028/U2029 using the pinned decoder; it does not invent Unicode
 category tables. Zero-width printable combining marks are not rejected merely for
