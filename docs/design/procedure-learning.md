@@ -174,7 +174,7 @@ strict schema/canonical helpers, never ledger/controller/runtime/network code.
 
 `procedure_schema()` returns a defensive copy of one closed JSON Schema;
 `validate_procedure(value)` returns a validated decoded copy; and
-`project_procedures(records)` validates an ordered, bounded sequence of revisions
+`project_procedures(records)` validates a bounded sequence of revisions
 and returns a mapping from family ID to a decoded copy of its latest revision,
 preserving full input history outside
 the returned projection. These functions confer no input authority and do not
@@ -192,6 +192,9 @@ inside the admitted closure. Revision is1–1024, starts at1 with null parent, a
 advances exactly once from the current family's qualified ID/revision. A qualified
 ID is immutable; identical repeated copies dedupe, changed copies refuse.
 Conflicting/stale parent or duplicate revision refuses rather than overwriting.
+Resolve the complete graph by ancestry regardless of input/import order; a
+reversed complete sequence returns the same head, while missing/cyclic closure
+refuses. Input order is never a version or conflict tie-break.
 
 Goal/reason/condition/progress/limit text is at most1024characters. Parameters are
 at most8 unique names with `name`/`description`; steps are1–16 objects with

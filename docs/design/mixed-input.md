@@ -189,3 +189,81 @@ handoff and normal same-character save/reload/final ending. Source changes happe
 only after quiescence and runtime closure. No old failed admission resumes.
 Native click success is not procedural learning; one complete mission does not
 prove learning efficacy or complete the independent seven-day outcome.
+
+## Candidate native5 interface for the isolated worker
+
+This exact native side of delivery057 passed focused interface review on
+October21 and is frozen for isolated implementation. This does not activate5 or
+claim native qualification. The worker owns only
+`native/cdda_harness.cpp`, `native/cdda_harness.h`, `native/upstream.json`,
+`tools/patch_game.py` and `tests/test_setup.py`. The lead owns all Python wire/
+mission/controller/ledger/SDK/evidence migration, shared build/runtime and actual
+native qualification. No worker launches or patches the shared build.
+
+All native requests/responses/control envelopes become protocol5; protocol4
+rejects. Existing semantic `key`/`action` and registered lifecycle/control shapes
+retain their meaning under5. They are not a second version or compatibility path.
+Add ordinary `kind="direct"` with one `input` member in place of the key/action
+payload: the same11 common ordinary fields plus this one payload, no new channel.
+The common exact-source/authority/created/deadline/boundary/revision/frame checks
+are unchanged. Direct requests additionally require `require_exact_frame=true`;
+false refuses before translation/commit. No direct input at activity, interrupt,
+debug or unsupported boundaries. The mission layer restricts lifecycle/identity
+ownership; native cannot infer a higher-level mission from event text.
+
+The closed input shapes are:
+
+- Key: `type="key"`, `key`, `modifiers`. Key is one printable ASCII or the
+  existing supported named key; modifiers is a unique list of CTRL/ALT/SHIFT,
+  maximum3. Construct/validate without reading held physical keys or mutating
+  upstream arrow-combo state. Resolve explicit SHIFT consistently for engine
+  glyph and widget text; CTRL letters retain upstream control semantics, with no
+  accidental text injection for control shortcuts. Reject unsupported combinations
+  before dispatch. Each accepted logical key has matched widget down/up.
+- Text: `type="text"`, `text`, where text is exactly one printable valid Unicode
+  scalar, no controls/surrogates/newline. This is one charged native primitive;
+  the mission adapter expands its at-most24-scalar operation with fresh per-scalar
+  feedback and no implicit Enter. Named keys are never disguised as text.
+- Click: `type="click"`, `button="left"|"right"`, integer `x`/`y` in the
+  exact full-output PNG and `geometry` equal to its retained frame geometry.
+  One logical click returns exactly `LeftButtonReleased` or `RightButtonReleased`
+  to the engine (the pinned MOUSE_LEFT/MOUSE_RIGHT selection mapping), alongside
+  matched ImGui motion/down/up at the separately mapped positions. Pressed engine
+  events start different drag behavior and are not this operation. No held button, pointer warp, OS focus,
+  drag, wheel or extra implicit navigation.
+
+Every protocol5 observation adds `frame_geometry`, null when its frame is not
+attested; otherwise an object with positive `window_width`, `window_height`,
+`output_width`, `output_height` (each at most16384) and `viewport` as four integers
+`[x,y,width,height]` wholly inside that output. Capture the full default render
+target at output dimensions, with at most16777216 pixels before allocating the
+surface; its PNG origin is output `[0,0]`. Record geometry
+alongside the cached presented surface, not from a later unrelated render target.
+Invalid/minimized/default-target or capture failure cannot attest a click frame.
+At final click commit compare retained/request geometry with current window/output/
+viewport geometry AND exact saved PNG; reject changed size/scale/viewport even if
+the image comparison alone could look identical. Non-unit geometry is a required
+native qualification, not established by arithmetic tests.
+
+Map PNG pixel `(x,y)` to engine window-local
+`(floor(x*window_width/output_width),floor(y*window_height/output_height))`.
+The pinned widget backend uses output-pixel coordinates with its unit motion
+scale; supply `(x,y)` there separately. Preserve the engine event's injected
+coordinates through the physical mouse-position overwrite at input-return.
+Validate point bounds and all transformations without input effects before the
+existing final commit gate. Unsupported geometry is refusal, not clamping.
+
+Harness-only pointer handling stays enabled consistently across queued widget
+events. Filter physical motion/button/wheel from the ordinary engine/widget input
+paths, but run deliberate physical button-down/wheel takeover BEFORE filtering.
+Keyboard takeover remains unchanged. Suppress backend physical pointer polling,
+capture/warp/cursor changes while the harness is enabled; non-harness behavior
+remains upstream. Pin the modified backend checksum and use count-checked anchors,
+including fixtures for repeatable patch application. No transient NoMouse toggle
+or global mouse option change is sufficient.
+
+Source tests cover exact fields/version, pure unsupported translation, capture
+dimensions/geometry and separate coordinate transforms, injected-coordinate
+preservation, stable pointer backend handling, physical takeover order and
+unchanged non-harness paths. Any additional concrete native API needed must be
+reported to the lead before changing this interface or worker ownership.
