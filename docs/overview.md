@@ -48,50 +48,29 @@ Independent player/successor play and meaningful supplies/shelter remain unquali
 [Native006](acceptance/2026-10-20-native-character-lifecycle.md) and earlier reports
 retain their failures, unknown ACKs and exceptional cleanup.
 
-The [first actual independent attempt](acceptance/2026-10-20-independent-mission-first-attempt.md)
-failed before world confirmation: the player paraphrased the exact question and
-included its adjacent legend. No Yes was dispatched; the stopped attempt retains
-70 returned inputs and its exceptional setup cleanup. A separate actual spectator
-Pause test revoked a live phase/lease and rejected stale input. Neither accepts
-the independent mission. The source correction preserves an original phase only
-for a local malformed-question rejection; a new corrected request must still pass
-fresh evidence and all original authority/budget checks.
-[Native008](acceptance/2026-10-20-confirmation-correction.md) qualified both world
-and Save question corrections, ordinary identity/adoption and normal save/exit/
-stopped Finish through a fresh engineering operator. Its 67 charges retain three
-unknown ACKs with reconciled effects. The clock fixture was corrected and both
-exact hosted lanes passed before deciding002. That
-[second attempt](acceptance/2026-10-20-independent-mission-second-attempt.md)
-created/adopted Quinn, then failed when a copied old inventory boundary caused a
-pre-input rejection and phase revocation. Its 74 charges/one unknown and exceptional
-teardown remain retained. Source now checks eligible local metadata inconsistencies
-before altering the phase, with all real authority/budget stops preserved; native
-correction qualification and a new independent player/successor mission remain open.
-A pure canonical request producer combines chosen context and intent to reduce
-repeated field/root errors. [Native009](acceptance/2026-10-20-request-construction-qualification.md)
-failed before the probe when identity inspection omitted its root.
-[Native010](acceptance/2026-10-20-menu-dismissal-qualification.md) then exercised
-the correction and actual item inspection, but failed normal ending because
-semantic dismissal used QUIT where UILIST registered UILIST.QUIT. Both are closed.
-The mapping now follows the registered context action.
-[Native011](acceptance/2026-10-20-registered-dismissal-qualified.md) qualified that
-dismissal and normal ending within engineering scope. The
-[third independent attempt](acceptance/2026-10-20-independent-mission-third-attempt.md)
-failed before creation on a lead-admitted unsupported name length. The
-[fourth](acceptance/2026-10-20-independent-mission-fourth-attempt.md) reached a real
-fresh successor, then failed because valid Work history could not fit retrieval.
-All failures are closed with their costs and exceptional cleanup retained.
+The independent attempts remain failed and closed, with costs/unknowns retained.
+The [work map](work.md) links their causes and source corrections. The latest
+[fifth attempt](acceptance/2026-10-20-independent-mission-fifth-attempt.md) normally
+created/adopted Morgan, acquired food and made four purposeful steps, then stopped
+when semantic confirmation rejected an already-owned native distraction question.
+No answer was dispatched; the player issued Stop autonomously. Rest, verified
+water volume, genuine correction, actual fresh successor and normal lifecycle
+remain unaccepted. [#167](https://github.com/CVX-Hull/enactive/issues/167) owns that
+bounded mapping repair; another full finite mission is required.
 
 Current source distinguishes raw assertions from combined Work views and checks
-complete handoff retrieval capacity before giving up the active player's control.
-This source change has no new native or independent acceptance yet. A thin
-structured player adapter now handles request retention, submission, result
-collection and exact-image presentation over the existing runtime. The official
-MCP SDK supplies the tool protocol. Its fixture/SDK evidence does not prove actual
-Codex loading or review-free gameplay; those remain owned setup work in
-[#166](https://github.com/CVX-Hull/enactive/issues/166) and
-[#164](https://github.com/CVX-Hull/enactive/issues/164). Rule matching or a successful
-approved call cannot establish absence of automatic reviews.
+complete handoff retrieval capacity before relinquishing control. Actual fresh
+successor acceptance remains open after the
+[fourth attempt's retrieval failure](acceptance/2026-10-20-independent-mission-fourth-attempt.md).
+The official-MCP-SDK adapter now handles request retention, submission, original
+result collection and exact images over the existing runtime. The actual005 player
+used its project-preapproved tools through creation, ordinary skills and memory,
+with no visible human or automatic review events. Invisible host review telemetry
+is unavailable; full successor/save/reload paths and whole-workflow efficiency
+remain to be verified in [#166](https://github.com/CVX-Hull/enactive/issues/166)
+and [#164](https://github.com/CVX-Hull/enactive/issues/164). A matching rule alone
+never proves review-free execution. Separate real spectator Pause and native
+lifecycle qualification remain scoped component evidence, not mission success.
 
 Current movement uses strictly known non-HOSTILE evidence. Inventory projection
 omits only the engine's non-selecting cosmetic summary. Reload follows the actual

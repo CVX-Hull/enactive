@@ -22,6 +22,7 @@ _VERTICAL = _CHARACTER | {"MAIN_MENU", "INVENTORY", "INVENTORY_SELECTOR", "CRAFT
                           "PICK_WORLD_DIALOG", "WORLDGEN_CONFIRM_DIALOG"}
 _TABS = _CHARACTER | {"MODMANAGER_DIALOG"}
 _COLUMNS = frozenset({"INVENTORY", "INVENTORY_SELECTOR"})
+_CONFIRMATIONS = frozenset({"YESNO", "CANCEL_ACTIVITY_OR_IGNORE_QUERY"})
 
 
 @dataclass(frozen=True)
@@ -239,12 +240,14 @@ class SemanticControlSkill:
             return (("action", action),)
         if view["kind"] in ("direction", "confirmation"):
             if view["kind"] == "direction":
-                category = "DEFAULTMODE"
+                categories = {"DEFAULTMODE"}
                 action = {"North": "UP", "South": "DOWN", "East": "RIGHT", "West": "LEFT", "Here": "pause"}[goal["label"]]
             else:
-                category = "YESNO"
+                # The native exact-owner distraction query preserves its own
+                # category and YES/NO bindings; it is not an injected interrupt.
+                categories = _CONFIRMATIONS
                 action = {"Yes": "YES", "No": "NO"}[goal["label"]]
-            if state["category"] != category:
+            if state["category"] not in categories:
                 raise _ControlBlocked("Prompt category does not match the interpreted control")
             return (("action", action),)
         up, down = self._directions(state["category"], view["control"])

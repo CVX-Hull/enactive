@@ -109,6 +109,67 @@ class MissionActivityTests(unittest.TestCase):
         self.assertFalse([r for r in self.runtime._ledger.memory_records("claim")
                           if r["entry"]["key"]["property"] == "supply"])
 
+    def distraction_answer(self, label):
+        self.begin()
+        original = self.runtime._ledger.request("rest-root")
+        behavior = self.bridge.behavior
+        shown = False
+
+        def distracted(bridge, request):
+            nonlocal shown
+            behavior(bridge, request)
+            if request.get("action") in ("YES", "NO"):
+                bridge.value.update(category="DEFAULTMODE", ui=None)
+                if request["action"] == "YES":
+                    bridge.value.update(scene=copy.deepcopy(self.normal), actions=["sleep"])
+                    bridge.value["boundary"].update(kind="normal_play", id="cancelled-rest", recovery_operations=[])
+                else:
+                    bridge.value.update(scene=None, actions=[])
+                    bridge.value["boundary"].update(kind="activity_poll", id="continued-rest",
+                        recovery_operations=["request_interrupt"])
+            elif request["kind"] == "observe" and not shown:
+                shown = True
+                bridge.value.update(category="CANCEL_ACTIVITY_OR_IGNORE_QUERY", scene=None, ui=None,
+                    actions=["YES", "NO", "MANAGER", "IGNORE", "LEFT", "RIGHT"])
+                bridge.value["boundary"].update(kind="menu", id="sound-question", recovery_operations=[])
+            return True
+
+        self.bridge.behavior = distracted
+        question = self.poll("sound-observation")
+        self.assertEqual(question["result"]["phase"]["stage"], "awaiting_control")
+        source = self.runtime.status()["current_source"]
+        view = dict(kind="confirmation", basis="player_interpretation", source_id=source["observation_id"],
+                    question="Heard blam! Stop waiting?")
+        answer = self.control("menu", dict(purpose="Assess interrupted wait", label=label, outcome="activated"),
+                              phase_id="rest-root", perception=view, request_id="sound-answer")
+        self.assertEqual(self.runtime.command(answer)["status"], "accepted")
+        result = self.settled("sound-answer")
+        self.assertEqual(result["state"], "partial", result)
+        self.assertTrue(result["result"]["verification_required"])
+        self.assertEqual(result["result"]["proposals"], 1)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertEqual(self.runtime._ledger.request("rest-root"), original)
+        self.assertEqual(result["deadline"], original["deadline"])
+        self.assertEqual(self.runtime._ledger.memory_records("work"), ())
+        delivered = len(self.bridge.delivered)
+        self.assertEqual(self.runtime.command(answer)["operation"]["result"], result["result"])
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        return result
+
+    def test_owned_distraction_yes_returns_normal_without_claiming_rest(self):
+        result = self.distraction_answer("Yes")
+        self.assertEqual(result["result"]["phase"]["stage"], "complete")
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 0)
+
+    def test_owned_distraction_no_keeps_poll_under_original_activity_root(self):
+        result = self.distraction_answer("No")
+        self.assertEqual(result["result"]["phase"]["stage"], "activity_poll")
+        self.assertEqual(self.runtime._prompt_phase.root_id, "rest-root")
+        # No new normal endpoint was observed; retain the prior measured cost,
+        # without turning the selected wait duration into credited rest.
+        self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 0)
+
     def test_game_budget_overshoot_retains_observed_effect_and_original_input_count(self):
         self.begin(limits=dict(primitives=8, wall_seconds=120, game_seconds=300))
         self.finish = 301

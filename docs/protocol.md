@@ -736,6 +736,14 @@ question, separate from the injected pause's owned YESNO recovery. The
 [real native probe](acceptance/2026-10-18-activity-distraction.md) verified an actual
 feral-cop distraction and ordinary Yes followed by fresh normal play; other choices
 and nested negative cases were not exercised natively.
+Semantic confirmation uses the existing explicit Yes/No goal at this exact-owned
+menu as well as `YESNO`, and still requires the selected registered action and
+source/phase/Pause/limit checks. Unknown categories are not promoted by advertising
+those names. One answer requires fresh effect assessment; it cannot credit rest
+or retry the activity. `IGNORE`/`MANAGER` are outside that binary goal. The
+[independent005 failure](acceptance/2026-10-20-independent-mission-fifth-attempt.md)
+exposed the former semantic category mismatch; its source correction is not a
+new native or independent-mission pass.
 
 The finite ordinary-menu set also includes nearby `LIST_ITEMS`/`LIST_MONSTERS`,
 `CRAFTING` and `CONSTRUCTION`, with the engine retaining binding and outcome

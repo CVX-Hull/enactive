@@ -1,12 +1,12 @@
 ---
 owner: lead
-status: proposed
+status: active
 review_trigger: Mission interface adoption; implementation or native validation contradicts this design; new source or player lifecycle constraints
 ---
 
 # Player-owned mission design
 
-This is the design deliverable for [#137](https://github.com/CVX-Hull/enactive/issues/137),
+This is the accepted design deliverable for [#137](https://github.com/CVX-Hull/enactive/issues/137),
 with implemented component checkpoints and remaining acceptance work below; it
 is not a gameplay admission. The coordinated mission/7 ingress now replaces the
 waypoint runtime. [Architecture](../architecture.md) and [protocol](../protocol.md)

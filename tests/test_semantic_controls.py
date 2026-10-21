@@ -388,6 +388,49 @@ class SemanticControlTests(unittest.TestCase):
             self.assertEqual(result.disposition, "partial")
             self.assertTrue(result.verification_required)
 
+    def test_owned_distraction_confirmation_is_one_registered_answer_not_rest_success(self):
+        for label, action, normal in (("Yes", "YES", True), ("No", "NO", False)):
+            with self.subTest(label=label):
+                before = self.frame(category="CANCEL_ACTIVITY_OR_IGNORE_QUERY",
+                    actions=["YES", "NO", "MANAGER", "IGNORE", "LEFT", "RIGHT"])
+                skill = self.skill(before,
+                    view=self.view(before, kind="confirmation", question="Heard blam! Stop waiting?"),
+                    goal=dict(purpose="Assess interrupted shelter wait", label=label, outcome="activated"))
+                intent = self.propose(skill)
+                self.assertIsInstance(intent, ControlIntent)
+                self.assertEqual((intent.kind, intent.action), ("action", action))
+                if normal:
+                    after = self.frame(normal=True)
+                else:
+                    def polling(value):
+                        value["actions"] = []
+                        value["boundary"].update(kind="activity_poll", recovery_operations=["request_interrupt"])
+                    after = self.frame(category="DEFAULTMODE", change=polling)
+                outcome = self.accept(skill, intent, after)
+                self.assertEqual((outcome.disposition, outcome.proposed_count), ("partial", 1))
+                self.assertTrue(outcome.verification_required)
+                self.assertIs(self.propose(skill), outcome)
+
+    def test_distraction_answer_requires_known_menu_category_and_selected_native_action(self):
+        for category, actions, boundary in (("OTHER_QUERY", ["YES", "NO"], "menu"),
+                ("CANCEL_ACTIVITY_OR_IGNORE_QUERY", ["NO"], "menu"),
+                ("CANCEL_ACTIVITY_OR_IGNORE_QUERY", ["YES", "NO"], "unsupported"),
+                ("YESNO", ["YES", "NO"], "interrupt_confirmation")):
+            with self.subTest(category=category, actions=actions, boundary=boundary):
+                def owned_boundary(value):
+                    value["boundary"]["kind"] = boundary
+                    if boundary == "interrupt_confirmation":
+                        value.update(paused=True, pause_origin="host")
+                        value["boundary"].update(recovery_operations=["answer_interrupt"],
+                            interrupt_request_id="owned-interrupt")
+                before = self.frame(category=category, actions=actions,
+                    change=owned_boundary)
+                skill = self.skill(before, view=self.view(before, kind="confirmation"),
+                    goal=dict(purpose="Answer question", label="Yes", outcome="activated"))
+                outcome = self.propose(skill)
+                self.assertIsInstance(outcome, ControlOutcome)
+                self.assertEqual((outcome.disposition, outcome.proposed_count), ("blocked", 0))
+
     def test_interact_uses_closed_registered_action_and_does_not_claim_effect(self):
         before = self.frame(normal=True, change=lambda v: v["actions"].append("examine"))
         request = self.request(before, skill_kind="interact", goal=dict(action="examine", intent="Look", desired_outcome="Know"))

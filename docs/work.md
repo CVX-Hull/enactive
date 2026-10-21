@@ -226,10 +226,16 @@ user's explicit zero routine approval-review requirement; literal allow matching
 and an approved passive call do not prove it. #164 now has a thin structured-client
 implementation using the official MCP SDK, existing ingress, ledger and exact
 retained images. Request staging and bounded collection replace the player's
-manual file/helper/polling loop. Actual-host loading, review-free operation and
-new native mission acceptance remain pending. These are actual owned steps before
-#156 readiness, a genuinely new #157/#144 mission and #145's finite seven-day plan
-or blockers. Never resume or relabel a failed attempt. Changed host validation
+manual file/helper/polling loop. Both exact3cd7071 CI lanes passed before the
+[fifth actual mission](acceptance/2026-10-20-independent-mission-fifth-attempt.md).
+Its real player used the loaded preapproved tools through creation, ordinary
+skills and supported memory, with no visible human/automatic review events;
+invisible host telemetry remains unavailable. It failed at an already-owned
+native sound question because semantic confirmation accepted only YESNO. The
+player stopped without rescue; normal ending and in-memory progress preservation
+remain unverified. #167 owns the bounded mapping fix and original-root regressions.
+Full native successor/lifecycle and whole-workflow acceptance remain for a new
+#156/#157/#144 admission, then #145's finite seven-day plan or owned blockers. Never resume or relabel a failed attempt. Changed host validation
 needs actual scoped acceptance; the unchanged native binary needs no rebuild
 solely for this source change. No old allowance or date resets. General setup
 cancellation remains unsupported beyond its narrow existing branch.
@@ -242,6 +248,11 @@ readiness precedes the actual #157/#144 player/successor memory-and-skills missi
 and #145's seven-day readiness decision. These are the same integrated iteration
 and active goal, with original costs and no date/admission reset. Exact outcomes,
 clock bases and interventions belong in the linked reports and GitHub Issues.
+Independent005's four credited navigation goals were all single-step: no batching
+benefit is claimed. #138/#143/#164 own meaningful bounded target use and observed
+workflow timing; preserve per-step software checks and do not manufacture a detour
+or attribute inter-command gaps to model inference. The next brief must retain
+that operating principle as well as the full original acceptance profile.
 
 During deciding play, one player and a later clean-context successor own inputs;
 any curator stays read-only and optional. No worker changes the shared game,

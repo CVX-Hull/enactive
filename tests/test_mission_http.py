@@ -123,20 +123,41 @@ class MissionHTTPTests(unittest.TestCase):
         self.assertIn("error", self.request("/api/mission/frame?" + query))
 
     def test_source_reader_keeps_atomic_mission_store_binding_during_replacement(self):
-        self.start()
         runtime = self.server.mission
-        ref = runtime._current
-        next_store = Mock()
-        # This is the real _start transition window: storage has switched while
-        # the published observer snapshot still names the previous mission.
-        with patch.object(runtime, "_store", next_store):
-            metadata, _ = runtime.source(self.a.mission_id, ref.observation_id)
-            self.assertEqual(metadata["reference"], ref.to_dict())
-            with self.assertRaisesRegex(ValueError, "No matching"):
-                runtime.source("next-mission", "next-source")
-            with self.assertRaisesRegex(ValueError, "Unknown retained"):
-                runtime.source(self.a.mission_id, "next-source")
-            next_store.export_source.assert_not_called()
+        published, release = threading.Event(), threading.Event()
+        resumed, timed_out = threading.Event(), threading.Event()
+        original_publish = runtime._publish
+
+        def publish_then_park():
+            original_publish()
+            if runtime._active is None:
+                published.set()
+                if not release.wait(5):
+                    timed_out.set()
+                resumed.set()
+
+        # A settled operation can precede its writer's final observer publication.
+        # Park after that publication so it cannot republish our artificial store.
+        with patch.object(runtime, "_publish", side_effect=publish_then_park):
+            try:
+                self.start()
+                self.assertTrue(published.wait(5), "Start writer did not finish publication")
+                ref = runtime._current
+                next_store = Mock()
+                # Model _start's single-writer transition: storage has switched
+                # while the published observer still names the previous mission.
+                with patch.object(runtime, "_store", next_store):
+                    metadata, _ = runtime.source(self.a.mission_id, ref.observation_id)
+                    self.assertEqual(metadata["reference"], ref.to_dict())
+                    with self.assertRaisesRegex(ValueError, "No matching"):
+                        runtime.source("next-mission", "next-source")
+                    with self.assertRaisesRegex(ValueError, "Unknown retained"):
+                        runtime.source(self.a.mission_id, "next-source")
+                    next_store.export_source.assert_not_called()
+            finally:
+                release.set()
+                self.assertTrue(resumed.wait(5), "Source-binding fixture writer did not resume")
+                self.assertFalse(timed_out.is_set(), "Source-binding fixture writer watchdog expired")
 
     def test_production_start_cannot_adopt_unowned_normal_play_or_dispatch(self):
         delivered = deepcopy(self.bridge.delivered)

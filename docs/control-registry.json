@@ -380,32 +380,35 @@
         "docs/acceptance/2026-10-20-confirmation-correction.md",
         "docs/acceptance/2026-10-20-registered-dismissal-qualified.md",
         "docs/acceptance/2026-10-20-independent-mission-third-attempt.md",
-        "docs/acceptance/2026-10-20-independent-mission-fourth-attempt.md"
+        "docs/acceptance/2026-10-20-independent-mission-fourth-attempt.md",
+        "docs/acceptance/2026-10-20-independent-mission-fifth-attempt.md",
+        "docs/changes/052-distraction-confirmation.md"
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
-      "limitations": "Historical MVP evidence is host/scenario specific; no automated native regression runner or current native execution is provided by this map. Ignored media may be unavailable on another checkout. Native011 is a scoped dismissal/normal-ending pass; independent003/004 remain failed. A current policy allow match or approved call does not establish zero automatic approval reviews; actual-player workflow verification is required under #166.",
+      "limitations": "Historical probes are host/scenario specific; no automated native regression runner or current native execution is provided by this map. Native011 is a scoped pass; independent003/004/005 remain failed. Independent005 exercised actual loaded/preapproved primary-player tools without visible review events; invisible telemetry and full fresh-successor/normal-lifecycle paths remain unverified. Source correction/fixtures do not accept a new native mission.",
       "enforcement": "Required by S-PROTOCOL/S-DELIVERY and release review; manual, outside the portable gate. Permission readiness before ordinary campaign input also requires S-OPS's [live permission preflight](operator-permissions.md#preflight-for-every-campaign) from the actual designated player and exact entry point. Retain enabled project-layer evidence, rule decisions and live results separately. Repeated per-action review fails permission readiness even if every request is approved; resolve it before ordinary play. This is a manual activation check; prefix matching does not prove runtime loading.",
       "status": "active",
       "rationale": null,
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-20",
-        "outcome": "Actual Native008 local world/Save rejection/correction plus visible identity/adoption, normal save/owned exit and stopped Finish passed scoped independent audit. Original3unknown ACKs retained with0unreconciled effects.",
-        "scope": "Frozenf4db/nativecd031.43requests/67charges/165frames;0game-seconds, no signal/exceptional cleanup or objective Work completion. Not independent gameplay/successor acceptance.",
+        "outcome": "Independent005 FAILED at an already-owned sound-distraction question: semantic confirmation blocked0proposals. Actual player created/adopted character, found ration and made4creditedsteps;30minute rest and full independent mission remain unaccepted.",
+        "scope": "Frozen3cd/nativecd031; preapproved MCP primary-player path had no visible review events, invisible host telemetry unavailable. One original unknown ACK effect reconciled; autonomous Stop and exceptional exact-child closure, no normal save/exit/Finish. Native011 scoped pass remains historical.",
         "evidence": [
-          "docs/acceptance/2026-10-20-confirmation-correction.md",
-          "docs/acceptance/2026-10-20-independent-mission-first-attempt.md"
+          "docs/acceptance/2026-10-20-independent-mission-fifth-attempt.md",
+          "docs/changes/052-distraction-confirmation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-20",
         "effectiveness": "partially_effective",
-        "findings": "Native008 qualified world/Save malformed-local-question rejection, new exact corrected requests, identity/adoption and normal save/exit/stopped Finish through a fresh operator. Independent001 remains failed and independent mission acceptance open. Exact PR CI exposed a wall-age fixture sampled before its actual frame; independent review confirmed production fencing and the observed-frame-based test correction. Passive default-sandbox GET access did not prove Start execution mode; explicit existing authorized mode worked without rule expansion. Actual stopped viewer retains a stale question alongside stopped mission state; terminal clarity remains owned.",
-        "cost": "Native008 retains 67 charges (64 returned, 3 unchanged unknown ACKs), 43 requests, 165 verified PNGs/4696397bytes and517.490972757seconds through terminal watermark; zero canonical game-seconds, no exceptional cleanup. Earlier runs retain separate costs. Existing writer, ledger, CLI mode, profiler candidates and independent reviews reused; no new framework/global setup. Model/tool/display costs remain unknown.",
-        "follow_up": "#156 new finite deciding readiness only after coherent fixture/report checkpoint and exact CI; #157/#144 actual independent mission/successor; #145 seven-day readiness. #154 staged timing and history-growth profile; #143 terminal display clarity; #75 fixture clocks/access-mode/control burden. October24 and January15 dates unchanged.",
+        "findings": "Native owner coverage existed, but semantic confirmation duplicated a narrower category assumption. Actual stopped sound question exposed that gap. Preserve the failed run and extend only the known Yes/No query mapping; original rest/root/source/Pause checks remain. No ordinary lead/user rescue or native rebuild is justified by this host-only correction.",
+        "cost": "Independent005 retains72requests/107charges/276verifiedframes; the dated report owns full clock/unknown/cleanup costs. Source correction focused81tests/14.698s and independent read-only source/data/pixel review; full new common/CI remain separate. Existing engine actions, writer, SQLite, archive, MCP SDK and Git/GitHub reused; no native rebuild or global setup.",
+        "follow_up": "#167 complete common/exact CI and a new full #156/#157/#144 deciding mission; #165 actual fresh Work successor, #166 remaining successor/lifecycle review-free verification; #138/#143/#164 meaningful bounded targets and honest latency. #145 seven-day readiness; #75 maintain active recipes/control coverage. October24 and January15 dates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-20-confirmation-correction.md",
-          "docs/acceptance/2026-10-20-independent-mission-first-attempt.md"
+          "docs/acceptance/2026-10-20-independent-mission-fifth-attempt.md",
+          "docs/changes/052-distraction-confirmation.md",
+          "docs/operator-permissions.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -543,7 +546,9 @@
         "docs/acceptance/2026-10-20-native-character-lifecycle.md",
         "docs/acceptance/2026-10-20-native-lifecycle-qualified.md",
         "docs/acceptance/2026-10-20-independent-mission-first-attempt.md",
-        "docs/acceptance/2026-10-20-confirmation-correction.md"
+        "docs/acceptance/2026-10-20-confirmation-correction.md",
+        "docs/acceptance/2026-10-20-independent-mission-fifth-attempt.md",
+        "docs/changes/052-distraction-confirmation.md"
       ],
       "failure_response": "Resolve material findings or record scoped owner/reason/revisit exception; after two unsuccessful worker repairs lead takes back the work.",
       "limitations": "No code checker proves reasoning quality, typing completeness, decomposition or delegation compliance; independence depends on the actual review process. Reuse fit and the adequacy of its rationale are semantic judgments; CI does not prove them. Identity configuration prevents inferred defaults but does not inspect file contents or prove a message, branch or remote ref contains no personal information; full-message inspection remains manual. Fixture realism is a manual source/evidence judgment; common tests cannot prove it.",
@@ -553,22 +558,23 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-20",
-        "outcome": "Independent read-only audit accepted Native008 ledger/frame/dispatch/correction/identity/save/exit/Finish/clock/closeout scope. Separate source review confirmed the hosted failure is a clock-fixture defect and accepted minimal observed-timestamp correction without production change.",
-        "scope": "Read-only originals/source; no reviewer input. Lead owns adjudication/new deciding admission.",
+        "outcome": "Clean-context source review found no P1/P2 in the known-query correction and activity-root regressions. Independent closeout review verified closed ledger clocks/unknowns and all four public image hashes/pixels; obsolete future-CLI guidance was found and corrected.",
+        "scope": "Read-only actual originals/pinned producer/current source; no reviewer gameplay, writers or test/native launches. Focused tests/source evidence are not native acceptance.",
         "evidence": [
-          "docs/acceptance/2026-10-20-confirmation-correction.md",
-          "docs/engineering.md"
+          "docs/acceptance/2026-10-20-independent-mission-fifth-attempt.md",
+          "docs/changes/052-distraction-confirmation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-20",
         "effectiveness": "partially_effective",
-        "findings": "Native008 qualified world/Save malformed-local-question rejection, new exact corrected requests, identity/adoption and normal save/exit/stopped Finish through a fresh operator. Independent001 remains failed and independent mission acceptance open. Exact PR CI exposed a wall-age fixture sampled before its actual frame; independent review confirmed production fencing and the observed-frame-based test correction. Passive default-sandbox GET access did not prove Start execution mode; explicit existing authorized mode worked without rule expansion. Actual stopped viewer retains a stale question alongside stopped mission state; terminal clarity remains owned.",
-        "cost": "Native008 retains 67 charges (64 returned, 3 unchanged unknown ACKs), 43 requests, 165 verified PNGs/4696397bytes and517.490972757seconds through terminal watermark; zero canonical game-seconds, no exceptional cleanup. Earlier runs retain separate costs. Existing writer, ledger, CLI mode, profiler candidates and independent reviews reused; no new framework/global setup. Model/tool/display costs remain unknown.",
-        "follow_up": "#156 new finite deciding readiness only after coherent fixture/report checkpoint and exact CI; #157/#144 actual independent mission/successor; #145 seven-day readiness. #154 staged timing and history-growth profile; #143 terminal display clarity; #75 fixture clocks/access-mode/control burden. October24 and January15 dates unchanged.",
+        "findings": "Review checked actual registered query semantics, one-answer accounting, original root/deadline and no false rest credit. It also caught an active-looking historical CLI recipe that contradicted MCP-only player guidance; the corrected document now separates historical/engineering commands from the current player path. Aggregate source tests alone would not prove that semantic consistency.",
+        "cost": "Independent005 retains72requests/107charges/276verifiedframes; the dated report owns full clock/unknown/cleanup costs. Source correction focused81tests/14.698s and independent read-only source/data/pixel review; full new common/CI remain separate. Existing engine actions, writer, SQLite, archive, MCP SDK and Git/GitHub reused; no native rebuild or global setup.",
+        "follow_up": "#167 complete common/exact CI and a new full #156/#157/#144 deciding mission; #165 actual fresh Work successor, #166 remaining successor/lifecycle review-free verification; #138/#143/#164 meaningful bounded targets and honest latency. #145 seven-day readiness; #75 maintain active recipes/control coverage. October24 and January15 dates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-20-confirmation-correction.md",
-          "docs/acceptance/2026-10-20-independent-mission-first-attempt.md"
+          "docs/acceptance/2026-10-20-independent-mission-fifth-attempt.md",
+          "docs/changes/052-distraction-confirmation.md",
+          "docs/operator-permissions.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -783,7 +789,9 @@
         "docs/acceptance/2026-10-19-first-clean-water.md",
         "docs/acceptance/2026-10-19-seven-day-survival.md",
         "docs/acceptance/2026-10-20-independent-mission-first-attempt.md",
-        "docs/acceptance/2026-10-20-confirmation-correction.md"
+        "docs/acceptance/2026-10-20-confirmation-correction.md",
+        "docs/acceptance/2026-10-20-independent-mission-fifth-attempt.md",
+        "docs/changes/052-distraction-confirmation.md"
       ],
       "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",
@@ -793,22 +801,23 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-20",
-        "outcome": "Reconciled actual failed001 and scoped Native008 outcomes, controls/current docs/backlog; preserved failures/unknowns and closed owned runtimes normally after008.",
-        "scope": "Native008 no game/listener/slots; prior failed cleanup separate. Current fixture/report checkpoint and exact CI still required; no new campaign acceptance.",
+        "outcome": "Reconciled failed005, source repair167 and scoped MCP workflow evidence; removed obsolete routine-player manual JSON/CLI recipe and preserved historical failures. Exact owned game/controller/listener/slots verified closed with all files retained.",
+        "scope": "Current docs/control map and original finite costs updated; default/global settings unchanged. No normal save/progress preservation, fresh-successor, full independent mission or measured batching benefit claimed.",
         "evidence": [
-          "docs/acceptance/2026-10-20-confirmation-correction.md",
-          "docs/work.md"
+          "docs/acceptance/2026-10-20-independent-mission-fifth-attempt.md",
+          "docs/changes/052-distraction-confirmation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-20",
         "effectiveness": "partially_effective",
-        "findings": "Native008 qualified world/Save malformed-local-question rejection, new exact corrected requests, identity/adoption and normal save/exit/stopped Finish through a fresh operator. Independent001 remains failed and independent mission acceptance open. Exact PR CI exposed a wall-age fixture sampled before its actual frame; independent review confirmed production fencing and the observed-frame-based test correction. Passive default-sandbox GET access did not prove Start execution mode; explicit existing authorized mode worked without rule expansion. Actual stopped viewer retains a stale question alongside stopped mission state; terminal clarity remains owned.",
-        "cost": "Native008 retains 67 charges (64 returned, 3 unchanged unknown ACKs), 43 requests, 165 verified PNGs/4696397bytes and517.490972757seconds through terminal watermark; zero canonical game-seconds, no exceptional cleanup. Earlier runs retain separate costs. Existing writer, ledger, CLI mode, profiler candidates and independent reviews reused; no new framework/global setup. Model/tool/display costs remain unknown.",
-        "follow_up": "#156 new finite deciding readiness only after coherent fixture/report checkpoint and exact CI; #157/#144 actual independent mission/successor; #145 seven-day readiness. #154 staged timing and history-growth profile; #143 terminal display clarity; #75 fixture clocks/access-mode/control burden. October24 and January15 dates unchanged.",
+        "findings": "Actual primary-player tool use replaced manual staging/polling without visible routine review events; invisible host telemetry stays unknown. The run still used single-step navigation goals and failed before rest, so maintain meaningful-target guidance and do not claim efficiency. Clarified lead lifecycle implementation/custody versus player registered lifecycle; future full acceptance and proper scoped cleanup remain owned.",
+        "cost": "Independent005 retains72requests/107charges/276verifiedframes; the dated report owns full clock/unknown/cleanup costs. Source correction focused81tests/14.698s and independent read-only source/data/pixel review; full new common/CI remain separate. Existing engine actions, writer, SQLite, archive, MCP SDK and Git/GitHub reused; no native rebuild or global setup.",
+        "follow_up": "#167 complete common/exact CI and a new full #156/#157/#144 deciding mission; #165 actual fresh Work successor, #166 remaining successor/lifecycle review-free verification; #138/#143/#164 meaningful bounded targets and honest latency. #145 seven-day readiness; #75 maintain active recipes/control coverage. October24 and January15 dates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-20-confirmation-correction.md",
-          "docs/acceptance/2026-10-20-independent-mission-first-attempt.md"
+          "docs/acceptance/2026-10-20-independent-mission-fifth-attempt.md",
+          "docs/changes/052-distraction-confirmation.md",
+          "docs/operator-permissions.md"
         ]
       },
       "next_review": "2027-01-15"
