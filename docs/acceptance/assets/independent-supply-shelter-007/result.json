@@ -1,0 +1,57 @@
+{
+  "outcome": "FAILED independent007: near-expiry editor source skipped refresh and was stale at dispatch; TEXT.CLEAR was not dispatched; player autonomously stopped",
+  "source_commit": "ed92a911e4f47ef2625b5ace8fe73be4aa721a66",
+  "native_sha256": "cd031f200748cbbb387011335db15596346dac29607221fac25641ec9a771f1f",
+  "requests": 13,
+  "requests_by_kind": {
+    "start": 1,
+    "lifecycle": 2,
+    "skill": 9,
+    "stop": 1
+  },
+  "requests_by_state": {
+    "completed": 3,
+    "partial": 7,
+    "blocked": 2,
+    "unknown": 1
+  },
+  "charged_inputs": 8,
+  "returned": 8,
+  "unknown_semantic_requests": 1,
+  "unknown": 0,
+  "unreconciled_effects": 0,
+  "frames": 26,
+  "png_bytes": 708886,
+  "all_frame_hashes_verified": true,
+  "canonical_game_seconds": null,
+  "world_created": false,
+  "character_created": false,
+  "wall_seconds_through_stop_admission": 112.67438197135925,
+  "wall_seconds_through_shutdown_watermark": 208.43269300460815,
+  "source_patches_during_attempt": 0,
+  "ordinary_lead_gameplay_rescue": false,
+  "normal_exit": false,
+  "normal_save": false,
+  "normal_finish": false,
+  "full_independent_objective_completed": false,
+  "player_permanently_quiescent": true,
+  "game_signals": 1,
+  "exceptional_failed_attempt_teardowns": 1,
+  "child_exit_code": null,
+  "service_exit_code": 0,
+  "cleanup_order_deviation": "Service closed while custody still reported child running; later exact OS absence verified; no exit code captured",
+  "visible_routine_gameplay_human_approval_events": 0,
+  "visible_routine_gameplay_automatic_review_events": 0,
+  "review_observability": "Actual actor/root preapproved MCP calls; invisible host telemetry unavailable; engineering setup/tests/publication/exceptional cleanup separate",
+  "external_model_identity": null,
+  "external_model_tokens": null,
+  "external_model_cost": null,
+  "full_skill_model_tool_display_latency": null,
+  "images": [
+    {
+      "file": "world-name-editor.png",
+      "source_id": "1ad2da989773c08bad1c00090548aacdef7406ce34a381dc3f857aa565b51b3e",
+      "sha256": "e7422ccfde85b515207a80d70edb0bfff7625fdf62eb37d9e9511566c1714449"
+    }
+  ]
+}

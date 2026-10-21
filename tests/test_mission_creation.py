@@ -4,6 +4,8 @@ These tests never patch identity adoption, lifecycle guards or receipt validatio
 The fake bridge supplies controlled visible boundaries and expected session loss.
 """
 import copy
+from contextlib import contextmanager
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -12,6 +14,28 @@ from harness.mission_runtime import MissionRuntime
 from tests import test_mission_launch as launch_fixtures
 from tests.test_gameplay_evidence import observation
 from tests.test_mission_contracts import claim
+
+
+@contextmanager
+def expire_selected_at_dispatch(runtime, selected):
+    """Age only the selected capture through the real freshness validator."""
+    expired = threading.Event()
+    freshness, dispatch = runtime._store._fresh, runtime._dispatch
+
+    def source_age(entry, now_monotonic, now_timestamp_ms):
+        if entry.reference == selected:
+            age = 3.05 if expired.is_set() else 2.95
+            now_monotonic = selected.received_monotonic + max(0, age - entry.initial_lag_seconds)
+            now_timestamp_ms = selected.timestamp_ms + round(age * 1000)
+        return freshness(entry, now_monotonic, now_timestamp_ms)
+
+    def cross_boundary(*args, **kwargs):
+        expired.set()
+        return dispatch(*args, **kwargs)
+
+    with patch.object(runtime._store, "_fresh", side_effect=source_age), \
+            patch.object(runtime, "_dispatch", side_effect=cross_boundary):
+        yield
 
 
 class MissionCreationFixture:
@@ -248,6 +272,99 @@ class MissionCreationFixture:
 
 
 class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
+    def test_fresh_editor_source_is_revalidated_before_it_can_expire_at_dispatch(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        self.run_request(self.control("world-form", "Create World"))
+        self.run_request(self.control("world-name-field", "World name"))
+        before, _ = self.current()
+        data = self.control("edit-near-freshness-boundary", "World name")
+        data.update(skill_kind="edit", goal=dict(purpose="world_name", text=self.a.scenario.world, commit=False),
+            perception=dict(kind="editor", source_id=before.observation_id, basis="player_interpretation",
+                purpose="world_name", label="World name", visible_text="Old", whole_value=True, focused=True))
+        data["limits"]["primitives"] = 16
+        original = copy.deepcopy(data)
+        root_deadline = self.runtime._ledger.request("create")["deadline"]
+        mission_deadline = self.runtime._mission_deadline
+        spent = self.runtime.status()["spent_inputs"]
+        with expire_selected_at_dispatch(self.runtime, before):
+            operation = self.run_request(data)
+        self.assertEqual(operation["state"], "partial", operation)
+        self.assertEqual(operation["request"], original)
+        self.assertEqual(self.bridge.editor_text, self.a.scenario.world)
+        self.assertEqual(sum(r.get("action") == "TEXT.CLEAR" for r in self.bridge.delivered), 1)
+        relation = operation["result"]["revalidation"]
+        self.assertEqual(relation["rule"], "exact_png_bytes")
+        self.assertEqual(relation["original"]["source_id"], before.observation_id)
+        self.assertNotEqual(relation["current"]["source_id"], before.observation_id)
+        primitives = [p for p in self.runtime._ledger.primitive_records() if p["request_id"] == data["request_id"]]
+        self.assertEqual(len(primitives), 1 + len(self.a.scenario.world))
+        self.assertTrue(all(p["state"] == "returned" for p in primitives))
+        self.assertEqual(primitives[0]["intent"]["source_before"], relation["current"]["source_id"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent + len(primitives))
+        self.assertEqual(self.runtime._ledger.request("create")["deadline"], root_deadline)
+        self.assertEqual(self.runtime._mission_deadline, mission_deadline)
+
+    def test_fresh_initial_resume_revalidates_before_selected_source_expires(self):
+        self.ready()
+        before = self.runtime._current
+        data = self.lifecycle("create")
+        with expire_selected_at_dispatch(self.runtime, before):
+            operation = self.run_request(data)
+        self.assertEqual(operation["state"], "partial", operation)
+        primitive, = self.runtime._ledger.primitive_records()
+        self.assertEqual((primitive["intent"]["kind"], primitive["state"]), ("resume", "returned"))
+        self.assertEqual(len({before.observation_id, primitive["intent"]["source_before"],
+                              primitive["intent"]["preflight_source"]}), 3)
+        self.assertEqual(operation["request"], data)
+
+    def test_fresh_stage_commit_revalidates_before_selected_source_expires(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        self.run_request(self.control("world-form", "Create World"))
+        before = self.runtime._current
+        data = self.lifecycle("world-finalize", parent="create")
+        deadline = self.runtime._ledger.request("create")["deadline"]
+        with expire_selected_at_dispatch(self.runtime, before):
+            operation = self.run_request(data)
+        self.assertEqual(operation["state"], "partial", operation)
+        primitive = self.runtime._ledger.primitive_records()[-1]
+        self.assertEqual((primitive["intent"]["value"], primitive["state"]), ("FINALIZE", "returned"))
+        self.assertEqual(primitive["intent"]["revalidation"]["original"]["source_id"], before.observation_id)
+        self.assertEqual(self.runtime._ledger.request("create")["deadline"], deadline)
+
+    def test_new_entry_capture_still_expires_at_final_preflight(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        before = self.runtime._current
+        data = self.control("expired-replacement", "Create World")
+        spent = self.runtime.status()["spent_inputs"]
+        freshness, dispatch = self.runtime._store._fresh, self.runtime._dispatch
+        preflight = threading.Event()
+
+        def expired_replacement(entry, now_monotonic, now_timestamp_ms):
+            if preflight.is_set() and entry.reference != before:
+                now_monotonic = entry.reference.received_monotonic + 3.05
+                now_timestamp_ms = entry.reference.timestamp_ms + 3050
+            return freshness(entry, now_monotonic, now_timestamp_ms)
+
+        def expire_before_dispatch(*args, **kwargs):
+            preflight.set()
+            return dispatch(*args, **kwargs)
+
+        with patch.object(self.runtime._store, "_fresh", side_effect=expired_replacement), \
+                patch.object(self.runtime, "_dispatch", side_effect=expire_before_dispatch):
+            operation = self.run_request(data)
+        self.assertTrue(preflight.is_set())
+        self.assertEqual(operation["state"], "unknown", operation)
+        self.assertIn("stale", operation["result"]["reason"])
+        self.assertIsNotNone(operation["result"]["revalidation"])
+        self.assertEqual(operation["result"]["proposals"], 1)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertFalse(any(p["request_id"] == data["request_id"]
+                             for p in self.runtime._ledger.primitive_records()))
+        self.assertFalse(any(r.get("action") == "CONFIRM" for r in self.bridge.delivered))
+
     def test_aged_explicit_world_commit_refreshes_before_finalize(self):
         self.ready()
         self.run_request(self.lifecycle("create"))
@@ -285,29 +402,27 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(self.runtime._registered_lifecycle.phase.first_normal, before)
         self.assertEqual(sum(r.get("action") == "save" for r in self.bridge.delivered), 1)
 
-    def test_explicit_commit_refresh_rejects_changed_pixels_without_finalize(self):
+    def test_fresh_explicit_commit_refresh_rejects_changed_pixels_without_finalize(self):
         self.ready()
         self.run_request(self.lifecycle("create"))
         self.run_request(self.control("world-form", "Create World"))
-        data, before = self.lifecycle("world-finalize", parent="create"), self.runtime._current
+        data = self.lifecycle("world-finalize", parent="create")
         spent = self.runtime.status()["spent_inputs"]
         self.bridge.editor_text = "Changed visible world configuration"
-        with patch.object(self.runtime._store, "inspect_current_boundary", return_value=(before, False)):
-            operation = self.run_request(data)
+        operation = self.run_request(data)
         self.assertEqual(operation["state"], "blocked", operation)
         self.assertEqual(self.runtime.status()["spent_inputs"], spent)
         self.assertFalse(any(r.get("action") == "FINALIZE" for r in self.bridge.delivered))
 
     def test_user_pause_during_save_refresh_prevents_rotation_and_save(self):
         self.create()
-        data, before = self.lifecycle("save", "save"), self.runtime._current
+        data = self.lifecycle("save", "save")
         spent, observe = self.runtime.status()["spent_inputs"], self.runtime._observe_native
         def pause_after_observation(*args, **kwargs):
             result = observe(*args, **kwargs)
             self.runtime.pause("User Pause during normal save refresh")
             return result
-        with patch.object(self.runtime._store, "inspect_current_boundary", return_value=(before, False)), \
-                patch.object(self.runtime, "_observe_native", side_effect=pause_after_observation), \
+        with patch.object(self.runtime, "_observe_native", side_effect=pause_after_observation), \
                 patch.object(self.runtime, "_rotate", wraps=self.runtime._rotate) as rotate:
             operation = self.run_request(data)
         self.assertEqual(operation["state"], "paused", operation)
@@ -340,11 +455,8 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
     def test_resume_refresh_cannot_adopt_changed_pixels(self):
         self.ready()
         data = self.lifecycle("create")
-        before = self.runtime._current
         self.bridge.editor_text = "Changed visible content without a changed action list"
-        # Force the refresh branch for fault probes; real aging is exercised above.
-        with patch.object(self.runtime._store, "inspect_current_boundary", return_value=(before, False)):
-            operation = self.run_request(data)
+        operation = self.run_request(data)
         self.assertEqual(operation["state"], "blocked", operation)
         self.assertEqual(self.runtime._ledger.primitive_records(), ())
         self.assertFalse(any(row["kind"] == "resume" for row in self.bridge.delivered))
@@ -352,14 +464,13 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
 
     def test_user_pause_during_resume_refresh_sends_no_input(self):
         self.ready()
-        data, before = self.lifecycle("create"), self.runtime._current
+        data = self.lifecycle("create")
         observe = self.runtime._observe_native
         def pause_after_observation(*args, **kwargs):
             result = observe(*args, **kwargs)
             self.runtime.pause("User Pause during initial lifecycle refresh")
             return result
-        with patch.object(self.runtime._store, "inspect_current_boundary", return_value=(before, False)), \
-                patch.object(self.runtime, "_observe_native", side_effect=pause_after_observation):
+        with patch.object(self.runtime, "_observe_native", side_effect=pause_after_observation):
             operation = self.run_request(data)
         self.assertEqual(operation["state"], "paused", operation)
         self.assertEqual(self.runtime.status()["pause_cause"], "user")

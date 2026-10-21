@@ -872,7 +872,21 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_after_storage_failure_stays_unknown_and_does_not_fake_before_as_after(self):
         self.start()
         request = self.navigation()
-        with patch.object(self.runtime._store, "ingest", side_effect=OSError("after-frame fsync failed")):
+        ingest, execute = self.runtime._store.ingest, self.controller.execute_mission
+        published = threading.Event()
+        def dispatch(*args, **kwargs):
+            result = execute(*args, **kwargs)
+            if result["published"]:
+                published.set()
+            return result
+        def fail_after_input(value, **kwargs):
+            # Entry Observe is intentionally before dispatch. Inject failure on
+            # the actual correlated input ACK, preserving this post-input probe.
+            if published.is_set():
+                raise OSError("after-frame fsync failed")
+            return ingest(value, **kwargs)
+        with patch.object(self.controller, "execute_mission", side_effect=dispatch), \
+                patch.object(self.runtime._store, "ingest", side_effect=fail_after_input):
             self.runtime.command(request)
             op = self.settled(request["request_id"])
         self.assertEqual(op["state"], "unknown", op)

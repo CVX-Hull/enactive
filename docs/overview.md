@@ -49,14 +49,18 @@ Independent player/successor play and meaningful supplies/shelter remain unquali
 retain their failures, unknown ACKs and exceptional cleanup.
 
 The independent attempts remain failed and closed, with costs/unknowns retained.
-The [work map](work.md) links their causes and source corrections. The latest
+The [work map](work.md) links their causes and source corrections. The
 [fifth attempt](acceptance/2026-10-20-independent-mission-fifth-attempt.md) normally
 created/adopted Morgan, acquired food and made four purposeful steps, then stopped
 when semantic confirmation rejected an already-owned native distraction question.
 No answer was dispatched; the player issued Stop autonomously. Rest, verified
 water volume, genuine correction, actual fresh successor and normal lifecycle
 remain unaccepted. [#167](https://github.com/CVX-Hull/enactive/issues/167) owns that
-bounded mapping repair; another full finite mission is required.
+bounded mapping repair. The [sixth attempt](acceptance/2026-10-20-independent-mission-sixth-attempt.md)
+exhausted an undersized creation-phase budget; the
+[seventh](acceptance/2026-10-20-independent-mission-seventh-attempt.md) stopped at
+a source-freshness race before editor input. [#168](https://github.com/CVX-Hull/enactive/issues/168)
+owns that repair. Another full finite mission is required.
 
 Current source distinguishes raw assertions from combined Work views and checks
 complete handoff retrieval capacity before relinquishing control. Actual fresh

@@ -86,6 +86,16 @@ architecture or model comparisons. #75 owns finite workflow/control maintenance;
 control maintenance keeps January15,2027 and earlier event triggers. The public
 Project owns changing estimates and Status/Horizon, not this evidence map.
 
+The [sixth](acceptance/2026-10-20-independent-mission-sixth-attempt.md) and
+[seventh](acceptance/2026-10-20-independent-mission-seventh-attempt.md) independent
+attempts are failed and closed. The former exhausted its prospectively undersized
+creation root; the latter encountered a near-expiry source at editor dispatch.
+[#168](https://github.com/CVX-Hull/enactive/issues/168) owns the existing-mechanism
+entry-refresh repair, regression/review/CI and a new full mission. All original
+supplies/rest/memory/succession/normal lifecycle objectives remain; no old attempt
+resumes. The seventh cleanup also retains a controller-before-child-exit ordering
+defect and an unknown child exit code.
+
 ## Selected independent-player iteration
 
 Deliver one integrated supply-and-shelter mission (#144), followed by #145's

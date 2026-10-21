@@ -13,7 +13,7 @@ from harness.gameplay.contracts import ContractError
 from harness.gameplay.semantic_controls import ControlIntent
 from harness.gameplay.evidence import same_native_state
 from harness.mission_runtime import _Work
-from tests.test_mission_creation import MissionCreationFixture
+from tests.test_mission_creation import MissionCreationFixture, expire_selected_at_dispatch
 from tests import test_mission_runtime as runtime_fixtures
 
 
@@ -217,6 +217,45 @@ class NormalObservationChurnTests(unittest.TestCase):
     result = runtime_fixtures.MissionRuntimeTests.result
     settled = runtime_fixtures.MissionRuntimeTests.settled
     navigation = runtime_fixtures.MissionRuntimeTests.navigation
+    control = runtime_fixtures.MissionRuntimeTests.control
+    open_direction = runtime_fixtures.MissionRuntimeTests.open_direction
+
+    def test_fresh_navigation_revalidates_before_selected_source_expires(self):
+        self.start()
+        data = self.navigation(target=(1, 0, 0))
+        before = self.runtime._current
+        deadline = self.runtime._mission_deadline
+        with expire_selected_at_dispatch(self.runtime, before):
+            self.assertEqual(self.runtime.command(data)["status"], "accepted")
+            result = self.settled(data["request_id"])
+        self.assertEqual(result["state"], "completed", result)
+        self.assertEqual(result["result"]["position"], [1, 0, 0])
+        self.assertEqual(result["request"], data)
+        primitive, = self.runtime._ledger.primitive_records()
+        relation = primitive["intent"]["revalidation"]
+        self.assertEqual(relation["original"]["source_id"], before.observation_id)
+        self.assertEqual(relation["rule"], "native_state")
+        self.assertEqual(len({before.observation_id, primitive["intent"]["source_before"],
+                              primitive["intent"]["preflight_source"]}), 3)
+        self.assertEqual(self.runtime._mission_deadline, deadline)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+
+    def test_fresh_prompt_revalidates_without_renewing_shared_root(self):
+        root, _ = self.open_direction(limits=dict(primitives=2, wall_seconds=120, game_seconds=1200))
+        before = self.runtime._current
+        deadline = self.runtime._ledger.request(root["request_id"])["deadline"]
+        child = self.control("menu", dict(purpose="Open direction", label="Here", outcome="activated"),
+            phase_id=root["request_id"], perception=dict(kind="direction", basis="player_interpretation",
+                source_id=before.observation_id, question="Where?"))
+        with expire_selected_at_dispatch(self.runtime, before):
+            self.assertEqual(self.runtime.command(child)["status"], "accepted")
+            result = self.settled(child["request_id"])
+        self.assertEqual(result["state"], "partial", result)
+        self.assertEqual(result["result"]["phase"]["stage"], "complete")
+        self.assertEqual(result["result"]["revalidation"]["rule"], "exact_png_bytes")
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertEqual(self.runtime._ledger.request(root["request_id"])["deadline"], deadline)
+        self.assertIsNone(self.runtime._prompt_phase)
 
     def test_navigation_uses_original_sources_and_correlated_acks_under_polling(self):
         self.start()

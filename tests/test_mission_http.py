@@ -1,7 +1,7 @@
 """HTTP/core composition with explicit trusted identity fixture, never native acceptance.
 
 The production-Start test uses the real gate. Core skill tests separately mock that
-unimplemented lifecycle boundary; they establish no creation/load/identity result.
+owned-identity boundary; they establish no creation/load/identity result.
 """
 from copy import deepcopy
 import json

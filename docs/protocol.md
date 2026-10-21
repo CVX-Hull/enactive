@@ -166,13 +166,19 @@ The independent mission remains unqualified. Native006 retains its actual failur
 and exceptional second-child cleanup; later success does not rewrite it.
 Neither synthetic UI tests nor tests assuming identity accept an independent mission. Observe likewise cannot adopt
 an unexplained normal session. Reopening restores neither phase nor input authority.
-An aged lifecycle Resume checkpoint is refreshed inside the registered operation
+The lifecycle Resume checkpoint is refreshed once at entry inside the registered operation
 before proposal/publication. The existing guarded Observe must preserve exact
 native state and PNG bytes, original actor/operator/takeover and root/child/mission
 deadlines. Its journal links old and fresh source IDs without constructing a
 lease-bound SourceBinding before a lease exists. It sends no input or grants
 readmission by itself. Explicit creation-stage commit, normal save and identity
 inspection use the same guarded refresh with typed exact-PNG SourceRevalidation.
+Ordinary semantic controls and navigation likewise capture/revalidate once at entry,
+even if the selected source is still fresh. Interpreted controls require exact PNG
+equivalence; native-row/navigation decisions retain native-state equivalence.
+A replacement that expires before final dispatch still fails. This bounded Observe
+cost does not renew requests, phase limits, authority or the freshness threshold.
+[Entry-refresh rationale](changes/053-operation-entry-refresh.md).
 Save refresh precedes operation rotation and preserves its original normal-game
 time anchor. Changed state, Pause or expiry still stops input.
 An atomic controller snapshot keeps a frame's first-seen clock; a command reader
@@ -250,7 +256,7 @@ only; world identity still needs its source-backed interpretation.
 A source-bound root charges distinct Resume and QUIT primitives, then awaits an
 explicit interpreted Really quit? Yes/No child. Exact-PNG refreshes preserve
 checkpoint provenance; root/child ceilings and original deadlines never renew.
-An aged confirmation refreshes inside the operation before proposal. Its typed
+The selected confirmation refreshes once at operation entry before proposal. Its typed
 exact-PNG SourceRevalidation must link the immutable interpreted source to the
 actual dispatched before-source. Normal result and orphan-effect validation enforce
 that relation at write and reopen; native-state equivalence alone is insufficient.
@@ -264,8 +270,9 @@ state after durable recording, stays paused/frozen and sends no input or signals
 Lifecycle PhaseReceipt/exit proof are historical data, never restored permissions.
 Any unexpected normal frame remains diagnostic: registered identity/adoption is
 required before time cost, maps, native memory facts or ordinary dispatch, including
-after reopening. The source saved-exit branch has synthetic integration coverage only; qualified
-untouched-menu cleanup proves neither a save nor independent normal-game play.
+after reopening. The saved-exit branch passed scoped
+[Native007 qualification](acceptance/2026-10-20-native-lifecycle-qualified.md);
+independent normal-game mission acceptance remains separate.
 
 Registered create/load starts only from the retained launch's paused main menu.
 Explicit stage commits request world FINALIZE or final character NEXT_TAB; the

@@ -138,7 +138,10 @@ class RequestBindingTests(unittest.TestCase):
                         case.a = replace(case.a, limits=replace(case.a.limits, inputs=2),
                                          cleanup_reserve=replace(case.a.cleanup_reserve, inputs=1))
                     elif fault == 'capacity_tail':
-                        case.a = replace(case.a, limits=replace(case.a.limits, frames=5),
+                        # Bootstrap, entry refresh, preflight and ACK retain four
+                        # frames. Leave exactly one usable frame, still too few
+                        # for another dispatch reservation; keep its assertion.
+                        case.a = replace(case.a, limits=replace(case.a.limits, frames=6),
                                          cleanup_reserve=replace(case.a.cleanup_reserve, frames=1))
                     root, _ = case.native_choices(**({'limits': dict(primitives=1, wall_seconds=120,
                         game_seconds=1200)} if fault == 'root_input' else {}))

@@ -160,8 +160,8 @@ protects time, map and native-memory eligibility. Some core tests assume identit
 exercise the real adoption reader without that mock. Registered creation/save/load
 and provisional character inspection are composed in source. Quiescent handoff, bound
 successor context retrieval/claim and separately charged readmission also compose in
-source; historical receipts restore no live consent. Item/activity and ordinary
-inspection adapters still block. Normal finish now
+source; historical receipts restore no live consent. Selected item/activity and ordinary
+inspection adapters compose through the same writer. Normal finish now
 composes in source after committed normal exit, preserving historical evidence
 and distinguishing cleanup from player-reported objective completion. Native
 mission acceptance remains required. Registered launch now composes the fixed process adapter
@@ -174,9 +174,10 @@ can resolve process custody while retaining an unknown ACK and all charges. No
 normal save is claimed. The [bounded native retest](acceptance/2026-10-20-owned-launch.md#native-qualification002-accepted-owned-menu-component)
 qualified the Yes/normal-exit path while retaining its failed first attempt. It
 created, loaded and saved no character and did not exercise native No or user Pause.
-The registered character lifecycle remains unqualified natively. Source coverage
-includes normal save, saved-menu exit and a new child loading the exact retained
-character/turn; this is separate from actual engine acceptance.
+Registered creation, normal save, saved-menu exit and new-child exact reload passed
+the scoped [Native007 qualification](acceptance/2026-10-20-native-lifecycle-qualified.md).
+Independent use of that lifecycle within the full supplies/shelter mission remains
+unaccepted; component qualification does not accept the mission.
 The [timeline reducer](../harness/gameplay/timeline.py) sums normal-session spans
 only with exact chronological equal-turn endpoint links across sessions. The [lifecycle reader](../harness/gameplay/lifecycle.py) derives links only after
 validating owned transitions, direct identity Claims, inspection receipts and saved
@@ -187,7 +188,7 @@ can recover historical cost but no live phase, process or lease.
 Missing continuity makes cost unknown instead of silently resetting it.
 
 Lifecycle Resume, explicit creation-stage commit, normal save, identity inspection
-and owned exit confirmation refresh an aged checkpoint inside
+and owned exit confirmation refresh the selected checkpoint once at entry inside
 the operation, comparing exact retained native state and PNG bytes under the
 original actor/Pause and root/child deadlines. Resume journals source lineage before
 acquiring a lease; it cannot construct authority from an old binding. Exit's typed
@@ -229,8 +230,9 @@ in-flight cancellation or post-Pause readmission.
 both world/Save local rejections and new exact corrected requests, visible identity
 and normal save/exit/stopped Finish through a fresh engineering operator. It
 retains three unknown ACKs with reconciled effects and no gameplay objective.
-A synthetic hosted clock-fault fixture needs correction before exact CI and a
-new finite deciding admission; production dispatch checks are unchanged by it.
+The synthetic hosted clock-fault fixture was corrected without changing production
+dispatch checks; subsequent common and exact hosted CI passed. Later independent
+failures remain linked from [the work map](work.md).
 
 Cached status performs no evidence or memory I/O. It can show the last explicitly
 requested context packet, including claims, Work, source IDs, omissions and

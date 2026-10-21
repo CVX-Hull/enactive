@@ -12,6 +12,7 @@ from harness.gameplay.contracts import ContractError
 from harness.gameplay.mission_contracts import canonical
 from harness.gameplay.mission_ledger import MissionLedger
 from tests import test_mission_launch as launch_fixtures
+from tests.test_mission_creation import expire_selected_at_dispatch
 
 
 
@@ -143,13 +144,29 @@ class MissionExitTests(unittest.TestCase):
         self.assertIsNone(self.runtime._exit_phase)
         self.assertIsNone(self.controller._mission_lease)
 
+    def test_fresh_exit_confirmation_revalidates_before_selected_source_expires(self):
+        self.ready()
+        root = self.begin_exit()
+        before = self.runtime._current
+        data = self.confirmation()
+        with expire_selected_at_dispatch(self.runtime, before):
+            operation = self.run_request(data)
+        self.assertEqual(operation["state"], "completed", operation)
+        primitive = self.runtime._ledger.primitive(operation["result"]["normal_exit"]["terminal_logical_id"])
+        relation = primitive["intent"]["revalidation"]
+        self.assertEqual(relation["original"]["source_id"], before.observation_id)
+        self.assertEqual(relation["rule"], "exact_png_bytes")
+        self.assertNotEqual(primitive["intent"]["source_before"], before.observation_id)
+        self.assertEqual(self.runtime._ledger.request("exit")["deadline"], root["deadline"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 3)
+        self.assertEqual(sum(r.get("action") == "YES" for r in self.bridge.delivered), 1)
+
     def test_confirmation_refresh_rejects_changed_pixels_without_yes(self):
         self.ready()
         self.begin_exit()
-        data, before = self.confirmation(), self.runtime._current
+        data = self.confirmation()
         self.bridge.editor_text = "Changed visible confirmation"
-        with patch.object(self.runtime._store, "inspect_current_boundary", return_value=(before, False)):
-            operation = self.run_request(data)
+        operation = self.run_request(data)
         self.assertEqual(operation["state"], "blocked", operation)
         self.assertEqual(self.runtime.status()["spent_inputs"], 2)
         self.assertFalse(any(row.get("action") == "YES" for row in self.bridge.delivered))
@@ -157,14 +174,13 @@ class MissionExitTests(unittest.TestCase):
     def test_user_pause_during_confirmation_refresh_sends_no_yes(self):
         self.ready()
         self.begin_exit()
-        data, before = self.confirmation(), self.runtime._current
+        data = self.confirmation()
         observe = self.runtime._observe_native
         def pause_after_observation(*args, **kwargs):
             result = observe(*args, **kwargs)
             self.runtime.pause("User Pause during confirmation refresh")
             return result
-        with patch.object(self.runtime._store, "inspect_current_boundary", return_value=(before, False)), \
-                patch.object(self.runtime, "_observe_native", side_effect=pause_after_observation):
+        with patch.object(self.runtime, "_observe_native", side_effect=pause_after_observation):
             operation = self.run_request(data)
         self.assertEqual(operation["state"], "paused", operation)
         self.assertEqual(self.runtime.status()["pause_cause"], "user")

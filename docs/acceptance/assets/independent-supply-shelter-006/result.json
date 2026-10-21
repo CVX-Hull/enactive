@@ -1,0 +1,54 @@
+{
+  "outcome": "FAILED independent006: player allocated one primitive to entire creation phase; Resume consumed it; next menu input was not dispatched",
+  "source_commit": "ed92a911e4f47ef2625b5ace8fe73be4aa721a66",
+  "native_sha256": "cd031f200748cbbb387011335db15596346dac29607221fac25641ec9a771f1f",
+  "requests": 6,
+  "requests_by_kind": {
+    "start": 1,
+    "lifecycle": 2,
+    "skill": 2,
+    "stop": 1
+  },
+  "requests_by_state": {
+    "completed": 3,
+    "partial": 1,
+    "blocked": 2
+  },
+  "charged_inputs": 1,
+  "returned": 1,
+  "unknown": 0,
+  "unreconciled_effects": 0,
+  "frames": 6,
+  "png_bytes": 192804,
+  "all_frame_hashes_verified": true,
+  "canonical_game_seconds": null,
+  "world_created": false,
+  "character_created": false,
+  "wall_seconds_through_stop_admission": 34.442970752716064,
+  "wall_seconds_through_shutdown_watermark": 126.03286099433899,
+  "source_patches_during_attempt": 0,
+  "ordinary_lead_gameplay_rescue": false,
+  "normal_exit": false,
+  "normal_save": false,
+  "normal_finish": false,
+  "full_independent_objective_completed": false,
+  "player_permanently_quiescent": true,
+  "game_signals": 1,
+  "exceptional_failed_attempt_teardowns": 1,
+  "child_exit_code": 0,
+  "service_exit_code": 0,
+  "visible_routine_gameplay_human_approval_events": 0,
+  "visible_routine_gameplay_automatic_review_events": 0,
+  "review_observability": "Actual actor/root preapproved MCP calls; invisible host telemetry unavailable; engineering setup/tests/publication/exceptional cleanup separate",
+  "external_model_identity": null,
+  "external_model_tokens": null,
+  "external_model_cost": null,
+  "full_skill_model_tool_display_latency": null,
+  "images": [
+    {
+      "file": "main-menu.png",
+      "source_id": "7eacfeaee8c5dd7ba70e2d1ac91e24ca33d52a3c2266ceaa1fd7c43a95558dcc",
+      "sha256": "746a5d66c7733692c34020bf66fe72b15aec115bf2a270177758d2884b2fc56c"
+    }
+  ]
+}

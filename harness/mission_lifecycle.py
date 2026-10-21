@@ -256,17 +256,16 @@ class RegisteredLifecycle:
 
     def _resume(self, work: _Work, phase: NormalPhase) -> NormalPhase:
         r = self.runtime
-        inspected, fresh = r._store.inspect_current_boundary(**r._clocks())
+        inspected, _ = r._store.inspect_current_boundary(**r._clocks())
         if inspected != phase.checkpoint:
             raise EvidenceError("Lifecycle Resume lost its exact retained checkpoint")
-        if not fresh:
-            original = phase.checkpoint
-            phase = self._refresh(work, phase)
-            # Resume has no lease yet. Retain the exact source relation without
-            # constructing a lease-bound SourceBinding or granting authority.
-            r._record("mission_lifecycle_resume_checkpoint", {"request_id": work.request["request_id"],
-                "before_source_id": original.observation_id, "refreshed_source_id": phase.checkpoint.observation_id,
-                "rule": "exact_png_bytes", "grants_authority": False})
+        original = phase.checkpoint
+        phase = self._refresh(work, phase)
+        # Resume has no lease yet. Retain the exact source relation without
+        # constructing a lease-bound SourceBinding or granting authority.
+        r._record("mission_lifecycle_resume_checkpoint", {"request_id": work.request["request_id"],
+            "before_source_id": original.observation_id, "refreshed_source_id": phase.checkpoint.observation_id,
+            "rule": "exact_png_bytes", "grants_authority": False})
         # Constructor is private to the runtime, not serialized player data.
         proposal = r._resume_intent(work.request["request_id"], phase.checkpoint)
         feedback = r._dispatch(work, proposal, phase.checkpoint, lifecycle=phase)
@@ -422,17 +421,19 @@ class RegisteredLifecycle:
         if state["boundary"]["kind"] == "normal_play":
             raise ControlError("Normal provisional source requires character_identity inspection or adoption")
         skill = MenuSkill(data) if data["skill_kind"] == "menu" and data["perception"] is None else SemanticControlSkill(data)
-        inspected, fresh = r._store.inspect_current_boundary(**r._clocks())
+        inspected, _ = r._store.inspect_current_boundary(**r._clocks())
         if inspected != phase.checkpoint:
             raise EvidenceError("Lifecycle child lost its exact retained checkpoint")
-        if not fresh:
-            original, binding = phase.checkpoint, r._binding(phase.checkpoint)
-            phase = self._refresh(work, phase)
-            relation = SourceRevalidation(binding, r._binding(phase.checkpoint),
-                "exact_png_bytes" if data["perception"] is not None else "native_state")
-            skill.revalidate(relation, r._store, **r._clocks())
-            r._record("mission_lifecycle_revalidation", relation.to_dict())
-            r._store.observation(original)
+        # A source just inside the age limit can expire before dispatch. Capture
+        # and attest this operation's checkpoint even when it is currently fresh.
+        # Original phase budgets and the independent final freshness checks stay.
+        original, binding = phase.checkpoint, r._binding(phase.checkpoint)
+        phase = self._refresh(work, phase)
+        relation = SourceRevalidation(binding, r._binding(phase.checkpoint),
+            "exact_png_bytes" if data["perception"] is not None else "native_state")
+        skill.revalidate(relation, r._store, **r._clocks())
+        r._record("mission_lifecycle_revalidation", relation.to_dict())
+        r._store.observation(original)
         while True:
             proposal = skill.propose(r._store, **r._clocks())
             if isinstance(proposal, (MenuOutcome, ControlOutcome)):
@@ -491,14 +492,12 @@ class RegisteredLifecycle:
         self.guard(work, phase)
         return phase
 
-    def _action_checkpoint(self, work: _Work, phase: NormalPhase) -> tuple[NormalPhase, SourceRevalidation | None]:
+    def _action_checkpoint(self, work: _Work, phase: NormalPhase) -> tuple[NormalPhase, SourceRevalidation]:
         """Refresh one already-decided action without changing its consent or anchor."""
         r = self.runtime
-        inspected, fresh = r._store.inspect_current_boundary(**r._clocks())
+        inspected, _ = r._store.inspect_current_boundary(**r._clocks())
         if inspected != phase.checkpoint:
             raise EvidenceError("Lifecycle action lost its current owned checkpoint")
-        if fresh:
-            return phase, None
         binding = r._binding(phase.checkpoint)
         phase = self._refresh(work, phase)
         relation = SourceRevalidation(binding, r._binding(phase.checkpoint), "exact_png_bytes")

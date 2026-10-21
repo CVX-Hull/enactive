@@ -24,33 +24,37 @@ permission to resume through another endpoint. Historical receipts cannot restor
 a phase after user Pause or service restart. This path has synthetic coverage;
 actual clean-context/native acceptance remains required.
 Eligible lifecycle Resume, stage commit, save, identity inspection and owned quit
-confirmation refresh an aged checkpoint
+confirmation refresh the selected checkpoint once at operation entry
 inside the operation under exact-state/image and original authority/deadline
 checks. The player need not race a three-second window between model/tool calls.
 A changed image, Pause or expired root still stops input; do not retry an unknown
 delivery. [Native timing failure and retained cleanup](acceptance/2026-10-20-lifecycle-freshness.md).
 Before admission, ordinary controller commands retain their documented guards.
-Registered launch can only verify a retained child and paused main-menu readiness;
-other lifecycle gaps below prevent independent production gameplay. A launch receipt
-grants no character identity, Resume, lease or normal-game time. No actual launch
-acceptance follows from portable process fixtures.
+Registered launch verifies the retained child and paused main-menu readiness; it
+grants no character identity, Resume, lease or normal-game time. Scoped
+[Native007 qualification](acceptance/2026-10-20-native-lifecycle-qualified.md) passed
+creation/save/new-child reload/normal ending. The full independent supplies/shelter
+mission remains unaccepted; portable fixtures alone cannot accept native play.
 
 ## Permissions and player ownership
 
-See [the permission audit](operator-permissions.md) before requesting elevation
-or changing executor ownership. Narrow project-local CLI rules are prepared and
-matching-tested; [actual-player calls and resumed play](acceptance/2026-10-18-activity-distraction-stop.md)
-verified the scoped loaded setup. A later native proof used the stable CLI without
-recurring review or another restart. Changed actors/entry points/policy need their
-own preflight; existing capture wrappers do not match the stable CLI rule. User keys/unlock/rescue are not the
-routine fallback. A passive waypoint planner has no live ingress. A designated
-player needs the explicit bounded mission assignment and handoff below; permission rules
-do not establish actor identity or restore ownership.
-Before admitting gameplay, have that actor perform a passive access preflight with
-the required explicit tool permission mode. Lead access alone is insufficient;
-see the [actor preflight](operator-permissions.md#dedicated-gameplay-context).
+The admitted player uses the fifteen project-preapproved
+[structured tools](setup.md#configure-the-structured-player-tools). Routine
+observation, actions, memory, handoff, lifecycle and result/image handling must have
+zero human or automatic approval-review round trips. Verify the actual designated
+actor's tool catalogue and harmless live calls before admission or replacement;
+lead access or a matching configuration alone is insufficient. Recurring reviews
+are a setup defect to repair before play. The [permission procedure](operator-permissions.md)
+records verification and observability limits. Native freshness, ownership, budgets
+and user Pause remain active. User keys/unlock/rescue are not a routine fallback.
 
 ## Start and observe
+
+For an admitted mission, start only the controller service below, then follow
+[typed mission requests](#typed-mission-requests-and-the-player). The designated
+player launches the owned windowed child through `enactive_lifecycle`; manual
+bundle launch and raw CLI inputs below are engineering procedures outside a
+nonterminal mission.
 
 First inspect existing terminals/processes to avoid starting a second game or
 controller. A native app lookup by name may launch a second copy when the game
@@ -62,7 +66,6 @@ use an available loopback port and launch only the prepared project bundle:
 
 ```sh
 .venv/bin/python -m harness serve --port 8766 --timeout 15
-open .runtime/Cataclysm.app
 ```
 
 The explicit15second native wait uses the existing bounded setting. Actual world
@@ -72,7 +75,8 @@ it cannot renew original root deadlines or repair an expired/unknown input.
 [Latency accounting and proposed targets](evaluation.md#latency-budgets-for-interactive-play)
 separate loading, skill execution, observer updates and model/tool overhead.
 
-Launch the prepared app **bundle**, which executes that project's wrapper and
+Outside an admitted mission, `open .runtime/Cataclysm.app` launches the prepared
+app **bundle**, which executes that project's wrapper and
 explicit userdir. Direct terminal execution of the wrapper produced a game that
 native app automation could not bind in the first-day rehearsal. Bundle launch
 exposed the actual window in a subsequent menu-only probe. Neither launch method
@@ -356,7 +360,9 @@ separates implemented components from remaining independent-play acceptance.
    JSON Schema through the existing validator: current whole-value editing accepts
    at most24 supported ASCII characters, while Scenario can describe80-character
    load identities. Budget TEXT.CLEAR plus typing and a separately interpreted
-   commit. This pure feasibility check is not native acceptance; recheck when
+   commit. A lifecycle root includes Resume and ALL child inputs cumulatively;
+   larger child limits do not extend it. Freeze a sufficient whole-phase budget
+   prospectively, leaving the mission cleanup reserve intact. This pure feasibility check is not native acceptance; recheck when
    editor/schema/scenario changes. Never shorten an immutable admitted identity.
 2. Configure and verify the [structured player tools](setup.md#configure-the-structured-player-tools).
    The designated player uses `enactive_snapshot` and explicitly selects the
@@ -369,7 +375,8 @@ separates implemented components from remaining independent-play acceptance.
    per-action file-writing recipe.
 3. Start is source-free; explicit Observe is passive. Registered owned lifecycle must establish
    world/character identity and fresh input authority. Source lifecycle composition
-   has synthetic coverage; native character/mission acceptance remains required.
+   has source coverage and scoped Native007 qualification; full independent
+   mission acceptance remains required.
    Do not substitute raw keys/Resume or a trusted unit fixture.
 4. Read the result by its exact operation ID. Accepted only acknowledges admission;
    wait for the settled immutable result and inspect the frame/effect. A lost response
@@ -396,8 +403,8 @@ separates implemented components from remaining independent-play acceptance.
    root/child limits and unknowns stay recorded. Untouched-menu exit uses its owned
    lifecycle root and an explicit interpreted confirmation child. It is not a
    character save/exit path. Item/activity, creation/save/reload and handoff adapters
-   compose in source; actual native outcomes and independent-player qualification
-   remain required.
+   compose in source. Scoped native lifecycle qualification is linked above;
+   actual independent-player and fresh-successor outcomes remain required.
 7. Pause prevents further admission, without undoing an input or native activity.
    Honor user Pause/takeover; do not auto-Resume or restore a phase from disk. A
    stopped deciding attempt remains stopped. Normal cleanup, actual fresh-context

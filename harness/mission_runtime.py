@@ -1335,15 +1335,14 @@ class MissionRuntime:
             raise ControlError("Owned exit requires its exact interpreted Really quit? Yes/No child")
         self._exit_guard(work, phase)
         skill = SemanticControlSkill(data)
-        inspected, fresh = self._store.inspect_current_boundary(**self._clocks())
+        inspected, _ = self._store.inspect_current_boundary(**self._clocks())
         if inspected != phase.checkpoint:
             raise EvidenceError("Exit confirmation lost its exact retained checkpoint")
-        if not fresh:
-            binding = self._binding(phase.checkpoint)
-            phase = self._refresh_exit(work, phase)
-            relation = SourceRevalidation(binding, self._binding(phase.checkpoint), "exact_png_bytes")
-            skill.revalidate(relation, self._store, **self._clocks())
-            self._record("mission_exit_revalidation", relation.to_dict())
+        binding = self._binding(phase.checkpoint)
+        phase = self._refresh_exit(work, phase)
+        relation = SourceRevalidation(binding, self._binding(phase.checkpoint), "exact_png_bytes")
+        skill.revalidate(relation, self._store, **self._clocks())
+        self._record("mission_exit_revalidation", relation.to_dict())
         proposal = skill.propose(self._store, **self._clocks())
         if not isinstance(proposal, ControlIntent):
             return proposal.disposition, self._control_result(proposal)
@@ -1894,21 +1893,20 @@ class MissionRuntime:
                  else SemanticControlSkill(data))
         self._skill = data["skill_kind"]
         mark = self._operator_mark()
-        inspected, fresh = self._store.inspect_current_boundary(**self._clocks())
+        inspected, _ = self._store.inspect_current_boundary(**self._clocks())
         if inspected != original:
             raise EvidenceError("Control informing source is no longer the exact retained checkpoint")
-        if not fresh:
-            self._store.verify(original)
-            self._capacity()
-            state, received = self._observe_native(work, deadline_monotonic=self._deadline(work, original))
-            current = self._ingest(state, received)
-            refreshed = self._binding(current)
-            relation = SourceRevalidation(binding, refreshed, "exact_png_bytes" if data["perception"] is not None else "native_state")
-            skill.revalidate(relation, self._store, **self._clocks())
-            self._record("mission_revalidation", relation.to_dict())
-            self._publish_source(current, authoritative=True)
-            if phase is not None:
-                phase = self._advance_prompt(work, original, current)
+        self._store.verify(original)
+        self._capacity()
+        state, received = self._observe_native(work, deadline_monotonic=self._deadline(work, original))
+        current = self._ingest(state, received)
+        refreshed = self._binding(current)
+        relation = SourceRevalidation(binding, refreshed, "exact_png_bytes" if data["perception"] is not None else "native_state")
+        skill.revalidate(relation, self._store, **self._clocks())
+        self._record("mission_revalidation", relation.to_dict())
+        self._publish_source(current, authoritative=True)
+        if phase is not None:
+            phase = self._advance_prompt(work, original, current)
         self._capture_memory(self._current)
         rotated = False
         receipt_phase = phase
@@ -1979,19 +1977,19 @@ class MissionRuntime:
             raise EvidenceError("Navigation has no current observed map")
         skill = NavigationSkill(data, self._map)
         self._skill = "navigate"
-        inspected, fresh = self._store.inspect_current(**self._clocks())
+        inspected, _ = self._store.inspect_current(**self._clocks())
         if inspected != original:
             raise EvidenceError("Informing source is no longer the current retained source")
-        if not fresh:
-            # Exactly one intentional promotion; never mutate original request/source age.
-            self._store.verify(original)
-            self._capacity()
-            state, received = self._observe_native(work)
-            current = self._ingest(state, received)
-            refreshed = self._publish_source(current, authoritative=True)
-            relation = SourceRevalidation(binding, refreshed, "native_state")
-            skill.revalidate(relation, self._store, **self._clocks())
-            self._record("mission_revalidation", relation.to_dict())
+        # Exactly one entry capture, even for a source near the freshness limit;
+        # never mutate the original request/source age or renew its limits.
+        self._store.verify(original)
+        self._capacity()
+        state, received = self._observe_native(work, deadline_monotonic=self._deadline(work, original))
+        current = self._ingest(state, received)
+        refreshed = self._publish_source(current, authoritative=True)
+        relation = SourceRevalidation(binding, refreshed, "native_state")
+        skill.revalidate(relation, self._store, **self._clocks())
+        self._record("mission_revalidation", relation.to_dict())
         self._capture_memory(self._current)
         self._check_cancelled(work)
         rotated = False
