@@ -1,0 +1,43 @@
+{
+  "outcome": "PASS within scoped engineering confirmation correction, identity/adoption, normal save/owned exit/stopped Finish; not independent mission acceptance",
+  "source_commit": "f4db8ae5603587327fdc1e4b813f9484e885b7ae",
+  "native_sha256": "cd031f200748cbbb387011335db15596346dac29607221fac25641ec9a771f1f",
+  "requests": 43,
+  "charged_inputs": 67,
+  "returned": 64,
+  "unknown": 3,
+  "unreconciled_effects": 0,
+  "frames": 165,
+  "png_bytes": 4696397,
+  "wall_seconds_through_terminal_watermark": 517.4909727573395,
+  "canonical_game_seconds": 0,
+  "exceptional_cleanup": false,
+  "signals_to_game": 0,
+  "retained_child_exit_code": 0,
+  "service_exit_code": 0,
+  "normal_finish": {
+    "completed_work_event_id": null,
+    "disposition": "stopped",
+    "final_source_id": "790d506be83706f094d5c5cf04e2650f919dacffb0aa53973d7aae96361060c4",
+    "grants_authority": false,
+    "normal_exit_result_request_id": "char008-exit-yes",
+    "record_type": "NormalFinish",
+    "schema": "mission/6"
+  },
+  "source_edits_during_attempt": 0,
+  "operator_quiescent": true,
+  "model_tool_approval_display_latency": null,
+  "retained_global_unknowns_separate": 15,
+  "normal_exit_verified": true,
+  "reopened_without_authority": true,
+  "no_game_listener_or_live_slots": true,
+  "independent_mission_accepted": false,
+  "returned_preflight_to_terminal_intervals": {
+    "sample_count": 64,
+    "median_ms": 77.910520369187,
+    "p95_nearest_rank_ms": 141.6023331694305,
+    "max_ms": 6393.123916815966,
+    "unknown_excluded": 3,
+    "scope": "Native008 returned setup/menu/identity inputs only; no movement, model/tool/display or settled-result speed claim"
+  }
+}

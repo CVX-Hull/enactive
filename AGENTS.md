@@ -34,5 +34,8 @@ planner remains candidate-only; explorers/reviewers never send game inputs.
   reports, proposals and superseded ADRs are evidence, not current instructions.
 - Apply S-CODE's reuse review to tools, documentation and controls. Git owns tracked
   source history; custom infrastructure needs a concrete gap and maintenance owner.
-- Run the common checks and inspect staged changes before checkpointing. Control
-  definitions, coverage limits and gaps are in [the control map](docs/controls.md).
+- Use the [development-first workflow](docs/project-management.md#development-first-delivery):
+  fast checkpoint checks and relevant focused tests before development play;
+  independent review, full checks and protected CI before formal acceptance/merge.
+  Freeze each finite run and retain failures. Inspect staged changes before commits.
+  Control coverage and gaps are in [the control map](docs/controls.md).

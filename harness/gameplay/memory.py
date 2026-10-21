@@ -14,7 +14,7 @@ from .contracts import (
     ContractError, EvidenceRef, Fact, Interpretation, PlanCandidate,
     PrimitiveResult, SkillDescriptor, TaskSpec,
 )
-from .evidence import CapacityError, EvidenceError, EvidenceStore, MAX_BYTES, MAX_FRAMES
+from .evidence import CapacityError, EvidenceError, EvidenceStore, DEFAULT_BYTES, DEFAULT_FRAMES
 
 MAX_FACTS = 128
 MAX_INTERPRETATIONS = 32
@@ -93,8 +93,8 @@ class VerificationCost:
     originals. Those bounded extra reads are separate from this deduplicated scan.
     """
     source_checks: int
-    maximum_source_checks: int = MAX_FRAMES
-    maximum_retained_image_bytes: int = MAX_BYTES
+    maximum_source_checks: int = DEFAULT_FRAMES
+    maximum_retained_image_bytes: int = DEFAULT_BYTES
 
 
 @dataclass(frozen=True)
@@ -215,7 +215,7 @@ class TaskMemory:
     def _scan(self, extra: tuple[EvidenceRef, ...] = ()) -> dict[EvidenceRef, str]:
         self._check_generation()
         references = tuple(dict.fromkeys(self._sources() + extra))
-        if len(references) > MAX_FRAMES:
+        if len(references) > DEFAULT_FRAMES:
             self._invalidate_plans("Source capacity exceeded")
             raise CapacityError("Memory dependencies exceed the 32-frame evidence bound")
         statuses: dict[EvidenceRef, str] = {}
@@ -310,6 +310,10 @@ class TaskMemory:
         if not observe:
             return statuses
         if ref not in statuses:
+            if len(statuses) >= DEFAULT_FRAMES:
+                self._current = None
+                self._invalidate_plans("Memory source capacity exceeded; history preserved")
+                raise CapacityError("Task memory dependencies exceed the 32-source bound")
             statuses[ref] = self._store.source_status(ref)
         if statuses[ref] != "retained":
             self._current = None
@@ -332,7 +336,7 @@ class TaskMemory:
                               self._retired, self._retirement_reason or self._reason, current, historical, disputed,
                               self._interpretations, self._hypotheses, self._plans,
                               self._procedures, self._actions, self._counts(),
-                              VerificationCost(len(statuses)))
+                              VerificationCost(len(statuses), DEFAULT_FRAMES, self._store.max_bytes))
 
     def refresh(self, *, now_monotonic: float, now_timestamp_ms: int) -> MemorySnapshot:
         """Retain fresh store facts if available; otherwise return explicit history."""

@@ -1,0 +1,19 @@
+---
+title: Proposed active play and asynchronous reflection
+---
+flowchart LR
+  accTitle: One active player acts while a background learner proposes evidence-linked procedures
+  accDescr: The active player uses skills or direct interaction through one existing writer to windowed CDDA. Retained visible evidence feeds a background trajectory learner. Advisory proposals return to the active player and accepted scoped revisions go through the serialized memory writer. The background learner has no input authority. User Pause independently blocks dispatch. These are proposed logical responsibilities, not implemented new processes.
+  P["Active player<br/>plan, act, observe, correct"] --> I["Skills or direct interaction"]
+  I --> W["One existing input writer"]
+  W --> G["Windowed CDDA"]
+  G --> E["Canonical visible evidence<br/>receipts and unfinished Work"]
+  E --> P
+  E -. "Bounded trajectory snapshot" .-> R["Background reflection<br/>compare and propose procedures"]
+  R -. "Versioned advice, warnings<br/>questions and retractions" .-> P
+  P -. "Use/defer/test result<br/>and counterexamples" .-> R
+  P --> M["Serialized accepted<br/>advisory-memory revision"]
+  M --> E
+  U["User Pause"] --> W
+  classDef learner fill:#eef2ff,stroke:#4f46e5,color:#111827
+  class R learner

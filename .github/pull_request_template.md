@@ -18,7 +18,10 @@ reference only after acceptance is verified. A duplicate/cancelled issue is not 
 
 <!-- Record candidate/environment, exact commands actually run and results, including failures.
 Separate portable checks, native builds and observed gameplay. State checks not run and why.
-Common command: .venv/bin/python tools/check.py
+Fast checkpoint: .venv/bin/python tools/check.py --fast plus applicable focused tests.
+Full portable acceptance/CI: .venv/bin/python tools/check.py
+Label development evidence versus formal acceptance; link consolidated run findings.
+Do not require another full suite/reviewer for every development attempt.
 Native bridge/input/renderer/compiler/source-pin/protocol changes need relevant native acceptance.
 Redact secrets, private paths and data; do not attach saves by default. -->
 

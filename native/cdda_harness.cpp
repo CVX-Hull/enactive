@@ -1,6 +1,7 @@
 #include "cdda_harness.h"
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
@@ -9,6 +10,7 @@
 #include <fcntl.h>
 #include <fstream>
 #include <map>
+#include <optional>
 #include <set>
 #include <sstream>
 #include <cctype>
@@ -75,6 +77,9 @@ int owner_depth = 0;
 int query_depth = 0;
 int query_input_depth = -1;
 int revision = 0;
+// Process lifetime: neither session replacement nor recovery clears human input.
+long long takeover_generation = 0;
+std::string pause_origin = "startup";
 int last_turn = -1;
 bool dirty = true;
 struct input_scope {
@@ -143,6 +148,76 @@ std::string frame_session;
 int frame_revision = -1;
 long long frame_ms = 0;
 bool saved_frame_ok = false;
+std::optional<fs::file_time_type> own_pause_time;
+struct visible_row {
+    std::string text;
+    bool enabled;
+    std::string hotkey;
+    bool selected;
+};
+struct visible_ui {
+    std::string purpose;
+    std::string category;
+    std::string title;
+    std::vector<visible_row> rows;
+};
+bool ui_top = false;
+std::optional<visible_ui> staged_ui;
+std::string presented_ui;
+std::optional<visible_ui> presented_ui_data;
+std::string ui_boundary;
+std::string ui_session;
+int ui_revision = -1;
+
+// Conservatively bound UTF-8 bytes without cutting a codepoint. Schema limits
+// count characters, so this tighter bound also meets the public contract.
+std::string ui_text( const std::string &text, size_t maximum )
+{
+    size_t length = std::min( text.size(), maximum );
+    while( length < text.size() && length > 0 &&
+           ( static_cast<unsigned char>( text[length] ) & 0xc0 ) == 0x80 ) {
+        --length;
+    }
+    return text.substr( 0, length );
+}
+void write_ui( JsonOut &out, const visible_ui &ui )
+{
+    out.start_object();
+    out.member( "purpose", ui.purpose );
+    out.member( "title", ui.title );
+    out.member( "rows" );
+    out.start_array();
+    std::string selected;
+    for( size_t i = 0; i < ui.rows.size(); ++i ) {
+        const visible_row &row = ui.rows[i];
+        const std::string id = "row-" + std::to_string( i );
+        out.start_object();
+        out.member( "id", id );
+        out.member( "text", row.text );
+        out.member( "enabled", row.enabled );
+        out.member( "hotkey" );
+        if( row.hotkey.empty() ) { out.write_null(); }
+        else { out.write( row.hotkey ); }
+        out.end_object();
+        if( row.selected ) { selected = id; }
+    }
+    out.end_array();
+    out.member( "selected" );
+    if( selected.empty() ) { out.write_null(); }
+    else { out.write( selected ); }
+    // These separately drawn fields have no clipping/occlusion attestation yet.
+    out.member( "filter" ); out.write_null();
+    out.member( "count" ); out.write_null();
+    out.member( "coverage", "rendered_rows_only" );
+    out.end_object();
+}
+std::string encode_ui( const visible_ui &ui )
+{
+    std::ostringstream stream;
+    JsonOut out( stream );
+    write_ui( out, ui );
+    return stream.str();
+}
 std::deque<std::string> retained_frames;
 
 std::string path( const std::string &name )
@@ -153,6 +228,8 @@ void pause_file()
 {
     std::ofstream out( path( "pause" ) );
     out << "paused\n";
+    out.close();
+    own_pause_time = fs::last_write_time( path( "pause" ) );
 }
 void scene( JsonOut &out )
 {
@@ -209,7 +286,7 @@ void write_observation( JsonOut &out, const std::string &id, const std::string &
                         const std::string &error, bool frame_ok, const std::string &published_frame )
 {
     out.start_object();
-    out.member( "protocol", 3 );
+    out.member( "protocol", 4 );
     out.member( "id", id );
     out.member( "session", session );
     out.member( "revision", revision );
@@ -218,6 +295,16 @@ void write_observation( JsonOut &out, const std::string &id, const std::string &
     out.member( "status", status );
     out.member( "error", error );
     out.member( "paused", paused );
+    out.member( "pause_origin", pause_origin );
+    out.member( "takeover_generation", takeover_generation );
+    out.member( "ui" );
+    if( frame_ok && !presented_ui.empty() &&
+        ui_boundary == boundary_id && ui_session == session && ui_revision == revision ) {
+        // Serialized by encode_ui, never arbitrary request data.
+        write_ui( out, *presented_ui_data );
+    } else {
+        out.write_null();
+    }
     out.member( "timestamp_ms", frame_ok ? presented_ms : now_ms() );
     out.member( "frame_ok", frame_ok );
     out.member( "frame", published_frame );
@@ -302,7 +389,7 @@ void publish_control( const std::string &id, const std::string &status,
     std::ifstream snapshot( path( "state.json" ) );
     std::ofstream stream( path( "control-response.json.tmp" ) );
     stream.exceptions( std::ios::badbit | std::ios::failbit );
-    stream << "{\"protocol\":3,\"id\":";
+    stream << "{\"protocol\":4,\"id\":";
     { JsonOut out( stream ); out.write( id ); }
     stream << ",\"status\":";
     { JsonOut out( stream ); out.write( status ); }
@@ -391,6 +478,115 @@ void authority_gate( const TextJsonObject &request )
         throw std::runtime_error( "host authority revoked or malformed" );
     }
 }
+void ordinary_gate( const TextJsonObject &request )
+{
+    if( request.get_string( "session" ) != session || integer_member( request, "revision" ) != revision ||
+        request.get_string( "boundary_id" ) != boundary_id ||
+        integer_member( request, "takeover_generation" ) != takeover_generation ) {
+        throw std::runtime_error( "stale session, revision, boundary or human generation; observe again" );
+    }
+    if( request.get_string( "frame" ) != frame_name || frame_name.empty() || !saved_frame_ok ||
+        frame_boundary != boundary_id || frame_session != session || frame_revision != revision ||
+        now_ms() - frame_ms > 3000 ||
+        presented_boundary != boundary_id || presented_session != session ||
+        presented_revision != revision || now_ms() - presented_ms > 3000 ||
+        integer_member( request, "deadline_ms" ) < now_ms() ) {
+        throw std::runtime_error( "fresh matching rendered boundary and deadline required" );
+    }
+    authority_gate( request );
+}
+bool same_frame_png( const std::string &saved, const std::string &latest, const struct stat &owned )
+{
+    constexpr off_t maximum_frame_bytes = 32 * 1024 * 1024;
+    // Nonblocking opens cannot hang on a substituted FIFO; fstat rejects every
+    // nonregular file and O_NOFOLLOW rejects symlinks before reading anything.
+    const int saved_fd = open( saved.c_str(), O_RDONLY | O_NOFOLLOW | O_NONBLOCK );
+    const int latest_fd = open( latest.c_str(), O_RDONLY | O_NOFOLLOW | O_NONBLOCK );
+    struct stat saved_info = {};
+    struct stat latest_info = {};
+    bool same = saved_fd >= 0 && latest_fd >= 0 &&
+                fstat( saved_fd, &saved_info ) == 0 && fstat( latest_fd, &latest_info ) == 0 &&
+                S_ISREG( saved_info.st_mode ) && S_ISREG( latest_info.st_mode ) &&
+                saved_info.st_size > 0 && saved_info.st_size <= maximum_frame_bytes &&
+                saved_info.st_size == latest_info.st_size &&
+                latest_info.st_dev == owned.st_dev && latest_info.st_ino == owned.st_ino;
+    std::array<char, 32 * 1024> saved_chunk;
+    std::array<char, 32 * 1024> latest_chunk;
+    off_t remaining = saved_info.st_size;
+    while( same && remaining > 0 ) {
+        const off_t amount = std::min( remaining, static_cast<off_t>( saved_chunk.size() ) );
+        const ssize_t saved_read = read( saved_fd, saved_chunk.data(), static_cast<size_t>( amount ) );
+        const ssize_t latest_read = read( latest_fd, latest_chunk.data(), static_cast<size_t>( amount ) );
+        // A short read or error (including EINTR) rejects without retrying work
+        // beyond the request's original deadline.
+        same = saved_read == amount && latest_read == amount &&
+               std::equal( saved_chunk.begin(), saved_chunk.begin() + amount, latest_chunk.begin() );
+        remaining -= amount;
+    }
+    char trailing;
+    same = same && read( saved_fd, &trailing, 1 ) == 0 && read( latest_fd, &trailing, 1 ) == 0;
+    if( saved_fd >= 0 && close( saved_fd ) != 0 ) { same = false; }
+    if( latest_fd >= 0 && close( latest_fd ) != 0 ) { same = false; }
+    return same;
+}
+void exact_frame_gate()
+{
+    // ordinary_gate has already matched the generated basename. Never capture
+    // here: refresh_display has restored a different renderer target. The
+    // existing encoder writes only the cached last-presented surface.
+    const std::string saved = path( frame_name );
+    const std::string latest = path( "frame.compare.tmp.png" );
+    const int descriptor = open( latest.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0600 );
+    if( descriptor < 0 ) {
+        throw std::runtime_error( "cannot exclusively create exact frame temporary file" );
+    }
+    struct stat owned = {};
+    const bool identified = fstat( descriptor, &owned ) == 0;
+    struct stat current = {};
+    // One trusted bridge writer owns this pathname for the operation. The
+    // existing encoder reopens it by name; concurrent external filesystem
+    // mutation is outside this contract, not defeated by an inode check.
+    const bool same = identified && lstat( latest.c_str(), &current ) == 0 &&
+                      current.st_dev == owned.st_dev && current.st_ino == owned.st_ino &&
+                      write_frame( latest ) && same_frame_png( saved, latest, owned );
+    const bool closed = close( descriptor ) == 0;
+    // Reject observed replacement. This pathname check/unlink is not atomic
+    // protection against concurrent mutation by another same-user process.
+    const bool removed = identified && lstat( latest.c_str(), &current ) == 0 &&
+                         current.st_dev == owned.st_dev && current.st_ino == owned.st_ino &&
+                         unlink( latest.c_str() ) == 0;
+    if( !removed ) {
+        throw std::runtime_error( "exact frame temporary file cleanup failed" );
+    }
+    if( !same || !closed ) {
+        throw std::runtime_error( "latest presented PNG does not exactly match the saved frame or file I/O failed" );
+    }
+}
+void ordinary_commit_gate( const TextJsonObject &request, bool resuming )
+{
+    ordinary_gate( request );
+    if( !resuming && ( paused || fs::exists( path( "pause" ) ) ) ) {
+        throw std::runtime_error( "pause interrupted dispatch" );
+    }
+    if( request.get_bool( "require_exact_frame" ) ) {
+        exact_frame_gate();
+    }
+    // The encoder/comparison can be slow. No game-thread input processing or
+    // redraw interleaves it; queued physical input is handled by CheckMessages.
+    // Host Pause still revokes the durable authority token, including Resume,
+    // whose existing sentinel is intentionally consumed only after this gate.
+    ordinary_gate( request );
+    if( !waiting_interrupt.empty() || fs::exists( path( "control.json" ) ) ||
+        fs::exists( path( "control-claimed.json" ) ) ) {
+        throw std::runtime_error( "recovery is pending" );
+    }
+    if( integer_member( request, "deadline_ms" ) < now_ms() ) {
+        throw std::runtime_error( "request expired before input commit" );
+    }
+    if( !resuming && ( paused || fs::exists( path( "pause" ) ) ) ) {
+        throw std::runtime_error( "pause interrupted dispatch" );
+    }
+}
 input_event action_event( const std::string &action, keyboard_mode mode, bool confirmation = false )
 {
     if( std::find( actions.begin(), actions.end(), action ) == actions.end() ) {
@@ -454,7 +650,7 @@ bool poll_control( keyboard_mode mode, input_event &event )
         else if( kind != "request_interrupt" ) { throw std::runtime_error( "unsupported control kind" ); }
         const long long created = integer_member( request, "created_ms" );
         const long long deadline = integer_member( request, "deadline_ms" );
-        if( request.size() != fields || integer_member( request, "protocol" ) != 3 ||
+        if( request.size() != fields || integer_member( request, "protocol" ) != 4 ||
             created < 0 || created > now_ms() + 1000 || deadline != created + 2000 || deadline < now_ms() ) {
             throw std::runtime_error( "unsupported control envelope or expired request" );
         }
@@ -499,6 +695,7 @@ bool poll_control( keyboard_mode mode, input_event &event )
             }
         }
         paused = true;
+        pause_origin = "recovery";
         pause_file();
         // This is the sole recovery commit gate. A Pause after this cannot undo input.
         authority_gate( request );
@@ -529,6 +726,7 @@ bool poll_control( keyboard_mode mode, input_event &event )
     } catch( const std::exception &error ) {
         event = input_event();
         paused = true;
+        pause_origin = "fault";
         pause_file();
         // Malformed/unidentified claims remain evidence and block subsequent recovery.
         if( !id.empty() ) {
@@ -543,6 +741,23 @@ bool poll_control( keyboard_mode mode, input_event &event )
     }
 }
 } // namespace
+
+void ui_redraw( bool top )
+{
+    // Every callback clears the lower window, including unsupported overlays.
+    ui_top = top;
+    staged_ui.reset();
+}
+void ui_begin( const std::string &purpose, const std::string &category, const std::string &title )
+{
+    if( !enabled() || !ui_top ) { return; }
+    staged_ui = visible_ui { ui_text( purpose, 128 ), category, ui_text( title, 1024 ), {} };
+}
+void ui_row( const std::string &text, bool enabled, const std::string &hotkey, bool selected )
+{
+    if( !ui_top || !staged_ui || staged_ui->rows.size() >= 32 ) { return; }
+    staged_ui->rows.push_back( { ui_text( text, 1024 ), enabled, ui_text( hotkey, 32 ), selected } );
+}
 
 bool enabled()
 {
@@ -685,7 +900,9 @@ void playing( bool value )
     session = std::to_string( now_ms() ) + "-" + std::to_string( getpid() ) +
               "-" + std::to_string( ++world_counter );
     paused = true;
+    if( pause_origin != "human" ) { pause_origin = "world_change"; }
     ++control_generation;
+    staged_ui.reset();
     new_boundary();
     last_turn = -1;
     seen_ids.clear();
@@ -706,6 +923,9 @@ void frame_presented( bool valid )
 {
     if( !valid || !scoped() ) {
         presented_boundary.clear();
+        staged_ui.reset();
+        presented_ui.clear();
+        presented_ui_data.reset();
         return;
     }
     sync_scope();
@@ -715,6 +935,20 @@ void frame_presented( bool valid )
         ++revision;
         dirty = true;
     }
+    const bool supported_ui = staged_ui && current_kind == boundary_kind::menu &&
+                              staged_ui->category == category;
+    const std::string next_ui = supported_ui ? encode_ui( *staged_ui ) : "";
+    if( next_ui != presented_ui ) {
+        // Same context and turn can display changed labels, filtering or selection.
+        new_boundary();
+    }
+    presented_ui = next_ui;
+    presented_ui_data = supported_ui ? staged_ui : std::nullopt;
+    staged_ui.reset(); // A cached buffer cannot attest rows for a later presentation.
+    ui_top = false;
+    ui_boundary = boundary_id;
+    ui_session = session;
+    ui_revision = revision;
     presented_boundary = boundary_id;
     presented_session = session;
     presented_revision = revision;
@@ -726,6 +960,8 @@ void human_input()
         return;
     }
     paused = true;
+    pause_origin = "human";
+    ++takeover_generation;
     injected_interrupt.clear();
     owned_interrupt.clear();
     waiting_interrupt.clear();
@@ -761,6 +997,8 @@ void boundary()
         }
     } catch( const std::exception &e ) {
         paused = true;
+        pause_origin = "fault";
+        pause_file();
         std::ofstream( path( "bridge-error.txt" ) ) << e.what();
     }
 }
@@ -772,8 +1010,11 @@ bool poll( keyboard_mode mode, input_event &event )
     last_poll = now_ms();
     std::string id;
     try {
-        if( fs::exists( path( "pause" ) ) && !paused ) {
+        if( fs::exists( path( "pause" ) ) &&
+            ( !paused || !own_pause_time || fs::last_write_time( path( "pause" ) ) != *own_pause_time ) ) {
             paused = true;
+            pause_origin = "host";
+            own_pause_time = fs::last_write_time( path( "pause" ) );
             // Host Pause revokes its durable token but changes no game input or
             // rendered scene. Advancing revision here invalidates the capture
             // needed by the recovery request admitted under the new token.
@@ -786,6 +1027,7 @@ bool poll( keyboard_mode mode, input_event &event )
             }
         } catch( const std::exception &error ) {
             paused = true;
+            pause_origin = "fault";
             pause_file();
             std::ofstream( path( "bridge-error.txt" ) ) << error.what();
             return false;
@@ -815,16 +1057,21 @@ bool poll( keyboard_mode mode, input_event &event )
         if( id.empty() || id.size() > 80 || !seen_ids.insert( id ).second ) {
             throw std::runtime_error( "invalid or duplicate request id" );
         }
-        if( request.get_int( "protocol" ) != 3 ) {
+        if( integer_member( request, "protocol" ) != 4 ) {
             throw std::runtime_error( "unsupported protocol" );
         }
         const std::string kind = request.get_string( "kind" );
-        if( request.get_float( "deadline_ms" ) < now_ms() ) {
+        if( integer_member( request, "deadline_ms" ) < now_ms() ) {
             throw std::runtime_error( "expired request" );
+        }
+        const size_t fields = kind == "observe" || kind == "pause" ? 4 : kind == "resume" ? 11 : 12;
+        if( request.size() != fields ) {
+            throw std::runtime_error( "unsupported request envelope" );
         }
         if( kind == "observe" || kind == "pause" ) {
             if( kind == "pause" ) {
                 paused = true;
+                pause_origin = "host";
                 pause_file();
                 ++revision;
             }
@@ -838,20 +1085,15 @@ bool poll( keyboard_mode mode, input_event &event )
             fs::exists( path( "control-claimed.json" ) ) ) {
             throw std::runtime_error( "recovery is pending" );
         }
-        if( request.get_string( "session" ) != session || request.get_int( "revision" ) != revision ) {
-            throw std::runtime_error( "stale session or revision; observe again" );
-        }
+        ordinary_gate( request );
         if( kind == "resume" ) {
             if( current_kind != boundary_kind::normal_play && current_kind != boundary_kind::menu ) {
                 throw std::runtime_error( "unsupported boundary for resume" );
             }
-            if( presented_boundary != boundary_id || presented_session != session ||
-                presented_revision != revision || now_ms() - presented_ms > 3000 ) {
-                throw std::runtime_error( "fresh matching rendered boundary required" );
-            }
-            authority_gate( request );
+            ordinary_commit_gate( request, true );
             fs::remove( path( "pause" ) );
             paused = false;
+            pause_origin = "none";
             ++control_generation;
             ++revision;
             publish( id, "ready" );
@@ -883,14 +1125,7 @@ bool poll( keyboard_mode mode, input_event &event )
         } else {
             throw std::runtime_error( "unsupported command" );
         }
-        if( fs::exists( path( "pause" ) ) ) {
-            throw std::runtime_error( "pause interrupted dispatch" );
-        }
-        if( presented_boundary != boundary_id || presented_session != session ||
-            presented_revision != revision || now_ms() - presented_ms > 3000 ) {
-            throw std::runtime_error( "fresh matching rendered boundary required" );
-        }
-        authority_gate( request );
+        ordinary_commit_gate( request, false );
         ++revision;
         pending = id;
         publish( id, "dispatched", "", false );
@@ -906,6 +1141,7 @@ bool poll( keyboard_mode mode, input_event &event )
             publish( id, "rejected", e.what() );
         } catch( const std::exception &publication_error ) {
             paused = true;
+            pause_origin = "fault";
             pause_file();
             std::fprintf( stderr, "CDDA harness publication failed: %s\n", publication_error.what() );
         }

@@ -40,6 +40,189 @@ outcome, risks/blockers, decisions needed and evidence links. Give consequences
 in plain language; implementation detail belongs behind links. Routine authorized
 work continues; changed user constraints or substantial commitments need user input.
 
+Reconcile actionable discussion, research, review and campaign findings at those
+checkpoints. Prefer updating an existing issue; create a new one only for distinct
+owned work. Give each finding an implementation/follow-up, duplicate, deferred or
+rejected disposition with its reason, next action/acceptance and dependencies.
+Link affected design, principles/standards/controls, procedures and evidence;
+update their authoritative sources when applicable, including generated controls
+through the registry. Preserve current-versus-proposed status and unverified lanes.
+C-REVIEW checks this coverage and C-MAINTENANCE revisits drift under existing
+triggers. A review finding is not fixed because it was filed, and a document is
+not accurate merely because it has a recent date. This uses GitHub and the current
+document/control system, without another tracker, parser or per-action ceremony.
+
+## Development-first delivery
+
+Get a coherent behavior working through real use, then qualify it. The lead selects
+one useful integration outcome and spends development effort finding its important
+failures. Review and verification protect the resulting acceptance claim; they are
+not a ritual to repeat before each short attempt. This applies to code, gameplay,
+documentation and project controls under P-CHANGE/P-KNOWLEDGE/P-REVIEW and
+S-WORK/S-EVIDENCE/S-DOCS. The full user outcome remains the definition of Done.
+
+| Checkpoint | Required work and evidence | What may proceed |
+| --- | --- | --- |
+| Development checkpoint | Fast checks, relevant focused behavioral/negative tests, inspected diff and a Git commit; record unrun or failed lanes | A finite development run on that exact source; full review/CI may be pending |
+| Development run | Declared development purpose, objective, actor, source/native/configuration, finite attempts/resources/reserve and stop rules; retain original ledger/frames/unknowns | Player-owned meaningful gameplay and learning about the implementation; no acceptance or reliability claim |
+| Integration checkpoint | A useful behavior composes end to end, or evidence identifies a concrete blocker; consolidate findings and current contracts | One cohesive independent review, full portable checks and PR validation; split ownership without fragmenting the outcome |
+| Formal acceptance and merge | Review the exact frozen candidate and retained run evidence; require passed exact PR `controller` check/full suite, required native/graphical outcomes and finding dispositions | Merge through existing main protection; Done/release waits for actual merged-main validation and applicable outcome evidence |
+
+The next integrated behavior is the complete supply-and-shelter mission: useful
+navigation/replanning, supplies/needs, shelter/rest, genuine memory correction and
+unfinished Work, actual fresh player context, normal same-character save/new-child
+reload and final normal ending. An early menu failure is development evidence,
+not a reason to redefine success or publish a new acceptance package before trying
+again. Other iterations name their equivalent meaningful checkpoint in the issue.
+
+### Minimum checks and escalation
+
+Run `.venv/bin/python tools/check.py --fast` and the focused tests that exercise the
+changed behavior and its consequential failure boundaries. The fast command checks
+syntax/lint, imports, document structure/links, governance and whitespace; it does
+not run behavioral tests or render diagrams. The lead names focused commands and
+results in the existing issue/PR or run note. Missing checks are explicit, never
+implied green. A documentation-only correction needs the applicable document checks;
+a controller change needs relevant behavior and negative cases, not just lint.
+
+An applicable failure in input authority, Pause, identity, budgets, delivery
+uncertainty, required version migration or owned cleanup blocks affected play.
+Consequential new boundaries/dependencies still need S-ARCH's design/risk review.
+Relevant native changes need a valid matching build and bounded checks of affected
+input boundaries. No full suite or second readiness reviewer is automatically
+required before every ordinary development attempt. Pending unrelated CI is not
+a development gate; a discovered applicable failure stops affected new inputs for
+repair. Preserve all prior evidence and costs. Never suppress a failed gate or use
+`--no-verify` as the workflow.
+
+Freeze source and declared conditions for EACH finite run, including development.
+A source repair happens only after the deciding actor is quiescent and the owned
+runtime is closed; a new run gets a new identity and prospective allowance. No
+patching a live run, replaying uncertain input, restoring old authority or silently
+extending a stopped phase. Native freshness, one input owner, independent user
+Pause, project-local state and normal CDDA behavior apply in every checkpoint.
+Routine gameplay keeps zero human/automatic approval-review round trips. The lead
+owns engineering and observes; development labeling does not authorize tactical
+rescue or make assisted evidence independent.
+
+### Efficient discovery
+
+Optimize for useful uncertainty resolved and capability progress per unit of work.
+Use the cheapest relevant check first: producer source/configuration, a focused
+real-component reproduction, then finite native exploration and the integrated
+outcome. For example, registered action names do not prove default key bindings;
+inspect the engine's existing bindings before spending another creation cycle.
+Batch related unknown capabilities into a coherent development admission where
+possible. A traceable failure can guide the next experiment without a fresh full
+suite or report package. The player uses supported replanning/recovery while its
+scope remains eligible; unknown delivery or lost authority never permits replay.
+
+Retain the starting basis, source/configuration, intent, observations, delivery and
+semantic outcome, costs, interventions and finding disposition in the existing
+admission/ledger/archive/Git/Issues. Show the maintainer a small coverage/findings
+summary with links to those records; do not build a second history or tracker.
+Current normal checkpoint reload is limited to its own mission's proven save.
+[Cross-admission development checkpoint reuse #175](https://github.com/CVX-Hull/enactive/issues/175)
+is proposed work, not permission to restore old authority or roll back a run.
+Source repairs still require closure and a new finite admission; exploratory
+evidence keeps its declared conditions and does not become a fresh assessment.
+
+### Evidence and documentation cadence
+
+Use the existing issue, immutable admission, ledger and archive. A development
+attempt needs a short closure/finding note referencing source and artifacts,
+outcome, known costs/unknowns, cleanup disposition and the next owned action.
+Do not copy the entire contract, write a standalone acceptance report, launch
+another review swarm or publish an amendment for every menu error. Retain the raw
+evidence immediately; consolidate reports, selected images/provenance and finding
+dispositions at the integration/acceptance checkpoint. Public notes need the usual
+identity/privacy inspection. Historical failures remain accessible and never turn
+into passing tests after a repair.
+
+Update authoritative contracts when behavior changes; mark incomplete support and
+unrun checks plainly. Keep chat updates brief and the overview understandable.
+An issue/PR brief is enough for a routine fix. A consequential workflow/boundary
+change may need one short design rationale, not parallel plan/status systems.
+
+Development episodes used to select repairs remain development data. Freeze source,
+objective, conditions and limits before every run. Formal acceptance is a decision
+on the resulting evidence, not a requirement to repeat an unchanged run. A complete
+unassisted development run may establish the prospective functional mission outcome
+after its unchanged exact source passes full checks and independent evidence review.
+The run must actually meet every original criterion, including independence, memory
+succession and normal ending; missing evidence or prohibited assistance cannot be
+repaired afterward. Keep its development label. Held-out comparisons and generalized
+learning/performance claims require their separately frozen assessment conditions
+and source-episode separation; development data is not relabeled held-out data. A comprehensive acceptance suite
+is paid once per coherent candidate and repeated when new changes, failures or uncovered risk
+justify it. Do not rerun it for unchanged procedural admissions or duplicate a
+passed hosted suite locally solely to complete a checklist.
+
+### Enforcement and upkeep
+
+The local commit hook runs the fast command. CI runs the full command on PRs and
+pushes to main, with no path filters on the required PR job. Superseded PR runs are
+cancelled through GitHub concurrency; running main checks are not cancelled by
+that policy. Development play need not wait for CI, but formal acceptance/merge
+must use the actual successful exact candidate check. It may be completed after
+the development run, before acceptance is granted. The required job name,
+GitHub App association and main ruleset remain unchanged. C-PORTABLE/C-RELEASE
+own those mechanical boundaries; C-REVIEW checks selected tests, outcome scope and
+evidence rather than approving ordinary gameplay actions.
+
+At meaningful integration/closeout checkpoints, C-MAINTENANCE reviews time to real
+play, verification/review/waiting effort, useful gameplay reached, recurring failures,
+escaped regressions and user interventions. Use available command/ledger/CI times;
+unmeasured model effort stays unknown. Do not impose a numerical performance quota
+from a single run. Simplify or retire a step whose cost is not justified by defects
+it catches; strengthen a targeted check when evidence warrants it. The lead owns
+this review under existing event/date triggers, without another scheduler or tracker.
+
+## Review by decision and risk
+
+Name the decision and uncertainty a review should resolve, then choose the smallest
+useful set of perspectives and an inspectable artifact. A review should enable the
+next safe experiment or expose a concrete blocker. Do not ask every role to review
+every change, require consensus, or repeat a full review of unchanged material.
+
+| Trigger / artifact | Useful review and timing |
+| --- | --- |
+| Small mapping/bug fix with unchanged boundaries | Lead inspection and relevant regressions; native qualification as applicable. Include it in coherent integration review; no automatic product/architecture swarm before development. |
+| New input/ownership/persistence/schema/learning boundary | Independent architecture/risk review of the brief and alternatives before implementation commitment. Reversible isolated probes may inform that design within their declared controls. |
+| New player capability or observer workflow | Product/player or observer perspective on goals, acceptance and a working flow, diagram or prototype. Validate actual usability later; an agent persona is not a real user study. |
+| New memory/adaptation policy or consequential literature claim | Research/evidence perspective checks prior documents, primary support, transfer limits, conflicts and functional-versus-efficacy claims. No fresh full survey for each leaf fix. |
+| Permissions, external access or isolation change | Focused security/operations review at that boundary. This is not gameplay strategy review or a critic/approval per key. |
+| Integrated acceptance/publication | Independent outcome/evidence and maintainability review against original requirements, source/configuration and failure/unknown receipts. Full checks and protected publication remain. |
+
+For maintainer-facing design review, lead with the user outcome, a small boundary
+diagram when useful, important alternatives/tradeoffs, open decisions and evidence
+limits. Link implementation detail rather than requiring the user to audit it.
+Review the actual working flow again at integration when implementation reveals
+new information; the earlier design review is not a promise that the design is right.
+
+For consequential work, two or three clean-context reviewers may work in parallel
+on distinct questions, such as product outcome, player/observer experience and
+architecture/research. Use the named reviewer role with an explicit lens, source
+paths, decisions already made, user constraints and acceptance questions. These
+are proxy perspectives, not delegated product authority. The lead owns decisions
+and verifies findings against evidence; the user decides actual product tradeoffs
+when needed. Avoid identical prompts or a committee of overlapping approvals.
+
+Report concrete findings with source, impact, uncertainty and what would resolve
+them. Adjudicate material findings before the affected commitment; track other
+owned work without blocking unrelated exploration. Re-review changed boundaries
+or new contrary evidence, not the entire project after each edit. Stop reviewing
+when evidence is adequate for the next stage and material findings are resolved;
+unresolved required checks remain explicit blockers, never a green badge.
+
+Record selection, findings/dispositions and known review effort in the existing
+Issue/PR. At meaningful checkpoints compare useful progress, escaped defects,
+false alarms and review/coordination cost; simplify or strengthen controls from
+those observations. Reuse C-REVIEW, CI and current issue workflow. No new review
+tracker, mandatory per-feature swarm, recurring date reset or routine gameplay
+approval follows. The lead may review the tightly coupled change itself when
+delegating would add little; independent acceptance remains separate.
+
 ## Work items and flow
 
 During triage, the lead adds selected issues to the linked Project and assigns
@@ -64,9 +247,9 @@ before execution, and the two-writer/shared-runtime limits below remain unchange
 | --- | --- |
 | Backlog | Candidate with a problem and intended outcome; no execution commitment |
 | Ready | Scope, owner, interfaces/dependencies, acceptance and required validation lanes are clear; needed decisions resolved |
-| In progress | Capacity available and owner starts work against the brief; record start date |
+| In progress | Development, targeted checks and real development runs against the brief; record start date |
 | Review | Cohesive diff and executed checks available; independent review appropriate to risk is requested |
-| Validation | Review findings resolved; lead integrates and checks the exact candidate, including required native/graphical lanes |
+| Validation | Review findings resolved; exact candidate undergoes formal portable/native/graphical acceptance |
 | Done | Lead verifies acceptance, evidence and documentation; record finish date and close as completed |
 
 Blocked is a flag plus reason, owner and next action/revisit condition; keep the
@@ -189,16 +372,19 @@ before input; preserve the effective final cleanup reserve against both whole an
 aggregate limits. This delegation does not waive safety, renew failed phases, reset
 costs or authorize provider spending or permission/global environment changes.
 No routine gameplay-budget question is required within that delegation.
-For unchanged-runtime procedural admissions, review/common checks and a clean Git
-checkpoint precede native acceptance; consolidate protected publication and exact/
-main CI after the cohesive attempt. Do not require a new PR per tactical segment.
-Source/native changes and held-out assessments retain their separate verification
-and freeze requirements. C-REVIEW/C-NATIVE/C-RELEASE/C-MAINTENANCE own these manual
+Use the [development-first checkpoints](#development-first-delivery) to select
+validation timing: frozen finite development runs follow fast/focused checks;
+formal acceptance follows reviewed exact-candidate full checks. Unchanged-runtime
+procedural admissions reuse applicable evidence; they do not trigger another suite
+or reviewer. Consolidate publication, review and merged-main CI for the coherent
+outcome. Do not require a new PR per tactical segment. Source/native changes and
+held-out assessments retain their declared verification and freeze requirements. C-REVIEW/C-NATIVE/C-RELEASE/C-MAINTENANCE own these manual
 checks; this is no new automated enforcement claim.
 
 Review at planned segment boundaries, handoffs, material failure/unknown stops and
-campaign closeout. A stopped attempt gets a review even if it cannot supply a
-successful gameplay result. Use a concise finding table in the campaign issue or
+campaign closeout. A stopped attempt gets a concise finding/closure disposition even if it cannot
+supply a successful gameplay result; an independent acceptance review waits for
+the integration checkpoint unless a concrete risk requires it earlier. Use a concise finding table in the campaign issue or
 linked dated report: source observation/action references; expected versus observed
 result and user consequence; suspected cause and alternative explanations; affected
 area; disposition; accountable owner; linked follow-up or revisit trigger; and the

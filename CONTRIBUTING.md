@@ -29,15 +29,20 @@ Follow [setup](docs/setup.md) for pinned, project-local dependencies and tools.
 Keep new environments, caches, saves and build outputs project-local or in an
 explicitly recorded owned temporary build; do not install global tools or profiles.
 
-Run the common checks from the repository root in the prepared environment:
+For a development checkpoint, run fast checks and the relevant focused behavioral
+tests (name those commands/results in the issue or PR):
 
 ```sh
-.venv/bin/python tools/check.py
+.venv/bin/python tools/check.py --fast
 ```
 
-Run relevant focused checks while developing. The common command and hosted CI
-cover the portable lane; they do not establish native build or graphical gameplay
-acceptance. Native bridge, input, renderer, compiler, source-pin or protocol changes
+Use [development-first delivery](docs/project-management.md#development-first-delivery)
+for finite real development runs before comprehensive qualification. The commit
+hook runs fast checks. At a coherent integration/acceptance checkpoint, run the
+full `.venv/bin/python tools/check.py` or use its successful exact-candidate hosted
+CI result, resolve independent review and verify the relevant native outcome. The
+full command and hosted CI cover the portable lane; they do not establish native
+build or graphical gameplay acceptance. Native bridge, input, renderer, compiler, source-pin or protocol changes
 need the relevant [native acceptance](docs/runbook.md#native-acceptance-lane).
 The current native scope is one tested macOS host; other hosts remain unverified.
 

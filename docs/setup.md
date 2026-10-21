@@ -6,8 +6,11 @@ status: active
 
 # Local setup and checks
 
-The controller uses Python's standard library. The passive gameplay records/evidence
-module also uses the already-pinned `jsonschema` package from the project lock.
+The controller's I/O uses Python's standard library. Gameplay records/evidence
+require the pinned `jsonschema` package. The optional project-local structured
+player tool process uses the official MCP Python SDK; it does not instantiate a
+controller or game. Runtime requirements are in [requirements.in](../requirements.in)
+and the shared hashed [lock](../requirements-dev.lock).
 Use Python 3.12 or newer and an
 existing Node.js 22.13+ runtime for JavaScript and diagram checks. Native builds require
 macOS, existing Xcode command-line tools (`clang++`, `make`, `hdiutil`, `ditto`,
@@ -27,8 +30,8 @@ python3 tools/setup.py --venv
 
 The optional `.venv/` starts without pip or third-party packages and uses the
 interpreter that creates it; setup does not download Python. Existing environments
-are preserved. Running the game/controller still needs only the standard library.
-Using `harness.gameplay` and running development checks require the pinned tools below. See the [environment ledger](environment.md)
+are preserved. Running the mission service and development checks requires the
+pinned packages below. See the [environment ledger](environment.md)
 for this Mac's existing toolchain and installation history.
 
 ## Install development controls locally
@@ -88,6 +91,34 @@ Python 3.14 and Node 22 on Ubuntu 24.04; its first run exposed a Chrome sandbox
 startup failure, repaired and verified in [public workflow acceptance](acceptance/2026-10-17-public-workflow.md).
 Required checks must pass before integration. Other interpreter/host combinations
 require their own validation before a support claim.
+
+## Configure the structured player tools
+
+After installing the lock, inspect then write only this trusted checkout's MCP table:
+
+```sh
+.venv/bin/python -m tools.configure_player_tools
+.venv/bin/python -m tools.configure_player_tools --write
+codex mcp get enactive_player --json
+```
+
+The helper derives the explicit tool allow list from the current adapter. It adds
+only `mcp_servers.enactive_player` to project `.codex/config.toml`, preserves other
+settings, refuses a conflicting existing table and changes no global configuration.
+The generated file contains machine-local absolute launch paths and is Git-ignored;
+the portable recipe and its tests are tracked. It sets the supported per-server
+approval mode to `approve`; it does not change the shell sandbox, a global approval
+default, network policy or managed requirements. Re-run read-only after a move or
+tool change and deliberately review a conflicting old table rather than retaining
+two configurations.
+
+The [official MCP setup](https://learn.chatgpt.com/docs/extend/mcp) documents
+project configuration and host loading. Confirm the active chat has loaded the
+server/tool catalogue after the supported reload/restart. A separate CLI diagnostic
+or SDK handshake proves neither active loading nor absence of review. The actual
+designated player must exercise the [permission preflight](operator-permissions.md#preflight-for-every-campaign)
+without human or automatic approval review before a deciding campaign. The SDK
+stdio test proves message/image integration only. No game starts during setup.
 
 ## Install and maintain visual documentation tools
 
@@ -233,8 +264,30 @@ fails. Fragment anchors, raw HTML links and external web availability are not ch
 tests require permission to bind loopback; a sandbox denial is a failed check,
 not permission to skip those tests.
 
-The same command is used by `.githooks/pre-commit` and
-[the portable CI job](../.github/workflows/check.yml). CI tests only the
+The prepared keyboard-driven game uses CDDA's `ENABLE_MOUSE=false` in its
+project userdir, alongside `FULLSCREEN=no`. Owned launch rejects missing, duplicate
+or enabled mouse options. This prevents native menu hover from silently changing
+selection between exact captures. Keyboard takeover and browser Pause remain;
+no global input preference or image-validation rule changes.
+The fixed wrapper also exports `SDL_MAC_BACKGROUND_APP=1` and
+`SDL_WINDOW_NO_ACTIVATION_WHEN_SHOWN=1` only to its child. These existing SDL2
+hints prevent startup from activating the application/window; the game remains
+windowed and observable. Deliberate native focus/keyboard takeover still revokes
+harness authority. [SDL macOS background hint](https://wiki.libsdl.org/SDL2/SDL_HINT_MAC_BACKGROUND_APP)
+and [window-show hint](https://wiki.libsdl.org/SDL2/SDL_HINT_WINDOW_NO_ACTIVATION_WHEN_SHOWN)
+own library semantics; actual host focus preservation needs a real launch check.
+
+For fast development checkpoints, `.githooks/pre-commit` runs
+`.venv/bin/python tools/check.py --fast`: syntax/lint, import contracts, JS syntax,
+document structure/links, governance and whitespace, without behavioral tests or
+browser-based diagram rendering. Run relevant focused tests separately.
+[Development-first delivery](project-management.md#development-first-delivery) owns
+when full checks and independent review gate formal acceptance.
+
+[The portable CI job](../.github/workflows/check.yml) keeps the full default command
+on PRs and pushes to main. It cancels superseded PR runs, without cancelling
+running main checks, and avoids duplicate feature-branch push/PR jobs. Required PR
+checks have no path filters. CI tests only the
 controller/setup/documentation lane on Linux; it makes no native compilation or
 real-game claim. The hook is opt-in and setup does not change Git configuration.
 To enable it for this repository, run:

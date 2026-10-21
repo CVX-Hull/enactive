@@ -280,22 +280,26 @@ def check_protocol(root: Path) -> list[str]:
                     evidence_versions.extend(v.value if isinstance(v, ast.Constant) else None
                                              for k, v in zip(value.keys, value.values)
                                              if isinstance(k, ast.Constant) and k.value == "const")
-    forms = {"native emitter": emitter, "native validator": validator,
-             "native control emitter": control_emitter, "native control validator": control_validator,
+    forms = {"native emitter": emitter, "native integer validators": control_validator,
+             "native control emitter": control_emitter,
              "controller send": dict_protocols(controller), "controller validator": response_versions,
              "server advertisement": dict_protocols(server), "CLI discovery validator": discovery_versions,
              "stored request validator": stored_versions, "viewer validator": viewer_versions,
              "evidence validator": evidence_versions, "docs/protocol.md": docs}
-    expected_counts = {"controller send": 2, "controller validator": 2, "stored request validator": 2, "viewer validator": 2}
+    # Ordinary exchange, operator recovery and trusted mission recovery each
+    # construct the same current native envelope; none is a fallback transport.
+    expected_counts = {"native integer validators": 2, "controller send": 3, "controller validator": 2, "stored request validator": 2, "viewer validator": 2}
     errors = []
+    if validator:
+        errors.append("native protocol uses the removed coercive get_int form; review integer validator")
     if native.count('"protocol"') != 3 or native.count(r'\"protocol\"') != 1:
         errors.append("native protocol representation changed; review and update the bounded checker")
     for label, versions in forms.items():
         expected = expected_counts.get(label, 1)
         if len(versions) != expected:
             errors.append(f"{label}: protocol representation changed; expected {expected} recognized literals, found {versions!r}; review checker")
-        elif any(type(version) is not int or version != 3 for version in versions):
-            errors.append(f"{label}: protocol drift: expected supported v3, found {versions!r}; review contract and checker")
+        elif any(type(version) is not int or version != 4 for version in versions):
+            errors.append(f"{label}: protocol drift: expected supported v4, found {versions!r}; review contract and checker")
     return errors
 
 
@@ -357,7 +361,7 @@ def main(argv: list[str] | None = None) -> int:
             (ROOT / "docs/controls.md").write_text(render_map(registry))
             print("Generated docs/controls.md; no gameplay or evidence-byte verification performed.")
         else:
-            print("Governance schemas, mappings, local references, protocol v3 source forms and map freshness: passed.")
+            print("Governance schemas, mappings, local references, current protocol source forms and map freshness: passed.")
         return 0
     except (OSError, ValueError, SyntaxError, SchemaError) as error:
         print(f"Governance failed: {error}", file=sys.stderr)

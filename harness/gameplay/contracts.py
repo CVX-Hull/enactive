@@ -1,4 +1,4 @@
-"""Frozen gameplay/1 records; JSON Schema is the serialized trust boundary."""
+"""Frozen gameplay/2 records; JSON Schema is the serialized trust boundary."""
 from __future__ import annotations
 
 from dataclasses import dataclass, fields
@@ -8,7 +8,7 @@ from typing import Any, ClassVar, Literal, Self
 from jsonschema import Draft202012Validator
 from jsonschema.exceptions import ValidationError
 
-VERSION = "gameplay/1"
+VERSION = "gameplay/2"
 VISIBILITY_VERSION = "cdda-visible/1"
 MAX_JSON_BYTES = 1_048_576
 Vector = tuple[int, int, int]
@@ -217,11 +217,17 @@ class EvidenceRef(Record):
     revision: int
     timestamp_ms: int
     received_monotonic: float
-    turn: int
+    turn: int | None
     frame_path: str
     frame_sha256: str
     boundary_kind: BoundaryKind
     visibility_version: Literal["cdda-visible/1"] = VISIBILITY_VERSION
+
+    def _invariants(self) -> None:
+        if self.boundary_kind == "normal_play" and self.turn is None:
+            raise ContractError("Normal scene reference requires observed game time")
+        if self.boundary_kind != "normal_play" and self.turn is not None:
+            raise ContractError("Non-scene reference cannot manufacture game time")
 
 
 @dataclass(frozen=True)
@@ -394,7 +400,7 @@ _DEFS = {
                          "operator_request_id": _ID, "kind": {"const": "waypoint_return"}}),
     "EvidenceRef": _object({"observation_id": _ID, "session": _ID, "revision": _INT,
                             "timestamp_ms": _INT, "received_monotonic": _number(1e15),
-                            "turn": _integer(2**31 - 1, -(2**31)), "frame_path": _text(4096),
+                            "turn": _nullable(_integer(2**31 - 1, -(2**31))), "frame_path": _text(4096),
                             "frame_sha256": {"type": "string", "pattern": "^[a-f0-9]{64}$"},
                             "boundary_kind": _BOUNDARY,
                             "visibility_version": {"const": VISIBILITY_VERSION}}),

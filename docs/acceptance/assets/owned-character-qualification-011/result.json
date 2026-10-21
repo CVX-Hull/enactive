@@ -1,0 +1,64 @@
+{
+  "outcome": "Scoped Native011 engineering registered dismissal and normal ending passed; independent mission unclaimed",
+  "source_commit": "e92734f82b813ac501d159e8440c13bcd47e0bbf",
+  "native_sha256": "cd031f200748cbbb387011335db15596346dac29607221fac25641ec9a771f1f",
+  "requests": 50,
+  "charged_inputs": 74,
+  "returned": 71,
+  "unknown": 3,
+  "unreconciled_effects": 0,
+  "frames": 188,
+  "png_bytes": 5882930,
+  "canonical_game_seconds": 0,
+  "wall_seconds_through_finish": 649.5902669429779,
+  "wall_seconds_through_process_shutdown_verification": 735.2916650772095,
+  "model_tool_approval_usage": null,
+  "blocked_zero_input_requests": [
+    {
+      "request_id": "char011-world-name",
+      "reason": "Commit requires fresh interpreted visible_text exactly equal to the target"
+    },
+    {
+      "request_id": "char011-item-open",
+      "reason": "Player interpretation conflicts with native rendered rows/order/selection"
+    }
+  ],
+  "normal_adoption": true,
+  "normal_save": true,
+  "normal_exit": true,
+  "normal_finish": true,
+  "independent_objective_completed": false,
+  "signals_to_game": 0,
+  "source_patches_during_attempt": 0,
+  "gameplay_rescue": false,
+  "child_exit_code": 0,
+  "service_exit_code": 0,
+  "native_intervals": {
+    "scope": "Native011 returned setup/identity/item/menu preflight-to-ACK intervals; not whole skill, model/tool/approval/display time or movement",
+    "samples": 71,
+    "unknown_excluded": 3,
+    "median_ms": 80.79333323985338,
+    "nearest_rank_p95_ms": 210.49620769917965,
+    "max_ms": 6362.782666925341,
+    "sum_intervals_seconds": 12.606250744778663
+  },
+  "normal_finish_result": {
+    "completed_work_event_id": null,
+    "disposition": "stopped",
+    "final_source_id": "9d43728fc58e8f2b7d720a6044cd6cebcd3760c679f3deddc1ccb9c39c6ad440",
+    "grants_authority": false,
+    "normal_exit_result_request_id": "char011-exit-yes",
+    "record_type": "NormalFinish",
+    "schema": "mission/6"
+  },
+  "ledger_reopen_no_authority": true,
+  "evidence_reopen_no_authority": true,
+  "actual_review": "Independent read-only SQL/journal/action-custody/frame-hash/budget audit: no material blocker within declared scope",
+  "image": {
+    "file": "pocket-knife-details.png",
+    "source_id": "d330dd8e5eb1f4811c53380361469a8a8ecfd7ef8c786ab81909575fc5fa438b",
+    "sha256": "bc5a815d41821e679bcabc12f4d027234a7bef0fb24d48a887f9b0cc97cf223e",
+    "revision": 93,
+    "unaltered_native_frame": true
+  }
+}

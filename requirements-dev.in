@@ -1,5 +1,5 @@
-# Development controls only; runtime harness still uses the standard library.
-jsonschema
+-r requirements.in
+# Repository development controls.
 import-linter
 ruff
 markdown-it-py

@@ -5,45 +5,15 @@ import hmac
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import re
+import threading
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlsplit
 
 from .controller import Controller, MAX_REQUEST, MAX_WAIT, RECOVERY_KINDS, atomic_json
-from .gameplay.contracts import PlanCandidate, json_object
-
-
-GAMEPLAY_FIELDS = {
-    "start": {"direction", "distance", "expected_session", "expected_revision"},
-    "continue": {"run_id", "execution_epoch", "expected_session", "expected_revision"},
-    "abandon": {"run_id", "execution_epoch"},
-    "planning_request": set(),
-    "plan": {"request_id", "candidate"},
-}
-
-
-def validate_gameplay(body: dict[str, Any]) -> None:
-    """Check data at ingress; only the runtime can admit gameplay authority."""
-    kind = body.get("kind")
-    if not isinstance(kind, str) or kind not in GAMEPLAY_FIELDS:
-        raise ValueError("Unknown gameplay operation")
-    if body.keys() != GAMEPLAY_FIELDS[kind] | {"kind"}:
-        raise ValueError("Gameplay fields must match the operation exactly")
-    for field in {"run_id", "request_id", "expected_session"} & body.keys():
-        if not isinstance(body[field], str) or not body[field].strip() or len(body[field]) > 160:
-            raise ValueError(f"{field} must be nonempty text of at most 160 characters")
-    for field in {"execution_epoch", "expected_revision"} & body.keys():
-        if type(body[field]) is not int or body[field] < 0:
-            raise ValueError(f"{field} must be a nonnegative integer")
-    if kind == "start":
-        if body["direction"] not in ("north", "east", "south", "west"):
-            raise ValueError("Direction must be north, east, south or west")
-        if type(body["distance"]) is not int or not 1 <= body["distance"] <= 4:
-            raise ValueError("Distance must be an integer from 1 to 4")
-    if kind == "plan":
-        if type(body["candidate"]) is not dict:
-            raise ValueError("Candidate must be a gameplay/1 PlanCandidate object")
-        PlanCandidate.from_dict(body["candidate"])
+from .gameplay.contracts import json_object
+from .gameplay.mission_contracts import MAX_REQUEST_BYTES, validate_request
+from .gameplay.mission_ledger import TERMINAL
 
 
 def validate_recovery(body: dict[str, Any]) -> None:
@@ -78,25 +48,36 @@ class Server(ThreadingHTTPServer):
     block_on_close = False
 
     def __init__(self, controller: Controller, port: int = 8765):
-        from .runtime import GameplayRuntime
+        from .mission_runtime import MissionRuntime
 
         self.controller = controller
-        self.gameplay = GameplayRuntime(controller)
-        self._gameplay_closed = False
+        # A failed bind must not leave a mission worker running. Base server
+        # construction can call server_close before a runtime exists.
+        self._mission_closed = True
+        # Coordinate raw dispatch with admission, without queueing behind native
+        # waits. Pause and cached status never acquire this gate.
+        self.ingress_lock = threading.Lock()
+        self.raw_ingress = 0
         super().__init__(("127.0.0.1", port), Handler)
         self.port = self.server_address[1]
-        atomic_json(controller.bridge / "controller.json", {
-            "protocol": 3, "port": self.port, "token": controller.token})
+        try:
+            self.mission = MissionRuntime(controller)
+            self._mission_closed = False
+            atomic_json(controller.bridge / "controller.json", {
+                "protocol": 4, "port": self.port, "token": controller.token})
+        except BaseException:
+            self.server_close()
+            raise
 
     def server_close(self) -> None:
         super().server_close()
-        if not self._gameplay_closed:
-            self._gameplay_closed = True
+        if not self._mission_closed:
+            self._mission_closed = True
             # The immediate path revokes authority before waiting for worker cleanup.
             try:
-                self.gameplay.pause("Service shutdown")
+                self.mission.pause("Service shutdown", cause="internal_recovery")
             finally:
-                self.gameplay.close()
+                self.mission.close()
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -141,8 +122,27 @@ class Handler(BaseHTTPRequestHandler):
             return
         path = urlsplit(self.path).path
         controller = self.server.controller
+        if path in {"/api/mission/source", "/api/mission/frame"}:
+            supplied = self.headers.get("X-CDDA-Token", "")
+            if not hmac.compare_digest(supplied.encode("utf-8"), controller.token.encode("ascii")):
+                self._json(403, {"error": "Valid local controller token required"})
+                return
+            try:
+                query = parse_qs(urlsplit(self.path).query, strict_parsing=True)
+                if (set(query) != {"mission_id", "source_id"}
+                        or any(len(values) != 1 or not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", values[0])
+                               for values in query.values())):
+                    raise ValueError("Select one exact mission and retained source ID")
+                metadata, data = self.server.mission.source(query["mission_id"][0], query["source_id"][0])
+                if path == "/api/mission/source":
+                    self._json(200, metadata)
+                else:
+                    self._send(200, data, "image/png")
+            except (OSError, ValueError) as exc:
+                self._json(409, {"error": str(exc)[:1024]})
+            return
         if path == "/api/status":
-            self._json(200, {**controller.status(), "gameplay": self.server.gameplay.status()})
+            self._json(200, {**controller.status(), "mission": self.server.mission.status()})
             return
         if path == "/frame.png":
             try:
@@ -177,9 +177,11 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self) -> None:
         if not self._trusted():
             return
-        if self.path not in {"/api/command", "/api/recovery", "/api/gameplay"}:
+        if self.path not in {"/api/command", "/api/recovery", "/api/mission"}:
             self._json(404, {"error": "Unknown endpoint"})
             return
+        with self.server.controller.data_lock:
+            entry_generation = self.server.controller.pause_generation
         supplied = self.headers.get("X-CDDA-Token", "")
         if not hmac.compare_digest(supplied.encode("utf-8"), self.server.controller.token.encode("ascii")):
             self._json(403, {"error": "Valid local controller token required"})
@@ -189,8 +191,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         try:
             length = int(self.headers.get("Content-Length", "-1"))
-            if self.headers.get("Transfer-Encoding") or not 0 < length <= MAX_REQUEST:
-                self._json(413, {"error": "JSON body must be 1–4096 bytes"})
+            maximum = MAX_REQUEST_BYTES if self.path == "/api/mission" else MAX_REQUEST
+            if self.headers.get("Transfer-Encoding") or not 0 < length <= maximum:
+                self._json(413, {"error": f"JSON body must be 1–{maximum} bytes"})
                 return
             self.connection.settimeout(3)
             data = self.rfile.read(length)
@@ -199,8 +202,8 @@ class Handler(BaseHTTPRequestHandler):
                 raise ValueError("Command must be a JSON object with a string kind")
             if self.path == "/api/recovery":
                 validate_recovery(body)
-            elif self.path == "/api/gameplay":
-                validate_gameplay(body)
+            elif self.path == "/api/mission":
+                body = validate_request(body)
             else:
                 allowed = {"kind", "timeout", "key", "action", "direction", "steps", "text",
                            "expected_session", "expected_revision"}
@@ -209,21 +212,48 @@ class Handler(BaseHTTPRequestHandler):
         except (ValueError, OSError, RecursionError) as exc:
             self._json(400, {"error": f"Invalid command: {exc}"})
             return
-        kind = body.pop("kind")
+        kind = body["kind"]
+        starting = self.path == "/api/mission" and kind == "start"
+        raw_input = self.path != "/api/mission" and not (self.path == "/api/command" and kind == "pause")
+        guarded = starting or raw_input
+        if guarded and not self.server.ingress_lock.acquire(blocking=False):
+            self._json(409, {"status": "rejected", "error": "Another raw input or mission admission owns ingress"})
+            return
+        if starting and self.server.raw_ingress:
+            self.server.ingress_lock.release()
+            self._json(409, {"status": "rejected", "error": "Raw input must settle before mission admission"})
+            return
+        if raw_input:
+            self.server.raw_ingress += 1
+            # Recovery must still run while an ordinary native input is waiting.
+            # Only admission needs exclusion; controller owns channel writers.
+            self.server.ingress_lock.release()
         try:
-            if self.path == "/api/gameplay":
-                result = self.server.gameplay.command(kind, **body)
+            if self.path == "/api/mission":
+                result = self.server.mission.command(body)
             elif self.path == "/api/command" and kind == "pause":
-                result = self.server.gameplay.pause("Operator Pause")
+                result = self.server.mission.pause("Operator Pause")
             else:
-                dispatch = self.server.controller.recover if self.path == "/api/recovery" else self.server.controller.execute
-                result = dispatch(kind, **body)
+                mission = self.server.mission.status()
+                if mission is not None and mission.get("phase") not in TERMINAL:
+                    raise ValueError("An admitted mission owns observation/input; use its typed mission request or Pause")
+                body.pop("kind")
+                if self.path == "/api/recovery":
+                    result = self.server.controller.recover(kind, **body)
+                else:
+                    result = self.server.controller.execute(kind, expected_generation=entry_generation, **body)
         except (OSError, ValueError, TypeError) as exc:
-            result = {"status": "rejected" if self.path == "/api/gameplay" else "controller_error",
+            result = {"status": "rejected" if self.path == "/api/mission" else "controller_error",
                       "error": f"Controller could not complete the request: {exc}"}
-            if self.path == "/api/gameplay":
-                result["gameplay"] = self.server.gameplay.status()
-        success = ({"accepted"} if self.path == "/api/gameplay" else
+            if self.path == "/api/mission":
+                result["mission"] = self.server.mission.status()
+        finally:
+            if starting:
+                self.server.ingress_lock.release()
+            elif raw_input:
+                with self.server.ingress_lock:
+                    self.server.raw_ingress -= 1
+        success = ({"accepted"} if self.path == "/api/mission" else
                    {"prompt_opened", "answer_delivered", "dismissal_delivered", "not_applicable"}
                    if self.path == "/api/recovery" else {"ready", "recorded", "pause_requested", "complete"})
         code = 200 if result["status"] in success else 409

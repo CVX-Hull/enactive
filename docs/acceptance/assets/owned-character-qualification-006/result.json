@@ -1,0 +1,55 @@
+{
+  "outcome": "PARTIAL capabilities; overall006failed before reload selection; second child exceptionallyclosed",
+  "source_commit": "b44afbe77d32d7e732d6948bd917621e80eb7565",
+  "native_sha256": "6cc8078455401c9ae8094dddeb596820e93f207c609cad65da747e2ce5d4907a",
+  "controller_wait_seconds": 15,
+  "charged_inputs": 70,
+  "returned": 67,
+  "unknown": 3,
+  "unreconciled_effects": 0,
+  "frames": 185,
+  "png_bytes": 9639699,
+  "wall_seconds_through_owner_exit_watermark": 1325.6794612407684,
+  "wall_seconds_through_owner_status": 1325.694328069687,
+  "wall_seconds_including_shutdown_reopen_record": 1362.450345993042,
+  "observed_same_session_game_seconds": 60,
+  "model_tool_usage": null,
+  "proofs": {
+    "normal_adoption": [
+      "char006-create-adopt"
+    ],
+    "saved_checkpoint": [
+      "char006-save-reconcile"
+    ],
+    "normal_exit": [
+      "char006-exit-first-yes"
+    ],
+    "normal_finish": []
+  },
+  "first_child_normal_exit": true,
+  "second_child_normal_exit": false,
+  "signals": 1,
+  "exceptional_cleanup_interventions": 1,
+  "lead_explicit_stop": 1,
+  "user_keys": 0,
+  "source_patches": 0,
+  "local_staging_inspection_issues": 8,
+  "qualified": [
+    "ordinary fresh character in visiblyempty retainedworld",
+    "visible identity Claims/adoption",
+    "inventory inspection and carried-water Claim",
+    "counted one-matchbook drop",
+    "one-minute native activity/poll/observednormalreturn",
+    "normal Save and firstchild OwnedNormalExit",
+    "genuinely new owned child"
+  ],
+  "unqualified": [
+    "semantic navigation near NPC",
+    "actual pickup acquisition",
+    "exact-character reload",
+    "final normal secondchild exit/Finish",
+    "independent player/successor mission",
+    "observer presentation latency"
+  ],
+  "resource_state": "no game/listener/live slots; reopenedpaused noauthority; saved firstchild character preserved"
+}

@@ -6,7 +6,10 @@ review_trigger: Codex permission support, CLI entry point, executor ownership or
 
 # Gameplay permissions and player ownership
 
-Routine admitted play should proceed without user keys or permission decisions.
+Routine admitted play must proceed without user keys, human approvals or automatic
+approval/guardrail-review round trips, including observation, memory, lifecycle,
+handoff and supporting request/result plumbing. The user's standing gameplay
+delegation does not need to be requested again for each action or successor.
 User Pause/takeover remains available. There are three separate boundaries:
 Codex controls process/network permission; the harness validates current input
 authority; the player judges the visible game outcome. An allow rule changes
@@ -14,6 +17,10 @@ only the first boundary. It cannot grant a lease, make stale input current,
 replay an unknown request or override CDDA.
 
 ## Command permissions
+
+This section records CLI permission background and engineering allowances.
+Current designated players use the structured tools and preflight below; these
+commands are not an alternate routine-player path.
 
 On this Mac's managed workspace-write session, a real passive preflight after
 normal game shutdown found both `harness serve --port8766` and `harness status`
@@ -26,9 +33,10 @@ or downloads have separate permissions; do not stamp every shell call elevated.
 
 [Project-local rules](../.codex/rules/gameplay.rules) allow only the existing
 `.venv/bin/python -m harness` command family for ordinary observation, control,
-recovery and bounded waypoint tasks. Setup/server launch, GitHub publication,
+recovery and the current typed mission-request entry point. Retired gameplay-*
+commands are removed from both parser and allowance. Setup/server launch, GitHub publication,
 arbitrary Python, shell scripts and study capture wrappers are not matched. The
-exact005 recorder rule was retired at its stopped closeout; it is historical, not
+October18 study005 recorder rule was retired at its stopped closeout; it is historical, not
 a template for wildcard studies.
 Preparing these rules changed no global defaults, user rules, OS permissions or
 broad network access. The later exact-project trust correction below adds only
@@ -58,7 +66,7 @@ support changes. Review the diff, effective policy and an allowed/blocked harmle
 preflight before relying on activation. Retire obsolete allowances with their
 commands. Reuse these inline checks rather than building a policy parser.
 
-Official sources checked2026-10-18: [rules](https://learn.chatgpt.com/docs/agent-configuration/rules),
+Official rules source rechecked2026-10-20; other linked background checked2026-10-18: [rules](https://learn.chatgpt.com/docs/agent-configuration/rules),
 [sandbox and approvals](https://learn.chatgpt.com/docs/agent-approvals-security),
 [sub-agent permissions](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 
@@ -76,16 +84,15 @@ that scoped setup, not every future invocation or managed-policy behavior. The
 stable-CLI calls followed by actual ordinary inputs without recurring review, a
 new recorder allowance or another Codex restart.
 
-005 then ended on an unsupported native activity question, independently of
+Historical October18 study005 ended on an unsupported native activity question, independently of
 permission. Its exact-study rule is removed from source; subsequent policy loading
-applies that removal. Cached allowances do not authorize closed005 admission.
-Keep the stable reviewed harness entry point for future play; review any necessary
-outer wrapper once during setup rather than introducing per-action review or
-restarting a verified unchanged setup. Invoke a literal command directly; shell
-chains/redirections can change the policy target. Honor actual restrictions and
-reviews; do not hide unrelated work behind allowed entry points. All original
-costs/clocks/unknowns remain. Future gameplay needs its own prospective authority
-and complete-outcome feasibility assessment, not a policy-file edit.
+applies that removal. Cached allowances do not authorize that closed study.
+Its literal-command and wrapper-matching lessons remain historical engineering
+evidence. Future designated players follow the structured-tool preflight below,
+with no manual CLI/request-file fallback or recurring review. Honor actual
+restrictions; do not hide unrelated work behind an allowed entry point. All original
+costs/clocks/unknowns remain. New gameplay needs prospective authority and a
+complete-outcome feasibility assessment, not a policy-file edit.
 
 ## Dedicated gameplay context
 
@@ -94,38 +101,112 @@ and complete-outcome feasibility assessment, not a policy-file edit.
 The lead owns permission readiness before ordinary input. A recorder that requires
 admitted metadata must receive only a bounded passive preflight assignment first;
 that setup assignment authorizes no keys, actions or Resume. Repeat this check when
-the checkout, command entry point, recorder, player, Codex version or permission
-configuration changes; reuse the verified setup otherwise.
+the checkout location, command/tool entry point, recorder, player, Codex version
+or permission configuration changes; reuse the verified setup otherwise. A new
+attempt on the unchanged verified actor/tool setup does not require another policy
+loading exercise or arbitrary repeated status calls. Confirm the live service is
+reachable through the ordinary tool path; first-use failures still stop new play.
 
-1. Prefer the stable reviewed harness CLI entry points. If a campaign recorder
-   wraps them, verify the exact outer recorder prefix too. A child CLI allowance
-   does not automatically allow its wrapper. Review the executable and scope once
-   during setup; do not request approval separately for each ordinary game action.
-2. Verify that this exact checkout's project layer is enabled. Codex's documented
-   `config/read` with `cwd` and `includeLayers` can show an enabled project layer;
-   an absent exact trust entry or an ancestor's trust is not activation evidence.
-   Codex stores project trust in user-level `config.toml`, under
-   `projects.<absolute-checkout-path>.trust_level`. An authorized change adds only
-   that project entry and preserves unrelated settings. Keep gameplay allowances
-   in this checkout's `.codex/rules/`, not a broad user-level Python/shell rule.
-3. Check positive and negative command examples with the installed Codex policy
-   checker. Then reload Codex when required and test two consecutive harmless live
-   status/observation calls from the actual designated player through its exact
-   entry point. Record whether either call required review; a successful approved
-   call alone proves access, not absence of per-action review.
-   Retain loading, matching, access and absence of recurring review as separate
-   evidence. A fresh diagnostic process does not prove the active chat reloaded.
-4. If every action still reaches approval review, stop permission admission and
-   diagnose trust/loading, outer shell syntax and managed restrictions. Do not
-   spend the campaign repeating reviews or disable the sandbox globally. Honor
-   any actual denial. If supported project rules cannot remove recurring review,
-   report that product/policy limit explicitly instead of claiming readiness.
+1. Use the reviewed structured Enactive MCP tools for the designated player.
+   Verify the exact project-only server command/cwd and fifteen named enabled
+   tools with `approve` behavior using the supported setup recipe. No arbitrary
+   shell/Python allowance or per-action approval justification is the play loop.
+2. Verify that this exact checkout's project layer is enabled. Supported
+   `config/read` with `cwd` and `includeLayers` can show loading and scope;
+   absent project trust or ancestor trust alone is not activation evidence.
+   Keep changes narrow and project-scoped; preserve unrelated/global settings.
+3. Inspect the actual host catalogue, then have the actual designated actor make
+   a harmless live snapshot call for a new/changed actor or setup. Verify semantic,
+   result/image, memory and lifecycle access at their natural first use in the
+   finite admission; do not add a separate mutating-tool gauntlet before movement.
+   Continue autonomously only if actual calls incur no human or
+   automatic review event; no lead per-action critic is required. Report missing
+   host telemetry honestly. A rule match, fresh diagnostic process, successful
+   approved call or absence of a visible prompt alone proves less. Reuse existing
+   SDK negative-tool and transport/source tests rather than invent a policy parser.
+   Reload only when the supported host path requires it, not repeatedly after
+   unchanged verified setup. An ambiguous result queries its original operation;
+   it never authorizes another action POST.
+   Preserve the complete standard MCP reply before extracting optional
+   `structuredContent`; surface every returned text/image block and `isError`.
+   The [MCP result contract](https://modelcontextprotocol.io/specification/2025-06-18/server/tools)
+   permits text-only tool errors. Do not overwrite the retained
+   reply with an absent success payload or infer nondelivery from `isError` alone.
+   For changed presentation instructions, verify a harmless read-only error once
+   alongside the snapshot; this requires neither mutating probes nor a host reload.
+4. Any recurring gameplay approval review is a setup defect. Stop new gameplay,
+   retain the actual event and diagnose the supported project configuration and
+   managed-policy boundary. Honor a denial; do not change transports to evade it,
+   repeat reviewer justifications or weaken unrelated global protections. If the
+   platform cannot supply the required path, report the specific limit explicitly.
 
 Existing admitted campaigns retain their original budgets and stop rules during
 a user-requested configuration interruption. This prospective setup standard
 does not retroactively invalidate their recorded gameplay or renew allowances.
 Native guards, user Pause, recovery eligibility and campaign limits still apply.
 Setup, source changes, publication and unrelated commands have separate scope.
+
+### Historical execution gap and current scoped verification
+
+Independent004's fresh successor initially reached automatic approval review on a
+literal passive status call. Review rejected it as unrelated work; the same action
+subsequently passed after the original human authorization was supplied. The
+denial remains evidence. The project rule still matches allow and this checkout
+was trusted, but those calls did not establish review-free execution. Current
+session settings remain workspace-write/on-request/auto_review. No global defaults or
+permissions were changed. [#166](https://github.com/CVX-Hull/enactive/issues/166)
+owns this setup gap; [#164](https://github.com/CVX-Hull/enactive/issues/164) owns
+structured request/result/image automation using the existing ingress. Repeating
+authorization arguments to a reviewer is not the accepted gameplay loop.
+
+The [official automatic-review guidance](https://learn.chatgpt.com/docs/sandboxing/auto-review)
+explains that routine actions inside effective policy proceed without review;
+changing approval policy alone grants no missing access. A supported integration
+must be configured and verified before it can be called review-free. Do not
+silently route a denied action through another tool, override managed policy or
+use a broad Python/shell allowance. Keep local deterministic protocol validation,
+finite accounting and user Pause/control; these require no reviewer model.
+
+The [structured player adapter](changes/051-structured-player-tools.md) now has
+source/fixture support for typed submission, result collection and actual retained
+images. Its [project setup recipe](setup.md#configure-the-structured-player-tools)
+configures only the named MCP tools with per-server `approve` behavior. The official
+SDK owns stdio framing; the same mission ingress still owns execution. Actual
+host loading and the initial player's representative workflow were exercised
+below. The later [independent024 primary/successor result](acceptance/2026-10-21-independent-supply-shelter.md)
+adds actual fresh-context memory and normal save/reload/Finish coverage with no
+visible routine review events; hidden host telemetry remains unavailable. This is
+an explicitly configured integration under the
+standing authorization, after the old denial was resolved on its original path;
+it is not an alternate route for a pending denied action. Source checks or a CLI
+configuration read cannot close #166.
+
+On2026-10-20 the generated project table was installed and the supported CLI
+recognized its fifteen named tools. A separate Codex0.162.1 `--strict-config`
+diagnostic returned the enabled project layer, exact stdio command/cwd, explicit
+tool list and `default_tools_approval_mode:"approve"`. The inherited global
+on-request/auto_review values stayed unchanged. Diagnostic SQLite/log paths were
+project-local; no model thread was started and the owned process exited0. The
+first diagnostic rejected an incorrect state-path key before startup; the corrected
+restricted run failed EPERM, then the authorized corrected run passed. These are
+configuration evidence, not active-host/no-review evidence. The tools subsequently
+appeared through the host's supported refresh without a user restart. The parent
+and a fresh general-purpose agent both saw all fifteen tools; one parent and two
+agent snapshot calls reached the real MCP server and returned the expected
+no-controller error. This proves catalogue loading/dispatch, not live loopback or
+zero-review gameplay. No review event was visible; that alone is not proof of its
+absence. The daemon socket was absent and Computer Use refused the Codex app;
+neither was worked around. The subsequent
+[independent005 mission](acceptance/2026-10-20-independent-mission-fifth-attempt.md)
+verified actual-player live access twice against the final controller, then owned
+creation, semantic actions, result/image presentation, supported memory and Stop
+through the preapproved tools without visible review events. That mission failed
+at a semantic distraction-dialog gap, not an approval request. Invisible host
+telemetry remains unavailable. The later
+[independent024 result](acceptance/2026-10-21-independent-supply-shelter.md) verifies
+actual fresh-successor and normal-ending use without visible routine reviews;
+it supplies no hidden-host telemetry or universal guarantee. Engineering setup/publication/tests and exceptional
+teardown are separate from the routine gameplay path.
 
 The [trust correction](changes/033-gameplay-permission-preflight.md) records the
 observed disabled project layer and the exact-project fix. Fresh bundled loading
@@ -138,21 +219,85 @@ observations separate from engineering discussion. It does not require a weaker
 model tier or another paid API. It inherits parent permissions; role instructions
 do not create security isolation, and delegation alone cannot remove approvals.
 
-The waypoint planner proposes candidates through the
-[existing planning contract](protocol.md#bounded-injected-planner); it still has
-no raw-input role. A separately designated campaign operator may use ordinary
-inputs under the [bounded actor contract](protocol.md#designated-campaign-operator).
-The lead retains admission, source/game/service ownership, escalation and final
-verification. These responsibilities are mutually scheduled, not simultaneous
-executors or alternate protocol versions.
+The current designated player uses typed mission requests for semantic skills,
+memory and registered lifecycle. The passive waypoint planner has no live ingress.
+The lead retains admission, source/game/service custody, escalation and acceptance;
+it supplies no ordinary gameplay rescue during the deciding mission. Historical
+operator reports below describe the first campaign's procedure, not another current
+execution path. A new command allowance needs syntax/matching and actual-player
+loading checks; no activation claim follows from a policy-file edit.
 
-The operator's clean-context brief identifies command/file scope, phase and
-cumulative limits. Pause, completed tool calls, an explicitly quiescent agent,
-empty live request/lease checks and fresh paused observation precede lead
-inspection. Returning control needs a new bounded assignment and fresh Resume;
-historical unknowns and accounting do not reset. Actor names and instructions
-are workflow controls, not exclusive external capabilities or a sandbox. Do not
-use explorer/reviewer roles to send input. See the [runbook](runbook.md#designated-campaign-operator).
+### Constructing player requests
+
+Use `enactive_snapshot` or an explicitly returned next snapshot, choose a source
+and semantic intent, then call the named skill/lifecycle/memory tool with finite
+limits and a stable request ID. The adapter uses the
+[pure canonical producer](protocol.md#skill-request-binding-errors) internally;
+software owns serialization, durable staging, submission, bounded collection and
+actual-image presentation. The player does not write routine JSON files, private
+helpers or polling scripts. CLI/raw protocol clients remain engineering tools,
+not an alternate routine-player path.
+
+A menu request without perception selects the native UILIST rendered-row policy;
+it does not ask software to interpret another screen. Other supported menus need
+the player's explicit source-bound control interpretation. An eligible mismatch
+returns a zero-input draft refusal with the original phase intact, so the player
+can submit a new corrected request; software neither invents the view nor switches
+adapters automatically. Genuine authority/evidence/budget faults still stop.
+
+Choose a whole returned snapshot/source consistently after focus changes. For
+memory/context/navigation scope, use the returned mission `coordinate_scope`
+when present. Its coordinate epoch comes from adopted session continuity and is
+different from mission/actor `epoch`; never substitute one for the other. A fresh
+successor uses this passive scope for its bound context request and independently
+reads required sources before claim/readmission. Null scope grants no inferred
+index or authority. A retained `diagnostic` string can describe an earlier refused
+request after later success; current operation errors and ownership/provenance
+checks establish actionability, not the historical string alone.
+
+For handoff issuance, `checkpoint_ids` contains retained source observation IDs
+from returned sources or memory provenance; it does not contain Claim or Work IDs.
+`unfinished_work_ids` contains the complete current unfinished Work set. An unknown
+checkpoint reference or omitted/extra Work ID returns a zero-input blocked result
+before stopping input and preserves an otherwise eligible phase. Correct the draft
+with a NEW request; no source is substituted and no handoff is issued automatically.
+Known checkpoint-source damage, actual authority loss and spent limits remain failures.
+
+For handoff readmission, select the issuance's original `post_pause_source_id`,
+which the successor already inspected for its claim. A separate Observe is not a
+prerequisite and its returned source does not replace that issued ID. Readmission
+does its own bounded refresh and charges Resume separately. The exact-source
+selection refusal occurs before admission/input and names the required ID;
+correct it with a NEW explicit request only while the original handoff is still
+eligible. User Pause, unknown delivery or lost ownership cannot be repaired by
+selecting another source.
+
+For provisional identity after committed create/load transition reconciliation, first
+call enactive_lifecycle with lifecycle scope, the same create/load operation and
+root, and no identity Claims or Work. This separate readmission charges Resume;
+Observe and effect reconciliation do not. Then select inspect/character_identity
+with lifecycle scope. Premature eligible inspection returns a zero-input
+explanation and retains the original phase; use a NEW explicit request for the
+missing step. Actual source/ownership/Pause/proof/budget faults still stop.
+Lifecycle confirmations and editor intent also retain that root. Supporting diagnostic source IDs are explicit. Initial
+activity interruption uses the prompt summary; answer/readmission use the exact
+activity checkpoint, which may differ from current_source. Memory content,
+support groups and truthful handoff source-read declarations remain the player's
+choices; the adapter does not invent them or select a newer source.
+
+Choose meaningful bounded navigation targets, interactions and native activities
+when observed evidence supports them. Software checks each primitive; one model
+request per arrow is not the intended default. Independent005 used only one-step
+navigation goals, so no batching benefit is claimed. Unknown outcomes collect
+only the original operation, never replay or silently Resume. Retained complete
+receipts remain available; a concise tool result is not permission to alter
+history. Native ACK timing is separate from skill/model/tool/display latency.
+
+The clean-context brief identifies configured tools/evidence scope, actor/phase, cumulative
+limits and reserve. Pause, completed tools, explicit quiescence and empty live
+slots precede inspection or registered handoff. Original unknowns and accounting
+never reset. Role names/instructions are workflow controls, not a sandbox. Follow
+the [current actor contract](protocol.md#designated-campaign-operator).
 
 [#97](https://github.com/CVX-Hull/enactive/issues/97)'s
 [two-phase result](acceptance/2026-10-18-campaign-operator.md) records actual
@@ -164,15 +309,13 @@ This is one qualified operating result, not general survival or a reliability cl
 Missing/unquiesced player, denied approval or failed readable access stops; user
 rescue is not the fallback. Do not expand an active frozen campaign mid-run.
 
-Test access from the **designated actor**, before gameplay admission. A successful
-lead call does not prove that the player's next tool invocation will request the
-same permission mode. When this session requires elevation, the brief must name
-`sandbox_permissions: "require_escalated"` and a narrow justification explicitly;
-omitting the field uses the default sandbox. Honor an approval rejection; do not
-route it through another actor. A sandbox connection failure before any elevated
-request is a different event and must not be reported as automatic-review denial.
-Retain the actual passive preflight and terminal tool result. Project allow-rule
-matching still does not prove live activation.
+Historical CLI evidence distinguishes default-sandbox connection failure from an
+actual approval rejection. Earlier actor briefs named the exact elevated command
+mode where required; their successful calls did not prove absence of review.
+Those commands are not the current player's operating path. Current actor access
+uses the preapproved tools and procedure above. A successful lead call still
+cannot substitute for actual designated-player verification. Preserve every
+historical denial and do not route a pending denied action through another actor.
 
 The [first deciding campaign](acceptance/2026-10-18-seven-day-stop.md) later passed
 actor access and sent ordinary inputs, then received an actual approval rejection

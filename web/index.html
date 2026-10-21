@@ -31,27 +31,41 @@
       <details class="evidence"><summary>Control and observation details</summary><p>One input at a time. A ready response means the engine returned to input. Check the scene to verify the intended result.</p><p>Native keyboard input pauses remote control. A pause cannot undo an input already dispatched.</p></details>
     </section>
     <aside>
-      <section class="panel task-panel" aria-labelledby="task-heading">
-        <div class="panel-heading"><span id="task-heading" class="eyebrow">WAYPOINT &amp; RETURN</span><span id="task-state" class="badge">NOT STARTED</span></div>
-        <p id="task-summary">Choose a short route from the current observed position.</p>
-        <dl class="task-facts" aria-live="polite">
-          <dt>Stage</dt><dd id="task-stage">No task admitted</dd>
-          <dt>Player</dt><dd id="task-player">External chat · waiting for explicit start</dd>
-          <dt>Executor</dt><dd id="task-executor">No run owns input</dd>
-          <dt>Progress</dt><dd id="task-progress">No verified movement</dd>
-          <dt>Next check</dt><dd id="task-next">Observe, then resume remote control to start.</dd>
-          <dt>Reason</dt><dd id="task-reason">No task admitted</dd>
-          <dt>Freshness</dt><dd id="task-freshness">No task evidence</dd>
+      <section class="panel mission-panel" aria-labelledby="mission-heading">
+        <div class="panel-heading"><span id="mission-heading" class="eyebrow">PLAYER MISSION</span><span id="mission-state" class="badge">NO MISSION</span></div>
+        <p id="mission-summary">No mission objective recorded.</p>
+        <dl class="mission-facts" aria-live="polite">
+          <dt>Player</dt><dd id="mission-player">No player admitted</dd>
+          <dt>Mission</dt><dd id="mission-identity">No mission identity</dd>
+          <dt>Input lease</dt><dd id="mission-owner">No current input lease reported</dd>
+          <dt>Live operation</dt><dd id="mission-operation">No active operation</dd>
+          <dt>Activity</dt><dd id="mission-activity">No private activity checkpoint reported</dd>
+          <dt>Lifecycle</dt><dd id="mission-lifecycle">No lifecycle checkpoint reported</dd>
+          <dt>Progress</dt><dd id="mission-progress">No mission progress</dd>
+          <dt>Next decision</dt><dd id="mission-next">Waiting for an explicitly admitted player mission</dd>
+          <dt>Pause / reason</dt><dd id="mission-reason">No mission admitted</dd>
+          <dt>Freshness</dt><dd id="mission-freshness">No mission evidence</dd>
+          <dt>Uncertainty</dt><dd id="mission-unresolved">No mission effects reported</dd>
         </dl>
-        <form id="task-form">
-          <label for="task-direction">Outbound direction</label>
-          <div class="input-row"><select id="task-direction"><option value="north">North</option><option value="east">East</option><option value="south">South</option><option value="west">West</option></select><input id="task-distance" type="number" min="1" max="4" value="1" aria-label="Outbound distance in tiles"><button id="task-start" type="submit" disabled>Start</button></div>
-        </form>
-        <div class="task-buttons"><button id="task-continue" type="button" disabled>Continue task</button><button id="task-abandon" type="button" disabled>Abandon task</button></div>
-        <p id="task-control-note" class="hint">Start and Continue use the current decoded frame. Continue keeps the original task and budgets; resume remote control explicitly first. Unknown effects prohibit continuation.</p>
-        <p class="hint">Pause prevents future input immediately. An input already sent may still take effect.</p>
-        <details><summary>Task evidence and last receipt</summary><pre id="task-evidence">No retained task evidence.</pre><pre id="task-result">No gameplay command sent.</pre></details>
-        <details><summary>Player usage and cost</summary><p id="task-cost" class="hint">Harness API spending: $0. Codex usage, token consumption and subscription cost are unmeasured. No model efficiency claim.</p><pre id="task-budgets">Original budgets appear after admission.</pre></details>
+        <p id="mission-control-note" class="hint">Observer only: missions are admitted outside this viewer.</p>
+        <p class="hint">Pause prevents future remote input; it cannot undo a committed input or cancel an activity.</p>
+        <details open><summary>Memory context · claims, work and sources</summary><p id="mission-memory-summary" class="hint">No journaled context preview available.</p><p class="hint">Historical, query-specific preview, bounded to 32 KiB by the service. Claims and work retain their statuses, source IDs, omissions and dispositions. It grants no current authority.</p><div id="mission-memory-readable" hidden>
+          <p id="mission-omissions" class="hint"></p>
+          <h3>Claims and corrections</h3><ul id="mission-claims" class="memory-list"></ul>
+          <h3>Work and next verification</h3><ul id="mission-work" class="memory-list"></ul>
+          <details><summary>Sources and status dispositions</summary><ul id="mission-sources" class="memory-list"></ul><h3>Dispositions</h3><ul id="mission-dispositions" class="memory-list"></ul></details>
+          <details><summary>Requested reobservations</summary><ul id="mission-reobservations" class="memory-list"></ul></details>
+        </div><details><summary>Raw historical context JSON</summary><pre id="mission-memory" tabindex="0">No memory claims, work or source dispositions available.</pre></details></details>
+        <details><summary>Process, control and source details</summary><dl class="mission-facts">
+          <dt>Last report</dt><dd id="mission-last-report">No result phase reported</dd>
+          <dt>Process</dt><dd id="mission-process">No usable process sample · current liveness unknown</dd>
+          <dt>Exit evidence</dt><dd id="mission-exit">No verified normal exit proof reported</dd>
+          <dt>Source</dt><dd id="mission-source">No current mission source</dd>
+        </dl></details>
+        <details><summary>Progress, evidence and last receipt</summary><pre id="mission-evidence" tabindex="0">No retained mission evidence.</pre></details>
+        <details><summary>Limits and player configuration</summary><pre id="mission-budgets" tabindex="0">No mission limits reported.</pre></details>
+        <details><summary>Measured usage, unknown costs and archive</summary><p id="mission-counts" class="hint">Cumulative request and admission counts unavailable.</p><p id="mission-usage" class="hint">Model calls, tokens, quota, time, external cost and interventions: unknown.</p><pre id="mission-archive" tabindex="0">No archive usage reported.</pre></details>
+        <details><summary>Last mission Observe request</summary><p class="hint">Observe is asynchronous. Admission is not readiness or proof of an effect. Status polling never retries, resumes or sends gameplay input.</p><pre id="mission-result" tabindex="0">No mission Observe request sent.</pre></details>
       </section>
       <section class="panel recovery-panel" aria-labelledby="recovery-heading">
         <div class="panel-heading"><span id="recovery-heading" class="eyebrow">OPERATOR RECOVERY</span><span class="tiny">STAYS PAUSED</span></div>
@@ -68,7 +82,6 @@
         <details><summary>Gameplay pending and unknown evidence</summary><pre id="gameplay-evidence">No evidence yet.</pre></details>
         <details><summary>Recovery result, pending and unknown evidence</summary><pre id="recovery-result">No recovery sent.</pre><pre id="recovery-evidence">No evidence yet.</pre></details>
       </section>
-      <section class="panel goal-panel"><div class="panel-heading"><span class="eyebrow">CURRENT OBJECTIVE</span><span class="tiny">PLANNER</span></div><form id="goal-form"><label for="goal" class="sr-only">Current objective</label><textarea id="goal" rows="3" placeholder="Set a goal for this session…" maxlength="2000"></textarea><div class="form-footer"><span>Recorded for the planner</span><button class="text-button" type="submit">Save goal ↗</button></div></form></section>
       <section class="panel timeline-panel"><div class="panel-heading"><span class="eyebrow">SESSION TIMELINE</span><span id="event-count" class="tiny">0 EVENTS</span></div><ol id="timeline"><li class="empty">Your observations and inputs appear here.</li></ol><div class="journal"><span class="dot small"></span><span id="journal">Local journal</span></div></section>
       <details class="advanced"><summary>Advanced controls &amp; details</summary>
       <section class="panel action-panel"><div class="panel-heading"><span class="eyebrow">SINGLE INPUT</span><span id="revision" class="tiny mono">REV —</span></div><form id="action-form"><label for="action">Registered native action</label><div class="input-row"><select id="action"><option value="">Observe to load actions</option></select><button type="submit" class="send">Send</button></div></form><form id="key-form"><label for="key">Key / named navigation key</label><div class="input-row"><input id="key" placeholder="e.g. i, ENTER, ESC" autocomplete="off" maxlength="10"><button type="submit" class="send">Send</button></div></form><details><summary>Guarded cardinal walk · up to 8 tiles</summary><form id="walk-form"><div class="input-row"><select id="direction" aria-label="Direction"><option value="north">North</option><option value="east">East</option><option value="south">South</option><option value="west">West</option></select><input id="steps" type="number" min="1" max="8" value="1" aria-label="Steps"><button type="submit" class="send">Walk</button></div><p class="hint">Stops on any visible creature, unknown terrain, furniture, changed context or unexpected movement. After a stop: Observe, interpret the fresh image, then Resume and decide again. No automatic damage guard.</p></form></details><p id="authority" class="hint">Inputs use the displayed observation’s session and revision.</p></section>

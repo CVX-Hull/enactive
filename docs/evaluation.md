@@ -24,6 +24,92 @@ budgets and pilot decision thresholds for #24. No live model comparison is claim
 by this tooling. Change that protocol before collecting affected outcomes, with a
 recorded reason; do not tune thresholds after seeing results.
 
+## Latency budgets for interactive play
+
+Native input, skill execution, observer presentation and player reasoning have
+separate clocks. A timeout is a ceiling, not a fixed delay: return immediately
+when the matching acknowledgement arrives. Use one higher-level player decision
+for a bounded semantic skill; the controller observes and guards its primitives
+without a model or approval round trip per key. Retrieve memory at meaningful
+planning/correction/handoff boundaries, not automatically for every primitive.
+
+Qualification 004's 31 returned primitives had a 62.33 ms median, 91.30 ms nearest-rank
+p95 and 95.37 ms maximum **retained preflight-to-ACK interval**. This includes host
+callback/persistence, native input/frame and transport; it is not pure engine or
+end-to-end player latency. Its world-selection ready ACK arrived 7.272 seconds after
+journaled admission, outside the default 5-second wait. The matching acknowledgement
+remains historical; an explicit 15-second setting was chosen prospectively for later
+attempts, within the existing controller limit. Neither changing a ceiling nor
+fast ordinary samples resolves an old unknown or measures all loading cases.
+
+[Qualification006](acceptance/2026-10-20-native-character-lifecycle.md) broadens the
+sample: 66 ordinary returned inputs, excluding world entry, had 120.96 ms median,
+242.11 ms nearest-rank p95 and 508.84 ms maximum. All 67 returns had 242.78 ms p95;
+world entry took 7580.40 ms. UI categories and sample sizes differ from 004, so this
+is not a controlled regression or speedup comparison. No movement was delivered.
+One 15-primitive name batch reached its last receipt in 1.886 seconds, and eight
+inventory arrows in 2.779 seconds from admission. Those are **last-receipt proxies**,
+not settled-result timestamps; model/tool/approval and actual browser decode
+latency remain unknown. Three session/exit ACK timeouts are separate from those
+successful intervals. Whole engineering wall time includes investigation and
+cannot be used as player or engine throughput.
+
+[Qualification007](acceptance/2026-10-20-native-lifecycle-qualified.md) has106returned
+inputs: median101.72ms, nearest-rank p95337.46ms, maximum6716.55ms. Excluding the
+preselected world-entry input leaves105: median100.50ms, p95336.68ms and
+maximum856.24ms. Its four movement steps span156.61–191.63ms (median182.00ms,
+nearest-rank p95=maximum); this is too small a sample for a general claim. A
+known two-step return reached its last receipt767.54ms after admission, a20key
+world-name batch2173ms, and eight inventory-focus arrows4293ms. Those are
+last-receipt proxies; an interpreted-result terminal timestamp is unavailable.
+Six unknown ACKs remain separate, with effects reconciled. Whole1941.5second
+engineering wall time includes unmeasured planning/tool work and is not throughput.
+The broader ordinary p95 exceeds the proposed250ms target. Profile the tails and
+model/tool/display boundaries before choosing faster models or adding infrastructure.
+
+[Native008](acceptance/2026-10-20-confirmation-correction.md) adds 64 returned
+setup/menu/identity intervals: median 77.91 ms, nearest-rank p95 141.60 ms and
+maximum 6393.12 ms, with three unknown ACKs retained separately. This is another
+scope/sample, not a controlled improvement over007. Its 517.49-second deliberate
+qualification does not measure normal-play throughput, model or browser latency.
+
+| Proposed next-campaign target | Measurement / limit |
+| --- | --- |
+| Ordinary movement/menu input p95 ≤250 ms | Original retained preflight-to-terminal ACK intervals; report sample count, rejected/unknown inputs and tails separately |
+| Newly available frame displayed within 500 ms during active play | Native frame/capture to successful browser decode; the active poll now schedules 250 ms after the preceding status response, idle/disconnected 1000 ms. Cadence alone does not prove the target |
+| Small semantic batches complete within a few seconds | Whole request admission to settled outcome; report primitive count and model/approval/tool overhead separately. A 20-key edit's native intervals target ≤5 seconds |
+| Player makes goal/outcome decisions, rather than decisions per key | Compare actual decision boundaries and skill requests; requests are not automatically model-call counts |
+| Loading and long activities have separate finite budgets | Record visible readiness/progress and actual stop/unknowns; do not apply the 250 ms input target or treat a 15-second wait as a universal load guarantee |
+
+These are proposed operational targets, not passing badges or new blanket gates
+for optional model tiers, telemetry frameworks or paid providers. The existing
+native journals/ledger/archive and viewer provide the starting evidence; external
+model time, approval delay and total tool cost remain unmeasured. #143 owns
+observer latency, #154 integrated timing evidence and #156 prospective setup;
+#145 uses actual mission results before a full campaign. Existing S-UX/S-VERIFY
+and native acceptance enforce honest evidence; common tests do not enforce wall
+percentiles. Revisit targets after representative navigation/items/activities and
+fresh-context player measurements, retaining both tails and failures. Reuse CDDA
+travel/activities where qualified before adding an execution framework.
+
+The next bounded measurement should correlate existing request/dispatch IDs across
+admission, bridge publication, terminal receipt, semantic settlement, status
+response and successful image decode. Use monotonic intervals within each process;
+browser/server clocks need explicit correlation before subtraction. The controller's
+15 ms receipt polling and viewer's active 250 ms post-response poll are hypotheses
+to profile, not explanations for all delay. Prioritize removing per-key player/tool
+round trips and unnecessary captures or repeated retrieval. Keep per-primitive
+outcome/authority checks; batch decisions rather than blindly batching input.
+Do not add a broker, telemetry service or new model tier without an observed gap.
+
+Campaign length is another profiling axis. Current ingestion scans retained peers,
+capacity accounting walks frame files and archive save serializes the manifest.
+Navigation rechecks accumulated source files/hashes. Profile those stages against
+archive and route-source counts before replacing storage or introducing a cache.
+Required loss/correction/integrity and current-authority checks must remain;
+reuse the existing SQLite/journal if evidence establishes a storage gap. #154
+owns this follow-up without adding a new framework gate to the current mission.
+
 ## Caller contract
 
 Use `RunRecorder(manifest)`, `record(event)`, `finish(outcome)` and `write(path)`

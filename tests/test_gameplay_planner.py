@@ -157,7 +157,7 @@ class PlannerTests(unittest.TestCase):
                         {"distance_remaining": 0}, {"expected_stage": "return"},
                         {"public_context": "x" * 4097},
                         {"packet": replace(req.packet, task_id="other")},
-                        {"packet": replace(req.packet, current=evidence(boundary_kind="menu"))},
+                        {"packet": replace(req.packet, current=evidence(boundary_kind="menu", turn=None))},
                         {"packet": replace(req.packet, current=evidence(session="other"),
                                            start=evidence(session="other"))},
                         {"skills": (skill(stage_kinds=("return",)),)}):
@@ -165,7 +165,7 @@ class PlannerTests(unittest.TestCase):
                 replace(req, **changes)
 
     def test_wrong_candidate_schema_identity_and_semantics(self):
-        mutations = [{"schema": "gameplay/2"}, {"extra": True}, {"candidate_id": ""},
+        mutations = [{"schema": "gameplay/1"}, {"extra": True}, {"candidate_id": ""},
                      {"execution_epoch": True}, {"distance_remaining": 2},
                      {"direction": "south"}, {"stage": "return", "direction": "south"},
                      {"task_id": "other"}, {"task_version": 2}, {"plan_id": "other"},

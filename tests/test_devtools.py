@@ -1,11 +1,14 @@
 """Exercise our tool configuration against isolated source and document fixtures."""
 import os
+from contextlib import redirect_stdout
+import io
 from pathlib import Path
 import shutil
 import subprocess
 import sys
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from tools import check
 
@@ -24,6 +27,11 @@ class DevToolTests(unittest.TestCase):
         self.write("movement.py", "import typing\n")
         self.write("server.py", "from . import controller\nimport http.server\n")
         self.write("__main__.py", "from . import controller, server\n")
+        self.write("mission_runtime.py", "")
+        self.write("native_process.py", "")
+        self.write("mission_client.py", "import urllib.request\n")
+        self.write("player_tools.py", "from . import mission_client\n")
+        self.write("player_mcp.py", "from . import player_tools\n")
         (self.root / "harness/gameplay").mkdir()
         self.write("gameplay/__init__.py", "")
         self.write("gameplay/evidence.py", "import json\n")
@@ -49,7 +57,20 @@ class DevToolTests(unittest.TestCase):
     def test_composition_root_and_http_adapter_are_allowed(self):
         result = self.lint_imports()
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        self.assertIn("4 kept, 0 broken", result.stdout)
+        self.assertIn("5 kept, 0 broken", result.stdout)
+
+    def test_player_adapters_cannot_import_an_executor_directly_or_indirectly(self):
+        for source in ("mission_client", "player_tools", "player_mcp"):
+            for target in ("controller", "server", "mission_runtime", "native_process", "__main__"):
+                with self.subTest(source=source, target=target):
+                    self.write(source + ".py", f"from . import {target}\n")
+                    try:
+                        self.assert_broken(self.lint_imports(), "harness." + source, "harness." + target)
+                    finally:
+                        self.write(source + ".py", "")
+        self.write("mission_client.py", "from . import helper\n")
+        self.write("helper.py", "from . import mission_runtime\n")
+        self.assert_broken(self.lint_imports(), "harness.mission_client", "harness.helper")
 
     def test_movement_policy_cannot_acquire_io_or_gameplay_dependencies(self):
         for module in ("harness.controller", "harness.gameplay.evidence", "time", "pathlib", "os"):
@@ -106,6 +127,32 @@ class DevToolTests(unittest.TestCase):
         self.assertEqual(len(errors), 2, errors)
         self.assertTrue(any("docs/missing.md" in error for error in errors))
         self.assertTrue(any("../outside.png" in error for error in errors))
+
+    def test_fast_and_full_commands_keep_distinct_acceptance_scope(self):
+        for arguments, full in ((["--fast"], False), ([], True)):
+            with self.subTest(arguments=arguments):
+                output = io.StringIO()
+                with patch.object(check, "ROOT", self.root), \
+                        patch.object(check, "check_documents", return_value=[]), \
+                        patch.object(check, "run") as commands, redirect_stdout(output):
+                    self.assertEqual(check.main(arguments), 0)
+                executed = [call.args[0] for call in commands.call_args_list]
+                self.assertEqual(any("unittest" in command for command in executed), full)
+                self.assertEqual(any("tools/diagrams.py" in command for command in executed), full)
+                self.assertEqual(any("tests/test_viewer.cjs" in command for command in executed), full)
+                self.assertTrue(any("tools/governance.py" in command for command in executed))
+                self.assertTrue(any("ruff" in command for command in executed))
+                self.assertEqual("Portable checks passed." in output.getvalue(), full)
+                if not full:
+                    self.assertIn("Behavioral tests, rendered diagrams, native build and real gameplay were not run.",
+                                  output.getvalue())
+
+    def test_fast_checkpoint_rejects_invalid_python_before_reporting_success(self):
+        self.write("controller.py", "def broken(:\n")
+        output = io.StringIO()
+        with patch.object(check, "ROOT", self.root), redirect_stdout(output), self.assertRaises(SyntaxError):
+            check.main(["--fast"])
+        self.assertNotIn("checks passed", output.getvalue())
 
 
 if __name__ == "__main__":

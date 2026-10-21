@@ -9,14 +9,14 @@ prefix_rule(
     pattern = [".venv/bin/python", "-m", "harness", [
         "status", "observe", "pause", "resume", "goal", "key", "action", "walk",
         "request_interrupt", "answer_interrupt", "continue_debug_once",
-        "gameplay-request", "gameplay-plan", "gameplay-start",
-        "gameplay-continue", "gameplay-abandon",
+        "mission-request",
     ]],
     decision = "allow",
     justification = "Ordinary authenticated loopback Enactive commands under an admitted campaign; native authority and campaign accounting still apply.",
     match = [
         ".venv/bin/python -m harness status",
         ".venv/bin/python -m harness pause",
+        ".venv/bin/python -m harness mission-request --request .runtime/mission-requests/request.json",
         ".venv/bin/python -m harness key ESC --expect example:1",
         ".venv/bin/python -m harness walk east --steps 1 --expect example:2",
     ],
@@ -26,6 +26,11 @@ prefix_rule(
         ".venv/bin/python -m harness serve --port 8766",
         ".venv/bin/python -m another_module status",
         "python -m harness status",
+        ".venv/bin/python -m harness gameplay-request --request old.json",
+        ".venv/bin/python -m harness gameplay-start --distance 1",
+        ".venv/bin/python -m harness gameplay-plan --task old",
+        ".venv/bin/python -m harness gameplay-continue --task old",
+        ".venv/bin/python -m harness gameplay-abandon --task old",
         "gh pr merge 1",
     ],
 )

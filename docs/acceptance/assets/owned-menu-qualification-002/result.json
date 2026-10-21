@@ -1,0 +1,63 @@
+{
+  "classification": "accepted bounded owned-menu launch/normal-exit component; no normal gameplay acceptance",
+  "source_commit": "b055ab44a5678691eeb9ae5a14091d38d0ff5951",
+  "native_sha256": "c65778e2912230f34b67340a4f2caacd0d5874af24ab964526c436bd686f7720",
+  "proof": {
+    "schema": "mission/2",
+    "record_type": "OwnedNormalExit",
+    "origin_request_id": "menu-qual-exit-002",
+    "launch_request_id": "menu-qual-launch-002",
+    "launch_id": "44d9367f19ab4644a04a3ce5c7aa474e",
+    "terminal_logical_id": "control-62ccac16322d06e1898ad355d6f85521c2ffd242ed2a0ec2290f882a08d6739c-1",
+    "native_request_id": "a1906950-72dd-4318-89bb-ee4e740d7824",
+    "source_ids": [
+      "be86231e1abf241e2e7f9c495bcdde303d798c0d361ca865f580bae0930e5995",
+      "45fe53630f4c05085d27fc9eeb6f6bd9981321a7fd89ae1234fab631bd7ca539"
+    ],
+    "no_save_required": true,
+    "returncode": 0,
+    "retirement": {
+      "launch_id": "44d9367f19ab4644a04a3ce5c7aa474e",
+      "exit_request_id": "menu-qual-exit-002",
+      "native_request_id": "a1906950-72dd-4318-89bb-ee4e740d7824",
+      "returncode": 0,
+      "retired_pending": true,
+      "grants_authority": false
+    },
+    "grants_authority": false
+  },
+  "input_ack": "unknown",
+  "spent_inputs": 3,
+  "wall_seconds_through_first_controller_close": 111.976184,
+  "wall_seconds_at_later_reopen_close_watermark": 152.027751,
+  "archive_frames": 9,
+  "archive_bytes": 298497,
+  "services_closed": true,
+  "reopen_restored_authority": false,
+  "persisted_mission_phase": "paused",
+  "normal_finish_implemented": false,
+  "world_or_character_created_loaded_saved": false,
+  "prior001_classification": "failed; unchanged",
+  "two_attempt_inputs": 6,
+  "two_attempt_native_execution_wall_seconds": 320.709386,
+  "two_attempt_wall_seconds_including_later_reopen_verification": 360.760923,
+  "two_attempt_frames": 18,
+  "two_attempt_png_bytes": 597353,
+  "assets": [
+    {
+      "path": "main-menu.png",
+      "source_id": "be86231e1abf241e2e7f9c495bcdde303d798c0d361ca865f580bae0930e5995",
+      "sha256": "014ac046335cdb2955e453b6240e8fccfad0a70c56f20f164d3acaf302e4269d"
+    },
+    {
+      "path": "quit-confirmation.png",
+      "source_id": "a550a8d4d2f8b54e0474ac90d57cc401b3578ae70e7c99e65c381ae45e3645a7",
+      "sha256": "c7d22e3143e30268ea8bc9ba5a1653c093324854746a1f6aeb0279da384d6c84"
+    },
+    {
+      "path": "spectator-1100.png",
+      "sha256": "165b097a206ee3bfabc23de9c4542d4030189562b3bb10d7f01b359f9b3f0746",
+      "scope": "actual loopback viewer1100x850; no browser POST or mocked response"
+    }
+  ]
+}

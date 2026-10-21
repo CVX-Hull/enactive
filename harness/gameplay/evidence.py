@@ -15,19 +15,27 @@ import math
 import os
 from pathlib import Path
 import re
+import stat
 import threading
 import uuid
 from typing import Any, Callable
 
+from .mission_contracts import PAUSE_ORIGINS, visible_ui_schema, validate_visible_ui
 from .contracts import (
     ContractError, EvidenceRef, Fact, Interpretation, Vector, _BOUNDARY, _ID,
-    _INT, _VECTOR, _array, _integer, _object, _text, json_object, validate_json,
+    _INT, _VECTOR, MAX_JSON_BYTES, _pairs, _reject_constant, _array, _integer, _object, _text, json_object, validate_json,
 )
 
-MAX_FRAMES = 32
-MAX_BYTES = 64 * 1024 * 1024
+DEFAULT_FRAMES = 32
+DEFAULT_BYTES = 64 * 1024 * 1024
+MAX_FRAMES = 4096
+MAX_BYTES = 1024 * 1024 * 1024
 MAX_FRAME_BYTES = 32 * 1024 * 1024
 MAX_AGE_SECONDS = 3.0
+MAX_METADATA_BYTES = 34 * 1024 * 1024
+# Preserve space for bounded dispute/blocked/session lists even at admission cap.
+METADATA_HEADROOM = 2 * 1024 * 1024
+MAX_ENTRY_BYTES = MAX_JSON_BYTES + 8192
 _PNG = b"\x89PNG\r\n\x1a\n"
 _SCENE = _object({
     "provenance": {"const": "player-visible input boundary"}, "position": _VECTOR,
@@ -39,7 +47,9 @@ _SCENE = _object({
         "required": ["dx", "dy", "visible"], "additionalProperties": False}, 8, 8),
 })
 _OBSERVATION = _object({
-    "protocol": {"type": "integer", "const": 3}, "id": _text(128, empty=True),
+    "protocol": {"type": "integer", "const": 4},
+    "pause_origin": {"enum": list(PAUSE_ORIGINS)}, "takeover_generation": _INT,
+    "ui": {"anyOf": [visible_ui_schema(), {"type": "null"}]}, "id": _text(128, empty=True),
     "session": {**_ID, "pattern": "^[A-Za-z0-9_-]+$"}, "revision": _INT,
     "category": _text(128, empty=True), "actions": _array(_text(128), 512),
     "status": {"enum": ["ready", "rejected", "dispatched"]}, "error": _text(4096, empty=True),
@@ -68,6 +78,7 @@ class CapacityReservation:
     before_observation_id: str
     frame_slots: int = 1
     bytes_reserved: int = MAX_FRAME_BYTES
+    metadata_reserved: int = MAX_ENTRY_BYTES
 
 
 @dataclass(frozen=True)
@@ -90,10 +101,22 @@ def _metadata(observation: dict[str, Any]) -> dict[str, Any]:
     return {key: value for key, value in observation.items() if key not in {"id", "status", "error"}}
 
 
+def same_native_state(before: dict | None, after: dict | None) -> bool:
+    """Compare validated native states, excluding only capture/transport identity.
+
+    This proves neither image equality, freshness nor authority. A passive capture
+    must not rewrite an archived source or replace its original receipt clock.
+    """
+    ignored = {"id", "timestamp_ms", "frame"}
+    return (before is not None and after is not None
+            and {key: value for key, value in before.items() if key not in ignored}
+            == {key: value for key, value in after.items() if key not in ignored})
+
+
 def _scene_authority(observation: dict[str, Any]) -> dict[str, Any]:
     # Host Pause changes transport permission, not game facts or scene revision.
     # _metadata still forbids rewriting paused (or anything else) on one frame.
-    return {key: observation[key] for key in ("scene", "boundary", "category", "actions", "in_game")}
+    return {key: observation[key] for key in ("scene", "ui", "boundary", "category", "actions", "in_game", "takeover_generation")}
 
 
 def _validate_observation(value: dict[str, Any] | str | bytes) -> dict[str, Any]:
@@ -101,13 +124,27 @@ def _validate_observation(value: dict[str, Any] | str | bytes) -> dict[str, Any]
     validate_json(observation, _OBSERVATION)
     if observation["status"] == "dispatched" or observation["frame_ok"] is not True:
         raise EvidenceError("A failed or unfinished capture is missing evidence")
-    if (observation["boundary"]["kind"] != "normal_play" or observation["in_game"] is not True
-            or observation["category"] != "DEFAULTMODE" or observation["scene"] is None
-            or observation["boundary"]["recovery_operations"] != []
-            or observation["boundary"]["interrupt_request_id"] is not None):
-        raise EvidenceError("Current evidence requires positively marked normal play")
+    validate_visible_ui(observation["ui"])
+    kind = observation["boundary"]["kind"]
+    if kind == "normal_play":
+        if (not observation["in_game"] or observation["category"] != "DEFAULTMODE" or observation["scene"] is None
+                or observation["boundary"]["recovery_operations"] != []
+                or observation["boundary"]["interrupt_request_id"] is not None):
+            raise EvidenceError("Normal-play evidence requires a positively marked scene")
+    elif observation["scene"] is not None:
+        raise EvidenceError("Non-normal boundary cannot publish a scene")
+    if kind != "menu" and observation["ui"] is not None:
+        raise EvidenceError("Visible menu data requires its native menu owner")
+    expected_recovery = {"activity_poll": ["request_interrupt"], "interrupt_confirmation": ["answer_interrupt"],
+                         "debug_prompt": ["continue_debug_once"]}.get(kind, [])
+    boundary = observation["boundary"]
+    if (boundary["recovery_operations"] not in ([], expected_recovery)
+            or kind == "interrupt_confirmation" and (boundary["recovery_operations"] != expected_recovery or boundary["interrupt_request_id"] is None)
+            or kind != "interrupt_confirmation" and boundary["interrupt_request_id"] is not None):
+        raise EvidenceError("Recovery evidence contradicts its boundary owner")
     if not re.fullmatch(r"frame-" + re.escape(observation["session"]) + r"-[1-9][0-9]*\.png", observation["frame"]):
         raise EvidenceError("Frame identity must match its native session and immutable basename")
+    if kind != "normal_play": return observation
     neighbors = observation["scene"]["neighbors"]
     expected = {(dx, dy) for dx in range(-1, 2) for dy in range(-1, 2) if (dx, dy) != (0, 0)}
     if {(tile["dx"], tile["dy"]) for tile in neighbors} != expected:
@@ -148,11 +185,11 @@ class EvidenceStore:
     or explicitly released. No store operation dispatches inputs.
     """
     def __init__(self, bridge_directory: Path, session_directory: Path, *,
-                 max_frames: int = MAX_FRAMES, max_bytes: int = MAX_BYTES):
+                 max_frames: int = DEFAULT_FRAMES, max_bytes: int = DEFAULT_BYTES):
         if type(max_frames) is not int or not 1 <= max_frames <= MAX_FRAMES:
-            raise CapacityError("Frame cap must be between 1 and 32")
+            raise CapacityError("Frame cap must be between 1 and 4096")
         if type(max_bytes) is not int or not 1 <= max_bytes <= MAX_BYTES:
-            raise CapacityError("Byte cap must be between 1 and 64 MiB")
+            raise CapacityError("Byte cap must be between 1 and 1 GiB")
         self.bridge = Path(bridge_directory).resolve(strict=True)
         self.directory = Path(session_directory).resolve()
         if self.directory == self.bridge or self.bridge in self.directory.parents:
@@ -205,12 +242,24 @@ class EvidenceStore:
             raise EvidenceError("Evidence store is closed")
 
     def _usage(self) -> tuple[int, int]:
-        count = size = 0
+        # Missing indexed sources retain their slots: dropping their bytes cannot
+        # admit an unbounded manifest or erase a memory frontier. Orphans consume
+        # additional slots rather than substituting for those missing sources.
+        count, size = len(self._entries), 0
+        indexed_names = {identity + ".png" for identity in self._entries}
         for path in self.frames.iterdir():
-            if path.is_symlink() or not path.is_file():
+            try:
+                metadata = path.lstat()
+            except FileNotFoundError:
+                # A source may disappear after listing. Indexed slots already
+                # remain counted above; integrity checks retain the loss, not an
+                # older source or permission to dispatch. Other I/O errors stop.
+                continue
+            if not stat.S_ISREG(metadata.st_mode):
                 raise EvidenceError("Unexpected non-file in retained evidence")
-            count += 1
-            size += path.stat().st_size
+            if path.name not in indexed_names:
+                count += 1
+            size += metadata.st_size
         if count > self.max_frames or size > self.max_bytes:
             raise CapacityError("Existing retention exceeds cap; no evidence was deleted")
         return count, size
@@ -219,11 +268,11 @@ class EvidenceStore:
         manifest = self.directory / "evidence.json"
         if manifest.exists():
             try:
-                if manifest.is_symlink() or manifest.stat().st_size > 34 * 1024 * 1024:
+                if manifest.is_symlink() or manifest.stat().st_size > MAX_METADATA_BYTES:
                     raise EvidenceError("Invalid evidence manifest")
-                value = json.loads(manifest.read_bytes())
+                value = json.loads(manifest.read_bytes(), parse_constant=_reject_constant, object_pairs_hook=_pairs)
                 if (type(value) is not dict or set(value) != {"store_version", "entries", "session", "retired_sessions", "blocked", "disputed"}
-                        or type(value["store_version"]) is not int or value["store_version"] != 2
+                        or type(value["store_version"]) is not int or value["store_version"] != 3
                         or type(value["entries"]) is not list or len(value["entries"]) > MAX_FRAMES
                         or type(value["retired_sessions"]) is not list or len(value["retired_sessions"]) > MAX_FRAMES
                         or any(type(s) is not str or not 1 <= len(s) <= 128 for s in value["retired_sessions"])
@@ -252,25 +301,38 @@ class EvidenceStore:
                     self._entries[ref.observation_id] = _Entry(ref, observation, lag)
                 if not set(self._disputed) <= self._entries.keys():
                     raise EvidenceError("Disputed source is not retained")
-                # Load all metadata before verification can persist a dispute;
-                # otherwise a bad early frame could truncate later entries.
+                # Preserve valid metadata even when an original image is lost.
+                # Memory needs the missing newest reference to avoid resurrecting
+                # older claims. No loaded source becomes current on reopen.
+                lost_source = False
                 for entry in self._entries.values():
-                    self.verify(entry.reference)
+                    try:
+                        self._verify_file(entry.reference)
+                    except EvidenceError as exc:
+                        self._invalidate(str(exc), entry.reference.observation_id)
+                        lost_source = True
+                if lost_source:
+                    self._save()
             except (OSError, ValueError, TypeError, KeyError, RecursionError) as exc:
                 if isinstance(exc, EvidenceError):
                     raise
                 raise EvidenceError(f"Cannot reopen retained evidence: {exc}") from exc
         self._usage()
 
-    def _save(self) -> None:
-        value = {"store_version": 2, "session": self._session, "retired_sessions": self._retired_sessions,
+    def _manifest(self) -> dict[str, Any]:
+        return {"store_version": 3, "session": self._session, "retired_sessions": self._retired_sessions,
                  "blocked": self._blocked, "disputed": self._disputed,
                  "entries": [{"reference": item.reference.to_dict(), "observation": item.observation,
                               "initial_lag_seconds": item.initial_lag_seconds} for item in self._entries.values()]}
+
+    def _save(self) -> None:
+        encoded = _canonical(self._manifest())
+        if len(encoded) > MAX_METADATA_BYTES:
+            raise CapacityError("Metadata retention cap reached; existing evidence preserved")
         temporary = self.directory / ("evidence-" + uuid.uuid4().hex + ".tmp")
         try:
             with temporary.open("xb") as stream:
-                stream.write(_canonical(value))
+                stream.write(encoded)
                 stream.flush()
                 os.fsync(stream.fileno())
             os.replace(temporary, self.directory / "evidence.json")
@@ -282,7 +344,7 @@ class EvidenceStore:
     def _reference(self, observation: dict[str, Any], received: float, digest: str) -> EvidenceRef:
         identity = _identity(observation)
         return EvidenceRef(identity, observation["session"], observation["revision"], observation["timestamp_ms"],
-                           received, observation["scene"]["turn"], str(self.frames / (identity + ".png")),
+                           received, None if observation["scene"] is None else observation["scene"]["turn"], str(self.frames / (identity + ".png")),
                            digest, observation["boundary"]["kind"])
 
     def _invalidate(self, reason: str, *disputed: str) -> None:
@@ -297,7 +359,7 @@ class EvidenceStore:
         self._current = None
         self.invalid_reason = reason
 
-    def _verify_file(self, reference: EvidenceRef) -> None:
+    def _frame_bytes(self, reference: EvidenceRef) -> bytes:
         path = Path(reference.frame_path)
         expected = self.frames / (reference.observation_id + ".png")
         if path != expected or path.is_symlink() or path.resolve() != expected:
@@ -310,6 +372,28 @@ class EvidenceStore:
         _check_frame_bytes(data)
         if hashlib.sha256(data).hexdigest() != reference.frame_sha256:
             raise EvidenceError("Retained source hash mismatch")
+        return data
+
+    def _verify_file(self, reference: EvidenceRef) -> None:
+        self._frame_bytes(reference)
+
+    @_serialized
+    def export_source(self, identity: str) -> tuple[dict, bytes]:
+        """Read one exact retained source; no refresh or authority mutation.
+
+        This reader is independent of the evictable bridge and does not scan the
+        manifest. Missing/changed bytes fail instead of returning a later image.
+        Runtime validation remains responsible for sticky evidence invalidation.
+        """
+        self._open()
+        entry = self._entries.get(identity)
+        if entry is None:
+            raise EvidenceError("Unknown retained source")
+        data = self._frame_bytes(entry.reference)
+        return {"reference": entry.reference.to_dict(),
+                "observation": json_object(entry.observation),
+                "disposition": "disputed" if identity in self._disputed else "retained",
+                "grants_authority": False}, data
 
     @_serialized
     def verify(self, reference: EvidenceRef) -> None:
@@ -356,21 +440,73 @@ class EvidenceStore:
         if elapsed < 0 or wall_age < -1000 or wall_age > 3000 or entry.initial_lag_seconds + elapsed > MAX_AGE_SECONDS:
             raise EvidenceError("Observation is stale or clock continuity is unknown")
 
+    @staticmethod
+    def _equivalence_rule(rule: str) -> None:
+        if rule not in ("native_state", "exact_png_bytes"):
+            raise ContractError("Unsupported evidence equivalence rule")
+
+    @_serialized
+    def equivalent(self, before: EvidenceRef, after: EvidenceRef, *, rule: str) -> bool:
+        """Compare verified historical sources without freshness or authority promotion.
+
+        Native-state equality attests only the retained normal scene or rendered
+        menu data. Exact-PNG equality additionally compares encoded canonical
+        bytes. Neither rule proves host or store generation continuity.
+        """
+        self._equivalence_rule(rule)
+        original, actual = self.observation(before), self.observation(after)
+        if any(value["status"] != "ready" or value["error"] != "" for value in (original, actual)):
+            return False
+        if not same_native_state(original, actual):
+            return False
+        if rule == "native_state":
+            return all((value["boundary"]["kind"] == "normal_play" and value["scene"] is not None)
+                       or (value["boundary"]["kind"] == "menu" and value["ui"] is not None)
+                       for value in (original, actual))
+        return before.frame_sha256 == after.frame_sha256
+
     @_serialized
     def ingest(self, value: dict[str, Any] | str | bytes, *, received_monotonic: float,
                now_monotonic: float, now_timestamp_ms: int,
                reservation: CapacityReservation | None = None) -> EvidenceRef:
-        """Retain a native-v3 normal-play observation with its actual first receipt.
+        """Retain a native-v4 normal/menu/activity/recovery observation with its actual first receipt.
 
         Repeated source identity reuses original receipt/lag and immutable copied
         source; bridge-cache eviction is harmless after initial retention. Altered
         metadata for that identity is a contradiction, never a fresh observation.
         """
+        return self._ingest(value, received_monotonic=received_monotonic, now_monotonic=now_monotonic,
+                            now_timestamp_ms=now_timestamp_ms, reservation=reservation, promote_current=True)
+
+    @_serialized
+    def retain_equivalent(self, value: dict[str, Any] | str | bytes, *, received_monotonic: float,
+                          now_monotonic: float, now_timestamp_ms: int, rule: str) -> EvidenceRef:
+        """Archive final preflight with its actual receipt, preserving current attribution.
+
+        Requires fresh current evidence and no outstanding after-frame reservation.
+        A successful result is historical evidence only; any failed retention
+        invalidates current authority and preserves available diagnostics.
+        """
+        return self._ingest(value, received_monotonic=received_monotonic, now_monotonic=now_monotonic,
+                            now_timestamp_ms=now_timestamp_ms, reservation=None, promote_current=False, rule=rule)
+
+    def _ingest(self, value: dict[str, Any] | str | bytes, *, received_monotonic: float,
+                now_monotonic: float, now_timestamp_ms: int, reservation: CapacityReservation | None,
+                promote_current: bool, rule: str = "native_state") -> EvidenceRef:
         self._open()
         try:
+            before = None
+            if not promote_current:
+                self._equivalence_rule(rule)
+                before = self.current_boundary(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
+                self.observation(before)  # A disputed current source cannot support equivalence.
+                if self._reservation is not None:
+                    raise CapacityError("An unresolved dispatch already reserves after evidence")
             observation = json_object(value)
             validate_json(observation, _OBSERVATION)
             session = observation["session"]
+            if not promote_current and session != before.session:
+                raise EvidenceError("Equivalent preflight cannot adopt another world session")
             if session in self._retired_sessions:
                 raise EvidenceError("An old world session cannot become current again")
             if self._session is not None and session != self._session:
@@ -380,6 +516,8 @@ class EvidenceStore:
                 self._retired_sessions.append(self._session)
             self._session = session
             observation = _validate_observation(observation)
+            if not promote_current and (observation["status"] != "ready" or observation["error"] != ""):
+                raise EvidenceError("Equivalent preflight requires ready evidence without an error")
             if type(received_monotonic) not in (int, float) or not math.isfinite(received_monotonic) or received_monotonic < 0:
                 raise EvidenceError("Invalid actual receipt time")
             identity = _identity(observation)
@@ -426,7 +564,7 @@ class EvidenceStore:
                 reference = self._reference(observation, received_monotonic, hashlib.sha256(data).hexdigest())
                 entry = _Entry(reference, observation, max(0, now_timestamp_ms - observation["timestamp_ms"]) / 1000)
                 self._fresh(entry, now_monotonic, now_timestamp_ms)
-                self._capacity(len(data), reservation)
+                self._capacity(len(data), reservation, metadata_bytes=len(_canonical(observation)) + 8192)
                 destination = Path(reference.frame_path)
                 if destination.exists():
                     raise EvidenceError("Unindexed retained source exists; refusing replacement")
@@ -436,13 +574,16 @@ class EvidenceStore:
                     os.fsync(stream.fileno())
                 destination.chmod(0o444)
                 self._entries[identity] = entry
+            if not promote_current and not self.equivalent(before, entry.reference, rule=rule):
+                raise EvidenceError("Final preflight is not equivalent to current retained evidence")
             if reservation is not None:
                 self._check_reservation(reservation)
                 self._reservation = None
-            if self._current != entry.reference:
-                self._authority_generation += 1
-            self._current = entry.reference
-            self.invalid_reason = ""
+            if promote_current:
+                if self._current != entry.reference:
+                    self._authority_generation += 1
+                self._current = entry.reference
+                self.invalid_reason = ""
             self._save()
             return entry.reference
         except (ContractError, OSError) as exc:
@@ -454,6 +595,15 @@ class EvidenceStore:
 
     @_serialized
     def current(self, *, now_monotonic: float, now_timestamp_ms: int) -> EvidenceRef:
+        """Current normal scene only: movement callers cannot use menu retention."""
+        reference = self.current_boundary(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
+        if reference.boundary_kind != "normal_play":
+            raise EvidenceError("Current evidence requires positively marked normal play")
+        return reference
+
+    @_serialized
+    def current_boundary(self, *, now_monotonic: float, now_timestamp_ms: int) -> EvidenceRef:
+        """Fresh retained boundary, never a dispatch capability or normal scene."""
         self._open()
         if self._current is None:
             raise EvidenceError(self.invalid_reason)
@@ -469,9 +619,16 @@ class EvidenceStore:
 
     @_serialized
     def inspect_current(self, *, now_monotonic: float, now_timestamp_ms: int) -> tuple[EvidenceRef | None, bool]:
+        """Inspect normal-play eligibility; menu retention does not grant it."""
+        reference, fresh = self.inspect_current_boundary(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
+        return (reference, fresh) if reference is not None and reference.boundary_kind == "normal_play" else (None, False)
+
+    @_serialized
+    def inspect_current_boundary(self, *, now_monotonic: float, now_timestamp_ms: int) -> tuple[EvidenceRef | None, bool]:
         """Report age without granting authority or invalidating merely old evidence.
 
-        Integrity failures still invalidate through verify; dispatch uses current().
+        Integrity failures still invalidate through verify; dispatch uses current_boundary().
+        Like current_boundary(), this includes retained menus and activity polls.
         """
         self._open()
         reference = self._current
@@ -488,23 +645,42 @@ class EvidenceStore:
         if self._reservation is None or reservation != self._reservation:
             raise CapacityError("Reservation is unknown, released or already consumed")
 
-    def _capacity(self, size: int, reservation: CapacityReservation | None) -> None:
+    def _capacity(self, size: int, reservation: CapacityReservation | None, *,
+                  metadata_bytes: int = MAX_ENTRY_BYTES) -> None:
         count, used = self._usage()
-        reserved_frames = reserved_bytes = 0
+        reserved_frames = reserved_bytes = reserved_metadata = 0
         if reservation is not None:
             self._check_reservation(reservation)
         elif self._reservation is not None:
             reserved_frames = self._reservation.frame_slots
             reserved_bytes = self._reservation.bytes_reserved
+            reserved_metadata = self._reservation.metadata_reserved
+        if len(_canonical(self._manifest())) + reserved_metadata + metadata_bytes + METADATA_HEADROOM > MAX_METADATA_BYTES:
+            raise CapacityError("Metadata capacity/reserve exhausted before dispatch")
         if count + reserved_frames + 1 > self.max_frames or used + reserved_bytes + size > self.max_bytes:
             raise CapacityError("Retention cap reached; existing evidence was preserved")
+
+    @_serialized
+    def usage(self) -> dict[str, int]:
+        """Measured archive usage; mission admission owns stricter cleanup reserves."""
+        self._open()
+        count, size = self._usage()
+        return {"frames": count, "bytes": size, "metadata_bytes": len(_canonical(self._manifest())),
+                "max_frames": self.max_frames, "max_bytes": self.max_bytes,
+                "max_metadata_bytes": MAX_METADATA_BYTES}
 
     @_serialized
     def preflight_dispatch(self, before: EvidenceRef, *, now_monotonic: float,
                            now_timestamp_ms: int) -> None:
         """Check worst-case capacity without claiming a reservation or dispatch guarantee."""
-        if self.current(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms) != before:
+        if self.current_boundary(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms) != before:
             raise EvidenceError("Dispatch before-frame must be current retained evidence")
+        self.preflight_retention()
+
+    @_serialized
+    def preflight_retention(self) -> None:
+        """Check existing capacity/reservation guards without refreshing or authorizing input."""
+        self._open()
         if self._reservation is not None:
             raise CapacityError("An unresolved dispatch already reserves after evidence")
         self._capacity(MAX_FRAME_BYTES, None)
@@ -546,6 +722,7 @@ class EvidenceStore:
         """Source-tagged measurements; being retained never implies freshness."""
         self.verify(reference)
         scene = self._entries[reference.observation_id].observation["scene"]
+        if scene is None: return ()
         return (Fact("position", json.dumps(scene["position"]), reference),
                 Fact("turn", str(scene["turn"]), reference),
                 Fact("visible_creature_count", str(len(scene["visible_creatures"])), reference))
@@ -557,7 +734,9 @@ class EvidenceStore:
     @_serialized
     def position(self, reference: EvidenceRef) -> Vector:
         self.verify(reference)
-        return tuple(self._entries[reference.observation_id].observation["scene"]["position"])
+        scene = self._entries[reference.observation_id].observation["scene"]
+        if scene is None: raise EvidenceError("Position requires a normal scene")
+        return tuple(scene["position"])
 
     @_serialized
     def interpret(self, text: str, sources: tuple[EvidenceRef, ...]) -> Interpretation:

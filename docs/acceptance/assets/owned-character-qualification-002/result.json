@@ -1,0 +1,84 @@
+{
+  "qualification": "FAILED after guarded Resume succeeded; firstmenu child blocked beforeinput; no world/character created",
+  "source_commit": "761f1837cc9788f2f1274008c11bab6ed9236355",
+  "native_sha256": "c65778e2912230f34b67340a4f2caacd0d5874af24ab964526c436bd686f7720",
+  "deciding_mission": false,
+  "charged_inputs": 1,
+  "primitive_dispositions": {
+    "resume_returned": 1,
+    "unknown": 0
+  },
+  "native_menu_action_inputs": 0,
+  "registered_exit": "blocked: Resume classifiedas requiring savedcheckpoint",
+  "normal_exit_proof": false,
+  "normal_finish": false,
+  "external_cleanup_interventions": 1,
+  "external_cleanup": "One separately reviewed/proposed postfailure SIGTERM to exact pausedownedchild34943; actualretainedownerexitcode0; not registerednormalexit",
+  "no_user_keys": true,
+  "no_source_patch": true,
+  "frames": 5,
+  "png_bytes": 166610,
+  "wall_seconds_through_retained_exit_sample": 419.2847261428833,
+  "wall_seconds_including_shutdown_and_reopen": 619.2889342308044,
+  "additional_shutdown_verification_seconds": 200.00420808792114,
+  "game_seconds": null,
+  "model_tool_usage": null,
+  "stale_epoch_cleanup_observe_rejection": "One epoch0 Observe rejected after failure advancedepoch1; freshuniqueepoch1 diagnostic accepted; no input in either",
+  "resource_state": "No game/listener/liveinboxes; serviceexit0; ledgerreopenretainsfailure/costs withoutnormalexit/Finish orliveauthority",
+  "api_verification_invocation_error": "First readback used incorrect MissionLedger constructor arguments and failed before opening/writing; corrected keyword-onlynow/admission readbackpassed",
+  "review": "reconciliation_ledger_review checked originalResume/nativejournal/identicalframes and both source defects before teardown",
+  "timing_basis": "009 mission.last_wall minus original started_at; final010 recorded_at minus same start. Original unsupported428.876300 derived summary preserved in013-original-derived-timing.json.",
+  "timing_correction": "Independent closeout review found original428.876300 endpoint unsupported. Native failure, inputs and other costs unchanged.",
+  "evidence": [
+    {
+      "source_id": "fc8ada87e8c6b98c3ef796631989d2732d00d44041ccb58f4d59b89216524200",
+      "native_revision": 1,
+      "paused": true,
+      "pause_origin": "host",
+      "category": "MAIN_MENU",
+      "in_game": false,
+      "frame_sha256": "c0bc35786b91b78577ba4bcef26af52ee2873136eb9b9b0ef580d217e1460506"
+    },
+    {
+      "source_id": "67e2fb1ce95e29ddc236b4e68ec217f2f3c62385fede6d955e1a16209e192948",
+      "native_revision": 1,
+      "paused": true,
+      "pause_origin": "host",
+      "category": "MAIN_MENU",
+      "in_game": false,
+      "frame_sha256": "c0bc35786b91b78577ba4bcef26af52ee2873136eb9b9b0ef580d217e1460506"
+    },
+    {
+      "source_id": "c8cfab9c8271da1a1050b587ef9f2226194ceabd3513063a855ca71ec97ee43a",
+      "native_revision": 1,
+      "paused": true,
+      "pause_origin": "host",
+      "category": "MAIN_MENU",
+      "in_game": false,
+      "frame_sha256": "c0bc35786b91b78577ba4bcef26af52ee2873136eb9b9b0ef580d217e1460506"
+    },
+    {
+      "source_id": "b19a07b7c92428753069b88a0fffc3ddba26f9181d129cb40644acb9c964bd68",
+      "native_revision": 2,
+      "paused": false,
+      "pause_origin": "none",
+      "category": "MAIN_MENU",
+      "in_game": false,
+      "frame_sha256": "c0bc35786b91b78577ba4bcef26af52ee2873136eb9b9b0ef580d217e1460506"
+    },
+    {
+      "source_id": "1973f73965c366697935a8bad433e1eea8ec725a77d352634ab9a61877d7d6ba",
+      "native_revision": 2,
+      "paused": true,
+      "pause_origin": "host",
+      "category": "MAIN_MENU",
+      "in_game": false,
+      "frame_sha256": "c0bc35786b91b78577ba4bcef26af52ee2873136eb9b9b0ef580d217e1460506"
+    }
+  ],
+  "resume_native_uuid": "5dc78532-df38-4106-867d-458cf1af9e47",
+  "image": {
+    "file": "main-menu.png",
+    "sha256": "c0bc35786b91b78577ba4bcef26af52ee2873136eb9b9b0ef580d217e1460506"
+  }
+}

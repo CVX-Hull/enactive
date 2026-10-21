@@ -1,0 +1,602 @@
+{
+  "outcome": "Original bounded development gameplay outcomes independently verified; final publication/protected closeout tracked separately",
+  "mission_id": "independent-supply-shelter-024",
+  "source_commit": "502ca0fcb788c98a7021d17efa6071dc5154102e",
+  "native_sha256": "cd031f200748cbbb387011335db15596346dac29607221fac25641ec9a771f1f",
+  "contracts": {
+    "mission": "mission/8",
+    "memory": "campaign-memory/3",
+    "ledger": 10,
+    "native": 4,
+    "archive": 3
+  },
+  "data_label": "development;not held-out or controlled efficacy evaluation",
+  "admission": {
+    "allowed_lifecycle": [
+      "launch",
+      "create",
+      "save",
+      "exit",
+      "load",
+      "finish"
+    ],
+    "allowed_skills": [
+      "navigate",
+      "menu",
+      "item",
+      "activity",
+      "inspect",
+      "edit",
+      "interact"
+    ],
+    "cleanup_reserve": {
+      "frame_bytes": 134217728,
+      "frames": 256,
+      "inputs": 100,
+      "wall_seconds": 900
+    },
+    "configuration": {
+      "effort": "def;w15;life256p1800w3600g;root32p900w3600g;MCP;mouseoff;bg1",
+      "lessons": "phase-budgets;MCP-errors;identity;coordinate-scope;issued-source;handoff-draft-feedback;no-online-promotion",
+      "model": "fresh-general-purpose-default-role;exact-unexposed",
+      "native_sha256": "cd031f200748cbbb387011335db15596346dac29607221fac25641ec9a771f1f",
+      "skills": "mission8-owned-skill-activity-observation",
+      "source_commit": "502ca0fcb788c98a7021d17efa6071dc5154102e"
+    },
+    "limits": {
+      "frame_bytes": 1073741824,
+      "frames": 4096,
+      "game_seconds": 43200,
+      "inputs": 1600,
+      "primitive_mappings": 8192,
+      "requests": 4096,
+      "wall_seconds": 10800
+    },
+    "mission_id": "independent-supply-shelter-024",
+    "objective": "DEVELOPMENT: Independent supply-and-shelter mission under accepted design: meaningful supplies/needs/shelter-rest, semantic navigation/replanning, retained memory correction and unfinished Work, actual fresh-context successor, exact normal save/restart/reload and final normal finish; lead observes only",
+    "player_id": "independent-player-024",
+    "record_type": "MissionAdmission",
+    "scenario": {
+      "character": "Alex Enactive",
+      "mode": "fresh",
+      "world": "Enactive Twenty Four"
+    },
+    "schema": "mission/8",
+    "update_policy": "facts-and-provisional/1"
+  },
+  "requests": 123,
+  "requests_by_kind": {
+    "start": 1,
+    "lifecycle": 21,
+    "skill": 79,
+    "observe": 8,
+    "remember": 9,
+    "correct": 2,
+    "handoff": 1,
+    "claim": 1,
+    "readmit": 1
+  },
+  "requests_by_state": {
+    "completed": 42,
+    "partial": 68,
+    "blocked": 9,
+    "unknown": 4
+  },
+  "charged_inputs": 156,
+  "returned": 150,
+  "unknown": 6,
+  "unknown_effects_reconciled": 6,
+  "unreconciled_effects": 0,
+  "frames": 408,
+  "png_bytes": 20541928,
+  "all_frame_hashes_verified": true,
+  "ledger_integrity": "ok;foreign_key_check empty",
+  "ledger_sha256": "7c5591decad29b13a2dea02053649489c94f96075b04f42f4d5368559e5c10f4",
+  "archive_index_sha256": "6e0ae38f08c0549e506dddb68ed4b93da3eeb08db5929135f8c2d410d344952e",
+  "canonical_game_seconds": 1845,
+  "wall_seconds_through_finish_request_admission": 1116.9717898368835,
+  "wall_time_scope": "Start to final Finish admission; excludes later engineering audit/cleanup, not model inference time",
+  "navigation": [
+    {
+      "request_id": "p024-nav-locker-east",
+      "target": [
+        2,
+        0,
+        0
+      ],
+      "verified_steps": 0,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "disposition": "blocked"
+    },
+    {
+      "request_id": "p024-nav-east-observed",
+      "target": [
+        1,
+        0,
+        0
+      ],
+      "verified_steps": 1,
+      "position": [
+        1,
+        0,
+        0
+      ],
+      "disposition": "completed"
+    },
+    {
+      "request_id": "p024-nav-east-end",
+      "target": [
+        2,
+        0,
+        0
+      ],
+      "verified_steps": 1,
+      "position": [
+        2,
+        0,
+        0
+      ],
+      "disposition": "completed"
+    },
+    {
+      "request_id": "p024-nav-south-lockers",
+      "target": [
+        2,
+        1,
+        0
+      ],
+      "verified_steps": 1,
+      "position": [
+        2,
+        1,
+        0
+      ],
+      "disposition": "completed"
+    },
+    {
+      "request_id": "p024-nav-return-bench",
+      "target": [
+        0,
+        0,
+        0
+      ],
+      "verified_steps": 3,
+      "position": [
+        0,
+        0,
+        0
+      ],
+      "disposition": "completed"
+    }
+  ],
+  "navigation_credited_steps": 6,
+  "navigation_multistep_requests": 1,
+  "water_ml_verified_before_save": 1000,
+  "water_evidence": "Two carried liquid clean-water bottles at0.50L each; consume menu independently lists4servings at0.25L. Separate frozen stock excluded.",
+  "food_evidence": "Counted wrapper pickup;800kcal consumed when Peckish;4protein rations still listed after eating. Not a fresh post-reload inventory measurement.",
+  "rest": {
+    "kind": "ordinary wait;not measured sleep",
+    "before_turn": 5212811,
+    "after_turn": 5214611,
+    "actual_game_seconds": 1800,
+    "place": "evac shelter C-41"
+  },
+  "saved_endpoint_turn": 5214645,
+  "first_reloaded_normal_turn": 5214645,
+  "final_normal_turn": 5214645,
+  "normal_creation": true,
+  "actual_fresh_successor_started": true,
+  "successor_claim_request": "p024-successor-claim",
+  "successor_readmission_request": "p024-successor-readmit",
+  "successor_readmission_charged_resumes": 1,
+  "source_image_exports": {
+    "actual_source_calls": [
+      {
+        "source_id": "24e8f5d3080bdeace2d673ae6b905f9e36e7242ed8744ee592864953801b8d94",
+        "call_id": "exec-fc5087ba-0db3-49ae-825c-8ae10be8139b",
+        "completed": true,
+        "sha256": "69cc60159e4d815a3b679e60da790ff572389e3761bd7fb3353ca75466e2dbc9",
+        "actual_output_image_matches_canonical_frame": true
+      },
+      {
+        "source_id": "324383cc50434d6491fe47d241428db1bd4e8c93c3c5c0bdf5f52f29552c6a27",
+        "call_id": "exec-fb44c48a-370b-49df-ad87-ea7cd862c592",
+        "completed": true,
+        "sha256": "1a881f9a7ddf70b00b1fbe30c03af4eb7cee8f0a3ef28621cfb2affb51efb4bd",
+        "actual_output_image_matches_canonical_frame": true
+      },
+      {
+        "source_id": "9c7fbec53094f78f06ab62bf1f45be98250feb42e87b0642a466265fe98bdd14",
+        "call_id": "exec-6a536c1a-2ef0-4ff9-a15e-8ef5f86a5810",
+        "completed": true,
+        "sha256": "ca912ea39e76bc8e1ec7a9eebc70cdda433de8e22e0595ebbe6d0084b831338d",
+        "actual_output_image_matches_canonical_frame": true
+      },
+      {
+        "source_id": "aa4e885dd8e5d2c13b72f2c29ea2d3b1daf5795f204d13a50aab4146f75239c1",
+        "call_id": "exec-c74dcaa8-d719-42f4-a579-7ca61ab139c9",
+        "completed": true,
+        "sha256": "69cc60159e4d815a3b679e60da790ff572389e3761bd7fb3353ca75466e2dbc9",
+        "actual_output_image_matches_canonical_frame": true
+      },
+      {
+        "source_id": "b8c363dfb85300426fec0ac7df86f4093c46c2a5c09cdfc13c393365064f5f1e",
+        "call_id": "exec-5ac58c81-d909-42bd-9901-387dcbe733c6",
+        "completed": true,
+        "sha256": "69cc60159e4d815a3b679e60da790ff572389e3761bd7fb3353ca75466e2dbc9",
+        "actual_output_image_matches_canonical_frame": true
+      },
+      {
+        "source_id": "bb8816770a1c14d7645cdbedbd7eaa5a0c0e069404f2d0f228d58cf8b9ad6b93",
+        "call_id": "exec-9ae43e3b-6479-476d-a755-7b85cf991176",
+        "completed": true,
+        "sha256": "a89d2bfb1867154e2ae22f7583ee5330f9386b7e585354a65008f5220ecc06cf",
+        "actual_output_image_matches_canonical_frame": true
+      },
+      {
+        "source_id": "c5b38fa9315cf123d4348b5761f77dda89b139a919b26c458e81894adcfe829e",
+        "call_id": "exec-e73c1da7-f0a0-4626-a1ca-3e9d817440ab",
+        "completed": true,
+        "sha256": "58a013c9edc4dd869f36b6b6e698a96916b99dc578976b7110a280bb0ba3644e",
+        "actual_output_image_matches_canonical_frame": true
+      }
+    ],
+    "all_seven_actual_output_images_match_canonical_sha256": true,
+    "evidence_scope": "Actual clean-context successor source exports and image presentation before claim/readmit; no proof of mental attention or causal memory benefit",
+    "private_transcript_published": false
+  },
+  "correction_ids": [
+    "p024-nav-evidence-correction",
+    "p024s-reload-world-menu-correction"
+  ],
+  "unfinished_work_id": "p024-supply-shelter-work",
+  "lifecycle_proofs": {
+    "p024-create-adopt": {
+      "normal_adoption": {
+        "character_claim_id": "p024-character",
+        "checkpoint_source_id": "98c08b2b1b7a8582d1d9fd1ff5d5c4b349c213ba5e967880def86d5811f77476",
+        "first_normal_source_id": "1b7ed628a889a05e4a7c3a44cb13db30a5acde44d73ee1dfb881849066670e81",
+        "grants_authority": false,
+        "identity_inspect_request_id": "p024-identity-inspect",
+        "origin_request_id": "p024-create",
+        "record_type": "NormalSessionAdoption",
+        "saved_checkpoint_request_id": null,
+        "schema": "mission/8",
+        "scope": {
+          "coordinate_epoch": 0,
+          "mission_id": "independent-supply-shelter-024",
+          "session": "1792591549135-22236-1"
+        },
+        "transition_result_request_id": "p024-create-reconcile",
+        "world_claim_id": "p024-world"
+      }
+    },
+    "p024s-save-transition": {
+      "lifecycle_transition": {
+        "actor_id": "independent-player-024-successor-clean",
+        "after_source_id": "16b5b7572ac42233df9470286b834f7c63fe45a9f9b6e05172145a2be0facbfb",
+        "after_takeover_generation": 0,
+        "before_source_id": "dc4003891c63ce5ffeb7ca56c1c767eb9746d4025d60c1139c2fe286331777e3",
+        "before_takeover_generation": 0,
+        "controller_boot_id": "ea5d94de06fc45b8bf53d3c290573ad7",
+        "grants_authority": false,
+        "launch_id": "4332bee7c3d247088ff409021e765b64",
+        "launch_request_id": "p024-launch",
+        "native_request_id": "e3bb06a6-1eaf-4a39-9037-5dea39a520b6",
+        "operation": "save",
+        "operator_pause_generation": 0,
+        "origin_epoch": 2,
+        "origin_request_id": "p024s-first-save",
+        "reconciled_epoch": 3,
+        "record_type": "LifecycleTransition",
+        "schema": "mission/8",
+        "terminal_logical_id": "control-42c91d3ec27edc3d9a7d199a58173fa95c343abdbadbdf60ceffda0186547487-1",
+        "terminal_request_id": "p024s-first-save-yes-valid"
+      },
+      "saved_checkpoint": {
+        "adoption_result_request_id": "p024-create-adopt",
+        "grants_authority": false,
+        "menu_source_id": "16b5b7572ac42233df9470286b834f7c63fe45a9f9b6e05172145a2be0facbfb",
+        "normal_endpoint_source_id": "fd8b68e18dc9131971a14493a78f471d7ca2addff8b1eac13f15a5370e6d50de",
+        "origin_request_id": "p024s-first-save",
+        "record_type": "SavedCheckpoint",
+        "schema": "mission/8",
+        "transition_result_request_id": "p024s-save-transition"
+      }
+    },
+    "p024s-first-exit-yes": {
+      "normal_exit": {
+        "grants_authority": false,
+        "launch_id": "4332bee7c3d247088ff409021e765b64",
+        "launch_request_id": "p024-launch",
+        "native_request_id": "2b44e72c-1e65-4119-a450-513a9f9d2716",
+        "no_save_required": false,
+        "origin_request_id": "p024s-first-exit",
+        "record_type": "OwnedNormalExit",
+        "retirement": {
+          "exit_request_id": "p024s-first-exit",
+          "grants_authority": false,
+          "launch_id": "4332bee7c3d247088ff409021e765b64",
+          "native_request_id": "2b44e72c-1e65-4119-a450-513a9f9d2716",
+          "retired_pending": true,
+          "returncode": 0
+        },
+        "returncode": 0,
+        "saved_checkpoint_request_id": "p024s-save-transition",
+        "schema": "mission/8",
+        "source_ids": [
+          "70944c8514b58e76ea88552015cbfd6013566b72df08246a1518ccb0da24590e",
+          "16b5b7572ac42233df9470286b834f7c63fe45a9f9b6e05172145a2be0facbfb",
+          "2eeb9d07a6615b3ced59aadc8949f5e892ab199b22417d313911c92e70c61bb6"
+        ],
+        "terminal_logical_id": "control-aae05e1b8d46d6004b6d5dbdf0f27886e4c96b0bb73be497a070f5dbd9ca3b69-1"
+      }
+    },
+    "p024s-reload-adopt-corrected": {
+      "normal_adoption": {
+        "character_claim_id": "p024s-reload-character",
+        "checkpoint_source_id": "8073e9dcd481c7a10a970ffbed228a31786f199ee5cfd4b439406de9eddfb3b8",
+        "first_normal_source_id": "77f1d672f009e35ed1ef27cf67073bf05c8a1ba1c91151404e58d4b20df4a32a",
+        "grants_authority": false,
+        "identity_inspect_request_id": "p024s-reload-identity",
+        "origin_request_id": "p024s-exact-load",
+        "record_type": "NormalSessionAdoption",
+        "saved_checkpoint_request_id": "p024s-save-transition",
+        "schema": "mission/8",
+        "scope": {
+          "coordinate_epoch": 1,
+          "mission_id": "independent-supply-shelter-024",
+          "session": "1792592199059-23318-1"
+        },
+        "transition_result_request_id": "p024s-load-transition",
+        "world_claim_id": "p024s-reload-world-menu-correction"
+      }
+    },
+    "p024s-final-save-transition": {
+      "lifecycle_transition": {
+        "actor_id": "independent-player-024-successor-clean",
+        "after_source_id": "d15c98982cb83b97c4e62641d0116de0c278bb1d32825dfd3641a865eb98fb73",
+        "after_takeover_generation": 0,
+        "before_source_id": "b38b39355ea6f162915f000b270e5d7a43eb842900c3ba6a47efaeba42aab994",
+        "before_takeover_generation": 0,
+        "controller_boot_id": "ea5d94de06fc45b8bf53d3c290573ad7",
+        "grants_authority": false,
+        "launch_id": "99aa0040d0a340c085d6cf434904347b",
+        "launch_request_id": "p024s-second-launch",
+        "native_request_id": "a2c57e99-8222-473b-a9fc-c74c5628be25",
+        "operation": "save",
+        "operator_pause_generation": 0,
+        "origin_epoch": 5,
+        "origin_request_id": "p024s-final-save",
+        "reconciled_epoch": 6,
+        "record_type": "LifecycleTransition",
+        "schema": "mission/8",
+        "terminal_logical_id": "control-065ff2de5a82d90f0cf4697b7cc54f1198c8df5a3c0541457e5175b7e4bb8648-1",
+        "terminal_request_id": "p024s-final-save-yes"
+      },
+      "saved_checkpoint": {
+        "adoption_result_request_id": "p024s-reload-adopt-corrected",
+        "grants_authority": false,
+        "menu_source_id": "d15c98982cb83b97c4e62641d0116de0c278bb1d32825dfd3641a865eb98fb73",
+        "normal_endpoint_source_id": "f2bd8ff5a713a3a7eec276df0d9d1e9b69cad5c5b6bfc6c3029e940bbad77216",
+        "origin_request_id": "p024s-final-save",
+        "record_type": "SavedCheckpoint",
+        "schema": "mission/8",
+        "transition_result_request_id": "p024s-final-save-transition"
+      }
+    },
+    "p024s-final-exit-yes": {
+      "normal_exit": {
+        "grants_authority": false,
+        "launch_id": "99aa0040d0a340c085d6cf434904347b",
+        "launch_request_id": "p024s-second-launch",
+        "native_request_id": "2c3c1ffe-3086-4817-9770-689b0e746716",
+        "no_save_required": false,
+        "origin_request_id": "p024s-final-exit",
+        "record_type": "OwnedNormalExit",
+        "retirement": {
+          "exit_request_id": "p024s-final-exit",
+          "grants_authority": false,
+          "launch_id": "99aa0040d0a340c085d6cf434904347b",
+          "native_request_id": "2c3c1ffe-3086-4817-9770-689b0e746716",
+          "retired_pending": true,
+          "returncode": 0
+        },
+        "returncode": 0,
+        "saved_checkpoint_request_id": "p024s-final-save-transition",
+        "schema": "mission/8",
+        "source_ids": [
+          "1e46d427e0cbc639a04967c32e252e541e3bd4be886418a2e52848bea7ad6940",
+          "d15c98982cb83b97c4e62641d0116de0c278bb1d32825dfd3641a865eb98fb73",
+          "e148f230938cfe027d00956dc1141c31180d0974d66e6a56707429ade4c160f2"
+        ],
+        "terminal_logical_id": "control-b512a71106029f8204c208b731faca9a57f3a0b37937da4351563ac4ee1d3e0e-1"
+      }
+    },
+    "p024s-finish-scoped": {
+      "normal_finish": {
+        "completed_work_event_id": "p024s-record-final-endpoint",
+        "disposition": "completed",
+        "final_source_id": "e148f230938cfe027d00956dc1141c31180d0974d66e6a56707429ade4c160f2",
+        "grants_authority": false,
+        "normal_exit_result_request_id": "p024s-final-exit-yes",
+        "record_type": "NormalFinish",
+        "schema": "mission/8"
+      }
+    }
+  },
+  "source_patches_during_attempt": 0,
+  "ordinary_lead_gameplay_rescue": false,
+  "player_permanently_quiescent": true,
+  "game_signals": 0,
+  "native_children_normal_exit_codes": [
+    0,
+    0
+  ],
+  "service_exit_code": 0,
+  "owned_pids_and_listener_absent": true,
+  "prior_failed_attempts": {
+    "range": "001-023",
+    "closed": 23,
+    "charged_inputs": 1468,
+    "requests": 982,
+    "primitive_states": {
+      "returned": 1452,
+      "unknown": 14,
+      "rejected": 2
+    }
+  },
+  "visible_routine_gameplay_human_approval_events": 0,
+  "visible_routine_gameplay_automatic_review_events": 0,
+  "hidden_host_review_telemetry": null,
+  "model_tool_usage": null,
+  "model_tokens_quota_and_inference_time": null,
+  "harness_api_spend": 0,
+  "native_intervals": {
+    "scope": "Returned preflight-to-ACK only;not full skill/model/tool/reviewer/display latency",
+    "samples": 150,
+    "unknown_excluded": 6,
+    "median_ms": 113.15864557400346,
+    "nearest_rank_p95_ms": 409.8058748058975,
+    "max_ms": 5622.815624810755,
+    "sum_intervals_seconds": 32.71598345367238
+  },
+  "images": [
+    {
+      "file": "identity.png",
+      "source_id": "c5b38fa9315cf123d4348b5761f77dda89b139a919b26c458e81894adcfe829e",
+      "sha256": "58a013c9edc4dd869f36b6b6e698a96916b99dc578976b7110a280bb0ba3644e",
+      "session": "1792591549135-22236-1",
+      "revision": 105,
+      "turn": null,
+      "category": "PLAYER_INFO",
+      "boundary_kind": "menu"
+    },
+    {
+      "file": "water-inventory.png",
+      "source_id": "0978a370a9d4a564d7176730df046866da117b334e3b0820e2262e317c3e11e1",
+      "sha256": "a84f6d69169fa2cfd112b6e260d4690f4aa34d29ec830426c13e9e9927281d38",
+      "session": "1792591549135-22236-1",
+      "revision": 164,
+      "turn": null,
+      "category": "INVENTORY",
+      "boundary_kind": "menu"
+    },
+    {
+      "file": "water-volume.png",
+      "source_id": "b781cf2dc28a259792aa0fd945b4b7af8fd90858d8e3aced68a88d2f424387a5",
+      "sha256": "42d5d7f1fdf5843b9921327299b40bdd108977c8a94655c7694ee9b3591c2ffc",
+      "session": "1792591549135-22236-1",
+      "revision": 167,
+      "turn": null,
+      "category": "UILIST",
+      "boundary_kind": "menu"
+    },
+    {
+      "file": "shelter-before.png",
+      "source_id": "d71c499507815107bdeb670fe19255d67adcb29f7eedf60e04e639b0497517f6",
+      "sha256": "28a68b7a85b1b4712aa1931ef51e0ea2e4531bac942adefd69fe762b04c19e5d",
+      "session": "1792591549135-22236-1",
+      "revision": 212,
+      "turn": 5212811,
+      "category": "DEFAULTMODE",
+      "boundary_kind": "normal_play"
+    },
+    {
+      "file": "shelter-after.png",
+      "source_id": "711c7e7a4d9fdb5b119f1dcc2c5ff23fa3985ba1af07ca32dfa9b35d5f30a9a0",
+      "sha256": "7de6cb9691ed25c4d94b7379e95c5426c1a4c58f8d7720c537cde628044c056c",
+      "session": "1792591549135-22236-1",
+      "revision": 232,
+      "turn": 5214611,
+      "category": "DEFAULTMODE",
+      "boundary_kind": "normal_play"
+    },
+    {
+      "file": "food-consumed.png",
+      "source_id": "f8d9a34e9a38bec9d4376c5f31bebabf4d40fb3c3280a72b22d744ac59a28207",
+      "sha256": "2f6d3b7362e304bf0cc6152f6c04159a529caaedc39c53155ae87c5d27ceb446",
+      "session": "1792591549135-22236-1",
+      "revision": 243,
+      "turn": null,
+      "category": "INVENTORY",
+      "boundary_kind": "menu"
+    },
+    {
+      "file": "reload-world.png",
+      "source_id": "d4740492525fbd194ea834015c815be37ab8e6108f7bf96e8c143402e8ee60b6",
+      "sha256": "320b9c84416b429c22248f18cf4e98c8e659f674c1770e3c37338b643fb23b47",
+      "session": "1792592169879-23318",
+      "revision": 2,
+      "turn": null,
+      "category": "MAIN_MENU",
+      "boundary_kind": "menu"
+    },
+    {
+      "file": "reload-identity.png",
+      "source_id": "9328087a05976148711281605124d0cab60c46dc1b06c4f83cbb09189871b655",
+      "sha256": "86b810aac1725357b489740bf63dcd6ffb25c60b16aa5121e7c548003d3912e1",
+      "session": "1792592199059-23318-1",
+      "revision": 12,
+      "turn": null,
+      "category": "PLAYER_INFO",
+      "boundary_kind": "menu"
+    },
+    {
+      "file": "final-endpoint.png",
+      "source_id": "f2bd8ff5a713a3a7eec276df0d9d1e9b69cad5c5b6bfc6c3029e940bbad77216",
+      "sha256": "388f8ce3aa1d716f6ffbea35936fa42286db20e4362991af6e28a99146fdda4f",
+      "session": "1792592199059-23318-1",
+      "revision": 14,
+      "turn": 5214645,
+      "category": "DEFAULTMODE",
+      "boundary_kind": "normal_play"
+    }
+  ],
+  "spectator_image": {
+    "file": "spectator-disconnected.jpg",
+    "sha256": "4a1413178abc5b74652a86ef139e8f475acc57e83d6c9adbbab23b287ac6d57c",
+    "scope": "Actual retained browser after controller shutdown;completed/no lease/0unresolved alongside stale unreconciled frame header. Not live native play or proof of current inventory."
+  },
+  "limits_of_claim": [
+    "One successful bounded development mission after23failed attempts;no general survival guarantee",
+    "Procedural actor separation,not OS/security isolation or proof of absent unrecorded interference",
+    "Actual image exports and independent continuation do not prove attention or causal memory benefit",
+    "Supply quantities directly inspected before reload;exact same-character/turn continuity separately verified",
+    "No measured sleep,general shelter safety,model speedup or seven-day independent success",
+    "Organic discovery,learned reusable procedures and asynchronous reflection remain proposed176/177/178"
+  ],
+  "full_independent_gameplay_outcomes_verified": true,
+  "local_artifacts": {
+    "availability": "Retained on the original project checkout only;ignored artifacts are absent from fresh Git checkouts. Public selected PNGs/result remain in Git. Absence is not a failed probe.",
+    "owner": "lead/integration maintainer",
+    "retention": "docs/runbook.md#evidence-retention-and-cleanup;retain referenced acceptance/failure evidence until reviewed equivalent supersession or explicit removal,record availability changes;never routine-delete saves",
+    "artifacts": [
+      {
+        "role": "closed_ledger",
+        "path": ".runtime/missions/independent-supply-shelter-024/mission.sqlite3",
+        "bytes": 1392640,
+        "sha256": "7c5591decad29b13a2dea02053649489c94f96075b04f42f4d5368559e5c10f4"
+      },
+      {
+        "role": "evidence_index",
+        "path": ".runtime/missions/independent-supply-shelter-024/evidence/evidence.json",
+        "bytes": 821935,
+        "sha256": "6e0ae38f08c0549e506dddb68ed4b93da3eeb08db5929135f8c2d410d344952e"
+      },
+      {
+        "role": "closed_journal_snapshot",
+        "path": ".runtime/campaigns/independent-supply-shelter-024/preparation/closed-journal-snapshot.jsonl",
+        "bytes": 1930144,
+        "sha256": "8a4209fe44dae0ec1d0ff999d30c2ed87706a970c7ac6594e17dadd780cad420"
+      }
+    ],
+    "frame_directory": ".runtime/missions/independent-supply-shelter-024/evidence/frames",
+    "journal_cutoff": "Snapshot taken after controller exit0;complete closed journal retained separately,not truncated;no liveappend during indexing."
+  },
+  "assessment_scope": "Original bounded supply-and-shelter development gameplay outcomes; broader136/145campaign completion and source-publication/main-CI receipts are separate."
+}

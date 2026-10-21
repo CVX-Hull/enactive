@@ -93,7 +93,39 @@ class MovementTests(unittest.TestCase):
             with self.subTest(change=change), self.assertRaises(MovementBlocked):
                 self.check(value)
         value = state()
-        value["scene"]["visible_creatures"] = [{"name": "cat", "hostile": False}]
+        value["scene"]["visible_creatures"] = [{"name": "zombie", "hostile": True}]
+        with self.assertRaises(MovementBlocked):
+            self.check(value)
+
+    def test_closed_nonhostile_creature_evidence_permits_bounded_movement(self):
+        for creatures in ([], [{"name": "Cornell", "hostile": False}],
+                          [{"name": "cat", "hostile": False}],
+                          [{"name": "n" * 1024, "hostile": False}] * 512):
+            with self.subTest(creatures=creatures[:1]):
+                value = state()
+                value["scene"]["visible_creatures"] = creatures
+                original = copy.deepcopy(value)
+                self.assertEqual(self.check(value), (0, 0, 0))
+                self.assertEqual(value, original)
+
+    def test_hostile_missing_and_malformed_creature_evidence_fail_closed(self):
+        invalid = (None, {}, (), [None], ["cat"], [{"name": "cat"}],
+                   [{"hostile": False}], [{"name": "", "hostile": False}],
+                   [{"name": "n" * 1025, "hostile": False}],
+                   [{"name": 1, "hostile": False}],
+                   [{"name": "cat", "hostile": False, "friendly": True}],
+                   [{"name": "cat", "hostile": False}] * 513,
+                   [{"name": "zombie", "hostile": True}],
+                   [{"name": "Cornell", "hostile": False}, {"name": "zombie", "hostile": True}],
+                   *([{"name": "cat", "hostile": value}] for value in (0, 1, None, "false", [], {})))
+        for creatures in invalid:
+            with self.subTest(creatures=creatures):
+                value = state()
+                value["scene"]["visible_creatures"] = creatures
+                with self.assertRaises(MovementBlocked):
+                    self.check(value)
+        value = state()
+        del value["scene"]["visible_creatures"]
         with self.assertRaises(MovementBlocked):
             self.check(value)
 

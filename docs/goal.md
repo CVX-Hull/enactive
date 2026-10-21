@@ -12,6 +12,37 @@ the user watches through a good graphical interface, supported by an understanda
 enforced and maintainable engineering system. Carry work through implementation,
 independent review and a real graphical gameplay demonstration.
 
+## Current independent-player delivery
+
+The active goal is to complete [#144](https://github.com/CVX-Hull/enactive/issues/144),
+an independent supply-and-shelter mission, and deliver
+[#145](https://github.com/CVX-Hull/enactive/issues/145)'s evidence-backed readiness
+decision and prospective plan for a fresh seven-day campaign. The broader
+[#136](https://github.com/CVX-Hull/enactive/issues/136) remains open through the
+fresh seven-day assessment. This refines the existing active goal; it does not
+reset work, costs, failed attempts or gameplay authority.
+
+Complete selected navigation, item, inspection and native-activity skills through
+one executor; source-linked Claims, corrections and unfinished Work; bounded
+outcome assessment/recovery; and useful observer views. A designated player owns
+plans, memory retrieval/update, semantic requests and routine recovery. The lead
+owns engineering and acceptance, without tactical rescue during deciding play.
+
+Acceptance requires real windowed supplies/shelter/rest, meaningful travel and
+player-owned replanning, normal same-character save/process restart/exact reload,
+an actual clean-context successor using retained memory, normal final save/quit
+and shutdown, and separate user Pause/control evidence. Preserve unknown delivery
+and every intervention. Source tests, menu-only probes and a short mission do not
+establish independent seven-day survival or general memory efficacy.
+
+Use the first run's water-possession corrections, interrupted craft and uncertain
+rest as development cases. Prefer composed engine activities and bounded travel
+over a model decision per key. Keep optional curator, model-tier comparisons,
+training and broader efficacy studies outside this iteration unless an observed
+blocker makes them necessary. [The work map](work.md#selected-independent-player-iteration)
+and GitHub own sequencing and allocation; finite deciding/cleanup limits are
+frozen only after integrated source and native preflight, not by this goal.
+
 ## Seven-day survival milestone
 
 The [dated campaign acceptance](acceptance/2026-10-19-seven-day-survival.md) records

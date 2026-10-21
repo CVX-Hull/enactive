@@ -36,7 +36,7 @@ class MovementSkillTests(unittest.TestCase):
               timestamp=1_000_000, session="world", revision=None, change=None,
               reservation=None):
         self.number += 1
-        value = {"protocol": 3, "id": "native-observe-is-not-logical-action",
+        value = {"protocol": 4, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "native-observe-is-not-logical-action",
                  "session": session, "revision": self.number if revision is None else revision,
                  "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT"],
                  "status": "ready", "error": "", "paused": False,
@@ -95,9 +95,11 @@ class MovementSkillTests(unittest.TestCase):
             tile.update({"terrain": "t_wall"} if obstacle == "wall" else {"furniture": "f_cupboard"})
 
     def test_descriptor_declares_only_implemented_predicates_and_bindings(self):
-        self.assertEqual(CARDINAL_MOVEMENT.skill_version, 3)
+        self.assertEqual(CARDINAL_MOVEMENT.skill_version, 4)
+        self.assertIn("known_nonhostile_visible_creatures", CARDINAL_MOVEMENT.observable_predicates)
+        self.assertIn("hostile_or_unknown_visible_creatures_or_current_boundary", CARDINAL_MOVEMENT.stop_rules)
         self.assertIn("current_boundary_at_exact_verified_target", CARDINAL_MOVEMENT.observable_predicates)
-        self.assertIn("visible_empty_allowlisted_neighbor_before_further_step", CARDINAL_MOVEMENT.observable_predicates)
+        self.assertIn("visible_allowlisted_furniture_free_neighbor_before_further_step", CARDINAL_MOVEMENT.observable_predicates)
         self.assertIn("current_guard_at_target_full_guard_before_further_step", CARDINAL_MOVEMENT.postconditions)
         self.assertEqual(set(CARDINAL_MOVEMENT.action_bindings), {"UP", "DOWN", "LEFT", "RIGHT"})
         self.assertEqual(CARDINAL_MOVEMENT.maximum_budgets.primitives_per_stage, 4)
@@ -132,6 +134,20 @@ class MovementSkillTests(unittest.TestCase):
                     value = self.settle(back, self.result(proposal, after))
                 self.assertEqual(value.stage_result.disposition, "completed")
                 self.assertEqual(value.progress.displacement, (-dx * 4, -dy * 4, 0))
+
+    def test_nonhostile_npc_and_monster_allow_proposal_and_target_verification(self):
+        for name in ("Cornell", "cat"):
+            with self.subTest(name=name):
+                self.reset()
+                def change(v):
+                    v["scene"]["visible_creatures"] = [{"name": name, "hostile": False}]
+                start = self.frame(change=change)
+                stage = self.stage(self.task(distance=1), start)
+                proposal = self.propose(stage)
+                self.assertIsInstance(proposal, StepProposal)
+                after = self.frame((1, 0, 0), turn=11, change=change)
+                value = self.settle(stage, self.result(proposal, after))
+                self.assertEqual((value.stage_result.disposition, value.progress.verified_steps), ("completed", 1))
 
     def test_frozen_proposal_evaluation_and_single_outstanding(self):
         stage = self.stage()
@@ -187,7 +203,7 @@ class MovementSkillTests(unittest.TestCase):
                     def mutation(v):
                         self.obstruct_neighbor(v, 1, 0, "cupboard")
                         if stop == "creature":
-                            v["scene"]["visible_creatures"] = [{"name": "cat", "hostile": False}]
+                            v["scene"]["visible_creatures"] = [{"name": "zombie", "hostile": True}]
                         elif stop == "action":
                             v["actions"] = ["LEFT"]
                     after = self.frame((1, 0, 0), turn=11, change=mutation)
@@ -245,7 +261,7 @@ class MovementSkillTests(unittest.TestCase):
         mutations = (
             lambda v: v.update(paused=True),
             lambda v: v.update(actions=["LEFT"]),
-            lambda v: v["scene"].update(visible_creatures=[{"name": "cat", "hostile": False}]),
+            lambda v: v["scene"].update(visible_creatures=[{"name": "zombie", "hostile": True}]),
             lambda v: next(t for t in v["scene"]["neighbors"] if (t["dx"], t["dy"]) == (1, 0)).update(terrain="t_wall"),
             lambda v: next(t for t in v["scene"]["neighbors"] if (t["dx"], t["dy"]) == (1, 0)).update(furniture="f_chair"),
         )
@@ -419,7 +435,7 @@ class MovementSkillTests(unittest.TestCase):
                     if stop == "terrain":
                         next(t for t in v["scene"]["neighbors"] if (t["dx"], t["dy"]) == (1, 0))["terrain"] = "t_wall"
                     elif stop == "creature":
-                        v["scene"]["visible_creatures"] = [{"name": "cat", "hostile": False}]
+                        v["scene"]["visible_creatures"] = [{"name": "zombie", "hostile": True}]
                     elif stop == "action":
                         v["actions"] = ["LEFT"]
                 after = self.frame((1, 0, 0), turn=11, change=mutation)

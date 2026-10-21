@@ -19,7 +19,7 @@ def manifest(**changes):
         "source_commit": "a" * 40, "native_build": None,
         "native_build_missing_reason": "Synthetic fixture", "model_id": "fixture-model",
         "model_id_missing_reason": None, "configuration_id": "fixture-config",
-        "configuration_id_missing_reason": None, "protocol_version": "native-v3",
+        "configuration_id_missing_reason": None, "protocol_version": "native-v4",
         "budgets": {"primitives": 8, "turns": 32, "wall_ms": 120000,
                     "model_calls": 10, "model_call_ms": 30000, "input_tokens": 10000,
                     "input_tokens_missing_reason": None, "output_tokens": 10000,
@@ -34,7 +34,7 @@ def manifest(**changes):
 
 
 def evidence():
-    return {"schema": "gameplay/1", "record_type": "EvidenceRef",
+    return {"schema": "gameplay/2", "record_type": "EvidenceRef",
             "observation_id": "observation-1", "session": "world-1", "revision": 1,
             "timestamp_ms": 1000, "received_monotonic": 100, "turn": 10,
             "frame_path": "retained/frame.png", "frame_sha256": "a" * 64,

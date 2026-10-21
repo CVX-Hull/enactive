@@ -14,7 +14,7 @@ import time
 import unittest
 
 from harness.controller import Controller, read_json
-from harness.gameplay.contracts import PlanCandidate
+from tests.test_mission_contracts import admission, claim, request as mission_record
 from harness.server import Server
 from tests.test_controller import ControlBridge, FakeBridge, recovery_state
 
@@ -27,19 +27,16 @@ class StubRuntime:
         self.calls = []
         self.closed = False
 
-    def command(self, kind, **payload):
-        self.calls.append((kind, payload))
-        result = {"status": "accepted", "gameplay": self.snapshot}
-        if kind == "planning_request":
-            result["planning_request"] = None
-        return result
+    def command(self, record):
+        self.calls.append(("command", record))
+        return {"status": "accepted", "mission": self.snapshot}
 
     def status(self):
         return self.snapshot
 
-    def pause(self, reason):
+    def pause(self, reason, *, cause="user"):
         self.calls.append(("pause", {"reason": reason}))
-        return self.controller.pause()
+        return self.controller.pause() if cause == "user" else self.controller.stop_input()
 
     def close(self):
         self.closed = True
@@ -56,9 +53,9 @@ class ServerTests(unittest.TestCase):
         # Functional file/HTTP exchanges allow scheduler and fsync latency.
         # Expiry and responsiveness tests below retain explicit short limits.
         self.controller = Controller(self.root, timeout=2.0)
-        runtime_module = ModuleType("harness.runtime")
-        runtime_module.GameplayRuntime = StubRuntime
-        with patch.dict(sys.modules, {"harness.runtime": runtime_module}):
+        runtime_module = ModuleType("harness.mission_runtime")
+        runtime_module.MissionRuntime = StubRuntime
+        with patch.dict(sys.modules, {"harness.mission_runtime": runtime_module}):
             self.server = Server(self.controller, 0)
         self.thread = threading.Thread(target=self.server.serve_forever, kwargs={"poll_interval": 0.01}, daemon=True)
         self.thread.start()
@@ -91,129 +88,181 @@ class ServerTests(unittest.TestCase):
         defaults.update(headers)
         return self.request("POST", "/api/recovery", json.dumps(value), **defaults)
 
-    def gameplay(self, value, **headers):
+    def mission(self, value, **headers):
         defaults = {"Content-Type": "application/json", "X-CDDA-Token": self.controller.token}
         defaults.update(headers)
-        return self.request("POST", "/api/gameplay", json.dumps(value), **defaults)
+        return self.request("POST", "/api/mission", json.dumps(value), **defaults)
 
-    def test_gameplay_lifecycle_status_and_exact_dispatch(self):
-        runtime = self.server.gameplay
+    def test_failed_bind_does_not_start_a_mission_worker(self):
+        with patch("harness.mission_runtime.MissionRuntime") as runtime:
+            with self.assertRaises(OSError):
+                Server(self.controller, self.server.port)
+            runtime.assert_not_called()
+
+    def test_failed_metadata_publication_closes_bound_socket_and_worker(self):
+        runtime = StubRuntime(self.controller)
+        closed_servers = []
+        original_close = Server.server_close
+        def tracked_close(server):
+            closed_servers.append(server)
+            original_close(server)
+        with patch("harness.mission_runtime.MissionRuntime", return_value=runtime), \
+                patch("harness.server.atomic_json", side_effect=OSError("disk full")), \
+                patch.object(Server, "server_close", tracked_close):
+            with self.assertRaisesRegex(OSError, "disk full"):
+                Server(self.controller, 0)
+        self.assertTrue(runtime.closed)
+        self.assertEqual(len(closed_servers), 1)
+        self.assertEqual(closed_servers[0].socket.fileno(), -1)
+
+    def test_mission_status_and_exact_typed_dispatch(self):
+        runtime = self.server.mission
         self.assertEqual(runtime.calls, [])
-        self.assertIsNone(json.loads(self.request()[1])["gameplay"])
-        runtime.snapshot = {"run_id": "run", "task": {}, "run": {"state": "planning"},
-                            "planner": {"usage_known": False}, "last_receipt": None}
-        payloads = [{"kind": "start", "direction": "east", "distance": 2,
-                     "expected_session": "shown", "expected_revision": 7},
-                    {"kind": "continue", "run_id": "run", "execution_epoch": 0,
-                     "expected_session": "shown", "expected_revision": 7},
-                    {"kind": "abandon", "run_id": "run", "execution_epoch": 0},
-                    {"kind": "planning_request"}]
+        self.assertIsNone(json.loads(self.request()[1])["mission"])
+        runtime.snapshot = dict(mission_id="mission-test", phase="active", epoch=0, memory_context=None)
+        payloads = [dict(schema="mission/8", kind="start", request_id="start-1", admission=admission().to_dict()),
+                    mission_record(), dict(schema="mission/8",kind="status",mission_id="mission-test"),
+                    dict(schema="mission/8",kind="result",mission_id="mission-test",operation_id="observe-1")]
         for payload in payloads:
-            code, body, _ = self.gameplay(payload)
+            code, body, _ = self.mission(payload)
             self.assertEqual(code, 200, body)
-            self.assertEqual(json.loads(body)["gameplay"], runtime.snapshot)
-            self.assertEqual(runtime.calls[-1], (payload["kind"], {k: v for k, v in payload.items() if k != "kind"}))
-        for _ in range(5):
-            self.assertEqual(json.loads(self.request()[1])["gameplay"], runtime.snapshot)
-        self.assertEqual(len(runtime.calls), len(payloads), "status reads cannot execute gameplay")
-        self.assertEqual(self.post({"kind": "pause"})[0], 200)
+            self.assertEqual(json.loads(body)["mission"], runtime.snapshot)
+            self.assertEqual(runtime.calls[-1], ("command", payload))
+        for _ in range(5): self.assertEqual(json.loads(self.request()[1])["mission"], runtime.snapshot)
+        self.assertEqual(len(runtime.calls), len(payloads), "status reads cannot execute work")
+        self.assertEqual(self.post({"kind":"pause"})[0], 200)
         self.assertEqual(runtime.calls[-1][0], "pause")
         self.assertTrue(self.controller.pause_requested)
 
-    def test_gameplay_validates_exact_fields_types_and_candidate_version(self):
-        start = {"kind": "start", "direction": "east", "distance": 2,
-                 "expected_session": "shown", "expected_revision": 7}
-        invalid = [{"kind": "resume"}, {**start, "extra": 1}, {"kind": "planning_request", "timeout": 1}]
-        invalid.extend({k: v for k, v in start.items() if k != field} for field in start)
-        for key, values in {"direction": ["up", None, 1], "distance": [0, 5, True, 1.0, "1"],
-                            "expected_session": [None, "", True], "expected_revision": [-1, True, 1.0]}.items():
-            invalid.extend({**start, key: value} for value in values)
-        invalid += [{"kind": "abandon", "run_id": "run", "execution_epoch": True},
-                    {"kind": "plan", "request_id": "request", "candidate": {"schema": "gameplay/2"}},
-                    {"kind": "plan", "request_id": "request", "candidate": "{}"}]
+    def test_mission_validates_exact_fields_types_and_current_version(self):
+        observe = mission_record()
+        invalid = [dict(observe, schema="mission/1"), dict(observe, extra=1), dict(observe, epoch=True),
+                   dict(observe, kind="resume"), {"kind":"planning_request"}, {"kind":"start","direction":"east"}]
+        invalid.extend({k:v for k,v in observe.items() if k != field} for field in observe)
         for payload in invalid:
             with self.subTest(payload=payload):
-                code, body, _ = self.gameplay(payload)
-                self.assertEqual(code, 400)
-                result = json.loads(body)
-                self.assertEqual(set(result), {"error"}, "ingress errors retain the existing HTTP envelope")
-        self.assertEqual(self.server.gameplay.calls, [])
+                code, body, _ = self.mission(payload)
+                self.assertEqual(code, 400, body)
+                self.assertEqual(set(json.loads(body)), {"error"})
+        self.assertEqual(self.server.mission.calls, [])
 
-    def test_gameplay_plan_and_planning_request_preserve_runtime_data(self):
-        candidate = PlanCandidate("candidate", "task", 1, "plan", 1, 0, "seen", 7,
-                                  "outbound", "east", 2, "cardinal", 2, "Visible route is clear").to_dict()
-        payload = {"kind": "plan", "request_id": "request-exact", "candidate": candidate}
-        self.assertEqual(self.gameplay(payload)[0], 200)
-        self.assertEqual(self.server.gameplay.calls[-1], ("plan", {"request_id": "request-exact", "candidate": candidate}))
-        for bad_candidate in ({**candidate, "schema": "gameplay/2"}, {**candidate, "extra": 1},
-                              {**candidate, "execution_epoch": True}):
-            self.assertEqual(self.gameplay({**payload, "candidate": bad_candidate})[0], 400)
-        request = {"request_id": "pending-exact", "deadline_ms": 12345,
-                   "input": {"task": {}, "packet": {}, "skills": [], "binding": {},
-                             "public_context": "bounded public context", "admission_monotonic": 1}}
-        result = {"status": "accepted", "gameplay": None, "planning_request": request}
-        with patch.object(self.server.gameplay, "command", return_value=result):
-            code, body, _ = self.gameplay({"kind": "planning_request"})
-            self.assertEqual((code, json.loads(body)), (200, result))
-        for reason in ("duplicate candidate", "late candidate", "stale binding"):
-            rejected = {"status": "rejected", "error": reason, "gameplay": {"run_id": "retained"}}
-            with patch.object(self.server.gameplay, "command", return_value=rejected):
-                code, body, _ = self.gameplay(payload)
-                self.assertEqual((code, json.loads(body)), (409, rejected))
-
-    def test_gameplay_malformed_json_and_runtime_errors_retain_diagnostics(self):
-        headers = {"Content-Type": "application/json", "X-CDDA-Token": self.controller.token}
-        for body in ('{"kind":"planning_request","kind":"planning_request"}',
-                     '{"kind":"start","distance":NaN}', '[]', '{"kind":'):
-            self.assertEqual(self.request("POST", "/api/gameplay", body, **headers)[0], 400)
-        self.assertEqual(self.server.gameplay.calls, [])
-        with patch.object(self.server.gameplay, "command", side_effect=ValueError("retained diagnostic")):
-            code, body, _ = self.gameplay({"kind": "planning_request"})
+    def test_mission_malformed_json_and_runtime_errors_retain_diagnostics(self):
+        headers = {"Content-Type":"application/json", "X-CDDA-Token":self.controller.token}
+        for body in ('{"kind":"observe","kind":"observe"}', '{"kind":"observe","epoch":NaN}', '[]', '{"kind":'):
+            self.assertEqual(self.request("POST", "/api/mission", body, **headers)[0], 400)
+        self.assertEqual(self.server.mission.calls, [])
+        with patch.object(self.server.mission, "command", side_effect=ValueError("retained diagnostic")):
+            code, body, _ = self.mission(mission_record())
             self.assertEqual(code, 409)
             result = json.loads(body)
             self.assertEqual(result["status"], "rejected")
             self.assertIn("retained diagnostic", result["error"])
-            self.assertIn("gameplay", result)
+            self.assertIn("mission", result)
 
-    def test_gameplay_pause_and_status_do_not_wait_for_task_command(self):
-        entered = threading.Event()
-        release = threading.Event()
+    def test_mission_rejection_preserves_result_without_retry(self):
+        result = {"status":"rejected", "reason":"stale epoch", "mission":{"mission_id":"mission-test"}}
+        with patch.object(self.server.mission, "command", return_value=result) as command:
+            code, body, _ = self.mission(mission_record())
+            self.assertEqual((code, json.loads(body)), (409,result))
+            self.assertEqual(command.call_count,1)
 
-        def blocked(kind, **payload):
+    def test_mission_pause_and_status_do_not_wait_for_blocked_command(self):
+        entered, release = threading.Event(), threading.Event()
+        def blocked(record):
             entered.set()
             self.assertTrue(release.wait(2))
-            return {"status": "rejected", "error": "Paused", "gameplay": None}
-
-        with patch.object(self.server.gameplay, "command", side_effect=blocked), ThreadPoolExecutor() as pool:
-            waiting = pool.submit(self.gameplay, {"kind": "planning_request"})
+            return {"status":"rejected", "reason":"Paused", "mission":None}
+        with patch.object(self.server.mission,"command",side_effect=blocked), ThreadPoolExecutor() as pool:
+            waiting=pool.submit(self.mission,mission_record())
             try:
                 self.assertTrue(entered.wait(1))
-                started = time.monotonic()
-                self.assertEqual(self.post({"kind": "pause"})[0], 200)
-                self.assertEqual(self.request()[0], 200)
-                self.assertLess(time.monotonic() - started, 0.2)
+                started=time.monotonic()
+                self.assertEqual(self.post({"kind":"pause"})[0],200)
+                self.assertEqual(self.request()[0],200)
+                self.assertLess(time.monotonic()-started,0.2)
                 self.assertFalse(waiting.done())
-            finally:
-                release.set()
-            self.assertEqual(waiting.result()[0], 409)
+            finally: release.set()
+            self.assertEqual(waiting.result()[0],409)
 
-    def test_gameplay_security_and_runtime_rejection(self):
-        payload = {"kind": "planning_request"}
-        for headers, code in [({"Origin": "null"}, 403), ({"Host": "evil.example"}, 403),
-                              ({"Sec-Fetch-Site": "cross-site"}, 403),
-                              ({"X-CDDA-Token": "wrong"}, 403), ({"Content-Type": "text/plain"}, 415)]:
-            self.assertEqual(self.gameplay(payload, **headers)[0], code)
-        self.assertEqual(self.gameplay({**payload, "padding": "x" * 4096})[0], 413)
-        self.assertEqual(self.server.gameplay.calls, [])
-        result = {"status": "rejected", "error": "stale request", "gameplay": None}
-        with patch.object(self.server.gameplay, "command", return_value=result):
-            code, body, _ = self.gameplay(payload)
-            self.assertEqual((code, json.loads(body)), (409, result))
+    def test_mission_security_limits_and_retired_route(self):
+        payload=mission_record()
+        for headers, code in [({"Origin":"null"},403),({"Host":"evil.example"},403),
+                ({"Sec-Fetch-Site":"cross-site"},403),({"X-CDDA-Token":"wrong"},403),({"Content-Type":"text/plain"},415)]:
+            self.assertEqual(self.mission(payload,**headers)[0],code)
+        self.assertEqual(self.mission({**payload,"padding":"x"*65536})[0],413)
+        self.assertEqual(self.post({"kind":"goal","text":"x"*4096})[0],413)
+        self.assertEqual(self.request("POST","/api/gameplay",'{}')[0],404)
+        self.assertEqual(self.server.mission.calls,[])
+
+    def test_large_valid_mission_record_uses_its_own_bounded_body_limit(self):
+        sources=["source"+str(i)+"x"*120 for i in range(8)]
+        entry=claim(sources=sources,supports=[dict(sources=sources,claims=[]) for _ in range(8)])
+        record=mission_record("remember",entry_type="claim",entry=entry)
+        self.assertGreater(len(json.dumps(record)),4096)
+        self.assertLess(len(json.dumps(record)),65536)
+        self.assertEqual(self.mission(record)[0],200)
+        self.assertEqual(self.server.mission.calls[-1],("command",record))
+
+    def test_nonterminal_mission_has_one_observation_and_input_ingress(self):
+        self.server.mission.snapshot=dict(mission_id="mission-test",epoch=0,phase="paused")
+        for kind in ("observe","resume","key","action","goal"):
+            self.assertEqual(self.post({"kind":kind})[0],409)
+        self.assertEqual(self.recovery(dict(kind="request_interrupt",expected_session="world",expected_control_generation=0))[0],409)
+        self.assertEqual(self.post({"kind":"pause"})[0],200)
+        self.assertEqual(self.mission(mission_record())[0],200)
+        self.assertFalse((self.controller.bridge/"request.json").exists())
+        self.server.mission.snapshot["phase"]="completed"
+        with FakeBridge(self.controller): self.assertEqual(self.post({"kind":"observe"})[0],200)
+
+    def test_start_cannot_overtake_raw_admission_and_pause_supersedes_old_resume(self):
+        entered, release = threading.Event(), threading.Event()
+        current_status = self.server.mission.status
+        def delayed_snapshot():
+            if not entered.is_set():
+                entered.set()
+                self.assertTrue(release.wait(3))
+            return current_status()
+        with FakeBridge(self.controller) as bridge:
+            self.assertEqual(self.post({"kind":"observe"})[0], 200)
+            with patch.object(self.server.mission, "status", side_effect=delayed_snapshot), ThreadPoolExecutor() as pool:
+                waiting = pool.submit(self.post, {"kind":"resume"})
+                try:
+                    self.assertTrue(entered.wait(1))
+                    start = dict(schema="mission/8", kind="start", request_id="start-1", admission=admission().to_dict())
+                    self.assertEqual(self.mission(start)[0], 409, "Start cannot pass raw ownership using a stale snapshot")
+                    self.assertEqual(self.server.mission.calls, [])
+                    self.assertEqual(self.post({"kind":"pause"})[0], 200)
+                    self.assertEqual(self.request()[0], 200)
+                finally: release.set()
+                code, body, _ = waiting.result()
+                self.assertEqual(code, 409, body)
+                self.assertIn("superseded", json.loads(body)["error"])
+            self.assertEqual(bridge.delivered, [], "Older raw Resume cannot adopt the post-Pause generation")
+
+    def test_raw_input_does_not_enter_while_start_is_awaiting_admission(self):
+        entered, release = threading.Event(), threading.Event()
+        def delayed_start(record):
+            entered.set()
+            self.assertTrue(release.wait(3))
+            return {"status":"accepted", "mission":None}
+        start = dict(schema="mission/8", kind="start", request_id="start-1", admission=admission().to_dict())
+        with patch.object(self.server.mission, "command", side_effect=delayed_start), ThreadPoolExecutor() as pool:
+            waiting = pool.submit(self.mission, start)
+            try:
+                self.assertTrue(entered.wait(1))
+                self.assertEqual(self.post({"kind":"resume"})[0], 409)
+                self.assertEqual(self.post({"kind":"pause"})[0], 200)
+                self.assertEqual(self.request()[0], 200)
+            finally: release.set()
+            self.assertEqual(waiting.result()[0], 200)
+        self.assertFalse((self.controller.bridge/"request.json").exists())
 
     def test_shutdown_pauses_and_closes_runtime(self):
+        counter = self.controller.operator_pause_generation
         self.server.server_close()
-        self.assertEqual(self.server.gameplay.calls[-1][0], "pause")
-        self.assertTrue(self.server.gameplay.closed)
+        self.assertEqual(self.controller.operator_pause_generation, counter)
+        self.assertEqual(self.server.mission.calls[-1][0], "pause")
+        self.assertTrue(self.server.mission.closed)
 
     def recovery_payload(self, kind="request_interrupt"):
         state = self.controller.state
@@ -226,13 +275,13 @@ class ServerTests(unittest.TestCase):
             payload.update(interrupt_request_id=state["boundary"]["interrupt_request_id"], choice="NO")
         return payload
 
-    def test_run_lease_enforced_on_existing_http_ingress(self):
+    def test_mission_lease_enforced_on_existing_http_ingress(self):
         with FakeBridge(self.controller) as bridge:
             self.assertEqual(self.post({"kind": "observe"})[0], 200)
             self.assertEqual(self.post({"kind": "resume"})[0], 200)
             current = self.controller.state
-            lease = self.controller.acquire_run("http-task", 0, "test-player",
-                expected_session=current["session"], expected_revision=current["revision"])
+            lease = self.controller.acquire_mission("http-task", 0, "test-player", operation="navigate",
+                expected_boundary_id=current["boundary"]["id"], expected_session=current["session"], expected_revision=current["revision"])
             delivered = len(bridge.delivered)
             for kind, payload in (("key", {"key": "x"}), ("action", {"action": "RIGHT"}),
                                   ("walk", {"direction": "east", "steps": 1}), ("resume", {})):
@@ -244,16 +293,16 @@ class ServerTests(unittest.TestCase):
 
             code, body, _ = self.request()
             self.assertEqual(code, 200)
-            self.assertEqual(json.loads(body)["run_lease"], {"task_id": "http-task",
-                "execution_epoch": 0, "owner": "test-player", "session": current["session"]})
+            self.assertEqual(json.loads(body)["mission_lease"], {"mission_id": "http-task", "epoch": 0, "actor_id": "test-player", "session": current["session"],
+                "operation": "navigate", "pause_generation": lease.pause_generation, "takeover_generation": 0})
             self.assertEqual(self.post({"kind": "observe"})[0], 200)
             self.assertEqual(self.post({"kind": "goal", "text": "record only"})[0], 200)
             # Public JSON cannot supply an in-process capability or start a run.
-            self.assertEqual(self.post({"kind": "action", "action": "RIGHT", "run_lease": {}})[0], 400)
-            self.assertEqual(self.post({"kind": "acquire_run"})[0], 409)
+            self.assertEqual(self.post({"kind": "action", "action": "RIGHT", "mission_lease": {}})[0], 400)
+            self.assertEqual(self.post({"kind": "acquire_mission"})[0], 409)
             self.assertEqual(self.post({"kind": "pause"})[0], 200)
-            self.assertIsNone(self.controller.status()["run_lease"])
-            rejected = self.controller.execute_run(lease, action="RIGHT",
+            self.assertIsNone(self.controller.status()["mission_lease"])
+            rejected = self.controller.execute_mission(lease, kind="action", value="RIGHT", expected_boundary_id=current["boundary"]["id"],
                 expected_session=current["session"], expected_revision=current["revision"],
                 logical_action_id="revoked-http-lease", deadline_monotonic=time.monotonic() + 1)
             self.assertFalse(rejected["published"])
@@ -261,13 +310,29 @@ class ServerTests(unittest.TestCase):
             self.assertEqual(len(bridge.delivered), delivered)
             self.assertEqual(self.post({"kind": "observe"})[0], 200)
             self.assertEqual(self.post({"kind": "resume"})[0], 200)
-            self.assertIsNone(self.controller.status()["run_lease"])
+            self.assertIsNone(self.controller.status()["mission_lease"])
+
+    def test_walk_accepts_known_nonhostile_evidence_through_http(self):
+        with FakeBridge(self.controller) as bridge:
+            self.assertEqual(self.post({"kind": "observe"})[0], 200)
+            self.assertEqual(self.post({"kind": "resume"})[0], 200)
+            bridge.value["scene"]["visible_creatures"] = [{"name": "cat", "hostile": False}]
+            current = self.controller.state
+            code, body, _ = self.post({"kind": "walk", "direction": "east", "steps": 2,
+                "expected_session": current["session"], "expected_revision": current["revision"]})
+            result = json.loads(body)
+            self.assertEqual((code, result["status"], result["steps"]), (200, "complete", 2))
+            self.assertEqual(result["observation"]["scene"]["position"], [2, 0, 0])
+            self.assertEqual(result["observation"]["scene"]["visible_creatures"],
+                [{"name": "cat", "hostile": False}])
+            self.assertEqual([request["action"] for request in bridge.requests if request["kind"] == "action"],
+                ["RIGHT", "RIGHT"])
 
     def test_walk_stop_evidence_and_reassessment_through_http(self):
         with FakeBridge(self.controller) as bridge:
             self.assertEqual(self.post({"kind": "observe"})[0], 200)
             self.assertEqual(self.post({"kind": "resume"})[0], 200)
-            bridge.value["scene"]["visible_creatures"] = [{"name": "cat", "hostile": False}]
+            bridge.value["scene"]["visible_creatures"] = [{"name": "cat", "hostile": True}]
             current = self.controller.state
             code, body, _ = self.post({"kind": "walk", "direction": "east", "steps": 2,
                 "expected_session": current["session"], "expected_revision": current["revision"]})
@@ -442,7 +507,7 @@ class ServerTests(unittest.TestCase):
         path = self.controller.bridge / "controller.json"
         self.assertEqual(path.stat().st_mode & 0o777, 0o600)
         self.assertEqual(json.loads(path.read_text())["token"], self.controller.token)
-        self.assertEqual(json.loads(path.read_text())["protocol"], 3)
+        self.assertEqual(json.loads(path.read_text())["protocol"], 4)
 
     def test_token_required_and_not_in_url(self):
         self.assertEqual(self.post({"kind": "pause"}, **{"X-CDDA-Token": "wrong"})[0], 403)
@@ -492,18 +557,37 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.request(path="/frame.png?name=../controller.json")[0], 400)
 
     def test_pause_endpoint_does_not_wait_for_native_exchange(self):
-        with ThreadPoolExecutor() as pool:
-            waiting = pool.submit(self.post, {"kind": "observe", "timeout": 0.4})
-            deadline = time.monotonic() + 1
-            while not (self.controller.bridge / "request.json").exists() and time.monotonic() < deadline:
-                time.sleep(0.002)
-            started = time.monotonic()
-            code, data, _ = self.post({"kind": "pause"})
-            self.assertEqual(code, 200)
-            self.assertEqual(json.loads(data)["status"], "pause_requested")
-            self.assertLess(time.monotonic() - started, 0.15)
-            self.assertFalse(waiting.done())
-            waiting.result()
+        entered, release = threading.Event(), threading.Event()
+        response_path = self.controller.bridge / "response.json"
+        def held_native_response(path):
+            if path == response_path:
+                entered.set()
+                if not release.wait(5):
+                    raise AssertionError("Native response fixture was not released")
+            return read_json(path)
+        # Hold the actual exchange after publication and outside data_lock.
+        # Completion before release proves independence; a 150ms scheduler/fsync
+        # threshold did not. The outer timeout is only a deadlock watchdog.
+        with patch("harness.controller.read_json", side_effect=held_native_response), \
+                ThreadPoolExecutor(max_workers=2) as pool:
+            waiting = pool.submit(self.post, {"kind": "observe", "timeout": 2.0})
+            try:
+                self.assertTrue(entered.wait(2))
+                self.assertTrue(self.controller.command_lock.locked())
+                self.assertTrue((self.controller.bridge / "request.json").exists())
+                generation = self.controller.operator_pause_generation
+                paused = pool.submit(self.post, {"kind": "pause"})
+                code, data, _ = paused.result(timeout=2)
+                self.assertEqual(code, 200)
+                self.assertEqual(json.loads(data)["status"], "pause_requested")
+                self.assertEqual(self.controller.operator_pause_generation, generation + 1)
+                self.assertTrue(self.controller.pause_requested)
+                self.assertTrue((self.controller.bridge / "pause").exists())
+                self.assertFalse(release.is_set())
+                self.assertFalse(waiting.done())
+            finally:
+                release.set()
+            waiting.result(timeout=3)
 
     def test_goal_is_saved_without_game(self):
         self.assertEqual(self.post({"kind": "goal", "text": "Explore"})[0], 200)

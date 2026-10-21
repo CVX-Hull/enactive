@@ -1,12 +1,20 @@
 ---
 owner: lead
-status: active
+status: historical
+date: 2026-10-17
+scope: Retired first waypoint slice; passive components and dated evidence only
 review_trigger: Gameplay interfaces, supported observations, model adapters, budgets or evaluation criteria change
 ---
 
-# First gameplay slice — waypoint and return
+# Historical first gameplay slice — waypoint and return
 
-Design for implementation under [#17](https://github.com/CVX-Hull/enactive/issues/17).
+This page preserves the first-slice design and its dated implementation narrative.
+Its live waypoint/planner ingress has been retired; it is not a supported runtime
+mode. Use [current architecture](../architecture.md) and the
+[current mission contract](../protocol.md#integrated-mission-lifecycle) for operation.
+Passive study components remain current-format libraries.
+
+Original design for implementation under [#17](https://github.com/CVX-Hull/enactive/issues/17).
 Typed gameplay/1 records and the passive bounded evidence adapter are implemented
 under [#32](https://github.com/CVX-Hull/enactive/issues/32). The bounded injected
 planner port is implemented under #34, skills/native predicate acceptance under
@@ -57,11 +65,11 @@ because an epoch changed. Service/game restart does not resume tasks from a jour
 
 ### Dedicated player sub-agent
 
-![Current player responsibilities: the dedicated player proposes plans, the service validates and executes, and you retain Pause.](../diagrams/player.svg)
+![Current mission architecture, which supersedes the first-slice arrangement described below: the dedicated player proposes plans, the service validates and executes, and you retain Pause.](../diagrams/player.svg)
 
 Solid arrows show responsibility and feedback, not independent model tiers.
 [Editable diagram](../diagrams/player.mmd). Current behavior is specified in the
-[protocol](../protocol.md#integrated-gameplay-lifecycle).
+[protocol](../protocol.md#integrated-mission-lifecycle).
 
 The integrated runtime uses one dedicated player sub-agent within the active
 Codex chat. The lead owns task admission, shared runtime, supervision and final
@@ -73,7 +81,7 @@ launch another game. Its working context contains gameplay evidence rather than
 engineering history. The lead can answer the same planning interface when needed;
 there is no automatic player fallback.
 
-The [current protocol](../protocol.md#integrated-gameplay-lifecycle) owns the runtime
+The [current protocol](../protocol.md#integrated-mission-lifecycle) owns the runtime
 contract, deadlines and accounting limits. The
 [integration brief](../changes/012-integrated-player.md#player-arrangement) records
 the decision, and [round012 acceptance](../acceptance/2026-10-18-integrated-player.md)
@@ -146,7 +154,7 @@ The bounded injected `planner.py` and passive remaining-route `skills.py` are im
 The skill proposes/evaluates one step; a new instance derives the remaining route
 from retained settled history. It cannot dispatch or automatically resume.
 See the [current skill contract](../protocol.md#passive-bounded-movement-skills).
-The passive `supervisor.py` composes these components. `harness/runtime.py` owns
+The passive `supervisor.py` composes these components. The historical waypoint runtime owned
 service lifecycle, external-chat handoff and production controller integration;
 it sits outside the passive gameplay package. Imports must not reverse that boundary.
 

@@ -1,0 +1,89 @@
+{
+  "outcome": "Functional native007 engineering qualification passed within stated scope; normal stopped Finish, not independent mission acceptance",
+  "source_commit": "5da2ea1bbb49b6ff49549f946181cf6b0759ada0",
+  "native_sha256": "cd031f200748cbbb387011335db15596346dac29607221fac25641ec9a771f1f",
+  "controller_wait_seconds": 15,
+  "charged_inputs": 112,
+  "returned": 106,
+  "unknown": 6,
+  "unreconciled_effects": 0,
+  "frames": 287,
+  "png_bytes": 13999031,
+  "wall_seconds_through_terminal_ledger_watermark": 1941.51003074646,
+  "wall_seconds_through_finished_status": 1941.5350258350372,
+  "wall_seconds_including_shutdown_reopen_record": 2028.2204058170319,
+  "canonical_game_seconds": 65,
+  "model_tool_usage": null,
+  "proofs": {
+    "normal_adoption": [
+      "char007-create-adopt",
+      "char007-load-adopt"
+    ],
+    "saved_checkpoint": [
+      "char007-save-first-reconcile",
+      "char007-save-final-reconcile"
+    ],
+    "normal_exit": [
+      "char007-exit-first-yes",
+      "char007-exit-final-yes"
+    ],
+    "normal_finish": [
+      "char007-finish-stopped"
+    ]
+  },
+  "first_child_normal_exit": true,
+  "second_child_normal_exit": true,
+  "signals_to_game": 0,
+  "exceptional_cleanup_interventions": 0,
+  "source_patches_during_run": 0,
+  "qualified": [
+    "normal fresh world and character creation",
+    "visible identity Claims and adoption",
+    "strict known non-HOSTILE adjacent movement",
+    "genuinely observed two-step return in one semantic request",
+    "counted one-matchbook drop and pickup with carried inventory verification",
+    "carried-stock Claims with frozen-water units/limits",
+    "one-minute native wait/poll/60-second observed return and completed Work",
+    "normal save/first exit/new child/exact-character reload with saved turn and coordinate scope",
+    "normal final save/second exit/stopped NormalFinish"
+  ],
+  "unqualified": [
+    "independent deciding player and fresh-context successor",
+    "meaningful supply-and-shelter objective",
+    "fresh-scene multi-step exploration",
+    "general setup cancellation",
+    "sleep recovery or interruption/resumption",
+    "observer presentation and model/tool/approval latency",
+    "new seven-day campaign"
+  ],
+  "resource_state": "no game/listener/live slots; reopened stopped history without authority; normally saved Rowan preserved",
+  "user_keys_evidence": "No user keys in operator history; native takeover/pause generations zero, not forensic proof of absolute absence.",
+  "latency": {
+    "clock": "original preflight receipt to terminal receipt monotonic interval; nearest-rank p95",
+    "returned_all": {
+      "n": 106,
+      "median_ms": 101.72,
+      "p95_ms": 337.46,
+      "max_ms": 6716.55
+    },
+    "returned_excluding_world_entry": {
+      "n": 105,
+      "median_ms": 100.5,
+      "p95_ms": 336.68,
+      "max_ms": 856.24
+    },
+    "map_steps": {
+      "n": 4,
+      "min_ms": 156.61,
+      "median_ms": 182.0,
+      "p95_ms": 191.63,
+      "max_ms": 191.63
+    },
+    "last_receipt_proxies_ms": {
+      "two_step_return": 767.54,
+      "world_name_20_primitives": 2173,
+      "inventory_focus_8_primitives": 4293
+    },
+    "settled_result_model_tool_approval_display_latency": null
+  }
+}

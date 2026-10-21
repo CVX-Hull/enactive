@@ -3,11 +3,15 @@ from pathlib import Path
 import argparse
 import hashlib
 import json
-import shlex
 import shutil
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parents[1]
+if __package__ in (None, ""):
+    sys.path.insert(0, str(ROOT))
+
+from harness.prepared_app import wrapper_source
 
 
 def prepare(binary: Path) -> None:
@@ -20,7 +24,7 @@ def prepare(binary: Path) -> None:
     config.mkdir(parents=True, exist_ok=True)
     options_path = config / "options.json"
     options = json.loads(options_path.read_text()) if options_path.exists() else []
-    values = {"FULLSCREEN": "no", "TERMINAL_X": "120", "TERMINAL_Y": "40",
+    values = {"FULLSCREEN": "no", "ENABLE_MOUSE": "false", "TERMINAL_X": "120", "TERMINAL_Y": "40",
               "TURN_DURATION": "0.0", "USE_LANG": "en"}
     for name, value in values.items():
         existing = next((item for item in options if item["name"] == name), None)
@@ -49,14 +53,7 @@ def prepare(binary: Path) -> None:
                             "@executable_path/libfreetype.6.dylib", str(target)], check=True)
     subprocess.run(["codesign", "--force", "--sign", "-", str(target)], check=True)
     wrapper = app / "Contents" / "MacOS" / "Cataclysm.sh"
-    wrapper.write_text(
-        "#!/bin/sh\nset -eu\n"
-        f"cd {shlex.quote(str(resources))}\n"
-        f"export CDDA_HARNESS_DIR={shlex.quote(str(bridge))}\n"
-        'export DYLD_LIBRARY_PATH="$PWD" DYLD_FRAMEWORK_PATH="$PWD"\n'
-        f"exec ./cataclysm-tiles --userdir {shlex.quote(str(user) + '/')} "
-        f">>{shlex.quote(str(logs / 'game.log'))} 2>&1\n"
-    )
+    wrapper.write_text(wrapper_source(ROOT))
     wrapper.chmod(0o755)
     print(f"Prepared windowed app: {app}")
     print(f"Installed binary SHA256: {hashlib.sha256(target.read_bytes()).hexdigest()}")

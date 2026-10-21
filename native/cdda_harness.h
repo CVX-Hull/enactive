@@ -47,6 +47,11 @@ class menu_query
     private:
         bool active;
 };
+// Called only by the pinned topmost redraw and ordinary menu renderers.
+// IDs are local to this presented list, never engine/item identities.
+void ui_redraw( bool top );
+void ui_begin( const std::string &purpose, const std::string &category, const std::string &title );
+void ui_row( const std::string &text, bool enabled, const std::string &hotkey, bool selected );
 void activity_interruptible( bool value );
 void playing( bool value );
 void boundary();

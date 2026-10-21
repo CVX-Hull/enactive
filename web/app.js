@@ -5,8 +5,7 @@ let latest = null;
 let displayed = null;
 let requestedFrame = '';
 let gameplayBusy = false;
-let taskBusy = false;
-let taskError = '';
+let missionError = '';
 let recoveryBusy = false;
 let observeBusy = false;
 let recoveryError = '';
@@ -19,13 +18,14 @@ let lastFrame = '';
 let localError = '';
 let frameError = '';
 let eventSignature = '';
+let memoryRendering;
 
 function showError(message) {
   $('error').textContent = message;
   $('error').hidden = !message;
 }
 function showErrors(extra = '') {
-  showError([...new Set([localError, taskError, recoveryError, frameError, latest?.error,
+  showError([...new Set([localError, missionError, recoveryError, frameError, latest?.error,
     latest?.last_result?.error, latest?.state?.error, extra].filter(Boolean))].join('\n'));
 }
 function frameIdentity(state) {
@@ -33,7 +33,7 @@ function frameIdentity(state) {
   const boundary = state.boundary;
   return JSON.stringify([state.protocol, state.session, state.revision, state.frame,
     boundary?.kind, boundary?.id, boundary?.control_generation, boundary?.interrupt_request_id,
-    boundary?.recovery_operations]);
+    boundary?.recovery_operations, state.takeover_generation, state.pause_origin]);
 }
 function currentFrame() {
   return displayed && latest?.state?.frame_ok && latest.connection === 'fresh' &&
@@ -47,13 +47,13 @@ function authority() {
   if (!currentFrame()) {
     throw new Error('Wait for the current game frame before choosing an input.');
   }
-  if (displayed.protocol !== 3 || !['normal_play', 'menu'].includes(displayed.boundary?.kind)) {
+  if (displayed.protocol !== 4 || !['normal_play', 'menu'].includes(displayed.boundary?.kind)) {
     throw new Error('This input boundary needs native control. Observe again after returning to supported play or a menu.');
   }
   return {expected_session: displayed.session, expected_revision: displayed.revision};
 }
 function eligibleRecovery(kind) {
-  if (!currentFrame() || displayed.protocol !== 3) return false;
+  if (!currentFrame() || displayed.protocol !== 4) return false;
   const boundary = displayed.boundary;
   const expected = {request_interrupt: 'activity_poll', answer_interrupt: 'interrupt_confirmation',
     continue_debug_once: 'debug_prompt'};
@@ -63,6 +63,7 @@ function eligibleRecovery(kind) {
     (kind !== 'answer_interrupt' || typeof boundary.interrupt_request_id === 'string' && boundary.interrupt_request_id.length > 0);
 }
 function recoveryAuthority(kind, choice) {
+  if (missionLocksControls()) throw new Error('Manual recovery is locked by mission execution or inconsistent mission status. Use Pause or the native window.');
   if (!eligibleRecovery(kind)) throw new Error('Observe and wait for the exact current recovery frame.');
   if (recoveryBusy || recoveryNeedsObserve || latest.control_pending) {
     throw new Error('Recovery is unresolved. Explicitly Observe after expiry before another operation.');
@@ -77,32 +78,39 @@ function recoveryAuthority(kind, choice) {
   }
   return payload;
 }
+// Phase and lease describe different things: a paused mission still owns its execution.
+function missionState() {
+  const mission = latest?.mission;
+  if (mission === null) return {kind: 'none', mission: null};
+  if (!mission || typeof mission !== 'object' || Array.isArray(mission) ||
+      typeof mission.phase !== 'string' || typeof mission.mission_id !== 'string' || !mission.mission_id.trim() ||
+      !Number.isSafeInteger(mission.epoch) || mission.epoch < 0) return {kind: 'invalid', mission};
+  if (['completed', 'failed', 'stopped'].includes(mission.phase)) return {kind: 'terminal', mission};
+  if (['admitted', 'active', 'paused', 'reconciling', 'handoff', 'finishing'].includes(mission.phase)) return {kind: 'nonterminal', mission};
+  return {kind: 'invalid', mission};
+}
+function missionLocksControls() {
+  return ['nonterminal', 'invalid'].includes(missionState().kind);
+}
 function updateControls() {
+  const missionLocked = missionLocksControls();
   const recoveryPending = recoveryBusy || recoveryNeedsObserve || !!latest?.control_pending;
   document.querySelectorAll('.send').forEach((button) => {
-    button.disabled = !!latest?.run_lease || gameplayBusy || taskBusy || recoveryPending || !currentFrame() || !!latest?.frozen || !!latest?.pause_requested;
+    button.disabled = missionLocked || gameplayBusy || recoveryPending || !currentFrame() || !!latest?.frozen || !!latest?.pause_requested;
   });
-  $('resume').disabled = !!latest?.run_lease || gameplayBusy || taskBusy || recoveryPending || !currentFrame() || !!latest?.frozen ||
+  $('resume').disabled = missionLocked || gameplayBusy || recoveryPending || !currentFrame() || !!latest?.frozen ||
     !['normal_play', 'menu'].includes(displayed?.boundary?.kind);
-  const task = latest?.gameplay;
-  const run = task?.run;
-  const ready = !taskBusy && !gameplayBusy && !recoveryPending && !latest?.pending &&
-    !latest?.run_lease && currentFrame() && displayed?.protocol === 3 && displayed?.boundary?.kind === 'normal_play' &&
-    !latest?.frozen && !latest?.pause_requested && !displayed?.paused;
-  $('task-start').disabled = !ready || !!task && run?.state !== 'abandoned';
-  $('task-continue').disabled = !ready || !task ||
-    !['blocked', 'interrupted', 'paused', 'failed', 'budget_exhausted'].includes(run?.state) ||
-    task.last_receipt?.disposition === 'unknown';
-  $('task-abandon').disabled = taskBusy || !task || run?.state === 'abandoned';
-  $('observe').disabled = observeBusy;
+  $('observe').disabled = observeBusy || missionState().kind === 'invalid';
   $('pause').disabled = false;
   for (const [id, kind] of [['recovery-interrupt', 'request_interrupt'], ['recovery-yes', 'answer_interrupt'],
     ['recovery-no', 'answer_interrupt'], ['recovery-debug', 'continue_debug_once']]) {
     const eligible = eligibleRecovery(kind);
     $(id).hidden = !eligible;
-    $(id).disabled = recoveryPending || !eligible;
+    $(id).disabled = missionLocked || recoveryPending || !eligible;
   }
-  $('recovery-state').textContent = recoveryBusy ? 'Recovery request in flight; Pause is available.' :
+  $('recovery-state').textContent = missionLocked ?
+    'Manual recovery is locked while a mission owns execution or its status is inconsistent. Pause remains available.' :
+    recoveryBusy ? 'Recovery request in flight; Pause is available.' :
     latest?.control_pending || recoveryNeedsObserve ? 'Recovery unresolved. Explicitly Observe after native expiry to reconcile; do not retry.' :
     ['request_interrupt', 'answer_interrupt', 'continue_debug_once'].some(eligibleRecovery) ?
       'Recovery available for the displayed boundary. Gameplay stays paused.' :
@@ -139,7 +147,7 @@ async function loadFrame(state) {
     $('frame-note').textContent = current ? 'FRESH · NATIVE CAPTURE' :
       latest?.state?.status === 'dispatched' ? 'INPUT DISPATCHED · WAITING FOR ENGINE' :
       'LAST FRAME · WAITING FOR CURRENT OBSERVATION';
-    renderGameplay(latest?.gameplay);
+    renderMission();
     updateControls();
   } catch (error) {
     if (requestedFrame === state.frame) {
@@ -158,12 +166,17 @@ function showResult(result, recovery = false) {
   if (!recovery) $('result-status').textContent = result.status || 'ERROR';
 }
 async function command(kind, payload = {}) {
-  const ordinary = !['pause', 'goal', 'observe'].includes(kind);
-  if (ordinary && latest?.run_lease) {
-    showError('A gameplay run owns input. Pause to take over, then observe and resume.');
+  if (kind === 'observe') {
+    const mode = missionState().kind;
+    if (mode === 'nonterminal') return missionObserve();
+    if (mode === 'invalid') { showError('Mission status is inconsistent. Observe and manual controls are locked; Pause and the native window remain available.'); return; }
+  }
+  const ordinary = !['pause', 'observe'].includes(kind);
+  if (ordinary && missionLocksControls()) {
+    showError('Mission execution owns remote input or its status is inconsistent. Use Pause or take control in the native window.');
     return;
   }
-  if (ordinary && (gameplayBusy || taskBusy || recoveryBusy || recoveryNeedsObserve || latest?.control_pending)) return;
+  if (ordinary && (gameplayBusy || recoveryBusy || recoveryNeedsObserve || latest?.control_pending)) return;
   if (kind === 'observe' && observeBusy) return;
   if (ordinary) gameplayBusy = true;
   if (kind === 'observe') observeBusy = true;
@@ -194,83 +207,243 @@ async function command(kind, payload = {}) {
     await refresh();
   }
 }
-function taskAuthority() {
-  const expected = authority();
-  if (displayed.boundary?.kind !== 'normal_play' || latest.frozen || latest.pause_requested || displayed.paused) {
-    throw new Error('Observe normal play and explicitly Resume remote control before starting or continuing a task.');
-  }
-  return expected;
-}
-async function gameplayCommand(kind) {
-  if (taskBusy) return;
-  let payload;
+async function missionObserve() {
+  if (observeBusy) return;
+  const {kind, mission} = missionState();
+  if (kind !== 'nonterminal') return;
+  observeBusy = true;
+  missionError = '';
+  updateControls();
   try {
-    updateControls();
-    if (!['start', 'continue', 'abandon'].includes(kind) || $(`task-${kind}`).disabled) {
-      throw new Error('This task operation is unavailable. Check the task state, resume control and observe a fresh frame.');
-    }
-    if (kind === 'start') {
-      const direction = $('task-direction').value;
-      const distance = Number($('task-distance').value);
-      if (!['north', 'east', 'south', 'west'].includes(direction) || !Number.isInteger(distance) || distance < 1 || distance > 4) {
-        throw new Error('Choose a cardinal direction and an outbound distance from 1 to 4 tiles.');
-      }
-      payload = {direction, distance, ...taskAuthority()};
-    } else {
-      const task = latest.gameplay;
-      if (typeof task.run_id !== 'string' || !Number.isInteger(task.run.execution_epoch)) {
-        throw new Error('The service has not supplied an exact run identity and execution epoch.');
-      }
-      payload = {run_id: task.run_id, execution_epoch: task.run.execution_epoch};
-      if (kind === 'continue') Object.assign(payload, taskAuthority());
-    }
-  } catch (error) { taskError = error.message; showErrors(); return; }
-  taskBusy = true;
-  taskError = '';
-  invalidateAuthority();
-  try {
-    const response = await fetch('/api/gameplay', {
+    const request = {schema: 'mission/8', kind: 'observe', request_id: crypto.randomUUID(),
+      mission_id: mission.mission_id, epoch: mission.epoch};
+    const response = await fetch('/api/mission', {
       method: 'POST', headers: {'Content-Type': 'application/json', 'X-CDDA-Token': token},
-      body: JSON.stringify({kind, ...payload}), credentials: 'same-origin'
+      body: JSON.stringify(request), credentials: 'same-origin'
     });
     const result = await response.json();
-    $('task-result').textContent = JSON.stringify(result, null, 2);
-    taskError = result.error || (response.ok ? '' : `Task request failed (${response.status})`);
+    const admission = response.ok && result.status === 'accepted' ?
+      'Admission recorded; not ready or effect proof. Watch status for the outcome.' :
+      'Response recorded. Check mission status and retained evidence before another operation; no automatic retry.';
+    $('mission-result').textContent = `${admission}\n${JSON.stringify(result, null, 2)}`;
+    missionError = result.error || (response.ok ? '' : `Mission Observe failed (${response.status})`);
   } catch (error) {
-    taskError = `Task response unavailable: ${error.message}. Inspect status before choosing another operation.`;
-    $('task-result').textContent = taskError;
+    missionError = `Mission Observe response unavailable; outcome unknown: ${error.message}. Inspect status; do not retry an uncertain operation.`;
+    $('mission-result').textContent = missionError;
   } finally {
-    taskBusy = false;
+    observeBusy = false;
     showErrors();
     updateControls();
     await refresh();
   }
 }
-function renderGameplay(gameplay) {
-  const task = gameplay?.task;
-  const run = gameplay?.run;
-  const planner = gameplay?.planner;
-  $('task-state').textContent = run?.state?.replaceAll('_', ' ').toUpperCase() || 'NOT STARTED';
-  $('task-summary').textContent = task ? `${task.distance} tile(s) ${task.direction}, then return to ${task.origin.join(', ')}. Target ${task.target.join(', ')}.` :
-    'Choose a short route from the current observed position.';
-  const steps = run?.progress?.verified_steps;
-  const leg = Number.isInteger(steps) && task ? steps >= task.distance ? 'Return' : 'Outbound' : '';
-  $('task-stage').textContent = run ? `${leg} · ${run.stage_id || 'No stage admitted'} · epoch ${run.execution_epoch}` : 'No task admitted';
-  $('task-player').textContent = run ? `${run.model_id || 'Identity unreported'} · ${run.configuration_id || 'Configuration unreported'}${planner?.pending_request_id ? ' · waiting for candidate' : ''}` :
-    'External chat · waiting for explicit start';
-  $('task-executor').textContent = run?.lease_owner ? `${run.lease_owner}${run.paused ? ' · paused' : ' · run owns input'}` :
-    run?.paused ? 'Paused · no run owns input' : 'No run owns input';
-  $('task-progress').textContent = run ? `${steps} / ${2 * task.distance} verified step(s) · displacement ${run.progress.displacement.join(', ')}` : 'No verified movement';
-  $('task-next').textContent = run?.next_check || 'Observe, then resume remote control to start.';
-  $('task-reason').textContent = run?.last_public_reason || 'No task admitted';
-  $('task-control-note').textContent = run?.state === 'completed' ?
-    'Completed task and progress retained. Abandon this task before starting another.' :
-    'Start and Continue use the current decoded frame. Continue keeps the original task and budgets; resume remote control explicitly first. Unknown effects prohibit continuation.';
-  $('task-freshness').textContent = run ? `${run.fresh ? 'Task evidence fresh' : 'Task evidence stale or unavailable'} · ${currentFrame() ? 'displayed frame fresh' : 'displayed frame unavailable or stale'}` : 'No task evidence';
-  $('task-evidence').textContent = gameplay ? JSON.stringify({run_id: gameplay.run_id, task_id: task.task_id,
-    evidence: run.evidence, last_receipt: gameplay.last_receipt,
-    pending_request_id: planner?.pending_request_id, planner_deadline_ms: planner?.deadline_ms}, null, 2) : 'No retained task evidence.';
-  $('task-budgets').textContent = task ? JSON.stringify({original: task.budgets, remaining: run.remaining_budgets}, null, 2) : 'Original budgets appear after admission.';
+function known(value) {
+  return value === null || value === undefined ? 'unknown' :
+    typeof value === 'object' ? JSON.stringify(value) : String(value);
+}
+function evidence(value, empty) {
+  return value === null || value === undefined ? empty : JSON.stringify(value, null, 2);
+}
+function record(value) {
+  return value !== null && typeof value === 'object' && !Array.isArray(value);
+}
+function recordedId(value) {
+  return typeof value === 'string' && value.trim().length > 0;
+}
+function renderLifecycle(mission) {
+  const phase = mission?.lifecycle_phase;
+  const checkpoint = record(phase) && phase.grants_authority === false &&
+    [phase.origin_request_id, phase.operation, phase.checkpoint_id].every(recordedId);
+  $('mission-lifecycle').textContent = checkpoint ?
+    `${mission.active_operation === null ? 'Awaiting lifecycle decision' : 'Lifecycle checkpoint'} · ${phase.operation} · request ${phase.origin_request_id} · checkpoint ${phase.checkpoint_id} · grants no authority` :
+    phase == null ? 'No lifecycle checkpoint reported' : 'Lifecycle checkpoint unavailable or inconsistent; inspect evidence';
+  const process = mission?.native_process;
+  const sample = record(process) && record(process.last_sample) ? process.last_sample : null;
+  const sampled = sample && typeof sample.running === 'boolean' && typeof sample.outcome === 'string';
+  const connection = latest?.connection === 'disconnected' ? 'service disconnected' :
+    latest?.connection === 'fresh' ? 'status connected' : 'status stale or unavailable';
+  const custody = record(process) && Array.isArray(process.unresolved_custody_requests) ?
+    `${process.unresolved_custody_requests.length} unresolved custody request(s)` : 'unresolved custody unknown';
+  $('mission-process').textContent = `${sampled ?
+    `Historical last sample · owner ${known(process.owner_mission_id)} · launch ${known(sample.launch_id)} · running: ${sample.running} · outcome ${sample.outcome} · exit code: ${known(sample.returncode)}` :
+    'No usable process sample'} · ${custody} · ${connection} · current liveness unknown`;
+  const result = mission?.progress;
+  const proof = record(result) ? result.normal_exit : null;
+  const finish = record(result) ? result.normal_finish : null;
+  const finishRecorded = record(finish) && finish.schema === 'mission/8' && finish.record_type === 'NormalFinish' &&
+    finish.grants_authority === false && [finish.final_source_id, finish.normal_exit_result_request_id].every(recordedId) &&
+    ((finish.disposition === 'stopped' && finish.completed_work_event_id === null) ||
+     (finish.disposition === 'completed' && recordedId(finish.completed_work_event_id)));
+  // Summarize the producer's recorded proof; process samples and ACKs cannot supply it.
+  const verified = record(proof) && proof.schema === 'mission/8' && proof.record_type === 'OwnedNormalExit' &&
+    proof.grants_authority === false && proof.returncode === 0 &&
+    (proof.no_save_required === true || proof.no_save_required === false && recordedId(proof.saved_checkpoint_request_id)) &&
+    [proof.origin_request_id, proof.launch_request_id, proof.launch_id,
+      proof.terminal_logical_id, proof.native_request_id].every(recordedId) &&
+    Array.isArray(proof.source_ids) && proof.source_ids.length > 0 && proof.source_ids.every(recordedId) &&
+    record(proof.retirement) && proof.retirement.grants_authority === false && proof.retirement.returncode === 0 &&
+    proof.retirement.launch_id === proof.launch_id && proof.retirement.exit_request_id === proof.origin_request_id &&
+    typeof proof.retirement.retired_pending === 'boolean' &&
+    proof.retirement.native_request_id === (proof.retirement.retired_pending ? proof.native_request_id : null) &&
+    result.phase?.operation === 'exit' && result.phase?.stage === 'complete';
+  const receipt = record(mission?.last_receipt) ? mission.last_receipt : null;
+  const matchesExit = verified && receipt?.native_request_id === proof.native_request_id &&
+    receipt?.logical_action_id === proof.terminal_logical_id;
+  $('mission-exit').textContent = `${finishRecorded ?
+    `Recorded normal finish report · ${finish.disposition === 'completed' ? 'player-reported objective completion' : 'normal cleanup; objective completion unclaimed'} · exit result ${finish.normal_exit_result_request_id} · final source ${finish.final_source_id} · mission state ${known(mission.phase)}. This report does not establish independent campaign acceptance` : verified ?
+    `Recorded verified normal exit effect · launch ${proof.launch_id} · ${proof.no_save_required ? 'no save required (untouched menu)' : `saved checkpoint ${proof.saved_checkpoint_request_id}`}` :
+    'No verified normal exit proof reported'}. Latest primitive receipt ${known(receipt?.native_request_id)} · logical ${known(receipt?.logical_action_id)} · acknowledgment ${known(receipt?.transport_disposition)}. ${matchesExit ?
+    'Matches the recorded terminal exit input.' : 'Not correlated with a recorded terminal exit input.'} Acknowledgment and exit effect are separate evidence.`;
+}
+function countMap(value) {
+  return record(value) && Object.values(value).every(count => Number.isSafeInteger(count) && count >= 0);
+}
+function measuredCounts(metrics) {
+  const operations = metrics?.operations;
+  const primitives = metrics?.primitives;
+  const total = value => Object.values(value).reduce((sum, count) => sum + count, 0);
+  return {
+    operations: record(operations) && Number.isSafeInteger(operations.total) && operations.total >= 0 &&
+      ['by_kind', 'by_skill', 'by_state'].every(key => countMap(operations[key])) &&
+      total(operations.by_kind) === operations.total && total(operations.by_state) === operations.total &&
+      total(operations.by_skill) === (operations.by_kind.skill || 0) ? operations : null,
+    primitives: record(primitives) && Number.isSafeInteger(primitives.charged) && primitives.charged >= 0 &&
+      countMap(primitives.by_state) && total(primitives.by_state) === primitives.charged ? primitives : null
+  };
+}
+function labeledCounts(value) {
+  return value ? Object.entries(value).map(([key, count]) => `${key}: ${count}`).join(' · ') || 'none recorded' : 'unavailable';
+}
+function renderActivity(mission) {
+  const phase = mission?.activity_phase;
+  const valid = record(phase) && phase.grants_authority === false && typeof phase.answered === 'boolean' &&
+    [phase.origin_request_id, phase.checkpoint_id, phase.stage].every(recordedId) &&
+    (phase.interrupt_request_id === null || recordedId(phase.interrupt_request_id));
+  $('mission-activity').textContent = valid ?
+    `Private paused activity · ${phase.stage} · request ${phase.origin_request_id} · checkpoint ${phase.checkpoint_id} · interrupt ${known(phase.interrupt_request_id)} · answered: ${phase.answered} · grants no authority` :
+    phase == null ? 'No private activity checkpoint reported' : 'Activity checkpoint unavailable or inconsistent; inspect evidence';
+  const reported = mission?.progress?.phase;
+  $('mission-last-report').textContent = record(reported) ?
+    `Last reported result · ${known(reported.operation)} · ${known(reported.stage)} · historical report, not a live phase or acceptance` :
+    'No result phase reported; inspect retained evidence';
+}
+function memoryList(id, items, limit, describe) {
+  const list = $(id);
+  list.replaceChildren();
+  const add = (title, lines = []) => {
+    const item = document.createElement('li');
+    const heading = document.createElement('strong');
+    heading.textContent = title;
+    item.append(heading);
+    for (const line of lines) {
+      const paragraph = document.createElement('p');
+      paragraph.textContent = line;
+      item.append(paragraph);
+    }
+    list.append(item);
+  };
+  if (!Array.isArray(items)) { add('Unavailable in this packet'); return; }
+  if (!items.length) { add('None included in this query-specific packet'); return; }
+  for (const item of items.slice(0, limit)) {
+    const description = record(item) ? describe(item) : ['Malformed entry; inspect raw context'];
+    add(description[0], description.slice(1));
+  }
+  if (items.length > limit) add(`${items.length - limit} additional entries not summarized; inspect raw context`);
+}
+function memoryValue(value) {
+  const text = known(value);
+  return text.length <= 2048 ? text : `${text.slice(0, 2048)}… [truncated; inspect raw context]`;
+}
+function memoryIds(value) {
+  return Array.isArray(value) ? value.slice(0, 32).map(memoryValue).join(', ') || 'none reported' : 'unavailable';
+}
+function quantities(value) {
+  return Array.isArray(value) ? value.slice(0, 16).map(item => record(item) ?
+    `${memoryValue(item.subject)}: ${memoryValue(item.quantity)} ${memoryValue(item.unit)}` : 'malformed quantity').join('; ') || 'none reported' : 'unavailable';
+}
+function renderMemory(mission) {
+  const memory = mission?.memory_context;
+  const usable = record(memory) && memory.schema === 'campaign-memory/3' && memory.grants_authority === false;
+  $('mission-memory-summary').textContent = usable ?
+    `Historical, query-specific last journaled context · packet ${known(memory.packet_id)} · memory version ${known(memory.memory_version)} · query ${known(memory.query)} · as of ${known(memory.as_of)} · scope ${known(memory.scope)}. Status labels belong to that packet, not the current world. This preview is not current authority and is not recomputed by the viewer.` :
+    `No journaled context preview available${memory == null ? '' : ' (unavailable or inconsistent packet)'}. Memory version ${known(mission?.memory_version)} · last packet ${known(mission?.last_context_id)}.`;
+  const rendering = evidence(memory, 'No memory claims, work or source dispositions available.');
+  // Polls repeat the same historical packet. Preserve scroll/selection while it
+  // is being read; compare content as well as ID so corrections still render.
+  if (rendering === memoryRendering) return;
+  memoryRendering = rendering;
+  $('mission-memory-readable').hidden = !usable;
+  const packet = usable ? memory : {};
+  memoryList('mission-claims', packet.claims, 32, claim => [
+    `${memoryValue(claim.status)} · ${memoryValue(claim.kind)} · ${memoryValue(claim.id)}`,
+    memoryValue(claim.text),
+    `Value: ${memoryValue(claim.value)} · Coverage: ${memoryValue(claim.coverage)}`,
+    `Sources: ${memoryIds(claim.sources)} · Observed: ${memoryValue(claim.observed_time)}`,
+    `Supersedes: ${memoryIds(claim.supersedes)} · Support groups: ${memoryValue(claim.supports)}`
+  ]);
+  memoryList('mission-work', packet.work, 16, work => [
+    `${memoryValue(work.status)} · ${memoryValue(work.intent)} · ${memoryValue(work.id)}`,
+    `Stage: ${memoryValue(work.stage)} · Progress: ${Number.isInteger(work.progress) && work.progress >= 0 && work.progress <= 100 ? `${work.progress}%` : 'unknown'} · Predecessor: ${memoryValue(work.predecessor_work_id)}`,
+    `Available: ${quantities(work.available)} · Committed: ${quantities(work.committed)}`,
+    `Predicted output: ${quantities(work.predicted_output)} · Observed output: ${quantities(work.observed_output)}`,
+    `Next verification: ${memoryValue(work.next_verification)} · Unresolved effects: ${memoryIds(work.unresolved_effects)}`,
+    `Sources: ${memoryIds(work.sources)}`
+  ]);
+  memoryList('mission-sources', packet.sources, 16, source => [
+    `${memoryValue(source.id)} · ${memoryValue(source.status)}`,
+    `Session: ${memoryValue(source.reference?.session)} · Revision: ${memoryValue(source.reference?.revision)} · Turn: ${memoryValue(source.reference?.turn)}`
+  ]);
+  memoryList('mission-dispositions', record(packet.dispositions) ? Object.entries(packet.dispositions).map(([id, reasons]) => ({id, reasons})) : null,
+    48, disposition => [memoryValue(disposition.id), memoryValue(disposition.reasons)]);
+  memoryList('mission-reobservations', packet.reobservations, 48, observation => [
+    `${memoryValue(observation.id)} · ${memoryValue(observation.reason)}`, memoryValue(observation.instruction),
+    `Scope: ${memoryValue(observation.scope)}`
+  ]);
+  $('mission-omissions').textContent = `Omitted claims: ${known(packet.omitted?.claims)} · Work: ${known(packet.omitted?.work)} · Bound exclusions: ${known(packet.omitted?.bounds)} · Reasons: ${known(packet.omitted?.reasons)}. This query-specific packet is not complete campaign memory. Work completion labels are reports, not independent acceptance.`;
+  $('mission-memory').textContent = rendering;
+}
+function renderMission() {
+  const {kind, mission} = missionState();
+  const available = mission && typeof mission === 'object' && !Array.isArray(mission);
+  $('mission-state').textContent = kind === 'none' ? 'NO MISSION' : kind === 'invalid' ? 'INCONSISTENT' : mission.phase.toUpperCase();
+  $('mission-summary').textContent = available && typeof mission.objective === 'string' ? mission.objective : 'No mission objective recorded.';
+  const configuration = available ? mission.configuration : null;
+  $('mission-player').textContent = available ? `${known(mission.actor_id)} · model ${known(configuration?.model)} · effort ${known(configuration?.effort)}` : 'No player admitted';
+  $('mission-identity').textContent = available ? `${known(mission.mission_id)} · epoch ${known(mission.epoch)}` : 'No mission identity';
+  $('mission-owner').textContent = available && mission.lease_owner ?
+    `${known(mission.lease_owner.actor_id)} · ${known(mission.lease_owner.operation)} · lease epoch ${known(mission.lease_owner.epoch)}` :
+    'No current input lease reported';
+  $('mission-operation').textContent = available ? `${mission.active_operation ? known(mission.active_operation) : 'No active operation'} · skill ${mission.skill ? known(mission.skill) : 'none reported'}` : 'No active operation';
+  renderLifecycle(available ? mission : null);
+  renderActivity(available ? mission : null);
+  const metrics = available ? mission.metrics : null;
+  const counts = measuredCounts(metrics);
+  $('mission-progress').textContent = `${counts.operations ? `${counts.operations.total} retained mission requests` : 'Mission requests: unavailable'} · ${counts.primitives ? `${counts.primitives.charged} charged primitive admissions` : 'Charged primitive admissions: unavailable'}. Requests are not model calls or independent tasks; admissions are not delivered keys.`;
+  $('mission-counts').textContent = `Cumulative retained requests by kind: ${labeledCounts(counts.operations?.by_kind)}. By skill: ${labeledCounts(counts.operations?.by_skill)}. By state: ${labeledCounts(counts.operations?.by_state)}. Charged primitives by state: ${labeledCounts(counts.primitives?.by_state)}. Includes rejected, not_dispatched and unknown primitive admissions. Only ledger-admitted operations are counted; read-only calls and pre-admission rejections are excluded. The recent timeline is not the cumulative counter.`;
+  $('mission-next').textContent = available ? known(mission.next_needed_decision) : 'Waiting for an explicitly admitted player mission';
+  $('mission-reason').textContent = available ? `${known(mission.pause_cause)} · ${known(mission.reason)}` : 'No mission admitted';
+  const freshness = available ? mission.freshness : null;
+  $('mission-freshness').textContent = available ?
+    `Mission evidence ${freshness?.fresh === true && latest?.connection === 'fresh' ? 'reported fresh' : 'stale or unavailable'} · age ${known(freshness?.age_seconds)}${Number.isFinite(freshness?.age_seconds) ? 's' : ''} · ${currentFrame() ? 'displayed frame fresh' : 'displayed frame unavailable or stale'}` : 'No mission evidence';
+  const source = available ? mission.current_source : null;
+  $('mission-source').textContent = source ? `${known(source.observation_id)} · session ${known(source.session)} · revision ${known(source.revision)}` : 'No current mission source';
+  $('mission-unresolved').textContent = available ? Array.isArray(mission.unresolved_effects) ?
+    `${mission.unresolved_effects.length} unresolved effect(s)` : 'Unknown unresolved effects' : 'No mission effects reported';
+  $('mission-control-note').textContent = kind === 'invalid' ?
+    'Mission status is inconsistent. Manual input, recovery, Resume and Observe are locked. Pause and control in the native window remain available.' :
+    kind === 'nonterminal' ?
+    'The player owns mission execution, including while paused or without an input lease. Manual input, recovery and Resume are locked. Pause or take control in the native window; native takeover invalidates mission authority.' :
+    kind === 'terminal' ? 'Retained mission history owns no execution. Ordinary controls still require current decoded evidence and explicit Resume when paused.' :
+    'Observer only: missions are admitted outside this viewer. Ordinary controls require current decoded evidence.';
+  $('mission-evidence').textContent = kind === 'invalid' ? evidence(mission, 'Mission field missing from status.') : available ? evidence({progress: mission.progress, last_receipt: mission.last_receipt,
+    current_source: mission.current_source, unresolved_effects: mission.unresolved_effects,
+    prompt_phase: mission.prompt_phase, lifecycle_phase: mission.lifecycle_phase, activity_phase: mission.activity_phase,
+    native_process: mission.native_process, diagnostic: mission.diagnostic}, '') : 'No retained mission evidence.';
+  $('mission-budgets').textContent = available ? evidence({remaining_limits: mission.remaining_limits,
+    cleanup_reserve: mission.cleanup_reserve, configuration: mission.configuration}, '') : 'No mission limits reported.';
+  $('mission-usage').textContent = `Harness API spend: ${known(metrics?.harness_api_spend)}. Model requests: unknown. Tool calls: unknown. External tokens: ${known(metrics?.external_tokens)}. API quota: ${known(metrics?.api_quota)}. Model time: ${known(metrics?.model_time_seconds)}. External cost: unknown. Interventions: unknown. Game seconds: ${known(metrics?.game_seconds)}. Usage and remaining budgets do not establish mission outcomes.`;
+  $('mission-archive').textContent = evidence(metrics?.archive, 'No archive usage reported.');
+  renderMemory(available ? mission : null);
 }
 async function recover(kind, choice) {
   let payload;
@@ -309,7 +482,7 @@ function timeline(events) {
   [...events].reverse().slice(0, 30).forEach((event) => {
     const item = document.createElement('li');
     const envelope = event.outcome;
-    const outcome = ['run_receipt', 'gameplay_receipt'].includes(event.request.kind) ? envelope.result : envelope;
+    const outcome = event.request.kind === 'run_receipt' ? envelope.result : envelope;
     if (outcome.error) item.className = 'event-error';
     const title = document.createElement('div');
     title.className = 'event-title';
@@ -318,8 +491,7 @@ function timeline(events) {
       resume: 'Remote control resumed', pause: 'Pause requested', key: 'Sent key', action: 'Sent action',
       walk: 'Guarded walk', goal: 'Objective updated', request_interrupt: 'Interrupt requested',
       answer_interrupt: 'Interrupt answer', continue_debug_once: 'Debug continuation', control_unresolved: 'Recovery unresolved', run_admission: 'Run action admitted',
-      run_receipt: 'Native action receipt', gameplay_receipt: 'Task action receipt',
-      malformed_gameplay_receipt: 'Invalid task receipt'};
+      run_receipt: 'Native action receipt'};
     text.textContent = `${names[event.request.kind] || event.request.kind} ${event.request.key || event.request.action || ''}`;
     const time = document.createElement('span');
     time.className = 'event-time';
@@ -340,8 +512,11 @@ function render(data) {
   $('connection-dot').className = `dot ${data.connection}`;
   $('age').textContent = data.age_ms === null ? 'No observation' : `${(data.age_ms / 1000).toFixed(1)}s old`;
   const paused = data.pause_requested || state?.paused;
-  $('control-state').textContent = data.frozen ? 'PAUSED · UNRECONCILED' : paused ? 'PAUSED' : data.run_lease ? `RUN OWNED · ${data.run_lease.owner}` : 'REMOTE CONTROL READY';
-  $('control-state').classList.toggle('active', !paused && !data.frozen);
+  const missionMode = missionState();
+  $('control-state').textContent = missionMode.kind === 'invalid' ? 'MISSION STATUS INCONSISTENT' :
+    missionMode.kind === 'nonterminal' ? `MISSION ${missionMode.mission.phase.toUpperCase()} · ${known(missionMode.mission.actor_id)}${paused || data.frozen ? ' · CONTROL PAUSED' : ''}` :
+    data.frozen ? 'PAUSED · UNRECONCILED' : paused ? 'PAUSED' : 'REMOTE CONTROL READY';
+  $('control-state').classList.toggle('active', !paused && !data.frozen && missionMode.kind !== 'invalid');
   const boundary = state?.boundary?.kind;
   $('category').textContent = boundary ? `${boundary.replaceAll('_', ' ').toUpperCase()} · ${state.category}` : 'NO VERIFIED INPUT BOUNDARY';
   $('revision').textContent = state ? `REV ${state.revision}` : 'REV —';
@@ -374,9 +549,8 @@ function render(data) {
     if (actions.includes(chosen)) select.value = chosen;
     select.dataset.actions = JSON.stringify(actions);
   }
-  const recordedGoal = typeof data.goal === 'string' ? data.goal : '';
+  const recordedGoal = typeof data.mission?.objective === 'string' ? data.mission.objective : typeof data.goal === 'string' ? data.goal : '';
   $('recorded-objective-text').textContent = recordedGoal.trim() ? recordedGoal : 'No objective recorded.';
-  if (document.activeElement !== $('goal')) $('goal').value = data.goal;
   if (data.last_result) {
     $('last-result').textContent = JSON.stringify(data.last_result, null, 2);
     $('result-status').textContent = data.last_result.status.toUpperCase();
@@ -392,7 +566,7 @@ function render(data) {
   $('recovery-evidence').textContent = JSON.stringify({pending: data.control_pending || null, unknown_outcomes: recoveryUnknowns,
     historical_incidents: (data.historical_unknowns || []).filter(item => item.channel === 'control')}, null, 2);
   $('journal').textContent = data.journal;
-  renderGameplay(data.gameplay);
+  renderMission();
   showErrors();
   updateControls();
   timeline(data.events);
@@ -407,7 +581,7 @@ async function refresh() {
   } catch (error) {
     if (sequence !== refreshSequence) return;
     if (latest) latest = {...latest, connection: 'disconnected'};
-    renderGameplay(latest?.gameplay);
+    renderMission();
     updateControls();
     $('connection').textContent = 'Service disconnected';
     $('connection-dot').className = 'dot disconnected';
@@ -420,13 +594,9 @@ $('recovery-interrupt').addEventListener('click', () => recover('request_interru
 $('recovery-yes').addEventListener('click', () => recover('answer_interrupt', 'YES'));
 $('recovery-no').addEventListener('click', () => recover('answer_interrupt', 'NO'));
 $('recovery-debug').addEventListener('click', () => recover('continue_debug_once'));
-$('task-form').addEventListener('submit', (event) => { event.preventDefault(); gameplayCommand('start'); });
-$('task-continue').addEventListener('click', () => gameplayCommand('continue'));
-$('task-abandon').addEventListener('click', () => gameplayCommand('abandon'));
 $('pause').addEventListener('click', () => command('pause'));
 $('resume').addEventListener('click', () => command('resume'));
 $('observe').addEventListener('click', () => command('observe'));
-$('goal-form').addEventListener('submit', (event) => { event.preventDefault(); command('goal', {text: $('goal').value}); });
 for (const kind of ['action', 'key']) {
   $(`${kind}-form`).addEventListener('submit', (event) => {
     event.preventDefault();
@@ -439,11 +609,18 @@ $('walk-form').addEventListener('submit', (event) => {
   try { command('walk', {direction: $('direction').value, steps: Number($('steps').value), ...authority()}); }
   catch (error) { showError(error.message); }
 });
-(async function poll() { await refresh(); setTimeout(poll, 1000); })();
+(async function poll() {
+  await refresh();
+  // Observe active play promptly without overlapping status requests or asking
+  // the player/model to poll per key. Idle/disconnected views keep the old rate.
+  const active = latest?.connection !== 'disconnected' &&
+    (latest?.mission?.active_operation || latest?.pause_requested === false);
+  setTimeout(poll, active ? 250 : 1000);
+})();
 
 (function checkFreshness() {
   updateControls();
-  renderGameplay(latest?.gameplay);
+  renderMission();
   if (latest?.state && Date.now() - latest.state.timestamp_ms > 3000) {
     $('frame-shell').classList.add('stale');
     $('frame-note').textContent = 'STALE · OBSERVE BEFORE CHOOSING INPUT';
