@@ -232,6 +232,15 @@ The closed input shapes are:
   events start different drag behavior and are not this operation. No held button, pointer warp, OS focus,
   drag, wheel or extra implicit navigation.
 
+Host validation uses one scalar and Python's `str.isprintable()`. Native validation
+independently rejects invalid/overlong UTF-8, surrogates/out-of-range scalars,
+C0/C1 controls and U2028/U2029 using the pinned decoder; it does not invent Unicode
+category tables. Zero-width printable combining marks are not rejected merely for
+width0. A pinned negative-width refusal is explicit unsupported input. Modified
+named arrows may refuse in keychar mode before commit rather than emulate
+diagonal/held-key policy; supported combinations must not read or mutate physical
+key state during preflight. Full Unicode/category/shortcut parity is not claimed.
+
 Every protocol5 observation adds `frame_geometry`, null when its frame is not
 attested; otherwise an object with positive `window_width`, `window_height`,
 `output_width`, `output_height` (each at most16384) and `viewport` as four integers
