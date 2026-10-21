@@ -5,6 +5,7 @@ not bypass creation, adoption, handoff, source, claim or normal-ending guards.
 Replacing PlayerTools tests disposable client context, not a fresh model agent.
 """
 from copy import deepcopy
+from dataclasses import replace
 import threading
 import unittest
 from unittest.mock import patch
@@ -150,7 +151,7 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         selection["perception"] = None
         self.assertEqual(self.run_request(selection)["state"], "unknown")
         self.observe("load-observe")
-        adopted = self.finish_identity("load", world, 1)
+        adopted = self.finish_identity("load", world, 1, diagnostic_observe=True)
         self.assertEqual(adopted["result"]["normal_adoption"]["saved_checkpoint_request_id"], "save-reconcile")
         self.save_final()
         self.exit("final-exit")
@@ -159,3 +160,92 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
         self.assertEqual(self.runtime._ledger.request("character-yes"), original_unknown)
         self.runtime._ledger._verify(self.a)
+
+    def test_paused_identity_observation_still_rejects_real_scope_and_custody_faults(self):
+        for fault in ("uncommitted_transition", "wrong_actor", "wrong_epoch", "takeover", "changed_pixels",
+                      "process_lost", "prepared", "published", "capacity"):
+            with self.subTest(fault=fault):
+                case = StructuredLifecycleTests("test_observe_after_committed_transition_keeps_paused_identity_scope")
+                case.setUp()
+                try:
+                    case.paused_identity()
+                    owner = case.runtime._registered_lifecycle.phase
+                    if fault == "uncommitted_transition":
+                        case.runtime._registered_lifecycle.phase = replace(owner, transition_request="character-yes")
+                    elif fault in ("wrong_actor", "wrong_epoch"):
+                        field = {"actor_id": "another-player"} if fault == "wrong_actor" else {"epoch": owner.epoch - 1}
+                        case.runtime._registered_lifecycle.phase = replace(owner, **field)
+                    elif fault == "takeover":
+                        with case.controller.data_lock:
+                            case.controller.state["takeover_generation"] += 1
+                    elif fault == "changed_pixels":
+                        case.bridge.editor_text = "Visible scene changed while paused"
+                    elif fault == "process_lost":
+                        case.process_state.update(running=False, returncode=1, outcome="exited")
+                    elif fault in ("prepared", "published"):
+                        # Fault-inject only this disposable fixture's audit. The
+                        # unresolved count excludes these unsettled states.
+                        primitive = case.runtime._ledger.primitive_records()[0]
+                        case.runtime._ledger._db.execute("UPDATE primitives SET state=? WHERE id=?",
+                            (fault, primitive["logical_id"]))
+                        self.assertEqual(case.runtime.status()["unreconciled"], 0)
+                    else:
+                        case.runtime._store.max_frames = case.runtime._store.usage()["frames"]
+                    before = case.runtime.status()["spent_inputs"]
+                    delivered = len(case.bridge.delivered)
+                    result = case.run_request(dict(schema="mission/7", kind="observe", request_id="bad-identity-observe",
+                        mission_id=case.a.mission_id, epoch=case.runtime.status()["epoch"]))
+                    self.assertEqual(result["state"], "blocked", result)
+                    self.assertEqual(case.runtime.status()["spent_inputs"], before)
+                    self.assertTrue(all(r["kind"] == "observe" for r in case.bridge.delivered[delivered:]))
+                    self.assertIsNone(case.runtime._lease)
+                    self.assertIsNone(case.runtime._registered_lifecycle.phase)
+                finally:
+                    case.doCleanups()
+
+    def paused_identity(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        self.run_request(self.control("world-form", "Create World"))
+        world = self.runtime._current
+        self.run_request(self.lifecycle("world-finalize", parent="create"))
+        self.run_request(self.control("world-yes", "Yes", question="Are you SURE you're finished?"))
+        self.run_request(self.control("character-menu", "Custom Character"))
+        self.run_request(self.lifecycle("character-finish", parent="create"))
+        entered = self.run_request(self.control("character-yes", "Yes", question="Are you SURE you're finished?"))
+        self.assertEqual(entered["state"], "unknown")
+        original_unknown = deepcopy(self.runtime._ledger.request("character-yes"))
+        self.observe("transition-observe")
+        self.run_request(self.lifecycle("transition", parent="create"))
+        return world, original_unknown
+
+    def test_observe_after_committed_transition_keeps_paused_identity_scope(self):
+        world, original_unknown = self.paused_identity()
+        phase = self.runtime._registered_lifecycle.phase
+        before = self.runtime.status()
+        delivered = len(self.bridge.delivered)
+        self.assertEqual(before["phase"], "paused")
+        self.observe("identity-observe")
+        after = self.runtime.status()
+        advanced = self.runtime._registered_lifecycle.phase
+        for field in ("epoch", "phase", "pause_cause", "spent_inputs", "lease_owner"):
+            self.assertEqual(after[field], before[field], field)
+        self.assertEqual(advanced.root_id, phase.root_id)
+        self.assertEqual(advanced.first_normal, phase.first_normal)
+        self.assertNotEqual(advanced.checkpoint, phase.checkpoint)
+        self.assertTrue(all(r["kind"] == "observe" for r in self.bridge.delivered[delivered:]))
+        self.assertIsNone(self.runtime._lease)
+        self.observe("identity-observe-again")
+        self.assertEqual(self.runtime._registered_lifecycle.phase.first_normal, phase.first_normal)
+        self.assertEqual(self.runtime.status()["phase"], "paused")
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
+        self.run_request(self.lifecycle("identity-readmit", parent="create"))
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"] + 1)
+        self.run_request(self.control("identity-inspect", "Character", kind="inspect"))
+        screen = self.runtime._current
+        world_id = self.remember_identity("world", "world", world, 0)
+        character_id = self.remember_identity("character", "character", screen, 0)
+        self.run_request(self.control("identity-return", "Cancel"))
+        adopted = self.run_request(self.lifecycle("adopt", parent="create", claims=[world_id, character_id]))
+        self.assertEqual(adopted["state"], "completed", adopted)
+        self.assertEqual(self.runtime._ledger.request("character-yes"), original_unknown)

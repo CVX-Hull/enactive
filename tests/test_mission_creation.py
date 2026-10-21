@@ -199,12 +199,14 @@ class MissionCreationFixture:
         self.assertEqual(operation["state"], "completed", operation)
         return entry["id"]
 
-    def finish_identity(self, root, world_source, epoch=0):
+    def finish_identity(self, root, world_source, epoch=0, *, diagnostic_observe=False):
         operation = self.run_request(self.lifecycle(f"{root}-reconcile", "create" if epoch == 0 else "load", parent=root))
         self.assertEqual(operation["state"], "completed", operation)
         self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
         self.assertIsNone(self.runtime._map)
         self.assertEqual(self.runtime._bindings, {})
+        if diagnostic_observe:
+            self.observe(f"{root}-identity-observe")
         readmit = self.run_request(self.lifecycle(f"{root}-readmit", "create" if epoch == 0 else "load", parent=root))
         self.assertEqual(readmit["state"], "completed", readmit)
         inspection = self.run_request(self.control(f"{root}-inspect", "Character", kind="inspect", parent=root))

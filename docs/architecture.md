@@ -148,6 +148,13 @@ Prepublication callbacks retain source and durable intent outside the controller
 data lock, then all authority/deadline fences are checked again. Unknown delivery
 retains its pending identity and charge; it is never blindly replayed.
 
+After a committed create/load transition, a still-paused identity phase supports
+diagnostic Observe under its exact historical effect and live owned lineage.
+This refreshes evidence without activation or a lease. The existing ledger proof
+validator is reused; only the diagnostic checkpoint advances, while first-normal
+provenance, original budgets and the separately charged explicit Resume remain.
+No phase is reconstructed from historical records on reopen.
+
 The selected mission game-time cap gates every input dispatch lane, including
 lifecycle, exit and readmission. Rejection settles any reserved intent before
 revoking authority; controller preflight does not revoke while its lock is held.

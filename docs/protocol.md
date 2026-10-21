@@ -296,6 +296,17 @@ without relabeling the ACK. Only then may explicit provisional readmission inspe
 PLAYER_INFO; only QUIT may return from that screen. Inventory or movement cannot
 use provisional normal evidence.
 
+While that reconciled create/load phase remains paused awaiting identity, Observe
+may refresh its diagnostic checkpoint without activating the ledger or acquiring
+a lease. The committed transition and exact terminal effect are revalidated through
+the ledger's existing proof checks, tied to the immutable first normal source and
+reconciled epoch. The owned child/operator/actor/native lineage must remain exact;
+prepared/published or unreconciled inputs and live leases/pending slots reject.
+Exact PNG/native equivalence, original refresh deadlines, game and capacity checks
+still apply. Repeated diagnostic refreshes change only the checkpoint and retained
+evidence costs. They cannot Resume, adopt identity or reconstruct a reopened phase;
+the next explicit same-root lifecycle child still charges its own Resume.
+
 NormalSessionAdoption requires directly supported, undisputed admitted world and
 character Claims, the exact identity inspection, owned transition and current
 normal checkpoint. The [historical reader](../harness/gameplay/lifecycle.py) validates

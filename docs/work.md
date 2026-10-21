@@ -138,6 +138,14 @@ status before interpreting a success payload. Source reproduction proves the
 supplied uppercase confirmation label is refused before submission and remains
 correctable in the same phase; it cannot recover the missing original reply.
 Existing SDK/ingress tests and S-AGENT cover this without another result protocol.
+Independent016 then passed that result-presentation path and reconciled creation's
+unknown ACK, but Observe at the deliberately paused identity boundary revoked its
+lifecycle through an active-only guard. It is failed and closed with all69charges,
+unknown ACK and exceptional shutdown retained; no identity/mission/normal-ending
+success is claimed. [#155](https://github.com/CVX-Hull/enactive/issues/155) owns the
+narrow diagnostic-Observe correction, reusing committed transition/effect validation
+without automatic Resume. Source regressions remain distinct from another full
+finite independent mission; no old attempt resumes.
 
 The [development-first workflow](project-management.md#development-first-delivery)
 now distinguishes targeted development runs from formal acceptance. The next

@@ -183,7 +183,36 @@ class RegisteredLifecycle:
         if latest.turn < first["scene"]["turn"] or latest.turn - phase.first_normal.turn > r._ledger.request(phase.root_id)["request"]["limits"]["game_seconds"]:
             raise BudgetError("Original provisional lifecycle game-time ceiling exceeded")
 
-    def guard(self, work: _Work, phase: NormalPhase, proposal: ControlIntent | _ResumeIntent | None = None) -> None:
+    def _paused_identity_diagnostic(self, phase: NormalPhase, ledger: dict, live: tuple) -> None:
+        """Validate historical effect proof without activating or acquiring a lease."""
+        r = self.runtime
+        if (phase.operation not in ("create", "load") or phase.stage != "awaiting_identity"
+                or phase.first_normal is None or phase.transition_request is None
+                or phase.checkpoint.boundary_kind != "normal_play"
+                or phase.checkpoint.session != phase.first_normal.session
+                or ledger["pause_cause"] != "unknown" or r._lease is not None
+                or live[3] is not None or live[5] or not live[4] or live[0] is None
+                or not live[0]["paused"] or live[0]["pause_origin"] not in ("world_change", "host")
+                or any(row["state"] in ("prepared", "published") for row in r._ledger.primitive_records())):
+            raise ControlError("Paused lifecycle observation requires quiescent provisional identity scope")
+        transition = r._ledger.request(phase.transition_request)
+        proof = None if transition["result"] is None else transition["result"].get("lifecycle_transition")
+        if transition["state"] != "completed" or proof is None:
+            raise ControlError("Paused lifecycle observation requires a committed transition")
+        # Reuse the ledger's complete root/launch/terminal UUID/effect validator;
+        # neither a matching source ID nor an unreconciled count alone suffices.
+        r._ledger._check_lifecycle_transition(phase.transition_request, transition["request"], proof, phase.actor_id)
+        expected = dict(operation=phase.operation, origin_request_id=phase.root_id,
+            launch_request_id=phase.launch.request_id, launch_id=phase.launch.launch_id,
+            after_source_id=phase.first_normal.observation_id, reconciled_epoch=phase.epoch,
+            actor_id=phase.actor_id, controller_boot_id=phase.launch.operator_mark[0],
+            operator_pause_generation=phase.launch.operator_mark[1],
+            after_takeover_generation=phase.launch.takeover_generation)
+        if any(proof[key] != value for key, value in expected.items()):
+            raise ControlError("Paused lifecycle observation lost its exact committed transition lineage")
+
+    def guard(self, work: _Work, phase: NormalPhase, proposal: ControlIntent | _ResumeIntent | None = None,
+              *, diagnostic: bool = False) -> None:
         r = self.runtime
         r._check_cancelled(work)
         launch = self._owned()
@@ -195,10 +224,15 @@ class RegisteredLifecycle:
         # encoded pixels and complete native state are compared by _dispatch's
         # retained-equivalence callback, not by whole-dictionary clock equality.
         same_boundary = same_native_state(actual, state)
+        paused_diagnostic = diagnostic and ledger["phase"] == "paused"
+        if diagnostic and proposal is not None:
+            raise ControlError("Diagnostic lifecycle observation cannot authorize an input")
+        if paused_diagnostic:
+            self._paused_identity_diagnostic(phase, ledger, live)
         if (self.phase is not phase or phase.launch.launch_id != launch.launch_id
                 or phase.epoch != ledger["epoch"] or phase.epoch != work.request["epoch"]
                 or phase.actor_id != ledger["player_id"] or ledger["unreconciled"]
-                or ledger["phase"] != "active" or not ledger["clock_valid"]
+                or (ledger["phase"] != "active" and not paused_diagnostic) or not ledger["clock_valid"]
                 or r._current != phase.checkpoint or not same_boundary
                 or state["takeover_generation"] != launch.takeover_generation or state["pause_origin"] == "human"):
             raise ControlError("Lifecycle phase lost its exact source, actor, epoch, accounting or operator lineage")
@@ -476,9 +510,9 @@ class RegisteredLifecycle:
             result["phase"] = self.receipt(phase, receipt_stage)
             return outcome.disposition, result
 
-    def _refresh(self, work: _Work, phase: NormalPhase) -> NormalPhase:
+    def _refresh(self, work: _Work, phase: NormalPhase, *, diagnostic: bool = False) -> NormalPhase:
         r = self.runtime
-        self.guard(work, phase)
+        self.guard(work, phase, diagnostic=diagnostic)
         r._capacity()
         deadline = r._clock() + min(r._ledger.request(work.request["request_id"])["deadline"],
             r._ledger.request(phase.root_id)["deadline"],
@@ -489,7 +523,7 @@ class RegisteredLifecycle:
             raise EvidenceError("Lifecycle refresh changed the exact owned state/image")
         self.retain_after(reference)
         phase = self._install(work, replace(phase, checkpoint=reference), previous=phase)
-        self.guard(work, phase)
+        self.guard(work, phase, diagnostic=diagnostic)
         return phase
 
     def _action_checkpoint(self, work: _Work, phase: NormalPhase) -> tuple[NormalPhase, SourceRevalidation]:
@@ -543,7 +577,7 @@ class RegisteredLifecycle:
         if self.candidate is None:
             if self.phase is None:
                 raise ControlError("No owned lifecycle evidence to observe")
-            phase = self._refresh(work, self.phase)
+            phase = self._refresh(work, self.phase, diagnostic=True)
             stage = phase.stage if phase.stage in ("awaiting_identity", "awaiting_adoption") else "awaiting_control"
             return {"source_ids": [phase.checkpoint.observation_id], "phase": self.receipt(phase, stage),
                 "lifecycle_needed": True, "grants_authority": False}
