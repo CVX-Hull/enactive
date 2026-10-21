@@ -18,13 +18,19 @@ from tests import test_mission_runtime as runtime_fixtures
 
 
 def passive_capture(controller, bridge):
-    """Publish another actual fixture frame without changing the native boundary."""
-    before, _ = controller.observation_snapshot()
-    value = copy.deepcopy(before)
-    value.update(id="", timestamp_ms=int(time.time() * 1000))
-    bridge.publish(value)
+    """Publish a synthetic unchanged heartbeat with the original immutable frame."""
+    before, received = controller.observation_snapshot()
+    image = (bridge.bridge / before["frame"]).read_bytes()
+    response = bridge.bridge / "response.json"
+    original_ack = response.read_bytes()
+    count = bridge.frames
+    bridge.publish_unchanged_passive(before)
     after = controller.status()["state"]
-    assert before["frame"] != after["frame"] and same_native_state(before, after)
+    assert before["frame"] == after["frame"] and same_native_state(before, after)
+    assert before["timestamp_ms"] == after["timestamp_ms"]
+    assert controller.observation_snapshot()[1] == received
+    assert bridge.frames == count and (bridge.bridge / before["frame"]).read_bytes() == image
+    assert response.read_bytes() == original_ack  # Includes original terminal UUID.
     return after
 
 
@@ -202,8 +208,15 @@ class LifecycleObservationChurnTests(MissionCreationFixture, unittest.TestCase):
         self.run_request(self.lifecycle("create"))
         data = self.control("world-form", "Create World")
         before = self.runtime.status()["spent_inputs"]
+        original, _ = self.controller.observation_snapshot()
+        image = (self.bridge.bridge / original["frame"]).read_bytes()
         self.bridge.editor_text = "changed visible pixels"
-        passive_capture(self.controller, self.bridge)
+        value = copy.deepcopy(original)
+        value.update(id="", timestamp_ms=int(time.time() * 1000))
+        self.bridge.publish(value)  # Changed capture must mint, never use unchanged helper.
+        changed = self.controller.status()["state"]
+        self.assertNotEqual(original["frame"], changed["frame"])
+        self.assertNotEqual(image, (self.bridge.bridge / changed["frame"]).read_bytes())
         result = self.run_request(data)
         self.assertEqual(result["state"], "blocked", result)
         self.assertEqual(self.runtime.status()["spent_inputs"], before)

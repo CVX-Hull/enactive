@@ -16,7 +16,7 @@ import time
 import unittest
 from unittest.mock import patch
 
-from harness.controller import Controller
+from harness.controller import Controller, atomic_json
 from harness.gameplay.evidence import CapacityError
 from harness.gameplay.contracts import canonical
 from harness.gameplay.mission_contracts import CleanupReserve, MissionLimits
@@ -67,11 +67,26 @@ class VisibleBridge(FakeBridge):
         value["frame"] = f'frame-{value["session"]}-{self.frames}.png'
         if not value["paused"]:
             value["pause_origin"] = "none"
+        (self.bridge / value["frame"]).write_bytes(self.visible_bytes(value))
+        super().publish(value)
+
+    def visible_bytes(self, value):
         # A synthetic visible-state marker, never a native or rendered PNG claim.
         content = {key: value[key] for key in ("scene", "ui", "category", "actions")}
         content["visible_editor"] = self.editor_text
-        (self.bridge / value["frame"]).write_bytes(b"\x89PNG\r\n\x1a\n" + canonical(content).encode())
-        super().publish(value)
+        return b"\x89PNG\r\n\x1a\n" + canonical(content).encode()
+
+    def publish_unchanged_passive(self, value):
+        """Model an already-eligible unchanged heartbeat, not capture eligibility.
+
+        Explicit captures still use publish; production PNG/age/metadata decisions
+        are separately covered by the compiled native component fixture.
+        """
+        value = copy.deepcopy(value)
+        assert (self.bridge / value["frame"]).read_bytes() == self.visible_bytes(value)
+        value["id"] = ""
+        # Native passive publication never overwrites the correlated ACK.
+        atomic_json(self.bridge / "state.json", value)
 
 
 class MissionRuntimeTests(unittest.TestCase):
