@@ -105,7 +105,11 @@ class Handler(BaseHTTPRequestHandler):
             pass
 
     def _json(self, code: int, data: dict[str, Any]) -> None:
-        self._send(code, json.dumps(data, ensure_ascii=True).encode(), "application/json; charset=utf-8")
+        # Match canonical context byte sizing without applying a single-record
+        # parser limit to aggregate spectator status/history responses.
+        body = json.dumps(data, ensure_ascii=False, allow_nan=False,
+                          sort_keys=True, separators=(",", ":")).encode("utf-8")
+        self._send(code, body, "application/json; charset=utf-8")
 
     def _trusted(self) -> bool:
         hosts = {f"127.0.0.1:{self.server.port}", f"localhost:{self.server.port}"}

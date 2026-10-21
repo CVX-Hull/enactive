@@ -42,8 +42,10 @@ and useful play during advisory computation. It failed on a capture-identity rac
 normal lifecycle and the coherent learning mission remained unqualified. The
 [second attempt](acceptance/2026-10-21-discovery-learning-second-attempt.md) supports
 responsive food, procedure application and the same-proposal reflection join,
-but failed on lifecycle-root submission validation. #183 owns that repair before
-a new finite attempt; neither failed run gains normal-ending credit.
+but failed on lifecycle-root submission validation. The later003attempt failed
+before normal adoption on control timing; #184/#185 own timing and advisory
+transport repairs. All three attempts are closed failures. Their partial results
+gain no normal-ending or coherent-mission credit.
 
 The official MCP SDK adapter constructs and retains requests, collects original
 results and presents exact images over the existing mission ingress. Both024

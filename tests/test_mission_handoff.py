@@ -116,7 +116,8 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(issued["state"], "completed", issued)
         checkpoint = self.runtime._registered_handoff.phase.checkpoint
         source = self.runtime._store.observation(checkpoint)
-        self.assertNotEqual(source["frame"], self.controller.state["frame"])
+        self.assertEqual(source["frame"], self.controller.state["frame"])
+        self.assertEqual(source["timestamp_ms"], self.controller.state["timestamp_ms"])
         self.assertEqual(issued["result"]["post_pause_source_id"], checkpoint.observation_id)
         self.assertIsNone(self.runtime._lease)
 

@@ -377,6 +377,11 @@ For source-dependent consequential claims, inspect executable predicates and the
 callers, cadence, units and defaults; a comment or agent citation does not prove
 behavior. Preserve mistaken rationale, corrections and which dependent actions
 actually occurred. Review against actual outcomes rather than retrofitting success.
+Derive published counts and ranges directly from retained machine-readable
+artifacts using existing analysis tools, stating fields, units and sample scope.
+Verify an agent's numerical summary against those artifacts before publication;
+a plausible live summary is not a substitute. Record corrections without replacing
+the original evidence. C-REVIEW checks this at the reporting checkpoint.
 Controls: C-GOVERNANCE, C-PORTABLE, C-NATIVE, C-RELEASE, C-MAINTENANCE, C-REVIEW.
 
 ## Workflow and maintenance

@@ -54,7 +54,10 @@ class MenuTests(unittest.TestCase):
         return value
 
     def skill(self, before=None, **changes):
-        return MenuSkill(self.request(self.frame() if before is None else before, **changes))
+        request = self.request(self.frame() if before is None else before, **changes)
+        return MenuSkill(
+            request,
+            deadline_monotonic=self.clocks["now_monotonic"] + request["limits"]["wall_seconds"])
 
     def propose(self, skill, **clocks):
         return skill.propose(self.store, **(self.clocks | clocks))
@@ -216,7 +219,9 @@ class MenuTests(unittest.TestCase):
         request = self.request(before)
         request["goal"]["quantity"] = 2
         with self.assertRaises(ContractError):
-            MenuSkill(request)
+            MenuSkill(
+                request,
+                deadline_monotonic=self.clocks["now_monotonic"] + request["limits"]["wall_seconds"])
         changes = [lambda v: v.update(ui=None),
                    lambda v: v["ui"].update(purpose="inventory"),
                    lambda v: v.update(category="INVENTORY"),
@@ -351,7 +356,9 @@ class MenuTests(unittest.TestCase):
                 if mode == "boundary": request["expected_boundary_id"] = "other"
                 if mode == "undeclared": request["sources"] = [earlier.observation_id]
                 if mode == "source_loss": Path(earlier.frame_path).unlink(); request["sources"].append(earlier.observation_id)
-                skill = MenuSkill(request)
+                skill = MenuSkill(
+                    request,
+                    deadline_monotonic=self.clocks["now_monotonic"] + request["limits"]["wall_seconds"])
                 outcome = self.propose(skill, **(dict(now_monotonic=104, now_timestamp_ms=1_004_000)
                                                 if mode == "stale" else {}))
                 self.assertEqual((outcome.disposition, outcome.proposed_count), ("blocked", 0))
@@ -365,11 +372,86 @@ class MenuTests(unittest.TestCase):
                                             if mode == "stale" else {}))
             self.assertEqual((outcome.disposition, outcome.proposed_count), ("unknown", 1))
 
+    def test_old_informing_source_uses_new_operation_deadline_only_after_exact_refresh(self):
+        for mode in ("stale", "implicit", "explicit"):
+            with self.subTest(mode=mode):
+                original = self.frame()
+                self.clocks = dict(now_monotonic=self.clocks["now_monotonic"] + 4,
+                                   now_timestamp_ms=self.clocks["now_timestamp_ms"] + 4000)
+                request = self.request(original, limits=dict(primitives=32, wall_seconds=1, game_seconds=100))
+                deadline = self.clocks["now_monotonic"] + request["limits"]["wall_seconds"]
+                skill = MenuSkill(request, deadline_monotonic=deadline)
+                if mode != "stale":
+                    current = self.refresh(original)
+                    relation = self.relation(original, current)
+                    if mode == "explicit": skill.revalidate(relation, self.store, **self.clocks)
+                result = self.propose(skill)
+                if mode == "explicit":
+                    self.assertIsInstance(result, MenuIntent)
+                    self.assertEqual(result.before, current)
+                    self.assertIs(result.revalidation, relation)
+                    self.assertEqual(skill._start, original)
+                    self.assertEqual(skill._deadline_monotonic, deadline)
+                else:
+                    self.assertEqual((result.disposition, result.proposed_count), ("blocked", 0))
+
+    def test_pending_proposals_share_the_original_operation_deadline(self):
+        request = self.request(self.frame())
+        deadline = self.clocks["now_monotonic"] + 1
+        self.assertLess(deadline, self.clocks["now_monotonic"] + request["limits"]["wall_seconds"])
+        skill = MenuSkill(request, deadline_monotonic=deadline)
+        intent = self.propose(skill)
+        self.assertIsInstance(intent, MenuIntent)
+        for elapsed in (0.5, 1.0):
+            self.clocks = dict(now_monotonic=100 + elapsed, now_timestamp_ms=1_000_000 + int(elapsed * 1000))
+            self.assertIs(self.propose(skill), intent)
+        self.clocks = dict(now_monotonic=101.1, now_timestamp_ms=1_001_100)
+        outcome = self.propose(skill)
+        self.assertEqual((outcome.disposition, outcome.proposed_count), ("unknown", 1))
+        self.assertEqual(outcome.pending_logical_id, intent.logical_id)
+        self.assertIn("budget exceeded", outcome.reason)
+        self.assertIs(self.propose(skill), outcome)
+        self.assertEqual(skill._deadline_monotonic, 101)
+
+    def test_constructor_requires_a_finite_nonnegative_operation_deadline(self):
+        request = self.request(self.frame())
+        with self.assertRaises(TypeError): MenuSkill(request)
+        with self.assertRaises(TypeError): MenuSkill(request, 101)
+        for invalid in (None, True, False, "101", -1, float("nan"), float("inf"), float("-inf")):
+            with self.subTest(deadline=invalid):
+                with self.assertRaises(ContractError): MenuSkill(request, deadline_monotonic=invalid)
+        for valid in (0, 101, 101.5):
+            with self.subTest(deadline=valid):
+                skill = MenuSkill(request, deadline_monotonic=valid)
+                self.assertEqual(skill._deadline_monotonic, valid)
+
+    def test_invalid_or_regressing_clocks_cannot_extend_the_deadline(self):
+        invalid_clocks = [dict(now_monotonic=value) for value in
+                          (None, True, "100", -1, float("nan"), float("inf"), float("-inf"))]
+        invalid_clocks += [dict(now_timestamp_ms=value) for value in (None, True, 1.0, -1)]
+        for changed in invalid_clocks:
+            with self.subTest(clocks=changed):
+                skill = self.skill()
+                outcome = skill.propose(self.store, **(self.clocks | changed))
+                self.assertEqual((outcome.disposition, outcome.proposed_count), ("blocked", 0))
+                self.assertIn("clock", outcome.reason)
+        for changed in (dict(now_monotonic=99), dict(now_timestamp_ms=999_999)):
+            with self.subTest(regression=changed):
+                skill = self.skill()
+                intent = self.propose(skill)
+                outcome = skill.propose(self.store, **(self.clocks | changed))
+                self.assertEqual((outcome.disposition, outcome.proposed_count), ("unknown", 1))
+                self.assertEqual(outcome.pending_logical_id, intent.logical_id)
+                self.assertIn("regressing", outcome.reason)
+                self.assertIs(self.propose(skill), outcome)
+
     def test_one_equivalent_refresh_preserves_original_budget_and_first_intent_relation(self):
         original = self.frame()
         request = self.request(original)
         unchanged = deepcopy(request)
-        skill = MenuSkill(request)
+        skill = MenuSkill(
+            request,
+            deadline_monotonic=self.clocks["now_monotonic"] + request["limits"]["wall_seconds"])
         request["goal"]["label"] = "Changed externally"
         self.clocks = dict(now_monotonic=104, now_timestamp_ms=1_004_000)
         current = self.refresh(original)
@@ -428,9 +510,15 @@ class MenuTests(unittest.TestCase):
         before = self.frame()
         request = self.request(before)
         for extra in ({"actions": ["CONFIRM"]}, {"script": "anything"}, {"key": "a"}):
-            with self.assertRaises(ContractError): MenuSkill(request | extra)
+            with self.assertRaises(ContractError):
+                MenuSkill(
+                    request | extra,
+                    deadline_monotonic=self.clocks["now_monotonic"] + request["limits"]["wall_seconds"])
         request["skill_kind"] = "item"
-        with self.assertRaises(ContractError): MenuSkill(request)
+        with self.assertRaises(ContractError):
+            MenuSkill(
+                request,
+                deadline_monotonic=self.clocks["now_monotonic"] + request["limits"]["wall_seconds"])
         self.assertIsInstance(self.propose(self.skill()), MenuIntent)
 
 

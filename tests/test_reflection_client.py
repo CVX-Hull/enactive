@@ -10,7 +10,7 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
 from harness.gameplay.contracts import ContractError, canonical
-from harness.gameplay.reflection import MAX_RESULT_BYTES
+from harness.gameplay.reflection import MAX_JOB_BYTES, MAX_RESULT_BYTES
 from harness.mission_client import MissionClient, MissionClientError
 from tests import test_mission_client as mission_fixture
 from tests.test_reflection_exchange import command, job, proposal, wrapper
@@ -174,6 +174,25 @@ class ReflectionClientTests(unittest.TestCase):
                          dict(mission_id=["mission-a"], reflector_id=["reflector-a"], wait_seconds=["0.0"]))
         self.server.callback = lambda handler, body: handler.reply(dict(status="offered", job=wrapper(job(mission_id="other")), grants_authority=False))
         with self.assertRaises(MissionClientError): self.client.reflection_next("mission-a", "reflector-a", wait_seconds=0)
+
+    def test_next_rejects_oversized_job_and_wire_without_increasing_either_bound(self):
+        oversized = job()
+        oversized["trajectory"][0]["result"]["exact"] = "x" * MAX_JOB_BYTES
+        response = dict(status="offered", job=wrapper(oversized), grants_authority=False)
+        body = canonical(response).encode("utf-8")
+        self.assertGreater(len(canonical(oversized).encode("utf-8")), MAX_JOB_BYTES)
+        self.assertLessEqual(len(body), MAX_JOB_BYTES + 2048)
+        self.server.callback = lambda handler, request: handler.reply(body)
+        with self.assertRaisesRegex(MissionClientError, "Invalid reflection job response"):
+            self.client.reflection_next("mission-a", "reflector-a", wait_seconds=0)
+
+        response["job"] = wrapper()
+        valid = canonical(response).encode("utf-8")
+        body = valid + b" " * (MAX_JOB_BYTES + 2049 - len(valid))
+        self.assertEqual(len(body), MAX_JOB_BYTES + 2049)
+        self.server.callback = lambda handler, request: handler.reply(body)
+        with self.assertRaises(MissionClientError):
+            self.client.reflection_next("mission-a", "reflector-a", wait_seconds=0)
 
     def test_exact_source_uses_reflection_endpoints_and_hash_checks(self):
         metadata, image, source_id = self.source_fixture()

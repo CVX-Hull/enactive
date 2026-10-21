@@ -541,6 +541,22 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
         self.assertLess(operation["deadline"], root_deadline)
         self.assertEqual(self.runtime._ledger.request("create")["deadline"], root_deadline)
 
+    def test_new_lifecycle_child_does_not_spend_wall_budget_before_admission(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        original = self.runtime._current
+        root_deadline = self.runtime._ledger.request("create")["deadline"]
+        time.sleep(1.05)
+        self.assertGreater(self.runtime._clock() - original.received_monotonic, 1)
+        child = self.control("new-child-old-image", "Create World")
+        child["limits"]["wall_seconds"] = 1
+        result = self.run_request(child)
+        self.assertEqual(result["state"], "partial", result)
+        self.assertAlmostEqual(result["deadline"] - result["admitted_at"], 1, places=5)
+        self.assertLess(result["deadline"], root_deadline)
+        self.assertEqual(self.runtime._ledger.request("create")["deadline"], root_deadline)
+        self.assertEqual(result["result"]["revalidation"]["original"]["source_id"], original.observation_id)
+
     def test_spare_points_is_separate_from_final_character_confirmation(self):
         self.spare_points = True
         self.create()

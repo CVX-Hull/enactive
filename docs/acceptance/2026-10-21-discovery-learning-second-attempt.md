@@ -51,14 +51,29 @@ selection before submission, and later explicit deciding-player nonadoption of
 that **same proposal**. Unlike001, the overlap and disposition join is supported.
 This demonstrates concurrency and player choice, not beneficial advice.
 
-Forty-two passive native samples retained original frame identity, timestamp and
-PNG hash within their freshness window. This is actual behavior of the capture
-repair; it cannot prove unavailable gate-time bytes from001. A bounded32-status/
-32-frame browser sample measured status processing around2.8–5.9ms and image
-decode/DOM around5.4–59.7ms. A next-animation callback is not paint; these samples
-exclude capture/poll/model delay and establish no end-to-end latency or speedup.
-The long admission objective also pushed sidebar owner/progress below the fold;
-#143 retains that presentation finding. Raw host traces remain private.
+The native sample contains42 reads:41 nonempty frames, including one sampled at
+3,031ms age, and one empty dispatched frame. Two repeated identities account for
+25 and14 reads and retain their respective original timestamp/PNG hash; one of
+those reads is the over-three-second sample. This supports bounded unchanged
+capture behavior, not universal freshness or input eligibility. It cannot prove
+unavailable gate-time bytes from001. The retained32-status/32-frame browser sample
+measures status round trip3.7–18.6ms, image decode5.5–26.0ms and status-to-DOM
+replacement5.7–26.6ms. Independent review caught the earlier summary transcription
+and overbroad freshness claim; original artifacts remain unchanged. A next-animation
+callback is not paint. These samples exclude capture/poll/model delay and establish
+no end-to-end latency or speedup. The long objective pushed sidebar owner/progress
+below the fold; the subsequent bounded scrollable presentation was inspected in
+actual003setup. Raw host traces remain private.
+
+Across all completed matched host items, the first player's81 skill calls have
+median918ms, p90 1,725ms and maximum15,009ms; six failed skill items are retained
+separately. The successor's13 completed skill calls have median1,463ms and
+maximum2,332ms, plus four failed items. These include returned blocked/partial
+operations and are whole tool intervals, not successful tasks. The first player's
+median nonoverlapping gap between adjacent Enactive MCP items is4,930ms; it combines
+interpretation, planning, scheduling and other host delay, not pure inference.
+The reflector's68 next-job calls have median15,006ms because bounded waiting is
+included. Wait intervals must not be attributed to slow game inputs.
 
 Both roles verified their actual twenty-tool host and harmless calls before
 admission. No routine approval round trip was visible; hidden review telemetry

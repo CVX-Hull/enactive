@@ -24,8 +24,12 @@ campaign outcome is met. At the024 baseline, mixed interaction/procedural learni
 reflection were separate follow-through. The user subsequently selected
 delivery057's explicit learning mission before this fresh campaign;
 [#176–178](../work.md#campaign-delivery-path) now supply its source capabilities.
-Reforecast from that mission's actual costs before admission. Optional additional curator,
-training, paid model tiers and causal efficacy studies are not admission gates.
+Reforecast from that mission's actual costs before admission. Failed learning002
+used165primitives/429frames;003used89/218before normal adoption. These are partial
+costs, not campaign rates. The earlier4,352-input/3,456-frame forecast did not
+adequately couple capture demand; the revised envelope below is still prospective.
+Optional additional curator, training, paid model tiers and causal efficacy studies
+are not admission gates.
 
 ## Evidence and remaining uncertainty
 
@@ -60,10 +64,10 @@ Choose shorter, evidence-justified intervals and children that narrow the root.
 
 | Resource | Proposed total ceiling | Protected ending provision within total | Preparation forecast / uncertainty |
 | --- | --- | --- | --- |
-| Charged inputs / primitive mappings | 8192each | 256each | Planning envelope:512setup/handoff/restart +7×512daily play +256ending =4352. Historical2109inputs are only a scale reference; no speedup claim. |
-| Retained requests | 4096 | 128 | 192setup/continuity +7×96daily +128ending =992. Actual024used123; counts are not model calls. |
-| Original frames | 4096 | 256 | 512setup/continuity +7×384daily +256ending =3456, leaving640unallocated. Observe and preflight both cost frames; inspect cumulative archive growth rather than inputs alone. |
-| Frame bytes | 1GiB | 128MiB | At024's50.35KB mean,3456frames would be about174MB. Scene/compression changes can increase this; the actual byte cap remains independent. |
+| Charged inputs / primitive mappings | 8192each | 256each | Tentative workload envelope:256setup/handoff/restart +7×96daily +256ending =1184. The hard input cap is not entirely usable if another resource binds first. Historical2109inputs are only a scale reference; no speedup claim. |
+| Retained requests | 4096 | 128soft | 192setup/continuity +7×96daily +128ending =992. Counts are not model calls; ending requests have no separate runtime reserve field. |
+| Original frames | 4096 | 768 | Planning stress scenario:3frames×928ordinary inputs +128separate observations =2912ordinary frames;3×256ending inputs =768ending frames. Total3680, leaving416unallocated. Three frames/input is an assumption, not a proven bound. |
+| Frame bytes | 1GiB | 192MiB | At an assumed0.25MiB/frame,2912ordinary frames use728MiB and768ending frames192MiB:920MiB total with104MiB unallocated. The ending allocation is within the total, not added twice. Actual compression/retention can invalidate the assumption. |
 | Wall time | 86400seconds | 1800seconds | At most84600seconds before the ending provision. No reliable independent seven-day throughput estimate exists. |
 | Game time | 691200seconds | Ending/overshoot headroom86400seconds beyond the604800target | Stop survival advancement once the target is verified; use normal ending, not gratuitous extra time. |
 
@@ -71,10 +75,14 @@ The input/frame/request allocations are engineering planning envelopes, not
 empirical confidence intervals or daily allowance renewals. Ending provisions
 exceed024's demonstrated normal ending and include uncertainty, but cannot
 guarantee every recovery. The admission's enforced cleanup fields select
-256inputs/1800wall seconds/256frames/128MiB; request/mapping provisions require the
+256inputs/1800wall seconds/768frames/192MiB; request/mapping provisions require the
 player's joint forecast because the current cleanup schema has no separate fields
-for them. No new accounting framework or unimplemented automatic reservation is
-claimed.
+for them. The larger prospective frame/byte provision matches the same ending
+input stress scenario; it changes no schema and is not admitted until the actual
+learning outcome and a new frozen forecast justify it. The0.25MiB/frame assumption
+is roughly five times002's observed mean, not a confidence interval or a guarantee
+against the32MiB per-frame bound. No new accounting framework or unimplemented
+automatic reservation is claimed.
 
 At each meaningful boundary forecast **all seven resources together**, including
 normal final Save/Quit/Finish. Use actual cumulative ledger/archive usage and the

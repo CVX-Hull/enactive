@@ -1402,7 +1402,7 @@ class MissionRuntime:
                 or phase.checkpoint.observation_id not in data["sources"]):
             raise ControlError("Owned exit requires its exact interpreted Really quit? Yes/No child")
         self._exit_guard(work, phase)
-        skill = SemanticControlSkill(data)
+        skill = SemanticControlSkill(data, deadline_monotonic=self._deadline(work, phase.checkpoint))
         inspected, _ = self._store.inspect_current_boundary(**self._clocks())
         if inspected != phase.checkpoint:
             raise EvidenceError("Exit confirmation lost its exact retained checkpoint")
@@ -1686,10 +1686,15 @@ class MissionRuntime:
     def _deadline(self, work: _Work, original: EvidenceRef) -> float:
         operation = self._ledger.request(work.request["request_id"])
         wall_deadline = min(operation["deadline"], self._mission_deadline - self._admission.cleanup_reserve.wall_seconds)
-        deadline = min(self._clock() + wall_deadline - self._wall(),
-                       original.received_monotonic + work.request["limits"]["wall_seconds"])
+        deadline = self._clock() + wall_deadline - self._wall()
+        # Control requests use their original ledger admission, capped by the
+        # parent/mission. Source first-seen time is evidence freshness, not a
+        # new child's execution start. Keep navigation's existing passive
+        # source-origin allowance; its continuation never renews that origin.
+        if work.request["kind"] == "skill" and work.request["skill_kind"] == "navigate":
+            deadline = min(deadline, original.received_monotonic + work.request["limits"]["wall_seconds"])
         if deadline <= self._clock():
-            raise BudgetError("Original navigation/mission deadline exhausted")
+            raise BudgetError("Original operation/mission deadline exhausted")
         return deadline
 
     def _envelope(self, raw: dict, work: _Work, proposal: MissionIntent | _ResumeIntent,
@@ -1986,8 +1991,9 @@ class MissionRuntime:
         original, binding = self._informing(data)
         phase = self._prompt_guard(data, original)
         work.game_anchor = original if original.boundary_kind == "normal_play" else self._last_normal()
-        skill = (MenuSkill(data) if data["skill_kind"] == "menu" and data["perception"] is None
-                 else SemanticControlSkill(data))
+        deadline = self._deadline(work, original)
+        skill = (MenuSkill(data, deadline_monotonic=deadline) if data["skill_kind"] == "menu" and data["perception"] is None
+                 else SemanticControlSkill(data, deadline_monotonic=deadline))
         self._skill = data["skill_kind"]
         mark = self._operator_mark()
         inspected, _ = self._store.inspect_current_boundary(**self._clocks())

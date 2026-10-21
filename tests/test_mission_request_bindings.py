@@ -245,6 +245,33 @@ class RequestBindingTests(unittest.TestCase):
         self.assertEqual(self.runtime.status()['spent_inputs'], 2)
         self.assertEqual(self.bridge.value['ui']['selected'], 'row-1')
 
+    def test_new_native_and_interpreted_children_use_admission_deadline_after_refresh(self):
+        for interpreted in (False, True):
+            with self.subTest(interpreted=interpreted):
+                case = RequestBindingTests("test_navigation_metadata_error_has_no_primitive_and_new_request_moves")
+                case.setUp()
+                try:
+                    root, _ = case.native_choices()
+                    source = case.runtime._current
+                    deadline = case.runtime._ledger.request(root['request_id'])['deadline']
+                    view = dict(kind='menu', source_id=source.observation_id, basis='player_interpretation',
+                        control='vertical', rows=[dict(label=label, enabled=True) for label in ('One', 'Two', 'Three')],
+                        selected=0, question='') if interpreted else None
+                    threading.Event().wait(1.05)
+                    self.assertGreater(case.runtime._clock() - source.received_monotonic, 1)
+                    child = case.control('menu', dict(purpose='Choose', label='Two', outcome='focused'),
+                        phase_id=root['request_id'], perception=view, request_id='new-child-old-image',
+                        limits=dict(primitives=1, wall_seconds=1, game_seconds=100))
+                    self.assertEqual(case.runtime.command(child)['status'], 'accepted')
+                    result = case.settled(child['request_id'])
+                    self.assertEqual(result['state'], 'partial' if interpreted else 'completed', result)
+                    self.assertAlmostEqual(result['deadline'] - result['admitted_at'], 1, places=5)
+                    self.assertEqual(case.runtime._ledger.request(root['request_id'])['deadline'], deadline)
+                    self.assertEqual(case.bridge.value['ui']['selected'], 'row-1')
+                    self.assertEqual(result['result']['revalidation']['original']['source_id'], source.observation_id)
+                finally:
+                    case.doCleanups()
+
     def test_navigation_metadata_error_has_no_primitive_and_new_request_moves(self):
         self.start()
         bad = self.navigation(expected_boundary_id='copied-old-boundary')

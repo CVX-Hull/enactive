@@ -9,17 +9,19 @@ import tempfile
 import threading
 import unittest
 from unittest.mock import patch
+from urllib.parse import urlencode
 
-from harness.gameplay.contracts import ContractError
+from harness.gameplay.contracts import ContractError, canonical
 from harness.gameplay.mission_contracts import LearningPolicy, ReflectionLimits
 from harness.gameplay.mission_ledger import LedgerError, MissionLedger
+from harness.gameplay.reflection import MAX_JOB_BYTES, validate_job
 from harness.mission_reflection import RegisteredReflection
 from harness.mission_client import MissionClient
 from harness.player_tools import PlayerTools
 from harness.server import Server
 from tests.test_mission_contracts import admission
 from tests import test_mission_runtime as runtime_fixture
-from tests.test_reflection_exchange import command, procedure
+from tests.test_reflection_exchange import command, job, procedure, wrapper
 
 
 class ReflectionCompositionTests(unittest.TestCase):
@@ -194,6 +196,40 @@ class ReflectionHTTPIntegrationTests(unittest.TestCase):
         request = self.f.navigation(target=(number % 2, 0, 0), request_id=f"step-{number}")
         self.assertEqual(self.f.runtime.command(request)["status"], "accepted")
         return self.f.settled(request["request_id"])
+
+    def test_exact_limit_unicode_offered_and_claimed_jobs_survive_production_http(self):
+        value = job(**self.scope)
+        value["trajectory"][0]["request"]["mission_id"] = self.scope["mission_id"]
+        value["sources"][0]["mission_id"] = self.scope["mission_id"]
+        value["trajectory"][0]["result"]["exact"] = ""
+        remaining = MAX_JOB_BYTES - len(canonical(value).encode("utf-8"))
+        value["trajectory"][0]["result"]["exact"] = "é" * (remaining // 2) + "x" * (remaining % 2)
+        self.assertEqual(len(canonical(value).encode("utf-8")), MAX_JOB_BYTES)
+        self.assertEqual(validate_job(value), value)
+        client = MissionClient(self.f.controller.root)
+        path = "/api/reflection/next?" + urlencode({**self.scope, "wait_seconds": 0})
+        for state in ("offered", "claimed"):
+            with self.subTest(state=state):
+                response = dict(status=state, grants_authority=False,
+                    job=wrapper(value, state=state,
+                        claimed_at=1000. if state == "claimed" else None,
+                        deadline=1180. if state == "claimed" else None))
+                maximum = MAX_JOB_BYTES + 2048
+                self.assertGreater(len(json.dumps(response, ensure_ascii=True).encode()), maximum)
+                # Only the passive job producer is replaced. The real
+                # Server/Handler, HTTP bytes and MissionClient validation run.
+                with patch.object(self.f.runtime, "reflection_next", return_value=response):
+                    connection = HTTPConnection("127.0.0.1", self.server.port, timeout=2)
+                    self.addCleanup(connection.close)
+                    connection.request("GET", path, headers={"X-CDDA-Token": self.f.controller.token})
+                    received = connection.getresponse()
+                    wire = received.read()
+                    self.assertEqual(received.status, 200)
+                    self.assertEqual(int(received.getheader("Content-Length")), len(wire))
+                    self.assertLessEqual(len(wire), maximum)
+                    self.assertEqual(wire, canonical(response).encode("utf-8"))
+                    self.assertEqual(client.reflection_next(**self.scope, wait_seconds=0), response)
+                    connection.close()
 
     def test_real_http_claim_source_submit_advice_and_useful_play_overlap(self):
         for number in range(1, 5):

@@ -38,7 +38,11 @@ useful graphical play during advisory computation and later same-proposal
 disposition. Normal learner save/reload/shutdown and the coherent learning mission
 remain unqualified. The pure submission boundary now rejects malformed
 create/save/load roots before queue admission while historical record validation
-retains original rejected evidence. No failure becomes execution authority.
+retains original rejected evidence. Control policies now receive the original
+admission-based deadline before equivalent refresh, separating execution allowance
+from image age. Canonical compact UTF-8 HTTP responses match advisory byte sizing.
+#184/#185 and the failed003attempt own actual requalification; no failure becomes
+execution authority.
 
 The harness-enabled SDL ImGui context uses the library's steady text-caret setting.
 It preserves exact image validation without treating cosmetic blink as stable

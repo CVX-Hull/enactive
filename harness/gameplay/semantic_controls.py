@@ -54,11 +54,15 @@ class _ControlBlocked(Exception):
 
 class SemanticControlSkill:
     """One immutable request; explicit clocks and retained feedback, no executor."""
-    def __init__(self, request: dict | str | bytes):
+    def __init__(self, request: dict | str | bytes, *, deadline_monotonic: float):
         data = validate_request(request)
         if (data["kind"] != "skill" or data["skill_kind"] not in ("menu", "edit", "interact", "item", "activity", "inspect", "direct")
                 or data["skill_kind"] == "menu" and data["perception"] is None):
             raise ContractError("Semantic controls require edit/interact or an interpreted menu request")
+        if (type(deadline_monotonic) not in (int, float) or not math.isfinite(deadline_monotonic)
+                or deadline_monotonic < 0):
+            raise ContractError("Semantic-control deadline must be finite and nonnegative")
+        self._deadline_monotonic = deadline_monotonic
         self._request = data
         self._logical_prefix = "control-" + hashlib.sha256(data["request_id"].encode()).hexdigest()
         self._basis = ("ordinary_input" if data["skill_kind"] == "direct" else
@@ -354,7 +358,7 @@ class SemanticControlSkill:
 
     def _budget(self, current: EvidenceRef, now_monotonic: float, *, completing: bool = False) -> None:
         limits = self._request["limits"]
-        remaining_wall = limits["wall_seconds"] - (now_monotonic - self._start.received_monotonic)
+        remaining_wall = self._deadline_monotonic - now_monotonic
         # Menu turns stay null; runtime owns mission costs across menu phases.
         remaining_game = None
         if self._start.turn is not None and current.turn is not None:

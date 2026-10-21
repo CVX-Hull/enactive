@@ -487,7 +487,9 @@ class RegisteredLifecycle:
             raise ControlError("Identity screen supports only an explicit owned dismissal")
         if state["boundary"]["kind"] == "normal_play":
             raise ControlError("Normal provisional source requires character_identity inspection or adoption")
-        skill = MenuSkill(data) if data["skill_kind"] == "menu" and data["perception"] is None else SemanticControlSkill(data)
+        deadline = r._deadline(work, phase.checkpoint)
+        skill = (MenuSkill(data, deadline_monotonic=deadline) if data["skill_kind"] == "menu" and data["perception"] is None
+                 else SemanticControlSkill(data, deadline_monotonic=deadline))
         inspected, _ = r._store.inspect_current_boundary(**r._clocks())
         if inspected != phase.checkpoint:
             raise EvidenceError("Lifecycle child lost its exact retained checkpoint")

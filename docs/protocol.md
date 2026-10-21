@@ -188,6 +188,15 @@ even if the selected source is still fresh. Interpreted controls require exact P
 equivalence; native-row/navigation decisions retain native-state equivalence.
 A replacement that expires before final dispatch still fails. This bounded Observe
 cost does not renew requests, phase limits, authority or the freshness threshold.
+For menu and semantic controls, the wall deadline starts at original ledger
+admission and is capped by the original parent, mission and ending reserve.
+The passive policy receives that fixed monotonic deadline before entry refresh;
+refresh, lock waiting, repeated proposals and new images cannot renew it. An
+informing image's first-seen time remains immutable freshness/provenance evidence,
+not the start of a newly admitted child's execution allowance. Time spent preparing
+the child still consumes the overall mission and existing root allowances.
+Navigation retains its existing additional source-origin passive wall cap and
+original continuation clock; this control repair does not extend a route.
 [Entry-refresh rationale](changes/053-operation-entry-refresh.md).
 Save refresh precedes operation rotation and preserves its original normal-game
 time anchor. Changed state, Pause or expiry still stops input.
@@ -821,6 +830,13 @@ separately admitted current mission can start anew. Migration never resets input
 costs, renews a stopped attempt or restores execution authority.
 
 ## Transport and state
+
+HTTP JSON uses Python's finite compact UTF-8 codec with the same encoding basis
+as canonical bounded advisory contexts. Per-record parser caps do not become
+aggregate spectator-status response caps; each client retains its own limits. A valid Unicode job and its offered/
+claimed envelope must fit the unchanged client response cap; ASCII escaping and
+pretty-print expansion are not extra admitted context. Request, job and transport
+bounds remain separate checks. Serialization changes no job claim or authority.
 
 ### Ordinary discovery and procedure data
 

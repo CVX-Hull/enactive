@@ -26,7 +26,12 @@ evidence. The [second attempt](acceptance/2026-10-21-discovery-learning-second-a
 adds food and same-proposal reflection/disposition evidence but failed normal
 saving. #182 has the capture repair; #183 owns correcting lifecycle-root drafts
 before admission without losing authority. Both attempts are closed failures.
-Normal lifecycle and the coherent learning mission remain unqualified. The fresh seven-day
+The subsequent003attempt failed before normal adoption:48requests/89primitives,
+218frames, no adopted game-time. [#184](https://github.com/CVX-Hull/enactive/issues/184)
+owns new-control deadlines versus source age; [#185](https://github.com/CVX-Hull/enactive/issues/185)
+owns valid Unicode advisory jobs overflowing their HTTP envelope. Both have source
+repairs under verification; all003actors/processes are closed. Normal lifecycle
+and the coherent learning mission remain unqualified. The fresh seven-day
 assessment remains pending. Source checks issue no run authority. The accepted024
 baseline and historical attempts below remain evidence, not a new admission.
 

@@ -13,7 +13,8 @@ import threading
 import time
 import unittest
 
-from harness.controller import Controller, read_json
+from harness.controller import Controller, read_json, validate_state
+from harness.gameplay.contracts import MAX_JSON_BYTES
 from tests.test_mission_contracts import admission, claim, request as mission_record
 from harness.server import Server
 from tests.test_controller import ControlBridge, FakeBridge, recovery_state
@@ -82,6 +83,24 @@ class ServerTests(unittest.TestCase):
         defaults = {"Content-Type": "application/json", "X-CDDA-Token": self.controller.token}
         defaults.update(headers)
         return self.request("POST", "/api/command", json.dumps(value), **defaults)
+
+    def test_compact_utf8_codec_does_not_add_a_single_record_cap_to_status_history(self):
+        state = FakeBridge(self.controller).value
+        state.update(category="UILIST", in_game=False, scene=None,
+            actions=["UILIST.UP", "UILIST.DOWN", "CONFIRM", "UILIST.QUIT"],
+            ui=dict(purpose="uilist", title="", rows=[dict(id=f"row-{i}", text="x" * 1024,
+                enabled=True, hotkey=None) for i in range(32)], selected="row-0", filter=None,
+                count=None, coverage="rendered_rows_only"))
+        state["boundary"].update(kind="menu", id="large-menu")
+        validate_state(state)  # Synthetic data within native row/text bounds.
+        for _ in range(32):
+            self.controller._record(dict(kind="observe"), dict(status="ready", observation=state))
+        status, body, headers = self.request()
+        self.assertEqual(status, 200)
+        self.assertGreater(len(body), MAX_JSON_BYTES)
+        self.assertEqual(int(headers["Content-Length"]), len(body))
+        decoded = json.loads(body)
+        self.assertEqual(decoded["events"][-1]["outcome"]["observation"]["ui"]["rows"][0]["text"], "x" * 1024)
 
     def recovery(self, value, **headers):
         defaults = {"Content-Type": "application/json", "X-CDDA-Token": self.controller.token}

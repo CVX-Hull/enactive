@@ -48,12 +48,16 @@ class MenuSkill:
     time from normal scenes and retains exact native-to-logical receipt mappings.
     A revalidation record is audit data and cannot restore that authority.
     """
-    def __init__(self, request: dict | str | bytes):
+    def __init__(self, request: dict | str | bytes, *, deadline_monotonic: float):
         data = validate_request(request)
         if data["kind"] != "skill" or data["skill_kind"] != "menu":
             raise ContractError("Menu policy requires an exact menu skill request")
         if data["perception"] is not None:
             raise ContractError("Native-row policy cannot substitute a player interpretation for native rows")
+        if (type(deadline_monotonic) not in (int, float) or not math.isfinite(deadline_monotonic)
+                or deadline_monotonic < 0):
+            raise ContractError("Menu deadline must be finite and nonnegative")
+        self._deadline_monotonic = deadline_monotonic
         self._request = data
         self._logical_prefix = "menu-" + hashlib.sha256(data["request_id"].encode()).hexdigest()
         self._store: EvidenceStore | None = None
@@ -196,7 +200,7 @@ class MenuSkill:
 
     def _budget(self, current: EvidenceRef, now_monotonic: float, *, completing: bool = False) -> None:
         limits = self._request["limits"]
-        remaining_wall = limits["wall_seconds"] - (now_monotonic - self._start.received_monotonic)
+        remaining_wall = self._deadline_monotonic - now_monotonic
         # Menu refs deliberately have no game time. Unknown is never zero; the
         # runtime must account mission game time from its observed normal refs.
         remaining_game = None

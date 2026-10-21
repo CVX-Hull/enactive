@@ -20,7 +20,12 @@ the [first learning attempt](../acceptance/2026-10-21-discovery-learning-first-a
 has partial graphical evidence but failed before normal lifecycle. The
 [second attempt](../acceptance/2026-10-21-discovery-learning-second-attempt.md) adds
 food/procedure/reflection evidence but failed saving; #183 owns the pure submission
-repair, preserving immutable rejected history and real authority checks. A coherent
+repair, preserving immutable rejected history and real authority checks. The later
+003attempt failed before adoption on a new child's source-age wall clock. It is
+closed with48requests/89charged primitives(88returned,1unknown),218frames/5,242,316bytes
+and no adopted game-time; owned exceptional exit is not normal ending. #184/#185
+repair control deadlines and valid advisory jobs whose old HTTP encoding exceeded
+the transport cap. A coherent
 learning mission and fresh campaign remain pending. Earlier failures
 remain failures, including the empty-popup mapping,
 handoff/reference errors and item-activity return defect.

@@ -347,8 +347,8 @@ class MissionExitTests(unittest.TestCase):
         root = self.begin_exit()
         root_deadline = root["deadline"]
         time.sleep(1.05)
-        self.run_request(dict(schema="mission/9", kind="observe", request_id="fresh-prompt",
-            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
+        # The confirmation itself must perform its guarded refresh; no caller
+        # Observe is needed to avoid charging pre-admission image age.
         operation = self.run_request(self.confirmation("No", limits=dict(primitives=1, wall_seconds=1, game_seconds=1)))
         self.assertEqual(operation["state"], "partial", operation)
         self.assertLess(operation["deadline"], root_deadline)
