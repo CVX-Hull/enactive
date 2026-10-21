@@ -9,17 +9,22 @@ status: active
 Decision: the [mission024 functional evidence](2026-10-21-independent-supply-shelter.md)
 supports preparing **one bounded fresh seven-day development assessment** through
 the current player-owned mission system. It does not establish seven-day success,
-general survival competence or measured memory benefit. Admission requires
-reviewed publication, exact final candidate/protected-main CI and the actual
-designated player's current permission/native readiness checks; verify current
-receipts in#145. This page is a
+general survival competence or measured memory benefit. For the user's selected
+[delivery057](../changes/057-discovery-learning-campaign.md), freeze reviewed
+source/interfaces, pass applicable fast/focused checks, and verify the actual
+player's current permission/native readiness before development play. Full review,
+exact candidate/protected-main CI and publication qualify formal acceptance and
+merge under the development-first workflow; they do not require merging gameplay
+claims before obtaining their evidence. Verify current receipts in#145. This page is a
 prospective plan, not live authority; it does not resume Alex or a failed attempt.
 
 [#145](https://github.com/CVX-Hull/enactive/issues/145) owns execution and acceptance;
 [#136](https://github.com/CVX-Hull/enactive/issues/136) remains open until the wider
-campaign outcome is met. Organic mixed interaction/procedural learning/reflection
-[#176–178](../work.md#campaign-delivery-path) remain useful separate work, not
-unimplemented prerequisites silently added to this assessment. Optional curator,
+campaign outcome is met. At the024 baseline, mixed interaction/procedural learning/
+reflection were separate follow-through. The user subsequently selected
+delivery057's explicit learning mission before this fresh campaign;
+[#176–178](../work.md#campaign-delivery-path) now supply its source capabilities.
+Reforecast from that mission's actual costs before admission. Optional additional curator,
 training, paid model tiers and causal efficacy studies are not admission gates.
 
 ## Evidence and remaining uncertainty
@@ -100,7 +105,10 @@ ceiling increase, new admission for the same failed run or retroactive refund.
    clean-context successor. Software retains required Work/source lineage; the
    successor retrieves actual images, claims once and separately readmits without
    a new clock/cost allowance. The lead's orchestration transfers original brief
-   and registered references only. An advisory learner is not required.
+   and registered references only. Freeze any advisory role and its finite limits
+   in this admission; the lead supplies no reflective fallback. Transfer procedures
+   through explicit pins to the prior closed mission, retaining scoped support
+   without importing its world facts.
 5. Normally save/quit at a midpoint, verify owned child exit and launch a new child
    for exact same-character reload. Compare world/character and saved/loaded turn;
    never replay a loading confirmation with unknown delivery. Choose handoff and
@@ -113,8 +121,9 @@ ceiling increase, new admission for the same failed run or retroactive refund.
 
 No daily lead sign-off or per-key critic is introduced. User Pause/takeover remains
 independent; an already committed native activity cannot be undone by Pause.
-Current observer terminal-wording ambiguity remains owned by#143/#164 and must be
-reported honestly rather than interpreted as a live unresolved effect. Player
+Source changes for observer terminal wording remain owned by#143/#164 and need
+actual native/browser qualification. Prior ambiguous wording must be reported
+honestly rather than interpreted as a live unresolved effect. Player
 decisions use typed current results and provenance, not a stale spectator label.
 
 ## Acceptance and maintenance
