@@ -16,7 +16,9 @@ Current main `811c14f365441da641d5e2b7a5cd6bdb620f38f1` is the accepted
 Its source, actual gameplay, exact candidate/main CI and closure are accepted in
 #144/PR158. General raw interaction, reusable procedures and reflection were
 missing at that baseline. The source checkpoint below implements their substrate;
-actual graphical learning and a fresh campaign remain pending. Earlier failures
+the [first learning attempt](../acceptance/2026-10-21-discovery-learning-first-attempt.md)
+has partial graphical evidence but failed before normal lifecycle. A coherent
+learning mission and fresh campaign remain pending. Earlier failures
 remain failures, including the empty-popup mapping,
 handoff/reference errors and item-activity return defect.
 
@@ -53,7 +55,14 @@ and structured MCP claim/source/submit/result/advice tools. Real local HTTP test
 cover concurrent waiting and useful synthetic navigation, durable refusal and
 restart collection; they do not qualify actual host actor concurrency or lifecycle
 quiescence. The native build passed, but no new graphical run
-or seven-day acceptance is implied. Focused tests and source review remain
+or seven-day acceptance is implied. The later actual twenty-tool host and
+concurrent actors have partial evidence in the failed first attempt. #182 repairs
+its passive-capture identity race: compare complete metadata and actual bounded
+PNG bytes, retain the original immutable identity/clock only while fresh, and
+reject controller retargeting. Tests reuse unittest, the existing C++ compiler,
+filesystem and exact production publication/gate/comparison bodies with explicit
+renderer/serializer doubles. This small fixture owns no runtime framework; native
+encoding and gameplay require separate actual qualification. Focused tests and source review remain
 separate from actual game evidence and final protected CI.
 
 Keep CDDA's ordinary UI/activities, existing native bridge, controller, single

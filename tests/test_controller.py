@@ -2602,6 +2602,41 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertNotEqual(envelope["request"]["id"], captured[0][0]["id"])
             self.assertEqual(envelope["result"]["scene"]["position"], [0, -1, 0])
 
+    def test_different_equal_image_identity_after_retention_never_retargets_input(self):
+        # Transport regression only: these bytes do not emulate a renderer.
+        for operation in ("ordinary", "resume"):
+            with self.subTest(operation=operation), FakeBridge(self.controller) as fake:
+                if operation == "ordinary":
+                    self.ready()
+                    lease = self.acquire()
+                else:
+                    self.controller.execute("observe")
+                image = b"synthetic unchanged image"
+                (fake.bridge / fake.value["frame"]).write_bytes(image)
+                captured = []
+                prior_requests = len(fake.requests)
+
+                def preflight(observation, received):
+                    captured.append((copy.deepcopy(observation), received))
+                    replacement = copy.deepcopy(observation)
+                    replacement.update(id="", frame="frame-game-test-2.png",
+                                       timestamp_ms=observation["timestamp_ms"] + 1)
+                    (fake.bridge / replacement["frame"]).write_bytes(image)
+                    self.controller._accept(replacement)
+
+                options = dict(preflight=preflight, expected_image_sha256=hashlib.sha256(image).hexdigest())
+                envelope = (self.mission_dispatch(lease, **options) if operation == "ordinary"
+                            else self.mission_resume(**options))
+                self.assertFalse(envelope["published"])
+                self.assertIsNone(envelope["request"])
+                self.assertEqual(envelope["preflight"]["observation"], captured[0][0])
+                self.assertEqual(envelope["preflight"]["received_monotonic"], captured[0][1])
+                self.assertIn("frame identity changed", envelope["result"]["error"])
+                self.assertFalse(any(r["kind"] in {"action", "resume"}
+                                     for r in fake.requests[prior_requests:]))
+                self.assertEqual(list(self.controller.admissions.glob("*.json")), [])
+                self.controller.pause()
+
     def test_final_preflight_image_failure_never_calls_callback_or_admits_input(self):
         for fault in ("changed", "missing", "empty", "oversized", "symlink", "directory", "foreign", "traversal"):
             with self.subTest(fault=fault), FakeBridge(self.controller) as fake:

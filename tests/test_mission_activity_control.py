@@ -113,25 +113,27 @@ class MissionActivityControlTests(unittest.TestCase):
                     self.assert_unpublished(receipt)
                     self.assertEqual(calls, [])
 
-    def test_passive_control_capture_checks_live_pixels_before_publication(self):
-        for changed in (False, True):
+    def test_passive_control_capture_requires_exact_identity_before_publication(self):
+        for changed in ("unchanged", "identity", "pixels"):
             with self.subTest(changed=changed), FakeBridge(self.controller) as fake, ControlBridge(self.controller) as control:
                 binding = self.prepare(fake)
                 captured = []
                 def preflight(observation, received):
                     captured.append((copy.deepcopy(observation), received))
                     live = copy.deepcopy(observation)
-                    live.update(id="", frame=f'frame-{live["session"]}-999.png',
-                                timestamp_ms=int(time.time() * 1000))
+                    live["id"] = ""
+                    if changed == "identity":
+                        live.update(frame=f'frame-{live["session"]}-999.png',
+                                    timestamp_ms=int(time.time() * 1000))
                     (self.controller.bridge / live["frame"]).write_bytes(
-                        b"changed image" if changed else b"informing image")
+                        b"changed image" if changed == "pixels" else b"informing image")
                     atomic_json(self.controller.bridge / "state.json", live)
                     self.controller.status()
                 digest = hashlib.sha256(b"informing image").hexdigest()
                 receipt = self.call(binding, expected_image_sha256=digest, preflight=preflight)
                 self.assertEqual(receipt["preflight"]["observation"], captured[0][0])
                 self.assertEqual(receipt["preflight"]["received_monotonic"], captured[0][1])
-                if changed:
+                if changed != "unchanged":
                     self.assert_unpublished(receipt)
                     self.assertEqual(control.delivered, [])
                 else:

@@ -82,14 +82,22 @@ absolute monotonic intent/task deadline is checked after queueing/preflight and
 under the publication lock; it bounds both exchanges and the native deadline.
 `observation_snapshot()` returns a copied current observation and original first
 receipt clock. Reading a snapshot does not renew its freshness.
-Passive captures may change transport id, timestamp and frame filename without
-changing native state. Live-versus-retained comparison excludes only those three
-fields; it retains status/error/frame validity and complete semantic/Pause/takeover
-state. This grants no freshness or image equivalence. Immutable ACK/UUID and
-retained preflight correlation remain exact; image-informed inputs retain their
-PNG and native commit checks. Recovery hashes the sampled live PNG outside the
-Pause lock and fences its frame identity. Interruption answers still require their
-exact native frame, so an intervening capture can stop before publication.
+Live-versus-retained state comparison excludes transport id, timestamp and frame
+filename; it retains status/error/frame validity and complete semantic/Pause/takeover
+state. This comparison grants neither freshness nor image equivalence. Final
+preflight requires the exact retained frame identity, including recovery; a different
+basename refuses before publication even when its PNG bytes match.
+
+Native passive captures freshly present and encode. Only unchanged complete
+observation metadata, geometry and actual bounded PNG bytes may reuse the current
+identity within its original three-second window, checked after encoding/comparison.
+The transport id/status/error and capture basename/timestamp are normalized for
+that metadata comparison. Reuse preserves the original timestamp, immutable file,
+receipt age and retention entry. Explicit id-bearing captures always mint a fresh
+identity. Changed/expired/failed captures cannot reuse an older matching frame.
+No TTL renewal, automatic retry or input-gate relaxation follows. Immutable ACK/UUID,
+retained preflight correlation and current-PNG commit checks remain exact. Recovery
+hashes the sampled live PNG outside the Pause lock and fences that same identity.
 
 The trusted Python-only `preflight` callback receives that copied Observe and
 actual receipt after boundary/lease/image checks, inside the command lock but

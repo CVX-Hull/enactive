@@ -18,11 +18,13 @@ observer/measurement follow-through#143/#164, then actual seven-day assessment#1
 The [procedure/exchange boundary](design/procedure-learning.md) has passed scoped
 design review. Native5 ordinary input, current host migration, procedure memory/
 library/handoff and observer changes have source implementations; the native build
-passed. Reflection now has coalesced writer scheduling and structured advisory
-claim/source/submit/result/advice tools. Synthetic real-HTTP integration and
-independent review cover their boundaries; actual host catalogue activation and
-concurrent actors remain pending. Graphical learning and both deciding
-missions remain pending. These source checks issue no run authority. The accepted024
+passed. Reflection has coalesced writer scheduling and structured advisory
+claim/source/submit/result/advice tools. The actual twenty-tool host and concurrent
+player/advisory actors were exercised in the [failed first learning attempt](acceptance/2026-10-21-discovery-learning-first-attempt.md).
+Player-derived revision/reuse and fresh-context application have supported partial
+evidence; normal lifecycle and the coherent mission remain unqualified. #182 owns
+the capture-identity race repair before a new finite attempt. The fresh seven-day
+assessment remains pending. Source checks issue no run authority. The accepted024
 baseline and historical attempts below remain evidence, not a new admission.
 
 [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) has

@@ -147,6 +147,7 @@ int frame_counter = 0;
 std::string frame_name;
 std::string frame_boundary;
 std::string frame_session;
+std::string frame_metadata;
 int frame_revision = -1;
 long long frame_ms = 0;
 bool saved_frame_ok = false;
@@ -286,7 +287,8 @@ void scene( JsonOut &out )
     out.end_object();
 }
 void write_observation( JsonOut &out, const std::string &id, const std::string &status,
-                        const std::string &error, bool frame_ok, const std::string &published_frame )
+                        const std::string &error, bool frame_ok, const std::string &published_frame,
+                        long long capture_ms, const std::optional<frame_geometry> &geometry )
 {
     out.start_object();
     out.member( "protocol", 5 );
@@ -308,17 +310,17 @@ void write_observation( JsonOut &out, const std::string &id, const std::string &
     } else {
         out.write_null();
     }
-    out.member( "timestamp_ms", frame_ok ? presented_ms : now_ms() );
+    out.member( "timestamp_ms", frame_ok ? capture_ms : now_ms() );
     out.member( "frame_ok", frame_ok );
     out.member( "frame", published_frame );
     out.member( "frame_geometry" );
-    if( frame_ok && saved_geometry ) {
+    if( frame_ok && geometry ) {
         out.start_object();
-        out.member( "window_width", saved_geometry->window_width );
-        out.member( "window_height", saved_geometry->window_height );
-        out.member( "output_width", saved_geometry->output_width );
-        out.member( "output_height", saved_geometry->output_height );
-        out.member( "viewport", saved_geometry->viewport );
+        out.member( "window_width", geometry->window_width );
+        out.member( "window_height", geometry->window_height );
+        out.member( "output_width", geometry->output_width );
+        out.member( "output_height", geometry->output_height );
+        out.member( "viewport", geometry->viewport );
         out.end_object();
     } else {
         out.write_null();
@@ -348,12 +350,23 @@ void write_observation( JsonOut &out, const std::string &id, const std::string &
     scene( out );
     out.end_object();
 }
+bool same_frame_png( const std::string &saved, const std::string &latest, const struct stat &owned );
+std::string capture_metadata( const std::optional<frame_geometry> &geometry )
+{
+    // Normalize only capture/transport identity. Reuse the complete observation
+    // serializer so new immutable fields cannot silently escape this comparison.
+    std::ostringstream stream;
+    JsonOut out( stream );
+    write_observation( out, "", "", "", true, "capture", 0, geometry );
+    return stream.str();
+}
 bool publish( const std::string &id, const std::string &status,
               const std::string &error = "", bool capture = true )
 {
     bool frame_ok = false;
     std::string published_frame;
     if( capture ) {
+        const bool previous_valid = saved_frame_ok;
         saved_frame_ok = false;
         saved_geometry.reset();
         // Present and copy this boundary's current render buffer. A cached front
@@ -363,30 +376,46 @@ bool publish( const std::string &id, const std::string &status,
         frame_ok = presented_boundary == boundary_id && presented_session == session &&
                    presented_revision == revision && write_frame( path( "frame.tmp.png" ) );
         if( frame_ok ) {
-            frame_name = "frame-" + session + "-" + std::to_string( ++frame_counter ) + ".png";
-            fs::rename( path( "frame.tmp.png" ), path( frame_name ) );
-            fs::copy_file( path( frame_name ), path( "frame.latest.png" ), fs::copy_options::overwrite_existing );
-            fs::rename( path( "frame.latest.png" ), path( "frame.png" ) );
+            const auto geometry = cached_frame_geometry();
+            const std::string metadata = capture_metadata( geometry );
+            struct stat candidate = {};
+            const bool same_capture = id.empty() && previous_valid && !frame_name.empty() &&
+                                      frame_metadata == metadata &&
+                                      lstat( path( "frame.tmp.png" ).c_str(), &candidate ) == 0 &&
+                                      same_frame_png( path( frame_name ), path( "frame.tmp.png" ), candidate );
+            // Compare before checking age: encoding and filesystem I/O can be
+            // slow. Neither a heartbeat nor equal pixels renew the original TTL.
+            const long long checked_ms = now_ms();
+            const bool reuse = same_capture && checked_ms >= frame_ms && checked_ms - frame_ms < 3000;
+            if( reuse ) {
+                fs::remove( path( "frame.tmp.png" ) );
+            } else {
+                frame_name = "frame-" + session + "-" + std::to_string( ++frame_counter ) + ".png";
+                fs::rename( path( "frame.tmp.png" ), path( frame_name ) );
+                fs::copy_file( path( frame_name ), path( "frame.latest.png" ), fs::copy_options::overwrite_existing );
+                fs::rename( path( "frame.latest.png" ), path( "frame.png" ) );
+                frame_ms = presented_ms;
+                frame_metadata = metadata;
+                retained_frames.push_back( frame_name );
+                if( retained_frames.size() > 120 ) {
+                    std::error_code ignored;
+                    fs::remove( path( retained_frames.front() ), ignored );
+                    retained_frames.pop_front();
+                }
+            }
             published_frame = frame_name;
             frame_boundary = boundary_id;
             frame_session = session;
             frame_revision = revision;
-            frame_ms = presented_ms;
             saved_frame_ok = true;
-            saved_geometry = cached_frame_geometry();
-            retained_frames.push_back( frame_name );
-            if( retained_frames.size() > 120 ) {
-                std::error_code ignored;
-                fs::remove( path( retained_frames.front() ), ignored );
-                retained_frames.pop_front();
-            }
+            saved_geometry = geometry;
         }
     }
     const std::string output = id.empty() ? "state.json" : "response.json";
     std::ofstream stream( path( output + ".tmp" ) );
     stream.exceptions( std::ios::badbit | std::ios::failbit );
     JsonOut out( stream );
-    write_observation( out, id, status, error, frame_ok, published_frame );
+    write_observation( out, id, status, error, frame_ok, published_frame, frame_ms, saved_geometry );
     stream.close();
     fs::rename( path( output + ".tmp" ), path( output ) );
     if( !id.empty() ) {

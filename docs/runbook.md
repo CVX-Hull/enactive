@@ -41,7 +41,7 @@ the full bounded supplies/shelter outcome; portable fixtures alone cannot accept
 
 ## Permissions and player ownership
 
-The admitted player uses the fifteen project-preapproved
+The admitted player uses the twenty project-preapproved
 [structured tools](setup.md#configure-the-structured-player-tools). Routine
 observation, actions, memory, handoff, lifecycle and result/image handling must have
 zero human or automatic approval-review round trips. Verify the actual designated
@@ -172,7 +172,7 @@ and reconcile, then resume. For a game crash/restart: preserve diagnostics, foll
 the bundle-based [start procedure](#start-and-observe), use normal CDDA load UI,
 and acquire new session authority.
 Old-session commands must not be reused, including after normal save/reload in the
-same process. Native-v4 rejects older and mixed components; restart a
+same process. Native-v5 rejects older and mixed components; restart a
 matching controller and native build, then observe. No save-file repair/editing is prescribed.
 
 Input admissions are durably retained in `.runtime/bridge/admissions/` before
@@ -380,7 +380,7 @@ separates implemented components from remaining independent-play acceptance.
 2. Configure and verify the [structured player tools](setup.md#configure-the-structured-player-tools).
    The designated player uses `enactive_snapshot` and explicitly selects the
    returned snapshot/source IDs for `enactive_skill` or `enactive_lifecycle`.
-   Software constructs and retains the current mission/8 request before submission,
+   Software constructs and retains the current mission/9 request before submission,
    collects its bounded result and returns the actual retained PNG in the same call.
    The lead uses `enactive_start` for the explicit frozen source-free admission;
    it does not launch or adopt a character. Raw engineering contract diagnostics

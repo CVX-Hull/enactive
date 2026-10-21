@@ -423,7 +423,7 @@ class SetupTests(unittest.TestCase):
 
     def test_exact_png_comparison_is_bounded_and_preserves_owned_files(self):
         native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
-        comparison = native[native.index('bool same_frame_png('):native.index('void ordinary_commit_gate(')]
+        comparison = native[native.rindex('bool same_frame_png('):native.index('void ordinary_commit_gate(')]
         self.assertIn('maximum_frame_bytes = 32 * 1024 * 1024', comparison)
         self.assertIn('std::array<char, 32 * 1024>', comparison)
         self.assertEqual(comparison.count('O_RDONLY | O_NOFOLLOW | O_NONBLOCK'), 2)

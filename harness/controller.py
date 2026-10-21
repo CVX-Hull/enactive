@@ -617,9 +617,7 @@ class Controller:
                     # Retention and image I/O cannot hold up operator Pause.
                     if expected_image_sha256 is not None and self._frame_sha256(observed) != expected_image_sha256:
                         raise ControlError("Final preflight image changed during recovery preflight")
-                    checked_frame = self._preflight_capture(observed, expected_image_sha256)
-                    if kind == "answer_interrupt" and checked_frame != observed["frame"]:
-                        raise ControlError("Interruption answer lost its exact native frame before publication")
+                    checked_frame = self._preflight_capture(observed)
                     with self.data_lock:
                         check_preflight()
                         authority = self.authority.copy()
@@ -1662,7 +1660,7 @@ class Controller:
                         # A normal storage/capacity/contract failure proves no input
                         # publication. Crashes/BaseException retain durable unknowns.
                         raise ControlError(f"Mission preflight failed: {type(exc).__name__}: {exc}") from exc
-                checked_frame = self._preflight_capture(observed, expected_image_sha256)
+                checked_frame = self._preflight_capture(observed)
                 with self.data_lock:
                     self._check_owner(lease, generation)
                     if (self.control_lock.locked() or self.control_pending is not None
@@ -1707,21 +1705,19 @@ class Controller:
                     self.pause_requested = result["paused"]
         return result
 
-    def _preflight_capture(self, observed: dict, expected_image_sha256: str | None) -> str:
-        """Verify a passive replacement frame outside the revocation lock.
+    def _preflight_capture(self, observed: dict) -> str:
+        """Retain the exact immutable preflight identity and its original clock.
 
-        A changed filename is acceptable only with actual identical PNG bytes,
-        never merely because a status record claims the same native boundary.
-        The caller fences this verified filename again before publication.
+        Eligible unchanged native heartbeats retain their identity. A different
+        identity after retention is a change or expiry, never a silent retarget.
+        The caller fences this same filename again before publication.
         """
         current, _ = self.observation_snapshot()
         if not same_native_state(current, observed):
             raise ControlError("Native state changed during preflight")
         if current["frame"] != observed["frame"]:
-            expected = expected_image_sha256 or self._frame_sha256(observed)
-            if self._frame_sha256(current) != expected:
-                raise ControlError("Live preflight image differs from the captured image")
-        return current["frame"]
+            raise ControlError("Native frame identity changed during final preflight")
+        return observed["frame"]
 
     def _frame_sha256(self, observed: dict[str, Any]) -> str:
         """Hash only the actual native immutable frame, outside the data lock."""
