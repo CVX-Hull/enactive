@@ -227,6 +227,13 @@ actual-image presentation. The player does not write routine JSON files, private
 helpers or polling scripts. CLI/raw protocol clients remain engineering tools,
 not an alternate routine-player path.
 
+A menu request without perception selects the native UILIST rendered-row policy;
+it does not ask software to interpret another screen. Other supported menus need
+the player's explicit source-bound control interpretation. An eligible mismatch
+returns a zero-input draft refusal with the original phase intact, so the player
+can submit a new corrected request; software neither invents the view nor switches
+adapters automatically. Genuine authority/evidence/budget faults still stop.
+
 Choose a whole returned snapshot/source consistently after focus changes. For
 provisional identity inspection, select inspect/character_identity and lifecycle
 scope to retain the creation/load root. Lifecycle confirmations and editor intent

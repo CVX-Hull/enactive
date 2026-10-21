@@ -112,6 +112,13 @@ class MenuSkill:
             raise EvidenceError("Menu informing boundary changed before first proposal")
 
     @staticmethod
+    def supports_native_rows(state: dict) -> bool:
+        """Representation support only; never evidence of authority or success."""
+        ui = state["ui"]
+        return (state["boundary"]["kind"] == "menu" and state["category"] == "UILIST"
+                and ui is not None and ui["purpose"] == "uilist" and ui["coverage"] == "rendered_rows_only")
+
+    @staticmethod
     def _native_shape(state: dict) -> dict:
         # Native focus changes only selection and the capture/boundary identity.
         return {**{key: state[key] for key in ("session", "category", "actions", "scene", "paused",
@@ -123,8 +130,7 @@ class MenuSkill:
         if state["status"] != "ready" or state["error"] or state["paused"] or not state["frame_ok"]:
             raise _MenuBlocked("Menu requires ready, unpaused native evidence with a valid capture")
         ui = state["ui"]
-        if (state["boundary"]["kind"] != "menu" or state["category"] != "UILIST"
-                or ui is None or ui["purpose"] != "uilist" or ui["coverage"] != "rendered_rows_only"):
+        if not self.supports_native_rows(state):
             raise _MenuBlocked("Capability requires native UILIST rendered rows; inventory/image adapters are unsupported")
         rows = ui["rows"]
         selected = next((i for i, row in enumerate(rows) if row["id"] == ui["selected"] and row["enabled"]), None)

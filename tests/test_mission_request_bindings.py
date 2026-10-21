@@ -80,6 +80,36 @@ class RequestBindingTests(unittest.TestCase):
                             self.runtime._bindings[self.runtime._current.observation_id][1].pause_generation)
         return root, old
 
+    def test_missing_native_rows_in_ordinary_prompt_allows_explicit_interpreted_choice(self):
+        root, _ = self.open_direction()
+        bad = self.control('menu', dict(purpose='Direction', label='Here', outcome='activated'),
+            phase_id=root['request_id'], request_id='wrong-native-direction')
+        self.assert_local_rejection(bad, root)
+        corrected = self.control('menu', dict(purpose='Direction', label='Here', outcome='activated'),
+            phase_id=root['request_id'], request_id='interpreted-direction', perception=dict(
+                kind='direction', basis='player_interpretation', source_id=self.runtime._current.observation_id,
+                question='Where?'))
+        self.runtime.command(corrected)
+        self.assertEqual(self.settled(corrected['request_id'])['state'], 'partial')
+
+    def test_missing_native_rows_in_ordinary_prompt_cannot_hide_changed_pixels(self):
+        root, _ = self.open_direction()
+        bad = self.control('menu', dict(purpose='Direction', label='Here', outcome='activated'),
+            phase_id=root['request_id'], request_id='native-draft-changed-pixels')
+        name = f'frame-{self.runtime._current.session}-999999.png'
+        (self.controller.bridge / name).write_bytes(b'\x89PNG\r\n\x1a\nchanged-visible-pixels')
+        with self.controller.data_lock:
+            self.controller.state['frame'] = name
+        spent, delivered = self.runtime.status()['spent_inputs'], copy.deepcopy(self.bridge.delivered)
+        self.runtime.command(bad)
+        refused = self.settled(bad['request_id'])
+        self.assertEqual(refused['state'], 'blocked', refused)
+        self.assertNotIn('No input or refresh was attempted', refused['result']['reason'])
+        self.assertEqual(self.runtime.status()['spent_inputs'], spent)
+        self.assertEqual(self.bridge.delivered, delivered)
+        self.assertIsNone(self.runtime._lease)
+        self.assertIsNone(self.runtime._prompt_phase)
+
     def test_expired_or_unknown_extra_support_rejects_only_draft_and_new_id_executes(self):
         root, old = self.completed_prompt()
         for number, extra in enumerate((old.observation_id, "unpublished-source")):
@@ -361,6 +391,65 @@ class RequestBindingTests(unittest.TestCase):
 
 class LifecycleBindingTests(MissionCreationFixture, unittest.TestCase):
     confirmation = confirmation_fixtures.ConfirmationValidationTests.confirmation
+
+    def test_missing_native_rows_refuses_draft_without_refresh_then_explicit_view_proceeds(self):
+        self.ready()
+        self.assertEqual(self.run_request(self.lifecycle('create'))['state'], 'partial')
+        phase = self.runtime._registered_lifecycle.phase
+        root = self.runtime._ledger.request('create')['request']
+        bad = self.control('missing-native-rows', 'Create World')
+        bad['perception'] = None
+        result = RequestBindingTests.assert_local_rejection(self, bad, root)
+        self.assertIn('visible-control interpretation', result['result']['reason'])
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertEqual(self.runtime._current, phase.checkpoint)
+        corrected = self.run_request(self.control('explicit-visible-world', 'Create World'))
+        self.assertEqual(corrected['state'], 'partial', corrected)
+        self.assertEqual(self.current()[1]['category'], 'WORLDGEN_CONFIRM_DIALOG')
+
+    def test_missing_native_rows_cannot_mask_authority_evidence_or_budget_faults(self):
+        for fault in ('takeover', 'native_drift', 'changed_pixels', 'source_loss', 'wrong_actor',
+                      'root_input', 'input_reserve', 'game_cap'):
+            with self.subTest(fault=fault):
+                case = LifecycleBindingTests(
+                    'test_missing_native_rows_refuses_draft_without_refresh_then_explicit_view_proceeds')
+                case.setUp()
+                try:
+                    if fault == 'input_reserve':
+                        case.a = replace(case.a, limits=replace(case.a.limits, inputs=2),
+                                         cleanup_reserve=replace(case.a.cleanup_reserve, inputs=1))
+                    case.ready()
+                    root = case.lifecycle('create')
+                    if fault == 'root_input':
+                        root['limits']['primitives'] = 1
+                    self.assertEqual(case.run_request(root)['state'], 'partial')
+                    bad = case.control('bad-native-with-real-fault', 'Create World')
+                    bad['perception'] = None
+                    if fault in ('takeover', 'native_drift'):
+                        with case.controller.data_lock:
+                            case.controller.state['takeover_generation' if fault == 'takeover' else 'revision'] += 1
+                    elif fault == 'changed_pixels':
+                        name = f'frame-{case.runtime._current.session}-999999.png'
+                        (case.controller.bridge / name).write_bytes(b'\x89PNG\r\n\x1a\nchanged-visible-pixels')
+                        with case.controller.data_lock:
+                            case.controller.state['frame'] = name
+                    elif fault == 'source_loss':
+                        Path(case.runtime._current.frame_path).unlink()
+                    elif fault == 'wrong_actor':
+                        owner = case.runtime._registered_lifecycle.phase
+                        case.runtime._registered_lifecycle.phase = replace(owner, actor_id='other-actor')
+                    elif fault == 'game_cap':
+                        case.runtime._game_cost = case.a.limits.game_seconds
+                    spent, delivered = case.runtime.status()['spent_inputs'], copy.deepcopy(case.bridge.delivered)
+                    refused = case.run_request(bad)
+                    self.assertEqual(refused['state'], 'blocked', refused)
+                    self.assertNotIn('No input or refresh was attempted', refused['result']['reason'])
+                    self.assertEqual(case.runtime.status()['spent_inputs'], spent)
+                    self.assertEqual(case.bridge.delivered, delivered)
+                    self.assertIsNone(case.runtime._lease)
+                    self.assertIsNone(case.runtime._registered_lifecycle.phase)
+                finally:
+                    case.doCleanups()
 
     def test_lifecycle_binding_error_preserves_original_phase_before_new_question(self):
         root, question, _ = self.confirmation('world')

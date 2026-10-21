@@ -56,8 +56,8 @@ It uses the single [mission ingress](protocol.md#integrated-mission-lifecycle).
 The lead owns admission, source integration and final verification. The user retains
 Pause and native takeover. Role assignment is procedural, not operating-system isolation.
 
-An eligible request's internally inconsistent source metadata or invalid extra
-informing-source selection returns blocked
+An eligible request's internally inconsistent source metadata, invalid extra
+informing-source selection or unsupported native-row menu representation returns blocked
 before phase mutation or native refresh. Its original limits and authority stay
 unchanged; real authority/evidence faults still stop. The
 [binding contract](protocol.md#skill-request-binding-errors) defines this narrow

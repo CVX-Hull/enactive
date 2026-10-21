@@ -352,8 +352,9 @@ persisted format, alternate executor or compatibility path. Review it with contr
 or phase-summary changes; real-component tests detect drift. Replace it if maintained
 upstream composition tooling fills this concrete gap at lower maintenance cost.
 
-The writer checks an internally inconsistent expected triple or additional
-informing sources outside the current actor/authority before adapter mutation
+The writer checks an internally inconsistent expected triple, additional
+informing sources outside the current actor/authority, or a menu draft selecting
+native-row control without its supported representation before adapter mutation
 or refresh only when the cited current source is exact and available,
 and any explicit perception names that same source. Existing read-only ownership,
 authority, original budget and integrity fences must still pass. Then it records
@@ -361,6 +362,12 @@ plain blocked without Observe, rotation, reservation or input, retaining the
 original phase/checkpoint, lease/epoch and deadlines. It never substitutes fields
 or certifies freshness. Same-ID results are immutable; a new corrected request
 traverses every normal guard. Request counts and elapsed time remain spent.
+Null menu perception selects the native UILIST row policy, not automatic image
+interpretation. A source without that policy's menu/category/purpose/coverage
+requires an explicit source-bound visible-control interpretation. The eligible
+zero-input refusal preserves the original scope; it does not infer the view,
+switch adapters, relax native-state equivalence or provide a general recovery
+from EvidenceError. Actual changed pixels still stop this refusal path.
 Additional skill sources must share the current mission, actor, epoch, controller
 boot, host Pause generation and native takeover generation. Older observations
 within that authority may support a transition; historical sources from an earlier

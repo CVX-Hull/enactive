@@ -119,6 +119,15 @@ correction and successor remain unfulfilled. [#174](https://github.com/CVX-Hull/
 owns the consume-selector mapping; #144 retains its costs and ordered exceptional
 closure. [#175](https://github.com/CVX-Hull/enactive/issues/175) owns the proposed
 development-start checkpoint gap. Neither finding resumes a failed attempt.
+Independent014 then stopped before world creation: a null-perception menu request
+selected native-row control on a main menu without native rows, and revalidation
+revoked its phase before menu input. One Resume input was charged. The actor
+stopped and permanently quiesced; ordered exceptional shutdown preserved all files
+and recorded child/controller exit0, without normal-ending credit. The existing
+[#162](https://github.com/CVX-Hull/enactive/issues/162) draft-validation repair now
+also rejects that representation mismatch only after all live eligibility fences,
+without refresh, inferred interpretation or phase renewal. Native-state equality
+is unchanged; source regressions are distinct from the next full mission.
 
 The [development-first workflow](project-management.md#development-first-delivery)
 now distinguishes targeted development runs from formal acceptance. The next

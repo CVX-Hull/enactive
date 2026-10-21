@@ -1513,8 +1513,8 @@ class MissionRuntime:
         if work.game_anchor is not None:
             self._game_guard(work.game_anchor, work.request["limits"]["game_seconds"])
 
-    def _skill_binding_rejection(self, work: _Work) -> dict | None:
-        """Reject inconsistent request metadata only while its original scope is eligible.
+    def _skill_draft_rejection(self, work: _Work) -> dict | None:
+        """Reject metadata/representation drafts only while their scope is eligible.
 
         This reads an immutable source, never substitutes fields or promotes its
         freshness. Real authority/evidence/budget faults retain their stopping
@@ -1536,7 +1536,9 @@ class MissionRuntime:
             identity != current.observation_id and (current_entry is None or identity not in self._bindings or
                 any(getattr(self._bindings[identity][1], field) != getattr(current_entry[1], field)
                     for field in authority_fields)) for identity in data["sources"])
-        if not metadata_mismatch and not incompatible_support:
+        missing_native_rows = (data["skill_kind"] == "menu" and data["perception"] is None
+                               and not MenuSkill.supports_native_rows(observed))
+        if not metadata_mismatch and not incompatible_support and not missing_native_rows:
             return None
 
         # A bad extra source must not conceal loss of another retained source,
@@ -1593,15 +1595,22 @@ class MissionRuntime:
         actual = self._live()[0]
         if not same_native_state(actual, observed):
             raise EvidenceError("Inconsistent request cannot bypass changed native source state")
-        image_informed = (data["perception"] is not None or self._registered_lifecycle.phase is not None
+        image_informed = (missing_native_rows or data["perception"] is not None or self._registered_lifecycle.phase is not None
             or self._exit_phase is not None or self._registered_activity.phase is not None
             or data["skill_kind"] == "activity" and data["goal"]["step"] in ("interrupt", "answer_interrupt", "resume"))
         if image_informed and self.controller._frame_sha256(actual) != current.frame_sha256:
             raise EvidenceError("Inconsistent request cannot bypass changed native pixels")
         self._check_cancelled(work)
-        reason = ("Additional informing sources do not belong to the current actor and authority; "
-                  "historical support belongs in memory. " if incompatible_support else
-                  "Skill request session, revision or boundary differs from its cited immutable source. ")
+        reasons = []
+        if incompatible_support:
+            reasons.append("Additional informing sources do not belong to the current actor and authority; "
+                           "historical support belongs in memory.")
+        if metadata_mismatch:
+            reasons.append("Skill request session, revision or boundary differs from its cited immutable source.")
+        if missing_native_rows:
+            reasons.append("This source has no supported native UILIST row representation. "
+                           "Supply an explicit source-bound visible-control interpretation for the observed UI.")
+        reason = " ".join(reasons) + " "
         return {"reason": reason +
                     "No input or refresh was attempted; read the source and submit a new corrected request ID.",
                 "source_ids": [current.observation_id], "grants_authority": False}
@@ -2061,7 +2070,7 @@ class MissionRuntime:
             return "completed", self._memory_request(work)
         if kind == "skill":
             self._registered_recovery.executable_guard(work.request)
-            rejection = self._skill_binding_rejection(work)
+            rejection = self._skill_draft_rejection(work)
             if rejection is not None:
                 return "blocked", rejection
             if self._registered_lifecycle.phase is not None:
