@@ -583,7 +583,14 @@ reserving the128th for the future post-Pause source. Required Work must fit a
 complete96KiB packet;32KiB of the128KiB handoff envelope remains reserved for the
 mission wrapper, maximum query and future source metadata. A narrowly typed
 representation refusal sends no input and preserves the original lease, epoch and
-bindings. Actual authority, storage and budget failures still stop. The runtime
+bindings. `checkpoint_ids` identifies retained source observation IDs, not memory
+Claim or Work IDs; `unfinished_work_ids` identifies the exact complete unfinished
+Work set. Unknown checkpoint references and omitted/extra Work IDs are correctable
+draft errors before stopping input. The player selects actual retained sources or
+retrieves complete current Work and submits a NEW explicit request while still
+eligible. No handoff, source substitution, Resume or budget renewal is automatic.
+A known checkpoint source with unavailable bytes remains an evidence failure. Actual
+authority, storage and budget failures still stop. The runtime
 internally stops input, clears the lease/bindings/map, captures the post-Pause normal
 source and checks empty controller/native slots. Atomic issuance records that source,
 controller boot, original operator Pause counter, host/native generations and a new

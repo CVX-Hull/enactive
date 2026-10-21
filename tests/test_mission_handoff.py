@@ -131,9 +131,89 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
     def test_omitted_unfinished_work_blocks_issuance(self):
         self.create()
         self.remember_work()
-        result = self.handoff()
+        before, lease = self.runtime.status(), self.runtime._lease
+        delivered = copy.deepcopy(self.bridge.delivered)
+        for identity, work_ids in (("omitted-work", []), ("extra-work", ["pending", "not-work"])):
+            with self.subTest(identity=identity), \
+                    patch.object(self.controller, "stop_input", wraps=self.controller.stop_input) as stopped:
+                result = self.run_request(self.operation("handoff", identity,
+                    checkpoint_ids=[self.runtime._current.observation_id], unfinished_work_ids=work_ids,
+                    successor_role="player"))
+                self.assertEqual(result["state"], "blocked", result)
+                self.assertIn("unfinished Work", result["result"]["reason"])
+                self.assertIn("before stopping input", result["result"]["reason"])
+                stopped.assert_not_called()
+                self.assertIs(self.runtime._lease, lease)
+                self.assertEqual(self.runtime.status()["phase"], "active")
+                self.assertEqual(self.runtime.status()["epoch"], before["epoch"])
+                self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
+                self.assertEqual(self.bridge.delivered, delivered)
+        self.assertEqual(self.handoff(unfinished_work_ids=["pending"])["state"], "completed")
+
+    def test_unknown_checkpoint_reference_can_be_corrected_without_losing_authority(self):
+        self.create()
+        self.remember_work()
+        ref, _ = self.current()
+        entry = claim(id="water-claim", key=dict(subject="water", property="supply", unit="charges",
+            coverage_id="fixture-scene"), scope=dict(mission_id=self.a.mission_id, session=ref.session,
+            coordinate_epoch=0), observed_time=dict(revision=ref.revision, turn=ref.turn),
+            sources=[ref.observation_id], supports=[dict(sources=[ref.observation_id], claims=[])])
+        self.assertEqual(self.run_request(self.operation("remember", "remember-character",
+            entry_type="claim", entry=entry))["state"], "completed")
+        before, lease = self.runtime.status(), self.runtime._lease
+        delivered = copy.deepcopy(self.bridge.delivered)
+        for index, unknown in enumerate(("water-claim", "pending", "f"*64)):
+            with self.subTest(reference=unknown), \
+                    patch.object(self.controller, "stop_input", wraps=self.controller.stop_input) as stopped:
+                result = self.run_request(self.operation("handoff", f"wrong-checkpoint-{index}",
+                    checkpoint_ids=[unknown], unfinished_work_ids=["pending"], successor_role="player"))
+                self.assertEqual(result["state"], "blocked", result)
+                self.assertIn("source observation IDs", result["result"]["reason"])
+                self.assertIn(unknown, result["result"]["reason"])
+                stopped.assert_not_called()
+                self.assertIs(self.runtime._lease, lease)
+                self.assertEqual(self.runtime.status()["phase"], "active")
+                self.assertEqual(self.runtime.status()["epoch"], before["epoch"])
+                self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
+                self.assertEqual(self.bridge.delivered, delivered)
+                self.assertIsNone(self.runtime._registered_handoff.phase)
+        self.assertEqual(self.handoff(unfinished_work_ids=["pending"])["state"], "completed")
+
+    def test_known_checkpoint_with_lost_bytes_still_revokes_authority(self):
+        self.create()
+        self.observe("historical-checkpoint")
+        ref, _ = self.current()
+        self.observe("new-current-source")
+        Path(ref.frame_path).unlink()
+        # An earlier caller typo must not hide damage to a supplied known source.
+        result = self.handoff(checkpoint_ids=["not-a-source", ref.observation_id])
         self.assertEqual(result["state"], "blocked", result)
-        self.assertIn("unfinished", result["result"]["reason"])
+        self.assertIn("source unavailable", result["result"]["reason"])
+        self.assertIsNone(self.runtime._lease)
+        self.assertIsNone(self.runtime._registered_handoff.phase)
+        self.assertEqual(self.runtime.status()["phase"], "paused")
+
+    def expired_draft(self, *, checkpoint_ids=None):
+        self.create()
+        self.remember_work()
+        before = self.runtime.status()
+        delivered = copy.deepcopy(self.bridge.delivered)
+        ordinary = before["deadline"] - self.a.cleanup_reserve.wall_seconds
+        with patch.object(self.runtime, "_wall", return_value=ordinary):
+            result = self.handoff(**({} if checkpoint_ids is None else dict(checkpoint_ids=checkpoint_ids)))
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertIn("observation deadline exhausted", result["result"]["reason"])
+        self.assertIsNone(self.runtime._lease)
+        self.assertIsNone(self.runtime._registered_handoff.phase)
+        self.assertEqual(self.runtime.status()["phase"], "paused")
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
+        self.assertEqual(self.bridge.delivered, delivered)
+
+    def test_unknown_checkpoint_cannot_hide_expired_ordinary_budget(self):
+        self.expired_draft(checkpoint_ids=["not-a-source"])
+
+    def test_work_coverage_error_cannot_hide_expired_ordinary_budget(self):
+        self.expired_draft()
 
     def test_lost_completed_work_source_blocks_handoff_without_hiding_failure(self):
         self.create()

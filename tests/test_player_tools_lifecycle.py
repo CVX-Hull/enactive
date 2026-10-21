@@ -241,6 +241,34 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(self.runtime.status()["phase"], "active")
         self.assertEqual(self.runtime._lease.actor_id, "successor")
 
+    def test_handoff_draft_feedback_allows_explicit_player_correction(self):
+        self.create()
+        self.remember_work()
+        selected, _ = self.player.call("enactive_snapshot", {})
+        source = selected["source"]["reference"]["observation_id"]
+        before, lease = self.runtime.status(), self.runtime._lease
+        delivered = deepcopy(self.bridge.delivered)
+        for identity, checkpoints, unfinished in (("wrong-reference", ["pending"], ["pending"]),
+                                                  ("missing-work", [source], [])):
+            refused, _ = self.player.call("enactive_handoff", dict(snapshot_id=selected["snapshot_id"],
+                request_id=identity, wait_seconds=3, intent=dict(checkpoint_ids=checkpoints,
+                    unfinished_work_ids=unfinished, successor_role="player")))
+            operation = refused["response"]["operation"]
+            self.assertEqual(operation["state"], "blocked", refused)
+            self.assertIn("before stopping input", operation["result"]["reason"])
+            self.assertFalse(operation["result"]["grants_authority"])
+            self.assertIs(self.runtime._lease, lease)
+            self.assertEqual(self.runtime.status()["epoch"], before["epoch"])
+            self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
+            self.assertEqual(self.bridge.delivered, delivered)
+        corrected, _ = self.player.call("enactive_handoff", dict(snapshot_id=selected["snapshot_id"],
+            request_id="corrected-handoff", wait_seconds=3, intent=dict(checkpoint_ids=[source],
+                unfinished_work_ids=["pending"], successor_role="player")))
+        self.assertEqual(corrected["response"]["operation"]["state"], "completed", corrected)
+        self.assertEqual(self.runtime.status()["phase"], "handoff")
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
+        self.assertIsNone(self.runtime._lease)
+
     def test_disputed_normal_source_cannot_publish_coordinate_scope(self):
         self.create()
         selected, _ = self.player.call("enactive_snapshot", {})

@@ -251,6 +251,14 @@ index or authority. A retained `diagnostic` string can describe an earlier refus
 request after later success; current operation errors and ownership/provenance
 checks establish actionability, not the historical string alone.
 
+For handoff issuance, `checkpoint_ids` contains retained source observation IDs
+from returned sources or memory provenance; it does not contain Claim or Work IDs.
+`unfinished_work_ids` contains the complete current unfinished Work set. An unknown
+checkpoint reference or omitted/extra Work ID returns a zero-input blocked result
+before stopping input and preserves an otherwise eligible phase. Correct the draft
+with a NEW request; no source is substituted and no handoff is issued automatically.
+Known checkpoint-source damage, actual authority loss and spent limits remain failures.
+
 For handoff readmission, select the issuance's original `post_pause_source_id`,
 which the successor already inspected for its claim. A separate Observe is not a
 prerequisite and its returned source does not replace that issued ID. Readmission

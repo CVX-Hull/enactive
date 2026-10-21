@@ -80,13 +80,18 @@ class RegisteredHandoff:
             return checks[identity]
         return refs, status
 
-    def _observe(self, work: _Work) -> tuple[dict, float]:
+    def _observation_remaining(self, work: _Work) -> float:
         r = self.runtime
         deadline = min(r._ledger.request(work.request["request_id"])["deadline"],
                        r._mission_deadline - r._admission.cleanup_reserve.wall_seconds)
         remaining = deadline - r._wall()
         if remaining <= 0:
             raise BudgetError("Original handoff/readmission observation deadline exhausted")
+        return remaining
+
+    def _observe(self, work: _Work) -> tuple[dict, float]:
+        r = self.runtime
+        remaining = self._observation_remaining(work)
         return r._observe_native(work, deadline_monotonic=r._clock() + min(MAX_WAIT, remaining))
 
     def issue(self, work: _Work) -> tuple[str, dict]:
@@ -100,20 +105,36 @@ class RegisteredHandoff:
         mark = launch.operator_mark
         # Prove complete successor representability while the original lease is
         # still live. Reserve one distinct source for the future post-Pause frame.
-        _, status = self._source_checker(MAX_HANDOFF_SOURCES - 1)
+        refs, status = self._source_checker(MAX_HANDOFF_SOURCES - 1)
         try:
+            unknown = None
             for identity in data["checkpoint_ids"]:
+                if identity not in refs:
+                    if unknown is None:
+                        unknown = identity
+                    continue
                 if status(identity) != "retained":
                     raise EvidenceError("Handoff source unavailable: " + identity)
+            if unknown is not None:
+                raise HandoffEvidenceError(
+                    "Handoff checkpoints require retained source observation IDs, not Claim/Work IDs; "
+                    "unknown reference: " + unknown + ". Refused before stopping input; no handoff issued. "
+                    "Select actual retained source IDs and submit a NEW request if still eligible.")
             unfinished = self._unfinished(status)
             r._memory.context(r._coordinate_scope(before), "Complete unfinished Work for successor",
                 max_bytes=MAX_HANDOFF_CONTEXT_BYTES - HANDOFF_CONTEXT_RESERVE,
                 required_work_ids=frozenset(unfinished), support_source_ids=tuple(data["checkpoint_ids"]),
                 source_status=status, cache=False, **r._clocks())
-        except CapacityError as exc:
+            if set(data["unfinished_work_ids"]) != unfinished:
+                raise HandoffEvidenceError(
+                    "Handoff must identify every unfinished Work item, without extras or truncation. "
+                    "Refused before stopping input; no handoff issued. Retrieve complete current Work and "
+                    "submit a NEW request if still eligible.")
+        except (CapacityError, HandoffEvidenceError) as exc:
+            self._observation_remaining(work)  # A draft error cannot preserve spent ordinary time.
+            if isinstance(exc, HandoffEvidenceError):
+                raise
             raise HandoffEvidenceError("Handoff representation refused before stopping input: " + str(exc)) from exc
-        if set(data["unfinished_work_ids"]) != unfinished:
-            raise LedgerError("Handoff must identify every unfinished Work item, without truncation")
         r._check_lease()  # User Pause during source verification always wins.
         r.controller.stop_input()  # Internal stop; never cancel this handle or advance ledger epoch here.
         r._lease, r._map = None, None

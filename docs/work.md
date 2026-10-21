@@ -213,6 +213,21 @@ known nondelivery without granting authority or changing any format. A new
 corrected request is possible only under the unchanged original live guards and
 deadlines. No failed attempt resumes.
 
+Independent022 reached navigation/replanning, source-linked correction and a
+30-minute sheltered wait, but selected memory Claim IDs as handoff checkpoints.
+The receiver treated unknown references as lost evidence and revoked its phase;
+no handoff was issued. The actor stopped permanently. Exact owned child
+termination preceded controller exit; all299 PNG signatures/hashes verified and
+files preserved. It is failed/closed:118charges (117returned,1unknown),76requests,
+1805canonical game seconds, with usable water, actual successor and normal ending
+unaccepted. All001–022 retain1335charges and895requests; no failed run resumes.
+#164/#144 own the reference/coverage correction: unknown checkpoint IDs and
+omitted/extra unfinished Work are zero-input draft refusals before stopping input,
+with precise namespace/selection feedback and an explicit NEW corrected request.
+Known checkpoint-source loss, authority faults and original limits still stop.
+This is source behavior under verification, not implemented organic learning or
+accepted full gameplay; #176/#177/#178 retain that separate roadmap.
+
 The [development-first workflow](project-management.md#development-first-delivery)
 now distinguishes targeted development runs from formal acceptance. The next
 meaningful integration checkpoint remains the complete mission below; repeated
