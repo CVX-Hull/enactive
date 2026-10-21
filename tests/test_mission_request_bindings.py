@@ -60,6 +60,119 @@ class RequestBindingTests(unittest.TestCase):
         self.assertFalse(any(p['request_id'] == request['request_id'] for p in self.runtime._ledger.primitive_records()))
         return result
 
+    def completed_prompt(self):
+        normal = copy.deepcopy(self.bridge.value["scene"])
+        def return_normal(bridge, request):
+            if request.get("action") == "pause":
+                bridge.value.update(category="DEFAULTMODE", scene=normal, ui=None,
+                    actions=["open", "UP", "DOWN", "LEFT", "RIGHT"])
+                bridge.value["boundary"].update(kind="normal_play", id="returned-normal")
+            return True
+        root, _ = self.open_direction(effect=return_normal)
+        old = self.runtime._current
+        child = self.control("menu", dict(purpose="Direction", label="Here", outcome="activated"),
+            phase_id=root["request_id"], request_id="complete-prompt", perception=dict(kind="direction",
+                basis="player_interpretation", source_id=old.observation_id, question="Where?"))
+        self.runtime.command(child)
+        self.assertEqual(self.settled(child["request_id"])["state"], "partial")
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertNotEqual(self.runtime._bindings[old.observation_id][1].pause_generation,
+                            self.runtime._bindings[self.runtime._current.observation_id][1].pause_generation)
+        return root, old
+
+    def test_expired_or_unknown_extra_support_rejects_only_draft_and_new_id_executes(self):
+        root, old = self.completed_prompt()
+        for number, extra in enumerate((old.observation_id, "unpublished-source")):
+            bad = self.control("interact", dict(action="open", intent="Open", desired_outcome="Inspect"),
+                request_id=f"bad-extra-{number}")
+            bad["sources"].append(extra)
+            result = self.assert_local_rejection(bad, root)
+            self.assertIn("historical support belongs in memory", result["result"]["reason"])
+            self.assertEqual(result["request"], bad)
+            self.assertEqual(self.runtime.command(bad)["operation"], self.runtime._ledger.request(bad["request_id"]))
+        corrected = self.control("interact", dict(action="open", intent="Open", desired_outcome="Inspect"),
+            request_id="new-current-source-root")
+        self.runtime.command(corrected)
+        self.assertEqual(self.settled(corrected["request_id"])["state"], "partial")
+        self.assertEqual(self.runtime.status()["spent_inputs"], 3)
+        self.assertEqual(self.runtime._prompt_phase.root_id, corrected["request_id"])
+
+    def test_bad_extra_cannot_mask_current_faults_or_mixed_support_loss(self):
+        for fault in ("takeover", "native_drift", "current_binding", "current_loss", "extra_loss",
+                      "extra_corrupt", "extra_disputed", "mixed_loss", "input_reserve", "game_cap"):
+            with self.subTest(fault=fault):
+                case = RequestBindingTests("test_navigation_metadata_error_has_no_primitive_and_new_request_moves")
+                case.setUp()
+                try:
+                    if fault == "input_reserve":
+                        case.a = replace(case.a, limits=replace(case.a.limits, inputs=3),
+                                         cleanup_reserve=replace(case.a.cleanup_reserve, inputs=1))
+                    root, old = case.completed_prompt()
+                    bad = case.control("interact", dict(action="open", intent="Open", desired_outcome="Inspect"),
+                        request_id="bad-extra-real-fault")
+                    bad["sources"].append(old.observation_id)
+                    if fault in ("takeover", "native_drift"):
+                        with case.controller.data_lock:
+                            case.controller.state["takeover_generation" if fault == "takeover" else "revision"] += 1
+                    elif fault == "current_binding":
+                        identity = case.runtime._current.observation_id
+                        ref, binding = case.runtime._bindings[identity]
+                        case.runtime._bindings[identity] = (ref, replace(binding, actor_id="wrong-actor"))
+                    elif fault in ("current_loss", "extra_loss"):
+                        Path((case.runtime._current if fault == "current_loss" else old).frame_path).unlink()
+                    elif fault == "extra_corrupt":
+                        Path(old.frame_path).chmod(0o600)
+                        Path(old.frame_path).write_bytes(b"changed retained image")
+                    elif fault == "extra_disputed":
+                        case.runtime._store._disputed.append(old.observation_id)
+                    elif fault == "mixed_loss":
+                        # One expired extra plus another retained-but-unbound
+                        # source whose bytes are missing must still stop.
+                        extra = next(ref for ref in case.runtime._store.historical_references
+                            if ref.observation_id not in bad["sources"])
+                        case.runtime._bindings.pop(extra.observation_id, None)
+                        bad["sources"].append(extra.observation_id)
+                        Path(extra.frame_path).unlink()
+                    elif fault == "game_cap":
+                        case.runtime._game_cost = case.a.limits.game_seconds
+                    spent, delivered = case.runtime.status()["spent_inputs"], copy.deepcopy(case.bridge.delivered)
+                    case.runtime.command(bad)
+                    refused = case.settled(bad["request_id"])
+                    self.assertEqual(refused["state"], "blocked", refused)
+                    self.assertNotIn("No input or refresh was attempted", refused["result"]["reason"])
+                    self.assertEqual(case.runtime.status()["spent_inputs"], spent)
+                    self.assertEqual(case.bridge.delivered, delivered)
+                    self.assertIsNone(case.runtime._lease)
+                finally:
+                    case.doCleanups()
+
+    def test_historical_sole_source_still_stops(self):
+        _, old = self.completed_prompt()
+        bad = self.control("interact", dict(action="open", intent="Open", desired_outcome="Inspect"),
+            request_id="sole-old-source", sources=[old.observation_id])
+        spent = self.runtime.status()["spent_inputs"]
+        self.runtime.command(bad)
+        result = self.settled(bad["request_id"])
+        self.assertEqual(result["state"], "blocked")
+        self.assertNotIn("No input or refresh was attempted", result["result"]["reason"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertIsNone(self.runtime._lease)
+
+    def test_older_support_in_same_authority_remains_eligible(self):
+        self.bridge.value["actions"].append("open")
+        self.start()
+        first = self.runtime._current
+        self.runtime.command(self.request("observe", request_id="same-authority-observe"))
+        self.assertEqual(self.settled("same-authority-observe")["state"], "completed")
+        self.assertNotEqual(self.runtime._current, first)
+        good = self.control("interact", dict(action="open", intent="Open", desired_outcome="Inspect"),
+            request_id="same-authority-support")
+        good["sources"].append(first.observation_id)
+        self.runtime.command(good)
+        result = self.settled(good["request_id"])
+        self.assertEqual(result["state"], "partial", result)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+
     def test_fresh_metadata_errors_preserve_scope_and_new_corrected_id_executes(self):
         root, _ = self.native_choices()
         last = None
@@ -263,6 +376,16 @@ class LifecycleBindingTests(MissionCreationFixture, unittest.TestCase):
         self.assertIs(self.runtime._registered_lifecycle.phase, phase)
         self.assertIs(self.runtime._lease, lease)
         self.assertEqual(self.bridge.delivered, delivered)
+        self.assertNotIn(self.runtime._current.observation_id, self.runtime._bindings)
+        bad_extra = self.control('bad-extra', 'Yes', parent=root, question=question)
+        bad_extra['sources'].append('unpublished-source')
+        spent = self.runtime.status()['spent_inputs']
+        result = self.run_request(bad_extra)
+        self.assertIn('historical support belongs in memory', result['result']['reason'])
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(self.bridge.delivered, delivered)
+        self.assertEqual(self.runtime.status()['spent_inputs'], spent)
         corrected = self.run_request(self.control('new-boundary', 'Yes', parent=root, question=question))
         self.assertEqual(corrected['state'], 'partial', corrected)
         self.assertEqual(self.runtime._ledger.request(root)['deadline'], deadline)
@@ -297,6 +420,17 @@ class ActivityBindingTests(unittest.TestCase):
         self.assertIs(self.runtime._registered_activity.phase, phase)
         self.assertIsNone(self.runtime._lease)
         self.assertEqual(self.bridge.delivered, delivered)
+        self.assertNotIn(self.runtime._current.observation_id, self.runtime._bindings)
+        bad_extra = self.control('activity', {**self.goal, 'step': 'answer_interrupt', 'answer': 'YES',
+            'interrupt_request_id': phase.interrupt_id}, phase_id='rest-root', request_id='bad-extra-answer')
+        bad_extra['sources'].append('unpublished-source')
+        spent = self.runtime.status()['spent_inputs']
+        self.runtime.command(bad_extra)
+        result = self.settled('bad-extra-answer')
+        self.assertIn('historical support belongs in memory', result['result']['reason'])
+        self.assertIs(self.runtime._registered_activity.phase, phase)
+        self.assertEqual(self.bridge.delivered, delivered)
+        self.assertEqual(self.runtime.status()['spent_inputs'], spent)
         answer = self.recovery('answer_interrupt', identity='corrected-answer')
         self.assertEqual(answer['state'], 'partial', answer)
         self.assertFalse(self.runtime._registered_activity.phase.needs_observation)

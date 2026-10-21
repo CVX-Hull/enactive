@@ -237,6 +237,16 @@ class NativeProcessTests(unittest.TestCase):
                     self.launch()
         self.popen.assert_not_called()
 
+    def test_launch_rejects_wrapper_missing_background_focus_controls(self):
+        for hint in ("SDL_MAC_BACKGROUND_APP=1", "SDL_WINDOW_NO_ACTIVATION_WHEN_SHOWN=1"):
+            with self.subTest(hint=hint):
+                configured = wrapper_source(self.root)
+                self.assertIn(hint, configured)
+                self.wrapper.write_text(configured.replace(hint, ""))
+                with self.assertRaisesRegex(NativeProcessError, "wrapper"):
+                    self.launch()
+        self.popen.assert_not_called()
+
     def test_wrapper_byte_and_executable_limits(self):
         for content in (b"x" * (16 * 1024 + 1), b"\xff"):
             self.wrapper.write_bytes(content)

@@ -1527,10 +1527,24 @@ class MissionRuntime:
         if data["perception"] is not None and data["perception"]["source_id"] != current.observation_id:
             return None
         observed = self._store.observation(current)
-        if ((data["expected_session"], data["expected_revision"], data["expected_boundary_id"]) ==
-                (current.session, current.revision, observed["boundary"]["id"])):
+        metadata_mismatch = ((data["expected_session"], data["expected_revision"], data["expected_boundary_id"]) !=
+                             (current.session, current.revision, observed["boundary"]["id"]))
+        current_entry = self._bindings.get(current.observation_id)
+        authority_fields = ("mission_id", "epoch", "actor_id", "controller_boot_id",
+                            "pause_generation", "takeover_generation")
+        incompatible_support = any(
+            identity != current.observation_id and (current_entry is None or identity not in self._bindings or
+                any(getattr(self._bindings[identity][1], field) != getattr(current_entry[1], field)
+                    for field in authority_fields)) for identity in data["sources"])
+        if not metadata_mismatch and not incompatible_support:
             return None
 
+        # A bad extra source must not conceal loss of another retained source,
+        # including historical evidence whose live binding has been cleared.
+        retained = {ref.observation_id: ref for ref in self._store.historical_references}
+        for identity in data["sources"]:
+            if identity in retained and self._store.source_status(retained[identity]) != "retained":
+                raise EvidenceError("Inconsistent request cannot bypass disputed supporting evidence")
         self._check_cancelled(work)
         ledger = self._ledger.snapshot(now=self._wall())
         counts = self._ledger.measured_counts()["primitives"]
@@ -1570,7 +1584,9 @@ class MissionRuntime:
                 return None
             self._registered_activity.guard(work, phase)
         else:
-            self._informing(data)
+            # Guard only: never dispatch this projection or rewrite the retained
+            # request. The corrected new request must pass every ordinary guard.
+            self._informing({**data, "sources": [current.observation_id]})
             self._prompt_guard(data, current)
             work.game_anchor = current if current.boundary_kind == "normal_play" else self._last_normal()
             self._dispatch_guard(work, current)
@@ -1583,7 +1599,10 @@ class MissionRuntime:
         if image_informed and self.controller._frame_sha256(actual) != current.frame_sha256:
             raise EvidenceError("Inconsistent request cannot bypass changed native pixels")
         self._check_cancelled(work)
-        return {"reason": "Skill request session, revision or boundary differs from its cited immutable source. "
+        reason = ("Additional informing sources do not belong to the current actor and authority; "
+                  "historical support belongs in memory. " if incompatible_support else
+                  "Skill request session, revision or boundary differs from its cited immutable source. ")
+        return {"reason": reason +
                     "No input or refresh was attempted; read the source and submit a new corrected request ID.",
                 "source_ids": [current.observation_id], "grants_authority": False}
 

@@ -46,13 +46,18 @@ Historical artifacts are retained as evidence without being accepted as runtime 
 The [overview](overview.md) provides the user-facing system picture. One local
 macOS game and one controller are supported. Prepared keyboard-driven launch
 requires project-local `ENABLE_MOUSE=false` and `FULLSCREEN=no`; native-image
-validation and keyboard/user Pause remain unchanged. The designated active Codex player
+validation and keyboard/user Pause remain unchanged. The wrapper requests SDL
+background startup without activating the shown window, so launch should leave
+the user's typing in their current app. These are child-process hints, not global
+Mac settings; direct OS focus telemetry is not exposed by the harness.
+The designated active Codex player
 chooses plans, interprets visible outcomes and requests bounded semantic operations.
 It uses the single [mission ingress](protocol.md#integrated-mission-lifecycle).
 The lead owns admission, source integration and final verification. The user retains
 Pause and native takeover. Role assignment is procedural, not operating-system isolation.
 
-An eligible request's internally inconsistent source metadata returns blocked
+An eligible request's internally inconsistent source metadata or invalid extra
+informing-source selection returns blocked
 before phase mutation or native refresh. Its original limits and authority stay
 unchanged; real authority/evidence faults still stop. The
 [binding contract](protocol.md#skill-request-binding-errors) defines this narrow

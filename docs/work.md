@@ -103,6 +103,16 @@ owns the bounded API repair. [#144](https://github.com/CVX-Hull/enactive/issues/
 retains concise closure/costs; no old run resumes. [#169](https://github.com/CVX-Hull/enactive/issues/169)
 tracks development-first workflow activation and maintenance.
 
+Later independent012 reached ordinary play on the background/windowed launcher
+without a recorded takeover, then stopped after an extra informing source from a
+closed pickup phase revoked its lease. [#162](https://github.com/CVX-Hull/enactive/issues/162)
+owns the narrow draft-versus-authority repair: preserve a healthy current scope
+only after all original eligibility and retained-evidence checks, then require an
+explicit corrected request. Real authority/storage/budget faults still stop. The
+failed run is closed with costs and exceptional cleanup retained in #144; no
+normal ending or integrated outcome is claimed. Another finite full mission is
+required. Launch focus hints are scoped child settings, not global Mac changes.
+
 The [development-first workflow](project-management.md#development-first-delivery)
 now distinguishes targeted development runs from formal acceptance. The next
 meaningful integration checkpoint remains the complete mission below; repeated

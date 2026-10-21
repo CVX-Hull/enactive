@@ -352,14 +352,25 @@ persisted format, alternate executor or compatibility path. Review it with contr
 or phase-summary changes; real-component tests detect drift. Replace it if maintained
 upstream composition tooling fills this concrete gap at lower maintenance cost.
 
-The writer checks an internally inconsistent expected triple before adapter
-mutation or refresh only when the cited current source is exact and available,
+The writer checks an internally inconsistent expected triple or additional
+informing sources outside the current actor/authority before adapter mutation
+or refresh only when the cited current source is exact and available,
 and any explicit perception names that same source. Existing read-only ownership,
 authority, original budget and integrity fences must still pass. Then it records
 plain blocked without Observe, rotation, reservation or input, retaining the
 original phase/checkpoint, lease/epoch and deadlines. It never substitutes fields
 or certifies freshness. Same-ID results are immutable; a new corrected request
 traverses every normal guard. Request counts and elapsed time remain spent.
+Additional skill sources must share the current mission, actor, epoch, controller
+boot, host Pause generation and native takeover generation. Older observations
+within that authority may support a transition; historical sources from an earlier
+phase belong in memory/Work instead. Private lifecycle/paused-activity skill
+checkpoints without a live source binding accept only their exact current source;
+specialized lifecycle transition proofs retain their separate typed requirements.
+Unknown additional IDs are draft errors, but
+all known retained cited sources are checked for integrity/dispute before any local
+refusal. This never drops a source from an executed request: a current-only copy
+is used solely to prove live eligibility for rejecting the original draft.
 
 Actual Pause/takeover, unsettled delivery, wrong ownership, missing/disputed source
 or exhausted budgets retain their existing stops. Frameless activity states that
