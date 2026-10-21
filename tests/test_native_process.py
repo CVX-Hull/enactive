@@ -68,6 +68,8 @@ class NativeProcessTests(unittest.TestCase):
         state = self.launch()
         self.popen.assert_called_once_with([str(self.wrapper)], cwd=self.root,
             stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        self.assertIn("export SDL_MAC_BACKGROUND_APP=1 SDL_WINDOW_NO_ACTIVATION_WHEN_SHOWN=1\n",
+                      self.wrapper.read_text())
         self.pgrep.assert_called_once_with(["/usr/bin/pgrep", "-x", "cataclysm-tiles"],
             capture_output=True, text=True, check=False, timeout=1.0)
         self.assertTrue(state["running"])

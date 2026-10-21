@@ -269,6 +269,13 @@ project userdir, alongside `FULLSCREEN=no`. Owned launch rejects missing, duplic
 or enabled mouse options. This prevents native menu hover from silently changing
 selection between exact captures. Keyboard takeover and browser Pause remain;
 no global input preference or image-validation rule changes.
+The fixed wrapper also exports `SDL_MAC_BACKGROUND_APP=1` and
+`SDL_WINDOW_NO_ACTIVATION_WHEN_SHOWN=1` only to its child. These existing SDL2
+hints prevent startup from activating the application/window; the game remains
+windowed and observable. Deliberate native focus/keyboard takeover still revokes
+harness authority. [SDL macOS background hint](https://wiki.libsdl.org/SDL2/SDL_HINT_MAC_BACKGROUND_APP)
+and [window-show hint](https://wiki.libsdl.org/SDL2/SDL_HINT_WINDOW_NO_ACTIVATION_WHEN_SHOWN)
+own library semantics; actual host focus preservation needs a real launch check.
 
 For fast development checkpoints, `.githooks/pre-commit` runs
 `.venv/bin/python tools/check.py --fast`: syntax/lint, import contracts, JS syntax,
