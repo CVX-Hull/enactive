@@ -93,6 +93,28 @@ Routine gameplay keeps zero human/automatic approval-review round trips. The lea
 owns engineering and observes; development labeling does not authorize tactical
 rescue or make assisted evidence independent.
 
+### Efficient discovery
+
+Optimize for useful uncertainty resolved and capability progress per unit of work.
+Use the cheapest relevant check first: producer source/configuration, a focused
+real-component reproduction, then finite native exploration and the integrated
+outcome. For example, registered action names do not prove default key bindings;
+inspect the engine's existing bindings before spending another creation cycle.
+Batch related unknown capabilities into a coherent development admission where
+possible. A traceable failure can guide the next experiment without a fresh full
+suite or report package. The player uses supported replanning/recovery while its
+scope remains eligible; unknown delivery or lost authority never permits replay.
+
+Retain the starting basis, source/configuration, intent, observations, delivery and
+semantic outcome, costs, interventions and finding disposition in the existing
+admission/ledger/archive/Git/Issues. Show the maintainer a small coverage/findings
+summary with links to those records; do not build a second history or tracker.
+Current normal checkpoint reload is limited to its own mission's proven save.
+[Cross-admission development checkpoint reuse #175](https://github.com/CVX-Hull/enactive/issues/175)
+is proposed work, not permission to restore old authority or roll back a run.
+Source repairs still require closure and a new finite admission; exploratory
+evidence keeps its declared conditions and does not become a fresh assessment.
+
 ### Evidence and documentation cadence
 
 Use the existing issue, immutable admission, ledger and archive. A development
@@ -143,6 +165,51 @@ unmeasured model effort stays unknown. Do not impose a numerical performance quo
 from a single run. Simplify or retire a step whose cost is not justified by defects
 it catches; strengthen a targeted check when evidence warrants it. The lead owns
 this review under existing event/date triggers, without another scheduler or tracker.
+
+## Review by decision and risk
+
+Name the decision and uncertainty a review should resolve, then choose the smallest
+useful set of perspectives and an inspectable artifact. A review should enable the
+next safe experiment or expose a concrete blocker. Do not ask every role to review
+every change, require consensus, or repeat a full review of unchanged material.
+
+| Trigger / artifact | Useful review and timing |
+| --- | --- |
+| Small mapping/bug fix with unchanged boundaries | Lead inspection and relevant regressions; native qualification as applicable. Include it in coherent integration review; no automatic product/architecture swarm before development. |
+| New input/ownership/persistence/schema/learning boundary | Independent architecture/risk review of the brief and alternatives before implementation commitment. Reversible isolated probes may inform that design within their declared controls. |
+| New player capability or observer workflow | Product/player or observer perspective on goals, acceptance and a working flow, diagram or prototype. Validate actual usability later; an agent persona is not a real user study. |
+| New memory/adaptation policy or consequential literature claim | Research/evidence perspective checks prior documents, primary support, transfer limits, conflicts and functional-versus-efficacy claims. No fresh full survey for each leaf fix. |
+| Permissions, external access or isolation change | Focused security/operations review at that boundary. This is not gameplay strategy review or a critic/approval per key. |
+| Integrated acceptance/publication | Independent outcome/evidence and maintainability review against original requirements, source/configuration and failure/unknown receipts. Full checks and protected publication remain. |
+
+For maintainer-facing design review, lead with the user outcome, a small boundary
+diagram when useful, important alternatives/tradeoffs, open decisions and evidence
+limits. Link implementation detail rather than requiring the user to audit it.
+Review the actual working flow again at integration when implementation reveals
+new information; the earlier design review is not a promise that the design is right.
+
+For consequential work, two or three clean-context reviewers may work in parallel
+on distinct questions, such as product outcome, player/observer experience and
+architecture/research. Use the named reviewer role with an explicit lens, source
+paths, decisions already made, user constraints and acceptance questions. These
+are proxy perspectives, not delegated product authority. The lead owns decisions
+and verifies findings against evidence; the user decides actual product tradeoffs
+when needed. Avoid identical prompts or a committee of overlapping approvals.
+
+Report concrete findings with source, impact, uncertainty and what would resolve
+them. Adjudicate material findings before the affected commitment; track other
+owned work without blocking unrelated exploration. Re-review changed boundaries
+or new contrary evidence, not the entire project after each edit. Stop reviewing
+when evidence is adequate for the next stage and material findings are resolved;
+unresolved required checks remain explicit blockers, never a green badge.
+
+Record selection, findings/dispositions and known review effort in the existing
+Issue/PR. At meaningful checkpoints compare useful progress, escaped defects,
+false alarms and review/coordination cost; simplify or strengthen controls from
+those observations. Reuse C-REVIEW, CI and current issue workflow. No new review
+tracker, mandatory per-feature swarm, recurring date reset or routine gameplay
+approval follows. The lead may review the tightly coupled change itself when
+delegating would add little; independent acceptance remains separate.
 
 ## Work items and flow
 

@@ -45,6 +45,12 @@ logic independent of HTTP and build tooling. Explain consequential alternatives,
 maintenance cost and reversal triggers in a brief/ADR. Review boundary changes
 before implementation; keep current architecture synchronized afterward.
 Apply S-CODE's reuse review to infrastructure and architectural tool choices.
+Cross-check consequential input, memory, learning and autonomy changes against
+prior architecture, contracts, research and actual campaign findings. Record what
+is retained, changed or in conflict, source applicability limits and unverified
+assumptions in the existing brief/design. C-REVIEW checks that crosswalk; links alone
+do not establish agreement or research currency. Keep current behavior distinct
+from proposals and retire superseded guidance when implementation changes.
 Controls: C-BOUNDARY, C-REVIEW, C-GOVERNANCE.
 
 ## S-PROTOCOL Command and observation authority

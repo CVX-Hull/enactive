@@ -112,6 +112,13 @@ explicit corrected request. Real authority/storage/budget faults still stop. The
 failed run is closed with costs and exceptional cleanup retained in #144; no
 normal ending or integrated outcome is claimed. Another finite full mission is
 required. Launch focus hints are scoped child settings, not global Mac changes.
+Independent013 then acquired a ration, completed four navigation steps including
+a two-step return, and waited30game minutes in shelter before consume inspection
+selected an unbound engine action. The player stopped autonomously; normal ending,
+correction and successor remain unfulfilled. [#174](https://github.com/CVX-Hull/enactive/issues/174)
+owns the consume-selector mapping; #144 retains its costs and ordered exceptional
+closure. [#175](https://github.com/CVX-Hull/enactive/issues/175) owns the proposed
+development-start checkpoint gap. Neither finding resumes a failed attempt.
 
 The [development-first workflow](project-management.md#development-first-delivery)
 now distinguishes targeted development runs from formal acceptance. The next
@@ -119,6 +126,13 @@ meaningful integration checkpoint remains the complete mission below; repeated
 menu failures retain short findings and raw artifacts without a full new review/CI
 cycle before every attempt. Full qualification and protected main remain required
 for acceptance, with all original outcomes unchanged.
+
+The [organic-discovery proposal](design/organic-discovery.md) cross-checks prior
+architecture/research and distinguishes current support from future changes.
+[Mixed primitive/skill control #176](https://github.com/CVX-Hull/enactive/issues/176)
+owns the input design; [player-learned procedures #177](https://github.com/CVX-Hull/enactive/issues/177)
+owns the separate functional memory/abstraction baseline. Neither is a claim of
+current autonomy or a requirement to adopt optional training/curator infrastructure.
 
 ## Selected independent-player iteration
 
