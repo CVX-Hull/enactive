@@ -395,11 +395,14 @@ def validate_prompt_result(value: dict, *, request: dict, root: dict, actor_id: 
             or root["mission_id"] != request["mission_id"]):
         raise ContractError("Prompt receipt contradicts its immutable root, actor or epoch")
     if request["kind"] == "observe":
-        activity_observation = (not lifecycle and data["phase_kind"] == "activity"
-                                and data["stage"] in ("activity_poll", "awaiting_control", "interrupt_confirmation", "awaiting_readmission", "complete"))
+        activity_observation = (not lifecycle and (
+            data["phase_kind"] in ("activity", "item", "inspect", "interact")
+            and data["stage"] in ("activity_poll", "awaiting_control", "complete")
+            or data["phase_kind"] == "activity"
+            and data["stage"] in ("interrupt_confirmation", "awaiting_readmission")))
         if (lifecycle and data["stage"] == "complete"
                 or not lifecycle and not activity_observation and data["stage"] != "complete"):
-            raise ContractError("Observe may only close an ordinary prompt")
+            raise ContractError("Observe requires ordinary completion or supported owned activity progress")
     elif request["kind"] not in (("skill", "lifecycle") if lifecycle else ("skill",)) or (
             request["request_id"] != root["request_id"] and request["phase_id"] != root["request_id"]):
         raise ContractError("Prompt result lost its root/child request correlation")

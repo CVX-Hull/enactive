@@ -1,7 +1,10 @@
 """Synthetic item/inspection composition; no native inventory acceptance claim."""
 import copy
+import time
 import unittest
+from unittest.mock import patch
 
+from harness.gameplay.mission_ledger import MissionLedger
 from tests import test_mission_runtime as runtime_fixtures
 
 
@@ -83,6 +86,128 @@ class MissionItemTests(unittest.TestCase):
             purpose=purpose, label="Count", visible_text=self.bridge.editor_text, whole_value=True, focused=True)
         return self.control("edit", dict(purpose=purpose, text=text, commit=commit),
             phase_id="water-root", perception=view, request_id=request_id)
+
+    def begin_consumption_activity(self):
+        self.bridge.value["actions"].append("eat")
+        self.start()
+        normal = copy.deepcopy(self.bridge.value["scene"])
+        self.consume_return = False
+        def behavior(bridge, request):
+            action = request.get("action")
+            if action == "eat":
+                self.inventory()
+            elif action == "CONFIRM":
+                bridge.value.update(category="DEFAULTMODE", scene=None, ui=None, actions=[])
+                bridge.value["boundary"].update(kind="activity_poll", id="consume-poll",
+                    recovery_operations=["request_interrupt"])
+            elif request["kind"] == "observe" and bridge.value["boundary"]["kind"] == "activity_poll":
+                if self.consume_return:
+                    bridge.value["revision"] += 1
+                    self.inventory()
+                    bridge.value["boundary"]["recovery_operations"] = []
+            elif action == "QUIT":
+                bridge.value.update(category="DEFAULTMODE", scene=normal, ui=None, actions=["eat"])
+                bridge.value["boundary"].update(kind="normal_play", id="consume-return", recovery_operations=[])
+            return True
+        self.bridge.behavior = behavior
+        goal = dict(purpose="consume", label="ration", quantity=1, quantity_unit="items",
+            step="start", outcome="consumed")
+        self.assertEqual(self.send(self.control("item", goal, request_id="consume-root"))["state"], "partial")
+        source = self.runtime.status()["current_source"]["observation_id"]
+        view = dict(kind="item_selection", basis="player_interpretation", source_id=source,
+            control="vertical", mode="single", rows=[dict(label="ration", enabled=True,
+            available_quantity=1, quantity_unit="items", chosen_quantity=None)], selected=0,
+            selection_coverage="all_selected", selected_items=[])
+        selected = self.send(self.control("item", {**goal, "step": "select"}, phase_id="consume-root",
+            perception=view, request_id="consume-selection"))
+        self.assertEqual(selected["result"]["phase"]["stage"], "activity_poll", selected)
+
+    def observe_consumption(self, request_id="consume-observation"):
+        self.assertEqual(self.runtime.command(self.request("observe", request_id=request_id))["status"], "accepted")
+        return self.settled(request_id)
+
+    def test_consumption_poll_return_and_explicit_control_keep_original_root(self):
+        self.begin_consumption_activity()
+        original = self.runtime._ledger.request("consume-root")
+        before, delivered = self.runtime.status()["spent_inputs"], copy.deepcopy(self.bridge.delivered)
+        polling = self.observe_consumption("consume-progress")
+        self.assertEqual(polling["state"], "completed", polling)
+        self.consume_return = True
+        result = self.observe_consumption()
+        self.assertEqual(result["state"], "completed", result)
+        self.assertEqual(polling["result"]["phase"]["stage"], "activity_poll")
+        self.assertEqual(result["result"]["phase"]["phase_kind"], "item")
+        self.assertEqual(result["result"]["phase"]["origin_request_id"], "consume-root")
+        self.assertEqual(result["result"]["phase"]["stage"], "awaiting_control")
+        self.assertTrue(result["result"]["verification_required"])
+        self.assertFalse(result["result"]["grants_authority"])
+        self.assertEqual(self.runtime._prompt_phase.root_id, "consume-root")
+        self.assertEqual(self.runtime.status()["spent_inputs"], before)
+        self.assertEqual(self.bridge.delivered, delivered)
+        self.assertEqual(self.observe_consumption("consume-menu-refresh")["state"], "completed")
+        source = self.runtime.status()["current_source"]["observation_id"]
+        closed = self.send(self.control("menu", dict(purpose="Close consume selector", label="Cancel", outcome="dismissed"),
+            phase_id="consume-root", request_id="consume-close", perception=dict(kind="dismissal",
+                basis="player_interpretation", source_id=source, question="Consume item")))
+        self.assertEqual(closed["result"]["phase"]["stage"], "complete", closed)
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime.status()["spent_inputs"], before+1)
+        self.assertEqual(self.runtime._ledger.request("consume-root"), original)
+        self.assertFalse([r for r in self.runtime._ledger.memory_records("claim")
+            if r["entry"]["key"]["property"] == "supply"])
+        directory = self.runtime._ledger.path.parent
+        self.runtime.close()
+        with MissionLedger(directory, now=time.time()) as reopened:
+            self.assertEqual(reopened.request("consume-observation"), result)
+            self.assertEqual(reopened.snapshot(now=time.time())["phase"], "paused")
+
+    def test_consumption_observe_cannot_cross_native_control_generation(self):
+        self.begin_consumption_activity()
+        self.consume_return = True
+        self.bridge.value["boundary"]["control_generation"] += 1
+        before = copy.deepcopy(self.bridge.delivered)
+        result = self.observe_consumption()
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertIn("control", result["result"]["reason"])
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertIsNone(self.runtime._lease)
+        self.assertEqual(self.bridge.delivered, before)
+
+    def test_consumption_observe_uses_original_deadline_without_new_input(self):
+        self.begin_consumption_activity()
+        deadline = self.runtime._ledger.request("consume-root")["deadline"]
+        before = len(self.bridge.requests)
+        with patch.object(self.runtime, "_wall", return_value=deadline):
+            result = self.observe_consumption()
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertIsNone(self.runtime._lease)
+        self.assertEqual(len(self.bridge.requests), before)
+
+    def test_user_pause_wins_during_consumption_observation(self):
+        self.begin_consumption_activity()
+        self.consume_return = True
+        observe = self.runtime._observe_native
+        def paused(work, **kwargs):
+            value = observe(work, **kwargs)
+            self.runtime.pause("User Pause during item activity", cause="user")
+            return value
+        with patch.object(self.runtime, "_observe_native", side_effect=paused):
+            result = self.observe_consumption()
+        self.assertEqual(result["state"], "paused", result)
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertIsNone(self.runtime._lease)
+
+    def test_item_activity_cannot_borrow_a_typed_activity_root(self):
+        self.begin_consumption_activity()
+        phase, before = self.runtime._prompt_phase, copy.deepcopy(self.bridge.delivered)
+        poll = self.control("activity", dict(operation="rest", target="rest", game_seconds=300,
+            interrupt_allowed=True, step="poll", answer=None, interrupt_request_id=None),
+            phase_id="consume-root", request_id="borrowed-activity-poll")
+        result = self.runtime.command(poll)
+        self.assertEqual(result["status"], "rejected", result)
+        self.assertIn("immutable root goal", result["reason"])
+        self.assertIs(self.runtime._prompt_phase, phase)
+        self.assertEqual(self.bridge.delivered, before)
 
     def test_pickup_count_edit_fresh_commit_and_effect_verification_share_root(self):
         self.open_items()

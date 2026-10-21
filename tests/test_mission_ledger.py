@@ -231,6 +231,22 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(self.ledger.request("request-1")["result"]["phase"], root)
         self.assertEqual(self.ledger.request("observe")["result"]["phase"], closed)
 
+    def test_item_observation_progress_does_not_grant_activity_recovery_stages(self):
+        root = phase_skill("item")
+        self.active_request(root)
+        phase = self.prompt_receipt(phase_kind="item", operation=root["goal"]["purpose"], stage="activity_poll")
+        self.ledger.complete_request("request-1", "partial", {"phase": phase}, now=1002)
+        self.ledger.begin_request(request("observe", request_id="observe"), now=1003)
+        for stage in ("interrupt_confirmation", "awaiting_readmission"):
+            with self.subTest(stage=stage), self.assertRaises(ContractError):
+                self.ledger.complete_request("observe", "completed", {"phase": phase | {"stage": stage}}, now=1004)
+        returned = phase | {"stage": "awaiting_control"}
+        self.ledger.complete_request("observe", "completed", {"phase": returned}, now=1004)
+        state = self.reopen(now=1005).snapshot(now=1005)
+        self.assertEqual(self.ledger.request("observe")["result"]["phase"], returned)
+        self.assertEqual(state["phase"], "paused")
+        self.assertFalse(state["grants_authority"])
+
     def test_navigation_prompt_controls_and_closing_observe_reopen_without_authority(self):
         self.active_request(skill())
         receipt = self.prompt_receipt(phase_kind="navigate", operation="navigate")

@@ -528,14 +528,25 @@ ceiling. Phase receipts name their actual kind/operation and restore no authorit
 A refused later proposal cannot erase an earlier delivered edit; partial effects
 still need interpretation.
 
-An activity root opens ordinary wait/sleep/craft controls. At an owned activity
-poll, a typed poll or Observe performs one deadline-bounded observation without
-input or Resume. Session, actor, epoch, operator, takeover and control generations
+An activity root opens ordinary wait/sleep/craft controls. Item, inspection or
+interaction roots may also enter an ordinary native activity after their own
+attributed input, such as consuming an item. At a retained owned activity poll,
+Observe performs one deadline-bounded observation without input or Resume;
+typed activity polls remain restricted to their original activity root and goal.
+Session, actor, epoch, operator, takeover and control generations
 must remain unchanged. Fresh progress, a native output menu or normal return may
-advance its checkpoint; ordinary input is still unavailable at a poll. Normal
+advance its checkpoint; ordinary input is still unavailable at a poll. A returned
+menu retains the original root kind, Work, game anchor and limits and requires
+fresh player interpretation through that root's existing explicit controls. It
+does not permit another root, arbitrary menu adoption or automatic answers.
+Normal
 return closes the phase but proves neither sleep duration nor completed Work.
 Retain observed root/child/mission budget overshoot and actual effects. No polling
 call renews original deadlines or claims unseen elapsed game time.
+These existing PhaseReceipt stages now settle and reopen coherently for the
+supported owned roots; no field, enum, persisted shape or native/tool version
+changes. Navigation activity support remains outside this contract. Historical
+failed observations remain failures; no private phase is restored on reopen.
 
 Trusted Python `recover_mission` supplies exact six-field transport receipts for
 paused activity interruption and its owned answer, without operator-Pause renewal,

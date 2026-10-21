@@ -228,6 +228,20 @@ Known checkpoint-source loss, authority faults and original limits still stop.
 This is source behavior under verification, not implemented organic learning or
 accepted full gameplay; #176/#177/#178 retain that separate roadmap.
 
+Independent023 then reached reported supplies, navigation/replanning, correction,
+1800 seconds sheltered rest and responsive ration care. Its item-consume root
+entered a native activity, then Observe returned the consume menu; dispatch only
+supported activity roots, so the ordinary observer refused the new menu and
+stopped. The actor permanently quiesced; exact owned child termination preceded
+controller exit, all341 PNG signatures/hashes verified and files preserved.
+It is failed/closed:133charges (132returned,1unknown),87requests and1807canonical
+game seconds. No successor or normal ending is accepted; partial outcomes still
+need independent evidence audit. All001–023 retain1468charges/982requests.
+#139/#141/#144 own reuse of the guarded owned-activity observation path for
+item/inspection/interaction roots, preserving original control ownership and
+limits. Existing receipt validation must change with dispatch and reopen tests;
+no screen-specific parser, automatic answer or failed-run renewal follows.
+
 The [development-first workflow](project-management.md#development-first-delivery)
 now distinguishes targeted development runs from formal acceptance. The next
 meaningful integration checkpoint remains the complete mission below; repeated

@@ -708,8 +708,7 @@ class MissionRuntime:
             return {"source_ids": [phase.checkpoint.observation_id], "phase": self._exit_receipt(phase, "awaiting_control"),
                 "lifecycle_needed": True, "grants_authority": False}
         phase = self._prompt_phase
-        if (phase is not None and phase.checkpoint.boundary_kind == "activity_poll"
-                and self._ledger.request(phase.root_id)["request"].get("skill_kind") == "activity"):
+        if phase is not None and phase.checkpoint.boundary_kind == "activity_poll":
             return self._poll_activity(work)[1]
         prior = None if phase is None else self._bindings.get(phase.checkpoint.observation_id)
         self._capacity()
@@ -791,9 +790,11 @@ class MissionRuntime:
         if phase is None:
             raise ControlError("Activity poll requires its live root phase")
         root = self._ledger.request(phase.root_id)
-        if root["request"].get("skill_kind") != "activity" or phase.checkpoint.boundary_kind != "activity_poll":
+        if phase.checkpoint.boundary_kind != "activity_poll":
             raise ControlError("Activity poll requires its actual owned activity boundary")
         if data["kind"] == "skill":
+            if root["request"].get("skill_kind") != "activity":
+                raise ControlError("Typed activity polling requires its original activity root; use Observe for other owned activities")
             self._prompt_guard(data, phase.checkpoint)
             observed = self._store.observation(phase.checkpoint)
             if (phase.checkpoint != self._current or phase.checkpoint.observation_id not in data["sources"]
