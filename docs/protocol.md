@@ -372,6 +372,13 @@ the stale-boundary failure that motivated this change; it cannot resume.
 failed before the declared probe after omitting the direct identity root. It cannot
 resume either; pure producer tests do not replace a new finite native qualification.
 
+Prompt-opening inspection/item/activity roots require room for opening and return:
+limits below two primitives return a correctable zero-input refusal, without
+creating a phase or renewing any allowance. Allocate the finite whole-phase cap
+for all controls, verification and return (normally up to32); it is a ceiling,
+not an upfront charge. Existing lifecycle roots separately include Resume and all
+children. This minimum is not a guarantee that a larger task fits its chosen cap.
+
 Semantic menu dismissal selects exactly one action by captured context:
 `STRING_INPUT` → `TEXT.QUIT`, `UILIST` → `UILIST.QUIT`,
 `WORLDGEN_CONFIRM_DIALOG` → `WORLDGEN_CONFIRM.QUIT`, otherwise the existing `QUIT`.

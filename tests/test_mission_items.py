@@ -165,7 +165,20 @@ class MissionItemTests(unittest.TestCase):
                 bridge.value["boundary"].update(kind="normal_play", id="inspection-return")
             return True
         self.bridge.behavior = behavior
-        root = self.control("inspect", dict(purpose="inventory"), request_id="inspect-inventory")
+        rejected = self.control("inspect", dict(purpose="inventory"), request_id="unusable-inspection-budget",
+            limits=dict(primitives=1, wall_seconds=120, game_seconds=1200))
+        lease, epoch = self.runtime._lease, self.runtime.status()["epoch"]
+        refused = self.send(rejected)
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertEqual(refused["result"]["proposals"], 0)
+        self.assertIn("whole phase", refused["result"]["reason"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 0)
+        self.assertEqual(self.runtime.status()["epoch"], epoch)
+        self.assertIs(self.runtime._lease, lease)
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertFalse(any(r.get("action") == "inventory" for r in self.bridge.delivered))
+        root = self.control("inspect", dict(purpose="inventory"), request_id="inspect-inventory",
+            limits=dict(primitives=2, wall_seconds=120, game_seconds=1200))
         opened = self.send(root)
         self.assertEqual(opened["state"], "partial", opened)
         self.assertEqual(opened["result"]["phase"]["phase_kind"], "inspect")

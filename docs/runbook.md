@@ -417,6 +417,13 @@ separates implemented components from remaining independent-play acceptance.
    Normal cleanup, actual fresh-context
    replacement and full mission acceptance are separately required.
 
+Allocate root limits for the entire phase: normal prompt-opening roots normally
+use the existing32-primitive ceiling, with room for all child selections/editing,
+verification and return; lifecycle setup uses its prospective whole-phase preset.
+One opening input is not the whole inspection. Limits spend only actual admitted
+primitives. Child limits can narrow their root, never enlarge it. Zero-input local
+budget refusals permit a new corrected request; exhausted live roots remain stopped.
+
 The lead owns source/integration/admission and verification. The deciding player
 owns ordinary tactics and supported lifecycle; source faults or unsupported required
 capabilities stop the attempt with evidence instead of inviting engineering rescue.

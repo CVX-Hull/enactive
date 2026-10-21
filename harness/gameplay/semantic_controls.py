@@ -83,6 +83,12 @@ class SemanticControlSkill:
 
     def _root_action(self) -> str:
         data = self._request
+        if (data["phase_id"] is None and data["skill_kind"] in ("inspect", "item", "activity")
+                and data["limits"]["primitives"] < 2):
+            raise _ControlBlocked("A prompt-opening root needs at least two primitives for opening and return. "
+                "Allocate for the whole phase, including all children (normally up to32), not only the opening key. "
+                "No input was dispatched; submit a new request with a sufficient finite limit. "
+                "The limit is a ceiling, not an upfront charge")
         if data["skill_kind"] == "interact": return data["goal"]["action"]
         if data["skill_kind"] == "item":
             if data["goal"]["purpose"] == "consume" and data["goal"]["quantity"] != 1:
