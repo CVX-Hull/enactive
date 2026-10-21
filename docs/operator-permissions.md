@@ -146,7 +146,7 @@ does not retroactively invalidate their recorded gameplay or renew allowances.
 Native guards, user Pause, recovery eligibility and campaign limits still apply.
 Setup, source changes, publication and unrelated commands have separate scope.
 
-### Current review-free execution gap
+### Historical execution gap and current scoped verification
 
 Independent004's fresh successor initially reached automatic approval review on a
 literal passive status call. Review rejected it as unrelated work; the same action
@@ -172,8 +172,10 @@ source/fixture support for typed submission, result collection and actual retain
 images. Its [project setup recipe](setup.md#configure-the-structured-player-tools)
 configures only the named MCP tools with per-server `approve` behavior. The official
 SDK owns stdio framing; the same mission ingress still owns execution. Actual
-host loading and the initial player's representative workflow are now exercised
-below; full fresh-successor and normal save/reload coverage remain open. This is
+host loading and the initial player's representative workflow were exercised
+below. The later [independent024 primary/successor result](acceptance/2026-10-21-independent-supply-shelter.md)
+adds actual fresh-context memory and normal save/reload/Finish coverage with no
+visible routine review events; hidden host telemetry remains unavailable. This is
 an explicitly configured integration under the
 standing authorization, after the old denial was resolved on its original path;
 it is not an alternate route for a pending denied action. Source checks or a CLI
@@ -200,8 +202,10 @@ verified actual-player live access twice against the final controller, then owne
 creation, semantic actions, result/image presentation, supported memory and Stop
 through the preapproved tools without visible review events. That mission failed
 at a semantic distraction-dialog gap, not an approval request. Invisible host
-telemetry remains unavailable; actual fresh-successor and normal ending paths
-still require verification. Engineering setup/publication/tests and exceptional
+telemetry remains unavailable. The later
+[independent024 result](acceptance/2026-10-21-independent-supply-shelter.md) verifies
+actual fresh-successor and normal-ending use without visible routine reviews;
+it supplies no hidden-host telemetry or universal guarantee. Engineering setup/publication/tests and exceptional
 teardown are separate from the routine gameplay path.
 
 The [trust correction](changes/033-gameplay-permission-preflight.md) records the

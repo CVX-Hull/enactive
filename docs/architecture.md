@@ -29,7 +29,7 @@ It preserves exact image validation without treating cosmetic blink as stable
 pixels. Game options and non-harness rendering retain upstream defaults.
 [Native004](acceptance/2026-10-20-native-receipt-order.md) qualified unchanged
 world-name captures and ordinary text/confirmation on its identified binary;
-normal character lifecycle and selector/activity acceptance remain open. The
+that probe did not qualify normal character lifecycle or selector/activity behavior. The
 [earlier editor failure](acceptance/2026-10-20-native-editor-caret.md) is retained.
 
 The spectator's existing serialized status poll schedules250ms after a completed
@@ -202,21 +202,22 @@ successor context retrieval/claim and separately charged readmission also compos
 source; historical receipts restore no live consent. Selected item/activity and ordinary
 inspection adapters compose through the same writer. Normal finish now
 composes in source after committed normal exit, preserving historical evidence
-and distinguishing cleanup from player-reported objective completion. Native
-mission acceptance remains required. Registered launch now composes the fixed process adapter
+and distinguishing cleanup from player-reported objective completion. Source coverage alone does not accept a native
+mission. Registered launch now composes the fixed process adapter
 with original deadlines and fresh paused-menu readiness in portable fixtures.
 Launch sends no Resume/input and establishes no identity or game-time anchor.
 Registered untouched-menu exit composes charged Resume/QUIT with an explicit
 player-interpreted confirmation, original operator mark and shared root/child limits.
 Published Yes plus exact owned normal exit and narrow durable pending retirement
 can resolve process custody while retaining an unknown ACK and all charges. No
-normal save is claimed. The [bounded native retest](acceptance/2026-10-20-owned-launch.md#native-qualification002-accepted-owned-menu-component)
+normal save is claimed by that untouched-menu retest. The [bounded native retest](acceptance/2026-10-20-owned-launch.md#native-qualification002-accepted-owned-menu-component)
 qualified the Yes/normal-exit path while retaining its failed first attempt. It
 created, loaded and saved no character and did not exercise native No or user Pause.
 Registered creation, normal save, saved-menu exit and new-child exact reload passed
 the scoped [Native007 qualification](acceptance/2026-10-20-native-lifecycle-qualified.md).
-Independent use of that lifecycle within the full supplies/shelter mission remains
-unaccepted; component qualification does not accept the mission.
+The later [independent024 mission](acceptance/2026-10-21-independent-supply-shelter.md)
+exercises that lifecycle within the full supplies/shelter outcome; component
+qualification alone did not accept the mission.
 The [timeline reducer](../harness/gameplay/timeline.py) sums normal-session spans
 only with exact chronological equal-turn endpoint links across sessions. The [lifecycle reader](../harness/gameplay/lifecycle.py) derives links only after
 validating owned transitions, direct identity Claims, inspection receipts and saved

@@ -162,7 +162,9 @@ remains stopped rather than being passed through unknown-delivery reconciliation
 [Native007](acceptance/2026-10-20-native-lifecycle-qualified.md) qualified ordinary
 creation/identity, counted drop/pickup, a known two-step return, bounded native
 wait/poll, normal save/new-child exact reload and normal final stopped Finish.
-The independent mission remains unqualified. Native006 retains its actual failure
+The later [independent024 mission](acceptance/2026-10-21-independent-supply-shelter.md)
+qualifies the bounded integrated gameplay outcome and actual successor continuity.
+Native006 retains its actual failure
 and exceptional second-child cleanup; later success does not rewrite it.
 Neither synthetic UI tests nor tests assuming identity accept an independent mission. Observe likewise cannot adopt
 an unexplained normal session. Reopening restores neither phase nor input authority.
@@ -332,12 +334,14 @@ Save/reload preserves the initial time anchor, cumulative costs and unknowns;
 new coordinates never inherit old relative vectors. A rejected candidate adoption
 can be explicitly corrected within its original phase/deadline. Reopen verifies
 history but reconstructs no process handle, phase, lineage, lease or queued input.
-Native007 qualified the selected actual creation/save/load path. Independent
-mission acceptance and actual fresh-context memory use remain pending.
+Native007 qualified the selected actual creation/save/load path. The later
+[independent024 mission](acceptance/2026-10-21-independent-supply-shelter.md) exercises
+actual fresh-context memory and the full bounded supply/shelter/lifecycle outcome.
 [Native008](acceptance/2026-10-20-confirmation-correction.md) additionally qualified
 world and Save local-question rejection followed by new exact guarded correction,
 identity/adoption and normal save/exit/stopped Finish. Original unknown delivery
-and the failed independent001 remain retained; no independent objective is accepted.
+and the failed independent001 remain retained; Native008 itself accepted no
+independent gameplay objective.
 
 ### Skill request binding errors
 
@@ -438,8 +442,9 @@ admission alone does not establish that cancellation is enabled. First worldgen
 cancel support does not implement a general setup-abort lifecycle.
 [Native010](acceptance/2026-10-20-menu-dismissal-qualification.md) exercised the
 narrow binding correction, then failed normal ending on the old generic-QUIT
-mapping. The translation repair still needs new finite native dismissal/ending
-qualification; the failed attempt cannot resume.
+mapping. [Native011](acceptance/2026-10-20-registered-dismissal-qualified.md)
+subsequently qualified actual registered UILIST dismissal and normal ending.
+The failed Native010 attempt cannot resume; later qualification does not rewrite it.
 
 MissionLimits permits at most 691200 game-seconds (eight days); its default remains
 43200 seconds. Each finite admission must budget normal ending work before its
@@ -662,8 +667,10 @@ handle is unfinished; cached reads/idempotent receipts and independent Pause rem
 available. Atomic receipts survive later cancellation;
 reopen validates history but restores no phase, process, lease or Resume.
 
-These boundaries have synthetic controller/ledger/archive coverage. Actual clean-context
-player replacement, native gameplay and independent mission acceptance remain open.
+These boundaries have synthetic controller/ledger/archive coverage and actual
+clean-context retrieval, image presentation, one-use claim/separate readmission
+and useful continuation in the [bounded024 mission](acceptance/2026-10-21-independent-supply-shelter.md).
+That functional evidence proves neither security isolation nor causal memory benefit.
 
 Trusted Python `observe_mission(deadline_monotonic, timeout)` uses the original
 absolute deadline through command-lock admission and native publication. It grants

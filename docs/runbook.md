@@ -21,8 +21,10 @@ settle tools, request internal handoff, retrieve successor-bound memory, declare
 needed source reads and claim while paused, then deliberately request readmission.
 A source/packet omission must be corrected within original limits; it is not
 permission to resume through another endpoint. Historical receipts cannot restore
-a phase after user Pause or service restart. This path has synthetic coverage;
-actual clean-context/native acceptance remains required.
+a phase after user Pause or service restart. The
+[independent024 mission](acceptance/2026-10-21-independent-supply-shelter.md) exercises
+actual clean-context retrieval/claim/readmission and useful continuation; future
+admissions still require their own current readiness.
 Eligible lifecycle Resume, stage commit, save, identity inspection and owned quit
 confirmation refresh the selected checkpoint once at operation entry
 inside the operation under exact-state/image and original authority/deadline
@@ -33,8 +35,9 @@ Before admission, ordinary controller commands retain their documented guards.
 Registered launch verifies the retained child and paused main-menu readiness; it
 grants no character identity, Resume, lease or normal-game time. Scoped
 [Native007 qualification](acceptance/2026-10-20-native-lifecycle-qualified.md) passed
-creation/save/new-child reload/normal ending. The full independent supplies/shelter
-mission remains unaccepted; portable fixtures alone cannot accept native play.
+creation/save/new-child reload/normal ending. The later
+[independent024 mission](acceptance/2026-10-21-independent-supply-shelter.md) exercises
+the full bounded supplies/shelter outcome; portable fixtures alone cannot accept native play.
 
 ## Permissions and player ownership
 
@@ -335,14 +338,16 @@ limits/reserve, allowed typed requests and memory/output paths. Verify actual-pl
 passive access before admission. The lead owns the runtime and acceptance, without
 ordinary gameplay rescue in the deciding attempt.
 
-Before lead inspection or player replacement: request Pause, finish every tool
+Before an input-custody change, invasive native inspection or player replacement:
+request Pause, finish every tool
 handle, retain the checkpoint, verify no queued/scheduled action and obtain explicit
 quiescence. Cached status alone cannot prove the agent's queue is empty. User
 Pause/native takeover prevents automatic continuation. The registered one-use
 handoff and real fresh context must preserve original costs and retrieve retained
-memory; their source adapters compose, while actual fresh-context/native acceptance
-remains required. Do not substitute raw inputs or lead-written
-reconstruction to make acceptance pass. Historical operator reports remain evidence,
+memory. [Actual024continuity](acceptance/2026-10-21-independent-supply-shelter.md)
+provides bounded native evidence; a new handoff still needs its own current
+provenance and guards. Read-only spectator/retained-artifact review takes no input
+lease. Do not substitute raw inputs or lead-written reconstruction to make acceptance pass. Historical operator reports remain evidence,
 not standing admissions or a second runtime mode.
 
 ## Typed mission requests and the player
@@ -380,8 +385,9 @@ separates implemented components from remaining independent-play acceptance.
    per-action file-writing recipe.
 3. Start is source-free; explicit Observe is passive. Registered owned lifecycle must establish
    world/character identity and fresh input authority. Source lifecycle composition
-   has source coverage and scoped Native007 qualification; full independent
-   mission acceptance remains required.
+   has source coverage, scoped Native007 qualification and actual
+   [independent024 mission evidence](acceptance/2026-10-21-independent-supply-shelter.md).
+   A new mission must meet its own original outcomes; historical success grants no authority.
    Do not substitute raw keys/Resume or a trusted unit fixture.
 4. Read the result by its exact operation ID. Accepted only acknowledges admission;
    wait for the settled immutable result and inspect the frame/effect. A lost response
@@ -411,8 +417,8 @@ separates implemented components from remaining independent-play acceptance.
    root/child limits and unknowns stay recorded. Untouched-menu exit uses its owned
    lifecycle root and an explicit interpreted confirmation child. It is not a
    character save/exit path. Item/activity, creation/save/reload and handoff adapters
-   compose in source. Scoped native lifecycle qualification is linked above;
-   actual independent-player and fresh-successor outcomes remain required.
+   compose in source. Scoped native lifecycle and actual024primary/successor
+   evidence are linked above; neither promises every future interface or campaign outcome.
 7. Pause prevents further admission, without undoing an input or native activity.
    Honor user Pause/takeover; do not auto-Resume or restore a phase from disk. A
    stopped deciding attempt remains stopped. Retain its original artifacts and

@@ -10,7 +10,9 @@ This is the accepted design deliverable for [#137](https://github.com/CVX-Hull/e
 with implemented component checkpoints and remaining acceptance work below; it
 is not a gameplay admission. The coordinated mission/8 ingress now replaces the
 waypoint runtime. [Architecture](../architecture.md) and [protocol](../protocol.md)
-own current behavior; lifecycle and independent mission acceptance remain pending.
+own current behavior. The [independent024 result](../acceptance/2026-10-21-independent-supply-shelter.md)
+now exercises the original bounded mission, actual successor and normal lifecycle;
+broader seven-day assessment and publication receipts remain separate.
 The [assessment](../research-memory-architecture.md) supplies the research rationale;
 the [trace pilot](../acceptance/2026-10-19-memory-trace-pilot.md) supplies bounded
 first-run development cases. GitHub owns scope, allocation and live stages.
@@ -595,6 +597,11 @@ it does not establish implemented schemas, native fields, gameplay or efficacy.
 
 ### Passive source foundation checkpoint
 
+The retained checkpoints below describe staged source/component evidence. Their
+pending/future qualification statements belong to those stages, not today's
+delivery status. Current contracts and the later024outcome are linked above;
+these notes neither reopen closed gates nor qualify unexercised cases.
+
 The current source foundation defines strict `mission/8`/`campaign-memory/3` records in
 [mission_contracts.py](../../harness/gameplay/mission_contracts.py) and single-writer
 accounting in [mission_ledger.py](../../harness/gameplay/mission_ledger.py).
@@ -629,7 +636,8 @@ operations and a trusted final-preflight callback before publication. The canoni
 archive retains that final frame without promoting navigation's current source.
 Every ordinary native envelope now carries the generated frame identity and a
 strict exact-presentation flag; true compares encoded presented PNG bytes at commit.
-These source mechanisms still require native qualification and runtime integration.
+At that source checkpoint, native qualification and runtime integration were still
+required; later scoped qualifications and024retain their own actual coverage.
 They do not make a fallible screenshot interpretation native-attested UI metadata.
 
 The passive [navigation skill](../../harness/gameplay/navigation.py) projects only
@@ -669,12 +677,13 @@ all-session validation and non-restoration of authority.
 [Native006](../acceptance/2026-10-20-native-character-lifecycle.md) qualified only
 ordinary creation/identity, counted dropping, inventory inspection, one-minute
 wait/poll and first normal save/exit. Its navigation, acquisition, exact reload,
-final normal shutdown and independent mission remain open; source repairs require
-new native qualification. Quiescent bound-memory handoff
+final normal shutdown and independent mission were not qualified by that probe;
+source repairs required later native evidence. Quiescent bound-memory handoff
 and charged readmission have synthetic coverage. Normal finish has source coverage
 after verified owned exit, with separate player-reported objective evidence and no
-native input. Actual mission acceptance remains open;
-there is no accepted independent mission or fresh player-context demonstration.
+native input. The later [independent024 mission](../acceptance/2026-10-21-independent-supply-shelter.md)
+exercises the complete bounded supplies/rest/memory/actual fresh-context and normal
+lifecycle outcome; earlier source/component evidence alone did not establish it.
 
 The [native-row menu policy](../../harness/gameplay/interaction.py) can propose a
 bounded sequence of actual `UILIST.UP`/`UILIST.DOWN` actions to an exact visible
@@ -761,8 +770,9 @@ The passive policy additionally stops an arrow batch when available native rows
 contradict its next expected enabled focus. Unknown results retain their pending
 ID and canonical actual-after reference even when the PNG is missing or corrupt;
 that diagnostic reference cannot authorize another input. This remains synthetic
-component verification, with native editor behavior pending. The current mission
-HTTP ingress is connected; owned lifecycle acceptance is not.
+component test evidence; actual ordinary editor and owned lifecycle use now has
+separate [024native evidence](../acceptance/2026-10-21-independent-supply-shelter.md).
+Current mission ingress/runtime is integrated; unexercised UI cases remain unqualified.
 
 Ledger10 validates a direct earlier lifecycle or navigate/item/activity/interact/inspect root,
 derives child deadlines from its original deadline, and counts direct-root and child
@@ -884,4 +894,7 @@ anchor and cumulative limits, fencing competing roots and handoff. User Pause
 revokes it; missing proof, unknown Resume and unsupported prompt ownership stay
 stopped. Reopening validates history without restoring private consent. The
 [protocol](../protocol.md#controller-run-ownership) owns the exact current contract.
-Native recovery and independent mission acceptance remain open.
+General native recovery remains separately scoped; the
+[independent024 result](../acceptance/2026-10-21-independent-supply-shelter.md) exercises
+lifecycle effect reconciliation and successor readmission. It does not qualify
+normal-play unknown-delivery/navigation-suffix recovery or arbitrary recovery.
