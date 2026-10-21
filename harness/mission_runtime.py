@@ -28,7 +28,7 @@ from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
 from .gameplay.evidence import MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore, same_native_state
 from .gameplay.interaction import MenuIntent, MenuOutcome, MenuSkill
 from .gameplay.contracts import canonical
-from .gameplay.mission_contracts import VERSION, MissionAdmission, SourceBinding, SourceRevalidation, validate_request
+from .gameplay.mission_contracts import VERSION, MissionAdmission, SourceBinding, SourceRevalidation, validate_submission
 from .gameplay.mission_ledger import BudgetError, LedgerError, MissionLedger, TERMINAL
 from .gameplay.navigation import NavigationIntent, NavigationOutcome, NavigationSkill, ObservedMap
 from .gameplay.semantic_controls import ControlIntent, ControlOutcome, SemanticControlSkill
@@ -210,7 +210,7 @@ class MissionRuntime:
 
     def command(self, request: dict | str | bytes) -> dict:
         try:
-            data = validate_request(request)
+            data = validate_submission(request)
         except (ContractError, ValueError, TypeError) as exc:
             return self._response("rejected", reason=str(exc)[:1024])
         kind = data["kind"]

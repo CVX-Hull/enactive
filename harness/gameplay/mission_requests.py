@@ -11,7 +11,7 @@ import hashlib
 
 from .contracts import ContractError, EvidenceRef, json_object
 from .evidence import _identity, _validate_observation
-from .mission_contracts import VERSION, validate_request
+from .mission_contracts import VERSION, validate_submission
 
 _DERIVED = frozenset(("schema", "mission_id", "epoch", "request_id", "limits", "phase_id",
                       "sources", "expected_session", "expected_revision", "expected_boundary_id"))
@@ -95,7 +95,7 @@ def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: di
     source_id is also derived. Limits and a new request ID are caller choices;
     no deadline or budget is inferred or extended. Explicit support IDs supplement
     the chosen primary (for example, first/latest transition observations).
-    validate_request owns the final closed schema and cross-field constraints;
+    validate_submission owns the final closed schema and admission constraints;
     the ordinary canonical serializer remains the serialization path.
     """
     if type(snapshot) is not dict or not {"mission_id", "epoch", *_PHASES} <= snapshot.keys():
@@ -128,6 +128,6 @@ def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: di
     parent = _selected_phase(snapshot, scope, data, primary)
     if view is not None:
         view["source_id"] = primary
-    return validate_request({**data, "schema": VERSION, "mission_id": snapshot["mission_id"],
+    return validate_submission({**data, "schema": VERSION, "mission_id": snapshot["mission_id"],
         "epoch": snapshot["epoch"], "request_id": request_id, "limits": limits, "phase_id": parent,
         "sources": ([] if primary is None else [primary]) + list(supporting_source_ids), **binding})

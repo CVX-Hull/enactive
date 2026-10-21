@@ -219,6 +219,16 @@ operator counter are required for a readiness receipt. It remains passive: no
 Resume, lease, normal facts, identity or game-time anchor. Portable fake-process
 tests are not actual native launch acceptance.
 
+Create/save/load roots require null `work_id` and empty `identity_claim_ids`.
+The shared pure submission validator rejects violations before client submission or
+receiver queue admission, so a malformed draft cannot itself revoke a lease.
+It does not discard supplied fields or retry; a new corrected request must pass
+every live guard. Identity adoption still uses its exact lifecycle child; Finish
+may cite completed Work. Pause, missing evidence, budgets and storage failures
+retain their existing stopping behavior. This syntax refusal grants no authority.
+The underlying record validator still reads original rejected request history;
+old failures are retained unchanged and cannot become executable through reopening.
+
 Cached process facts are last samples, not a liveness guarantee. Shutdown journals
 any owned child without signals; reopening restores no process handle. Only a
 validated committed OwnedNormalExit resolves that launch's historical custody.

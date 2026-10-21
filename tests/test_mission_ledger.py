@@ -151,6 +151,22 @@ class LedgerTests(unittest.TestCase):
         values.update(changes)
         return values
 
+    def test_rejected_lifecycle_root_history_reopens_without_rewriting_payload_or_digest(self):
+        # A formerly admitted malformed request is immutable failure evidence,
+        # even though the new pure submission boundary refuses its execution.
+        rejected = phase_lifecycle(operation="save", work_id="pending", identity_claim_ids=["old-identity"])
+        self.active_request(rejected)
+        self.ledger.complete_request(rejected["request_id"], "blocked",
+            dict(reason="Lifecycle root cannot import Work or old identity authority", grants_authority=False), now=1002)
+        before = self.ledger.request(rejected["request_id"])
+        payload = self.ledger._db.execute("SELECT payload,digest FROM requests WHERE id=?",
+            (rejected["request_id"],)).fetchone()
+        self.reopen(now=1003)
+        self.assertEqual(self.ledger.request(rejected["request_id"]), before)
+        self.assertEqual(self.ledger._db.execute("SELECT payload,digest FROM requests WHERE id=?",
+            (rejected["request_id"],)).fetchone(), payload)
+        self.assertEqual(self.ledger.primitive_records(), ())
+
     def test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen(self):
         empty = self.ledger.measured_counts()
         self.assertEqual(empty, {"operations": {"total": 0, "by_kind": {}, "by_skill": {}, "by_state": {}},

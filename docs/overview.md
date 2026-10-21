@@ -39,8 +39,11 @@ usefulness. Delivery057 adds source for reusable procedural records and a pinned
 read-only library. The [failed first learning attempt](acceptance/2026-10-21-discovery-learning-first-attempt.md)
 has actual scoped procedure derivation/revision/reuse, fresh-successor application
 and useful play during advisory computation. It failed on a capture-identity race;
-normal lifecycle, the complete reflection join and the coherent learning mission
-remain unqualified. #182 owns repair before a new finite attempt.
+normal lifecycle and the coherent learning mission remained unqualified. The
+[second attempt](acceptance/2026-10-21-discovery-learning-second-attempt.md) supports
+responsive food, procedure application and the same-proposal reflection join,
+but failed on lifecycle-root submission validation. #183 owns that repair before
+a new finite attempt; neither failed run gains normal-ending credit.
 
 The official MCP SDK adapter constructs and retains requests, collects original
 results and presents exact images over the existing mission ingress. Both024

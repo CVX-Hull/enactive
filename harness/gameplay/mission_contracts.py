@@ -931,3 +931,17 @@ def validate_request(value: dict | str | bytes) -> dict:
         if result["phase_id"] == result["request_id"]:
             raise ContractError("A phase child cannot parent itself")
     return result
+
+
+def validate_submission(value: dict | str | bytes) -> dict:
+    """Validate new intent before admission, without rewriting recorded failures.
+
+    validate_request also reads immutable rejected request evidence. Submission
+    checks cannot make those historical rows unreadable or grant live authority.
+    """
+    result = validate_request(value)
+    if (result["kind"] == "lifecycle" and result["operation"] in ("create", "save", "load")
+            and result["phase_id"] is None
+            and (result["work_id"] is not None or result["identity_claim_ids"])):
+        raise ContractError("Lifecycle root cannot import Work or old identity authority")
+    return result

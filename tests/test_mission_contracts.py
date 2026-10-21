@@ -6,7 +6,7 @@ import unittest
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.mission_contracts import (
     CleanupReserve, Configuration, MissionAdmission, MissionLimits, Scenario, SourceBinding, SourceRevalidation,
-    MAX_REQUEST_BYTES, validate_memory_entry, validate_request, validate_visible_ui,
+    MAX_REQUEST_BYTES, validate_memory_entry, validate_request, validate_submission, validate_visible_ui,
 )
 
 
@@ -260,6 +260,23 @@ class MissionContractTests(unittest.TestCase):
         create = {**launch, "operation": "create", "expected_session": "menu", "expected_revision": 3, "expected_boundary_id": "boundary"}
         self.assertEqual(validate_request(create), create)
         with self.assertRaises(ContractError): validate_request({**create, "pid": 42})
+
+    def test_lifecycle_phase_roots_reject_work_and_identity_drafts_before_execution(self):
+        root = request("lifecycle", operation="save", world="world", character="person", sources=["source-1"],
+            expected_session="native-session", expected_revision=30, expected_boundary_id="boundary-1",
+            limits=dict(primitives=8, wall_seconds=120, game_seconds=1000))
+        for operation in ("create", "save", "load"):
+            for fields in (dict(work_id="pending"), dict(identity_claim_ids=["identity"]),
+                           dict(work_id="pending", identity_claim_ids=["identity"])):
+                with self.subTest(operation=operation, fields=fields):
+                    with self.assertRaisesRegex(ContractError, "root cannot import"):
+                        validate_submission({**root, "operation": operation, **fields})
+                    # The immutable payload remains readable as rejected history.
+                    historical = {**root, "operation": operation, **fields}
+                    self.assertEqual(validate_request(historical), historical)
+        # Identity adoption is a child; normal Finish may cite completed Work.
+        self.assertEqual(validate_submission({**root, "phase_id": "save-root", "identity_claim_ids": ["identity"]})["phase_id"], "save-root")
+        self.assertEqual(validate_submission({**root, "operation": "finish", "work_id": "completed"})["work_id"], "completed")
 
     def test_player_cannot_forge_native_fact_or_cross_mission_memory(self):
         native = claim(kind="native_fact")

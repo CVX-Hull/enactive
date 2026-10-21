@@ -31,12 +31,14 @@ archive. A root's explicit procedure selection joins its actual child inputs and
 results automatically; adoption remains a player judgment over scoped data.
 The historical library reads pinned closed archives without restoring old-world
 facts or execution handles. See [the current contract](protocol.md#ordinary-discovery-and-procedure-data).
-The new native binary has passed its local build; graphical qualification remains
-pending. Reflection now has software scheduling and structured advisory tools over
-the existing server/writer. Local HTTP tests show independent advisory waiting
-and synthetic navigation; actual concurrent host actors, overlapping graphical
-play and normal learner shutdown remain pending. None establishes real procedural
-learning or a new campaign.
+The new native binary passed its local build. The two failed learning attempts
+have partial actual ordinary-input/procedure/concurrency evidence; the
+[second attempt](acceptance/2026-10-21-discovery-learning-second-attempt.md) supports
+useful graphical play during advisory computation and later same-proposal
+disposition. Normal learner save/reload/shutdown and the coherent learning mission
+remain unqualified. The pure submission boundary now rejects malformed
+create/save/load roots before queue admission while historical record validation
+retains original rejected evidence. No failure becomes execution authority.
 
 The harness-enabled SDL ImGui context uses the library's steady text-caret setting.
 It preserves exact image validation without treating cosmetic blink as stable

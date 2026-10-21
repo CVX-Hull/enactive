@@ -17,7 +17,10 @@ Its source, actual gameplay, exact candidate/main CI and closure are accepted in
 #144/PR158. General raw interaction, reusable procedures and reflection were
 missing at that baseline. The source checkpoint below implements their substrate;
 the [first learning attempt](../acceptance/2026-10-21-discovery-learning-first-attempt.md)
-has partial graphical evidence but failed before normal lifecycle. A coherent
+has partial graphical evidence but failed before normal lifecycle. The
+[second attempt](../acceptance/2026-10-21-discovery-learning-second-attempt.md) adds
+food/procedure/reflection evidence but failed saving; #183 owns the pure submission
+repair, preserving immutable rejected history and real authority checks. A coherent
 learning mission and fresh campaign remain pending. Earlier failures
 remain failures, including the empty-popup mapping,
 handoff/reference errors and item-activity return defect.

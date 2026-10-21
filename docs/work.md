@@ -22,8 +22,11 @@ passed. Reflection has coalesced writer scheduling and structured advisory
 claim/source/submit/result/advice tools. The actual twenty-tool host and concurrent
 player/advisory actors were exercised in the [failed first learning attempt](acceptance/2026-10-21-discovery-learning-first-attempt.md).
 Player-derived revision/reuse and fresh-context application have supported partial
-evidence; normal lifecycle and the coherent mission remain unqualified. #182 owns
-the capture-identity race repair before a new finite attempt. The fresh seven-day
+evidence. The [second attempt](acceptance/2026-10-21-discovery-learning-second-attempt.md)
+adds food and same-proposal reflection/disposition evidence but failed normal
+saving. #182 has the capture repair; #183 owns correcting lifecycle-root drafts
+before admission without losing authority. Both attempts are closed failures.
+Normal lifecycle and the coherent learning mission remain unqualified. The fresh seven-day
 assessment remains pending. Source checks issue no run authority. The accepted024
 baseline and historical attempts below remain evidence, not a new admission.
 

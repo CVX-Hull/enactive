@@ -185,6 +185,82 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(self.runtime._ledger.request("character-yes"), original_unknown)
         self.runtime._ledger._verify(self.a)
 
+    def test_save_root_draft_is_local_and_raw_rejection_preserves_explicit_normal_ending(self):
+        self.create()
+        selected, _ = self.player.call("enactive_snapshot", {})
+        source = selected["source"]["reference"]["observation_id"]
+        self.player.call("enactive_source", dict(mission_id=self.a.mission_id, source_id=source))
+        before, lease = self.runtime.status(), self.runtime._lease
+        checkpoint = self.runtime._current
+        delivered = deepcopy(self.bridge.delivered)
+        records = deepcopy(self.runtime._ledger.request_records())
+        for index, fields in enumerate((dict(work_id="pending"), dict(identity_claim_ids=["old-identity"]),
+                                       dict(work_id="pending", identity_claim_ids=["old-identity"]))):
+            raw = self.lifecycle(f"malformed-save-{index}", "save")
+            raw.update(fields)
+            arguments = dict(snapshot_id=selected["snapshot_id"], request_id=raw["request_id"],
+                scope="new_root", source_id=source, supporting_source_ids=[],
+                intent=dict(operation="save", world=self.a.scenario.world, character=self.a.scenario.character,
+                    work_id=raw["work_id"], identity_claim_ids=raw["identity_claim_ids"]),
+                limits=raw["limits"], wait_seconds=3)
+            with patch.object(self.player.client, "submit", wraps=self.player.client.submit) as submit:
+                with self.assertRaisesRegex(ContractError, "root cannot import"):
+                    self.player.call("enactive_lifecycle", arguments)
+                submit.assert_not_called()
+            # Raw callers cannot bypass the same pure receiver invariant.
+            refused = self.runtime.command(raw)
+            self.assertEqual(refused["status"], "rejected", refused)
+            self.assertIn("root cannot import", refused["reason"])
+            self.assertIs(self.runtime._lease, lease)
+            self.assertIs(self.runtime._current, checkpoint)
+            for field in ("epoch", "phase", "lifecycle_phase", "spent_inputs", "current_source", "lease_owner"):
+                self.assertEqual(self.runtime.status()[field], before[field], field)
+            self.assertEqual(self.runtime._ledger.request_records(), records)
+            self.assertEqual(self.bridge.delivered, delivered)
+        # A new, explicit corrected request follows all normal guards and the
+        # existing unknown-ACK reconciliation, with no restored authority.
+        self.save()
+        self.exit()
+        finished = self.run_request(self.lifecycle("finish", "finish"))
+        self.assertEqual(finished["state"], "completed", finished)
+        self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
+        self.runtime._ledger._verify(self.a)
+
+    def test_corrected_save_draft_cannot_restore_user_revoked_authority(self):
+        self.create()
+        bad = self.lifecycle("malformed-before-pause", "save")
+        bad.update(work_id="pending", identity_claim_ids=["old-identity"])
+        self.assertEqual(self.runtime.command(bad)["status"], "rejected")
+        delivered = deepcopy(self.bridge.delivered)
+        spent = self.runtime.status()["spent_inputs"]
+        self.runtime.pause("Fixture real user Pause")
+        corrected = self.lifecycle("corrected-after-pause", "save")
+        response = self.runtime.command(corrected)
+        if response["status"] == "accepted":
+            self.assertEqual(self.settled(corrected["request_id"])["state"], "blocked")
+        else:
+            self.assertEqual(response["status"], "rejected", response)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertEqual(self.bridge.delivered, delivered)
+        self.assertIsNone(self.runtime._lease)
+
+    def test_corrected_save_draft_still_checks_expired_mission_deadline(self):
+        self.create()
+        bad = self.lifecycle("malformed-before-exhaustion", "save")
+        bad["work_id"] = "pending"
+        self.assertEqual(self.runtime.command(bad)["status"], "rejected")
+        delivered = deepcopy(self.bridge.delivered)
+        spent = self.runtime.status()["spent_inputs"]
+        # Expire the runtime's existing deadline; do not mock its guard or
+        # extend the ledger's original admission/cleanup allowances.
+        self.runtime._mission_deadline = self.runtime._wall() - 1
+        corrected = self.run_request(self.lifecycle("corrected-after-exhaustion", "save"))
+        self.assertEqual(corrected["state"], "blocked", corrected)
+        self.assertLess(self.runtime._mission_deadline, self.runtime._wall())
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertEqual(self.bridge.delivered, delivered)
+        self.assertIsNone(self.runtime._lease)
+
     def test_unadopted_launch_has_no_coordinate_scope(self):
         self.ready()
         selected, _ = self.player.call("enactive_snapshot", {})
