@@ -64,7 +64,7 @@ class MissionRequestProducerTests(unittest.TestCase):
         supports = ["explicit-support"]
         before = deepcopy((self.status, self.source, self.limits, intent, supports))
         result = self.compose(intent, supporting_source_ids=supports)
-        expected = dict(schema="mission/7", mission_id="mission-test", epoch=3,
+        expected = dict(schema="mission/8", mission_id="mission-test", epoch=3,
             request_id="new-request", phase_id=None, sources=[self.source["reference"]["observation_id"],
             "explicit-support"], expected_session="synthetic-world", expected_revision=1,
             expected_boundary_id="boundary-1", limits=self.limits, **intent)

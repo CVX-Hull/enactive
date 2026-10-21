@@ -209,7 +209,7 @@ class LedgerTests(unittest.TestCase):
         self.ledger.settle_primitive(logical_id, "not_dispatched", {"reason": "Synthetic accounting probe"}, now=now)
 
     def prompt_receipt(self, **changes):
-        value = dict(schema="mission/7", record_type="PhaseReceipt", origin_request_id="request-1",
+        value = dict(schema="mission/8", record_type="PhaseReceipt", origin_request_id="request-1",
             phase_kind="interact", operation="open_consume", stage="awaiting_control", epoch=0,
             actor_id="player-test", controller_boot_id="controller-test", operator_pause_generation=0,
             takeover_generation=0, source_ids=["source-1"], continuity=None, grants_authority=False)
@@ -230,6 +230,32 @@ class LedgerTests(unittest.TestCase):
         self.assertFalse(state["grants_authority"])
         self.assertEqual(self.ledger.request("request-1")["result"]["phase"], root)
         self.assertEqual(self.ledger.request("observe")["result"]["phase"], closed)
+
+    def test_navigation_prompt_controls_and_closing_observe_reopen_without_authority(self):
+        self.active_request(skill())
+        receipt = self.prompt_receipt(phase_kind="navigate", operation="navigate")
+        for changes in (dict(operation="open"), dict(stage="activity_poll"), dict(actor_id="other")):
+            with self.subTest(changes=changes), self.assertRaises(LedgerError):
+                self.ledger.complete_request("request-1", "partial", {"phase": receipt | changes}, now=1002)
+        self.ledger.complete_request("request-1", "partial", {"phase": receipt}, now=1002)
+        for kind in ("interact", "item", "activity", "inspect"):
+            child = phase_skill(kind, request_id=kind, phase_id="request-1")
+            if kind in ("item", "activity"):
+                child["goal"]["step"] = "select" if kind == "item" else "poll"
+            with self.subTest(kind=kind), self.assertRaises(ContractError):
+                self.ledger.begin_request(child, now=1003)
+        for kind in ("menu", "edit"):
+            child = phase_skill(kind, request_id=kind, phase_id="request-1")
+            self.ledger.begin_request(child, now=1003)
+            self.phase_input(kind, "input-" + kind, now=1003)
+            self.ledger.complete_request(kind, "partial", {"phase": receipt}, now=1003)
+        self.ledger.begin_request(request("observe", request_id="observe"), now=1004)
+        self.ledger.complete_request("observe", "completed", {"phase": receipt | {"stage": "complete"}}, now=1004)
+        state = self.reopen(now=1005).snapshot(now=1005)
+        self.assertEqual(state["phase"], "paused")
+        self.assertEqual(state["spent_inputs"], 2)
+        self.assertFalse(state["grants_authority"])
+        self.assertEqual(self.ledger.request("menu")["result"]["phase"], receipt)
 
     def test_prompt_receipt_rejects_nonobjects_and_malformed_correlation_transactionally(self):
         self.active_request(phase_skill("interact"))
@@ -318,9 +344,10 @@ class LedgerTests(unittest.TestCase):
         self.ledger.begin_request(phase_skill(request_id="nested", phase_id="request-1"), now=1001)
         self.ledger.begin_request(phase_skill("item", request_id="root-item"), now=1001)
         bad = [phase_skill(request_id="bad", phase_id=parent) for parent in
-               ("missing", "bad", "nested", "root-menu", "root-edit", "root-navigate", "observe-only")]
+               ("missing", "bad", "nested", "root-menu", "root-edit", "observe-only")]
         bad += [phase_skill(kind, request_id="bad", phase_id="request-1") for kind in ("item", "activity")]
         bad += [skill(request_id="bad", phase_id="request-1"),
+                phase_skill("interact", request_id="bad", phase_id="root-navigate"),
                 phase_skill("interact", request_id="bad", phase_id="root-interact"),
                 phase_lifecycle(request_id="bad", phase_id="request-1", operation="load"),
                 phase_lifecycle(request_id="bad", phase_id="root-item"),
@@ -674,7 +701,7 @@ class LedgerTests(unittest.TestCase):
 
     def test_earlier_ledger_format_is_rejected_without_conversion(self):
         self.ledger.close()
-        for version in (1, 2, 3, 4, 5, 6, 7, 8):
+        for version in (1, 2, 3, 4, 5, 6, 7, 8, 9):
             with self.subTest(version=version):
                 with closing(sqlite3.connect(self.ledger.path)) as connection, connection:
                     connection.execute(f"PRAGMA user_version={version}")
@@ -953,7 +980,7 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(LedgerError):
             self.ledger.prepare_primitive("observe-only", "bad-input", intent(), now=1003)
         with self.assertRaises(LedgerError):
-            self.ledger.begin_request({"schema": "mission/7", "kind": "status", "mission_id": "mission-test"}, now=1003)
+            self.ledger.begin_request({"schema": "mission/8", "kind": "status", "mission_id": "mission-test"}, now=1003)
         with self.assertRaises(LedgerError):
             self.ledger.begin_request(skill(mission_id="other", goal={"scope": {"mission_id": "other", "session": "native-session", "coordinate_epoch": 0}, "target": [2, -3, 0]}), now=1003)
         self.ledger.close()

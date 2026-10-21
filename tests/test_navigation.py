@@ -453,6 +453,80 @@ class NavigationTests(unittest.TestCase):
                 self.assertEqual(outcome.verified_steps, 0)
                 self.assertIs(self.propose(skill), outcome)
 
+    def test_returned_ordinary_menu_retains_prefix_without_credit_or_replay(self):
+        for prefix in (0, 1):
+            with self.subTest(prefix=prefix):
+                self.map = ObservedMap("mission", "world", 0)
+                self.map.add(self.frame((1, 0, 0)), self.store)
+                skill = self.skill(self.frame(), target=(2, 0, 0))
+                if prefix:
+                    first = self.propose(skill)
+                    self.assertIsNone(self.accept(skill, first, self.frame((1, 0, 0), turn=11)))
+                intent = self.propose(skill)
+                menu = self.frame(change=lambda v: v.update(scene=None, category="UILIST",
+                    actions=["UILIST.QUIT"], boundary=v["boundary"] | {"kind": "menu"}))
+                result = PrimitiveResult(intent.logical_id, intent.before, menu, "returned", None, "Returned menu")
+                outcome = skill.accept(result, self.store, **self.clocks)
+                self.assertEqual((outcome.disposition, outcome.verified_steps, outcome.position),
+                                 ("partial", prefix, (prefix, 0, 0)))
+                self.assertEqual(outcome.proposed_count, prefix + 1)
+                self.assertIn(menu, outcome.evidence)
+                self.assertIsNone(outcome.pending_logical_id)
+                self.assertIs(self.propose(skill), outcome)
+
+    def test_menu_interruption_requires_returned_fresh_same_session_owned_feedback(self):
+        for change, disposition in (
+            (lambda v: None, "unknown"),
+            (lambda v: v.update(paused=True, pause_origin="human", takeover_generation=1), "returned"),
+            (lambda v: v.update(in_game=False), "returned"),
+            (lambda v: v["boundary"].update(kind="unsupported"), "returned"),
+            (lambda v: v["boundary"].update(kind="activity_poll"), "returned"),
+            (lambda v: v["boundary"].update(kind="debug_prompt"), "returned"),
+            (lambda v: v.update(session="other", frame=f"frame-other-{self.number + 1}.png"), "unknown"),
+        ):
+            with self.subTest(change=change, disposition=disposition):
+                self.map = ObservedMap("mission", "world", 0)
+                skill = self.skill(self.frame())
+                intent = self.propose(skill)
+                def alter(v):
+                    v.update(scene=None, category="UILIST", actions=["UILIST.QUIT"])
+                    v["boundary"]["kind"] = "menu"
+                    change(v)
+                menu = self.frame(change=alter)
+                result = PrimitiveResult(intent.logical_id, intent.before, menu, disposition, None, "Unverified")
+                outcome = skill.accept(result, self.store, **self.clocks)
+                self.assertEqual(outcome.disposition, "unknown")
+                self.assertEqual(outcome.verified_steps, 0)
+                self.assertIsNotNone(outcome.pending_logical_id)
+
+    def test_menu_feedback_cannot_absorb_an_intervening_capture(self):
+        skill = self.skill()
+        intent = self.propose(skill)
+        def menu(v):
+            v.update(scene=None, category="UILIST")
+            v["boundary"]["kind"] = "menu"
+        after = self.frame(change=menu)
+        self.frame(change=menu)
+        result = PrimitiveResult(intent.logical_id, intent.before, after, "returned", None, "Returned menu")
+        outcome = skill.accept(result, self.store, **self.clocks)
+        self.assertEqual(outcome.disposition, "unknown")
+        self.assertIsNotNone(outcome.pending_logical_id)
+
+    def test_normal_return_still_requires_displacement_and_menu_cannot_claim_it(self):
+        for menu in (False, True):
+            with self.subTest(menu=menu):
+                skill = self.skill(self.frame())
+                intent = self.propose(skill)
+                def alter(v):
+                    if menu:
+                        v.update(scene=None, category="UILIST")
+                        v["boundary"]["kind"] = "menu"
+                after = self.frame((1, 0, 0), turn=11, change=alter)
+                result = PrimitiveResult(intent.logical_id, intent.before, after, "returned",
+                                         (1, 0, 0) if menu else None, "Invalid feedback")
+                with self.assertRaises(ContractError):
+                    skill.accept(result, self.store, **self.clocks)
+
     def test_goal_verification_does_not_require_a_future_tile(self):
         skill = self.skill()
         intent = self.propose(skill)

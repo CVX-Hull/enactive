@@ -97,7 +97,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.fail(f"Timed out; status={self.runtime.status()}")
 
     def request(self, kind, **changes):
-        data = dict(schema="mission/7", kind=kind, request_id=kind + "-1",
+        data = dict(schema="mission/8", kind=kind, request_id=kind + "-1",
                     mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"])
         if kind == "handoff":
             data.update(unfinished_work_ids=[])
@@ -109,7 +109,7 @@ class MissionRuntimeTests(unittest.TestCase):
         return data
 
     def result(self, identity):
-        out = self.runtime.command(dict(schema="mission/7", kind="result",
+        out = self.runtime.command(dict(schema="mission/8", kind="result",
             mission_id=self.a.mission_id, operation_id=identity))
         self.assertEqual(out["status"], "accepted", out)
         return out["operation"]
@@ -122,7 +122,7 @@ class MissionRuntimeTests(unittest.TestCase):
             self.assertEqual(self.controller.execute("observe")["status"], "ready")
             self.assertEqual(self.controller.execute("resume")["status"], "ready")
             self._prepared_native = True
-        req = dict(schema="mission/7", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/8", kind="start", request_id="start-1", admission=self.a.to_dict())
         with patch.object(self.runtime, "_bootstrap", side_effect=lambda work: bootstrap_core_fixture(self.runtime, work)):
             response = self.runtime.command(req)
             self.assertEqual(response["status"], "accepted", response)
@@ -240,6 +240,109 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertIsNone(self.runtime._prompt_phase)
         self.assertEqual(self.runtime.status()["spent_inputs"], 1)
         self.assertIsNone(self.controller._mission_lease)
+
+    def navigation_menu(self, *, primitives=8):
+        self.start()
+        # First visit expands only this fixture's observed map. The second
+        # request has a known two-segment route, not a hidden-world target.
+        first = self.navigation(request_id="visit-known-floor")
+        self.runtime.command(first)
+        self.assertEqual(self.settled(first["request_id"])["state"], "completed")
+        normal = copy.deepcopy(self.bridge.value["scene"])
+        moves = 0
+        def collision(bridge, request):
+            nonlocal normal, moves
+            if request.get("action") in ("UP", "DOWN", "LEFT", "RIGHT"):
+                moves += 1
+                if moves == 2:
+                    bridge.value.update(scene=None, category="UILIST", actions=["UILIST.QUIT"],
+                        ui=dict(purpose="uilist", title="Interact with survivor", rows=[
+                            dict(id="row-0", text="Talk", enabled=True, hotkey=None)],
+                            selected="row-0", filter=None, count=None, coverage="rendered_rows_only"))
+                    bridge.value["boundary"].update(kind="menu", id="npc-choice")
+                else:
+                    normal = copy.deepcopy(bridge.value["scene"])
+            elif request.get("action") == "UILIST.QUIT":
+                bridge.value.update(scene=copy.deepcopy(normal), ui=None, category="DEFAULTMODE",
+                                    actions=["UP", "DOWN", "LEFT", "RIGHT"])
+                bridge.value["boundary"].update(kind="normal_play", id="returned-navigation-normal")
+            return True
+        self.bridge.behavior = collision
+        root = self.navigation((0, -1, 0), request_id="navigation-menu",
+            limits=dict(primitives=primitives, wall_seconds=120, game_seconds=1200))
+        self.runtime.command(root)
+        return root, self.settled(root["request_id"])
+
+    def navigation_cancel(self, root):
+        return self.control("menu", dict(purpose="Cancel unexpected interaction", label="Cancel", outcome="dismissed"),
+            request_id="cancel-navigation-menu", phase_id=root["request_id"], perception=dict(
+                kind="dismissal", basis="player_interpretation", question="Interact with survivor",
+                source_id=self.runtime.status()["current_source"]["observation_id"]))
+
+    def test_navigation_menu_retains_prefix_controls_same_root_then_allows_explicit_replan(self):
+        root, opened = self.navigation_menu()
+        self.assertEqual(opened["state"], "partial", opened)
+        self.assertEqual(opened["result"]["verified_steps"], 1)
+        self.assertIsNone(opened["result"]["pending_logical_id"])
+        self.assertEqual(opened["result"]["phase"]["phase_kind"], "navigate")
+        self.assertEqual(opened["result"]["phase"]["operation"], "navigate")
+        self.assertEqual(opened["result"]["phase"]["stage"], "awaiting_control")
+        self.assertIsNone(self.runtime._store.observation(self.runtime._current)["scene"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 3)
+        deadline = self.runtime._ledger.request(root["request_id"])["deadline"]
+        phase = self.runtime._prompt_phase
+        observed = self.request("observe")
+        self.runtime.command(observed)
+        self.assertEqual(self.settled(observed["request_id"])["state"], "completed")
+        self.assertEqual(self.runtime._prompt_phase.game_anchor, phase.game_anchor)
+        inspection = self.control("menu", dict(purpose="Inspect visible NPC choices", label="Talk", outcome="inspected"),
+            request_id="inspect-navigation-menu", phase_id=root["request_id"])
+        self.runtime.command(inspection)
+        inspected = self.settled(inspection["request_id"])
+        self.assertEqual(inspected["state"], "completed", inspected)
+        self.assertEqual(inspected["result"]["phase"]["stage"], "awaiting_control")
+        self.assertEqual(self.runtime.status()["spent_inputs"], 3)
+        unrelated = self.control("interact", dict(action="open", intent="Other", desired_outcome="Other"))
+        self.assertEqual(self.runtime.command(unrelated)["status"], "rejected")
+        cancel = self.navigation_cancel(root)
+        self.runtime.command(cancel)
+        closed = self.settled(cancel["request_id"])
+        self.assertEqual(closed["state"], "partial", closed)
+        self.assertEqual(closed["result"]["phase"]["stage"], "complete")
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime._ledger.request(root["request_id"])["deadline"], deadline)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 4)
+        self.assertEqual(opened["result"]["position"], self.bridge.value["scene"]["position"])
+        # A deliberate new plan follows current normal evidence; it is not an
+        # automatic replay of the interrupted step or a renewed suffix.
+        replan = self.navigation((1, 0, 0), request_id="explicit-replan")
+        self.runtime.command(replan)
+        finished = self.settled(replan["request_id"])
+        self.assertEqual(finished["state"], "completed", finished)
+        self.assertEqual(self.runtime._ledger.request(root["request_id"])["result"], opened["result"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 5)
+
+    def test_navigation_menu_children_keep_root_budget_and_pause_revokes_ownership(self):
+        root, opened = self.navigation_menu(primitives=2)
+        self.assertEqual(opened["state"], "partial", opened)
+        self.runtime.command(self.navigation_cancel(root))
+        rejected = self.settled("cancel-navigation-menu")
+        self.assertEqual(rejected["state"], "blocked", rejected)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 3)
+        self.assertEqual(len([r for r in self.bridge.delivered if r.get("action") == "UILIST.QUIT"]), 0)
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertIsNone(self.controller._mission_lease)
+
+    def test_user_pause_revokes_navigation_menu_without_automatic_response(self):
+        _, opened = self.navigation_menu()
+        self.assertEqual(opened["state"], "partial", opened)
+        charged = self.runtime.status()["spent_inputs"]
+        self.runtime.pause("User paused at unexpected menu")
+        self.wait(lambda: not self.runtime._pending_pauses)
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertIsNone(self.controller._mission_lease)
+        self.assertEqual(self.runtime.status()["spent_inputs"], charged)
+        self.assertNotIn("UILIST.QUIT", [r.get("action") for r in self.bridge.delivered])
 
     def test_prompt_dismissal_is_one_accounted_input_with_partial_effect_verification(self):
         normal = copy.deepcopy(self.bridge.value["scene"])
@@ -426,7 +529,7 @@ class MissionRuntimeTests(unittest.TestCase):
         initial = self.start()
         self.assertIsNone(initial["memory_context"])
         scope = dict(mission_id=self.a.mission_id, session=initial["current_source"]["session"], coordinate_epoch=0)
-        response = self.runtime.command(dict(schema="mission/7", kind="context", handoff=None, mission_id=self.a.mission_id,
+        response = self.runtime.command(dict(schema="mission/8", kind="context", handoff=None, mission_id=self.a.mission_id,
             scope=scope, query="position", max_bytes=32768))
         packet = copy.deepcopy(response["context"]["packet"])
         response["context"]["packet"]["query"] = "Modified caller copy"
@@ -582,7 +685,7 @@ class MissionRuntimeTests(unittest.TestCase):
             release.set()
             self.assertEqual(self.settled(request["request_id"])["state"], "paused")
         self.wait(lambda: self.runtime.status()["active_operation"] is None)
-        absent = self.runtime.command(dict(schema="mission/7", kind="result", mission_id=self.a.mission_id,
+        absent = self.runtime.command(dict(schema="mission/8", kind="result", mission_id=self.a.mission_id,
                                            operation_id=stop["request_id"]))
         self.assertEqual(absent["status"], "rejected")
         retry = self.request("stop", request_id="stop-new-epoch", reason=stop["reason"])
@@ -625,7 +728,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.runtime.command(req)
         self.assertEqual(self.settled("pending-work")["state"], "completed")
         Path(second["frame_path"]).unlink()
-        context_request = dict(schema="mission/7", kind="context", handoff=None, mission_id=self.a.mission_id,
+        context_request = dict(schema="mission/8", kind="context", handoff=None, mission_id=self.a.mission_id,
                                scope=scope, query="water", max_bytes=32768)
         out = self.runtime.command(context_request)
         self.assertEqual(out["status"], "accepted", out)
@@ -644,7 +747,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.start()
         source = self.runtime.status()["current_source"]
         scope = dict(mission_id=self.a.mission_id, session=source["session"], coordinate_epoch=0)
-        out = self.runtime.command(dict(schema="mission/7", kind="context", handoff=None, mission_id=self.a.mission_id,
+        out = self.runtime.command(dict(schema="mission/8", kind="context", handoff=None, mission_id=self.a.mission_id,
             scope=scope, query="water", max_bytes=32768))
         packet = out["context"]["packet"]
         decision = dict(schema="campaign-memory/3", record_type="Decision", id="decision-1",
@@ -776,7 +879,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.bridge.delivered, [])
 
     def test_paused_start_admits_without_native_resume_or_planning_binding(self):
-        req = dict(schema="mission/7", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/8", kind="start", request_id="start-1", admission=self.a.to_dict())
         self.assertEqual(self.runtime.command(req)["status"], "accepted")
         op = self.settled("start-1")
         self.assertTrue(op["result"]["lifecycle_needed"])
@@ -795,7 +898,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.controller.execute("observe")["status"], "ready")
         self.assertEqual(self.controller.execute("resume")["status"], "ready")
         delivered = copy.deepcopy(self.bridge.delivered)
-        req = dict(schema="mission/7", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/8", kind="start", request_id="start-1", admission=self.a.to_dict())
         with patch.object(self.controller, "acquire_mission", side_effect=AssertionError("Start cannot adopt identity")):
             self.assertEqual(self.runtime.command(req)["status"], "accepted")
             self.assertTrue(self.settled("start-1")["result"]["lifecycle_needed"])
@@ -810,7 +913,7 @@ class MissionRuntimeTests(unittest.TestCase):
 
     def test_missing_native_start_stays_admitted_without_launch(self):
         self.bridge.__exit__(None, None, None)
-        req = dict(schema="mission/7", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/8", kind="start", request_id="start-1", admission=self.a.to_dict())
         self.runtime.command(req)
         op = self.settled("start-1")
         self.assertTrue(op["result"]["lifecycle_needed"])
@@ -901,7 +1004,7 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_crash_prepared_reopen_keeps_unknown_effect_and_no_authority(self):
         directory = self.controller.root / ".runtime" / "missions" / self.a.mission_id
         with MissionLedger(directory, admission=self.a, now=time.time()) as ledger:
-            start = dict(schema="mission/7", kind="start", request_id="start-1", admission=self.a.to_dict())
+            start = dict(schema="mission/8", kind="start", request_id="start-1", admission=self.a.to_dict())
             ledger.begin_request(start, now=time.time())
             ledger.complete_request("start-1", "completed", {"admitted": True}, now=time.time())
             ledger.activate(epoch=0, player_id=self.a.player_id, now=time.time())
@@ -1008,7 +1111,7 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_context_journal_failure_never_issues_a_packet_or_allows_more_work(self):
         self.start()
         source = self.runtime.status()["current_source"]
-        request = dict(schema="mission/7", kind="context", handoff=None, mission_id=self.a.mission_id,
+        request = dict(schema="mission/8", kind="context", handoff=None, mission_id=self.a.mission_id,
             scope=dict(mission_id=self.a.mission_id, session=source["session"], coordinate_epoch=0),
             query="water", max_bytes=8192)
         record = self.controller._record
@@ -1173,7 +1276,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.start()
         source = self.runtime.status()["current_source"]
         scope = dict(mission_id=self.a.mission_id, session=source["session"], coordinate_epoch=0)
-        req = dict(schema="mission/7", kind="context", handoff=None, mission_id=self.a.mission_id,
+        req = dict(schema="mission/8", kind="context", handoff=None, mission_id=self.a.mission_id,
                    scope=scope, query="water and pending work", max_bytes=8192)
         response = self.runtime.command(req)
         self.assertEqual(response["status"], "accepted", response)
@@ -1238,7 +1341,7 @@ class MissionRuntimeTests(unittest.TestCase):
         with closing(sqlite3.connect(path)) as db:
             db.execute("PRAGMA user_version=2")
         before = path.read_bytes()
-        response = self.runtime.command(dict(schema="mission/7", kind="start", request_id="start-1", admission=self.a.to_dict()))
+        response = self.runtime.command(dict(schema="mission/8", kind="start", request_id="start-1", admission=self.a.to_dict()))
         self.assertEqual(response["status"], "rejected", response)
         self.assertEqual(path.read_bytes(), before)
         self.assertEqual(self.bridge.delivered, [])

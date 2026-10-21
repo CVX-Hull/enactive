@@ -24,7 +24,7 @@ from .mission_contracts import (
     validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission,
 )
 
-DB_VERSION = 9
+DB_VERSION = 10
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
 MAX_RECEIPT_BYTES = 65_536
 MAX_EFFECT_BYTES = 32_768
@@ -752,8 +752,8 @@ class MissionLedger:
                     raise LedgerError("Navigation continuation must keep its exact original goal/scope")
             elif data["skill_kind"] not in ("menu", "edit", "interact", "inspect", "item", "activity"):
                 raise LedgerError("Phase skill child must be a direct control operation")
-            elif root.get("skill_kind") == "navigate":
-                raise LedgerError("Navigation root permits only its exact navigation suffix")
+            elif root.get("skill_kind") == "navigate" and data["skill_kind"] not in ("menu", "edit"):
+                raise LedgerError("Navigation root permits only its exact suffix or ordinary menu/editor controls")
             if data["skill_kind"] in ("item", "activity"):
                 kind = data["skill_kind"]
                 keys = ("purpose", "label", "quantity", "quantity_unit", "outcome") if kind == "item" else (

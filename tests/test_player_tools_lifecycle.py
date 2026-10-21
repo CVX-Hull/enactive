@@ -193,7 +193,7 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
                         case.runtime._store.max_frames = case.runtime._store.usage()["frames"]
                     before = case.runtime.status()["spent_inputs"]
                     delivered = len(case.bridge.delivered)
-                    result = case.run_request(dict(schema="mission/7", kind="observe", request_id="bad-identity-observe",
+                    result = case.run_request(dict(schema="mission/8", kind="observe", request_id="bad-identity-observe",
                         mission_id=case.a.mission_id, epoch=case.runtime.status()["epoch"]))
                     self.assertEqual(result["state"], "blocked", result)
                     self.assertEqual(case.runtime.status()["spent_inputs"], before)

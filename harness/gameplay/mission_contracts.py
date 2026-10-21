@@ -1,4 +1,4 @@
-"""Strict mission/7 data. Parsing never grants a controller capability.
+"""Strict mission/8 data. Parsing never grants a controller capability.
 
 The existing JSON decoder/schema helpers own duplicate, finite-number and strict
 integer validation. Request dictionaries are decoded copies, not mutable aliases.
@@ -15,7 +15,7 @@ from .contracts import (
     json_object, validate_json,
 )
 
-VERSION = "mission/7"
+VERSION = "mission/8"
 MEMORY_VERSION = "campaign-memory/3"
 MAX_REQUEST_BYTES = 65_536
 MAX_CONTEXT_BYTES = 32_768
@@ -242,6 +242,10 @@ _SEMANTIC_PHASE_RECEIPT = _object({
     "operation": _text(128),
     "stage": _enum("awaiting_control", "activity_poll", "interrupt_confirmation", "awaiting_readmission", "complete", "unknown"),
 })
+_NAVIGATION_PHASE_RECEIPT = _object({
+    **_PROMPT_RECEIPT["properties"], "phase_kind": {"const": "navigate"},
+    "operation": {"const": "navigate"}, "stage": _enum("awaiting_control", "complete", "unknown"),
+})
 _EXIT_PHASE_RECEIPT = _object({
     **_PROMPT_RECEIPT["properties"], "phase_kind": {"const": "lifecycle"},
     "operation": {"const": "exit"}, "stage": _enum("awaiting_control", "complete", "unknown"),
@@ -378,11 +382,12 @@ def validate_prompt_result(value: dict, *, request: dict, root: dict, actor_id: 
     lifecycle = type(value) is dict and value.get("phase_kind") == "lifecycle"
     exit_schema = _SAVED_EXIT_PHASE if lifecycle and value.get("no_save_required") is False else _EXIT_PHASE_RECEIPT
     schema = ((exit_schema if value.get("operation") == "exit" else _NORMAL_LIFECYCLE_PHASE) if lifecycle else
-              _PROMPT_RECEIPT if value.get("phase_kind") == "interact" else _SEMANTIC_PHASE_RECEIPT)
+              _PROMPT_RECEIPT if value.get("phase_kind") == "interact" else
+              _NAVIGATION_PHASE_RECEIPT if value.get("phase_kind") == "navigate" else _SEMANTIC_PHASE_RECEIPT)
     data = _decode(value, schema)
     valid_root = (root["kind"] == "lifecycle" and root["operation"] in ("exit", "create", "save", "load") if lifecycle else
                   root["kind"] == "skill" and root["skill_kind"] == data["phase_kind"])
-    operation = root.get("operation") if lifecycle else root.get("goal", {}).get(
+    operation = root.get("operation") if lifecycle else "navigate" if data["phase_kind"] == "navigate" else root.get("goal", {}).get(
         "action" if data["phase_kind"] == "interact" else "operation" if data["phase_kind"] == "activity" else "purpose")
     if (not valid_root or root["phase_id"] is not None
             or data["origin_request_id"] != root["request_id"] or data["operation"] != operation

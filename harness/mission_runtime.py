@@ -476,7 +476,7 @@ class MissionRuntime:
         root = self._ledger.request(phase.root_id)["request"]
         kind = root["skill_kind"]
         return {"schema": VERSION, "record_type": "PhaseReceipt", "origin_request_id": phase.root_id,
-            "phase_kind": kind, "operation": root["goal"][
+            "phase_kind": kind, "operation": "navigate" if kind == "navigate" else root["goal"][
                 "action" if kind == "interact" else "operation" if kind == "activity" else "purpose"], "stage": stage,
             "epoch": phase.epoch, "actor_id": phase.actor_id, "controller_boot_id": phase.controller_boot_id,
             "operator_pause_generation": phase.operator_generation, "takeover_generation": phase.takeover_generation,
@@ -515,7 +515,7 @@ class MissionRuntime:
                 or state["takeover_generation"] != self._store.observation(original)["takeover_generation"]
                 or original.boundary_kind != "normal_play" or after.session != original.session):
             raise ControlError("Interaction cannot open a prompt across changed authority/session")
-        phase = _PromptPhase(work.request["request_id"], after, original, ledger["player_id"],
+        phase = _PromptPhase(work.request.get("phase_id") or work.request["request_id"], after, original, ledger["player_id"],
             ledger["epoch"], boot, mark[1], state["takeover_generation"])
         with self._metadata:
             self._check_cancelled(work)
@@ -2021,6 +2021,7 @@ class MissionRuntime:
         self._capture_memory(self._current)
         self._check_cancelled(work)
         rotated = False
+        mark = self._operator_mark()
         while True:
             self._check_cancelled(work)
             proposal = skill.propose(self._store, **self._clocks())
@@ -2055,9 +2056,14 @@ class MissionRuntime:
                 result.update(disposition="partial", reason="Observed mission game budget overshot; cost retained")
                 return "partial", result
             if outcome is not None:
+                result = self._navigation_result(outcome)
+                if (outcome.disposition == "partial" and feedback.transport_disposition == "returned"
+                        and feedback.after is not None and feedback.after.boundary_kind == "menu"):
+                    phase = self._open_prompt(work, anchor, feedback.after, mark)
+                    result["phase"] = self._prompt_receipt(phase, "awaiting_control")
                 self._registered_recovery.finish_continuation(work, outcome.disposition)
                 self._capture_memory(self._current)
-                return outcome.disposition, self._navigation_result(outcome)
+                return outcome.disposition, result
 
     def _execute_work(self, work: _Work, *, bootstrap: bool) -> tuple[str, dict]:
         kind = work.request["kind"]

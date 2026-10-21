@@ -6,8 +6,8 @@ status: active
 
 # Current architecture
 
-Current source contracts are native4, mission/7, campaign-memory/3, gameplay/2,
-evidence archive3 and mission ledger9. One MissionRuntime owns the live mission API.
+Current source contracts are native4, mission/8, campaign-memory/3, gameplay/2,
+evidence archive3 and mission ledger10. One MissionRuntime owns the live mission API.
 The wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.
 Start is source-free and cannot adopt an unrelated already-running character. The
@@ -89,7 +89,7 @@ owns the exact source/byte bounds and later evidence-loss limits.
 | Lead / active Codex chat | Objective → frozen admission, reviewed source and acceptance | Owns shared runtime and integration; no ordinary gameplay rescue in the deciding mission |
 | Designated player / general-purpose agent | Visible evidence and memory → typed mission requests, plans and verification | One bounded actor; fresh-context handoff needs quiescence and one-use accounting; no authority from a summary |
 | Structured player adapter / harness maintainer | Explicit semantic arguments and returned handles → existing ingress, settled result and exact PNG | No capability, source refresh, replay, automatic Resume or new ledger; actual host review-free proof remains separate |
-| Mission runtime / harness maintainer | mission/7 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
+| Mission runtime / harness maintainer | mission/8 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
 | Controller / harness maintainer | State-bound command → native request and correlated receipt | Serialized ordinary/control writers, exact process-local lease, Pause revocation and native fences; never edits saves |
 | Native bridge / integration maintainer | Bounded request → actual input, visible metadata and rendered frame | Engine validates outcomes on its game thread; unsupported boundaries cannot claim success |
 | Spectator / viewer maintainer | Frame and mission snapshot → inspectable progress, uncertainty and Pause | Mission Observe uses typed ingress; raw input/Resume/recovery disabled while nonterminal; malformed state stays locked |
@@ -108,11 +108,16 @@ Implementation: [mission runtime](../harness/mission_runtime.py),
 [evidence store](../harness/gameplay/evidence.py), [owned process](../harness/native_process.py).
 
 Navigation, native-row focus and fallible image controls share the same mission
-writer. An ordinary interaction, item, activity or inspection root may own a returned prompt. Explicit control
+writer. An ordinary interaction, item, activity, inspection or interrupted navigation root may own a returned prompt. Explicit control
 children retain its original scope, actor/epoch, deadlines and cumulative input
 ceiling. A settled owned menu may be refreshed only through retained exact-PNG
 source revalidation. Typed PhaseReceipt audit data restores no private phase on
 reopen. A normal return closes the prompt without proving the desired effect.
+Returned navigation into an ordinary same-session menu retains its verified route
+prefix and last verified position, with no movement credit for the menu-opening
+input. Explicit menu/editor children remain under the original root,
+including after a recovered suffix; no automatic answer or route retry occurs.
+After normal return, the player can choose a new plan from current evidence.
 Cancellation selects one exact registered action: TEXT.QUIT for STRING_INPUT,
 UILIST.QUIT for UILIST, WORLDGEN_CONFIRM.QUIT for WORLDGEN_CONFIRM_DIALOG, otherwise
 QUIT. Missing registration blocks without trying another alias. The result is
@@ -137,7 +142,7 @@ Interpreted activation of the selected world Finish row returns a correctable
 zero-input result directing the player to its existing create stage commit; it
 keeps the lifecycle phase and original limits available.
 
-Ledger9 records Resume under admitted lifecycle/readmission or an exact activity
+Ledger10 records Resume under admitted lifecycle/readmission or an exact activity
 resume child, and charges activity controls through the same primitive table.
 Prepare and reopen share parent/answer rules; prior ledger formats reject unchanged.
 The controller's trusted Resume compares controller boot, operator-Pause counter,
@@ -274,7 +279,7 @@ and a fresh paused diagnostic source. Separate normal-play readmission charges
 one Resume. Navigation continuation retains the original goal, Work, game-time
 anchor and cumulative root limits; competing roots and handoff remain fenced.
 Reopen validates historical proof but restores no private phase or input consent.
-The single current effect envelope and ledger9 reject older shapes rather than
+The single current effect envelope and ledger10 reject older shapes rather than
 converting them. This source integration is not native recovery qualification or
 an additional executor/history store. Ambiguous delivery and unsupported semantic
 uncertainty remain stopped; a later expected-looking frame cannot supply proof.

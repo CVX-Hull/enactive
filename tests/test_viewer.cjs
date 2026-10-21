@@ -470,7 +470,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.match(element('recovery-evidence').textContent, /restored-control/);
   assert.match(element('recovery-result').textContent, /Delivery unknown/);
   assert.equal(element('recovery-debug').disabled, true);
-  // Mission observation uses the current mission/7 contract, with no admission controls.
+  // Mission observation uses the current mission/8 contract, with no admission controls.
   run('recoveryNeedsObserve = false');
   render(30, 'mission-current.png');
   context.input.mission = structuredClone(missionFixture);
@@ -637,7 +637,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.ok(sendButtons.every(button => button.disabled));
   context.input.connection = 'disconnected';
 
-  const normalExit = {schema: 'mission/7', record_type: 'OwnedNormalExit',
+  const normalExit = {schema: 'mission/8', record_type: 'OwnedNormalExit',
     origin_request_id: 'exit-root', launch_request_id: 'launch-root', launch_id: 'launch-test',
     terminal_logical_id: 'exit-logical', native_request_id: 'exit-native', source_ids: ['exit-checkpoint'],
     no_save_required: true, returncode: 0, grants_authority: false,
@@ -657,7 +657,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
     normal_exit: {...normalExit, no_save_required: false, saved_checkpoint_request_id: 'saved-checkpoint'}};
   run('render(input)');
   assert.match(element('mission-exit').textContent, /saved checkpoint saved-checkpoint/);
-  const finish = {schema: 'mission/7', record_type: 'NormalFinish', final_source_id: 'final-checkpoint',
+  const finish = {schema: 'mission/8', record_type: 'NormalFinish', final_source_id: 'final-checkpoint',
     normal_exit_result_request_id: 'exit-result', completed_work_event_id: 'objective-event',
     disposition: 'completed', grants_authority: false};
   mission.progress = {normal_finish: finish};
@@ -738,6 +738,10 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.equal(element('mission-state').textContent, 'PAUSED');
   assert.match(element('mission-reason').textContent, /operator_pause.*User paused/);
   assert.match(element('mission-freshness').textContent, /stale/);
+  assert.match(element('mission-freshness').textContent, /age 9s/);
+  mission.freshness.age_seconds = null;
+  run('render(input)');
+  assert.match(element('mission-freshness').textContent, /age unknown ·/);
   assert.match(element('mission-freshness').textContent, /displayed frame unavailable or stale/);
   assert.match(element('mission-source').textContent, /6bd4b315/);
   assert.equal(requests.length, countBeforeMission);
@@ -748,7 +752,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   const observeMission = request('/api/mission', 'observe');
   const payload = JSON.parse(observeMission.options.body);
   assert.deepEqual(Object.keys(payload).sort(), ['schema', 'kind', 'request_id', 'mission_id', 'epoch'].sort());
-  assert.equal(payload.schema, 'mission/7');
+  assert.equal(payload.schema, 'mission/8');
   assert.equal(payload.mission_id, 'mission-test');
   assert.equal(payload.epoch, 7);
   assert.match(payload.request_id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);

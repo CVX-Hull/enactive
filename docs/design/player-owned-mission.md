@@ -8,7 +8,7 @@ review_trigger: Mission interface adoption; implementation or native validation 
 
 This is the accepted design deliverable for [#137](https://github.com/CVX-Hull/enactive/issues/137),
 with implemented component checkpoints and remaining acceptance work below; it
-is not a gameplay admission. The coordinated mission/7 ingress now replaces the
+is not a gameplay admission. The coordinated mission/8 ingress now replaces the
 waypoint runtime. [Architecture](../architecture.md) and [protocol](../protocol.md)
 own current behavior; lifecycle and independent mission acceptance remain pending.
 The [assessment](../research-memory-architecture.md) supplies the research rationale;
@@ -68,7 +68,7 @@ passive contracts/planner/supervisor logic may remain only with current consumer
 and tests. Remove unconsumed execution scaffolding rather than keep two players.
 
 Advance gameplay records together to `gameplay/2` where their shared encoding is
-used; unsupported `gameplay/1` input rejects. Introduce `mission/7` for the strict
+used; unsupported `gameplay/1` input rejects. Introduce `mission/8` for the strict
 mission request/state envelope and `campaign-memory/3` for the durable index.
 Advance the evidence-store metadata to version3 and native observation to wire4
 for the visible-menu field below. Update every active producer/reader/fixture,
@@ -174,7 +174,7 @@ retaining the normal-only gate and calling external keys alongside it is rejecte
 
 ### Request shapes
 
-Every request has `schema=mission/7`, `kind` and a unique `request_id` except read-only
+Every request has `schema=mission/8`, `kind` and a unique `request_id` except read-only
 status/result/context. Mutating existing-mission operations additionally bind
 `mission_id` and `epoch`; input decisions bind the informing session/revision and
 boundary. Exact operation payloads are:
@@ -595,7 +595,7 @@ it does not establish implemented schemas, native fields, gameplay or efficacy.
 
 ### Passive source foundation checkpoint
 
-The current source foundation defines strict `mission/7`/`campaign-memory/3` records in
+The current source foundation defines strict `mission/8`/`campaign-memory/3` records in
 [mission_contracts.py](../../harness/gameplay/mission_contracts.py) and single-writer
 accounting in [mission_ledger.py](../../harness/gameplay/mission_ledger.py).
 The ledger and records send no input; MissionRuntime composes the registered
@@ -709,12 +709,12 @@ ground-versus-carried water corrections motivate explicit Work and effect eviden
 its lifecycle overhead motivates composed controls. Those totals are development
 evidence, not model latency or an efficiency baseline for a different scenario.
 
-Current source uses mission/7, campaign-memory/3 and ledger9. Stop has only a Pause
+Current source uses mission/8, campaign-memory/3 and ledger10. Stop has only a Pause
 reason; NormalFinish is separate. Bound successor context and readmission,
-typed item/activity/inspection records and explicit units remain. Mission/7 retains
+typed item/activity/inspection records and explicit units remain. Mission/8 retains
 the uniform typed effect proof and explicit handoff/recovery readmission modes.
 All current callers, results and fixtures migrate; mission/2, mission/3, mission/4,
-mission/5 and mission/6 requests/admissions reject without
+mission/5, mission/6 and mission/7 requests/admissions reject without
 mutation or a compatibility reader. Historical admissions remain evidence; there
 is no automatic import. Native4/gameplay2/archive3 stay unchanged. These contracts
 do not accept independent gameplay; the [protocol](../protocol.md#quiescent-player-replacement)
@@ -764,7 +764,7 @@ that diagnostic reference cannot authorize another input. This remains synthetic
 component verification, with native editor behavior pending. The current mission
 HTTP ingress is connected; owned lifecycle acceptance is not.
 
-Ledger9 validates a direct earlier lifecycle or navigate/item/activity/interact/inspect root,
+Ledger10 validates a direct earlier lifecycle or navigate/item/activity/interact/inspect root,
 derives child deadlines from its original deadline, and counts direct-root and child
 inputs together through SQLite's indexed request/primitive join. It checks links,
 original ceilings and counts again on reopen. A partial root receipt remains

@@ -140,7 +140,7 @@ planner and supervisor components below remain source/study tools, not another
 execution ingress. The [mission design](design/player-owned-mission.md) owns the
 chosen records, lifecycle requirements and separate native acceptance.
 
-Authenticated `POST /api/mission` accepts one strict mission/7 record, at most65536
+Authenticated `POST /api/mission` accepts one strict mission/8 record, at most65536
 UTF-8 bytes. It reuses host/origin/token and finite/duplicate-key JSON validation;
 operator command/recovery bodies keep4096-byte limits. Required fields and closed
 variants live in [mission_contracts.py](../harness/gameplay/mission_contracts.py),
@@ -433,10 +433,10 @@ existing admission and establishes no native survival outcome.
 
 `lifecycle(operation=finish)` is the sole normal finish route. Stop carries only
 its Pause reason; former Stop `finish` fields and mission/2, mission/3, mission/4,
-mission/5 or mission/6 records reject. The
-current mission/7 contract migrates CLI, viewer, requests, results and fixtures
+mission/5, mission/6 or mission/7 records reject. The
+current mission/8 contract migrates CLI, viewer, requests, results and fixtures
 without an alias or automatic old-admission import. Campaign memory advances to
-campaign-memory/3 and SQLite to ledger9. Native wire4, gameplay/2 and archive3
+campaign-memory/3 and SQLite to ledger10. Native wire4, gameplay/2 and archive3
 remain unchanged. Prior accepted reports and raw older mission/memory/ledger
 artifacts remain historical evidence, not current request inputs. Closed failed
 missions stay closed; a new admission uses a new mission directory, with no
@@ -465,7 +465,24 @@ native final shutdown or the independent mission.
 
 ### Selected item, inspection and activity composition
 
-Mission/7 retains explicit item units (`items` or `charges`) and root/select/commit
+A returned navigation input may open an ordinary in-game menu in the same session.
+Mission/8 records a `navigate` PhaseReceipt (`operation=navigate`) and terminal
+partial result, retaining the verified prefix and last verified route position.
+The menu has no scene; the opening input receives no displacement credit or retry.
+Inspection uses the existing menu outcome `inspected`, with no input; standalone
+inspection skills still require normal play. Only exact current retained feedback with unchanged attribution/authority can open
+this phase. Unknown delivery and activity/debug/unsupported boundaries do not.
+Explicit menu/editor children share the original root, Work, deadlines
+and cumulative primitive ceiling. An interrupted recovered suffix transfers to
+that original root and game anchor before its continuation closes. No interaction,
+item or activity root is borrowed. A normal return closes the prompt; a subsequent
+navigation plan is a new explicit player choice, not automatic route continuation.
+Ledger10 validates the selected child links and closed receipt variants on write
+and reopen; historical records restore no private phase or input authority. The
+[repair brief](changes/055-navigation-menu-interruption.md) records rationale and
+qualification limits.
+
+Mission/8 retains explicit item units (`items` or `charges`) and root/select/commit
 steps. The pure [item policy](../harness/gameplay/interactions.py) checks exact
 represented target, native row contradictions, known availability and chosen
 count. A focus batch sends at most eight observed arrows and never confirms.
@@ -530,7 +547,7 @@ Resume is a separate charged activity child, eligible only at a fresh paused
 normal/menu boundary under the original operator mark. It grants no lease until
 its verified return; root/child/mission time and actor fences still apply before
 publishing a new prompt or normal source. A newer user Pause wins throughout.
-Ledger9 rejects earlier formats before mutation; there is no compatibility reader.
+Ledger10 rejects earlier formats before mutation; there is no compatibility reader.
 Reopening restores neither the private phase nor authority. Source tests do not
 qualify native gameplay. Already-returned but uninterpretable semantic outcomes
 remain unsupported by delivery reconciliation.
@@ -715,7 +732,7 @@ verified terminal suffix or explicit stop. Historical phase IDs grant no authori
 This selected source path does not establish semantic success, native recovery or
 general recovery from already-returned but uninterpretable outcomes.
 
-Mission/7 and ledger9 migrate all current producers, callers and persisted readers
+Mission/8 and ledger10 migrate all current producers, callers and persisted readers
 together. Earlier mission versions, ledger7 and its old untyped effect shape reject
 without conversion. Retain old mission artifacts and saves as evidence; only a
 separately admitted current mission can start anew. Migration never resets input
@@ -960,7 +977,7 @@ and journal evidence, granting no authority, replay or inferred resolution.
 
 The lead designates one general-purpose player for a finite mission. It chooses
 plans, interprets evidence, retrieves/updates memory and requests semantic skills
-and registered normal lifecycle through mission/7. The lead owns source/release
+and registered normal lifecycle through mission/8. The lead owns source/release
 acceptance, finite admission, shared runtime custody, escalation and final
 verification. It supplies no ordinary gameplay rescue in the deciding mission.
 Explorers/reviewers never send inputs. Actor names and instructions are workflow

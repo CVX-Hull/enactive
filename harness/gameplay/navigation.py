@@ -236,8 +236,9 @@ class NavigationSkill:
             raise EvidenceError("Invalid or regressing navigation clock")
         self._last_monotonic, self._last_timestamp_ms = now_monotonic, now_timestamp_ms
 
-    def _finish(self, reason: str, *, unknown: bool = False, completed: bool = False) -> NavigationOutcome:
-        disposition = "unknown" if unknown else "completed" if completed else "partial" if self._steps else "blocked"
+    def _finish(self, reason: str, *, unknown: bool = False, completed: bool = False,
+                interrupted: bool = False) -> NavigationOutcome:
+        disposition = "unknown" if unknown else "completed" if completed else "partial" if self._steps or interrupted else "blocked"
         self._terminal = NavigationOutcome(disposition, reason, self._steps, self._proposals,
                                            self._position, self._sources,
                                            self._pending.logical_id if self._pending else None,
@@ -399,20 +400,23 @@ class NavigationSkill:
         if (self._terminal is not None or pending is None or
                 (result.action_id, result.before) != (pending.logical_id, pending.before)):
             raise ContractError("Navigation accepts its exact pending logical ID and before reference once")
-        if result.transport_disposition == "returned" and result.observed_displacement is None:
-            raise ContractError("Returned navigation requires independently checkable displacement")
         verified: dict[EvidenceRef, dict] = {}
         try:
             self._clocks(now_monotonic, now_timestamp_ms)
             self._map._bind(store)
-            current = store.current(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
+            current = store.current_boundary(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
             before = self._map._source(result.before, store, verified)
-            after = self._map._source(result.after, store, verified) if result.after is not None else None
+            after = store.observation(result.after) if result.after is not None else None
             self._scan_sources(store, verified)
+            if after is not None and result.after.session != result.before.session:
+                raise EvidenceError("Navigation feedback crossed its exact session")
             displacement = (tuple(b - a for a, b in zip(before["scene"]["position"], after["scene"]["position"]))
-                            if after is not None else None)
+                            if after is not None and result.after.boundary_kind == "normal_play" else None)
             if result.observed_displacement is not None and result.observed_displacement != displacement:
                 raise ContractError("Navigation displacement disagrees with retained observations")
+            if (result.transport_disposition == "returned" and result.after is not None
+                    and result.after.boundary_kind == "normal_play" and result.observed_displacement is None):
+                raise ContractError("Returned navigation requires independently checkable displacement")
             checkpoint = result.after if result.after is not None else result.before
             expected_generation = self._generation + (checkpoint != self._checkpoint)
             if current != checkpoint or store.authority_generation() != expected_generation:
@@ -421,6 +425,20 @@ class NavigationSkill:
                 self._sources = tuple(dict.fromkeys((*self._sources, result.after)))
             if result.transport_disposition in ("unknown", "dispatched"):
                 return self._finish(result.reason, unknown=True)
+            if result.transport_disposition == "returned" and result.after.boundary_kind != "normal_play":
+                if (result.after.boundary_kind != "menu" or not after["in_game"]
+                        or after["status"] != "ready" or after["error"] or after["paused"]
+                        or after["takeover_generation"] != before["takeover_generation"]
+                        or result.after.revision <= result.before.revision):
+                    raise EvidenceError("Navigation returned an unsupported or revoked non-normal boundary")
+                if now_monotonic - self._start.received_monotonic > self._request["limits"]["wall_seconds"]:
+                    raise EvidenceError("Original navigation wall budget exceeded at menu interruption")
+                # This input returned, but a menu has no scene or displacement.
+                # Keep the verified prefix and last position; never project or
+                # retry the interrupted step. The runtime owns explicit controls.
+                self._pending = None
+                return self._finish("Returned navigation opened an ordinary menu; movement effect unverified",
+                                    interrupted=True)
             self._pending = None
             if result.transport_disposition in ("not_dispatched", "rejected"):
                 return self._finish(result.reason, unknown=displacement not in (None, (0, 0, 0)))

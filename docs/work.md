@@ -44,7 +44,7 @@ ownership and observer visibility feed one [supply-and-shelter acceptance #144](
 then a [fresh seven-day assessment #145](https://github.com/CVX-Hull/enactive/issues/145)
 with the engineering lead outside gameplay. Reviewed component readiness permits
 shared native validation; the mission does not wait for component issue closure.
-The current source ingress is mission/7, with coordinated item/activity/inspection
+The current source ingress is mission/8, with coordinated item/activity/inspection
 records and rejection of prior contracts. Native capability qualification remains
 separate from source integration.
 Start/Observe remain read-only until the
@@ -147,6 +147,16 @@ narrow diagnostic-Observe correction, reusing committed transition/effect valida
 without automatic Resume. Source regressions remain distinct from another full
 finite independent mission; no old attempt resumes.
 
+Independent017 qualified the paused diagnostic path, explicit charged Resume and
+identity adoption, then failed when returned movement opened an ordinary NPC menu
+without displacement. It is closed with92charged inputs (91returned,1unknown
+creation ACK),66requests and240frames retained. The [navigation interruption
+repair](changes/055-navigation-menu-interruption.md), owned by #138, keeps the
+verified prefix and menu evidence and permits explicit controls under the original
+root. Mission/8 and ledger10 migrate current callers together; native4/archive3
+are unchanged. Source checks do not accept another native mission or its normal
+ending. All failed attempts remain closed; original #144 outcomes still apply.
+
 The [development-first workflow](project-management.md#development-first-delivery)
 now distinguishes targeted development runs from formal acceptance. The next
 meaningful integration checkpoint remains the complete mission below; repeated
@@ -223,7 +233,7 @@ retirement can prove unclaimed custody only for its exact request; an absent inb
 or later frame alone cannot prove delivery. Original unknown receipts,
 costs, root limits and user Pause remain intact. It reuses the mission writer,
 ledger, controller and deliberate charged Resume rather than adding an outbox or
-another executor. Mission/7 and ledger9 migrate every current caller and reject
+another executor. Mission/8 and ledger10 migrate every current caller and reject
 old shapes. Original dispatch custody and evidence capacity survive uncertainty;
 one pre-Observe collection retains exact unclaimed retirement or terminal evidence.
 Framed terminal bytes use the original reservation before diagnostic Observe.
@@ -317,8 +327,8 @@ Both attempts are closed; all failures, costs and exceptional cleanup remain.
 #165 owns the coupled representability repair: raw eight-source assertions and
 coherent Work views have separate bounds; complete handoff context is checked
 before authority is relinquished, and Work writes freeze until readmission.
-Current source migrates every active caller to mission/7, campaign-memory/3 and
-ledger9. Tests/source review do not accept native successor play. #166 owns the
+Current source migrates every active caller to mission/8, campaign-memory/3 and
+ledger10. Tests/source review do not accept native successor play. #166 owns the
 user's explicit zero routine approval-review requirement; literal allow matching
 and an approved passive call do not prove it. #164 now has a thin structured-client
 implementation using the official MCP SDK, existing ingress, ledger and exact

@@ -148,8 +148,10 @@ untouched; do not claim complete keyboard emulation from a schema alone.
 
 ## Delivery and evidence
 
-The proposed coordinated migration is native5, mission/8, ledger10 and evidence
-archive4, with campaign-memory/3 and gameplay/2 record shapes unchanged. Migrate
+The proposed coordinated migration is native5, mission/9, ledger11 and evidence
+archive4, with campaign-memory/3 and gameplay/2 record shapes unchanged. Start
+from the current mission/8 and ledger10 navigation-menu contract; those current
+versions do not implement this proposal. Migrate
 all current producers, callers, strict validators, correlation/reopen rules,
 fixtures and guidance together; reject prior runtime contracts. Preserve closed
 historical evidence without importing authority. The matching native build and

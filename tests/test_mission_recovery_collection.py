@@ -138,6 +138,45 @@ class MissionRecoveryCollectionTests(unittest.TestCase):
         self.assertEqual(self.runtime._ledger.primitive(candidate.logical_id), original)
         self.runtime._ledger._verify(self.a)
 
+    def test_recovered_suffix_menu_transfers_to_original_root_without_new_allowance(self):
+        candidate, _ = self.ready_resolution()
+        original = self.runtime._ledger.primitive(candidate.logical_id)
+        deadline = self.runtime._ledger.request(candidate.root_id)["deadline"]
+        anchor = self.runtime._registered_recovery.phase.game_anchor
+        self.bridge.behavior = None
+        self.assertEqual(self.run_request(self.readmit_request())["state"], "completed")
+        normal = copy.deepcopy(self.bridge.value["scene"])
+        def menu(bridge, request):
+            if request.get("action") == "RIGHT":
+                bridge.value.update(scene=None, ui=None, category="UILIST", actions=["UILIST.QUIT"])
+                bridge.value["boundary"].update(kind="menu", id="suffix-menu")
+            elif request.get("action") == "UILIST.QUIT":
+                bridge.value.update(scene=copy.deepcopy(normal), ui=None, category="DEFAULTMODE",
+                                    actions=["UP", "DOWN", "LEFT", "RIGHT"])
+                bridge.value["boundary"].update(kind="normal_play", id="suffix-cancel-normal")
+            return True
+        self.bridge.behavior = menu
+        suffix = self.run_request(self.navigation(request_id="menu-suffix", phase_id=candidate.root_id))
+        self.assertEqual(suffix["state"], "partial", suffix)
+        self.assertEqual(suffix["result"]["verified_steps"], 0)
+        self.assertEqual(suffix["result"]["phase"]["origin_request_id"], candidate.root_id)
+        self.assertEqual(self.runtime._prompt_phase.game_anchor, anchor)
+        self.assertIsNone(self.runtime._registered_recovery.continuation)
+        reference = self.runtime.status()["current_source"]
+        cancel = self.control("menu", dict(purpose="Cancel", label="Cancel", outcome="dismissed"),
+            request_id="suffix-menu-cancel", phase_id=candidate.root_id, perception=dict(
+                kind="dismissal", basis="player_interpretation", question="Menu",
+                source_id=reference["observation_id"]))
+        closed = self.run_request(cancel)
+        self.assertEqual(closed["state"], "partial", closed)
+        self.assertEqual(closed["result"]["phase"]["origin_request_id"], candidate.root_id)
+        self.assertEqual(closed["result"]["phase"]["stage"], "complete")
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 4)
+        self.assertEqual(self.runtime._ledger.request(candidate.root_id)["deadline"], deadline)
+        self.assertEqual(self.runtime._ledger.primitive(candidate.logical_id), original)
+        self.runtime._ledger._verify(self.a)
+
     def test_ambiguous_input_cannot_reconcile_from_a_later_frame(self):
         candidate = self.unknown()
         self.observe()

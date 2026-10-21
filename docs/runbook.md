@@ -372,7 +372,7 @@ separates implemented components from remaining independent-play acceptance.
 2. Configure and verify the [structured player tools](setup.md#configure-the-structured-player-tools).
    The designated player uses `enactive_snapshot` and explicitly selects the
    returned snapshot/source IDs for `enactive_skill` or `enactive_lifecycle`.
-   Software constructs and retains the current mission/7 request before submission,
+   Software constructs and retains the current mission/8 request before submission,
    collects its bounded result and returns the actual retained PNG in the same call.
    The lead uses `enactive_start` for the explicit frozen source-free admission;
    it does not launch or adopt a character. Raw engineering contract diagnostics

@@ -13,7 +13,7 @@ from tests.test_mission_contracts import claim
 
 class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
     def operation(self, kind, identity, **fields):
-        return dict(schema="mission/7", kind=kind, request_id=identity, mission_id=self.a.mission_id,
+        return dict(schema="mission/8", kind=kind, request_id=identity, mission_id=self.a.mission_id,
                     epoch=self.runtime.status()["epoch"], **fields)
 
     def handoff(self, **fields):
@@ -25,7 +25,7 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
     def context(self, *, binding=True, query="unfinished supplies shelter"):
         phase = self.runtime._registered_handoff.phase
         ref = phase.checkpoint
-        result = self.runtime.command(dict(schema="mission/7", kind="context", mission_id=self.a.mission_id,
+        result = self.runtime.command(dict(schema="mission/8", kind="context", mission_id=self.a.mission_id,
             scope=dict(mission_id=self.a.mission_id, session=ref.session, coordinate_epoch=0),
             query=query, max_bytes=32768, handoff=dict(handoff_id="handoff", prospective_player_id="successor",
                 actor_role="player") if binding else None))
