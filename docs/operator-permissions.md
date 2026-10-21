@@ -242,7 +242,16 @@ can submit a new corrected request; software neither invents the view nor switch
 adapters automatically. Genuine authority/evidence/budget faults still stop.
 
 Choose a whole returned snapshot/source consistently after focus changes. For
-provisional identity after committed create/load transition reconciliation, first
+memory/context/navigation scope, use the returned mission `coordinate_scope`
+when present. Its coordinate epoch comes from adopted session continuity and is
+different from mission/actor `epoch`; never substitute one for the other. A fresh
+successor uses this passive scope for its bound context request and independently
+reads required sources before claim/readmission. Null scope grants no inferred
+index or authority. A retained `diagnostic` string can describe an earlier refused
+request after later success; current operation errors and ownership/provenance
+checks establish actionability, not the historical string alone.
+
+For provisional identity after committed create/load transition reconciliation, first
 call enactive_lifecycle with lifecycle scope, the same create/load operation and
 root, and no identity Claims or Work. This separate readmission charges Resume;
 Observe and effect reconciliation do not. Then select inspect/character_identity

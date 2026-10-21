@@ -668,7 +668,22 @@ not a public JSON field. Terminal history remains visible and owns no execution.
 
 `/api/status.mission` is null or a copied bounded mission snapshot: objective, actor,
 epoch, phase/cause, active operation/skill/progress, exact source/receipt identifiers,
-remaining limits/reserve, unresolved effects, memory version and diagnostic. The
+remaining limits/reserve, unresolved effects, memory version and diagnostic.
+`coordinate_scope` is nullable passive metadata derived from the current retained
+normal-play source's adopted timeline: mission ID, session and coordinate epoch.
+Normal source publication verifies adoption and creates the current session map;
+status reuses that scope after the existing retained-source integrity check,
+without repeating lifecycle verification or observing native state. It is null
+before adoption, without that map or retained source, and at menus without a
+current normal-play source. The coordinate epoch
+is the adopted session's timeline index, **not** the mission/actor `epoch`, Pause
+generation or native revision. A successor copies this returned scope for bound
+context retrieval instead of guessing an index. It grants no freshness, lease,
+claim or Resume, and the live handoff guard still validates the request against
+its own checkpoint-derived scope. Current persisted formats and tool argument shapes are
+unchanged. The diagnostic string retains earlier refused-operation errors after
+later successes; inspect current operation results and phase/ownership/provenance
+before concluding that a historical string is a current fatal fault. The
 spectator uses mission Observe and disables ordinary input/Resume/recovery while
 nonterminal; malformed mission state stays locked and Pause remains available.
 Rendering sends no gameplay or memory request. Normal native input can still take

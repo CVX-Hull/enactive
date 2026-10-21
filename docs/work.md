@@ -182,6 +182,22 @@ old-run repair follows. #176/#177/#178 separately retain organic interaction,
 procedure learning and asynchronous reflection acceptance from these failures;
 these are planned capabilities, not implemented learning.
 
+Independent020 created/adopted Alex Enactive and retained a source-linked water-state
+correction and unfinished Work, then issued a quiescent handoff. Its first fresh
+successor aborted at a historical memory-refusal diagnostic. A replacement
+successor then supplied actor epochs as coordinate epochs and was refused before
+context retrieval/claim/readmission. The replacement brief incorrectly identified
+the issued actor epoch as a coordinate epoch; the current API exposed no reliable
+coordinate scope to correct that independently. The actor stopped and permanently
+quiesced; exact owned child termination preceded controller closure, preserving all
+files. Its111charges (110returned,1unknown),85requests,290frames and34canonical
+game seconds remain failed evidence; food,30minutes rest, successful successor and
+normal ending are unaccepted. #140/#164 own passive adopted-scope discoverability;
+#143/#164 separately own historical-diagnostic actionability. Source now exposes
+nullable passive `coordinate_scope` from adopted session continuity, separate from
+actor epoch; no claim, refresh, Resume, restored failed run or native acceptance
+follows. Current persisted/tool argument contracts remain unchanged.
+
 The [development-first workflow](project-management.md#development-first-delivery)
 now distinguishes targeted development runs from formal acceptance. The next
 meaningful integration checkpoint remains the complete mission below; repeated

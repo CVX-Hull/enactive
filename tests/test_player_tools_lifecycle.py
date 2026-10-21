@@ -15,6 +15,7 @@ from unittest.mock import patch
 
 from harness.mission_client import MissionClient
 from harness.gameplay.contracts import ContractError
+from harness.gameplay.evidence import EvidenceError
 from harness.player_tools import PlayerTools
 from harness.server import Server
 from tests import test_mission_creation as creation
@@ -116,6 +117,8 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(corrected["state"], "partial", corrected)
 
     def test_creation_successor_readmission_save_new_child_reload_and_normal_finish(self):
+        selected, _ = self.player.call("enactive_snapshot", {})
+        self.assertIsNone(selected["mission"])
         self.create()
         original_unknown = deepcopy(self.runtime._ledger.request("character-yes"))
         self.remember_work()
@@ -127,8 +130,22 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.player = PlayerTools(MissionClient(self.controller.root))
         selected, _ = self.player.call("enactive_snapshot", {})
         ref = selected["source"]["reference"]
+        coordinate_scope = selected["mission"]["coordinate_scope"]
+        self.assertEqual(coordinate_scope, dict(mission_id=self.a.mission_id,
+            session=ref["session"], coordinate_epoch=0))
+        self.assertNotEqual(selected["mission"]["epoch"], coordinate_scope["coordinate_epoch"])
+        scope = {key: coordinate_scope[key] for key in ("session", "coordinate_epoch")}
+        wrong_scope = dict(scope, coordinate_epoch=selected["mission"]["epoch"])
+        rejected, _ = self.player.call("enactive_context", dict(snapshot_id=selected["snapshot_id"],
+            intent=dict(scope=wrong_scope, query="unfinished", max_bytes=131072,
+                handoff=dict(handoff_id="handoff", prospective_player_id="successor", actor_role="player"))))
+        self.assertEqual(rejected["response"]["status"], "rejected")
+        self.assertIn("current adopted coordinate scope", rejected["response"]["reason"])
+        self.assertEqual(self.runtime.status()["phase"], "handoff")
+        self.assertEqual(self.runtime.status()["spent_inputs"], before)
+        self.assertIsNone(self.runtime._lease)
         context, _ = self.player.call("enactive_context", dict(snapshot_id=selected["snapshot_id"],
-            intent=dict(scope=dict(session=ref["session"], coordinate_epoch=0), query="unfinished",
+            intent=dict(scope=scope, query="unfinished",
                 max_bytes=131072, handoff=dict(handoff_id="handoff", prospective_player_id="successor", actor_role="player"))))
         packet = context["response"]["context"]["packet"]
         self.assertIn("pending", [work["id"] for work in packet["work"]])
@@ -156,6 +173,10 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.observe("load-observe")
         adopted = self.finish_identity("load", world, 1, diagnostic_observe=True)
         self.assertEqual(adopted["result"]["normal_adoption"]["saved_checkpoint_request_id"], "save-reconcile")
+        reloaded, _ = self.player.call("enactive_snapshot", {})
+        self.assertEqual(reloaded["mission"]["coordinate_scope"], dict(mission_id=self.a.mission_id,
+            session=reloaded["source"]["reference"]["session"], coordinate_epoch=1))
+        self.assertNotEqual(reloaded["mission"]["coordinate_scope"]["session"], coordinate_scope["session"])
         self.save_final()
         self.exit("final-exit")
         finished = self.run_request(self.lifecycle("finish", "finish"))
@@ -163,6 +184,35 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
         self.assertEqual(self.runtime._ledger.request("character-yes"), original_unknown)
         self.runtime._ledger._verify(self.a)
+
+    def test_unadopted_launch_has_no_coordinate_scope(self):
+        self.ready()
+        selected, _ = self.player.call("enactive_snapshot", {})
+        self.assertIsNone(selected["mission"]["coordinate_scope"])
+        self.assertFalse(selected["mission"]["grants_authority"])
+
+    def test_disputed_normal_source_cannot_publish_coordinate_scope(self):
+        self.create()
+        selected, _ = self.player.call("enactive_snapshot", {})
+        self.assertIsNotNone(selected["mission"]["coordinate_scope"])
+        before = self.runtime.status()["spent_inputs"]
+        delivered = deepcopy(self.bridge.delivered)
+        with patch.object(self.runtime._store, "observation", side_effect=EvidenceError("fixture source-read race")):
+            self.runtime._publish()
+            raced, _ = self.player.call("enactive_snapshot", {})
+            self.assertIsNone(raced["mission"]["coordinate_scope"])
+            self.assertIsNone(raced["mission"]["current_source"])
+        frame = Path(self.runtime._current.frame_path)
+        # Archive files are read-only; replace only this disposable fixture file.
+        frame.unlink()
+        frame.write_bytes(b"corrupt fixture image")
+        self.runtime._publish()
+        selected, _ = self.player.call("enactive_snapshot", {})
+        self.assertIsNone(selected["mission"]["coordinate_scope"])
+        self.assertIsNone(selected["mission"]["current_source"])
+        self.assertFalse(selected["mission"]["grants_authority"])
+        self.assertEqual(selected["mission"]["spent_inputs"], before)
+        self.assertEqual(self.bridge.delivered, delivered)
 
     def test_premature_identity_refusal_does_not_conceal_integrity_or_budget_faults(self):
         for fault in ("uncommitted_transition", "wrong_actor", "takeover", "changed_pixels",
@@ -327,6 +377,11 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         before = self.runtime.status()
         delivered = len(self.bridge.delivered)
         self.assertEqual(before["phase"], "paused")
+        self.assertEqual(self.runtime._current.boundary_kind, "normal_play")
+        selected, _ = self.player.call("enactive_snapshot", {})
+        self.assertIsNone(selected["mission"]["coordinate_scope"])
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertEqual(selected["mission"]["spent_inputs"], before["spent_inputs"])
         self.observe("identity-observe")
         after = self.runtime.status()
         advanced = self.runtime._registered_lifecycle.phase

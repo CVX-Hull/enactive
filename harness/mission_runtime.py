@@ -314,15 +314,25 @@ class MissionRuntime:
         limits, reserve = self._admission.limits, self._admission.cleanup_reserve
         active = self._active.request if self._active is not None else None
         current_available = self._current is not None
+        inspected = None
         if current_available:
             try:
                 inspected, _ = self._store.inspect_current_boundary(**self._clocks())
                 current_available = inspected == self._current and self._live()[0] == self._store.observation(self._current)
             except EvidenceError:
                 current_available = False
+                inspected = None
         live = self._live()
         lease_owner = asdict(self._lease) if self._lease is not None and live[3] is self._lease and not live[4] else None
+        coordinate_scope = None
+        if (self._map is not None and inspected is not None and inspected == self._current
+                and inspected.boundary_kind == "normal_play" and self._map.scope[1] == inspected.session):
+            # Normal source publication already verified this adopted scope.
+            # Do not repeat lifecycle/source checks during passive publication.
+            mission_id, session, coordinate_epoch = self._map.scope
+            coordinate_scope = dict(mission_id=mission_id, session=session, coordinate_epoch=coordinate_epoch)
         value = {**state, "lease_owner": lease_owner, "objective": self._admission.objective, "actor_id": state["player_id"],
+            "coordinate_scope": coordinate_scope,
             "prompt_phase": None if self._prompt_phase is None else {
                 "origin_request_id": self._prompt_phase.root_id,
                 "checkpoint_id": self._prompt_phase.checkpoint.observation_id, "grants_authority": False},
