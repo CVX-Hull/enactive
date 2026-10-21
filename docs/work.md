@@ -10,6 +10,28 @@ status: active
 
 GitHub Issues own work scope, acceptance, dependencies, estimates, owners and blockers. Project Status owns execution stage; Horizon owns Now/Next/Later. This page explains the delivery path and points to evidence. It does not duplicate the live backlog or serve as input authority. The [overview](overview.md) explains capability; [project management](project-management.md) explains how work is selected and reviewed.
 
+## Current integrated checkpoint
+
+[Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) has
+independently verified original gameplay outcomes: supplies/needs, six credited
+navigation steps including a three-step return, genuine replan/corrections,
+thirty actual minutes of shelter waiting, retained unfinished Work, actual fresh
+successor with seven hash-verified image exports, exact normal save/new-child/reload
+and normal final shutdown.156charges/123requests/408frames/1845game seconds;
+six original unknown ACKs retain separately settled effects. The deciding source
+502ca0f passed1291hosted tests. Final publication, candidate/protected-main CI
+and Issue/Project receipts belong to [PR158](https://github.com/CVX-Hull/enactive/pull/158)
+and#144, separately from this gameplay result. Failed001–023remain
+closed with1468charges/982requests, not repaired successes.
+
+[Seven-day readiness](acceptance/2026-10-21-independent-seven-day-readiness.md)
+selects a bounded prospective assessment and jointly forecasts existing caps and
+protected ending. It grants no live authority or seven-day success. #145/#136 stay
+open. Terminal observer wording/historical Work ambiguity remains owned by#143/#164;
+organic interaction/procedure learning/reflection remain#176–178 below. The attempt
+notes below retain historical checkpoint states; this section and the linked
+current report supersede their former “pending full mission” assessment.
+
 ## Campaign delivery path
 
 [Outcome #10](https://github.com/CVX-Hull/enactive/issues/10) requires a normally created fresh character alive after seven elapsed game days, maintained essential needs, useful shelter/rest, meaningful supply/travel/threat decisions, normal save/restart, a real player handoff, a watchable graphical UI and user Pause/control. The user must not need to supply keys or rescue ordinary gameplay. Investigation completion, passing tests or a partial surviving character does not establish this outcome.
@@ -58,7 +80,7 @@ Current source adds registered creation/identity adoption and normal save/new-ch
 reload through synthetic integration tests, with exact canonical continuity and
 unknown ACKs retained. [Native007](acceptance/2026-10-20-native-lifecycle-qualified.md) qualified ordinary
 creation, counted pickup, a known two-step return, wait/poll, normal save/new-child
-exact reload and final normal stopped Finish. Independent use remains open; the
+exact reload and final normal stopped Finish. Independent024 now exercises the integrated outcome; the
 Native006 failure and original unknown ACKs stay retained. The [mission design](design/player-owned-mission.md)
 defines the remaining lifecycle, fresh-context and bounded acceptance work; the [trace pilot](acceptance/2026-10-19-memory-trace-pilot.md)
 records actual source/interpretation limits. Neither page claims runtime delivery.
@@ -69,9 +91,8 @@ composition; its ground/carried-water corrections and interrupted craft motivate
 source-linked Claims and unfinished Work. Those totals do not establish measured
 speedup or memory efficacy. Lifecycle, normal finish and one-use bound successor retrieval/claim with separately
 charged deliberate readmission now compose in source. Selected item/activity and
-delivery-recovery handling now compose too. Native lifecycle is qualified within
-engineering scope; next exercise the actual deciding player and a real fresh
-player-context replacement. Freeze #156 for each finite run after applicable
+delivery-recovery handling now compose too. Native lifecycle qualification and actual024player/successor evidence now exist
+in their distinct lanes; qualify final publication and protected closeout next. Freeze #156 for each finite run after applicable
 fast/focused and native readiness checks; full review/CI qualify formal acceptance
 under the development-first workflow below. #157 supplies actual mission evidence
 before #145 readiness. The lead owns coupled runtime/ledger integration and the single native runtime. Disjoint

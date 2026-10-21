@@ -17,6 +17,13 @@ accepted autonomous survival service. Earlier [foundation](acceptance/2026-10-17
 and [MVP](acceptance/2026-10-17-mvp.md) reports retain their dated contract scopes.
 Protocol version: 4.
 
+The [independent024 result](acceptance/2026-10-21-independent-supply-shelter.md)
+exercises the integrated supply/shelter, durable memory, actual fresh successor and
+normal same-character lifecycle path on deciding source502ca0f. It is bounded
+development evidence, not unattended seven-day survival or learned-procedure
+support. Final publication/CI and the [prospective seven-day assessment](acceptance/2026-10-21-independent-seven-day-readiness.md)
+have separate gates. Earlier qualifications below retain their historical scope.
+
 The harness-enabled SDL ImGui context uses the library's steady text-caret setting.
 It preserves exact image validation without treating cosmetic blink as stable
 pixels. Game options and non-harness rendering retain upstream defaults.
