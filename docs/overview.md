@@ -77,9 +77,13 @@ normal ending. A fresh seven-day result is still required.
 The next input-foundation work and its
 [artifact impact map](changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
 link current contracts, procedures, controls, learning feedback and evidence to
-their backlog owners. Explicit Observe now permits a new decision on a changed
-healthy owned prompt; strict automatic input refresh and broader native/game
-coupling remain unresolved. Source support is distinct from real qualification.
+their backlog owners. The current foundation separates ordinary physical input
+from strict semantic refresh and permits explicit Observe under healthy custody.
+The [fifth learning attempt](acceptance/2026-10-22-discovery-learning-fifth-attempt.md)
+failed on a native JSON-object lifetime error during the first ordinary pickup
+key. It is closed with no eligible current library; a repaired build and new
+coherent learning run remain necessary before the fresh seven-day campaign.
+Source/CI support is distinct from real qualification and game-family portability.
 
 The official MCP SDK adapter constructs and retains requests, collects original
 results and presents exact images over the existing mission ingress. Both024

@@ -652,15 +652,13 @@ void exact_frame_gate()
     if( failure ) { std::rethrow_exception( failure ); }
     if( !same ) { throw input_refusal( "latest presented PNG changed" ); }
 }
-void ordinary_commit_gate( const TextJsonObject &request, bool resuming )
+void ordinary_commit_gate( const TextJsonObject &request, bool resuming, bool click )
 {
     ordinary_gate( request );
     if( !ordinary_receiver() ) { throw input_refusal( "no live ordinary input receiver" ); }
     if( !resuming && ( paused || fs::exists( path( "pause" ) ) ) ) {
         throw std::runtime_error( "pause interrupted dispatch" );
     }
-    const bool click = request.get_string( "kind" ) == "direct" &&
-                       request.get_object( "input" ).get_string( "type" ) == "click";
     if( request.get_string( "kind" ) == "direct" && request.get_bool( "require_exact_frame" ) ) {
         throw input_refusal( "direct input requires physical-event preflight" );
     }
@@ -1359,7 +1357,7 @@ bool poll( keyboard_mode mode, input_event &event )
             if( !ordinary_receiver() ) {
                 throw input_refusal( "unsupported boundary for resume" );
             }
-            ordinary_commit_gate( request, true );
+            ordinary_commit_gate( request, true, false );
             fs::remove( path( "pause" ) );
             paused = false;
             pause_origin = "none";
@@ -1401,7 +1399,7 @@ bool poll( keyboard_mode mode, input_event &event )
         } else {
             throw std::runtime_error( "unsupported command" );
         }
-        ordinary_commit_gate( request, false );
+        ordinary_commit_gate( request, false, direct && direct->type == direct_input::kind::click );
         ++revision;
         pending = id;
         input_committed = true;
@@ -1425,6 +1423,8 @@ bool poll( keyboard_mode mode, input_event &event )
                 if( !claimed.is_open() ) { throw std::runtime_error( "cannot read refusal claim" ); }
                 TextJsonIn parser( claimed );
                 const TextJsonObject original = parser.get_object();
+                // This secondary read checks custody only; primary request validation stays strict.
+                original.allow_omitted_members();
                 authority_gate( original );
                 if( integer_member( original, "takeover_generation" ) != takeover_generation ||
                     ( original.get_string( "kind" ) != "resume" &&

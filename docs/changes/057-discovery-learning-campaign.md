@@ -376,6 +376,7 @@ through first adoption-request admission from whole-attempt totals:
 | --- | --- | --- | --- |
 | Learning004 | 294.711s | 42 / 79 | 178 |
 | Fresh seven-day002 (failed) | 238.647s | 41 / 81 | 115 |
+| Learning005 (failed, current contract) | 512.147s | 43 / 80 | 87 |
 
 The lead verified the request/admission and primitive joins against the closed
 ledgers; no current runtime reader, old library import or restored authority was
@@ -393,6 +394,20 @@ delays investigation; preserve all old costs and new provenance. No extra snapsh
 framework, precise ROI requirement or blanket campaign gate follows.
 
 ## Maintenance and current status
+
+The [fifth actual learning attempt](../acceptance/2026-10-22-discovery-learning-fifth-attempt.md)
+failed on the first ordinary pickup key after normal adoption. Its87primitives,
+218frames and1game second remain retained; no current library or normal ending is
+accepted. All actors/processes are closed exceptionally. Exact3f17f7c CI passed
+1,569tests, separately from this native failure. Actual pinned-parser probes
+reproduce partial-child and secondary-root visitation errors without repeating
+character creation. The reviewed repair carries translated click classification
+and uses the documented partial-read API only for the secondary custody reread;
+primary validation stays strict. A separate ACK/custody repair retains known
+terminal delivery under a later takeover/session capture. Both require new source,
+installed native and graphical evidence; never resume005 or reuse its authority.
+This small reuse of compiled engine objects is a concrete accelerator under
+P-CHANGE/S-CODE; #175 retains the larger checkpoint-reuse assessment.
 
 This active delivery brief records implementation and the bounded004graphical
 checkpoint. It does not accept a fresh seven-day campaign or protected release.

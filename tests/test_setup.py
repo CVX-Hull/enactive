@@ -221,8 +221,8 @@ class SetupTests(unittest.TestCase):
                           'feed_imgui(', 'process_input(', 'LeftButtonPressed', 'RightButtonPressed'):
             self.assertNotIn(forbidden, direct)
         poll = native[native.index('bool poll( keyboard_mode'):]
-        self.assertLess(poll.index('direct = direct_event('), poll.index('ordinary_commit_gate( request, false );'))
-        self.assertLess(poll.index('ordinary_commit_gate( request, false );'), poll.index('feed_direct_imgui( *direct );'))
+        self.assertLess(poll.index('direct = direct_event('), poll.index('ordinary_commit_gate( request, false, direct && direct->type == direct_input::kind::click );'))
+        self.assertLess(poll.index('ordinary_commit_gate( request, false, direct && direct->type == direct_input::kind::click );'), poll.index('feed_direct_imgui( *direct );'))
         self.assertIn('kind == "direct" && request.get_bool( "require_exact_frame" )', poll)
         gate = native[native.index('void ordinary_commit_gate('):native.index('input_event action_event(')]
         self.assertIn('current_frame_geometry() != saved_geometry', gate)
@@ -369,7 +369,7 @@ class SetupTests(unittest.TestCase):
         self.assertIn('integer_member( request, "takeover_generation" ) != takeover_generation', native)
         poll = native[native.index('bool poll( keyboard_mode'):]
         self.assertEqual(poll.count('ordinary_gate( request );'), 1)
-        self.assertLess(poll.rindex('ordinary_commit_gate( request, false );'), poll.index('pending = id;'))
+        self.assertLess(poll.rindex('ordinary_commit_gate( request, false, direct && direct->type == direct_input::kind::click );'), poll.index('pending = id;'))
         human = native[native.index('void human_input()'):native.index('void boundary()')]
         self.assertIn('++takeover_generation;', human)
         world = native[native.index('void playing('):native.index('void frame_presented(')]
@@ -439,11 +439,11 @@ class SetupTests(unittest.TestCase):
         self.assertLess(gate.rindex('ordinary_gate( request );'), gate.rindex('fs::exists( path( "pause" ) )'))
         poll = native[native.index('bool poll( keyboard_mode'):]
         resume = poll[poll.index('if( kind == "resume" )'):poll.index('if( paused ||')]
-        self.assertLess(resume.index('ordinary_commit_gate( request, true );'),
+        self.assertLess(resume.index('ordinary_commit_gate( request, true, false );'),
                         resume.index('fs::remove( path( "pause" ) );'))
         self.assertLess(resume.index('fs::remove( path( "pause" ) );'), resume.index('paused = false;'))
-        self.assertLess(poll.index('event = *binding;'), poll.index('ordinary_commit_gate( request, false );'))
-        self.assertLess(poll.index('ordinary_commit_gate( request, false );'), poll.index('++revision;\n        pending = id;'))
+        self.assertLess(poll.index('event = *binding;'), poll.index('ordinary_commit_gate( request, false, direct && direct->type == direct_input::kind::click );'))
+        self.assertLess(poll.index('ordinary_commit_gate( request, false, direct && direct->type == direct_input::kind::click );'), poll.index('++revision;\n        pending = id;'))
 
     def test_patch_rejects_changed_render_owner_hashes_and_anchors(self):
         for name in ("src/uilist.cpp", "src/inventory_ui.cpp", "src/ui_manager.cpp", "src/cata_imgui.cpp",

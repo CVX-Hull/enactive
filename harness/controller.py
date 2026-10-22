@@ -1006,7 +1006,8 @@ class Controller:
                 stream.flush()
                 os.fsync(stream.fileno())
 
-    def _accept(self, response: dict[str, Any], *, known_control_id: str | None = None,
+    def _accept(self, response: dict[str, Any], *, known_request_id: str | None = None,
+                known_control_id: str | None = None,
                 historical: bool = False) -> None:
         def newer_capture(candidate: dict, previous: dict) -> bool:
             if candidate["session"] == previous["session"]:
@@ -1053,7 +1054,7 @@ class Controller:
                     self.frozen = True
                     self.pause_requested = True
                     self._pause_file()
-                    if self.pending is not None:
+                    if self.pending is not None and self.pending["id"] != known_request_id:
                         self._unknown(self.pending, "native session changed; old-world outcome remains unknown")
                     if self.control_pending is not None and self.control_pending["id"] != known_control_id:
                         self._control_unknown(self.control_pending, "native session changed")
@@ -1174,7 +1175,9 @@ class Controller:
                         if receipt is not None:
                             receipt["received_monotonic"] = received_monotonic
                             receipt["result"] = copy.deepcopy(response)
-                    self._accept(response, historical=terminal_received and kind in {"key", "action", "direct", "resume"})
+                    terminal_input = terminal_received and kind in {"key", "action", "direct", "resume"}
+                    self._accept(response, known_request_id=request_id if terminal_input else None,
+                                 historical=terminal_input)
                     if terminal_received:
                         with self.data_lock:
                             self.pending = None

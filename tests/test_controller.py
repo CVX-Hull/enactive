@@ -2303,6 +2303,110 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(entries[-1]["request"]["kind"], "mission_receipt")
             self.assertEqual(entries[-1]["outcome"], envelope)
 
+    def test_terminal_ack_stays_known_when_current_capture_revokes_custody(self):
+        for status in ("ready", "rejected"):
+            for change in ("takeover", "session"):
+                with self.subTest(status=status, change=change), tempfile.TemporaryDirectory() as root:
+                    controller = Controller(Path(root), timeout=2)
+                    try:
+                        captures = {}
+                        def supersede_ack(fake, request):
+                            if request["kind"] != "action":
+                                return True
+                            ack = copy.deepcopy(fake.value)
+                            ack.update(status=status, error="native rejection" if status == "rejected" else "",
+                                       revision=request["revision"] + (status == "ready"))
+                            current = copy.deepcopy(ack)
+                            current.update(id="", status="ready", error="", paused=True,
+                                           pause_origin="human", revision=ack["revision"] + 1,
+                                           timestamp_ms=ack["timestamp_ms"] + 1,
+                                           frame="frame-game-test-99.png", takeover_generation=1)
+                            current["boundary"]["control_generation"] += 1
+                            current["boundary"]["id"] = "takeover-boundary"
+                            if change == "session":
+                                current.update(session="new-world", frame="frame-new-world-1.png")
+                            captures.update(ack=ack, current=current)
+                            # Publish the independent current source first so a
+                            # correlated terminal cannot race ahead of this test.
+                            atomic_json(fake.bridge / "state.json", current)
+                            atomic_json(fake.bridge / "response.json", ack)
+                            return False
+
+                        with FakeBridge(controller, supersede_ack) as fake:
+                            self.assertEqual(controller.execute("observe")["status"], "ready")
+                            self.assertEqual(controller.execute("resume")["status"], "ready")
+                            source = copy.deepcopy(controller.state)
+                            lease = controller.acquire_mission("task-test", 0, "supervisor", operation="navigate",
+                                expected_boundary_id=source["boundary"]["id"], expected_session=source["session"],
+                                expected_revision=source["revision"])
+                            receipt = controller.execute_mission(lease, kind="action", value="UP",
+                                expected_boundary_id=source["boundary"]["id"], logical_action_id="ack-custody",
+                                expected_session=source["session"], expected_revision=source["revision"],
+                                deadline_monotonic=time.monotonic() + 2)
+                            request = receipt["request"]
+                            self.assertTrue(receipt["published"])
+                            self.assertIsNone(receipt["processing_error"])
+                            self.assertEqual(receipt["result"], captures["ack"])
+                            self.assertEqual(receipt["result"]["id"], request["id"])
+                            self.assertIsInstance(receipt["received_monotonic"], float)
+                            self.assertLessEqual(receipt["received_monotonic"], time.monotonic())
+                            self.assertEqual(read_json(fake.bridge / "response.json"), captures["ack"])
+                            snapshot, received = controller.observation_snapshot()
+                            self.assertEqual(snapshot, captures["current"])
+                            self.assertIsInstance(received, float)
+                            self.assertIsNone(controller._mission_lease)
+                            self.assertTrue(controller.frozen)
+                            self.assertTrue(controller.pause_requested)
+                            self.assertTrue((fake.bridge / "pause").exists())
+                            self.assertGreater(controller.pause_generation, lease.pause_generation)
+                            self.assertIsNone(controller.pending)
+                            self.assertFalse((controller.admissions / f'{request["id"]}.json').exists())
+                            self.assertEqual(sum(r["kind"] == "action" for r in fake.requests), 1)
+                            self.assertEqual(controller.unknown_outcomes, [])
+                            entries = [json.loads(line) for line in controller.journal.read_text().splitlines()]
+                            self.assertFalse(any(row["outcome"].get("status") == "unknown"
+                                and row["outcome"].get("request", {}).get("id") == request["id"] for row in entries))
+                            self.assertTrue(any(row["request"] == request and row["outcome"] == captures["ack"]
+                                                for row in entries))
+                            self.assertEqual(entries[-1]["outcome"], receipt)
+                    finally:
+                        controller.close()
+
+    def test_takeover_capture_preserves_unknown_without_matching_terminal(self):
+        for unrelated_terminal in (False, True):
+            with self.subTest(unrelated_terminal=unrelated_terminal), FakeBridge(self.controller) as fake:
+                self.ready()
+                lease = self.acquire()
+                # An admitted action still awaiting its terminal ACK. This
+                # isolates the capture classification from exchange timeout.
+                pending = {**copy.deepcopy(fake.requests[-1]), "id": str(uuid.uuid4()),
+                           "kind": "action", "action": "UP"}
+                self.controller.pending = pending
+                atomic_json(self.controller.admissions / f'{pending["id"]}.json', pending)
+                current = copy.deepcopy(fake.value)
+                current.update(paused=True, pause_origin="human", takeover_generation=1,
+                               revision=current["revision"] + 1, frame="frame-game-test-99.png")
+                current["boundary"]["control_generation"] += 1
+                atomic_json(fake.bridge / "state.json", current)
+                if unrelated_terminal:
+                    self.controller._accept(current, known_request_id=str(uuid.uuid4()), historical=True)
+                else:
+                    self.controller.status()  # An ordinary capture authenticates no ACK.
+                self.assertEqual(self.controller.pending, pending)
+                self.assertTrue((self.controller.admissions / f'{pending["id"]}.json').exists())
+                self.assertEqual(self.controller.unknown_outcomes[-1]["request"], pending)
+                entries = [json.loads(line) for line in self.controller.journal.read_text().splitlines()]
+                self.assertTrue(any(row["outcome"].get("status") == "unknown"
+                    and row["outcome"].get("request", {}).get("id") == pending["id"] for row in entries))
+                self.assertEqual(self.controller.observation_snapshot()[0], current)
+                self.assertIsNone(self.controller._mission_lease)
+                self.assertTrue(self.controller.frozen)
+                self.assertTrue(self.controller.pause_requested)
+                self.assertTrue((fake.bridge / "pause").exists())
+                self.assertGreater(self.controller.pause_generation, lease.pause_generation)
+            self.controller.pending = None
+            self.controller.state = None
+
     def test_run_preflight_rejection_is_never_an_action_receipt(self):
         with FakeBridge(self.controller) as fake:
             self.ready()

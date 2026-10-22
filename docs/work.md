@@ -99,9 +99,16 @@ checks pass. The initial full suite failed1567tests with10failures/186errors;
 current-only fixture and lifecycle receipt corrections have focused passing
 evidence and independent review. The complete repaired check ran1,569tests with
 one stale diagnostic assertion failure; that assertion is repaired and its
-27-test caller/lifecycle lane passes. Exact candidate full CI remains required.
-Native6 compiled successfully from committed source and is installed in the
-isolated project app; graphical integrated qualification remains open in#191.
+27-test caller/lifecycle lane passes. Exact3f17f7c hosted CI39723564882 then
+passed1,569tests/827.945s plus portable/viewer checks. Native6 compiled and was
+installed, but the [fifth learning attempt](acceptance/2026-10-22-discovery-learning-fifth-attempt.md)
+failed on its first ordinary pickup key: a fresh partially consumed native JSON
+object triggered CDDA DEBUG_MSG. Its53requests/87primitives/218frames/1game second
+and two unknown ACKs remain retained; no current library or normal ending is
+accepted. Both actors and owned processes are closed exceptionally. The actual
+pinned-parser probe reproduces the fault without another character-creation run;
+reviewed native lifetime and known-ACK/custody repairs now require their own
+source/build/graphical qualification. #176/#191 own that follow-through.
 P-CHANGE/S-CODE and the existing review/maintenance controls now
 explicitly favor objective-oriented reuse and configured platform guarantees;
 the delivery brief records an applied removal of duplicate post-ACK verification.

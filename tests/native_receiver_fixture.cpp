@@ -53,14 +53,20 @@ std::optional<frame_geometry> saved_geometry = frame_geometry{1};
 int current_width = 1, cached_width = 1;
 std::optional<frame_geometry> current_frame_geometry() { return frame_geometry{current_width}; }
 std::optional<frame_geometry> cached_frame_geometry() { return frame_geometry{cached_width}; }
+bool reject_input_reopen = false;
 struct TextJsonObject {
     std::map<std::string, std::string> strings;
     std::map<std::string, long long> integers;
     std::map<std::string, bool> booleans;
     std::map<std::string, TextJsonObject> objects;
+    mutable bool omitted_members_allowed = false;
+    void allow_omitted_members() const { omitted_members_allowed = true; }
     std::string get_string( const std::string &key ) const { return strings.at( key ); }
     bool get_bool( const std::string &key ) const { return booleans.at( key ); }
-    TextJsonObject get_object( const std::string &key ) const { return objects.at( key ); }
+    TextJsonObject get_object( const std::string &key ) const {
+        if( key == "input" && reject_input_reopen ) { throw std::runtime_error( "translated input reopened" ); }
+        return objects.at( key );
+    }
     size_t size() const { return strings.size() + integers.size() + booleans.size() + objects.size(); }
 };
 TextJsonObject packet;
@@ -72,9 +78,11 @@ long long integer_member( const TextJsonObject &request, const std::string &key 
 bool authority_ok = true, control_waiting = false, refuse_translation = false;
 bool fail_feed = false, fail_publish = false, fail_unlink = false, encoder_ok = true;
 int authority_calls = 0, feed_calls = 0;
+bool partial_custody_checked = false;
 std::function<void()> during_authority;
-void authority_gate( const TextJsonObject & ) {
+void authority_gate( const TextJsonObject &request ) {
     ++authority_calls;
+    if( request.omitted_members_allowed ) { partial_custody_checked = true; }
     if( during_authority ) { during_authority(); }
     if( !authority_ok ) { throw std::runtime_error( "authority" ); }
 }
@@ -87,7 +95,11 @@ bool write_frame( const std::string &filename ) {
 enum class keyboard_mode { keychar, keycode };
 enum class input_event_t { keyboard_char, keyboard_code };
 struct input_event { input_event_t type = input_event_t::keyboard_char; std::vector<int> sequence = {1}; };
-struct direct_input { input_event engine; };
+struct direct_input {
+    enum class kind { key, text, click };
+    kind type = kind::key;
+    input_event engine;
+};
 input_event key_event( const std::string &, keyboard_mode ) { return {}; }
 input_event action_event( const std::string &, keyboard_mode, bool = false ) { return {}; }
 direct_input direct_event( const TextJsonObject &, keyboard_mode );
@@ -127,9 +139,19 @@ void publish_control( const std::string &id, const std::string &status, const st
 void feed_imgui( const input_event & ) { ++feed_calls; if( fail_feed ) { throw std::runtime_error( "widget" ); } }
 void feed_direct_imgui( const direct_input &event ) { feed_imgui( event.engine ); }
 // PRODUCTION_FUNCTIONS
-direct_input direct_event( const TextJsonObject &, keyboard_mode ) {
+std::function<void()> during_translation;
+direct_input direct_event( const TextJsonObject &input, keyboard_mode ) {
     if( refuse_translation ) { throw input_refusal( "unsupported translation" ); }
-    return {};
+    direct_input event;
+    const std::string type = input.get_string( "type" );
+    if( type == "text" ) { event.type = direct_input::kind::text; }
+    else if( type == "click" ) { event.type = direct_input::kind::click; }
+    else if( type != "key" ) { throw input_refusal( "unsupported input type" ); }
+    // Translation has consumed this child. A commit must use its typed result,
+    // rather than opening a fresh child with only a subset of members visited.
+    reject_input_reopen = true;
+    if( during_translation ) { during_translation(); }
+    return event;
 }
 void require( bool value ) { if( !value ) { throw std::runtime_error( "assertion failed" ); } }
 void refresh_identity() {
@@ -217,35 +239,35 @@ int main( int argc, char **argv ) {
                     }
                     require( revision == before );
                 } else if( scenario == "receiver-exit" ) {
-                    receivers.clear(); require( refusal( [&]() { ordinary_commit_gate( packet, false ); } ) );
+                    receivers.clear(); require( refusal( [&]() { ordinary_commit_gate( packet, false, false ); } ) );
                     receivers.emplace_back( scopes.size(), &context );
                 } else if( scenario == "receiver-changed-at-commit" ) {
                     during_authority = [&]() { if( authority_calls == 2 ) { receivers.back().second = &second; } };
-                    require( refusal( [&]() { ordinary_commit_gate( packet, false ); } ) );
+                    require( refusal( [&]() { ordinary_commit_gate( packet, false, false ); } ) );
                 } else if( scenario == "direct-key-resize" || scenario == "direct-text-resize" ) {
                     current_width = cached_width = 2; pixels = "changed by f(T)";
                     if( scenario == "direct-text-resize" ) { packet.objects["input"].strings["type"] = "text"; }
-                    ordinary_commit_gate( packet, false );
+                    ordinary_commit_gate( packet, false, false );
                 } else if( scenario == "direct-click-resize" ) {
                     packet.objects["input"].strings["type"] = "click"; current_width = 2;
-                    require( refusal( [&]() { ordinary_commit_gate( packet, false ); } ) );
+                    require( refusal( [&]() { ordinary_commit_gate( packet, false, true ); } ) );
                 } else if( scenario == "direct-exact-rejected" ) {
                     packet.booleans["require_exact_frame"] = true;
-                    require( refusal( [&]() { ordinary_commit_gate( packet, false ); } ) );
+                    require( refusal( [&]() { ordinary_commit_gate( packet, false, false ); } ) );
                 } else if( scenario == "semantic-exact" || scenario == "semantic-drift" || scenario == "comparison-io" || scenario == "comparison-symlink" ) {
                     packet.strings["kind"] = "key"; packet.booleans["require_exact_frame"] = true;
                     if( scenario == "semantic-drift" ) { pixels = "different bytes"; }
                     if( scenario == "comparison-io" ) { fs::remove( frame_name ); }
                     if( scenario == "comparison-symlink" ) { fs::remove( frame_name ); fs::create_symlink( "missing", frame_name ); }
-                    if( scenario == "semantic-drift" ) { require( refusal( [&]() { ordinary_commit_gate( packet, false ); } ) ); }
-                    else if( scenario != "semantic-exact" ) { require( hard_fault( [&]() { ordinary_commit_gate( packet, false ); } ) ); }
-                    else { ordinary_commit_gate( packet, false ); }
+                    if( scenario == "semantic-drift" ) { require( refusal( [&]() { ordinary_commit_gate( packet, false, false ); } ) ); }
+                    else if( scenario != "semantic-exact" ) { require( hard_fault( [&]() { ordinary_commit_gate( packet, false, false ); } ) ); }
+                    else { ordinary_commit_gate( packet, false, false ); }
                     require( !fs::exists( "frame.compare.tmp.png" ) );
                 } else if( scenario == "stale" ) {
-                    ++revision; require( refusal( [&]() { ordinary_commit_gate( packet, false ); } ) );
+                    ++revision; require( refusal( [&]() { ordinary_commit_gate( packet, false, false ); } ) );
                 } else if( scenario == "authority" || scenario == "pause" ) {
                     if( scenario == "authority" ) { authority_ok = false; } else { paused = true; }
-                    require( hard_fault( [&]() { ordinary_commit_gate( packet, false ); } ) );
+                    require( hard_fault( [&]() { ordinary_commit_gate( packet, false, false ); } ) );
                 } else {
                     std::ofstream( "request.json" ) << "fixture packet";
                     if( scenario == "expected-refusal" || scenario == "refusal-capture-failure" ||
@@ -260,13 +282,27 @@ int main( int argc, char **argv ) {
                     else if( scenario == "postcommit-publish" ) { fail_publish = true; }
                     else if( scenario == "postcommit-unlink" ) { fail_unlink = true; }
                     else if( scenario == "control-first" ) { control_waiting = true; }
+                    else if( scenario == "translated-key" || scenario == "translated-text" ||
+                             scenario == "translated-click" || scenario == "translated-click-resize" ) {
+                        packet.objects["input"].strings["type"] = scenario == "translated-key" ? "key" :
+                                scenario == "translated-text" ? "text" : "click";
+                        if( scenario != "translated-click" ) {
+                            during_translation = []() { current_width = cached_width = 2; pixels = "changed by f(T)"; };
+                        }
+                    }
                     else { throw std::runtime_error( "unknown scenario" ); }
                     if( scenario == "human-fault" || scenario == "refusal-capture-human" ) { pause_origin = "human"; }
                     input_event event; const bool delivered = poll( keyboard_mode::keychar, event );
                     if( scenario == "control-first" ) { require( delivered && feed_calls == 0 && fs::exists( "request.json" ) ); }
-                    else if( scenario == "expected-refusal" ) {
+                    else if( scenario == "translated-key" || scenario == "translated-text" || scenario == "translated-click" ) {
+                        require( delivered && feed_calls == 1 && pending == "input-1" );
+                        require( !partial_custody_checked && !paused && !fs::exists( "pause" ) &&
+                                 statuses == std::vector<std::string>{"dispatched"} );
+                    }
+                    else if( scenario == "expected-refusal" || scenario == "translated-click-resize" ) {
                         require( !delivered && !paused && pause_origin == "none" && !fs::exists( "pause" ) );
-                        require( statuses == std::vector<std::string>{"rejected"} );
+                        require( partial_custody_checked && feed_calls == 0 &&
+                                 statuses == std::vector<std::string>{"rejected"} );
                     } else {
                         require( !delivered && paused && fs::exists( "pause" ) );
                         require( pause_origin == ( scenario == "human-fault" || scenario == "refusal-capture-human" ? "human" : "fault" ) );
