@@ -1415,7 +1415,9 @@ dispute persistence still reject reopening.
 Each caller-owned store has one writer and defaults to32frames/64MiB, including
 indexed source slots (including missing originals) and orphan files on reopen.
 Explicit mission admission may raise retention up to
-4096frames/1GiB. Metadata stays bounded to34MiB with separate bookkeeping headroom;
+8192frames/2GiB. These shared mission/store/library ceilings support a prospectively
+sized campaign; existing default budgets and original admissions do not grow.
+Metadata stays bounded to34MiB with4MiB bookkeeping headroom;
 capacity checks reserve worst-case after metadata before dispatch. Each image is at most 32 MiB. Before
 dispatch, retain the before-frame and reserve one additional slot plus 32 MiB for
 the after/failure frame. Consume or explicitly release that reservation; capacity
@@ -1429,7 +1431,7 @@ predicate path was accepted in
 [bounded-skill acceptance](acceptance/2026-10-17-bounded-skills.md) for its tested
 scope. This does not establish general campaign evidence ingestion.
 
-The evidence store uses format version 3 and exposes `source_status(reference)`
+The evidence store uses format version 5 and exposes `source_status(reference)`
 as `retained` or `disputed` after identity/integrity verification. Disputes persist
 across newer observations and reopening, including after damaged bytes are restored.
 Stale current authority alone does not dispute historical truth. Earlier stores

@@ -21,7 +21,7 @@ from typing import Any
 
 from .contracts import canonical, ContractError, EvidenceRef, _pairs, _reject_constant, json_object, validate_json
 from .evidence import (
-    MAX_FRAME_BYTES, MAX_FRAMES, MAX_METADATA_BYTES, MAX_AGE_SECONDS, MAX_HISTORICAL_LAG_SECONDS, _check_frame_bytes,
+    MAX_FRAME_BYTES, MAX_FRAMES, MAX_BYTES, MAX_METADATA_BYTES, MAX_AGE_SECONDS, MAX_HISTORICAL_LAG_SECONDS, _check_frame_bytes,
     _identity, _validate_observation,
 )
 from .mission_contracts import MissionAdmission, validate_effect_reconciliation, validate_request
@@ -32,7 +32,7 @@ from .procedures import MAX_PROCEDURE_RECORDS, procedure_schema, project_procedu
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
 MAX_REQUESTS = 4096
 MAX_PRIMITIVES = 8192
-MAX_ARCHIVE_BYTES = 1024 * 1024 * 1024
+MAX_ARCHIVE_BYTES = MAX_BYTES
 _TERMINAL = frozenset({"completed", "failed", "stopped"})
 _REQUEST_TERMINAL = frozenset({"completed", "partial", "blocked", "failed", "unknown", "paused"})
 _PRIMITIVE_TERMINAL = frozenset({"returned", "rejected", "not_dispatched", "unknown"})

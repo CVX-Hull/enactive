@@ -35,7 +35,13 @@ restoring old-world facts or execution handles. Old native5 libraries remain
 immutable historical evidence and cannot be mounted under native6. See
 [the current contract](protocol.md#ordinary-discovery-and-procedure-data).
 The native6 candidate passed its fresh local build from committed source and is
-installed in the isolated project app; real graphical qualification remains pending. Earlier learning failures retain
+installed in the isolated project app. The
+[normal sixth run](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
+qualifies bounded current-contract discovery, procedure branch refinement/reuse,
+actual fresh-context application, same-proposal advisory overlap and exact normal
+lifecycle. Its v2 procedure is eligible scoped advisory library data. The disclosed
+technical creation-recovery pointer prevents a zero-assistance claim; no unsafe-rule
+correction, causal learning benefit or seven-day survival is established. Earlier learning failures retain
 their partial evidence. The [fourth run](acceptance/2026-10-21-discovery-learning-fourth-attempt.md)
 qualifies bounded native5 procedure reuse, fresh-context application, same-proposal
 graphical advisory overlap/disposition and normal save/reload/final shutdown.
@@ -88,8 +94,9 @@ game-time overshoot ends a normal root partial or leaves an owned menu for Obser
 closure without pausing healthy mission ownership. Full shared
 game integration extraction, general setup/ending cancellation and a real second
 game qualification also remain open. [Delivery057](changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
-maps these limits to #191; this source candidate has no new native/graphical or
-hosted full-pass claim.
+maps these limits to #191. Learning006 and exact1947b3aCI supply their own bounded
+evidence; subsequent source changes require their own applicable checks, and
+unexercised native/game-family behavior remains unqualified.
 
 The harness-enabled SDL ImGui context uses the library's steady text-caret setting.
 It preserves exact image validation without treating cosmetic blink as stable

@@ -436,6 +436,21 @@ checks browser status anchors, leaving actual paired native correlation to fresh
 play. These use the existing viewer and#143/#164, without a new endpoint, transport,
 telemetry service, approval layer or native/mission/library migration.
 
+Fresh-campaign preparation then found a concrete capacity mismatch: the old
+1,184-input forecast was below the first supervised2,109whole-input trajectory,
+while current006retains2.64frames/input. The shared optional retention ceiling is
+now8192frames/2GiB across admission, evidence and the sealed library; defaults,
+original admissions,32MiB/image,34MiB metadata and64MiB ledger remain unchanged.
+Existing bookkeeping headroom grows to4MiB for doubled bounded lists. No archive
+format, native binary, storage mechanism, pruning or compatibility path changes.
+Independent review and114focused tests cover capacity/configuration, reservation,
+refusal and reopen without authority; current006pins and all seven episode source
+exports remain intact. The [revised prospective plan](../acceptance/2026-10-21-independent-seven-day-readiness.md#joint-finite-preparation-budget)
+couples2456inputs/2820requests/7496frames/1874MiB plus original wall/game/ending
+limits. This is a planning envelope, not large-archive performance or survival
+evidence. Actual fresh-actor catalogue/permission/native checks and the new finite
+source freeze precede admission.
+
 The second fresh campaign exposed another distinction required by the existing
 [organic loop](../design/organic-discovery.md) and
 [mixed-input boundary](../design/mixed-input.md): an invalid semantic request is

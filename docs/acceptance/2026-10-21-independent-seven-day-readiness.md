@@ -7,7 +7,7 @@ status: active
 # Independent seven-day readiness
 
 Decision: the [mission024 evidence](2026-10-21-independent-supply-shelter.md) and
-[bounded learning004 result](2026-10-21-discovery-learning-fourth-attempt.md) support preparing **one bounded fresh seven-day development assessment** through
+[bounded current learning006 result](2026-10-22-discovery-learning-sixth-attempt.md) support preparing **one bounded fresh seven-day development assessment** through
 the current player-owned mission system. It does not establish seven-day success,
 general survival competence or measured memory benefit. For the user's selected
 [delivery057](../changes/057-discovery-learning-campaign.md), freeze reviewed
@@ -24,8 +24,8 @@ campaign outcome is met. At the024 baseline, mixed interaction/procedural learni
 reflection were separate follow-through. The user subsequently selected
 delivery057's explicit learning mission before this fresh campaign;
 [#176–178](../work.md#campaign-delivery-path) now supply its source capabilities.
-Learning004closed normally with178primitives/148requests/467frames/25,411,298bytes
-and1845game seconds. All146actual host image presentations match retained bytes.
+Learning006closed normally with155primitives/128requests/409frames/22,190,684bytes
+and1850game seconds. All147actual host image presentations match retained bytes.
 It supports scoped condition refinement and fresh-context application, not
 correction of an erroneous rule or measured efficacy. Failed learning002used
 165primitives/429frames;003used89/218before normal adoption. All remain retained;
@@ -74,38 +74,51 @@ test, not a promise of adequate time.
 
 ## Joint finite preparation budget
 
-These are proposed selections within the existing software maxima, not a request
-to raise them. All costs accumulate in one admission across replacement/reload.
-At the selected current ceilings, seven elapsed days require604800game seconds;
-the691200game-second cap leaves86400seconds for legitimate activity overshoot and
-ending. Ordinary skill roots may select at most32primitives/900wall/43200game
-seconds; lifecycle roots at most256/1800/43200. A twelve-hour activity allowance
-is a software maximum, not permission to ignore needs or threats for twelve hours.
-Choose shorter, evidence-justified intervals and children that narrow the root.
+The current shared mission/store/library retention ceiling is8192frames/2GiB,
+with ordinary defaults unchanged. This prospective increase resolves a concrete
+workload mismatch: the old1,184-input forecast was below the first supervised
+campaign's2,109whole-input trajectory, while current006retains409frames for155inputs
+(2.64frames/input). The old4,096-frame ceiling would allow only about1,365inputs
+at a three-frame planning rate, before extra observations. There is no reason to
+consume a failed live campaign solely to demonstrate that arithmetic. This uses
+the existing ledger, archive and reader, with no pruning, new storage framework,
+compatibility path or larger live authority. The current schema has the same
+shape/version; every schema producer, store and library uses the shared bounds.
+Historical admissions and defaults retain their original finite selections.
 
-| Resource | Proposed total ceiling | Protected ending provision within total | Preparation forecast / uncertainty |
+The new prospective forecast allows2,200ordinary inputs plus256ending inputs,
+including creation/handoff/reload within the ordinary envelope. It is deliberately
+larger than2,109whole historical inputs; the1,188aggregate scope equals2,109minus
+its921baseline and must not be added or substituted as whole fresh-campaign cost.
+Day five's663inputs motivate flexible campaign-wide capacity rather than96inputs
+as an assumed daily rate. Different interfaces, supervision and setup make these
+scale references rather than an independent throughput prediction.
+
+All costs accumulate in one admission across replacement/reload. Seven elapsed
+days require604800game seconds; the691200cap leaves86400for legitimate activity
+overshoot and ending. Ordinary roots remain at most32primitives/900wall/43200game
+seconds; lifecycle roots256/1800/43200. A twelve-hour allowance is a maximum, not
+permission to ignore needs/threats.
+
+| Resource | Proposed total ceiling | Protected ending within total | Coupled forecast / uncertainty |
 | --- | --- | --- | --- |
-| Charged inputs / primitive mappings | 8192each | 256each | Tentative workload envelope:256setup/handoff/restart +7×96daily +256ending =1184. The hard input cap is not entirely usable if another resource binds first. Historical2109inputs are only a scale reference; no speedup claim. |
-| Retained requests | 4096 | 128soft | 192setup/continuity +7×96daily +128ending =992. Counts are not model calls; ending requests have no separate runtime reserve field. |
-| Original frames | 4096 | 768 | Planning stress scenario:3frames×928ordinary inputs +128separate observations =2912ordinary frames;3×256ending inputs =768ending frames. Total3680, leaving416unallocated. Three frames/input is an assumption, not a proven bound. |
-| Frame bytes | 1GiB | 192MiB | At an assumed0.25MiB/frame,2912ordinary frames use728MiB and768ending frames192MiB:920MiB total with104MiB unallocated. The ending allocation is within the total, not added twice. Actual compression/retention can invalidate the assumption. |
-| Wall time | 86400seconds | 1800seconds | At most84600seconds before the ending provision. No reliable independent seven-day throughput estimate exists. |
-| Game time | 691200seconds | Ending/overshoot headroom86400seconds beyond the604800target | Stop survival advancement once the target is verified; use normal ending, not gratuitous extra time. |
+| Inputs / primitive mappings |8192each|256each|2200ordinary +256ending =2456; other resources can bind before the input ceiling. No daily allowance renewals. |
+| Requests |4096|320soft|2500ordinary (including separate observations/memory/continuity) +320ending =2820. Requests are not model calls; no separate enforced request reserve. |
+| Original frames |8192|768|3×2200ordinary inputs +128extra observations =6728;3×256ending =768; total7496, leaving696unallocated. Three frames/input is an assumption, not a proven bound. |
+| Frame bytes |2GiB|192MiB|At0.25MiB/frame:1682MiBordinary +192MiBending =1874MiB, leaving174MiB.006mean54,256bytes/max116,629bytes support the scale, not a compression or32MiB-per-frame guarantee. |
+| Wall time |86400seconds|1800seconds|84600before ending reserve. First supervised100224.8second span includes engineering/review and is not an independent-player prediction;24hours remains a finite risk envelope. |
+| Game time |691200seconds|86400beyond604800target|Stop survival advancement when target is verified, then normally end. |
 
-The input/frame/request allocations are engineering planning envelopes, not
-empirical confidence intervals or daily allowance renewals. Ending provisions
-exceed024's demonstrated normal ending and include uncertainty, but cannot
-guarantee every recovery. The admission's enforced cleanup fields select
-256inputs/1800wall seconds/768frames/192MiB; request/mapping provisions require the
-player's joint forecast because the current cleanup schema has no separate fields
-for them. The larger prospective frame/byte provision matches the same ending
-input stress scenario; it changes no schema and is not admitted until the actual
-learning outcome and a new frozen forecast justify it. The0.25MiB/frame assumption
-is roughly five times002's observed mean, not a confidence interval or a guarantee
-against the32MiB per-frame bound. Learning004observed2.62frames/charged primitive
-and about53KiB/frame on average; neither is a worst-case guarantee. The selected
-3frames/input stress assumption and0.25MiB/frame budget remain prospective. No
-new accounting framework or unimplemented automatic reservation is claimed.
+The enforced cleanup fields remain256inputs/1800wall/768frames/192MiB. Mapping,
+request and game-time ending provisions use the player's joint forecast because
+the reserve schema has no separate fields for them. The planning total leaves
+headroom for corrections and after-frame reservations; it guarantees neither
+survival nor recovery from every failure. Image presentation/retrieval counts are
+not additional retained frames. Metadata remains bounded to34MiB, with4MiB for
+bookkeeping growth; the ledger remains64MiB. Current006metadata/ledger sizes make
+the selected workload plausible, but source tests and arithmetic do not qualify
+large-archive performance or all future UI payloads. Existing capacity checks stop
+before further dispatch if any actual limit cannot fit; no evidence is deleted.
 
 At each meaningful boundary forecast **all seven resources together**, including
 normal final Save/Quit/Finish. Use actual cumulative ledger/archive usage and the
@@ -118,30 +131,28 @@ ceiling increase, new admission for the same failed run or retroactive refund.
 
 ## Scoped memory and advisory preparation
 
-Pin only normally closed learning004's ledger and evidence index, verifying both
-hashes and current ProcedureLibrary eligibility before freezing admission. The
-first actual pin check refused because its five authority-blocked prompt images
-were incorrectly treated as unavailable historical evidence; all467images verify
-and none is disputed. #188 now repairs that distinction. Independent source review passed; the lead
-repeated the exact read-only pin check successfully: two revisions, three support/
-contrary episodes and ten exported sources including all five blocked images,
-each retained with no authority. Original ledger/index hashes are unchanged. Its
-R1/R2 counted-pickup family is scoped advisory data. Retrieve original supporting
-images and assess current applicability; do not import Riley's stock, locations,
-world identity, handles or authority. R2 has a documented step-order ambiguity;
-actual execution and visible verification remain the player's responsibility.
+Pin only normally closed current-native6 learning006's ledger and evidence index,
+verifying both hashes and current ProcedureLibrary eligibility before freezing
+admission. Independent closed-run review and the current reader validate the two
+revision records and all seven support/counterexample source exports; original
+pins remain unchanged. V2 is scoped advisory locker/list branch refinement, not
+correction of an unsafe rule or causal learning efficacy. Retrieve original images
+and assess current applicability; do not import Casey's stock, locations, world
+identity, handles or authority. The lead's technical creation-contract pointer is
+disclosed in the learning report. Native5learning004remains historical evidence
+and cannot mount under native6; no compatibility path or rewritten old archive.
 Exceptional failed archives remain under #186 rather than being edited into
 eligible history. No new history or memory database is needed for this campaign.
 
-Learning004spent20×180=3600conservatively charged advisory seconds while observed
-claim-to-submit intervals ranged3.57–16.03seconds. A prospective campaign selection
+Learning006spent20×180=3600conservatively charged advisory seconds while observed
+claim-to-submit intervals ranged6.90–28.36seconds,296.295seconds total. A prospective campaign selection
 is64offered jobs,2pending,32requests/8sources/64KiB context/32KiB output per job,
 60seconds per original claim and3600total seconds: at most60full claimed windows.
 Sixty seconds is a planning choice, not a proven deadline bound; retain any actual
 miss without renewing it. Software remains responsible for scheduling/coalescing,
 and the deciding player need not wait for a proposal. The advisory actor must
-interpret actual source images, disclose omissions and remain fallible; five004
-claims before adoption motivate #178's relevance/coverage follow-through, without
+interpret actual source images, disclose omissions and remain fallible; setup
+claims and finite exhausted coverage motivate #178's relevance/coverage follow-through, without
 proving harm. Temporary Finish sealing returns bounded idle; only terminal phase
 or permanent closure means closed under #187. Actual host-handle quiescence is
 still required before controller/storage closure.
@@ -203,4 +214,4 @@ actual readiness state. Revisit this forecast at admission, after a material
 source/native/tool change, or when campaign evidence changes its assumptions.
 Existing research/control review dates remain unchanged. Actual capacity failure
 should become a scoped owned finding before selecting a later fresh assessment;
-uncertainty alone does not establish a need for larger caps or new infrastructure.
+measured workload/cap mismatches can justify prospective changes without first burning a live run; uncertainty alone does not justify new infrastructure.

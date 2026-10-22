@@ -401,11 +401,22 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(len(self.store.historical_references), 2)
 
     def test_mission_caps_can_increase_retention_without_changing_defaults(self):
+        from harness.gameplay.mission_contracts import MissionLimits
+        limits = MissionLimits(frames=8192, frame_bytes=2*1024*1024*1024)
         self.store.close()
-        self.store = self.open_store(max_frames=4096, max_bytes=1024*1024*1024)
+        self.store = self.open_store(max_frames=limits.frames, max_bytes=limits.frame_bytes)
         ref = self.ingest()
-        self.assertEqual(self.store.usage()["max_frames"], 4096)
+        self.assertEqual(self.store.usage()["max_frames"], limits.frames)
+        self.assertEqual(self.store.usage()["max_bytes"], limits.frame_bytes)
         self.assertEqual(self.current(), ref)
+        preflight = self.dispatch_preflight(ref)
+        reservation = self.store.reserve_dispatch(ref, preflight=preflight, rule="native_state",
+            now_monotonic=100, now_timestamp_ms=1_000_000)
+        self.store.release(reservation)
+        self.store.close()
+        self.store = self.open_store(max_frames=limits.frames, max_bytes=limits.frame_bytes)
+        self.store.verify(ref)
+        self.assertEqual(self.store.inspect_current(now_monotonic=100, now_timestamp_ms=1_000_000), (None, False))
 
     def test_observation_copy_cannot_mutate_store_or_refresh_authority(self):
         first = self.ingest()
@@ -814,7 +825,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertTrue(Path(ref.frame_path).exists())
 
     def test_limits_can_only_be_lowered_and_cache_directory_cannot_be_store(self):
-        for arguments in ({"max_frames": 4097}, {"max_bytes": MAX_BYTES + 1},
+        for arguments in ({"max_frames": 8193}, {"max_bytes": MAX_BYTES + 1},
                           {"max_frames": True}, {"max_bytes": 0}):
             with self.subTest(arguments=arguments), self.assertRaises(CapacityError):
                 EvidenceStore(self.bridge, self.root / "other-store", **arguments)

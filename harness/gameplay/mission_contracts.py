@@ -23,6 +23,9 @@ MAX_REQUEST_BYTES = 65_536
 MAX_CONTEXT_BYTES = 32_768
 MAX_HANDOFF_CONTEXT_BYTES = 131_072
 MAX_HANDOFF_SOURCES = 128
+# Explicit campaign retention ceilings; ordinary defaults remain smaller.
+MAX_RETAINED_FRAMES = 8192
+MAX_RETAINED_BYTES = 2 * 1024 * 1024 * 1024
 # Leave room for the bounded mission wrapper and the future post-Pause source.
 # The packet itself must fit the remaining 96KiB before authority is relinquished.
 HANDOFF_CONTEXT_RESERVE = 32_768
@@ -48,12 +51,12 @@ _SHA = {"type": "string", "pattern": "^[a-f0-9]{64}$"}
 _LIMITS = _object({
     "inputs": _integer(8192, 1), "wall_seconds": _number(86_400),
     # Seven elapsed days is an objective, not a safe total cap for ending work.
-    "game_seconds": _integer(691_200, 1), "frames": _integer(4096, 1),
-    "frame_bytes": _integer(1_073_741_824, 1),
+    "game_seconds": _integer(691_200, 1), "frames": _integer(MAX_RETAINED_FRAMES, 1),
+    "frame_bytes": _integer(MAX_RETAINED_BYTES, 1),
     "requests": _integer(4096, 1), "primitive_mappings": _integer(8192, 1),
 })
 _RESERVE = _object({"inputs": _integer(8192, 1), "wall_seconds": _number(86_400),
-                    "frames": _integer(4096, 1), "frame_bytes": _integer(1_073_741_824, 1)})
+                    "frames": _integer(MAX_RETAINED_FRAMES, 1), "frame_bytes": _integer(MAX_RETAINED_BYTES, 1)})
 _SCENARIO = _object({"mode": _enum("fresh", "load"), "world": _text(80),
                      "character": _text(80)})
 _CONFIGURATION = _object({

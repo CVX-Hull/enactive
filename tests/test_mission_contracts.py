@@ -128,7 +128,8 @@ class MissionContractTests(unittest.TestCase):
                         dict(update_policy="learn-new-code"), dict(cleanup_reserve=CleanupReserve(inputs=1500))]:
             with self.subTest(changes=changes), self.assertRaises(ContractError): admission(**changes)
         for cls, changes in [(MissionLimits, {"wall_seconds": 0}), (MissionLimits, {"inputs": True}),
-                             (MissionLimits, {"inputs": 2.0}), (MissionLimits, {"frames": 4097}),
+                             (MissionLimits, {"inputs": 2.0}), (MissionLimits, {"frames": 8193}),
+                             (MissionLimits, {"frame_bytes": 2*1024*1024*1024+1}),
                              (MissionLimits, {"primitive_mappings": 1}),
                              (CleanupReserve, {"inputs": 0}), (CleanupReserve, {"frames": 0})]:
             with self.subTest(changes=changes), self.assertRaises(ContractError): cls(**changes)

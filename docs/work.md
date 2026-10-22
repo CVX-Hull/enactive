@@ -20,12 +20,19 @@ has an independently accepted bounded functional outcome and eligible native6v2
 advisory library. It retains155primitives/128requests/409images/1,850game seconds,
 all six unknown ACKs with separate effect proofs, normal exact reload/shutdown
 and a disclosed technical creation-recovery clarification. Deciding1947b3a passed
-exact hosted CI39728016010/1,571tests. The new observer candidate fixes an actual
+exact hosted CI39728016010/1,571tests. Published observer6288b5a subsequently passed
+exact CI39735590480/1,571tests/851.285seconds. The observer candidate fixes an actual
 paused no-game stale-credential/Pause failure, with independent source review and
 real reconnect/Pause verification; native/browser clock correlation and protected
 publication remain separate. Next is a newly frozen genuinely fresh seven-day
 campaign, not resumption of earlier failed authority. Historical checkpoints below
 retain their earlier source-specific findings.
+Its [coupled preparation](acceptance/2026-10-21-independent-seven-day-readiness.md#joint-finite-preparation-budget)
+now accommodates the first seven-day run's larger workload through the existing
+optional8192-frame/2GiB store/ledger/library ceiling. Existing defaults/admissions
+and metadata/database bounds remain fixed. Independent review and114focused tests
+pass; actual fresh-host preflight and finite freeze remain required, with no
+large-archive performance or new gameplay outcome inferred.
 The [procedure/exchange boundary](design/procedure-learning.md) has passed scoped
 design review. Native5 ordinary input, current host migration, procedure memory/
 library/handoff and observer changes have source implementations; the native build

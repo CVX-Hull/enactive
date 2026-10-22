@@ -20,7 +20,9 @@ import threading
 import uuid
 from typing import Any, Callable
 
-from .mission_contracts import PAUSE_ORIGINS, visible_ui_schema, validate_visible_ui
+from .mission_contracts import (
+    MAX_RETAINED_FRAMES, MAX_RETAINED_BYTES, PAUSE_ORIGINS, visible_ui_schema, validate_visible_ui,
+)
 from .native_input import geometry_schema, validate_geometry
 from .contracts import (
     ContractError, EvidenceRef, Fact, Interpretation, Vector, _BOUNDARY, _ID,
@@ -29,14 +31,14 @@ from .contracts import (
 
 DEFAULT_FRAMES = 32
 DEFAULT_BYTES = 64 * 1024 * 1024
-MAX_FRAMES = 4096
-MAX_BYTES = 1024 * 1024 * 1024
+MAX_FRAMES = MAX_RETAINED_FRAMES
+MAX_BYTES = MAX_RETAINED_BYTES
 MAX_FRAME_BYTES = 32 * 1024 * 1024
 MAX_AGE_SECONDS = 3.0
 MAX_HISTORICAL_LAG_SECONDS = 86_400.0
 MAX_METADATA_BYTES = 34 * 1024 * 1024
 # Preserve space for bounded dispute/blocked/session lists even at admission cap.
-METADATA_HEADROOM = 2 * 1024 * 1024
+METADATA_HEADROOM = 4 * 1024 * 1024
 MAX_ENTRY_BYTES = MAX_JSON_BYTES + 8192
 _PNG = b"\x89PNG\r\n\x1a\n"
 _SCENE = _object({
@@ -200,9 +202,9 @@ class EvidenceStore:
     def __init__(self, bridge_directory: Path, session_directory: Path, *,
                  max_frames: int = DEFAULT_FRAMES, max_bytes: int = DEFAULT_BYTES):
         if type(max_frames) is not int or not 1 <= max_frames <= MAX_FRAMES:
-            raise CapacityError("Frame cap must be between 1 and 4096")
+            raise CapacityError(f"Frame cap must be between 1 and {MAX_FRAMES}")
         if type(max_bytes) is not int or not 1 <= max_bytes <= MAX_BYTES:
-            raise CapacityError("Byte cap must be between 1 and 1 GiB")
+            raise CapacityError(f"Byte cap must be between 1 and {MAX_BYTES} bytes")
         self.bridge = Path(bridge_directory).resolve(strict=True)
         self.directory = Path(session_directory).resolve()
         if self.directory == self.bridge or self.bridge in self.directory.parents:
