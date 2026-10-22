@@ -323,7 +323,10 @@
         "docs/acceptance/2026-10-21-independent-supply-shelter.md",
         "docs/acceptance/2026-10-21-independent-seven-day-readiness.md",
         "docs/acceptance/2026-10-22-independent-seven-day-fourth-attempt.md",
-        "docs/acceptance/2026-10-22-native-local-refusal.md"
+        "docs/acceptance/2026-10-22-native-local-refusal.md",
+        "docs/acceptance/2026-10-22-independent-seven-day-seventh-attempt.md",
+        "tests/test_controller_semantic_capture_refusal.py",
+        "tests/test_mission_semantic_capture_refusal.py"
       ],
       "failure_response": "Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.",
       "limitations": "Independent024 qualifies the bounded supplies/rest, correction/unfinished Work, actual fresh successor and normal same-character save/new-child/reload/final NormalFinish path on502ca0f/nativecd031. It does not qualify general native activity interruption/answer/resumption, general setup abort, combat/damage safety or seven-day independence. Earlier native/independent failures remain failed evidence. Portable fake-bridge fixtures alone cannot establish real effects. Frameless ACKs are not fresh images; unknown ACKs retain separate effect proofs. Pause cannot undo committed input or cancel an activity; filesystem stalls can delay revocation. Actual primary/successor tools show no visible routine reviews; hidden host telemetry is unavailable. Terminal viewer wording and historical Work ambiguity remain owned by#143/#164. No causal memory/learning or latency benefit is established. Current source adds ordinary input, procedure/reflection support and explicit changed-prompt observation. Bounded learning004 evidence and failed fresh001/002 evidence are linked through docs/changes/057-discovery-learning-campaign.md. Broader preflight drift, receiver classification, delivery/meaning and CDDA coupling remain #191 work; no real cross-game support is qualified. The dated maintenance review below retains its original024-baseline scope; the later exercise has its own narrower qualification.",
@@ -399,7 +402,8 @@
         "docs/changes/052-distraction-confirmation.md",
         "docs/acceptance/2026-10-21-independent-supply-shelter.md",
         "docs/acceptance/2026-10-21-independent-seven-day-readiness.md",
-        "docs/acceptance/2026-10-22-discovery-learning-sixth-attempt.md"
+        "docs/acceptance/2026-10-22-discovery-learning-sixth-attempt.md",
+        "docs/acceptance/2026-10-22-independent-seven-day-seventh-attempt.md"
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
       "limitations": "Host/scenario-specific manual qualification; this map launches no native regression runner and proves no current live process. Independent024 supplies/rest, actual fresh successor and normal lifecycle are qualified within its bounded development scope. Earlier001-023failures remain failures. Primary/successor actual tool traces show no visible routine review events; hidden host telemetry, mental attention and causal memory benefit remain unmeasured. General survival, future hosts and unexercised native interactions are unqualified. Source tests do not substitute for actual native evidence.",
@@ -823,7 +827,8 @@
         "docs/changes/054-development-first-delivery.md",
         "docs/acceptance/2026-10-22-independent-seven-day-third-attempt.md",
         "docs/acceptance/2026-10-22-independent-seven-day-fourth-attempt.md",
-        "docs/acceptance/2026-10-22-native-local-refusal.md"
+        "docs/acceptance/2026-10-22-native-local-refusal.md",
+        "docs/acceptance/2026-10-22-independent-seven-day-seventh-attempt.md"
       ],
       "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",

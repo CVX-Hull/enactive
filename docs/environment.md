@@ -55,6 +55,16 @@ Archive: 1,161,802 bytes, SHA-256
 Its adjacent manifest owns file hashes and restoration instructions. All 191
 accepted-world files and all mission evidence remain unchanged.
 
+After failed independent campaign007's three actor hosts and owned processes
+closed, archived `EnactiveSevenDaySeven` / Avery at
+`.runtime/save-retirement/2026-10-22-seven-day007/failed-world.tar.gz`.
+All 43 files were verified before removing the active copy. Archive: 459,550 bytes,
+SHA-256 `7a85470e4cced63e46cbca9b06e1b6c1cd26cb8b821be05431e311f8a58595ca`.
+The adjacent manifest retains file hashes and restoration instructions; all 191
+accepted-world files remained unchanged. Its mission evidence is intact. The
+owned native SIGTERM and controller Ctrl-C were exceptional cleanup, never a
+normal save/ending or authority to reuse the failed campaign.
+
 ## Structured player SDK, 2026-10-20
 
 Added official MCP Python SDK 2.3.0 for the optional local stdio adapter. The shared

@@ -33,7 +33,14 @@ ACK evidence remains immutable and separate from any actual current snapshot.
 The [delivery impact map](../changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
 and #191 identify remaining game-integration and qualification gaps. The matching
 native6 build passed and is installed in the project app; real graphical
-qualification, a current-contract learning library and a fresh campaign remain pending.
+qualification is bounded by the [normally closed learning006 report](../acceptance/2026-10-22-discovery-learning-sixth-attempt.md).
+Its scoped procedure library is eligible; a fresh independent seven-day campaign
+remains unaccepted. Semantic final-preflight capture churn now shares the existing
+known-unpublished refusal/explicit-Observe path, with independent custody,
+source/storage, mission-limit and original-preflight checks. This is source
+support, not new native qualification. Lifecycle and paused activity/recovery
+retain their stricter policies; no native filename retargeting or automatic retry
+is introduced.
 
 The [organic-discovery crosswalk](organic-discovery.md#cross-check-against-prior-work)
 retains prior mixed-control research, campaign findings and memory distinctions.
@@ -136,7 +143,7 @@ existing identity, collection, reconciliation, costs and no-replay rules.
 Known unpublished visual/representation/geometry refusal returns evidence while
 healthy ownership survives; actual custody, Pause, competing writer, exhausted
 mission resources or unavailable required trace capacity still stops input.
-The frame-name-only direct refusal is classified only after all original fatal
+The frame-name-only ordinary key/action/direct refusal is classified only after all original fatal
 guards pass. Native filename enforcement stays strict. A settled unpublished
 ordinary refusal retains the existing authenticated `observation_generation`
 scope across operation rotation, including the first refused prompt child;

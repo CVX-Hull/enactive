@@ -1767,19 +1767,15 @@ class MissionRuntime:
         self._dispatch_authority_guard(work, before)
         self._prompt_guard(work.request, before)
 
-    def _local_input_refusal(self, work: _Work, before: EvidenceRef,
-                             logical_id: str | None = None, *, command_work: int = 0) -> str | None:
-        """Positive local expiry proof, never authority from an error message.
-
-        Called only before publication. The current prepared intent may remain
-        charged; every other unsettled input, real fault and global limit stops.
-        """
+    def _ordinary_refusal_guard(self, work: _Work, before: EvidenceRef,
+                                logical_id: str | None = None, *, command_work: int = 0) -> bool:
+        """Shared health proof for ordinary nondelivery, never input permission."""
         data, phase = work.request, self._prompt_phase
-        if (data["kind"] != "skill" or (phase is None and data["skill_kind"] != "direct")
+        if (data["kind"] != "skill"
                 or self._exit_phase is not None or self._registered_lifecycle.phase is not None
                 or self._registered_activity.phase is not None or self._registered_recovery.phase is not None
                 or self._registered_recovery.continuation is not None):
-            return None
+            return False
         self._dispatch_authority_guard(work, before, local_limits=False)
         native = self.controller.check_mission_refusal(self._lease, self._lease.pause_generation, command_work=command_work)
         observed = self._store.observation(before)
@@ -1799,17 +1795,30 @@ class MissionRuntime:
         with self._ledger._mutex:
             pending = self._ledger._db.execute(
                 "SELECT id,request_id,state FROM primitives WHERE state IN ('prepared','published')").fetchall()
-            count = self._ledger._db.execute("SELECT count(*) FROM primitives WHERE request_id=?",
-                                            (data["request_id"],)).fetchone()[0]
         if any((identity, request, status) != (logical_id, data["request_id"], "prepared")
                for identity, request, status in pending):
             raise LedgerError("Local refusal cannot hide another unsettled input")
         self._store.verify(before)
         self._capacity(frames=0, byte_count=0)
-        local = None
         if phase is not None:
             self._store.verify(phase.checkpoint)
             self._store.verify(phase.game_anchor)
+        if work.game_anchor is not None:
+            self._store.verify(work.game_anchor)
+        return True
+
+    def _local_input_refusal(self, work: _Work, before: EvidenceRef,
+                             logical_id: str | None = None, *, command_work: int = 0) -> str | None:
+        """Positive local expiry proof, never authority from an error message."""
+        data, phase = work.request, self._prompt_phase
+        if (data["kind"] != "skill" or phase is None and data["skill_kind"] != "direct"
+                or not self._ordinary_refusal_guard(work, before, logical_id, command_work=command_work)):
+            return None
+        with self._ledger._mutex:
+            count = self._ledger._db.execute("SELECT count(*) FROM primitives WHERE request_id=?",
+                                            (data["request_id"],)).fetchone()[0]
+        local = None
+        if phase is not None:
             local = self._ordinary_macro_limit(phase)
         operation = self._ledger.request(data["request_id"])
         if self._wall() >= operation["deadline"]:
@@ -1822,6 +1831,26 @@ class MissionRuntime:
             except _LocalGameLimit:
                 local = "game_seconds"
         return None if local is None else f"Original local {local} allowance exhausted; Observe before a new input decision"
+
+    def _unpublished_refusal_guard(self, work: _Work, before: EvidenceRef,
+                                   logical_id: str, raw: dict) -> None:
+        """Authenticate an existing rejected receipt before preserving read-only lineage.
+
+        Image/geometry refusals may precede controller preparation. Their status
+        alone proves neither final custody nor mission/source/storage health.
+        """
+        if not self._ordinary_refusal_guard(work, before, logical_id):
+            raise ControlError("Unpublished refusal cannot preserve lifecycle or recovery authority")
+        proof = raw["preflight"]
+        if proof is None:
+            raise EvidenceError("Unpublished refusal lacks its actual preflight observation")
+        native, _ = self.controller.observation_snapshot()
+        observed, received = proof["observation"], proof["received_monotonic"]
+        if not same_native_state(native, observed):
+            raise EvidenceError("Unpublished refusal crossed its actual preflight native state")
+        if (not 0 <= self._clock() - received <= MAX_AGE_SECONDS
+                or not -1000 <= self._wall() * 1000 - observed["timestamp_ms"] <= MAX_AGE_SECONDS * 1000):
+            raise EvidenceError("Unpublished refusal preflight observation expired")
 
     def _skill_draft_rejection(self, work: _Work) -> dict | None:
         """Reject metadata/representation drafts only while their scope is eligible.
@@ -2306,11 +2335,15 @@ class MissionRuntime:
                 # The immutable terminal receipt remains known and unchanged.
                 current_error = f"Current observation unavailable after known ACK: {type(exc).__name__}: {exc}"[:1024]
                 self._stop_after_failure(current_error)
-        if (ordinary and envelope_valid or local_nonpublication) and disposition == "not_dispatched":
+        typed_refusal = (envelope_valid and not control and lifecycle is None and activity is None
+                         and not raw["published"] and raw["result"].get("status") == "rejected")
+        if (ordinary and envelope_valid or local_nonpublication or typed_refusal) and disposition == "not_dispatched":
             live = self._live()
             if processing_fatal or evidence_loss is not None:
                 self._stop_after_failure(processing_error or evidence_loss)
             elif self._lease is not None and live[3] is self._lease and not live[4]:
+                if typed_refusal:
+                    self._unpublished_refusal_guard(work, proposal.before, proposal.logical_id, raw)
                 # Rotation is already committed even when this first input was
                 # not published. Preserve only authenticated read-only lineage
                 # until Observe, never an old binding for another input.
@@ -2586,7 +2619,9 @@ class MissionRuntime:
                 return "unknown" if outcome is not None and outcome.disposition == "unknown" else "partial", result
             if outcome is not None:
                 result = self._navigation_result(outcome)
-                if (outcome.disposition == "partial" and feedback.transport_disposition == "returned"
+                if self._prompt_phase is not None and self._prompt_phase.observation_generation is not None:
+                    result["phase"] = self._prompt_receipt(self._prompt_phase, "awaiting_observation")
+                elif (outcome.disposition == "partial" and feedback.transport_disposition == "returned"
                         and feedback.after is not None and feedback.after.boundary_kind == "menu"):
                     phase = self._open_prompt(work, anchor, feedback.after, mark)
                     result["phase"] = self._prompt_receipt(phase, "awaiting_control")

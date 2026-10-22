@@ -3115,11 +3115,17 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     self.assertEqual(len(calls), 1)
                     self.assertFalse(envelope["published"])
                     self.assertIsNone(envelope["request"])
-                    self.assertEqual(envelope["result"]["status"], "controller_error")
+                    self.assertEqual(envelope["result"]["status"], "rejected" if fault == "frame" else "controller_error")
                     if fault == "wall_age":
                         self.assertIn("fresh successful", envelope["result"]["error"])
-                    self.assertTrue(self.controller.pause_requested)
-                    self.assertIsNone(self.controller._mission_lease)
+                    if fault == "frame":
+                        self.assertFalse(self.controller.pause_requested)
+                        self.assertFalse(self.controller.frozen)
+                        self.assertIs(self.controller._mission_lease, lease)
+                        self.controller.release_mission(lease)
+                    else:
+                        self.assertTrue(self.controller.pause_requested)
+                        self.assertIsNone(self.controller._mission_lease)
                     self.assertEqual(self.controller.unknown_outcomes, [])
                     self.assertFalse(any(request["kind"] == "action" for request in fake.requests))
                 finally:

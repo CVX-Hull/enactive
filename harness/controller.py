@@ -1819,7 +1819,8 @@ class Controller:
                 # Ordinary capture churn may be correctable nondelivery, but
                 # only after every fatal guard below passes. Never replace its
                 # retained frame/receipt or weaken the native filename gate.
-                checked_frame = observed["frame"] if kind == "direct" else self._preflight_capture(observed)
+                ordinary_input = lease is not None and lease.operation != "lifecycle" and kind in {"key", "action", "direct"}
+                checked_frame = observed["frame"] if ordinary_input else self._preflight_capture(observed)
                 with self.data_lock:
                     self._check_owner(lease, generation)
                     if (self.control_lock.locked() or self.control_pending is not None
@@ -1827,7 +1828,7 @@ class Controller:
                             ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
                         raise ControlError("Native or recovery work appeared during preflight")
                     if (not same_native_state(self.state, observed)
-                            or kind != "direct" and self.state["frame"] != checked_frame):
+                            or not ordinary_input and self.state["frame"] != checked_frame):
                         raise ControlError("Native boundary or frame changed during preflight")
                     if resume_binding is not None:
                         self._check_mission_resume(observed, resume_binding, generation)
@@ -1839,11 +1840,12 @@ class Controller:
                         self._mission_frame(observed, lease.operation, direct=kind == "direct")
                     if not 0 <= time.monotonic() - received <= 3:
                         raise ControlError("Final preflight observation expired")
-                    if deferred_refusal is not None:
+                    capture_changed = ordinary_input and self.state["frame"] != checked_frame
+                    if deferred_refusal is not None or capture_changed:
                         self.check_mission_refusal(lease, generation, command_work=1)
                     if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:
                         self._expired_before_publication("Original dispatch deadline expired during preflight", unpublished_refusal)
-                    if kind == "direct" and self.state["frame"] != checked_frame:
+                    if capture_changed:
                         raise MissionInputRefusal(
                             "Native frame identity changed during final preflight; observe and choose a new input", status="rejected")
                     if deferred_refusal is not None:

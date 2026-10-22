@@ -102,7 +102,13 @@ and any prepared charge. Entry and publication share the same custody/work
 checks; retained checkpoint and game-anchor integrity remain mandatory. Explicit
 Observe performs any subsequent fresh capture or macro closure. This adds no
 player tool, stored authority or automatic input. Passive skill verification may
-finish before another input is considered. Local
+finish before another input is considered. Semantic key/action capture churn
+uses that same known-unpublished path after
+fatal controller guards and an independent writer health/preflight proof.
+Navigation retains its verified prefix and requests explicit Observe; neither
+native filename retargeting nor automatic suffix replay is permitted. Lifecycle
+and paused activity/recovery remain strict. Source regressions do not establish
+native recurrence or an accepted campaign. Local
 game-time overshoot ends a normal root partial or leaves an owned menu for Observe
 closure without pausing healthy mission ownership. Full shared
 game integration extraction, general setup/ending cancellation and a real second

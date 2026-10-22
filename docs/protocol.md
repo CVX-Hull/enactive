@@ -94,10 +94,10 @@ receipt clock. Reading a snapshot does not renew its freshness.
 Live-versus-retained state comparison excludes transport id, timestamp and frame
 filename; it retains status/error/frame validity and complete semantic/Pause/takeover
 state. This comparison grants neither freshness nor image equivalence. Final
-semantic preflight requires the exact retained frame identity, including recovery;
+semantic publication requires the exact retained frame identity, including recovery;
 a different basename refuses even when PNG bytes match. Direct preflight instead
 binds its actual fresh frame under the same uninterrupted custody.
-If that ordinary direct capture's filename changes during host preflight while
+If an ordinary leased key/action/direct capture's filename changes during host preflight while
 all existing ownership, complete state, receiver, Pause, pending-work, original
 freshness and deadline guards still pass, input is refused before publication
 without revoking the healthy lease. Its prepared primitive remains charged and
@@ -108,8 +108,8 @@ new input intent under the original
 mission/prompt limits. This neither retries the old batch nor refreshes its
 receipt, replaces its frame or restores expired/lost authority. Combined guard
 failures keep their existing stop behavior. Native filename enforcement remains
-strict, including for ordinary events; semantic/Resume/recovery classification
-and exact-capture checks are unchanged.
+strict, including for ordinary events. Semantic image/native-state preconditions
+are unchanged; lifecycle, Resume and paused recovery still stop on capture churn.
 Known early ordinary nonpublication, such as a changed click mapping before
 primitive preparation, uses that same observation scope without inventing a
 primitive charge. Prepared refusal retains its actual charge. Processing/storage
@@ -1014,6 +1014,19 @@ rotation records a read-only `awaiting_observation` scope; explicit Observe stil
 owns fresh evidence and any macro closure. Lifecycle, registered activity/recovery
 and actual global exhaustion are excluded. Passive terminal verification may
 establish a skill's result before declining an additional input proposal.
+The same known-unpublished path covers final-preflight filename churn for
+ordinary leased semantic key/action proposals, including an activity's START at
+normal play. It does not cover paused activity/recovery or lifecycle input.
+The controller preserves its actual preflight capture and checks all fatal
+guards before rejecting; it neither retargets the native frame nor retries.
+Before retaining read-only lineage, the writer independently verifies current
+custody, original source/storage health, mission limits and the receipt's actual
+preflight state and clocks. A rejected status alone is insufficient: early
+image/geometry refusals can precede controller preparation. Navigation reports
+`awaiting_observation` both before movement and after a verified prefix; that
+prefix and every prepared charge remain recorded. Only explicit Observe and a
+new player choice can continue; no old suffix resumes. Source regressions cover
+these cases; an actual native occurrence and complete campaign remain separate.
 Unknown delivery, actual clock/session regression, controller processing,
 integrity/storage, lifecycle/activity/recovery and global exhaustion keep their
 stopping paths. A missing current frame alone neither undelivers an ACK nor
