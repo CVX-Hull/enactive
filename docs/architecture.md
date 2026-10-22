@@ -34,8 +34,8 @@ The read-only library accepts pinned closed current-contract archives without
 restoring old-world facts or execution handles. Old native5 libraries remain
 immutable historical evidence and cannot be mounted under native6. See
 [the current contract](protocol.md#ordinary-discovery-and-procedure-data).
-The prior native5 binary passed its local build; the native6 candidate still needs
-a matching build and real graphical qualification. Earlier learning failures retain
+The native6 candidate passed its fresh local build from committed source; installation
+and real graphical qualification remain pending. Earlier learning failures retain
 their partial evidence. The [fourth run](acceptance/2026-10-21-discovery-learning-fourth-attempt.md)
 qualifies bounded native5 procedure reuse, fresh-context application, same-proposal
 graphical advisory overlap/disposition and normal save/reload/final shutdown.

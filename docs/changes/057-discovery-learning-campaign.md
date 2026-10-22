@@ -180,6 +180,32 @@ versus actual current, explicit read-only Observe and nonblocking advice. Pinned
 Mermaid rendering/receipts pass; the lead inspected1000px-wide screenshots and
 repaired overflowing note text. Unchanged diagram assets retain their prior
 renders rather than accepting unrelated renderer/font serialization changes.
+
+The first broader run retained1,567tests/566.296s with10failures and186errors,
+not a passing migration. Two disjoint workers migrated old native5/restricted
+receiver fixtures and lifecycle receipt/preflight producers. The lead inspected
+and integrated the six passive fixture modules (196tests/4.869s passed), then took
+back the lifecycle file after two red probes. Actual native `playing(bool)` changes
+session, Pauses and clears pending input; the old cross-world ready-ACK positives
+were fictional. Those transition fixtures now preserve unknown delivery plus its
+independently verified lifecycle effect, with an explicit negative cross-world
+ACK regression. Same-session identity inspection still tests known ACK/source
+integrity on reopen. The lead repaired item-poll receiver fields, distinct
+preflight setup, known delivery versus failed semantic adoption expectations and
+local recovery-suffix exhaustion. The final80-test lifecycle/receipt/request-binding
+lane passed in31.213s; independent review passed53focused tests and found no
+remaining issue in that scope. A new full run is required for the repaired source.
+
+Source7324c3f631233f061d9f3bc86c88bfdf99418e10 has a successful fresh native6
+build with pinned upstream source and the documented build flags. The new owned
+temporary workspace and exact binary/source hashes are recorded in the local build
+manifest/receipt; the old stale manifest was preserved without touching its
+unverified former workspace. Binary SHA256:
+`c5df54c3960837f967549c28ba425a171a90f700740d571dc36773b24e34877c`.
+The compiled C++/header bytes match the committed native sources. This proves
+compilation/byte identity only: the binary is not installed or graphically
+qualified, no current learning005/library or fresh003 has been admitted, and
+protected publication remains pending.
 Published5f9a225 passed hosted run39703745808; that pass applies only to the
 earlier changed-prompt Observe checkpoint.
 

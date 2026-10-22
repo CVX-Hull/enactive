@@ -94,7 +94,11 @@ a read-only scope if the independent current snapshot is missing/aged; only
 explicit Observe across the authenticated rotation can publish the next binding.
 Local game overshoot returns partial work while healthy mission ownership survives;
 actual faults and global exhaustion still stop. Runtime regressions and fast
-checks pass; full/native/graphical integrated qualification remains open in#191.
+checks pass. The initial full suite failed1567tests with10failures/186errors;
+current-only fixture and lifecycle receipt corrections have focused passing
+evidence and independent review, with exact-source full rerun pending. Native6
+compiled successfully from committed source; installation and graphical integrated
+qualification remain open in#191.
 P-CHANGE/S-CODE and the existing review/maintenance controls now
 explicitly favor objective-oriented reuse and configured platform guarantees;
 the delivery brief records an applied removal of duplicate post-ACK verification.

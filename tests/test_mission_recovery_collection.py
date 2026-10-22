@@ -261,9 +261,11 @@ class MissionRecoveryCollectionTests(unittest.TestCase):
         self.bridge.behavior = overshoot
         suffix = self.run_request(self.navigation(request_id="overshoot-suffix", phase_id=candidate.root_id))
         self.assertEqual(suffix["state"], "partial", suffix)
-        self.assertIn("budget_stop", suffix["result"])
-        self.assertIsNone(self.runtime._lease)
-        self.assertTrue(self.controller.pause_requested)
+        self.assertEqual(suffix["result"]["macro_exhausted"], "game_seconds")
+        self.assertIsNotNone(self.runtime._lease)
+        self.assertIsNone(self.runtime._registered_recovery.continuation)
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertFalse(self.controller.pause_requested)
         self.assertEqual(self.runtime._ledger.primitive_records()[-1]["state"], "returned")
         self.assertEqual(self.runtime.status()["spent_inputs"], 3)
 

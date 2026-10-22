@@ -57,7 +57,7 @@ class MissionItemTests(unittest.TestCase):
         self.bridge.editor_text = None
         self.bridge.value.update(category="INVENTORY", scene=None, ui=None,
                                  actions=["UP", "DOWN", "MARK_WITH_COUNT", "CONFIRM", "QUIT"])
-        self.bridge.value["boundary"].update(kind="menu", id="water-selector")
+        self.bridge.value["boundary"].update(kind="menu", input_receiver=True, id="water-selector")
 
     def editor(self):
         self.bridge.editor_text = "0"
@@ -98,7 +98,7 @@ class MissionItemTests(unittest.TestCase):
                 self.inventory()
             elif action == "CONFIRM":
                 bridge.value.update(category="DEFAULTMODE", scene=None, ui=None, actions=[])
-                bridge.value["boundary"].update(kind="activity_poll", id="consume-poll",
+                bridge.value["boundary"].update(kind="activity_poll", input_receiver=False, id="consume-poll",
                     recovery_operations=["request_interrupt"])
             elif request["kind"] == "observe" and bridge.value["boundary"]["kind"] == "activity_poll":
                 if self.consume_return:
@@ -108,7 +108,7 @@ class MissionItemTests(unittest.TestCase):
             elif action == "QUIT" or (request["kind"] == "direct" and request["input"] ==
                     dict(type="key", key="ESC", modifiers=[])):
                 bridge.value.update(category="DEFAULTMODE", scene=normal, ui=None, actions=["eat"])
-                bridge.value["boundary"].update(kind="normal_play", id="consume-return", recovery_operations=[])
+                bridge.value["boundary"].update(kind="normal_play", input_receiver=True, id="consume-return", recovery_operations=[])
             return True
         self.bridge.behavior = behavior
         goal = dict(purpose="consume", label="ration", quantity=1, quantity_unit="items",

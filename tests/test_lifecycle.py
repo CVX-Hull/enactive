@@ -17,7 +17,7 @@ from harness.gameplay.procedure_library import ProcedureLibrary
 from tests import test_procedure_library as library_fixtures
 from tests.test_gameplay_evidence import observation, png
 from tests.test_mission_contracts import admission, claim, request, skill
-from tests.test_mission_ledger import intent, published_receipt
+from tests.test_mission_ledger import intent, known_receipt, published_receipt
 
 
 class LifecycleTests(unittest.TestCase):
@@ -53,6 +53,17 @@ class LifecycleTests(unittest.TestCase):
         data["epoch"] = self.ledger.snapshot(now=1000)["epoch"]
         self.ledger.begin_request(data, now=1000)
         return data["request_id"]
+
+    def preflight(self, before):
+        """Retain the distinct final capture without promoting current evidence."""
+        self.number += 1
+        value = self.store.observation(before)
+        value["frame"] = f"frame-{before.session}-{self.number}.png"
+        (self.bridge / value["frame"]).write_bytes(png())
+        retained = self.store.retain_preflight(value, rule="exact_png_bytes",
+            received_monotonic=100, now_monotonic=100, now_timestamp_ms=1_000_000)
+        self.assertNotEqual(retained.observation_id, before.observation_id)
+        return retained
 
     def lifecycle(self, identity, operation, before=None, phase=None, identities=None):
         return self.begin(request("lifecycle", request_id=identity, operation=operation,
@@ -95,10 +106,9 @@ class LifecycleTests(unittest.TestCase):
         result = CampaignMemory(self.ledger, self.store, self.library).apply(data, now=1000)
         self.complete(data["request_id"], result)
 
-    def primitive(self, request_id, before, after, *, value="CONFIRM", preflight=None, unknown_operation=None):
+    def primitive(self, request_id, before, after, *, value="CONFIRM", preflight, unknown_operation=None):
         logical = "logical-" + request_id
         native = "native-" + request_id
-        preflight = before if preflight is None else preflight
         proposed = intent(value=value, expected_session=before.session, expected_revision=before.revision,
             expected_boundary_id=self.store.observation(before)["boundary"]["id"],
             source_before=before.observation_id, preflight_source=preflight.observation_id)
@@ -108,14 +118,22 @@ class LifecycleTests(unittest.TestCase):
         receipt = dict(logical_action_id=logical, native_request_id=native, transport_disposition=disposition,
             published=True, source_after=None if unknown_operation is not None else after.observation_id,
             **{k: proposed[k] for k in ("kind", "value", "expected_session", "expected_revision", "expected_boundary_id", "source_before", "preflight_source")})
+        if unknown_operation is None:
+            receipt.update(known_receipt(native_id=native, logical_id=logical, proposed=proposed,
+                after=self.store.observation(after), frame=self.store.observation(preflight)["frame"]))
         receipt.update(published_receipt(native_id=native, logical_id=logical, proposed=proposed, controller_boot_id="boot-test",
-            dispatch_epoch=self.ledger.request(request_id)["epoch"], actor_id=self.a.player_id))
+            dispatch_epoch=self.ledger.request(request_id)["epoch"], actor_id=self.a.player_id,
+            frame=self.store.observation(preflight)["frame"]))
         self.ledger.settle_primitive(logical, disposition, receipt, now=1000)
         return logical, native
 
-    def transition(self, root, before, after, *, terminal=None, preflight=None, unknown=False):
+    def transition(self, root, before, after, *, terminal=None, preflight, unknown=False):
         terminal = root if terminal is None else terminal
         operation = self.ledger.request(root)["request"]["operation"]
+        # The actual native playing(bool) changes session, Pauses and clears
+        # pending input. No cross-world ready ACK can be returned. Retain its
+        # original unknown delivery and prove the observed lifecycle separately.
+        unknown = unknown or before.session != after.session
         logical, native = self.primitive(terminal, before, after, value="CONFIRM" if terminal == root else "YES",
             preflight=preflight, unknown_operation=operation if unknown else None)
         proof = dict(schema="mission/10", record_type="LifecycleTransition", operation=operation,
@@ -147,9 +165,11 @@ class LifecycleTests(unittest.TestCase):
             terminal = self.confirmation(root + "-yes", root, transition_before, "Are you SURE you're finished?")
         else:
             transition_before, terminal = before, root
+        transition_preflight = self.preflight(transition_before)
         first = self.ingest(session, turn)
         newer = self.ingest(session, turn) if first_extra else first
-        transition = self.transition(root, transition_before, newer, terminal=terminal, unknown=unknown)
+        transition = self.transition(root, transition_before, newer, terminal=terminal,
+            preflight=transition_preflight, unknown=unknown)
         self.complete(terminal, {})
         transition_id = root + "-transition"
         self.lifecycle(transition_id, "create" if epoch == 0 else "load", newer, phase=root)
@@ -157,9 +177,10 @@ class LifecycleTests(unittest.TestCase):
             phase=self.phase(root, transition["operation"], "awaiting_identity", transition_before.observation_id, newer.observation_id)))
         inspect_id = root + "-inspect"
         self.begin(skill(request_id=inspect_id, skill_kind="inspect", goal=dict(purpose="character_identity"),
-            phase_id=root, sources=[first.observation_id], expected_session=session, expected_revision=first.revision))
+            phase_id=root, sources=[newer.observation_id], expected_session=session, expected_revision=newer.revision))
+        inspect_preflight = self.preflight(newer)
         screen = self.ingest(session, category="PLAYER_INFO", in_game=True)
-        self.primitive(inspect_id, first, screen, value="player_data")
+        self.primitive(inspect_id, newer, screen, value="player_data", preflight=inspect_preflight)
         self.complete(inspect_id, dict(identity_screen_source_id=screen.observation_id, source_ids=[screen.observation_id]))
         checkpoint = self.ingest(session, turn)
         world_id, character_id = root + "-world", root + "-character"
@@ -190,13 +211,14 @@ class LifecycleTests(unittest.TestCase):
     def save(self, adopted, *, root="save", turn=20, launch=None):
         before = self.ingest(adopted["first"].session, turn)
         self.lifecycle(root, "save", before)
-        endpoint = self.ingest(before.session, turn)
+        endpoint = self.preflight(before)
         confirmation = self.ingest(before.session, category="QUERY_YN", in_game=True)
         self.primitive(root, before, confirmation, value="save", preflight=endpoint)
         self.complete(root, {}, "partial")
         terminal = self.confirmation(root + "-yes", root, confirmation, "Save and quit?")
+        transition_preflight = self.preflight(confirmation)
         menu = self.ingest("menu-" + root, category="MAIN_MENU")
-        proof = self.transition(root, confirmation, menu, terminal=terminal)
+        proof = self.transition(root, confirmation, menu, terminal=terminal, preflight=transition_preflight)
         self.complete(terminal, {})
         result_id = root + "-checkpoint"
         self.lifecycle(result_id, "save", menu, phase=root)
@@ -246,8 +268,9 @@ class LifecycleTests(unittest.TestCase):
         self.lifecycle("launch", "launch")
         self.complete("launch", dict(native_ready=True, source_ids=[menu.observation_id], process=dict(launch_id="owned-launch")))
         self.lifecycle("load", "load", menu)
+        preflight = self.preflight(menu)
         after = self.ingest("normal", turn=10)
-        logical, native = self.primitive("load", menu, after, unknown_operation="load")
+        logical, native = self.primitive("load", menu, after, preflight=preflight, unknown_operation="load")
         proof = dict(schema="mission/10", record_type="LifecycleTransition", operation="load", origin_request_id="load",
             terminal_request_id="load", terminal_logical_id=logical, native_request_id=native,
             launch_request_id="launch", launch_id="owned-launch", before_source_id=menu.observation_id,
@@ -566,11 +589,11 @@ class LifecycleTests(unittest.TestCase):
         with self.assertRaises(EvidenceError):
             candidate_timeline(self.ledger, self.store, request_id=created["result"], result=created["proposed"])
 
-    def test_returned_transition_after_source_rejects_on_reopen(self):
+    def test_returned_identity_inspection_after_source_rejects_on_reopen(self):
         self.create()
-        receipt = self.ledger.primitive("logical-create-yes")["result"]
+        receipt = self.ledger.primitive("logical-create-inspect")["result"]
         receipt["source_after"] = "unrelated-source"
-        self.ledger._db.execute("UPDATE primitives SET result=? WHERE id='logical-create-yes'", (canonical(receipt),))
+        self.ledger._db.execute("UPDATE primitives SET result=? WHERE id='logical-create-inspect'", (canonical(receipt),))
         with self.assertRaises(LedgerError): self.ledger._verify(self.a)
 
     def test_candidate_rejects_actor_forged_in_both_transition_and_phase(self):
@@ -581,6 +604,20 @@ class LifecycleTests(unittest.TestCase):
         proposed["phase"]["actor_id"] = "other-actor"
         with self.assertRaises(EvidenceError):
             candidate_timeline(self.ledger, self.store, request_id=created["result"], result=proposed)
+
+    def test_cross_world_ready_ack_is_rejected_instead_of_manufacturing_delivery(self):
+        menu = self.ingest("menu-a", category="MAIN_MENU")
+        self.lifecycle("launch", "launch")
+        self.complete("launch", dict(native_ready=True, source_ids=[menu.observation_id],
+            process=dict(launch_id="owned-launch")))
+        self.lifecycle("load", "load", menu)
+        preflight = self.preflight(menu)
+        after = self.ingest("normal-a", turn=10)
+        with self.assertRaisesRegex(LedgerError, "preflight session/revision"):
+            self.primitive("load", menu, after, preflight=preflight)
+        primitive, = self.ledger.primitive_records()
+        self.assertEqual(primitive["state"], "published")
+        self.assertIsNone(primitive["result"])
 
     def test_candidate_cannot_replace_settled_request(self):
         created = self.create()

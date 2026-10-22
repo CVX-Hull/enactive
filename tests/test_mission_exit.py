@@ -398,7 +398,12 @@ class MissionExitTests(unittest.TestCase):
             return original(bridge, request)
         self.bridge.behavior = unexpected_normal
         operation = self.begin_exit()
-        self.assertEqual(operation["state"], "unknown", operation)
+        # This synthetic same-session ready ACK proves delivery, not
+        # identity/adoption. The semantic lifecycle failure must not erase it.
+        self.assertEqual(operation["state"], "blocked", operation)
+        primitive = self.runtime._ledger.primitive_records()[-1]
+        self.assertEqual(primitive["state"], "returned")
+        self.assertIsNotNone(primitive["result"]["native_ack"])
         self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
         self.assertIsNone(self.runtime._map)
         self.assertEqual(self.runtime._bindings, {})

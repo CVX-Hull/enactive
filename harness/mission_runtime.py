@@ -2166,7 +2166,7 @@ class MissionRuntime:
                     if (state["session"] != after.session
                             or state["takeover_generation"] != takeover_generation
                             or state["boundary"]["control_generation"] != native_after["boundary"]["control_generation"]):
-                        raise EvidenceError("Current snapshot crossed the dispatch session or native custody")
+                        raise EvidenceError("Current snapshot crossed the dispatch session, native control or takeover custody")
                     if (type(received) not in (int, float) or not math.isfinite(received)
                             or received > self._clock() or self._wall() * 1000 - state["timestamp_ms"] < -1000):
                         raise EvidenceError("Current snapshot lacks its original finite clock continuity")

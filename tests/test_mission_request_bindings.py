@@ -809,9 +809,14 @@ class ItemControlDraftTests(unittest.TestCase):
                         pending = case.select()
                         pending["request_id"] = "pending-item-selection"
                         case.runtime._ledger.begin_request(pending, now=case.runtime._wall())
-                        reservation = case.runtime._store.reserve_dispatch(current, **case.runtime._clocks())
+                        observed, received = case.controller.observe_mission(
+                            deadline_monotonic=case.runtime._clock() + case.controller.timeout)
+                        preflight = case.runtime._store.retain_preflight(observed, received_monotonic=received,
+                            rule="exact_png_bytes", **case.runtime._clocks())
+                        reservation = case.runtime._store.reserve_dispatch(current, preflight=preflight,
+                            rule="exact_png_bytes", **case.runtime._clocks())
                         case.runtime._ledger.prepare_primitive(pending["request_id"], "pending-item-input", intent(
-                            source_before=current.observation_id, preflight_source=current.observation_id,
+                            source_before=current.observation_id, preflight_source=preflight.observation_id,
                             expected_session=current.session, expected_revision=current.revision,
                             expected_boundary_id=bad["expected_boundary_id"], reservation_id=reservation.token),
                             now=case.runtime._wall())
