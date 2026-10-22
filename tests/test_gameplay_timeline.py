@@ -36,7 +36,7 @@ class TimelineTests(unittest.TestCase):
         self.number += 1
         value = observation(self.number, session=session)
         value["revision"] = self.number if revision is None else revision
-        value["boundary"]["kind"] = kind
+        value["boundary"].update(kind=kind, input_receiver=kind in ("normal_play", "menu"))
         if kind == "normal_play":
             value["scene"].update(turn=turn, position=list(position))
         else:

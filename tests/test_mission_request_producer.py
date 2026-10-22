@@ -15,7 +15,7 @@ def bundle(number=1, *, kind="normal_play"):
     value["boundary"]["id"] = f"boundary-{number}"
     if kind != "normal_play":
         value.update(scene=None, category="YESNO")
-        value["boundary"]["kind"] = kind
+        value["boundary"].update(kind=kind, input_receiver=kind == "menu")
     reference = EvidenceRef(_identity(value), value["session"], value["revision"],
         value["timestamp_ms"], 100.0, 4 if kind == "normal_play" else None,
         "/synthetic/retained.png", "a" * 64, kind)

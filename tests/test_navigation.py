@@ -479,9 +479,9 @@ class NavigationTests(unittest.TestCase):
             (lambda v: None, "unknown"),
             (lambda v: v.update(paused=True, pause_origin="human", takeover_generation=1), "returned"),
             (lambda v: v.update(in_game=False), "returned"),
-            (lambda v: v["boundary"].update(kind="unsupported"), "returned"),
-            (lambda v: v["boundary"].update(kind="activity_poll"), "returned"),
-            (lambda v: v["boundary"].update(kind="debug_prompt"), "returned"),
+            (lambda v: v["boundary"].update(kind="unsupported", input_receiver=False), "returned"),
+            (lambda v: v["boundary"].update(kind="activity_poll", input_receiver=False), "returned"),
+            (lambda v: v["boundary"].update(kind="debug_prompt", input_receiver=False), "returned"),
             (lambda v: v.update(session="other", frame=f"frame-other-{self.number + 1}.png"), "unknown"),
         ):
             with self.subTest(change=change, disposition=disposition):

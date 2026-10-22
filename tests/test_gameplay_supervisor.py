@@ -80,7 +80,7 @@ class SupervisorTests(unittest.TestCase):
         self.number += 1
         turn = getattr(self, "last_turn", 10) if turn is None else turn
         self.last_turn = turn
-        value = {"protocol": 5, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "observe-is-not-action", "session": session,
+        value = {"protocol": 6, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "observe-is-not-action", "session": session,
                  "revision": self.number if revision is None else revision,
                  "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT"],
                  "status": "ready", "error": "", "paused": False,
@@ -89,7 +89,7 @@ class SupervisorTests(unittest.TestCase):
                     "output_width": 800, "output_height": 600, "viewport": [0, 0, 800, 600]},
                  "frame": f"frame-{session}-{self.number}.png", "in_game": True,
                  "boundary": {"kind": "normal_play", "id": "boundary", "control_generation": 0,
-                              "recovery_operations": [], "interrupt_request_id": None},
+                              "input_receiver": True, "recovery_operations": [], "interrupt_request_id": None},
                  "scene": {"provenance": "player-visible input boundary", "position": list(position),
                            "turn": turn, "visible_creatures": [],
                            "neighbors": [{"dx": dx, "dy": dy, "visible": True, "terrain": "t_floor",

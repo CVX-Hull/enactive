@@ -168,8 +168,8 @@ class MenuTests(unittest.TestCase):
             "human_pause": lambda v: v.update(paused=True, pause_origin="human", takeover_generation=1),
             "takeover": lambda v: v.update(takeover_generation=1),
             "control_generation": lambda v: v["boundary"].update(control_generation=1),
-            "unsupported": lambda v: (v.update(ui=None), v["boundary"].update(kind="unsupported")),
-            "debug": lambda v: (v.update(ui=None), v["boundary"].update(kind="debug_prompt")),
+            "unsupported": lambda v: (v.update(ui=None), v["boundary"].update(kind="unsupported", input_receiver=False)),
+            "debug": lambda v: (v.update(ui=None), v["boundary"].update(kind="debug_prompt", input_receiver=False)),
         }
         for name, change in changes.items():
             with self.subTest(native_after=name):
@@ -190,7 +190,7 @@ class MenuTests(unittest.TestCase):
                 skill = self.skill(label="One")
                 intent = self.propose(skill)
                 after = self.frame(change=lambda v: (v.update(category=category, ui=None, actions=[]),
-                                                     v["boundary"].update(kind=kind)))
+                                                     v["boundary"].update(kind=kind, input_receiver=kind == "menu")))
                 outcome = self.accept(skill, intent, after)
                 self.assertEqual(outcome.disposition, "partial")
                 self.assertTrue(outcome.verification_required)
