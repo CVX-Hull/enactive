@@ -55,13 +55,6 @@ class _TransitionCandidate:
     latest_after: EvidenceRef | None = None
 
 
-class _SaveImageChanged(Exception):
-    """A captured observation replaced a zero-input Save decision, not its root."""
-
-    def __init__(self, phase: NormalPhase):
-        self.phase = phase
-
-
 class RegisteredLifecycle:
     def __init__(self, runtime: MissionRuntime):
         self.runtime = runtime
@@ -307,7 +300,7 @@ class RegisteredLifecycle:
         # constructing a lease-bound SourceBinding or granting authority.
         r._record("mission_lifecycle_resume_checkpoint", {"request_id": work.request["request_id"],
             "before_source_id": original.observation_id, "refreshed_source_id": phase.checkpoint.observation_id,
-            "rule": "exact_png_bytes", "grants_authority": False})
+            "rule": self.source_rule(phase), "grants_authority": False})
         # Constructor is private to the runtime, not serialized player data.
         proposal = r._resume_intent(work.request["request_id"], phase.checkpoint)
         feedback = r._dispatch(work, proposal, phase.checkpoint, lifecycle=phase)
@@ -412,14 +405,7 @@ class RegisteredLifecycle:
 
     def _save(self, work: _Work, phase: NormalPhase) -> tuple[str, dict]:
         r, data = self.runtime, work.request
-        try:
-            phase, relation = self._action_checkpoint(work, phase)
-        except _SaveImageChanged as change:
-            return "blocked", {
-                "reason": "Save image changed before input. Inspect the new observation and choose a new "
-                    "same-root lifecycle Save decision; no input or allowance was renewed.",
-                "source_ids": [change.phase.checkpoint.observation_id],
-                "phase": self.receipt(change.phase, "awaiting_control"), "grants_authority": False}
+        phase, relation = self._action_checkpoint(work, phase)
         state = r._store.observation(phase.checkpoint)
         r._rotate(work, ControlIntent("save-rotation", "action", "save", phase.checkpoint, state["boundary"]["id"]))
         proposal = ControlIntent("save-" + hashlib.sha256(data["request_id"].encode()).hexdigest(),
@@ -566,6 +552,16 @@ class RegisteredLifecycle:
             result["phase"] = self.receipt(phase, receipt_stage)
             return outcome.disposition, result
 
+    @staticmethod
+    def source_rule(phase: NormalPhase) -> str:
+        # These registered normal-context operations retain their separate Save
+        # or committed-transition/identity proofs. Their incidental pixels are
+        # not an action precondition; actual identity screens/setup stay exact.
+        normal_context = phase.checkpoint.boundary_kind == "normal_play" and (
+            phase.operation == "save" and phase.stage == "save_start"
+            or phase.operation in {"create", "load"} and phase.stage == "awaiting_identity")
+        return "native_state" if normal_context else "exact_png_bytes"
+
     def _refresh(self, work: _Work, phase: NormalPhase, *, diagnostic: bool = False) -> NormalPhase:
         r = self.runtime
         self.guard(work, phase, diagnostic=diagnostic)
@@ -575,13 +571,12 @@ class RegisteredLifecycle:
             r._mission_deadline - r._admission.cleanup_reserve.wall_seconds) - r._wall()
         state, received = r._observe_native(work, deadline_monotonic=deadline)
         reference = r._ingest(state, received)
-        if not r._store.equivalent(phase.checkpoint, reference, rule="exact_png_bytes"):
-            if (phase.operation != "save" or phase.stage != "save_start"
-                    or not r._store.equivalent(phase.checkpoint, reference, rule="native_state")):
-                raise EvidenceError("Lifecycle refresh changed the exact owned state/image")
-            # This is observation, not equivalence for an already chosen input.
-            # Initial Save still has the original interaction lease; only actual
-            # dispatch rotates it. Preserve that exact lease and original root.
+        rule = self.source_rule(phase)
+        if not r._store.equivalent(phase.checkpoint, reference, rule=rule):
+            raise EvidenceError("Lifecycle refresh changed the owned action precondition")
+        if phase.operation == "save" and phase.stage == "save_start":
+            # Preserve the interaction lease through refresh. _save performs the
+            # existing checked lifecycle rotation only when dispatching Save.
             r._check_cancelled(work)
             r._check_lease()
             r._deadline(work, reference)
@@ -595,13 +590,6 @@ class RegisteredLifecycle:
             root = r._ledger.request(phase.root_id)
             if r._ledger._phase_primitive_count(phase.root_id) >= root["request"]["limits"]["primitives"]:
                 raise BudgetError("Original Save primitive ceiling exhausted")
-            self.retain_after(reference)
-            phase = self._install(work, replace(phase, checkpoint=reference), previous=phase)
-            self.guard(work, phase, diagnostic=diagnostic)
-            r._check_lease()
-            if not diagnostic:
-                raise _SaveImageChanged(phase)
-            return phase
         self.retain_after(reference)
         phase = self._install(work, replace(phase, checkpoint=reference), previous=phase)
         self.guard(work, phase, diagnostic=diagnostic)
@@ -615,7 +603,7 @@ class RegisteredLifecycle:
             raise EvidenceError("Lifecycle action lost its current owned checkpoint")
         binding = r._binding(phase.checkpoint)
         phase = self._refresh(work, phase)
-        relation = SourceRevalidation(binding, r._binding(phase.checkpoint), "exact_png_bytes")
+        relation = SourceRevalidation(binding, r._binding(phase.checkpoint), self.source_rule(phase))
         r._record("mission_lifecycle_revalidation", relation.to_dict())
         return phase, relation
 

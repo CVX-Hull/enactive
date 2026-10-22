@@ -118,67 +118,59 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(corrected["state"], "partial", corrected)
 
     def save_image_fixture(self):
-        """Change real PNG bytes, without changing the synthetic native state."""
+        """Actual008 PNG variants; synthetic native semantics, not native acceptance."""
         self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        self.bridge.value["frame_geometry"] = dict(window_width=960, window_height=640,
+            output_width=960, output_height=640, viewport=[0, 0, 960, 640])
         self.create()
         ordinary = self.control("ordinary-before-save", "", parent=None, kind="direct")
         ordinary.update(perception=None, goal=dict(input=dict(type="text", text="."),
             intent="Ordinary input before selecting Save", expected="Returned input", interrupt_allowed=False))
         self.assertEqual(self.run_request(ordinary)["state"], "partial")
         self.assertEqual(self.runtime._lease.operation, "interaction")
-        self.render_black = False
+        assets = Path(__file__).resolve().parents[1] / "docs" / "assets"
+        self.save_images = tuple((assets / name).read_bytes() for name in (
+            "independent-seven-day008-last-normal.png", "independent-seven-day008-save-refresh.png"))
+        self.assertNotEqual(*self.save_images)
+        self.render_variant = 0
+        self.persistent_image_drift = False
         original = self.bridge.visible_bytes
 
         def rendered(value):
             if value["category"] == "DEFAULTMODE":
-                return black_png() if self.render_black else png()
+                if self.persistent_image_drift:
+                    self.render_variant ^= 1
+                return self.save_images[self.render_variant]
             return original(value)
 
         self.enterContext(patch.object(self.bridge, "visible_bytes", side_effect=rendered))
-        self.observe("save-white-image")
+        self.observe("save-original-image")
         before = self.runtime._current
-        self.render_black = True
+        self.persistent_image_drift = True
         return before
 
-    def test_save_image_refusal_retains_root_for_new_explicit_decision_and_normal_ending(self):
+    def test_save_persistent_pixel_drift_uses_original_intent_and_normal_lifecycle(self):
         informing = self.save_image_fixture()
         before = self.runtime.status()
         lease = self.runtime._lease
         delivered = deepcopy(self.bridge.delivered)
-        refused = self.run_request(self.lifecycle("save", "save"))
-        self.assertEqual(refused["state"], "blocked", refused)
+        chosen = self.run_request(self.lifecycle("save", "save"))
+        self.assertEqual(chosen["state"], "partial", chosen)
         after = self.runtime.status()
         self.assertEqual(after["phase"], "active", after)
         self.assertEqual(after["epoch"], before["epoch"])
-        self.assertEqual(after["spent_inputs"], before["spent_inputs"])
-        self.assertIs(self.runtime._lease, lease)
-        self.assertEqual(self.bridge.delivered, delivered)
-        self.assertFalse([p for p in self.runtime._ledger.primitive_records() if p["request_id"] == "save"])
+        self.assertEqual(after["spent_inputs"], before["spent_inputs"] + 1)
+        self.assertIsNot(self.runtime._lease, lease)
+        self.assertEqual(self.runtime._lease.operation, "lifecycle")
         phase = self.runtime._registered_lifecycle.phase
         self.assertEqual(phase.root_id, "save")
-        self.assertEqual(phase.stage, "save_start")
+        self.assertEqual(phase.stage, "save_confirmation")
         self.assertEqual(phase.first_normal, informing)
         self.assertEqual(phase.checkpoint, self.runtime._current)
-        self.assertNotEqual(phase.checkpoint.frame_sha256, informing.frame_sha256)
-        original = deepcopy(self.runtime._ledger.request("save"))
-
-        # Observe may show another image. It neither repeats Save nor renews it.
-        self.render_black = False
-        self.observe("save-reconsider-image")
-        phase = self.runtime._registered_lifecycle.phase
-        self.assertEqual(phase.first_normal, informing)
-        self.assertEqual(phase.checkpoint, self.runtime._current)
-        self.assertEqual(phase.checkpoint.frame_sha256, informing.frame_sha256)
-        self.assertEqual(self.runtime._ledger.request("save"), original)
-        self.assertIs(self.runtime._lease, lease)
-        self.assertEqual(self.bridge.delivered, delivered)
-        chosen = self.run_request(self.lifecycle("save-new-decision", "save", parent="save"))
-        self.assertEqual(chosen["state"], "partial", chosen)
         self.assertEqual(chosen["result"]["phase"]["origin_request_id"], "save")
-        self.assertLessEqual(chosen["deadline"], original["deadline"])
-        self.assertEqual(self.runtime._ledger.request("save"), original)
-        self.assertEqual(len([p for p in self.runtime._ledger.primitive_records()
-            if p["request_id"] == "save-new-decision"]), 1)
+        primitives = [p for p in self.runtime._ledger.primitive_records() if p["request_id"] == "save"]
+        self.assertEqual(len(primitives), 1)
+        self.assertEqual(primitives[0]["intent"]["revalidation"]["rule"], "native_state")
         self.assertEqual(self.bridge.delivered[len(delivered)]["action"], "save")
         self.assertEqual(len(self.bridge.delivered), len(delivered) + 1)
 
@@ -214,8 +206,8 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
 
     def test_save_image_change_cannot_reuse_the_old_informing_source(self):
         informing = self.save_image_fixture()
-        refused = self.run_request(self.lifecycle("save", "save"))
-        self.assertEqual(refused["state"], "blocked", refused)
+        chosen = self.run_request(self.lifecycle("save", "save"))
+        self.assertEqual(chosen["state"], "partial", chosen)
         charged, delivered = self.runtime.status()["spent_inputs"], len(self.bridge.delivered)
         stale = self.lifecycle("save-from-old-image", "save", parent="save")
         stale["sources"] = [informing.observation_id]
@@ -650,7 +642,7 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertIsNone(self.runtime._lease)
 
     def test_paused_identity_observation_still_rejects_real_scope_and_custody_faults(self):
-        for fault in ("uncommitted_transition", "wrong_actor", "wrong_epoch", "takeover", "changed_pixels",
+        for fault in ("uncommitted_transition", "wrong_actor", "wrong_epoch", "takeover",
                       "process_lost", "prepared", "published", "capacity"):
             with self.subTest(fault=fault):
                 case = StructuredLifecycleTests("test_observe_after_committed_transition_keeps_paused_identity_scope")
@@ -666,8 +658,6 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
                     elif fault == "takeover":
                         with case.controller.data_lock:
                             case.controller.state["takeover_generation"] += 1
-                    elif fault == "changed_pixels":
-                        case.bridge.editor_text = "Visible scene changed while paused"
                     elif fault == "process_lost":
                         case.process_state.update(running=False, returncode=1, outcome="exited")
                     elif fault in ("prepared", "published"):
@@ -718,6 +708,9 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertIsNone(selected["mission"]["coordinate_scope"])
         self.assertEqual(len(self.bridge.delivered), delivered)
         self.assertEqual(selected["mission"]["spent_inputs"], before["spent_inputs"])
+        # Pixel-only drift in the owned normal context may refresh evidence;
+        # it cannot activate the paused actor or replace transition proof.
+        self.bridge.editor_text = "Visible scene changed while paused"
         self.observe("identity-observe")
         after = self.runtime.status()
         advanced = self.runtime._registered_lifecycle.phase

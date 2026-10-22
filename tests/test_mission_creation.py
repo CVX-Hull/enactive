@@ -462,7 +462,7 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual((primitive["intent"]["value"], primitive["state"]), ("save", "returned"))
         self.assertEqual(relation["original"]["source_id"], before.observation_id)
         self.assertEqual(relation["current"]["source_id"], primitive["intent"]["source_before"])
-        self.assertEqual(relation["rule"], "exact_png_bytes")
+        self.assertEqual(relation["rule"], "native_state")
         self.assertEqual(self.runtime._registered_lifecycle.phase.first_normal, before)
         self.assertEqual(sum(r.get("action") == "save" for r in self.bridge.delivered), 1)
 

@@ -1818,17 +1818,23 @@ class Controller:
                         raise ControlError(f"Mission preflight failed: {type(exc).__name__}: {exc}") from exc
                 # Ordinary capture churn may be correctable nondelivery, but
                 # only after every fatal guard below passes. Never replace its
-                # retained frame/receipt or weaken the native filename gate.
+                # retained frame/receipt. Native validates the original issued
+                # capture, clock and metadata; image/spatial choices stay strict.
                 ordinary_input = lease is not None and lease.operation != "lifecycle" and kind in {"key", "action", "direct"}
-                checked_frame = observed["frame"] if ordinary_input else self._preflight_capture(observed)
+                exact_capture = (expected_image_sha256 is not None
+                    or kind == "direct" and payload["input"]["type"] == "click")
+                checked_frame = (observed["frame"] if ordinary_input or not exact_capture
+                    else self._preflight_capture(observed))
                 with self.data_lock:
                     self._check_owner(lease, generation)
+                    if self._command_work != 1:
+                        raise ControlError("Exclusive command work changed during preflight")
                     if (self.control_lock.locked() or self.control_pending is not None
                             or self.pending is not None or any((self.bridge / name).exists() for name in
                             ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
                         raise ControlError("Native or recovery work appeared during preflight")
                     if (not same_native_state(self.state, observed)
-                            or not ordinary_input and self.state["frame"] != checked_frame):
+                            or exact_capture and not ordinary_input and self.state["frame"] != checked_frame):
                         raise ControlError("Native boundary or frame changed during preflight")
                     if resume_binding is not None:
                         self._check_mission_resume(observed, resume_binding, generation)
@@ -1840,7 +1846,7 @@ class Controller:
                         self._mission_frame(observed, lease.operation, direct=kind == "direct")
                     if not 0 <= time.monotonic() - received <= 3:
                         raise ControlError("Final preflight observation expired")
-                    capture_changed = ordinary_input and self.state["frame"] != checked_frame
+                    capture_changed = ordinary_input and exact_capture and self.state["frame"] != checked_frame
                     if deferred_refusal is not None or capture_changed:
                         self.check_mission_refusal(lease, generation, command_work=1)
                     if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:
@@ -1920,7 +1926,9 @@ class Controller:
             def fence() -> None:
                 self.check_mission_refusal(lease, generation, command_work=1)
                 if (not same_native_state(self.state, observed)
-                        or kind != "direct" and self.state["frame"] != observed["frame"]):
+                        or kind != "direct" and preflight is not None
+                        and preflight["expected_image_sha256"] is not None
+                        and self.state["frame"] != observed["frame"]):
                     raise ControlError("Native boundary or frame changed before local refusal")
                 self._mission_frame(observed, lease.operation, direct=kind == "direct")
                 if received is None or not 0 <= time.monotonic() - received <= 3:

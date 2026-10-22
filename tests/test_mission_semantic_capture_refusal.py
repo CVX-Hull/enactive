@@ -1,6 +1,7 @@
-"""Prepared semantic capture refusal over real writer/files; not native acceptance."""
+"""Capture provenance and image-conditioned refusal; not native acceptance."""
 import copy
 from dataclasses import replace
+import json
 from pathlib import Path
 import unittest
 from unittest.mock import patch
@@ -59,7 +60,7 @@ class SemanticCaptureRefusalTests(unittest.TestCase):
         self.assertFalse(self.controller.pause_requested)
         self.assertEqual(status["unresolved_effects"], [])
 
-    def test_wait_start_refusal_keeps_charge_then_explicit_observe_and_new_intent(self):
+    def test_wait_start_capture_churn_preserves_issued_preflight_and_charges_once(self):
         original = self.start()
         goal = dict(operation="wait", target="Wait briefly", game_seconds=30,
                     interrupt_allowed=True, step="start", answer=None, interrupt_request_id=None)
@@ -67,28 +68,29 @@ class SemanticCaptureRefusalTests(unittest.TestCase):
         with self.churn_after_preparation():
             self.assertEqual(self.runtime.command(request)["status"], "accepted")
             operation = self.settled(request["request_id"])
-        self.assert_refused(operation, original, charged=1)
+        self.assertEqual(operation["state"], "partial", operation)
+        self.assertNotEqual(operation["result"]["phase"]["stage"], "awaiting_observation")
+        status = self.runtime.status()
+        for key in ("epoch", "started_at", "deadline", "player_id", "cleanup_reserve"):
+            self.assertEqual(status[key], original[key], key)
+        self.assertEqual(status["spent_inputs"], 1)
         primitive, = self.runtime._ledger.primitive_records()
         self.assertEqual(primitive["intent"]["kind"], "action")
         self.assertEqual(primitive["intent"]["value"], "wait")
-        self.assertEqual(primitive["state"], "not_dispatched")
-        self.assertFalse(primitive["result"]["published"])
-        self.assertIsNone(primitive["native_id"])
-        self.assertIsNone(primitive["result"]["native_ack"])
-        self.assertFalse(any(r.get("action") == "wait" for r in self.bridge.delivered))
+        self.assertEqual(primitive["state"], "returned")
+        self.assertTrue(primitive["result"]["published"])
+        request_body = json.loads(primitive["result"]["native_request_json"])
+        source = next(ref for ref in self.runtime._store.historical_references
+            if ref.observation_id == primitive["intent"]["preflight_source"])
+        preflight = self.runtime._store.observation(source)
+        self.assertEqual(request_body["frame"], preflight["frame"])
+        self.assertFalse(request_body["require_exact_frame"])
+        self.assertEqual(sum(r.get("action") == "wait" for r in self.bridge.delivered), 1)
         self.assertEqual(self.runtime.command(request)["operation"], operation)
         self.assertEqual(len(self.runtime._ledger.primitive_records()), 1)
-        observed = self.observe()
-        self.assertEqual(observed["state"], "completed", observed)
-        self.assertIsNone(self.runtime._prompt_phase)
-        chosen = self.control("activity", goal, request_id="new-wait-choice")
-        self.assertEqual(self.runtime.command(chosen)["status"], "accepted")
-        self.assertEqual(self.settled(chosen["request_id"])["state"], "partial")
-        self.assertEqual(sum(r.get("action") == "wait" for r in self.bridge.delivered), 1)
-        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
         self.assertEqual(self.runtime._ledger.primitive_records()[0], primitive)
 
-    def test_navigation_first_refusal_and_delivered_prefix_require_explicit_observation(self):
+    def test_navigation_capture_churn_preserves_original_source_and_verified_steps(self):
         for prefix in (0, 1):
             with self.subTest(prefix=prefix):
                 case = type(self)()
@@ -109,21 +111,18 @@ class SemanticCaptureRefusalTests(unittest.TestCase):
                     with case.churn_after_preparation(at=prefix + 1):
                         self.assertEqual(case.runtime.command(request)["status"], "accepted")
                         operation = case.settled(request["request_id"])
-                    case.assert_refused(operation, original, charged=len(baseline) + prefix + 1, verified=prefix)
+                    self.assertEqual(operation["state"], "completed", operation)
+                    self.assertEqual(operation["result"]["verified_steps"], prefix + 1)
+                    for key in ("epoch", "started_at", "deadline", "player_id", "cleanup_reserve"):
+                        self.assertEqual(case.runtime.status()[key], original[key], key)
+                    self.assertEqual(case.runtime.status()["spent_inputs"], len(baseline) + prefix + 1)
                     rows = case.runtime._ledger.primitive_records()
                     self.assertEqual(rows[:len(baseline)], baseline)
-                    self.assertEqual([r["state"] for r in rows[len(baseline):]], ["returned"] * prefix + ["not_dispatched"])
+                    self.assertEqual([r["state"] for r in rows[len(baseline):]], ["returned"] * (prefix + 1))
                     self.assertEqual(case.runtime.command(request)["operation"], operation)
                     self.assertEqual(case.runtime._ledger.primitive_records(), rows)
-                    self.assertEqual(case.observe()["state"], "completed")
                     self.assertIsNone(case.runtime._prompt_phase)
-                    chosen = case.navigation(target=target, request_id="new-route-choice")
-                    self.assertEqual(case.runtime.command(chosen)["status"], "accepted")
-                    completed = case.settled(chosen["request_id"])
-                    self.assertEqual(completed["state"], "completed", completed)
-                    self.assertEqual(completed["result"]["position"], list(target))
-                    self.assertEqual(case.runtime.status()["spent_inputs"], len(baseline) + prefix + 2)
-                    self.assertEqual(case.runtime._ledger.primitive_records()[:len(rows)], rows)
+                    self.assertEqual(operation["result"]["position"], list(target))
                 finally:
                     case.doCleanups()
 

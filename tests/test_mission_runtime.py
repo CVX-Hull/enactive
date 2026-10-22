@@ -1293,7 +1293,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(primitive["native_id"], self.bridge.delivered[-1]["id"])
         self.assertEqual(self.runtime.command(req)["operation"], op)
 
-    def test_capture_refresh_settles_text_prefix_then_allows_explicit_new_intent(self):
+    def test_nonimage_text_capture_churn_keeps_original_sources_and_costs(self):
         self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
         original = self.start()
         self.bridge.editor_text = ""
@@ -1313,8 +1313,8 @@ class MissionRuntimeTests(unittest.TestCase):
             prepared.append(result)
             dispatched_leases.append(self.controller._mission_lease)
             if len(prepared) == 2:
-                # A new capture with unchanged state is not permission to send
-                # input using the retained filename. No engine input is invented.
+                # Incidental capture churn retains the original prepared source.
+                # Native provenance/metadata/TTL checks remain the final fence.
                 current = copy.deepcopy(self.controller.state)
                 current.update(id="", frame="frame-game-test-999999.png")
                 (self.controller.bridge / current["frame"]).write_bytes(self.bridge.visible_bytes(current))
@@ -1329,40 +1329,30 @@ class MissionRuntimeTests(unittest.TestCase):
             operation = self.settled(request["request_id"])
         self.assertEqual(operation["state"], "partial", operation)
         rows = self.runtime._ledger.primitive_records()
-        self.assertEqual([row["state"] for row in rows], ["returned", "not_dispatched"])
-        refused = rows[-1]
-        self.assertFalse(refused["result"]["published"])
-        self.assertIsNone(refused["native_id"])
-        self.assertIsNone(refused["result"]["native_ack"])
-        self.assertIn("frame identity changed", refused["result"]["reason"])
-        self.assertEqual(self.bridge.editor_text, "a")
+        self.assertEqual([row["state"] for row in rows], ["returned"] * 3)
+        self.assertEqual(self.bridge.editor_text, "abc")
+        delivered = [r for r in self.bridge.delivered if r["kind"] == "direct"]
+        self.assertEqual([r["input"]["text"] for r in delivered], ["a", "b", "c"])
+        references = {ref.observation_id: ref for ref in self.runtime._store.historical_references}
+        for row, native in zip(rows, delivered, strict=True):
+            self.assertEqual(row["native_id"], native["id"])
+            preflight = self.runtime._store.observation(
+                references[row["intent"]["preflight_source"]])
+            self.assertEqual(native["frame"], preflight["frame"])
         current = self.runtime.status()
         self.assertEqual(current["phase"], "active", current)
         self.assertEqual(current["epoch"], original["epoch"])
-        self.assertEqual(current["spent_inputs"], 2)
+        self.assertEqual(current["spent_inputs"], 3)
         self.assertEqual(current["unresolved_effects"], [])
         self.assertIs(self.controller._mission_lease, dispatched_leases[-1])
         for field in ("player_id", "started_at", "deadline", "cleanup_reserve"):
             self.assertEqual(current[field], original[field], field)
 
-        # Dedup returns the old terminated batch; it cannot send its suffix.
+        # Collection of the identical request cannot replay any text scalar.
         self.assertEqual(self.runtime.command(request)["operation"], operation)
-        self.assertEqual(self.bridge.editor_text, "a")
-        observe = self.request("observe", request_id="explicit-refresh")
-        self.assertEqual(self.runtime.command(observe)["status"], "accepted")
-        self.settled(observe["request_id"])
-        remaining = self.control("direct", {**goal, "input": dict(type="text", text="bc")},
-                                 request_id="new-remaining-intent")
-        self.assertEqual(self.runtime.command(remaining)["status"], "accepted")
-        self.assertEqual(self.settled(remaining["request_id"])["state"], "partial")
         self.assertEqual(self.bridge.editor_text, "abc")
-        self.assertEqual([r["input"]["text"] for r in self.bridge.delivered if r["kind"] == "direct"],
-                         ["a", "b", "c"])
-        self.assertEqual([row["state"] for row in self.runtime._ledger.primitive_records()],
-                         ["returned", "not_dispatched", "returned", "returned"])
-        self.assertEqual(self.runtime.status()["spent_inputs"], 4)
-        self.assertEqual(self.runtime.status()["unresolved_effects"], [])
-        self.assertEqual(self.runtime.status()["deadline"], original["deadline"])
+        self.assertEqual(len(self.runtime._ledger.primitive_records()), 3)
+        self.assertEqual(len([r for r in self.bridge.delivered if r["kind"] == "direct"]), 3)
 
     def test_capture_refusal_does_not_restore_exhausted_prompt_root_budget(self):
         self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
@@ -1378,8 +1368,9 @@ class MissionRuntimeTests(unittest.TestCase):
             self.controller._accept(current)
             return result
 
-        goal = dict(input=dict(type="key", key="ESC", modifiers=[]), interrupt_allowed=False,
-                    intent="Close the visible prompt", expected="Inspect the returned screen")
+        goal = dict(input=dict(type="click", button="left", x=0, y=0,
+                               geometry=copy.deepcopy(self.bridge.value["frame_geometry"])), interrupt_allowed=False,
+                    intent="Select the visible prompt position", expected="Inspect the returned screen")
         child = self.control("direct", goal, phase_id=root["request_id"], request_id="refused-close")
         with patch.object(self.runtime._ledger, "prepare_primitive", refresh_capture):
             self.assertEqual(self.runtime.command(child)["status"], "accepted")
@@ -1415,8 +1406,9 @@ class MissionRuntimeTests(unittest.TestCase):
             self.controller._accept(current)
             return result
 
-        goal = dict(input=dict(type="key", key="ESC", modifiers=[]), interrupt_allowed=False,
-                    intent="Close the visible prompt", expected="Inspect the returned screen")
+        goal = dict(input=dict(type="click", button="left", x=0, y=0,
+                               geometry=copy.deepcopy(self.bridge.value["frame_geometry"])), interrupt_allowed=False,
+                    intent="Select the visible prompt position", expected="Inspect the returned screen")
         child = self.control("direct", goal, phase_id=root["request_id"], request_id="first-close-refused")
         with patch.object(self.runtime._ledger, "prepare_primitive", refresh_capture):
             self.assertEqual(self.runtime.command(child)["status"], "accepted")
@@ -1492,7 +1484,8 @@ class MissionRuntimeTests(unittest.TestCase):
             self.controller._accept(current)
             return result
 
-        request = self.control("direct", dict(input=dict(type="key", key="ESC", modifiers=[]),
+        request = self.control("direct", dict(input=dict(type="click", button="left", x=0, y=0,
+            geometry=copy.deepcopy(self.bridge.value["frame_geometry"])),
             interrupt_allowed=False, intent="Close this prompt", expected="Inspect resulting screen"),
             phase_id=root["request_id"], request_id="refusal-with-storage-fault")
         with patch.object(self.runtime._ledger, "prepare_primitive", refresh_capture), \

@@ -85,7 +85,7 @@ class ControllerSemanticCaptureRefusalTests(unittest.TestCase):
                 self.assertEqual(read_json(preparation)["charge"], 1)
                 self.controller.release_mission(lease)
 
-    def test_key_and_navigation_capture_churn_at_callback_and_final_fence(self):
+    def test_nonimage_key_and_navigation_keep_original_preflight_across_capture_churn(self):
         for operation, kind, value in (("interaction", "key", "ENTER"), ("navigate", "action", "UP")):
             for stage in ("callback", "final_fence"):
                 with self.subTest(operation=operation, stage=stage), FakeBridge(self.controller) as fake:
@@ -115,8 +115,12 @@ class ControllerSemanticCaptureRefusalTests(unittest.TestCase):
 
                     with patch.object(self.controller, "_check_owner", owner_check):
                         receipt = self.mission_dispatch(lease, kind=kind, value=value, preflight=prepare)
-                    self.assertEqual(receipt["result"]["status"], "rejected", receipt)
-                    self.assert_unpublished(receipt, fake)
+                    self.assertEqual(receipt["result"]["status"], "ready", receipt)
+                    self.assertTrue(receipt["published"], receipt)
+                    self.assertEqual(receipt["request"]["frame"], captured[0][0]["frame"])
+                    self.assertFalse(receipt["request"]["require_exact_frame"])
+                    self.assertEqual(len([row for row in fake.delivered if row["kind"] == kind]), 1)
+                    self.assertNotEqual(receipt["request"]["frame"], "frame-game-test-2.png")
                     self.assert_healthy(lease, authority)
                     self.assertEqual(receipt["preflight"]["observation"], captured[0][0])
                     self.assertEqual(receipt["preflight"]["received_monotonic"], captured[0][1])
@@ -165,7 +169,7 @@ class ControllerSemanticCaptureRefusalTests(unittest.TestCase):
                         self.controller._command_work = 0
                         self.controller.state = None
 
-    def test_lifecycle_and_resume_capture_churn_remain_fatal(self):
+    def test_image_conditioned_lifecycle_and_resume_capture_churn_remain_fatal(self):
         for operation in ("lifecycle", "resume"):
             with self.subTest(operation=operation), FakeBridge(self.controller) as fake:
                 if operation == "lifecycle":
@@ -173,12 +177,16 @@ class ControllerSemanticCaptureRefusalTests(unittest.TestCase):
                     lease = self.acquire(operation="lifecycle")
                 else:
                     self.assertEqual(self.controller.execute("observe")["status"], "ready")
+                image = b"image-conditioned lifecycle source"
+                (fake.bridge / fake.value["frame"]).write_bytes(image)
 
                 def prepare(observation, received):
                     self.refresh(fake, observation)
 
-                receipt = (self.mission_dispatch(lease, preflight=prepare) if operation == "lifecycle"
-                           else self.mission_resume(preflight=prepare))
+                expected = hashlib.sha256(image).hexdigest()
+                receipt = (self.mission_dispatch(lease, preflight=prepare, expected_image_sha256=expected)
+                           if operation == "lifecycle" else self.mission_resume(preflight=prepare,
+                               expected_image_sha256=expected))
                 self.assert_unpublished(receipt, fake)
                 self.assertEqual(receipt["result"]["status"], "controller_error", receipt)
                 self.assertIsNone(self.controller._mission_lease)

@@ -32,7 +32,6 @@ std::string pending, directory = ".";
 int revision = 1, boundary_counter = 0, query_depth = 0, query_input_depth = -1;
 int control_generation = 0, frame_revision = 1, presented_revision = 1, frame_counter = 0;
 std::string frame_metadata;
-std::deque<std::string> retained_frames;
 long long takeover_generation = 0, clock_ms = 1000, last_poll = 0, last_publish = 0;
 long long frame_ms = 1000, presented_ms = 1000;
 std::string frame_boundary, frame_session = "test", presented_boundary, presented_session = "test";
@@ -87,7 +86,9 @@ void authority_gate( const TextJsonObject &request ) {
     if( !authority_ok ) { throw std::runtime_error( "authority" ); }
 }
 std::string pixels = "original pixels";
+std::function<void()> during_encode;
 bool write_frame( const std::string &filename ) {
+    if( during_encode ) { const auto effect = during_encode; during_encode = {}; effect(); }
     if( !encoder_ok ) { return false; }
     std::ofstream( filename ) << pixels;
     return true;
@@ -166,6 +167,8 @@ void refresh_identity() {
     packet.objects = {{"authority", {}}, {"input", {}}};
     packet.objects["input"].strings["type"] = "key";
     std::ofstream( frame_name ) << "original pixels";
+    frame_metadata = capture_metadata( saved_geometry );
+    retained_frames.push_back( { frame_name, frame_ms, frame_metadata } );
 }
 bool refusal( const std::function<void()> &run ) {
     try { run(); } catch( const input_refusal & ) { return true; }
@@ -247,10 +250,23 @@ int main( int argc, char **argv ) {
                 } else if( scenario == "direct-key-resize" || scenario == "direct-text-resize" ) {
                     current_width = cached_width = 2; pixels = "changed by f(T)";
                     if( scenario == "direct-text-resize" ) { packet.objects["input"].strings["type"] = "text"; }
-                    ordinary_commit_gate( packet, false, false );
+                    require( refusal( [&]() { ordinary_commit_gate( packet, false, false ); } ) );
                 } else if( scenario == "direct-click-resize" ) {
                     packet.objects["input"].strings["type"] = "click"; current_width = 2;
                     require( refusal( [&]() { ordinary_commit_gate( packet, false, true ); } ) );
+                } else if( scenario == "click-current-geometry-at-commit" || scenario == "click-cached-geometry-at-commit" ) {
+                    during_authority = [&]() {
+                        if( authority_calls == 2 ) {
+                            if( scenario == "click-current-geometry-at-commit" ) { ++current_width; }
+                            else { ++cached_width; }
+                        }
+                    };
+                    require( refusal( [&]() { ordinary_commit_gate( packet, false, true ); } ) );
+                    require( feed_calls == 0 );
+                } else if( scenario == "resume-pixel-drift" ) {
+                    packet.strings["kind"] = "resume"; packet.booleans["require_exact_frame"] = true;
+                    pixels = "different pixels";
+                    require( refusal( [&]() { ordinary_commit_gate( packet, true, false ); } ) );
                 } else if( scenario == "direct-exact-rejected" ) {
                     packet.booleans["require_exact_frame"] = true;
                     require( refusal( [&]() { ordinary_commit_gate( packet, false, false ); } ) );
@@ -261,6 +277,49 @@ int main( int argc, char **argv ) {
                     packet.strings["frame"] = "frame-original-capture.png";
                     require( refusal( [&]() { ordinary_commit_gate( packet, false,
                                              scenario == "direct-click-stale-frame" ); } ) );
+                } else if( scenario.find( "retained-" ) == 0 ) {
+                    const std::string original = frame_name;
+                    pixels = "different current pixels";
+                    require( publish( "new-observe", "ready" ) && frame_name != original );
+                    require( packet.get_string( "frame" ) == original );
+                    if( scenario == "retained-action" ) { packet.strings["kind"] = "action"; }
+                    if( scenario == "retained-semantic" || scenario == "retained-exact" ) { packet.strings["kind"] = "key"; }
+                    if( scenario == "retained-exact" || scenario == "retained-resume" ) {
+                        packet.booleans["require_exact_frame"] = true;
+                    }
+                    const bool resuming = scenario == "retained-resume" || scenario == "retained-normal-resume";
+                    const bool click = scenario == "retained-click";
+                    if( resuming ) { packet.strings["kind"] = "resume"; }
+                    if( click || scenario == "retained-resume" || scenario == "retained-exact" ) {
+                        require( refusal( [&]() { ordinary_commit_gate( packet, resuming, click ); } ) );
+                    } else { ordinary_commit_gate( packet, resuming, false ); }
+                    require( packet.get_string( "frame" ) == original && frame_ms == 1000 );
+                } else if( scenario.find( "comparison-fence-" ) == 0 ) {
+                    packet.strings["kind"] = "key"; packet.booleans["require_exact_frame"] = true;
+                    const bool soft = scenario == "comparison-fence-deadline" || scenario == "comparison-fence-age" ||
+                                      scenario == "comparison-fence-receiver" || scenario == "comparison-fence-metadata" ||
+                                      scenario == "comparison-fence-revision" || scenario == "comparison-fence-boundary";
+                    during_encode = [&]() {
+                        if( scenario == "comparison-fence-authority" ) { authority_ok = false; }
+                        else if( scenario == "comparison-fence-takeover" ) { ++takeover_generation; }
+                        else if( scenario == "comparison-fence-pause" ) { paused = true; }
+                        else if( scenario == "comparison-fence-sentinel" ) { std::ofstream( "pause" ) << "paused"; }
+                        else if( scenario == "comparison-fence-pending" ) { waiting_interrupt = "pending"; }
+                        else if( scenario == "comparison-fence-control" ) { std::ofstream( "control.json" ) << "pending"; }
+                        else if( scenario == "comparison-fence-claimed" ) { std::ofstream( "control-claimed.json" ) << "pending"; }
+                        else if( scenario == "comparison-fence-deadline" ) { packet.integers["deadline_ms"] = clock_ms - 1; }
+                        else if( scenario == "comparison-fence-age" ) { clock_ms = 4001; }
+                        else if( scenario == "comparison-fence-receiver" ) { receivers.clear(); }
+                        else if( scenario == "comparison-fence-metadata" ) { ++cached_width; }
+                        else if( scenario == "comparison-fence-revision" ) { ++revision; }
+                        else if( scenario == "comparison-fence-boundary" ) { boundary_id += "changed"; }
+                        else if( scenario == "comparison-fence-session" ) { session += "changed"; }
+                        else { throw std::runtime_error( "unknown comparison fence" ); }
+                    };
+                    if( soft ) { require( refusal( [&]() { ordinary_commit_gate( packet, false, false ); } ) ); }
+                    else { require( hard_fault( [&]() { ordinary_commit_gate( packet, false, false ); } ) ); }
+                    if( scenario == "comparison-fence-receiver" ) { receivers.emplace_back( scopes.size(), &context ); }
+                    require( !fs::exists( "frame.compare.tmp.png" ) && feed_calls == 0 );
                 } else if( scenario == "semantic-exact" || scenario == "semantic-drift" || scenario == "comparison-io" || scenario == "comparison-symlink" ) {
                     packet.strings["kind"] = "key"; packet.booleans["require_exact_frame"] = true;
                     if( scenario == "semantic-drift" ) { pixels = "different bytes"; }
@@ -289,24 +348,39 @@ int main( int argc, char **argv ) {
                     else if( scenario == "postcommit-publish" ) { fail_publish = true; }
                     else if( scenario == "postcommit-unlink" ) { fail_unlink = true; }
                     else if( scenario == "control-first" ) { control_waiting = true; }
+                    else if( scenario == "translated-retained-key" || scenario == "translated-retained-text" ||
+                             scenario == "translated-retained-click" ) {
+                        packet.objects["input"].strings["type"] = scenario == "translated-retained-key" ? "key" :
+                                scenario == "translated-retained-text" ? "text" : "click";
+                        during_translation = []() {
+                            pixels = "new capture pixels";
+                            publish( "observe-new", "ready" );
+                            statuses.clear();
+                        };
+                    }
                     else if( scenario == "translated-key" || scenario == "translated-text" ||
                              scenario == "translated-click" || scenario == "translated-click-resize" ) {
                         packet.objects["input"].strings["type"] = scenario == "translated-key" ? "key" :
                                 scenario == "translated-text" ? "text" : "click";
                         if( scenario != "translated-click" ) {
-                            during_translation = []() { current_width = cached_width = 2; pixels = "changed by f(T)"; };
+                            during_translation = [scenario]() {
+                                if( scenario == "translated-click-resize" ) { current_width = cached_width = 2; }
+                                pixels = "changed by f(T)";
+                            };
                         }
                     }
                     else { throw std::runtime_error( "unknown scenario" ); }
                     if( scenario == "human-fault" || scenario == "refusal-capture-human" ) { pause_origin = "human"; }
                     input_event event; const bool delivered = poll( keyboard_mode::keychar, event );
                     if( scenario == "control-first" ) { require( delivered && feed_calls == 0 && fs::exists( "request.json" ) ); }
-                    else if( scenario == "translated-key" || scenario == "translated-text" || scenario == "translated-click" ) {
+                    else if( scenario == "translated-key" || scenario == "translated-text" || scenario == "translated-click" ||
+                             scenario == "translated-retained-key" || scenario == "translated-retained-text" ) {
                         require( delivered && feed_calls == 1 && pending == "input-1" );
                         require( !partial_custody_checked && !paused && !fs::exists( "pause" ) &&
                                  statuses == std::vector<std::string>{"dispatched"} );
                     }
-                    else if( scenario == "expected-refusal" || scenario == "translated-click-resize" ) {
+                    else if( scenario == "expected-refusal" || scenario == "translated-click-resize" ||
+                             scenario == "translated-retained-click" ) {
                         require( !delivered && !paused && pause_origin == "none" && !fs::exists( "pause" ) );
                         require( partial_custody_checked && feed_calls == 0 &&
                                  statuses == std::vector<std::string>{"rejected"} );

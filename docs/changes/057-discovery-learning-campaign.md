@@ -83,22 +83,25 @@ refused before input. Exported native state matched apart from capture identity
 and time, while the actual images differed in 72 minimap pixels. The animation
 cause and a successful normal ending are unproved.
 
-The selected correction retains the original private `save_start` root,
-first-normal source, deadlines and cumulative costs while exposing the new
-checkpoint after a healthy native-state-equal PNG change. The old decision returns
-blocked without input or rotation; the player must inspect that image and choose
-a NEW same-root Save request. Explicit Observe can update the same checkpoint.
-Cancellation, lease, quiescence, original root/mission limits and retained evidence
-remain enforced. Mapping capacity cannot exhaust before the input ceiling under
-the admission's mappings-at-least-inputs invariant.
+The first correction retained the original private `save_start` root and exposed a
+new image for an explicit new decision. Fresh008 then supplies the actual persistent
+drift counterexample: all four chosen Save requests refused before input. The
+[capture/precondition correction](058-capture-provenance-action-preconditions.md)
+uses native-state equivalence for registered Save start and creation/load normal
+readmission/identity-inspection entry, with original owned transition/identity,
+root, clocks, budgets and checked lease rotation intact. The complete-loop source
+regression keeps actual changed PNGs throughout Save and reload. Setup/identity
+screens, explicit confirmations, spatial/image-conditioned decisions and recovery
+retain their applicable stronger checks. No causal learning benefit follows.
 
 Catching an evidence error alone was rejected because ingestion had already
 advanced current evidence and left the phase inconsistent. Discarding/recreating
 the root was rejected because it would reset local consent/accounting. No screen
 region is masked, animation frozen, failed admission resumed or input automatically
-retried. Final controller/native image checks remain strict. If recurring visual
-churn still prevents real Save, assess command-relevant equivalence across the
-whole boundary; this observation correction does not guarantee liveness.
+retried. Native retains issued capture provenance in its existing bounded frame
+retention and checks original clocks plus complete current metadata; image
+equality is action-specific. Actual rebuilt-native qualification remains separate
+from source regressions; no general liveness guarantee follows.
 [#195](https://github.com/CVX-Hull/enactive/issues/195) owns live follow-through.
 
 ### Local requests and continuing gameplay

@@ -12,7 +12,9 @@ class NativeReceiverTests(unittest.TestCase):
         compiler = shutil.which("c++")
         if not compiler:
             raise unittest.SkipTest("C++ compiler unavailable")
-        cls.temporary = tempfile.TemporaryDirectory()
+        output_root = Path(__file__).resolve().parents[1] / ".runtime"
+        output_root.mkdir(exist_ok=True)
+        cls.temporary = tempfile.TemporaryDirectory(dir=output_root)
         cls.addClassCleanup(cls.temporary.cleanup)
         cls.root = Path(cls.temporary.name)
         native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
@@ -21,6 +23,7 @@ class NativeReceiverTests(unittest.TestCase):
             begin = native.rindex(start) if last else native.index(start)
             return native[begin:native.index(end, begin)]
         production = [header[header.index('enum class boundary_kind'):header.index('// Marks only the injected')],
+                      body('struct issued_capture {', 'std::string path('),
                       body('struct input_scope {', 'std::vector<std::pair<size_t, const void *>> receivers;'),
                       body('bool scoped()', 'bool in_game = false;'),
                       body('void fault_pause()', 'void scene('),
@@ -31,8 +34,8 @@ class NativeReceiverTests(unittest.TestCase):
                       body('bool poll( keyboard_mode', '} // namespace cdda_harness')]
         fixture = Path(__file__).with_name('native_receiver_fixture.cpp').read_text()
         source = cls.root / 'receiver.cpp'
-        source.write_text(fixture.replace('// PRODUCTION_TYPES', production[0] + production[1]).replace(
-            '// PRODUCTION_FUNCTIONS', ''.join(production[2:])))
+        source.write_text(fixture.replace('// PRODUCTION_TYPES', production[0] + production[1] + production[2]).replace(
+            '// PRODUCTION_FUNCTIONS', ''.join(production[3:])))
         cls.binary = cls.root / 'receiver'
         result = subprocess.run([compiler, '-std=c++17', '-Wall', '-Wextra', '-Werror', str(source),
                                  '-o', str(cls.binary)], capture_output=True, text=True, timeout=60)
@@ -43,8 +46,17 @@ class NativeReceiverTests(unittest.TestCase):
         for scenario in ('unfamiliar', 'identity', 'timeouts', 'normal-owner', 'unsupported-owner',
                          'debug', 'activity', 'interrupt', 'outside', 'direct-key-resize',
                          'direct-text-resize', 'direct-click-resize', 'direct-exact-rejected',
+                         'click-current-geometry-at-commit', 'click-cached-geometry-at-commit', 'resume-pixel-drift',
                          'direct-key-stale-frame', 'direct-text-stale-frame', 'direct-click-stale-frame',
                          'translated-key', 'translated-text', 'translated-click', 'translated-click-resize',
+                         'translated-retained-key', 'translated-retained-text', 'translated-retained-click',
+                         'retained-key', 'retained-text', 'retained-action', 'retained-semantic',
+                         'retained-exact', 'retained-click', 'retained-resume', 'retained-normal-resume',
+                         'comparison-fence-authority', 'comparison-fence-takeover', 'comparison-fence-pause',
+                         'comparison-fence-sentinel', 'comparison-fence-pending', 'comparison-fence-control',
+                         'comparison-fence-claimed', 'comparison-fence-deadline', 'comparison-fence-age',
+                         'comparison-fence-receiver', 'comparison-fence-metadata', 'comparison-fence-revision',
+                         'comparison-fence-boundary', 'comparison-fence-session',
                          'semantic-exact', 'semantic-drift', 'comparison-io', 'comparison-symlink',
                          'stale', 'authority', 'pause', 'receiver-exit', 'receiver-changed-at-commit',
                          'expected-refusal', 'wire5', 'hard-fault', 'human-fault', 'postcommit-feed',

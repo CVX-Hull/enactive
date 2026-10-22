@@ -387,11 +387,13 @@ class SetupTests(unittest.TestCase):
         self.assertIn('kind == "resume" ? 11 : 12', poll)
         self.assertIn('kind == "observe" || kind == "pause" ? 4', poll)
         gate = native[native.index('void ordinary_gate('):native.index('input_event action_event(')]
-        for guard in ('request.get_string( "frame" ) != frame_name', 'frame_name.empty()',
+        for guard in ('require_current_frame && source != frame_name', 'frame_name.empty()',
                       '!saved_frame_ok', 'frame_boundary != boundary_id', 'frame_session != session',
-                      'frame_revision != revision', 'now_ms() - frame_ms > 3000',
+                      'frame_revision != revision', 'checked_ms - frame_ms > 3000',
                       'presented_boundary != boundary_id', 'presented_session != session',
-                      'presented_revision != revision', 'now_ms() - presented_ms > 3000',
+                      'presented_revision != revision', 'checked_ms - presented_ms > 3000',
+                      'issued == retained_frames.end()', 'checked_ms - issued->timestamp_ms > 3000',
+                      'issued->metadata != capture_metadata( cached_frame_geometry() )',
                       'integer_member( request, "deadline_ms" ) < now_ms()', 'authority_gate( request );'):
             self.assertIn(guard, gate)
         self.assertIn('request.get_bool( "require_exact_frame" )', gate)
@@ -425,18 +427,19 @@ class SetupTests(unittest.TestCase):
     def test_exact_png_comparison_runs_once_at_final_commit_with_revocation_checks(self):
         native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
         gate = native[native.index('void ordinary_commit_gate('):native.index('input_event action_event(')]
+        self.assertIn('click || request.get_bool( "require_exact_frame" )', gate)
         self.assertEqual(gate.count('exact_frame_gate();'), 1)
-        self.assertEqual(gate.count('ordinary_gate( request );'), 2)
+        self.assertEqual(gate.count('ordinary_gate( request, require_current_frame );'), 2)
         self.assertEqual(gate.count('!resuming && ( paused || fs::exists( path( "pause" ) ) )'), 2)
-        self.assertLess(gate.index('ordinary_gate( request );'), gate.index('exact_frame_gate();'))
+        self.assertLess(gate.index('ordinary_gate( request, require_current_frame );'), gate.index('exact_frame_gate();'))
         self.assertLess(gate.index('request.get_bool( "require_exact_frame" )'), gate.index('exact_frame_gate();'))
-        self.assertLess(gate.index('exact_frame_gate();'), gate.rindex('ordinary_gate( request );'))
+        self.assertLess(gate.index('exact_frame_gate();'), gate.rindex('ordinary_gate( request, require_current_frame );'))
         self.assertLess(gate.index('exact_frame_gate();'), gate.rindex('fs::exists( path( "pause" ) )'))
         for guard in ('!waiting_interrupt.empty()', 'fs::exists( path( "control.json" ) )',
                       'fs::exists( path( "control-claimed.json" ) )',
                       'integer_member( request, "deadline_ms" ) < now_ms()'):
             self.assertLess(gate.index('exact_frame_gate();'), gate.index(guard))
-        self.assertLess(gate.rindex('ordinary_gate( request );'), gate.rindex('fs::exists( path( "pause" ) )'))
+        self.assertLess(gate.rindex('ordinary_gate( request, require_current_frame );'), gate.rindex('fs::exists( path( "pause" ) )'))
         poll = native[native.index('bool poll( keyboard_mode'):]
         resume = poll[poll.index('if( kind == "resume" )'):poll.index('if( paused ||')]
         self.assertLess(resume.index('ordinary_commit_gate( request, true, false );'),

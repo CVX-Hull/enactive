@@ -34,8 +34,9 @@ The read-only library accepts pinned closed current-contract archives without
 restoring old-world facts or execution handles. Old native5 libraries remain
 immutable historical evidence and cannot be mounted under native6. See
 [the current contract](protocol.md#ordinary-discovery-and-procedure-data).
-The native6 candidate passed its fresh local build from committed source and is
-installed in the isolated project app. The
+The earlier native6 ce810d binary is installed in the isolated project app.
+The current capture-precondition repair still needs a matching rebuild and
+graphical qualification. The
 [normal sixth run](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
 qualifies bounded current-contract discovery, procedure branch refinement/reuse,
 actual fresh-context application, same-proposal advisory overlap and exact normal
@@ -102,12 +103,15 @@ and any prepared charge. Entry and publication share the same custody/work
 checks; retained checkpoint and game-anchor integrity remain mandatory. Explicit
 Observe performs any subsequent fresh capture or macro closure. This adds no
 player tool, stored authority or automatic input. Passive skill verification may
-finish before another input is considered. Semantic key/action capture churn
+finish before another input is considered. Image-conditioned semantic/spatial capture churn
 uses that same known-unpublished path after
 fatal controller guards and an independent writer health/preflight proof.
-Navigation retains its verified prefix and requests explicit Observe; neither
-native filename retargeting nor automatic suffix replay is permitted. Lifecycle
-and paused activity/recovery remain strict. Source regressions do not establish
+Navigation retains any verified prefix when a real refusal occurs. Non-image
+input retains its exact native-issued capture and original clock across later
+pixel/filename churn only under equal complete current metadata and custody.
+The existing bounded native retention owns this provenance; no filename is
+retargeted and no suffix replayed. Lifecycle uses the action-specific policy
+below; paused activity/recovery remains strict. Source regressions do not establish
 native recurrence or an accepted campaign. Local
 game-time overshoot ends a normal root partial or leaves an owned menu for Observe
 closure without pausing healthy mission ownership. Full shared
@@ -329,15 +333,18 @@ checkpoint advances during Observe, while first-normal
 provenance, original budgets and the separately charged explicit Resume remain.
 No phase is reconstructed from historical records on reopen.
 
-A Save-start PNG-only change under unchanged native state and healthy custody
-advances the existing private observation checkpoint and ends the chosen decision
-without input. It retains the original Save root, first normal source and budgets;
-the player must inspect the new image and choose a new same-root Save child.
-Explicit Observe uses the same bounded refresh. Other lifecycle stages and final
-input equivalence stay strict, so recurring animation can still prevent dispatch.
-This is scoped observation bookkeeping and explicit replanning through the existing
-phase/SDK machinery, not a generic evidence-error recovery or command-equivalence
-change. Real native liveness remains a separate qualification.
+Registered Save start and creation/load provisional normal readmission use
+`native_state` equivalence across refresh and dispatch. Incidental pixel drift
+does not invalidate those normal-context intents. Save keeps its interaction
+lease through refresh, then performs the existing checked lifecycle rotation;
+normal readmission still has no lease until its separately charged Resume.
+Committed transition/effect/owned-launch proof and subsequent visible identity
+Claims/adoption stay independent of pixels. Setup, character selection, identity
+screens, confirmations and recovery keep their stronger policies. The
+[capture/precondition design](changes/058-capture-provenance-action-preconditions.md)
+records the complete-loop regression and bounded reuse of native-issued captures.
+No old Save-image retry loop or compatibility mode remains. Actual native
+qualification and liveness under tested conditions remain separate from fixtures.
 
 The selected mission game-time cap gates every input dispatch lane, including
 lifecycle, exit and readmission. Rejection settles any reserved intent before
@@ -391,8 +398,9 @@ Missing continuity makes cost unknown instead of silently resetting it.
 
 Lifecycle Resume, explicit creation-stage commit, normal save, identity inspection
 and owned exit confirmation refresh the selected checkpoint once at entry inside
-the operation, comparing exact retained native state and PNG bytes under the
-original actor/Pause and root/child deadlines. Resume journals source lineage before
+the operation, using the checkpoint's declared native-state or exact-PNG rule under
+the original actor/Pause and root/child deadlines. Resume journals its actual rule
+and source lineage before
 acquiring a lease; it cannot construct authority from an old binding. Exit's typed
 revalidation links the immutable interpretation to the actual dispatch source at
 write, orphan-proof validation and reopen. Save refresh precedes operation rotation

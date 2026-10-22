@@ -105,6 +105,11 @@ unique identity, expiry, bounded inputs, observation provenance and no blind
 retry of uncertain side effects. Game thread owns game state. Producer and
 consumer versions must agree. A new version or native input change requires
 real-game reconciliation/takeover probes; a mock cannot satisfy that lane.
+Distinguish immutable capture provenance, original freshness/custody and the
+preconditions of the chosen action. Require pixel equality where the decision is
+image-conditioned; incidental rendering changes are not themselves a semantic
+state change. Verify this boundary with real changed images, negative custody/
+clock cases and a coherent lifecycle, not a screen mask or repeated retry loop.
 Controls: C-PROTOCOL, C-RUNTIME, C-PORTABLE, C-NATIVE.
 
 ## S-CODE Maintainable implementation

@@ -32,15 +32,19 @@ clearing stale quantity proof while preserving original scope and costs. Known
 ACK evidence remains immutable and separate from any actual current snapshot.
 The [delivery impact map](../changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
 and #191 identify remaining game-integration and qualification gaps. The matching
-native6 build passed and is installed in the project app; real graphical
-qualification is bounded by the [normally closed learning006 report](../acceptance/2026-10-22-discovery-learning-sixth-attempt.md).
+native6 export shape is unchanged; the capture/precondition correction requires
+a matching rebuilt/pinned native and its own actual qualification. Earlier
+graphical qualification is bounded by the [normally closed learning006 report](../acceptance/2026-10-22-discovery-learning-sixth-attempt.md).
 Its scoped procedure library is eligible; a fresh independent seven-day campaign
-remains unaccepted. Semantic final-preflight capture churn now shares the existing
+remains unaccepted. Image-conditioned semantic/spatial final-preflight capture churn shares the existing
 known-unpublished refusal/explicit-Observe path, with independent custody,
 source/storage, mission-limit and original-preflight checks. This is source
-support, not new native qualification. Lifecycle and paused activity/recovery
-retain their stricter policies; no native filename retargeting or automatic retry
-is introduced.
+support, not new native qualification. Non-image input preserves its issued
+preflight capture and original TTL under equal complete current native metadata,
+even after a newer rendering. Normal lifecycle follows its action-specific
+[source policy](../protocol.md#lifecycle-action-preconditions); other
+image-conditioned lifecycle and paused activity/recovery remain strict. No native
+filename retargeting or automatic retry is introduced.
 
 The [organic-discovery crosswalk](organic-discovery.md#cross-check-against-prior-work)
 retains prior mixed-control research, campaign findings and memory distinctions.
@@ -143,8 +147,10 @@ existing identity, collection, reconciliation, costs and no-replay rules.
 Known unpublished visual/representation/geometry refusal returns evidence while
 healthy ownership survives; actual custody, Pause, competing writer, exhausted
 mission resources or unavailable required trace capacity still stops input.
-The frame-name-only ordinary key/action/direct refusal is classified only after all original fatal
-guards pass. Native filename enforcement stays strict. A settled unpublished
+An image-conditioned/spatial frame-name refusal is classified only after all original fatal
+guards pass. Non-image native dispatch instead verifies the original retained
+issuance, complete current metadata and original clocks; it never rewrites the
+requested frame. A settled unpublished
 ordinary refusal retains the existing authenticated `observation_generation`
 scope across operation rotation, including the first refused prompt child;
 explicit Observe must publish a fresh binding before another input. This is
@@ -215,7 +221,8 @@ format is introduced. Local game overshoot yields partial work without revoking
 healthy ownership; an owned menu closes through explicit Observe, while normal
 return has already ended the root. Global/clock/custody faults and unknown delivery
 retain their stopping paths. Scoped synthetic regressions and independent review
-are source evidence only. The matching native6 build is installed. Normally closed
+are source evidence only. The earlier native6 ce810d build is installed; the
+capture-precondition repair requires a matching rebuild and graphical qualification. Normally closed
 [learning006](../acceptance/2026-10-22-discovery-learning-sixth-attempt.md) qualifies
 bounded graphical ordinary discovery/procedure application;
 [Native001](../acceptance/2026-10-22-native-save-refresh.md) qualifies one unit-scale
@@ -448,15 +455,17 @@ campaign-memory/4; those versions describe historical artifacts, not supported
 runtime inputs. Preserve their exact captured data and pins without importing
 authority or relabeling them as current-contract learning evidence.
 [Delivery057](../changes/057-discovery-learning-campaign.md) retains failed runs and
-source/build/install receipts. The matching native6 build passed and is installed;
-actual host catalogue/preapproval activation and graphical acceptance remain
+source/build/install receipts. The earlier native6 ce810d build passed and is installed;
+this does not qualify the later capture-precondition repair, which awaits rebuild
+and graphical qualification. Actual
+host catalogue/preapproval activation and graphical acceptance remain
 separate qualifications. Learning006 and Native001 above provide their scoped
 actual host/graphical evidence; this is no blanket pending claim or proof of
 every subsequent source change.
 
 Lead owns coupled Python integration, tests, documentation, shared build/runtime
 and final verification. The isolated native implementation has been integrated;
-its syntax/apply checks remain source evidence. The later matching build proves
+its syntax/apply checks remain source evidence. A matching build proves
 compilation, while gameplay requires separate qualification. Existing controller/
 schema/ledger tooling owns dispatch and accounting; the reuse probe determines the
 remaining widget-targeting gap. No separate input executor,

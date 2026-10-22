@@ -46,10 +46,13 @@ custody/storage/global faults still stop. Do not treat an old checkpoint as curr
 
 Eligible lifecycle Resume, stage commit, save, identity inspection and owned quit
 confirmation refresh the selected checkpoint once at operation entry
-inside the operation under exact-state/image and original authority/deadline
-checks. The player need not race a three-second window between model/tool calls.
-A changed image, Pause or expired root still stops input; do not retry an unknown
-delivery. [Native timing failure and retained cleanup](acceptance/2026-10-20-lifecycle-freshness.md).
+inside the operation under its [declared source policy](protocol.md#lifecycle-action-preconditions)
+and original authority/deadline checks. Save start and provisional normal
+readmission use native-state equivalence; setup, identity screens and explicit
+confirmations retain image conditioning. The player need not race a three-second
+window between model/tool calls. Changed required state/image, Pause or an expired
+root still stops input; do not retry unknown delivery.
+[Native timing failure and retained cleanup](acceptance/2026-10-20-lifecycle-freshness.md).
 Before admission, ordinary controller commands retain their documented guards.
 Registered launch verifies the retained child and paused main-menu readiness; it
 grants no character identity, Resume, lease or normal-game time. Scoped

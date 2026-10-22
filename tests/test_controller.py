@@ -1443,6 +1443,25 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertIsNone(self.controller.status()["mission_lease"])
             self.assertEqual([r["kind"] for r in fake.delivered], ["resume"])
 
+    def test_nonimage_mission_resume_preserves_original_capture_across_render_churn(self):
+        with FakeBridge(self.controller) as fake:
+            self.controller.execute("observe")
+            captured = []
+
+            def preflight(observation, received):
+                captured.append(copy.deepcopy(observation))
+                changed = copy.deepcopy(observation)
+                changed["frame"] = "frame-game-test-2.png"
+                self.controller._accept(changed)
+
+            result = self.mission_resume(preflight=preflight)
+            self.assertTrue(result["published"], result)
+            self.assertEqual(result["result"]["status"], "ready")
+            self.assertEqual(result["request"]["frame"], captured[0]["frame"])
+            self.assertFalse(result["request"]["require_exact_frame"])
+            self.assertEqual([r["kind"] for r in fake.delivered], ["resume"])
+            self.assertIsNone(self.controller.status()["mission_lease"])
+
     def mission_resume(self, **changes):
         return self.controller.resume_mission(**{**self.mission_resume_binding(), **changes})
 
@@ -1602,6 +1621,8 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
         for fault in faults:
             with self.subTest(fault=fault), FakeBridge(self.controller) as fake:
                 self.controller.execute("observe")
+                image = b"image-conditioned Resume source"
+                (fake.bridge / fake.value["frame"]).write_bytes(image)
                 sentinel = fake.bridge / "pause"
                 if fault == "sentinel_create": sentinel.unlink()
                 clock = SimpleNamespace(value=time.monotonic(), wall=time.time())
@@ -1654,6 +1675,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 try:
                     with patch("harness.controller.time", proxy), patch.object(self.controller, "_exchange", side_effect=exchange):
                         envelope = self.mission_resume(preflight=preflight,
+                            expected_image_sha256=hashlib.sha256(image).hexdigest(),
                             deadline_monotonic=clock.value + (2 if fault == "deadline" else 10))
                     self.assertIsNotNone(envelope["preflight"])
                     self.assertFalse(envelope["published"])
@@ -2813,7 +2835,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 self.assertEqual(list(self.controller.admissions.glob("*.json")), [])
                 self.controller.pause()
 
-    def test_direct_capture_refresh_refuses_without_revoking_healthy_owner(self):
+    def test_direct_capture_churn_keeps_nonspatial_source_and_refuses_spatial_source(self):
         inputs = (dict(type="key", key="ESC", modifiers=[]), dict(type="text", text="a"),
                   dict(type="click", button="left", x=0, y=0, geometry=frame_geometry()))
         for direct in inputs:
@@ -2844,18 +2866,25 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     with patch.object(self.controller, "_check_owner", owner_check):
                         envelope = self.mission_dispatch(lease, kind="direct", value=direct,
                                                         preflight=preflight)
-                    self.assertEqual(envelope["result"]["status"], "rejected", envelope)
-                    self.assertIn("frame identity changed", envelope["result"]["error"])
-                    self.assertFalse(envelope["published"])
-                    self.assertIsNone(envelope["request"])
-                    self.assertIsNone(envelope["received_monotonic"])
+                    spatial = direct["type"] == "click"
+                    if spatial:
+                        self.assertEqual(envelope["result"]["status"], "rejected", envelope)
+                        self.assertIn("frame identity changed", envelope["result"]["error"])
+                        self.assertFalse(envelope["published"])
+                        self.assertIsNone(envelope["request"])
+                        self.assertIsNone(envelope["received_monotonic"])
+                    else:
+                        self.assertEqual(envelope["result"]["status"], "ready", envelope)
+                        self.assertTrue(envelope["published"])
+                        self.assertEqual(envelope["request"]["frame"], captured[0][0]["frame"])
                     self.assertEqual(envelope["preflight"]["observation"], captured[0][0])
                     self.assertEqual(envelope["preflight"]["received_monotonic"], captured[0][1])
                     self.assertIs(self.controller._mission_lease, lease)
                     self.assertFalse(self.controller.frozen)
                     self.assertFalse(self.controller.pause_requested)
                     self.assertEqual(self.controller.unknown_outcomes, [])
-                    self.assertFalse(any(r["kind"] == "direct" for r in fake.requests))
+                    self.assertEqual(len([r for r in fake.requests if r["kind"] == "direct"]),
+                                     0 if spatial else 1)
                     self.assertEqual(list(self.controller.admissions.glob("*.json")), [])
                     self.controller.release_mission(lease)
 
@@ -3086,6 +3115,8 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             with self.subTest(fault=fault), FakeBridge(self.controller) as fake:
                 self.ready()
                 lease = self.acquire()
+                image = b"image-conditioned action source"
+                (fake.bridge / fake.value["frame"]).write_bytes(image)
                 clock = SimpleNamespace(value=time.monotonic(), wall=time.time())
                 proxy = SimpleNamespace(monotonic=lambda: clock.value, time=lambda: clock.wall, sleep=time.sleep)
                 calls = []
@@ -3111,6 +3142,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 try:
                     with patch("harness.controller.time", proxy):
                         envelope = self.mission_dispatch(lease, preflight=preflight,
+                            expected_image_sha256=hashlib.sha256(image).hexdigest(),
                             deadline_monotonic=clock.value + (2 if fault == "deadline" else 10))
                     self.assertEqual(len(calls), 1)
                     self.assertFalse(envelope["published"])

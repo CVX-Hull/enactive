@@ -1,0 +1,382 @@
+{
+  "schema": "campaign-evidence-summary/1",
+  "mission_id": "independent-seven-day-008",
+  "outcome": "failed",
+  "source_commit": "d4fdb9c166af73662c7b25248a4133a5e1777a55",
+  "native_sha256": "ce810d3a2ee05517c5ead7b56caba7de42b4d4f0c729cea7551a327aaf0ec45e",
+  "turns": {
+    "initial": 5212800,
+    "last": 5223974,
+    "elapsed_seconds": 11174
+  },
+  "requests": {
+    "completed": 52,
+    "partial": 176,
+    "blocked": 18,
+    "unknown": 1
+  },
+  "primitives": {
+    "returned": 379,
+    "rejected": 4,
+    "not_dispatched": 1,
+    "unknown": 1
+  },
+  "images": {
+    "count": 994,
+    "bytes": 102214097,
+    "integrity": "Every indexed file SHA256/PNG signature/chunk CRC/IEND verified"
+  },
+  "selected_images": [
+    {
+      "source_id": "65e3b37d09d92c35149b37fa8220d9f1f2e25695c6fbfdb9c19f56655f2c887d",
+      "public_path": "docs/assets/independent-seven-day008-warmth.png",
+      "frame_sha256": "5b36fdf833bc1495efb430e91fce6c04e07a839c4d0f059c048932c29ea5ad05",
+      "turn": 5223835,
+      "native_frame": "frame-1792691732180-5303-1-1456.png"
+    },
+    {
+      "source_id": "3084a9036400f39b496f26fe762e3d1803a9314fd33694b202f25e824bfd5a61",
+      "public_path": "docs/assets/independent-seven-day008-last-normal.png",
+      "frame_sha256": "ef0fecdc2f667812e0005d3267c7a1fdbe15401bcaf829263a4720f1282e9606",
+      "turn": 5223974,
+      "native_frame": "frame-1792691732180-5303-1-2258.png"
+    },
+    {
+      "source_id": "8470ad5582e0ef03294efd964ab42c47e1f7bddff8b6f26634a91b2ca91b0572",
+      "public_path": "docs/assets/independent-seven-day008-save-refresh.png",
+      "frame_sha256": "63d7d57b198a3d1e9f5b6a5a26f4b343fd1fb577a73cb9d2a98bedf9b197ccf9",
+      "turn": 5223974,
+      "native_frame": "frame-1792691732180-5303-1-2298.png"
+    }
+  ],
+  "latency": {
+    "scope": "first submitted tool start to first observed terminal completion, exact operation/result joins. Terminal includes blocked/partial/unknown. Gaps include unknown interpretation/scheduling work, not isolated inference. Actors separate; no causal speedup or extrapolation. Adviser excluded. Viewer14join prefix is a separate sequential window.",
+    "exact_terminal_result_joins": 246,
+    "outside_player_hosts": [
+      "sd008-start-original"
+    ],
+    "actors": {
+      "player_seven_eight": {
+        "mcp_item_completed_events": 175,
+        "host_status": {
+          "completed": 171,
+          "failed": 4
+        },
+        "matched_terminal_requests": 152,
+        "whole_request_ms": {
+          "launch": {
+            "n": 1,
+            "min": 656,
+            "median": 656,
+            "max": 656
+          },
+          "create": {
+            "n": 6,
+            "min": 131,
+            "median": 294.5,
+            "max": 582
+          },
+          "menu": {
+            "n": 23,
+            "min": 123,
+            "median": 351,
+            "max": 20223
+          },
+          "edit": {
+            "n": 6,
+            "min": 116,
+            "median": 246.0,
+            "max": 2715
+          },
+          "observe": {
+            "n": 9,
+            "min": 133,
+            "median": 389,
+            "max": 806
+          },
+          "inspect": {
+            "n": 5,
+            "min": 473,
+            "median": 814,
+            "max": 1982
+          },
+          "remember": {
+            "n": 9,
+            "min": 129,
+            "median": 137,
+            "max": 187
+          },
+          "item": {
+            "n": 2,
+            "min": 576,
+            "median": 631.5,
+            "max": 687
+          },
+          "direct": {
+            "n": 83,
+            "min": 687,
+            "median": 1968,
+            "max": 8893
+          },
+          "activity": {
+            "n": 4,
+            "min": 365,
+            "median": 704.0,
+            "max": 2013
+          },
+          "navigate": {
+            "n": 2,
+            "min": 292,
+            "median": 339.5,
+            "max": 387
+          },
+          "correct": {
+            "n": 1,
+            "min": 177,
+            "median": 177,
+            "max": 177
+          },
+          "handoff": {
+            "n": 1,
+            "min": 1167,
+            "median": 1167,
+            "max": 1167
+          }
+        },
+        "intercall_gaps_ms": {
+          "n": 173,
+          "min": 4,
+          "median": 9891,
+          "max": 38436
+        },
+        "excluded_gaps": [
+          {
+            "before_line": 30,
+            "after_line": 104,
+            "ms": 282446
+          }
+        ]
+      },
+      "player_seven_eight_successor": {
+        "mcp_item_completed_events": 125,
+        "host_status": {
+          "completed": 125
+        },
+        "matched_terminal_requests": 94,
+        "whole_request_ms": {
+          "claim": {
+            "n": 1,
+            "min": 355,
+            "median": 355,
+            "max": 355
+          },
+          "readmit": {
+            "n": 1,
+            "min": 1824,
+            "median": 1824,
+            "max": 1824
+          },
+          "direct": {
+            "n": 53,
+            "min": 2082,
+            "median": 4065,
+            "max": 22771
+          },
+          "navigate": {
+            "n": 2,
+            "min": 830,
+            "median": 1004.0,
+            "max": 1178
+          },
+          "observe": {
+            "n": 23,
+            "min": 671,
+            "median": 1060,
+            "max": 1535
+          },
+          "activity": {
+            "n": 1,
+            "min": 2422,
+            "median": 2422,
+            "max": 2422
+          },
+          "inspect": {
+            "n": 4,
+            "min": 2421,
+            "median": 2658.0,
+            "max": 3198
+          },
+          "remember": {
+            "n": 4,
+            "min": 189,
+            "median": 243.0,
+            "max": 282
+          },
+          "save": {
+            "n": 4,
+            "min": 722,
+            "median": 812.5,
+            "max": 1092
+          },
+          "stop": {
+            "n": 1,
+            "min": 485,
+            "median": 485,
+            "max": 485
+          }
+        },
+        "intercall_gaps_ms": {
+          "n": 124,
+          "min": 2,
+          "median": 9914.5,
+          "max": 43730
+        },
+        "excluded_gaps": []
+      }
+    },
+    "navigation": [
+      {
+        "id": "sd008-shelter-west-lockers",
+        "state": "blocked",
+        "proposals": 0,
+        "verified_steps": 0,
+        "reason": "Target or connecting terrain is unknown or blocked"
+      },
+      {
+        "id": "sd008-shelter-around-lockers",
+        "state": "blocked",
+        "proposals": 0,
+        "verified_steps": 0,
+        "reason": "Target or connecting terrain is unknown or blocked"
+      },
+      {
+        "id": "sd008-s1-shelter-south",
+        "state": "blocked",
+        "proposals": 0,
+        "verified_steps": 0,
+        "reason": "Target or connecting terrain is unknown or blocked"
+      },
+      {
+        "id": "sd008-s1-return-shelter-route",
+        "state": "blocked",
+        "proposals": 0,
+        "verified_steps": 0,
+        "reason": "Target or connecting terrain is unknown or blocked"
+      }
+    ],
+    "initial_running_responses": 4,
+    "recovered_initial_uncertain_collection_responses": 4
+  },
+  "save_drift": {
+    "method": "Bundled Pillow RGB decode and ImageChops.difference, actual canonical originals; no production dependency or image editing.",
+    "pairs": [
+      {
+        "before": "3084a9036400f39b496f26fe762e3d1803a9314fd33694b202f25e824bfd5a61",
+        "after": "8470ad5582e0ef03294efd964ab42c47e1f7bddff8b6f26634a91b2ca91b0572",
+        "size": [
+          960,
+          640
+        ],
+        "decoded_pixels_equal": false,
+        "changed_pixels": 13,
+        "difference_bbox": [
+          777,
+          626,
+          782,
+          631
+        ],
+        "before_frame": "frame-1792691732180-5303-1-2258.png",
+        "after_frame": "frame-1792691732180-5303-1-2298.png",
+        "before_turn": 5223974,
+        "after_turn": 5223974,
+        "before_revision": 815,
+        "after_revision": 815,
+        "before_sha256": "ef0fecdc2f667812e0005d3267c7a1fdbe15401bcaf829263a4720f1282e9606",
+        "after_sha256": "63d7d57b198a3d1e9f5b6a5a26f4b343fd1fb577a73cb9d2a98bedf9b197ccf9"
+      },
+      {
+        "before": "8470ad5582e0ef03294efd964ab42c47e1f7bddff8b6f26634a91b2ca91b0572",
+        "after": "7a811dbce34e880a781198e31933e2bf46008769d97ed83c6aa02032a446667e",
+        "size": [
+          960,
+          640
+        ],
+        "decoded_pixels_equal": false,
+        "changed_pixels": 13,
+        "difference_bbox": [
+          777,
+          626,
+          782,
+          631
+        ],
+        "before_frame": "frame-1792691732180-5303-1-2298.png",
+        "after_frame": "frame-1792691732180-5303-1-2308.png",
+        "before_turn": 5223974,
+        "after_turn": 5223974,
+        "before_revision": 815,
+        "after_revision": 815,
+        "before_sha256": "63d7d57b198a3d1e9f5b6a5a26f4b343fd1fb577a73cb9d2a98bedf9b197ccf9",
+        "after_sha256": "f7781f777a334d7e3a3fc5ab620b01b06bf73fd8657da67f2b78873ecb4332bf"
+      },
+      {
+        "before": "7a811dbce34e880a781198e31933e2bf46008769d97ed83c6aa02032a446667e",
+        "after": "c1785dd4b1643854d193dcd459d6c95730bf007d4f2b0e5710df3b089e4541c3",
+        "size": [
+          960,
+          640
+        ],
+        "decoded_pixels_equal": false,
+        "changed_pixels": 13,
+        "difference_bbox": [
+          777,
+          626,
+          782,
+          631
+        ],
+        "before_frame": "frame-1792691732180-5303-1-2308.png",
+        "after_frame": "frame-1792691732180-5303-1-2320.png",
+        "before_turn": 5223974,
+        "after_turn": 5223974,
+        "before_revision": 815,
+        "after_revision": 815,
+        "before_sha256": "f7781f777a334d7e3a3fc5ab620b01b06bf73fd8657da67f2b78873ecb4332bf",
+        "after_sha256": "5ff1d03111bf459f7ec975b893761d061bec2b7b48da4add5ca9f4ae23e869c7"
+      },
+      {
+        "before": "c1785dd4b1643854d193dcd459d6c95730bf007d4f2b0e5710df3b089e4541c3",
+        "after": "d64da4616d52b793a7866e1116e18216834b1756dbe0d80750ccd192b83323bf",
+        "size": [
+          960,
+          640
+        ],
+        "decoded_pixels_equal": false,
+        "changed_pixels": 13,
+        "difference_bbox": [
+          777,
+          626,
+          782,
+          631
+        ],
+        "before_frame": "frame-1792691732180-5303-1-2320.png",
+        "after_frame": "frame-1792691732180-5303-1-2363.png",
+        "before_turn": 5223974,
+        "after_turn": 5223974,
+        "before_revision": 815,
+        "after_revision": 815,
+        "before_sha256": "5ff1d03111bf459f7ec975b893761d061bec2b7b48da4add5ca9f4ae23e869c7",
+        "after_sha256": "ce8fc1835cea5a594bd1be77d08d9f4d5d2b0d2e49f1e7f69cc90ab976f57235"
+      }
+    ],
+    "scope": "Changed decoded pixels within same exported native state do not identify pixel semantics or prove every native rejection predicate."
+  },
+  "adviser": {
+    "completed_jobs": 40,
+    "on_time_submissions": 40,
+    "charged_seconds": 2400,
+    "jobs_declaring_omissions": 27,
+    "nonunique_omission_occurrences": 772,
+    "additional_trajectory_truncation_job": 4,
+    "procedure_candidate_adopted": false
+  },
+  "limits": "No day/midpoint/normal ending/seven-day acceptance; no attention, causal learning/advice benefit, isolated inference/billing or throughput claim. Separate rolling browser prefix is not combined with player durations."
+}

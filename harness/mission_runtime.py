@@ -2091,8 +2091,11 @@ class MissionRuntime:
                        self._prompt_phase.game_anchor if self._prompt_phase is not None else original)
         control = isinstance(proposal, ActivityIntent)
         ordinary = proposal.kind == "direct"
+        lifecycle_image = lifecycle is not None and not (
+            isinstance(lifecycle, NormalPhase)
+            and self._registered_lifecycle.source_rule(lifecycle) == "native_state")
         image_informed = not ordinary and (work.request.get("perception") is not None
-                          or lifecycle is not None or activity is not None)
+                          or lifecycle_image or activity is not None)
         rule = "ordinary_input" if ordinary else "exact_png_bytes" if image_informed else "native_state"
         def unpublished_refusal() -> str | None:
             nonlocal local_nonpublication
@@ -2188,7 +2191,7 @@ class MissionRuntime:
                     expected_pause_origin=observed["pause_origin"], expected_session=proposal.before.session,
                     expected_revision=proposal.before.revision, expected_boundary_id=proposal.expected_boundary_id,
                     logical_action_id=proposal.logical_id, deadline_monotonic=deadline, preflight=preflight,
-                    expected_image_sha256=proposal.before.frame_sha256)
+                    expected_image_sha256=proposal.before.frame_sha256 if image_informed else None)
             else:
                 raw = self.controller.execute_mission(self._lease, kind=proposal.kind, value=proposal.action,
                     expected_session=proposal.before.session, expected_revision=proposal.before.revision,

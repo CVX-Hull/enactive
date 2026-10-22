@@ -11,8 +11,10 @@ Protocol version: 6.
 This is the detailed current contract supporting [architecture](architecture.md).
 Authority rules are [S-PROTOCOL](engineering.md#s-protocol-command-and-observation-authority).
 Current source is native6/mission10/ledger12/archive5, with procedure/2,
-campaign-memory/5 and reflection/2; gameplay/2 is unchanged. The matching native6
-build passed and is installed locally. [Learning006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
+campaign-memory/5 and reflection/2; gameplay/2 is unchanged. The installed native6
+binary is the earlier ce810d build. The [capture-precondition repair](changes/058-capture-provenance-action-preconditions.md)
+requires a matching rebuild and graphical qualification before deployment.
+[Learning006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
 and [native001](acceptance/2026-10-22-native-save-refresh.md) provide bounded
 graphical qualification; wider input/geometry and the full independent campaign
 retain their explicit limits. Dated native5 and earlier results retain their exact
@@ -94,10 +96,15 @@ receipt clock. Reading a snapshot does not renew its freshness.
 Live-versus-retained state comparison excludes transport id, timestamp and frame
 filename; it retains status/error/frame validity and complete semantic/Pause/takeover
 state. This comparison grants neither freshness nor image equivalence. Final
-semantic publication requires the exact retained frame identity, including recovery;
-a different basename refuses even when PNG bytes match. Direct preflight instead
-binds its actual fresh frame under the same uninterrupted custody.
-If an ordinary leased key/action/direct capture's filename changes during host preflight while
+publication preserves the original native-issued preflight capture. Non-spatial,
+non-image-conditioned input may use that retained capture after a newer rendering
+only while its original clock and complete normalized native metadata remain
+valid. Native checks the issued record; the host never substitutes a newer
+filename or timestamp. Image-conditioned semantic input, spatial clicks and
+recovery retain their applicable current-capture/image/geometry rules. Direct
+preflight binds its actual fresh capture under uninterrupted custody, separately
+from the immutable model-informing source.
+If an image-conditioned ordinary input or spatial capture's filename changes during host preflight while
 all existing ownership, complete state, receiver, Pause, pending-work, original
 freshness and deadline guards still pass, input is refused before publication
 without revoking the healthy lease. Its prepared primitive remains charged and
@@ -107,9 +114,9 @@ operation rotation. Explicit Observe supplies a fresh binding before a distinct
 new input intent under the original
 mission/prompt limits. This neither retries the old batch nor refreshes its
 receipt, replaces its frame or restores expired/lost authority. Combined guard
-failures keep their existing stop behavior. Native filename enforcement remains
-strict, including for ordinary events. Semantic image/native-state preconditions
-are unchanged; lifecycle, Resume and paused recovery still stop on capture churn.
+failures keep their existing stop behavior. Non-image input does not refuse solely
+because the latest capture basename changed. Normal lifecycle source policy is
+defined below; image-conditioned setup/Resume and paused recovery remain strict.
 Known early ordinary nonpublication, such as a changed click mapping before
 primitive preparation, uses that same observation scope without inventing a
 primitive charge. Prepared refusal retains its actual charge. Processing/storage
@@ -123,7 +130,16 @@ The transport id/status/error and capture basename/timestamp are normalized for
 that metadata comparison. Reuse preserves the original timestamp, immutable file,
 receipt age and retention entry. Explicit id-bearing captures always mint a fresh
 identity. Changed/expired/failed captures cannot reuse an older matching frame.
-No TTL renewal, automatic retry or input-gate relaxation follows. Immutable ACK/UUID,
+The existing 120-frame native retention deque also retains each issued filename's
+original capture timestamp and normalized complete observation metadata. Input
+looks up that exact record, compares its metadata with current game-thread state,
+then checks its original TTL, current saved/presented clocks and original request
+deadline. Unknown, evicted, expired or changed-context captures refuse with
+predicate-specific diagnostics. Pixel changes do not renew those clocks.
+Image-conditioned input and spatial clicks additionally require the current
+capture; registered normal readmission Resume uses its native-state policy while
+other Resume callers retain image conditioning. No TTL renewal, automatic retry
+or silent retargeting follows. Immutable ACK/UUID,
 retained preflight correlation and semantic exact-PNG commit checks remain exact. Recovery
 hashes the sampled live PNG outside the Pause lock and fences that same identity.
 
@@ -205,12 +221,14 @@ and exceptional second-child cleanup; later success does not rewrite it.
 Neither synthetic UI tests nor tests assuming identity accept an independent mission. Observe likewise cannot adopt
 an unexplained normal session. Reopening restores neither phase nor input authority.
 The lifecycle Resume checkpoint is refreshed once at entry inside the registered operation
-before proposal/publication. The existing guarded Observe must preserve exact
-native state and PNG bytes, original actor/operator/takeover and root/child/mission
+before proposal/publication. The existing guarded Observe must preserve the
+[action-specific source policy](#lifecycle-action-preconditions), original actor/operator/takeover and root/child/mission
 deadlines. Its journal links old and fresh source IDs without constructing a
 lease-bound SourceBinding before a lease exists. It sends no input or grants
 readmission by itself. Explicit creation-stage commit, normal save and identity
-inspection use the same guarded refresh with typed exact-PNG SourceRevalidation.
+inspection use the same guarded refresh with typed SourceRevalidation under that
+policy; only normal Save start and provisional normal identity entry use native-state
+equivalence, while setup and the actual identity screen retain exact-PNG checks.
 Ordinary semantic controls and navigation likewise capture/revalidate once at entry,
 even if the selected source is still fresh. Interpreted controls require exact PNG
 equivalence; native-row/navigation decisions retain native-state equivalence.
@@ -408,20 +426,26 @@ preflight. Wrong metadata/support, changed pixels, user Pause/takeover, unsettle
 input, uncommitted proof, lost child or exhausted limits keep stopping behavior.
 An immutable blocked result is never reinterpreted as permission or success.
 
-At Save start, a refresh that changes only PNG bytes while native state and healthy
-owned custody remain unchanged returns a zero-input blocked result with the newly
-captured checkpoint. The private `save_start` phase retains its original root,
-first normal source, deadlines and cumulative costs; no rotation or Save occurs.
-Inspect the new source and submit a NEW `enactive_lifecycle` Save request with
-`lifecycle` scope. Explicit Observe can update that same checkpoint under the
-same guards. Reusing the old source rejects. Pending/unsettled input, lost custody,
-Pause/takeover, changed native state, archive faults and exhausted original limits
-still stop. This observation rule does not declare the images equivalent for an
-action: the new decision's refresh and final controller/native dispatch remain
-strict. Persistent image churn can therefore still prevent Save; this is not a
-liveness guarantee or permission to retry automatically. Create/load, Resume,
-identity and confirmation refresh semantics are unchanged. Source regression
-evidence and actual graphical qualification are separate lanes.
+### Lifecycle action preconditions
+
+Lifecycle source policy distinguishes the registered action from incidental pixels:
+
+| Private checkpoint/intent | Refresh and dispatch precondition |
+| --- | --- |
+| Owned normal Save at `save_start` | `native_state`; preserve the original root, first-normal identity, budgets/deadlines and interaction lease through refresh, then perform the existing single checked lifecycle rotation before Save dispatch. |
+| Creation/load `awaiting_identity` at normal play | `native_state` for provisional refresh, its separately charged registered Resume and entry to identity inspection. Original committed transition/effect proof, owned child, actor/epoch/Pause lineage and subsequent identity Claims/adoption remain mandatory. |
+| Setup forms/rows, identity screen, explicit confirmations and other lifecycle checkpoints | Existing exact-PNG policy; a normal-context rule cannot authorize a different stage or operation. |
+
+The same selected rule is recorded in SourceRevalidation and Resume lineage and
+used through runtime/controller/native preflight. A normal image change under
+equal complete native state does not require another Save decision merely to
+wait for equal pixels. This does not claim image equivalence, renew an aged source
+or reconstruct a phase from history. Pending/unsettled input, lost custody,
+Pause/takeover, changed required native state, archive faults and exhausted original
+limits still stop. Image-conditioned choices, spatial input and registered
+recovery retain their own stronger checks. No automatic input retry or general
+liveness guarantee follows. Source regressions and actual native qualification
+remain separate evidence lanes.
 
 NormalSessionAdoption requires directly supported, undisputed admitted world and
 character Claims, the exact identity inspection, owned transition and current

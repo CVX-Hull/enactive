@@ -251,7 +251,13 @@ std::string encode_ui( const visible_ui &ui )
     write_ui( out, ui );
     return stream.str();
 }
-std::deque<std::string> retained_frames;
+// Retention preserves the issued source and clock across later render-only churn.
+struct issued_capture {
+    std::string name;
+    long long timestamp_ms;
+    std::string metadata;
+};
+std::deque<issued_capture> retained_frames;
 
 std::string path( const std::string &name )
 {
@@ -436,10 +442,10 @@ bool publish( const std::string &id, const std::string &status,
                 fs::rename( path( "frame.latest.png" ), path( "frame.png" ) );
                 frame_ms = presented_ms;
                 frame_metadata = metadata;
-                retained_frames.push_back( frame_name );
+                retained_frames.push_back( { frame_name, frame_ms, metadata } );
                 if( retained_frames.size() > 120 ) {
                     std::error_code ignored;
-                    fs::remove( path( retained_frames.front() ), ignored );
+                    fs::remove( path( retained_frames.front().name ), ignored );
                     retained_frames.pop_front();
                 }
             }
@@ -564,25 +570,52 @@ void authority_gate( const TextJsonObject &request )
         throw std::runtime_error( "host authority revoked or malformed" );
     }
 }
-void ordinary_gate( const TextJsonObject &request )
+void ordinary_gate( const TextJsonObject &request, bool require_current_frame = false )
 {
     authority_gate( request );
     if( integer_member( request, "takeover_generation" ) != takeover_generation ) {
         throw std::runtime_error( "human generation changed" );
     }
     if( request.get_string( "session" ) != session ) { throw std::runtime_error( "session changed" ); }
-    if( integer_member( request, "revision" ) != revision ||
-        request.get_string( "boundary_id" ) != boundary_id ) {
-        throw input_refusal( "stale session, revision, boundary or human generation; observe again" );
+    if( integer_member( request, "revision" ) != revision ) {
+        throw input_refusal( "revision changed; observe again" );
+    }
+    if( request.get_string( "boundary_id" ) != boundary_id ) {
+        throw input_refusal( "boundary changed; observe again" );
     }
     if( !saved_frame_ok ) { throw std::runtime_error( "capture is unhealthy" ); }
-    if( request.get_string( "frame" ) != frame_name || frame_name.empty() || !saved_frame_ok ||
-        frame_boundary != boundary_id || frame_session != session || frame_revision != revision ||
-        now_ms() - frame_ms > 3000 ||
-        presented_boundary != boundary_id || presented_session != session ||
-        presented_revision != revision || now_ms() - presented_ms > 3000 ||
-        integer_member( request, "deadline_ms" ) < now_ms() ) {
-        throw input_refusal( "fresh matching rendered boundary and deadline required" );
+    const std::string source = request.get_string( "frame" );
+    const auto issued = std::find_if( retained_frames.begin(), retained_frames.end(),
+    [&source]( const issued_capture &capture ) { return capture.name == source; } );
+    if( issued == retained_frames.end() ) {
+        throw input_refusal( "capture was not issued or is no longer retained" );
+    }
+    if( require_current_frame && source != frame_name ) {
+        throw input_refusal( "action requires the current capture" );
+    }
+    if( frame_name.empty() || frame_boundary != boundary_id || frame_session != session ||
+        frame_revision != revision ) {
+        throw input_refusal( "saved capture context changed" );
+    }
+    if( presented_boundary != boundary_id || presented_session != session || presented_revision != revision ) {
+        throw input_refusal( "presented render context changed" );
+    }
+    if( issued->metadata != capture_metadata( cached_frame_geometry() ) ) {
+        throw input_refusal( "capture observation metadata changed" );
+    }
+    // Serialization work cannot renew or outrun the original source clocks.
+    const long long checked_ms = now_ms();
+    if( checked_ms < issued->timestamp_ms || checked_ms - issued->timestamp_ms > 3000 ) {
+        throw input_refusal( "original capture expired or clock moved backwards" );
+    }
+    if( checked_ms < frame_ms || checked_ms - frame_ms > 3000 ) {
+        throw input_refusal( "current saved capture expired or clock moved backwards" );
+    }
+    if( checked_ms < presented_ms || checked_ms - presented_ms > 3000 ) {
+        throw input_refusal( "presented render expired or clock moved backwards" );
+    }
+    if( integer_member( request, "deadline_ms" ) < now_ms() ) {
+        throw input_refusal( "request deadline expired" );
     }
 }
 bool same_frame_png( const std::string &saved, const std::string &latest, const struct stat &owned )
@@ -654,7 +687,9 @@ void exact_frame_gate()
 }
 void ordinary_commit_gate( const TextJsonObject &request, bool resuming, bool click )
 {
-    ordinary_gate( request );
+    // Click classification comes from the already-consumed primary direct-event parse.
+    const bool require_current_frame = click || request.get_bool( "require_exact_frame" );
+    ordinary_gate( request, require_current_frame );
     if( !ordinary_receiver() ) { throw input_refusal( "no live ordinary input receiver" ); }
     if( !resuming && ( paused || fs::exists( path( "pause" ) ) ) ) {
         throw std::runtime_error( "pause interrupted dispatch" );
@@ -674,7 +709,7 @@ void ordinary_commit_gate( const TextJsonObject &request, bool resuming, bool cl
     // redraw interleaves it; queued physical input is handled by CheckMessages.
     // Host Pause still revokes the durable authority token, including Resume,
     // whose existing sentinel is intentionally consumed only after this gate.
-    ordinary_gate( request );
+    ordinary_gate( request, require_current_frame );
     if( !ordinary_receiver() ) { throw input_refusal( "no live ordinary input receiver" ); }
     if( !waiting_interrupt.empty() || fs::exists( path( "control.json" ) ) ||
         fs::exists( path( "control-claimed.json" ) ) ) {

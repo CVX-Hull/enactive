@@ -27,6 +27,7 @@ explains the integrated design. Its owned work is linked from
 | [Learning006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md) | Scoped procedure reuse/refinement, fresh-context application, background advice and normal lifecycle; disclosed technical assistance, no causal learning claim |
 | [Fresh006](acceptance/2026-10-22-independent-seven-day-sixth-attempt.md) | Failed independent campaign and retained handoff/local-exhaustion evidence; no day or normal ending credited |
 | [Fresh007](acceptance/2026-10-22-independent-seven-day-seventh-attempt.md) | Failed semantic START preflight, partial independent play/handoff and bounded latency evidence; exceptional closure, no day or normal ending |
+| [Fresh008](acceptance/2026-10-22-independent-seven-day-eighth-attempt.md) | Actual fresh-context continuation and ordinary refusal recovery, then native rejections and persistent Save image drift; exceptional closure, no day or normal ending |
 | [Native001](acceptance/2026-10-22-native-save-refresh.md) | One unit-geometry click and exact normal save/reload/ending |
 | [Local-refusal001](acceptance/2026-10-22-native-local-refusal.md) | Closed real menu refusal/Observe/new-root cancellation loop and normal lifecycle; source checks and independent qualification remain separate |
 

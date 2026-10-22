@@ -16,7 +16,9 @@ class NativeCaptureTests(unittest.TestCase):
         compiler = shutil.which("c++")
         if compiler is None:
             raise unittest.SkipTest("C++ compiler absent; native component tests not executed")
-        cls.temp = tempfile.TemporaryDirectory()
+        output_root = Path(__file__).resolve().parents[1] / ".runtime"
+        output_root.mkdir(exist_ok=True)
+        cls.temp = tempfile.TemporaryDirectory(dir=output_root)
         cls.addClassCleanup(cls.temp.cleanup)
         cls.root = Path(cls.temp.name)
         native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
@@ -26,7 +28,11 @@ class NativeCaptureTests(unittest.TestCase):
         compare = native[native.rindex("bool same_frame_png( "):native.index("void exact_frame_gate()")]
         fixture = Path(__file__).with_name("native_capture_fixture.cpp").read_text()
         source = cls.root / "capture.cpp"
-        source.write_text(fixture.replace("// PRODUCTION_FUNCTIONS", compare + gate + publish))
+        records = native[native.index("struct issued_capture {"):native.index("std::string path(")]
+        serializer = native[native.index("void write_observation("):native.index("bool publish( ")]
+        source.write_text(fixture.replace("// PRODUCTION_RECORDS", records).replace(
+            "// PRODUCTION_SERIALIZER", serializer).replace(
+            "// PRODUCTION_FUNCTIONS", compare + gate + publish))
         cls.binary = cls.root / "capture"
         result = subprocess.run([compiler, "-std=c++17", "-Wall", "-Wextra", "-Werror", str(source),
                                  "-o", str(cls.binary)], capture_output=True, text=True, timeout=60)
@@ -36,7 +42,10 @@ class NativeCaptureTests(unittest.TestCase):
     def test_capture_identity_and_original_gate_invariants(self):
         for scenario in ("heartbeat", "explicit", "expiry", "encoding-expiry", "backwards",
                          "changed-pixels", "changed-geometry", "changed-metadata", "failed-capture",
-                         "missing-file", "authority", "deadline", "source-age"):
+                         "missing-file", "authority", "deadline", "source-age", "original-ttl",
+                         "current-metadata", "metadata-expiry", "unknown", "foreign", "evicted", "ttl-boundary",
+                         "metadata-category", "metadata-actions", "metadata-control", "metadata-ui",
+                         "metadata-pause-origin", "metadata-in-game"):
             with self.subTest(scenario=scenario), tempfile.TemporaryDirectory(dir=self.root) as directory:
                 result = subprocess.run([str(self.binary), scenario], cwd=directory, capture_output=True,
                                         text=True, timeout=5)

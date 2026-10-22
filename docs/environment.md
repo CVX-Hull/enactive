@@ -65,6 +65,18 @@ accepted-world files remained unchanged. Its mission evidence is intact. The
 owned native SIGTERM and controller Ctrl-C were exceptional cleanup, never a
 normal save/ending or authority to reuse the failed campaign.
 
+After failed independent campaign008's three actual actor hosts became FINAL,
+preserved evidence and exceptionally closed native5303/controller95020. The
+controller records native returncode−9 after the lead's initial SIGTERM request;
+controller exit0 and absent exact PIDs/port8766 do not establish normal Save/exit.
+Archived all49files of `EnactiveSevenDayEight` / Sam before active-menu retirement:
+`.runtime/save-retirement/2026-10-22-seven-day008/failed-world.tar.gz`,
+892,024bytes, SHA-256
+`4379e070199731f709b4ce93f9e6986133555c1b3d72947a6a9bd8d62463481b`.
+Every archive member hash verified; all191accepted-world files remained unchanged.
+The adjacent manifest owns hashes/restoration; the [failed008 report](acceptance/2026-10-22-independent-seven-day-eighth-attempt.md)
+owns original costs, unknowns and limits. No global installation or setting changed.
+
 ## Structured player SDK, 2026-10-20
 
 Added official MCP Python SDK 2.3.0 for the optional local stdio adapter. The shared
