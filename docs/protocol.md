@@ -993,6 +993,17 @@ both samples' health and clock/revision integrity. A future clock, regressed
 revision, contradictory same-revision scene or changed immutable capture remains
 a fault. Mission status names the latest retained sample, separately from the
 spectator's newer native frame; neither grants input authority.
+Ordinary current-source availability also requires its existing live published
+binding/custody; stopped or unbound history is not exposed as current. Explicit
+owned lifecycle/activity/handoff/exit checkpoints retain their private paths.
+The initial activity poll and an exact owned launch/saved-menu checkpoint also
+retain their existing presentation path. The owned menu requires the original
+operator mark, admitted/active mission and retained running native-process custody;
+Pause or process exit cannot expose it as current.
+Passive malformed-state validation makes the current sample unavailable without
+closing result collection; execution still fails closed. The controller checks
+the archive's clock/revision progression at ordinary entry and late refusal
+fences, and immutable capture/custody at the final retained-proof comparison.
 
 Semantic entry refresh still requires positive state/image equivalence before
 input. A verified non-equivalent refresh publishes actual fresh evidence, advances

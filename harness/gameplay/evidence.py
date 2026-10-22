@@ -122,11 +122,7 @@ def same_native_state(before: dict | None, after: dict | None) -> bool:
 
 
 def same_native_custody(before: dict | None, after: dict | None) -> bool:
-    """Compare custody of two samples, never their action applicability or age.
-
-    A new capture may show a newer scene or receiver. Reusing one immutable
-    capture identity for different state is still a contradiction.
-    """
+    """Compare custody and immutable capture metadata, never applicability/age."""
     if before is None or after is None:
         return False
     return (all(before[key] == after[key] for key in

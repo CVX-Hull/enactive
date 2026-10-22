@@ -137,6 +137,14 @@ semantic preflight is selected only for proven nondelivery and must end before
 reservation or preparation; strict retention failure is never caught and retried
 with weaker rules. See [design059](../changes/059-observation-custody-and-applicability.md).
 
+Actual window-resize qualification remains in [#181](https://github.com/CVX-Hull/enactive/issues/181).
+The archive treats changed geometry at one revision as contradictory; the current
+native presentation increments revision for turn/UI changes and samples geometry
+separately. Source tests with revised synthetic geometry do not prove that native
+resize advances revision. Reconcile that coupling with real resize evidence in
+the wider-geometry work; do not claim qualification or silently waive the archive
+contract from a synthetic passing test.
+
 **Delivery and further input.** A correlated ready ACK is returned delivery even
 when its screen is unfamiliar, unclassified or already superseded by a later
 observation. Its actual capture is historical evidence; readiness for another

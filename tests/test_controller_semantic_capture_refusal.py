@@ -48,6 +48,8 @@ class ControllerSemanticCaptureRefusalTests(unittest.TestCase):
             with self.subTest(equal_pixels=equal_pixels), FakeBridge(self.controller) as fake:
                 self.ready()
                 fake.value["actions"].append("wait")
+                fake.value["revision"] += 1
+                self.assertEqual(self.controller.execute("observe")["status"], "ready")
                 lease = self.acquire(operation="interaction")
                 authority = read_json(self.controller.bridge / "authority.json")
                 image = b"synthetic informing pixels"
@@ -134,6 +136,8 @@ class ControllerSemanticCaptureRefusalTests(unittest.TestCase):
                 with self.subTest(kind=kind, fault=fault), FakeBridge(self.controller) as fake:
                     self.ready()
                     fake.value["actions"].append("wait")
+                    fake.value["revision"] += 1
+                    self.assertEqual(self.controller.execute("observe")["status"], "ready")
                     lease = self.acquire(operation="interaction")
                     clock = SimpleNamespace(mono=time.monotonic(), wall=time.time())
                     proxy = SimpleNamespace(monotonic=lambda: clock.mono, time=lambda: clock.wall, sleep=time.sleep)
@@ -159,11 +163,18 @@ class ControllerSemanticCaptureRefusalTests(unittest.TestCase):
                             receipt = self.mission_dispatch(lease, kind=kind, value=value, preflight=prepare,
                                 deadline_monotonic=clock.mono + (1 if fault == "deadline" else 10))
                         self.assert_unpublished(receipt, fake)
-                        self.assertEqual(receipt["result"]["status"], "controller_error", receipt)
+                        self.assertEqual(receipt["result"]["status"],
+                                         "rejected" if fault == "revision" else "controller_error", receipt)
                         self.assertNotEqual(receipt["result"]["error"], "Native frame identity changed during final preflight")
-                        self.assertIsNone(self.controller._mission_lease)
-                        self.assertTrue(self.controller.frozen)
-                        self.assertTrue(self.controller.pause_requested)
+                        if fault == "revision":
+                            self.assertIs(self.controller._mission_lease, lease)
+                            self.assertFalse(self.controller.frozen)
+                            self.assertFalse(self.controller.pause_requested)
+                            self.controller.release_mission(lease)
+                        else:
+                            self.assertIsNone(self.controller._mission_lease)
+                            self.assertTrue(self.controller.frozen)
+                            self.assertTrue(self.controller.pause_requested)
                     finally:
                         self.controller.pending = self.controller.control_pending = None
                         self.controller._command_work = 0

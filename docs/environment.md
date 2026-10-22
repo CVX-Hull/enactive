@@ -119,6 +119,18 @@ unchanged. The adjacent manifest owns restoration instructions; the
 [failed009 report](acceptance/2026-10-22-independent-seven-day-ninth-attempt.md)
 owns costs, delivery uncertainty and evidence limits. No global change was made.
 
+Observation001's operator became actually FINAL after both normal owned exits and
+FinishStopped. The controller then exited0 on ordinary interrupt; project native
+and port8766 listener were absent, without exceptional signals. Archived43 closed
+technical-world files with member-hash verification:
+`.runtime/save-retirement/2026-10-22-observation001/closed-technical-world.tar.gz`,
+756,778bytes, SHA-256
+`abee20e0d798405590704e5984310667ede348e67ed8bfb474841e3f87889484`.
+All191 accepted-save files remained unchanged; adjacent manifest owns restoration.
+The [bounded report](acceptance/2026-10-22-native-observation-custody.md) retains
+the successful valid path, six unknown ACKs and failed frozen-source full checks.
+No global setup, save contents or old authority changed.
+
 ## Structured player SDK, 2026-10-20
 
 Added official MCP Python SDK 2.3.0 for the optional local stdio adapter. The shared

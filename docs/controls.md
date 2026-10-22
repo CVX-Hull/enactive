@@ -96,9 +96,9 @@ Coverage gap: Source controls and synthetic fixtures do not establish native eff
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-22. Outcome: Capture001 completed ordinary inventory/cancel, normal Save/owned exit/new-child exact reload/visible identity, postreload movement and final Save/owned exit/NormalFinishStopped on the rebuilt boundary.
-Scope: Frozenf2fdc62/native40acb8;67requests/72charges/194verified PNGs/7,648,384bytes/1game second/782.783947wall. Six unknown ACKs remain with separate effects; both children exit0 and actual actor FINAL. Capture names changed but checked PNGs match; persistentpixel drift/nativecommit race unexercised.
-Exercise evidence: [docs/acceptance/2026-10-22-native-capture-preconditions.md](../docs/acceptance/2026-10-22-native-capture-preconditions.md).
+Last exercise: 2026-10-22. Outcome: Observation001 completed organic inventory/filter/Observe/semantic cancellation and coherent normal same-character reload/ending on frozen de97c8b. Full local1619tests/737.839s and exactCI39861570099 failed; valid graphical path is not formal source acceptance.
+Scope: 68requests/86charges/224verified PNGs/8793506bytes/1game second/644.679732wall;6unknown ACKs retain separateeffects. ActorFINAL and2normal exits; no uncertain input replay. Source triage requires controller entry/late progression, qualified current-binding availability and passive malformed-state containment, plus truthful clock/revision fixtures. Exact corrected-source checks and harder native race/refusal branches remain separate.
+Exercise evidence: [docs/acceptance/2026-10-22-native-observation-custody.md](../docs/acceptance/2026-10-22-native-observation-custody.md), [docs/acceptance/2026-10-22-independent-seven-day-ninth-attempt.md](../docs/acceptance/2026-10-22-independent-seven-day-ninth-attempt.md), [docs/changes/059-observation-custody-and-applicability.md](../docs/changes/059-observation-custody-and-applicability.md).
 
 Maintenance review: 2026-10-22. Effectiveness: partially_effective.
 Findings: Failed008 preserved exact failure/unknown/cost evidence. Reviewed action-specific preconditions now compose through a coherent real normal lifecycle on matching native; actual persistentpixel drift and retainedcapture commit race remain source-tested/unexercised there. Original clocks/custody/identity/unknown effects persist. Normal engine TURN_DURATIONfloat serialization changed raw options bytes without changing configured behavior; original pin discrepancy retained and independently adjudicated.

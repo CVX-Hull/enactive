@@ -20,7 +20,7 @@ from typing import Any, Callable
 
 from harness.movement import DIRECTIONS, MovementBlocked, guard, observed_step
 from harness.gameplay.contracts import ContractError
-from harness.gameplay.evidence import same_native_custody, same_native_state
+from harness.gameplay.evidence import EvidenceError, same_native_custody, same_native_state, validate_native_progression
 from harness.gameplay.mission_contracts import PAUSE_ORIGINS, validate_visible_ui
 from harness.gameplay.native_input import validate_geometry, validate_input
 
@@ -1390,6 +1390,16 @@ class Controller:
             self.command_lock.release()
 
     @staticmethod
+    def _native_progression(before: dict | None, after: dict | None) -> None:
+        """Keep archive integrity failures fatal at controller refusal fences."""
+        if before is None or after is None:
+            raise ControlError("Native progression requires both actual samples")
+        try:
+            validate_native_progression(before, after, now_timestamp_ms=int(time.time() * 1000))
+        except EvidenceError as exc:
+            raise ControlError(str(exc)) from exc
+
+    @staticmethod
     def _mission_frame(state: dict[str, Any], operation: str, *, direct: bool = False) -> None:
         validate_state(state)
         age = int(time.time() * 1000) - state["timestamp_ms"]
@@ -1760,13 +1770,16 @@ class Controller:
             return result
         # Direct drift preserves custody from the owned entry screen.
         with self.data_lock:
-            entry_control_generation = self.state["boundary"]["control_generation"] if self.state else None
+            entry_state = copy.deepcopy(self.state)
+            entry_control_generation = entry_state["boundary"]["control_generation"] if entry_state else None
         observation_receipt: dict[str, float] = {}
         observed = self._exchange("observe", timeout, deadline_monotonic=deadline_monotonic,
                                   observation_receipt=observation_receipt, unpublished_refusal=unpublished_refusal)
         if observed["status"] != "ready":
             return observed
         ordinary_input = lease is not None and lease.operation != "lifecycle" and kind in {"key", "action", "direct"}
+        if ordinary_input:
+            self._native_progression(entry_state, observed)
         context_changed = (ordinary_input and kind != "direct"
             and observed["session"] == payload.get("expected_session")
             and (observed["revision"] != payload.get("expected_revision")
@@ -1850,8 +1863,12 @@ class Controller:
                             or self.pending is not None or any((self.bridge / name).exists() for name in
                             ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
                         raise ControlError("Native or recovery work appeared during preflight")
+                    if ordinary_input:
+                        self._native_progression(observed, self.state)
+                        if not same_native_custody(observed, self.state):
+                            raise ControlError("Native custody or immutable capture changed during preflight")
                     if not same_native_state(self.state, observed):
-                        if not ordinary_input or not same_native_custody(self.state, observed):
+                        if not ordinary_input:
                             raise ControlError("Native custody or specialized boundary changed during preflight")
                         self.check_mission_refusal(lease, generation, command_work=1)
                         deferred_refusal = MissionInputRefusal(
@@ -1948,6 +1965,7 @@ class Controller:
 
             def fence() -> None:
                 self.check_mission_refusal(lease, generation, command_work=1)
+                self._native_progression(observed, self.state)
                 if not same_native_custody(self.state, observed):
                     raise ControlError("Native custody changed before local refusal")
                 self._mission_frame(observed, lease.operation, direct=True)

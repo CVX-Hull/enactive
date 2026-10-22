@@ -343,10 +343,12 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-22",
-        "outcome": "Capture001 completed ordinary inventory/cancel, normal Save/owned exit/new-child exact reload/visible identity, postreload movement and final Save/owned exit/NormalFinishStopped on the rebuilt boundary.",
-        "scope": "Frozenf2fdc62/native40acb8;67requests/72charges/194verified PNGs/7,648,384bytes/1game second/782.783947wall. Six unknown ACKs remain with separate effects; both children exit0 and actual actor FINAL. Capture names changed but checked PNGs match; persistentpixel drift/nativecommit race unexercised.",
+        "outcome": "Observation001 completed organic inventory/filter/Observe/semantic cancellation and coherent normal same-character reload/ending on frozen de97c8b. Full local1619tests/737.839s and exactCI39861570099 failed; valid graphical path is not formal source acceptance.",
+        "scope": "68requests/86charges/224verified PNGs/8793506bytes/1game second/644.679732wall;6unknown ACKs retain separateeffects. ActorFINAL and2normal exits; no uncertain input replay. Source triage requires controller entry/late progression, qualified current-binding availability and passive malformed-state containment, plus truthful clock/revision fixtures. Exact corrected-source checks and harder native race/refusal branches remain separate.",
         "evidence": [
-          "docs/acceptance/2026-10-22-native-capture-preconditions.md"
+          "docs/acceptance/2026-10-22-native-observation-custody.md",
+          "docs/acceptance/2026-10-22-independent-seven-day-ninth-attempt.md",
+          "docs/changes/059-observation-custody-and-applicability.md"
         ]
       },
       "maintenance_review": {

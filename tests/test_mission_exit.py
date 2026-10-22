@@ -259,11 +259,16 @@ class MissionExitTests(unittest.TestCase):
 
     def test_new_root_cannot_adopt_operator_pause_since_launch(self):
         self.ready()
+        request = self.exit_request()
         self.runtime.pause()
         deadline = time.monotonic() + 2
         while self.runtime._ledger.snapshot(now=time.time())["pause_cause"] != "user" and time.monotonic() < deadline:
             time.sleep(0.005)
-        operation = self.begin_exit()
+        self.assertIsNone(self.runtime.status()["current_source"])
+        # Retain the old source while addressing the current epoch so this
+        # reaches the operator-origin guard rather than stale-epoch rejection.
+        request["epoch"] = self.runtime.status()["epoch"]
+        operation = self.run_request(request)
         self.assertEqual(operation["state"], "blocked", operation)
         self.assertIn("operator mark", operation["result"]["reason"])
         self.assertEqual(self.runtime.status()["spent_inputs"], 0)

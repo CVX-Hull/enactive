@@ -351,11 +351,26 @@ class MissionRuntime:
         inspected = None
         if current_available:
             try:
+                launch = self._owned_launch
+                owned_menu_checkpoint = (state["phase"] in ("admitted", "active") and launch is not None
+                    and launch.checkpoint == self._current and launch.operator_mark == self._operator_mark()
+                    and self._native is not None
+                    and self._native_owner == (self._admission.mission_id, self._admission.configuration.native_sha256)
+                    and self._native.status()["running"])
+                private_checkpoint = owned_menu_checkpoint or any(phase is not None and phase.checkpoint == self._current for phase in
+                    (self._registered_lifecycle.phase, self._registered_activity.phase,
+                     self._registered_handoff.phase, self._exit_phase,
+                     self._prompt_phase if self._prompt_phase is not None
+                        and self._prompt_phase.checkpoint.boundary_kind == "activity_poll" else None))
+                if not private_checkpoint:
+                    # A retained as-of sample is not a current published source
+                    # after stop/handoff/storage failure cleared its live binding.
+                    self._informing({"sources": [self._current.observation_id]})
                 inspected, _ = self._store.inspect_current_boundary(**self._clocks())
                 observed, live = self._store.observation(self._current), self._live()[0]
                 self._capture_custody(observed, live)
                 current_available = inspected == self._current
-            except EvidenceError:
+            except (EvidenceError, ControlError, LedgerError):
                 current_available = False
                 inspected = None
         live = self._live()

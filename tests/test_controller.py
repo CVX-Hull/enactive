@@ -2031,7 +2031,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                         return True
                     fake.behavior = future
                 result = self.run_action(lease, action="UP", **expected)
-                self.assertEqual(result["status"], "controller_error")
+                self.assertEqual(result["status"], "rejected" if change == "revision" else "controller_error")
                 self.assertFalse(any(r["kind"] == "action" for r in fake.delivered))
                 self.controller.pause()
                 # Restore a known world before the next subcase's Observe/Resume.
@@ -2934,11 +2934,17 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                             envelope = self.mission_dispatch(lease, kind="direct",
                                 value=dict(type="key", key="ESC", modifiers=[]), preflight=preflight,
                                 deadline_monotonic=clock.mono + (2 if fault == "deadline" else 10))
-                        self.assertEqual(envelope["result"]["status"], "controller_error", envelope)
+                        self.assertEqual(envelope["result"]["status"],
+                                         "rejected" if fault == "revision" else "controller_error", envelope)
                         self.assertFalse(envelope["published"])
                         self.assertIsNone(envelope["request"])
-                        self.assertIsNone(self.controller._mission_lease)
-                        self.assertTrue(self.controller.pause_requested)
+                        if fault == "revision":
+                            self.assertIs(self.controller._mission_lease, lease)
+                            self.assertFalse(self.controller.pause_requested)
+                            self.controller.release_mission(lease)
+                        else:
+                            self.assertIsNone(self.controller._mission_lease)
+                            self.assertTrue(self.controller.pause_requested)
                         self.assertEqual(self.controller.unknown_outcomes, [])
                         self.assertFalse(any(r["kind"] == "direct" for r in fake.requests))
                     finally:

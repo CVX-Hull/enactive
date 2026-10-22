@@ -1,7 +1,7 @@
 ---
 owner: lead
 review_trigger: Observation custody, semantic applicability or source publication changes
-status: proposed
+status: active
 ---
 
 # Observation custody and action applicability
@@ -101,3 +101,14 @@ and relevant native qualification before another genuinely fresh finite full
 campaign. Record actual native disposition and limits; a synthetic interleaving
 does not retrospectively pass009 or prove a native race. Keep prior failures,
 all original campaign requirements and normal-ending acceptance intact.
+
+The first implementation checkpoint `de97c8b` passed 142 focused tests and
+independent review, then failed 49 assertions in the full 1,619-test lane. Its
+[finite graphical run](../acceptance/2026-10-22-native-observation-custody.md)
+completed the valid ordinary/lifecycle path; harder race/refusal branches remain
+unexercised. The full lane exposed missing controller entry/late progression
+checks, stopped unbound-source presentation and passive malformed-state
+containment. Correct those through the existing common proof/binding paths;
+retain explicitly owned private checkpoints and result collection. Migrate
+fixtures that contradicted immutable clocks/revision semantics. These findings
+and source/graphical lane differences remain evidence, not retrospective success.

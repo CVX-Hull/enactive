@@ -107,7 +107,7 @@ class MacroClosureTests(unittest.TestCase):
         self.expired_child("execution")
 
     def test_standalone_deadline_refusal_preserves_age_but_not_capture_or_custody_faults(self):
-        for fault in ("healthy", "aged", "frame", "receiver", "control"):
+        for fault in ("healthy", "aged", "frame", "malformed_frame", "timestamp", "receiver", "control"):
             with self.subTest(fault=fault):
                 case = type(self)()
                 case.setUp()
@@ -122,8 +122,13 @@ class MacroClosureTests(unittest.TestCase):
                     def expire(work, before):
                         deadline = case.runtime._ledger.request(root["request_id"])["deadline"]
                         threading.Event().wait(max(0, deadline - case.runtime._wall() + .03))
-                        if fault == "aged": case.controller.state["timestamp_ms"] -= 4000
-                        elif fault == "frame": case.controller.state["frame_ok"] = False
+                        if fault == "aged":
+                            # Let both original clocks age; never rewrite one
+                            # immutable capture to simulate elapsed time.
+                            threading.Event().wait(2.1)
+                        elif fault == "frame": case.controller.state.update(frame_ok=False, frame_geometry=None)
+                        elif fault == "malformed_frame": case.controller.state["frame_ok"] = False
+                        elif fault == "timestamp": case.controller.state["timestamp_ms"] -= 4000
                         elif fault == "receiver": case.controller.state["boundary"]["input_receiver"] = False
                         elif fault == "control": case.controller.state["boundary"]["control_generation"] += 1
                         return actual(work, before)

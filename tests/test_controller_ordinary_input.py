@@ -52,6 +52,9 @@ class OrdinaryControllerTests(unittest.TestCase):
             self.ready()
             lease = self.acquire(operation='interaction')
             click = dict(type='click', button='left', x=0, y=0, geometry=frame_geometry())
+            # A revised synthetic geometry, not native resize qualification.
+            # Same-revision geometry contradictions remain separate negatives.
+            fake.value['revision'] += 1
             fake.value['frame_geometry']['window_width'] = 2
             receipt = self.mission_dispatch(lease, kind='direct', value=click)
             self.assertEqual(receipt['result']['status'], 'rejected')
