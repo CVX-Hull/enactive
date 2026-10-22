@@ -763,6 +763,104 @@ class MissionRuntime:
             self._record("mission_native_memory", receipt)
             self._memory_version = receipt["memory_version"]
 
+    def _prompt_observation_guard(self, work: _Work, phase: _PromptPhase,
+                                  reference: EvidenceRef | None = None) -> float:
+        """Observe may change visible facts, never the original prompt's authority.
+
+        Historical integrity and ownership survive source age or visual drift.
+        The new capture advances the store once; it does not renew any limit.
+        """
+        self._check_cancelled(work)
+        ledger = self._ledger.snapshot(now=self._wall())
+        state, generation, boot = self._check_lease()
+        prior = self._bindings.get(phase.checkpoint.observation_id)
+        if (self._prompt_phase is not phase or not ledger["clock_valid"]
+                or (ledger["phase"], ledger["epoch"], ledger["player_id"], work.request["epoch"]) !=
+                   ("active", phase.epoch, phase.actor_id, phase.epoch)
+                or self._operator_mark() != (phase.controller_boot_id, phase.operator_generation)
+                or boot != phase.controller_boot_id
+                or (self._lease.mission_id, self._lease.epoch, self._lease.actor_id) !=
+                   (self._admission.mission_id, phase.epoch, phase.actor_id)):
+            raise ControlError("Observe crossed its original prompt actor/epoch/controller/Pause")
+        if prior is None or prior[0] != phase.checkpoint or self._current != (reference or phase.checkpoint):
+            raise EvidenceError("Observe requires its original current prompt checkpoint/binding")
+        binding = prior[1]
+        if ((binding.source_id, binding.mission_id, binding.epoch, binding.actor_id,
+             binding.controller_boot_id, binding.pause_generation, binding.takeover_generation) !=
+                (phase.checkpoint.observation_id, self._admission.mission_id, phase.epoch, phase.actor_id,
+                 phase.controller_boot_id, generation, phase.takeover_generation)
+                or self._store.authority_generation() != binding.store_generation + (reference is not None)
+                or self._store.source_status(phase.checkpoint) != "retained"):
+            raise EvidenceError("Observe lost its original prompt source integrity or binding authority")
+        before = self._store.observation(phase.checkpoint)
+        if (phase.checkpoint.boundary_kind != "menu" or state["session"] != phase.checkpoint.session
+                or state["status"] != "ready" or state["error"] or state["paused"] or not state["frame_ok"]
+                or state["boundary"]["kind"] not in ("menu", "normal_play")
+                or state["takeover_generation"] != phase.takeover_generation
+                or state["boundary"]["control_generation"] != before["boundary"]["control_generation"]
+                or state["pause_origin"] != before["pause_origin"] or state["pause_origin"] in ("human", "fault")):
+            raise ControlError("Observe changed prompt session/native control/Pause or capture health")
+        if any(p["state"] in ("prepared", "published") or p["state"] == "unknown" and p["effect"] is None
+               for p in self._ledger.primitive_records()):
+            raise LedgerError("Unsettled input cannot advance a prompt observation")
+        root = self._ledger.request(phase.root_id)
+        deadline_wall = min(root["deadline"], self._ledger.request(work.request["request_id"])["deadline"],
+                            self._mission_deadline - self._admission.cleanup_reserve.wall_seconds)
+        if self._wall() >= deadline_wall:
+            raise BudgetError("Original prompt/root observation deadline exhausted")
+        if (self._ledger._phase_primitive_count(phase.root_id) >= root["request"]["limits"]["primitives"]
+                or ledger["spent_inputs"] >= min(self._admission.limits.inputs - self._admission.cleanup_reserve.inputs,
+                                                self._admission.limits.primitive_mappings)):
+            raise BudgetError("Original prompt/mission input capacity exhausted")
+        # A newly captured normal return must be published and close this root
+        # before its actual overshoot is reported, as on the existing path.
+        if reference is None or reference.boundary_kind != "normal_play":
+            self._game_guard(phase.game_anchor, root["request"]["limits"]["game_seconds"])
+            if self._game_cost is None or self._game_cost >= self._admission.limits.game_seconds:
+                raise BudgetError("Original observed mission game budget exhausted")
+        return self._clock() + deadline_wall - self._wall()
+
+    def _observe_prompt(self, work: _Work, phase: _PromptPhase) -> dict:
+        deadline = self._prompt_observation_guard(work, phase)
+        self._capacity()
+        state, received = self._observe_native(work, deadline_monotonic=deadline)
+        self._prompt_observation_guard(work, phase)
+        reference = self._ingest(state, received)
+        self._prompt_observation_guard(work, phase, reference)
+        self._capacity(frames=0, byte_count=0)
+        relation = None
+        if reference.boundary_kind == "menu" and self._store.equivalent(phase.checkpoint, reference, rule="exact_png_bytes"):
+            relation = SourceRevalidation(self._bindings[phase.checkpoint.observation_id][1],
+                                          self._binding(reference), "exact_png_bytes")
+            self._record("mission_prompt_revalidation", relation.to_dict())
+        transition = {"root_id": phase.root_id, "before": phase.checkpoint.observation_id,
+                      "after": reference.observation_id, "grants_authority": False}
+        self._publish_source(reference, authoritative=True)
+        self._prompt_observation_guard(work, phase, reference)
+        advanced = replace(phase, checkpoint=reference, quantity_editor=phase.quantity_editor if relation else False)
+        with self._metadata:
+            self._check_cancelled(work)
+            if self._prompt_phase is not phase:
+                raise ControlError("Observe prompt advancement superseded by Pause")
+            self._prompt_phase = None if reference.boundary_kind == "normal_play" else advanced
+        self._record("mission_prompt_observation", transition)
+        result = {"source_ids": [reference.observation_id], "lifecycle_needed": False,
+                  "observation": transition, "grants_authority": False}
+        if relation is not None:
+            result["revalidation"] = relation.to_dict()
+        if reference.boundary_kind == "normal_play":
+            result["phase"] = self._prompt_receipt(advanced, "complete")
+            root = self._ledger.request(phase.root_id)["request"]
+            try:
+                self._game_guard(phase.game_anchor, root["limits"]["game_seconds"], after=True)
+                if self._game_cost is None or self._game_cost > self._admission.limits.game_seconds:
+                    raise BudgetError("Observed mission game time unavailable or exceeded")
+            except BudgetError as exc:
+                self._stop_after_failure(str(exc))
+                result["budget_stop"] = str(exc)
+        self._capture_memory(reference)
+        return result
+
     def _observe(self, work: _Work) -> dict:
         if self._registered_activity.phase is not None:
             return self._registered_activity.observe(work)
@@ -775,14 +873,10 @@ class MissionRuntime:
         phase = self._prompt_phase
         if phase is not None and phase.checkpoint.boundary_kind == "activity_poll":
             return self._poll_activity(work)[1]
-        prior = None if phase is None else self._bindings.get(phase.checkpoint.observation_id)
-        self._capacity()
-        deadline = None
         if phase is not None:
-            root = self._ledger.request(phase.root_id)
-            deadline = self._clock() + min(root["deadline"],
-                self._mission_deadline - self._admission.cleanup_reserve.wall_seconds) - self._wall()
-        state, received = self._observe_native(work, deadline_monotonic=deadline)
+            return self._observe_prompt(work, phase)
+        self._capacity()
+        state, received = self._observe_native(work)
         normals = [r for r in self._store.historical_references if r.boundary_kind == "normal_play"]
         if state["boundary"]["kind"] == "normal_play" and (not normals or normals[-1].session != state["session"]):
             return {"source_ids": [], "lifecycle_needed": True,
@@ -798,48 +892,9 @@ class MissionRuntime:
                 "after": reference.observation_id, "rule": "exact_png_bytes", "grants_authority": False})
         live = self._live()
         authoritative = self._lease is not None and live[3] is self._lease and not live[4] and not live[5]
-        relation = None
-        if phase is not None:
-            ledger_state = self._ledger.snapshot(now=self._wall())
-            if (not authoritative or live[2] != phase.controller_boot_id
-                    or self._operator_mark()[1] != phase.operator_generation
-                    or ledger_state["epoch"] != phase.epoch or ledger_state["player_id"] != phase.actor_id
-                    or state["takeover_generation"] != phase.takeover_generation
-                    or reference.session != phase.checkpoint.session):
-                raise ControlError("Observe cannot adopt a changed prompt authority/session")
-            if reference.boundary_kind == "menu":
-                if prior is None or phase.checkpoint.boundary_kind != "menu":
-                    raise ControlError("An activity observation cannot adopt a new menu input phase")
-                if self._ledger.snapshot(now=self._wall())["unreconciled"]:
-                    raise LedgerError("Unresolved input cannot refresh a prompt checkpoint")
-                fresh_binding = self._binding(reference)
-                relation = SourceRevalidation(prior[1], fresh_binding, "exact_png_bytes")
-                if not self._store.equivalent(phase.checkpoint, reference, rule=relation.rule):
-                    raise EvidenceError("Observe changed the owned prompt; no automatic rebase")
-                self._record("mission_prompt_revalidation", relation.to_dict())
         self._publish_source(reference, authoritative=authoritative)
         result = {"source_ids": [reference.observation_id], "lifecycle_needed": not authoritative,
                   "grants_authority": False}
-        if phase is not None:
-            advanced = replace(phase, checkpoint=reference)
-            with self._metadata:
-                self._check_cancelled(work)
-                if self._prompt_phase is not phase:
-                    raise ControlError("Observe prompt advancement superseded by Pause")
-                if reference.boundary_kind == "normal_play":
-                    self._prompt_phase = None
-                elif relation is not None:
-                    self._prompt_phase = advanced
-            if reference.boundary_kind == "normal_play":
-                result["phase"] = self._prompt_receipt(advanced, "complete")
-                root = self._ledger.request(phase.root_id)["request"]
-                try:
-                    self._game_guard(phase.game_anchor, root["limits"]["game_seconds"], after=True)
-                except BudgetError as exc:
-                    self._stop_after_failure(str(exc))
-                    result["budget_stop"] = str(exc)
-            if relation is not None:
-                result["revalidation"] = relation.to_dict()
         self._capture_memory(reference)
         return result
 

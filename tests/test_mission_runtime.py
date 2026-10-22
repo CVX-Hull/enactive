@@ -501,14 +501,22 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertIsNone(self.runtime._prompt_phase)
         self.assertIsNone(self.controller._mission_lease)
 
-    def test_changed_image_observe_cannot_refresh_owned_prompt(self):
-        self.open_direction()
+    def test_changed_image_explicit_observe_advances_same_owned_prompt(self):
+        root, original_result = self.open_direction()
+        original = self.runtime._prompt_phase
+        original_root = self.runtime._ledger.request(root["request_id"])
         self.bridge.value["actions"].remove("RIGHT")
+        self.bridge.value["revision"] += 1
         self.runtime.command(self.request("observe"))
         operation = self.settled("observe-1")
-        self.assertEqual(operation["state"], "blocked", operation)
-        self.assertIsNone(self.runtime._prompt_phase)
-        self.assertIsNone(self.controller._mission_lease)
+        self.assertEqual(operation["state"], "completed", operation)
+        self.assertNotIn("revalidation", operation["result"])
+        current = self.runtime._prompt_phase
+        self.assertEqual(current.root_id, original.root_id)
+        self.assertEqual(current.game_anchor, original.game_anchor)
+        self.assertNotEqual(current.checkpoint, original.checkpoint)
+        self.assertEqual(self.runtime._ledger.request(root["request_id"]), original_root)
+        self.assertEqual(self.result(root["request_id"]), original_result)
         self.assertEqual(self.runtime.status()["spent_inputs"], 1)
 
     def test_owned_prompt_root_input_ceiling_cannot_be_renewed_by_child(self):
