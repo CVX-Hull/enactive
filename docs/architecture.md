@@ -315,6 +315,16 @@ checkpoint advances during Observe, while first-normal
 provenance, original budgets and the separately charged explicit Resume remain.
 No phase is reconstructed from historical records on reopen.
 
+A Save-start PNG-only change under unchanged native state and healthy custody
+advances the existing private observation checkpoint and ends the chosen decision
+without input. It retains the original Save root, first normal source and budgets;
+the player must inspect the new image and choose a new same-root Save child.
+Explicit Observe uses the same bounded refresh. Other lifecycle stages and final
+input equivalence stay strict, so recurring animation can still prevent dispatch.
+This is scoped observation bookkeeping and explicit replanning through the existing
+phase/SDK machinery, not a generic evidence-error recovery or command-equivalence
+change. Real native liveness remains a separate qualification.
+
 The selected mission game-time cap gates every input dispatch lane, including
 lifecycle, exit and readmission. Rejection settles any reserved intent before
 revoking authority; controller preflight does not revoke while its lock is held.

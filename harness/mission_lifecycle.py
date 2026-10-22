@@ -55,6 +55,13 @@ class _TransitionCandidate:
     latest_after: EvidenceRef | None = None
 
 
+class _SaveImageChanged(Exception):
+    """A captured observation replaced a zero-input Save decision, not its root."""
+
+    def __init__(self, phase: NormalPhase):
+        self.phase = phase
+
+
 class RegisteredLifecycle:
     def __init__(self, runtime: MissionRuntime):
         self.runtime = runtime
@@ -331,6 +338,8 @@ class RegisteredLifecycle:
         self._binding_request(work, phase.checkpoint)
         if data["identity_claim_ids"]:
             return self._adopt(work, phase)
+        if phase.operation == "save" and phase.stage == "save_start":
+            return self._save(work, phase)
         state = self.runtime._store.observation(phase.checkpoint)
         action = "FINALIZE" if state["category"] == "WORLDGEN_CONFIRM_DIALOG" else (
             "NEXT_TAB" if state["category"] == "NEW_CHAR_DESCRIPTION" else None)
@@ -399,7 +408,18 @@ class RegisteredLifecycle:
             return "partial", {"reason": "Owned lifecycle setup awaits player menu/field decisions",
                 "next_coordinate_epoch": next_epoch,
                 "phase": self.receipt(phase, "awaiting_control"), "grants_authority": False}
-        phase, relation = self._action_checkpoint(work, phase)
+        return self._save(work, phase)
+
+    def _save(self, work: _Work, phase: NormalPhase) -> tuple[str, dict]:
+        r, data = self.runtime, work.request
+        try:
+            phase, relation = self._action_checkpoint(work, phase)
+        except _SaveImageChanged as change:
+            return "blocked", {
+                "reason": "Save image changed before input. Inspect the new observation and choose a new "
+                    "same-root lifecycle Save decision; no input or allowance was renewed.",
+                "source_ids": [change.phase.checkpoint.observation_id],
+                "phase": self.receipt(change.phase, "awaiting_control"), "grants_authority": False}
         state = r._store.observation(phase.checkpoint)
         r._rotate(work, ControlIntent("save-rotation", "action", "save", phase.checkpoint, state["boundary"]["id"]))
         proposal = ControlIntent("save-" + hashlib.sha256(data["request_id"].encode()).hexdigest(),
@@ -556,7 +576,32 @@ class RegisteredLifecycle:
         state, received = r._observe_native(work, deadline_monotonic=deadline)
         reference = r._ingest(state, received)
         if not r._store.equivalent(phase.checkpoint, reference, rule="exact_png_bytes"):
-            raise EvidenceError("Lifecycle refresh changed the exact owned state/image")
+            if (phase.operation != "save" or phase.stage != "save_start"
+                    or not r._store.equivalent(phase.checkpoint, reference, rule="native_state")):
+                raise EvidenceError("Lifecycle refresh changed the exact owned state/image")
+            # This is observation, not equivalence for an already chosen input.
+            # Initial Save still has the original interaction lease; only actual
+            # dispatch rotates it. Preserve that exact lease and original root.
+            r._check_cancelled(work)
+            r._check_lease()
+            r._deadline(work, reference)
+            ledger = r._ledger.snapshot(now=r._wall())
+            counts = r._ledger.measured_counts()["primitives"]
+            if any(counts["by_state"].get(state, 0) for state in ("prepared", "published")):
+                raise LedgerError("Unsettled input cannot advance a Save observation")
+            if (ledger["remaining_inputs"] <= r._admission.cleanup_reserve.inputs
+                    or r._game_cost is not None and r._game_cost >= r._admission.limits.game_seconds):
+                raise BudgetError("Save observation cannot bypass exhausted mission limits")
+            root = r._ledger.request(phase.root_id)
+            if r._ledger._phase_primitive_count(phase.root_id) >= root["request"]["limits"]["primitives"]:
+                raise BudgetError("Original Save primitive ceiling exhausted")
+            self.retain_after(reference)
+            phase = self._install(work, replace(phase, checkpoint=reference), previous=phase)
+            self.guard(work, phase, diagnostic=diagnostic)
+            r._check_lease()
+            if not diagnostic:
+                raise _SaveImageChanged(phase)
+            return phase
         self.retain_after(reference)
         phase = self._install(work, replace(phase, checkpoint=reference), previous=phase)
         self.guard(work, phase, diagnostic=diagnostic)

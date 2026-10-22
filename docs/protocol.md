@@ -405,6 +405,21 @@ preflight. Wrong metadata/support, changed pixels, user Pause/takeover, unsettle
 input, uncommitted proof, lost child or exhausted limits keep stopping behavior.
 An immutable blocked result is never reinterpreted as permission or success.
 
+At Save start, a refresh that changes only PNG bytes while native state and healthy
+owned custody remain unchanged returns a zero-input blocked result with the newly
+captured checkpoint. The private `save_start` phase retains its original root,
+first normal source, deadlines and cumulative costs; no rotation or Save occurs.
+Inspect the new source and submit a NEW `enactive_lifecycle` Save request with
+`lifecycle` scope. Explicit Observe can update that same checkpoint under the
+same guards. Reusing the old source rejects. Pending/unsettled input, lost custody,
+Pause/takeover, changed native state, archive faults and exhausted original limits
+still stop. This observation rule does not declare the images equivalent for an
+action: the new decision's refresh and final controller/native dispatch remain
+strict. Persistent image churn can therefore still prevent Save; this is not a
+liveness guarantee or permission to retry automatically. Create/load, Resume,
+identity and confirmation refresh semantics are unchanged. Source regression
+evidence and actual graphical qualification are separate lanes.
+
 NormalSessionAdoption requires directly supported, undisputed admitted world and
 character Claims, the exact identity inspection, owned transition and current
 normal checkpoint. The [historical reader](../harness/gameplay/lifecycle.py) validates

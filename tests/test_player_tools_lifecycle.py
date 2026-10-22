@@ -18,6 +18,7 @@ from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import EvidenceError
 from harness.player_tools import PlayerTools
 from harness.server import Server
+from tests.test_gameplay_evidence import black_png, png
 from tests import test_mission_creation as creation
 from tests import test_mission_handoff as handoff
 from tests import test_mission_request_producer_integration as produced
@@ -115,6 +116,187 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         corrected = self.run_request(self.control("world-corrected-yes", "Yes",
             question="Are you SURE you're finished?"))
         self.assertEqual(corrected["state"], "partial", corrected)
+
+    def save_image_fixture(self):
+        """Change real PNG bytes, without changing the synthetic native state."""
+        self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        self.create()
+        ordinary = self.control("ordinary-before-save", "", parent=None, kind="direct")
+        ordinary.update(perception=None, goal=dict(input=dict(type="text", text="."),
+            intent="Ordinary input before selecting Save", expected="Returned input", interrupt_allowed=False))
+        self.assertEqual(self.run_request(ordinary)["state"], "partial")
+        self.assertEqual(self.runtime._lease.operation, "interaction")
+        self.render_black = False
+        original = self.bridge.visible_bytes
+
+        def rendered(value):
+            if value["category"] == "DEFAULTMODE":
+                return black_png() if self.render_black else png()
+            return original(value)
+
+        self.enterContext(patch.object(self.bridge, "visible_bytes", side_effect=rendered))
+        self.observe("save-white-image")
+        before = self.runtime._current
+        self.render_black = True
+        return before
+
+    def test_save_image_refusal_retains_root_for_new_explicit_decision_and_normal_ending(self):
+        informing = self.save_image_fixture()
+        before = self.runtime.status()
+        lease = self.runtime._lease
+        delivered = deepcopy(self.bridge.delivered)
+        refused = self.run_request(self.lifecycle("save", "save"))
+        self.assertEqual(refused["state"], "blocked", refused)
+        after = self.runtime.status()
+        self.assertEqual(after["phase"], "active", after)
+        self.assertEqual(after["epoch"], before["epoch"])
+        self.assertEqual(after["spent_inputs"], before["spent_inputs"])
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(self.bridge.delivered, delivered)
+        self.assertFalse([p for p in self.runtime._ledger.primitive_records() if p["request_id"] == "save"])
+        phase = self.runtime._registered_lifecycle.phase
+        self.assertEqual(phase.root_id, "save")
+        self.assertEqual(phase.stage, "save_start")
+        self.assertEqual(phase.first_normal, informing)
+        self.assertEqual(phase.checkpoint, self.runtime._current)
+        self.assertNotEqual(phase.checkpoint.frame_sha256, informing.frame_sha256)
+        original = deepcopy(self.runtime._ledger.request("save"))
+
+        # Observe may show another image. It neither repeats Save nor renews it.
+        self.render_black = False
+        self.observe("save-reconsider-image")
+        phase = self.runtime._registered_lifecycle.phase
+        self.assertEqual(phase.first_normal, informing)
+        self.assertEqual(phase.checkpoint, self.runtime._current)
+        self.assertEqual(phase.checkpoint.frame_sha256, informing.frame_sha256)
+        self.assertEqual(self.runtime._ledger.request("save"), original)
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(self.bridge.delivered, delivered)
+        chosen = self.run_request(self.lifecycle("save-new-decision", "save", parent="save"))
+        self.assertEqual(chosen["state"], "partial", chosen)
+        self.assertEqual(chosen["result"]["phase"]["origin_request_id"], "save")
+        self.assertLessEqual(chosen["deadline"], original["deadline"])
+        self.assertEqual(self.runtime._ledger.request("save"), original)
+        self.assertEqual(len([p for p in self.runtime._ledger.primitive_records()
+            if p["request_id"] == "save-new-decision"]), 1)
+        self.assertEqual(self.bridge.delivered[len(delivered)]["action"], "save")
+        self.assertEqual(len(self.bridge.delivered), len(delivered) + 1)
+
+        answered = self.run_request(self.control("save-yes", "Yes", parent="save", question="Save and quit?"))
+        self.assertEqual(answered["state"], "unknown", answered)
+        self.observe("save-transition-first")
+        first = self.runtime._current
+        self.observe("save-transition-second")
+        saved = self.run_request(self.lifecycle("save-reconcile", "save", parent="save",
+            supports=(first.observation_id,)))
+        self.assertEqual(saved["state"], "completed", saved)
+        endpoint = self.runtime._registered_lifecycle._source(
+            saved["result"]["saved_checkpoint"]["normal_endpoint_source_id"])
+        self.assertEqual(endpoint.turn, informing.turn)
+        self.exit()
+        self.assertEqual(self.launch(identity="launch-reload")["state"], "completed")
+        self.stage = "load-world"
+        self.assertEqual(self.run_request(self.lifecycle("load", "load"))["state"], "partial")
+        world = self.runtime._current
+        self.assertEqual(self.run_request(self.control("load-world", f"{self.a.scenario.world} (1)", parent="load"))["state"], "partial")
+        selection = self.control("load-character", self.a.scenario.character, parent="load")
+        selection["perception"] = None
+        entered = self.run_request(selection)
+        self.assertEqual(entered["state"], "unknown", entered)
+        self.observe("load-transition")
+        self.finish_identity("load", world, epoch=1)
+        self.save_final()
+        self.exit("final-exit")
+        finished = self.run_request(self.lifecycle("finish", "finish"))
+        self.assertEqual(finished["state"], "completed", finished)
+        self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
+        self.runtime._ledger._verify(self.a)
+
+    def test_save_image_change_cannot_reuse_the_old_informing_source(self):
+        informing = self.save_image_fixture()
+        refused = self.run_request(self.lifecycle("save", "save"))
+        self.assertEqual(refused["state"], "blocked", refused)
+        charged, delivered = self.runtime.status()["spent_inputs"], len(self.bridge.delivered)
+        stale = self.lifecycle("save-from-old-image", "save", parent="save")
+        stale["sources"] = [informing.observation_id]
+        # Submit the adversarial raw caller through the real writer, since the
+        # structured producer may refuse a stale draft before HTTP submission.
+        response = self.runtime.command(stale)
+        self.assertEqual(response["status"], "accepted", response)
+        blocked = self.settled(stale["request_id"])
+        self.assertEqual(blocked["state"], "blocked", blocked)
+        self.assertIn("exact current informing source", blocked["result"]["reason"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], charged)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertIsNone(self.runtime._lease)
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+
+    def test_save_image_change_does_not_conceal_fatal_faults(self):
+        for fault in ("native_state", "takeover", "process_lost", "published", "retention", "root_budget", "archive", "expiry", "pause"):
+            with self.subTest(fault=fault):
+                case = StructuredLifecycleTests("test_save_image_change_cannot_reuse_the_old_informing_source")
+                case.setUp()
+                try:
+                    case.save_image_fixture()
+                    request = case.lifecycle("save-fault", "save")
+                    charged, delivered = case.runtime.status()["spent_inputs"], len(case.bridge.delivered)
+                    with ExitStack() as faults:
+                        if fault == "native_state":
+                            case.bridge.value["scene"]["turn"] += 1
+                        elif fault == "takeover":
+                            with case.controller.data_lock:
+                                case.controller.state["takeover_generation"] += 1
+                        elif fault == "process_lost":
+                            case.process_state.update(running=False, returncode=1, outcome="exited")
+                        elif fault == "published":
+                            primitive = case.runtime._ledger.primitive_records()[-1]
+                            case.runtime._ledger._db.execute("UPDATE primitives SET state='published' WHERE id=?",
+                                (primitive["logical_id"],))
+                        elif fault == "retention":
+                            case.runtime._store.max_frames = case.runtime._store.usage()["frames"]
+                        elif fault == "root_budget":
+                            faults.enter_context(patch.object(case.runtime._ledger, "_phase_primitive_count", return_value=32))
+                        elif fault == "archive":
+                            faults.enter_context(patch.object(case.runtime._store, "ingest", side_effect=OSError("fixture archive failure")))
+                        else:
+                            observe = case.runtime._observe_native
+
+                            def lose_authority(*args, **kwargs):
+                                result = observe(*args, **kwargs)
+                                if fault == "expiry":
+                                    case.runtime._mission_deadline = case.runtime._wall() - 1
+                                else:
+                                    case.runtime.pause("User Pause during changed-image Save refresh")
+                                return result
+
+                            faults.enter_context(patch.object(case.runtime, "_observe_native", side_effect=lose_authority))
+                        response = case.runtime.command(request)
+                        self.assertEqual(response["status"], "accepted", response)
+                        blocked = case.settled(request["request_id"])
+                        self.assertEqual(blocked["state"], "paused" if fault == "pause" else "blocked", blocked)
+                        self.assertNotIn("Save image changed before input", blocked["result"]["reason"])
+                        self.assertEqual(case.runtime.status()["spent_inputs"], charged)
+                        self.assertEqual(len(case.bridge.delivered), delivered)
+                        self.assertIsNone(case.runtime._lease)
+                        self.assertIsNone(case.runtime._registered_lifecycle.phase)
+                finally:
+                    case.doCleanups()
+
+    def test_save_image_change_cannot_bypass_input_reserve(self):
+        # Configure the real admission before Start. This fixture requires ten
+        # creation inputs and one ordinary input. Mapping capacity must cover
+        # all admitted inputs, so it cannot exhaust independently first.
+        self.a = replace(self.a, limits=replace(self.a.limits, inputs=11 + self.a.cleanup_reserve.inputs))
+        self.save_image_fixture()
+        self.assertEqual(self.runtime.status()["spent_inputs"], 11)
+        delivered = len(self.bridge.delivered)
+        blocked = self.run_request(self.lifecycle("save-budget", "save"))
+        self.assertEqual(blocked["state"], "blocked", blocked)
+        self.assertIn("exhausted mission limits", blocked["result"]["reason"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 11)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertIsNone(self.runtime._lease)
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
 
     def test_creation_successor_readmission_save_new_child_reload_and_normal_finish(self):
         selected, _ = self.player.call("enactive_snapshot", {})
