@@ -14,7 +14,9 @@ from tests import test_mission_runtime as runtime_fixtures
 from tests import test_mission_confirmation_validation as confirmation_fixtures
 from tests import test_mission_activity_recovery as activity_fixtures
 from tests import test_mission_exit as exit_fixtures
+from tests import test_mission_items as item_fixtures
 from tests.test_mission_creation import MissionCreationFixture
+from tests.test_mission_ledger import intent
 
 
 class RequestBindingTests(unittest.TestCase):
@@ -33,12 +35,16 @@ class RequestBindingTests(unittest.TestCase):
         phase, lease = self.runtime._prompt_phase, self.runtime._lease
         current = self.runtime._current
         generation = self.runtime._store.authority_generation()
+        bindings = copy.deepcopy(self.runtime._bindings)
+        rotation = self.runtime._rotation
+        primitives = self.runtime._ledger.primitive_records()
         before = self.runtime.status()
         deadline = self.runtime._ledger.request(root['request_id'])['deadline']
         delivered = copy.deepcopy(self.bridge.delivered)
         with (patch.object(self.runtime, '_observe_native', wraps=self.runtime._observe_native) as observe,
               patch.object(self.runtime, '_dispatch', wraps=self.runtime._dispatch) as dispatch,
-              patch.object(self.runtime, '_rotate', wraps=self.runtime._rotate) as rotate):
+              patch.object(self.runtime, '_rotate', wraps=self.runtime._rotate) as rotate,
+              patch.object(self.runtime._store, 'reserve_dispatch', wraps=self.runtime._store.reserve_dispatch) as reserve):
             self.assertEqual(self.runtime.command(request)['status'], 'accepted')
             result = self.settled(request['request_id'])
         self.assertEqual(result['state'], 'blocked', result)
@@ -47,10 +53,14 @@ class RequestBindingTests(unittest.TestCase):
         observe.assert_not_called()
         dispatch.assert_not_called()
         rotate.assert_not_called()
+        reserve.assert_not_called()
         self.assertIs(self.runtime._prompt_phase, phase)
         self.assertIs(self.runtime._lease, lease)
         self.assertEqual(self.runtime._current, current)
         self.assertEqual(self.runtime._store.authority_generation(), generation)
+        self.assertEqual(self.runtime._bindings, bindings)
+        self.assertEqual(self.runtime._rotation, rotation)
+        self.assertEqual(self.runtime._ledger.primitive_records(), primitives)
         self.assertEqual(self.runtime.status()['epoch'], before['epoch'])
         self.assertEqual(self.runtime.status()['phase'], 'active')
         self.assertEqual(self.runtime.status()['metrics']['primitives'], before['metrics']['primitives'])
@@ -564,6 +574,260 @@ class ActivityBindingTests(unittest.TestCase):
         self.assertEqual(len(self.bridge.delivered), delivered + 1)
         self.assertIsNone(self.runtime._registered_activity.phase)
         self.assertIsNotNone(self.runtime._lease)
+
+
+class ItemControlDraftTests(unittest.TestCase):
+    setUp = item_fixtures.MissionItemTests.setUp
+    wait = item_fixtures.MissionItemTests.wait
+    request = item_fixtures.MissionItemTests.request
+    result = item_fixtures.MissionItemTests.result
+    settled = item_fixtures.MissionItemTests.settled
+    start = item_fixtures.MissionItemTests.start
+    control = item_fixtures.MissionItemTests.control
+    send = item_fixtures.MissionItemTests.send
+    open_items = item_fixtures.MissionItemTests.open_items
+    inventory = item_fixtures.MissionItemTests.inventory
+    editor = item_fixtures.MissionItemTests.editor
+    select = item_fixtures.MissionItemTests.select
+    edit = item_fixtures.MissionItemTests.edit
+    open_consumption_selector = item_fixtures.MissionItemTests.open_consumption_selector
+    consumption_selection = item_fixtures.MissionItemTests.consumption_selection
+    assert_local_rejection = RequestBindingTests.assert_local_rejection
+
+    def bad_menu(self, request_id="wrong-item-menu", *, interpreted=False):
+        source = self.runtime._current.observation_id
+        perception = None if not interpreted else dict(kind="menu", basis="player_interpretation",
+            source_id=source, control="vertical", rows=[dict(label=self.root["goal"]["label"], enabled=True)],
+            selected=0, question="")
+        return self.control("menu", dict(purpose="Choose visible item", label=self.root["goal"]["label"],
+            outcome="activated"), phase_id=self.root["request_id"], perception=perception, request_id=request_id)
+
+    def test_consume_wrong_menu_draft_then_typed_selection_keeps_original_root(self):
+        self.open_consumption_selector()
+        bad = self.bad_menu()
+        refused = self.assert_local_rejection(bad, self.root)
+        self.assertIn("typed quantity/selection", refused["result"]["reason"])
+        self.assertEqual(self.runtime.command(bad)["operation"], refused)
+        corrected = self.consumption_selection("corrected-consume")
+        self.assertEqual(self.runtime.command({**corrected, "request_id": bad["request_id"]})["status"], "rejected")
+        selected = self.send(corrected)
+        self.assertEqual(selected["state"], "partial", selected)
+        self.assertEqual(selected["result"]["phase"]["origin_request_id"], self.root["request_id"])
+        self.assertEqual(selected["result"]["phase"]["stage"], "activity_poll")
+        self.assertEqual(self.runtime._ledger.request(bad["request_id"]), refused)
+
+    def test_consume_wrong_menu_draft_then_explicit_cancel_keeps_original_root(self):
+        self.open_consumption_selector()
+        self.assert_local_rejection(self.bad_menu(interpreted=True), self.root)
+        cancelled = self.send(self.control("menu", dict(purpose="Close consume selector", label="Cancel",
+            outcome="dismissed"), phase_id=self.root["request_id"], request_id="cancel-consume",
+            perception=dict(kind="dismissal", basis="player_interpretation",
+                source_id=self.runtime._current.observation_id, question="Consume item")))
+        self.assertEqual(cancelled["result"]["phase"]["stage"], "complete", cancelled)
+        self.assertEqual(cancelled["result"]["phase"]["origin_request_id"], self.root["request_id"])
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual([r["intent"]["value"] for r in self.runtime._ledger.primitive_records()], ["eat", "QUIT"])
+
+    def test_premature_editor_then_real_count_opening_and_correct_count(self):
+        self.open_items()
+        premature = self.edit()
+        premature["perception"]["visible_text"] = ""
+        self.assert_local_rejection(premature, self.root)
+        self.assertEqual(self.send(self.select())["state"], "partial")
+        self.assertTrue(self.runtime._prompt_phase.quantity_editor)
+        self.assert_local_rejection(self.edit(text="3", request_id="wrong-count"), self.root)
+        self.assert_local_rejection(self.edit(purpose="filter", request_id="wrong-purpose"), self.root)
+        self.assertEqual(self.send(self.edit(request_id="correct-count"))["state"], "partial")
+        self.assertEqual(self.send(self.edit(commit=True, request_id="commit-count"))["state"], "partial")
+        completed = self.send(self.select(step="commit"))
+        self.assertEqual(completed["result"]["phase"]["stage"], "complete", completed)
+        self.assertEqual([r["intent"]["value"] for r in self.runtime._ledger.primitive_records()],
+            ["pickup", "MARK_WITH_COUNT", "TEXT.CLEAR", "2", "TEXT.CONFIRM", "CONFIRM"])
+
+    def test_bad_consume_draft_allows_ordinary_escape_without_typed_effect_credit(self):
+        self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        self.open_consumption_selector()
+        refused = self.assert_local_rejection(self.bad_menu(), self.root)
+        self.assertIn("ordinary direct input remains available", refused["result"]["reason"])
+        self.assertFalse(self.runtime._prompt_phase.quantity_editor)
+        spent = self.runtime.status()["spent_inputs"]
+        delivered = len(self.bridge.delivered)
+        key = dict(type="key", key="ESC", modifiers=[])
+        escaped = self.send(self.control("direct", dict(input=key, intent="Close the visible item selector",
+            expected="Return to normal play", interrupt_allowed=False), phase_id=self.root["request_id"],
+            request_id="ordinary-escape"))
+        self.assertEqual(escaped["state"], "partial", escaped)
+        self.assertEqual(escaped["result"]["basis"], "ordinary_input")
+        self.assertTrue(escaped["result"]["verification_required"])
+        self.assertEqual(escaped["result"]["phase"]["origin_request_id"], self.root["request_id"])
+        self.assertEqual(escaped["result"]["phase"]["stage"], "complete")
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent + 1)
+        self.assertEqual(self.bridge.delivered[delivered:][0]["input"], key)
+        self.assertEqual(len(self.bridge.delivered[delivered:]), 1)
+        self.assertEqual([p["intent"]["kind"] for p in self.runtime._ledger.primitive_records()], ["action", "direct"])
+        self.assertFalse([r for r in self.runtime._ledger.memory_records("claim")
+            if r["entry"]["key"]["property"] == "supply"])
+
+    def test_ordinary_input_survives_unfamiliar_menus_changing_after_prior_steps(self):
+        # The fixture models changing visible behavior, not a semantic adapter.
+        # No production category/action mapping knows these generated screens.
+        for change_after in (1, 3):
+            with self.subTest(change_after=change_after):
+                case = ItemControlDraftTests("test_consume_wrong_menu_draft_then_typed_selection_keeps_original_root")
+                case.setUp()
+                try:
+                    case.a = replace(case.a, allowed_skills=(*case.a.allowed_skills, "direct"))
+                    case.open_consumption_selector()
+                    case.assert_local_rejection(case.bad_menu(), case.root)
+                    deadline = case.runtime._ledger.request(case.root["request_id"])["deadline"]
+                    spent = case.runtime.status()["spent_inputs"]
+                    original_behavior, steps = case.bridge.behavior, []
+                    def behavior(bridge, request):
+                        if request["kind"] == "direct" and request["input"]["key"] == "x":
+                            steps.append(request)
+                            if len(steps) >= change_after:
+                                bridge.value.update(category=f"UNSEEN_VIEW_{change_after}_{len(steps)}",
+                                    actions=["ANY_INPUT"], ui=None)
+                                bridge.editor_text = f"Changed labels/layout {len(steps)}"
+                                bridge.value["boundary"]["id"] = f"unseen-{len(steps)}"
+                            return True
+                        return original_behavior(bridge, request)
+                    case.bridge.behavior = behavior
+                    for step in range(4):
+                        result = case.send(case.control("direct", dict(
+                            input=dict(type="key", key="x", modifiers=[]),
+                            intent="Try ordinary input on the currently visible screen",
+                            expected="Inspect the returned screen; no semantic outcome certified",
+                            interrupt_allowed=False), phase_id=case.root["request_id"],
+                            request_id=f"try-ordinary-{step}"))
+                        self.assertEqual(result["state"], "partial", result)
+                        self.assertTrue(result["result"]["verification_required"])
+                        self.assertEqual(case.runtime._prompt_phase.root_id, case.root["request_id"])
+                        self.assertFalse(case.runtime._prompt_phase.quantity_editor)
+                        self.assertEqual(case.runtime._ledger.request(case.root["request_id"])["deadline"], deadline)
+                    self.assertEqual(len(steps), 4)
+                    self.assertTrue(case.runtime._store.observation(case.runtime._current)["category"].startswith("UNSEEN_VIEW_"))
+                    cancelled = case.send(case.control("direct", dict(
+                        input=dict(type="key", key="ESC", modifiers=[]),
+                        intent="Cancel the current unfamiliar screen", expected="Inspect return",
+                        interrupt_allowed=False), phase_id=case.root["request_id"], request_id="ordinary-cancel"))
+                    self.assertEqual(cancelled["state"], "partial", cancelled)
+                    self.assertIsNone(case.runtime._prompt_phase)
+                    self.assertEqual(case.runtime.status()["phase"], "active")
+                    self.assertEqual(case.runtime.status()["spent_inputs"], spent + 5)
+                    self.assertEqual(case.runtime._current.boundary_kind, "normal_play")
+                finally:
+                    case.doCleanups()
+
+    def age_source(self, source):
+        freshness = self.runtime._store._fresh
+        def aged(entry, now_monotonic, now_timestamp_ms):
+            if entry.reference == source:
+                now_monotonic, now_timestamp_ms = source.received_monotonic + 4, source.timestamp_ms + 4000
+            return freshness(entry, now_monotonic, now_timestamp_ms)
+        return patch.object(self.runtime._store, "_fresh", side_effect=aged)
+
+    def test_aged_unchanged_item_draft_does_not_refresh_and_new_selection_revalidates(self):
+        self.open_items()
+        original = self.runtime._current
+        with self.age_source(original):
+            self.assertFalse(self.runtime._store.inspect_current_boundary(**self.runtime._clocks())[1])
+            self.assert_local_rejection(self.bad_menu(), self.root)
+            selected = self.send(self.select())
+        self.assertEqual(selected["state"], "partial", selected)
+        self.assertEqual(selected["result"]["revalidation"]["original"]["source_id"], original.observation_id)
+        self.assertTrue(self.runtime._prompt_phase.quantity_editor)
+
+    def test_aged_changed_pixels_stop_item_draft_even_without_perception(self):
+        self.open_items()
+        bad = self.bad_menu()
+        source = self.runtime._current
+        name = f"frame-{source.session}-999999.png"
+        (self.controller.bridge / name).write_bytes(b"\x89PNG\r\n\x1a\nchanged visible item selector")
+        with self.controller.data_lock:
+            self.controller.state["frame"] = name
+        before, spent = copy.deepcopy(self.bridge.delivered), self.runtime.status()["spent_inputs"]
+        with self.age_source(source):
+            refused = self.send(bad)
+        self.assertIn("changed native pixels", refused["result"]["reason"])
+        self.assertNotIn("No input or refresh was attempted", refused["result"]["reason"])
+        self.assertEqual(self.bridge.delivered, before)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertIsNone(self.runtime._lease)
+        self.assertIsNone(self.runtime._prompt_phase)
+
+    def test_item_draft_cannot_conceal_authority_evidence_or_budget_faults(self):
+        faults = ("takeover", "native_drift", "wrong_actor", "wrong_epoch", "lease", "operator_pause",
+            "checkpoint", "binding", "source_loss", "source_disputed", "game_cap", "game_unknown",
+            "input_reserve", "root_input", "capacity_tail", "deadline", "unsettled")
+        for fault in faults:
+            with self.subTest(fault=fault):
+                case = ItemControlDraftTests("test_consume_wrong_menu_draft_then_typed_selection_keeps_original_root")
+                case.setUp()
+                try:
+                    if fault == "input_reserve":
+                        case.a = replace(case.a, limits=replace(case.a.limits, inputs=2),
+                            cleanup_reserve=replace(case.a.cleanup_reserve, inputs=1))
+                    elif fault == "capacity_tail":
+                        case.a = replace(case.a, limits=replace(case.a.limits, frames=6),
+                            cleanup_reserve=replace(case.a.cleanup_reserve, frames=1))
+                    case.open_items(primitives=2 if fault == "root_input" else 16)
+                    if fault == "root_input":
+                        self.assertEqual(case.send(case.select())["state"], "partial")
+                    bad = case.bad_menu()
+                    phase, current = case.runtime._prompt_phase, case.runtime._current
+                    if fault in ("takeover", "native_drift", "operator_pause"):
+                        with case.controller.data_lock:
+                            if fault == "operator_pause":
+                                case.controller.operator_pause_generation += 1
+                            else:
+                                case.controller.state["takeover_generation" if fault == "takeover" else "revision"] += 1
+                    elif fault in ("wrong_actor", "wrong_epoch"):
+                        case.runtime._prompt_phase = replace(phase, **({"actor_id": "other-player"} if fault == "wrong_actor"
+                            else {"epoch": phase.epoch + 1}))
+                    elif fault == "lease":
+                        case.runtime._lease = None
+                    elif fault == "checkpoint":
+                        case.runtime._prompt_phase = replace(phase, checkpoint=phase.game_anchor)
+                    elif fault == "binding":
+                        ref, binding = case.runtime._bindings[current.observation_id]
+                        case.runtime._bindings[current.observation_id] = (ref, replace(binding,
+                            store_generation=binding.store_generation + 1))
+                    elif fault == "source_loss":
+                        Path(current.frame_path).unlink()
+                    elif fault == "source_disputed":
+                        case.runtime._store._disputed.append(current.observation_id)
+                    elif fault in ("game_cap", "game_unknown"):
+                        case.runtime._game_cost = None if fault == "game_unknown" else case.a.limits.game_seconds
+                    elif fault == "capacity_tail":
+                        self.assertEqual(case.a.limits.frames - case.a.cleanup_reserve.frames
+                            - case.runtime._store.usage()["frames"], 1)
+                    elif fault == "deadline":
+                        case.runtime._mission_deadline = case.runtime._wall() + case.a.cleanup_reserve.wall_seconds
+                    elif fault == "unsettled":
+                        pending = case.select()
+                        pending["request_id"] = "pending-item-selection"
+                        case.runtime._ledger.begin_request(pending, now=case.runtime._wall())
+                        reservation = case.runtime._store.reserve_dispatch(current, **case.runtime._clocks())
+                        case.runtime._ledger.prepare_primitive(pending["request_id"], "pending-item-input", intent(
+                            source_before=current.observation_id, preflight_source=current.observation_id,
+                            expected_session=current.session, expected_revision=current.revision,
+                            expected_boundary_id=bad["expected_boundary_id"], reservation_id=reservation.token),
+                            now=case.runtime._wall())
+                    # The unsettled fixture charges a real prepared primitive
+                    # directly; the cached published status has not seen it yet.
+                    delivered = copy.deepcopy(case.bridge.delivered)
+                    spent = case.runtime._ledger.snapshot(now=case.runtime._wall())["spent_inputs"]
+                    refused = case.send(bad)
+                    self.assertEqual(refused["state"], "blocked", refused)
+                    self.assertNotIn("No input or refresh was attempted", refused["result"]["reason"])
+                    self.assertEqual(case.bridge.delivered, delivered)
+                    self.assertEqual(case.runtime.status()["spent_inputs"], spent)
+                    self.assertIsNone(case.runtime._lease)
+                    self.assertIsNone(case.runtime._prompt_phase)
+                finally:
+                    case.doCleanups()
 
 
 class ExitBindingTests(unittest.TestCase):

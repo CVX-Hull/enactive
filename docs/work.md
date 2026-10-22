@@ -52,7 +52,24 @@ adopted game-time. Its exact c2b9117source passed1,451local tests, but lacked th
 library-plus-lifecycle composition regression. #189reuses the pure claim reducer
 without constructing procedure memory; independent review,108worker/44reviewer
 focused tests passed. All001actors/processes are closed exceptionally. A genuinely
-fresh next attempt and protected publication remain pending. Source checks issue no run authority. The accepted024
+fresh next attempt and protected publication remain pending. The
+[second fresh attempt](acceptance/2026-10-21-independent-seven-day-second-attempt.md)
+passed normal adoption but failed after food pickup and thirty minutes of wait:
+115 primitives/64 requests/285 frames/1,804 game seconds, no daily milestone or
+normal ending. All actors/processes are closed exceptionally. #190 preserves
+healthy zero-input draft correction and player-chosen ordinary Escape; independent
+source review and 109 lead-focused tests passed. #192 fixes the independently
+reproduced native/host exchange deadline mismatch; 145 reviewer-focused tests
+passed. Exact integrated full/hosted checks remain pending.
+
+The user now requires applicability across CDDA-class games and general discovery
+instead of accumulating menu handlers. P-GENERALITY, S-ARCH/S-CODE and existing
+controls record this constraint. [#191](https://github.com/CVX-Hull/enactive/issues/191)
+owns whole-loop recovery, CDDA coupling/migration, unfamiliar/time-changing
+interface tests and independent second-game evidence. Existing ordinary-input,
+memory/reflection, native and latency issues retain their acceptance lanes. Filing
+work or passing synthetic variants does not establish game-family support.
+Source checks issue no run authority. The accepted024
 baseline and historical attempts below remain evidence, not a new admission.
 
 [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) has

@@ -10,8 +10,9 @@ The user owns product direction and constraints.
 
 ## Purpose and success
 
-Let the user watch and direct understandable, authentic graphical CDDA gameplay
-performed by an agent. Success includes trustworthy control, a maintainable
+Let the user watch and direct understandable, authentic gameplay performed by an
+agent across CDDA-class games, starting with Cataclysm: Dark Days Ahead.
+Success includes trustworthy control, a maintainable
 harness, reproducible setup, and a project the user can understand and steer.
 The user reviews purpose, outcomes and tradeoffs; maintainers need clear contracts
 and evidence; contributors need reproducible entry points; upstream compatibility
@@ -25,10 +26,20 @@ version control; authentic engine behavior; no hidden state or save editing to
 win a demonstration. Historical environment exceptions remain in the
 [environment ledger](environment.md); they are not precedent for new changes.
 
+Current product constraint: designs must apply across CDDA-class games, not depend
+on this specific Cataclysm implementation. The working scope is turn-based
+survival/roguelike games with graphical or textual interfaces and persistent,
+long-horizon state. Game observations, actions and optional shortcuts may differ;
+the class is not defined by CDDA menu names, data formats or engine hooks. Record
+any narrower assumption explicitly. Broader game genres are a future extension,
+not a reason to build speculative infrastructure now. Only the user may relax
+this constraint; record a later relaxation as a versioned decision.
+
 Current assumptions: one local operator, game and controller; active Codex chat
 provides high-level planning; this Mac is the validated host. Recheck these before
 concurrency, unattended operation, distribution or platform expansion.
 
+Current validation uses CDDA on this Mac; family-wide support is not yet qualified.
 Current technical decisions are [native Tiles](decisions/001-native-platform.md)
 and [a local serialized bridge](decisions/002-local-contract.md). They may change
 when evidence or requirements change. They are not permanent principles.
@@ -72,6 +83,25 @@ do not carry backward-compatibility paths or mixed-version operation.
 Reduce uncertainty through meaningful working slices and real development play
 before paying for comprehensive qualification. Match assurance to the claim and
 consequence; preserve failures and strengthen acceptance once the behavior composes.
+
+## P-GENERALITY Build the capacity to discover
+
+Prefer interaction, search, learning and feedback mechanisms that remain useful
+as tasks and interfaces change. Following the [Bitter Lesson cross-check](research.md#generality-and-the-bitter-lesson),
+engineer the substrate for discovery; do not make our catalogue of game knowledge
+the boundary of what the player can try. Domain shortcuts are replaceable aids
+with explicit scope and demonstrated value. The player must be able to reconsider
+them using current observations and ordinary interface actions.
+
+Keep shared player, memory, learning, orchestration and evidence responsibilities
+separate from game-specific observation/input bindings and knowledge. Preserve
+identity, provenance and uncertainty across that boundary. A CDDA-specific
+integration may be necessary; requiring it throughout the shared design is not.
+
+Changing labels, layouts, menu implementations or behavior over time should call
+for player adaptation, not an engineer-authored handler for every variation.
+This is a design preference and evaluation obligation, not a claim of universal
+learning or permission to remove provenance, user control or finite limits.
 
 ## P-KNOWLEDGE Maintain trustworthy knowledge and evidence
 

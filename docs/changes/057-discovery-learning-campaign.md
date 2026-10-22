@@ -36,7 +36,13 @@ focused tests. The lead accepts the bounded learning checkpoint within that
 qualification. The [first fresh campaign](../acceptance/2026-10-21-independent-seven-day-first-attempt.md)
 failed before adoption on an unnecessary memory constructor in pure identity
 projection; #189removes that coupling with real-component regression coverage.
-That attempt is exceptionally closed, never renewed. Fresh seven-day survival
+That attempt is exceptionally closed, never renewed. The
+[second fresh attempt](../acceptance/2026-10-21-independent-seven-day-second-attempt.md)
+passed adoption and acquired food but failed on zero-input prompt revocation;
+115 primitives/64 requests/285 frames/1,804 game seconds remain retained. #190
+repairs healthy draft correction/raw Escape and #192 the separate exchange clock
+mismatch. Both have independent source review and focused checks; exact integrated
+full/hosted checks and real requalification remain separate. Fresh seven-day survival
 and protected publication remain pending. Earlier failures
 remain failures, including the empty-popup mapping,
 handoff/reference errors and item-activity return defect.
@@ -146,6 +152,28 @@ procedure/1 and reflection/1 records. The installed wrapper and actual loaded
 host catalogue must match before new play. Current callers, validators, persisted
 formats, SDK schemas and guidance migrate together; old runtime versions reject
 and historical evidence grants no authority.
+
+The second fresh campaign exposed another distinction required by the existing
+[organic loop](../design/organic-discovery.md) and
+[mixed-input boundary](../design/mixed-input.md): an invalid semantic request is
+not lost ownership of the game. #190 preserves a healthy original item prompt
+after incompatible control drafts and tests both typed correction and a
+player-chosen ordinary Escape child. This repairs a substrate failure; it does
+not prescribe a gameplay procedure or send a rescue input. Source review must
+also identify remaining boundaries that make semantic coverage mandatory for
+ordinary exploration. Preserve actual unknown delivery, Pause/takeover and finite
+costs, while allowing the player to observe, try, correct and cancel without the
+lead. Whole-loop regressions and a new real campaign qualify that behavior;
+additional menu-specific success handlers do not establish it.
+
+The charter now requires applicability across CDDA-class games, with broader
+genres a future extension. P-GENERALITY and S-ARCH/S-CODE govern further design;
+[#191](https://github.com/CVX-Hull/enactive/issues/191) owns systemic ordinary-input
+recovery, game-binding separation and independently shaped portability evidence.
+CDDA remains the actual seven-day validation target; neither that campaign nor a
+renamed synthetic menu proves support for other games. Shared player/memory/
+learning/orchestration must not inherit CDDA-specific menu or world assumptions.
+Use existing writer/archive/MCP facilities and extract demonstrated seams only.
 
 Use S-ARCH/S-AGENT/S-CODE/S-WORK/S-MIGRATION and existing C-REVIEW/C-PORTABLE/
 C-NATIVE/C-USABILITY/C-RELEASE. Add regressions for actual new boundaries rather

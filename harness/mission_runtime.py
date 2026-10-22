@@ -471,7 +471,20 @@ class MissionRuntime:
         if elapsed > limit or not after and elapsed == limit:
             raise BudgetError("Original observed root/child game-time budget exhausted")
 
-    def _prompt_guard(self, data: dict, before: EvidenceRef | None = None) -> _PromptPhase | None:
+    @staticmethod
+    def _item_control_reason(data: dict, root: dict, category: str, quantity_editor: bool) -> str | None:
+        if root["skill_kind"] == "item":
+            if data["skill_kind"] == "edit" and (not quantity_editor
+                    or data["goal"]["purpose"] != "quantity"
+                    or data["goal"]["text"] != str(root["goal"]["quantity"])):
+                return "Quantity editor requires its returned MARK_WITH_COUNT and exact immutable count"
+            if (data["skill_kind"] == "menu" and data["goal"]["outcome"] == "activated"
+                    and category in ("INVENTORY", "INVENTORY_SELECTOR", "STRING_INPUT")):
+                return ("Item selector menu confirmation requires its typed quantity/selection step; "
+                        "ordinary direct input remains available")
+        return None
+
+    def _prompt_authority_guard(self, data: dict, before: EvidenceRef | None = None) -> _PromptPhase | None:
         if data["skill_kind"] == "edit" and data["goal"]["purpose"] in ("character_name", "world_name"):
             raise ControlError("Creation-name editing requires the registered lifecycle adapter")
         with self._metadata:
@@ -496,15 +509,6 @@ class MissionRuntime:
         if (data["skill_kind"] == "direct" and data["goal"]["interrupt_allowed"]
                 and not root["goal"].get("interrupt_allowed", False)):
             raise ControlError("Direct child cannot enlarge its root interruption consent")
-        if root["skill_kind"] == "item":
-            if data["skill_kind"] == "edit" and (not phase.quantity_editor
-                    or data["goal"]["purpose"] != "quantity"
-                    or data["goal"]["text"] != str(root["goal"]["quantity"])):
-                raise ControlError("Quantity editor requires its returned MARK_WITH_COUNT and exact immutable count")
-            if data["skill_kind"] == "menu" and data["goal"]["outcome"] == "activated":
-                category = self._store.observation(phase.checkpoint)["category"]
-                if category in ("INVENTORY", "INVENTORY_SELECTOR", "STRING_INPUT"):
-                    raise ControlError("Item selector confirmation requires its typed quantity/selection step")
         state, _, boot = self._check_lease()
         actor = self._ledger.snapshot(now=self._wall())["player_id"]
         if ((boot, self._operator_mark()[1], state["takeover_generation"], data["epoch"], actor) !=
@@ -512,6 +516,16 @@ class MissionRuntime:
             raise ControlError("Prompt crossed actor/epoch/controller/operator Pause/native takeover")
         if before is not None and phase.checkpoint != before:
             raise EvidenceError("Prompt checkpoint cannot rebase from an unrelated observation")
+        return phase
+
+    def _prompt_guard(self, data: dict, before: EvidenceRef | None = None) -> _PromptPhase | None:
+        phase = self._prompt_authority_guard(data, before)
+        if phase is not None:
+            root = self._ledger.request(phase.root_id)["request"]
+            reason = self._item_control_reason(data, root,
+                self._store.observation(phase.checkpoint)["category"], phase.quantity_editor)
+            if reason is not None:
+                raise ControlError(reason)
         return phase
 
     def _clear_prompt(self) -> None:
@@ -1550,7 +1564,7 @@ class MissionRuntime:
             "source_id": proposal.before.observation_id, "before": asdict(old), "after": asdict(new)})
         self._check_cancelled(work)
 
-    def _dispatch_guard(self, work: _Work, before: EvidenceRef) -> None:
+    def _dispatch_authority_guard(self, work: _Work, before: EvidenceRef) -> None:
         self._check_cancelled(work)
         state, generation, boot = self._check_lease()
         ledger = self._ledger.snapshot(now=self._wall())
@@ -1574,12 +1588,16 @@ class MissionRuntime:
             raise EvidenceError("Proposal store generation changed")
         if self._game_cost is None or self._game_cost >= self._admission.limits.game_seconds:
             raise BudgetError("Game time unavailable or exhausted")
-        phase = self._prompt_guard(work.request, before)
+        phase = self._prompt_authority_guard(work.request, before)
         if phase is not None:
             root = self._ledger.request(phase.root_id)["request"]
             self._game_guard(phase.game_anchor, root["limits"]["game_seconds"])
         if work.game_anchor is not None:
             self._game_guard(work.game_anchor, work.request["limits"]["game_seconds"])
+
+    def _dispatch_guard(self, work: _Work, before: EvidenceRef) -> None:
+        self._dispatch_authority_guard(work, before)
+        self._prompt_guard(work.request, before)
 
     def _skill_draft_rejection(self, work: _Work) -> dict | None:
         """Reject metadata/representation drafts only while their scope is eligible.
@@ -1606,7 +1624,12 @@ class MissionRuntime:
                     for field in authority_fields)) for identity in data["sources"])
         missing_native_rows = (data["skill_kind"] == "menu" and data["perception"] is None
                                and not MenuSkill.supports_native_rows(observed))
-        if not metadata_mismatch and not incompatible_support and not missing_native_rows:
+        with self._metadata:
+            phase = self._prompt_phase
+        item_control_reason = None if phase is None else self._item_control_reason(data,
+            self._ledger.request(phase.root_id)["request"],
+            self._store.observation(phase.checkpoint)["category"], phase.quantity_editor)
+        if not metadata_mismatch and not incompatible_support and not missing_native_rows and item_control_reason is None:
             return None
 
         # A bad extra source must not conceal loss of another retained source,
@@ -1657,13 +1680,14 @@ class MissionRuntime:
             # Guard only: never dispatch this projection or rewrite the retained
             # request. The corrected new request must pass every ordinary guard.
             self._informing({**data, "sources": [current.observation_id]})
-            self._prompt_guard(data, current)
+            self._prompt_authority_guard(data, current)
             work.game_anchor = current if current.boundary_kind == "normal_play" else self._last_normal()
-            self._dispatch_guard(work, current)
+            self._dispatch_authority_guard(work, current)
         actual = self._live()[0]
         if not same_native_state(actual, observed):
             raise EvidenceError("Inconsistent request cannot bypass changed native source state")
-        image_informed = (data["skill_kind"] == "direct" or missing_native_rows or data["perception"] is not None or self._registered_lifecycle.phase is not None
+        image_informed = (data["skill_kind"] == "direct" or missing_native_rows or item_control_reason is not None
+            or data["perception"] is not None or self._registered_lifecycle.phase is not None
             or self._exit_phase is not None or self._registered_activity.phase is not None
             or data["skill_kind"] == "activity" and data["goal"]["step"] in ("interrupt", "answer_interrupt", "resume"))
         if image_informed and self.controller._frame_sha256(actual) != current.frame_sha256:
@@ -1678,6 +1702,8 @@ class MissionRuntime:
         if missing_native_rows:
             reasons.append("This source has no supported native UILIST row representation. "
                            "Supply an explicit source-bound visible-control interpretation for the observed UI.")
+        if item_control_reason is not None:
+            reasons.append(item_control_reason + ".")
         reason = " ".join(reasons) + " "
         return {"reason": reason +
                     "No input or refresh was attempted; read the source and submit a new corrected request ID.",

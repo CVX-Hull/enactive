@@ -1039,8 +1039,15 @@ class Controller:
             timeout = min(timeout, deadline_monotonic - started)
             if timeout <= 0:
                 return {"status": "controller_error", "error": "Original dispatch deadline expired before publication"}
+        # Both clocks describe the original exchange allowance. Sampling wall
+        # first makes conversion conservative if scheduling intervenes; adding
+        # a full timeout to this later sample would renew the native budget.
+        wall_sample = time.time()
+        remaining = started + timeout - time.monotonic()
+        if remaining <= 0:
+            return {"status": "controller_error", "error": "Original dispatch deadline expired before publication"}
         request = {"protocol": 5, "id": request_id, "kind": kind,
-                   "deadline_ms": int(time.time() * 1000 + timeout * 1000), **payload}
+                   "deadline_ms": int((wall_sample + remaining) * 1000), **payload}
         if kind not in {"observe", "pause"}:
             if self.state is None:
                 raise ControlError("No observation; observe first")

@@ -9,9 +9,18 @@ status: proposed
 The player should use skills for efficient familiar work and ordinary keys, text
 or deliberate clicks for discovery. Both go through the same mission writer;
 switching must preserve the original work, costs and uncertain outcomes. This
-selected design for [#176](https://github.com/CVX-Hull/enactive/issues/176) is not
-implemented input support. Current [architecture](../architecture.md) and
+selected design for [#176](https://github.com/CVX-Hull/enactive/issues/176) now has
+the source implementation and bounded evidence recorded in
+[delivery057](../changes/057-discovery-learning-campaign.md); unqualified features
+and future target handles below remain proposals. Current [architecture](../architecture.md) and
 [protocol](../protocol.md) remain authoritative.
+
+Further design follows the charter's CDDA-class constraint and P-GENERALITY.
+The ordinary input mechanism must remain available when a shortcut cannot
+interpret a novel or changed menu. Game-specific native events, semantic bindings
+and lifecycle attestations belong at the integration boundary. #190 fixes the
+known zero-input item-draft revocation; #191 tracks broader recovery and portability.
+Source support for clicks is not full mouse qualification or cross-game support.
 
 The [organic-discovery crosswalk](organic-discovery.md#cross-check-against-prior-work)
 retains prior mixed-control research, campaign findings and memory distinctions.
@@ -148,15 +157,14 @@ untouched; do not claim complete keyboard emulation from a schema alone.
 
 ## Delivery and evidence
 
-The proposed coordinated migration is native5, mission/9, ledger11 and evidence
+The implemented coordinated migration is native5, mission/9, ledger11 and evidence
 archive4, with campaign-memory/4 for the selected procedure/reflection integration
 and gameplay/2 record shapes unchanged. The [procedure boundary](procedure-learning.md)
 and [delivery057](../changes/057-discovery-learning-campaign.md) own that combined
-selection; no procedure support follows from native input alone. Start
-from the current mission/8 and ledger10 navigation-menu contract; those current
-versions do not implement this proposal. Migrate
-all current producers, callers, strict validators, correlation/reopen rules,
-fixtures and guidance together; reject prior runtime contracts. Preserve closed
+selection; no procedure support follows from native input alone. The historical
+starting point was mission/8 and ledger10; these are no longer current contracts.
+The source migrated producers, callers, strict validators, correlation/reopen
+rules, fixtures and guidance together and rejects prior runtime contracts. Preserve closed
 historical evidence without importing authority. The matching native build and
 actual host MCP catalogue/preapproval activation are separate gates.
 

@@ -50,7 +50,14 @@ projection now calls the existing pure claim-frontier reducer directly rather
 than constructing procedure memory without its admitted library (#189). Actual
 memory construction still validates the mounted library and exact environment;
 identity/source/continuity checks are unchanged. Its source regressions are not
-new native survival evidence.
+new native survival evidence. The [second fresh campaign](acceptance/2026-10-21-independent-seven-day-second-attempt.md)
+actually passed adoption, then exposed zero-input item-draft revocation (#190).
+The reviewed source separates hard prompt/dispatch authority from incompatible
+control representation, preserving the original healthy scope for correction or
+ordinary Escape. Synthetic tests also continue through previously unknown menu
+categories changing after earlier inputs. These are bounded source checks, not
+proof of general player adaptation or cross-game portability; #191 tracks that
+broader boundary.
 
 The harness-enabled SDL ImGui context uses the library's steady text-caret setting.
 It preserves exact image validation without treating cosmetic blink as stable
@@ -75,6 +82,35 @@ migrated together. There is no runtime compatibility layer or downgrade. Current
 native wire v5, gameplay records `gameplay/2`, evidence store version 4 and build
 manifest version 1 name separate contracts, not alternate versions of one interface.
 Historical artifacts are retained as evidence without being accepted as runtime input.
+
+## Game-family portability
+
+The [charter](charter.md) requires designs applicable across CDDA-class games.
+This is the target separation, not a claim that the existing implementation is
+already portable or that a general plugin API has been delivered.
+
+| Shared responsibility | Game integration responsibility |
+| --- | --- |
+| Player plans, ordinary exploration and interpretation of current observations | Capture player-visible evidence and deliver ordinary inputs in the actual engine/UI |
+| Source-linked episodic memory, scoped revisable procedures and asynchronous reflection | Explicit game/version/configuration context and optional observed facts or semantic shortcuts |
+| Single-writer ownership, user Pause, finite costs, request/result correlation and uncertainty | Native boundary/custody/timing attestations supported by that integration |
+| Campaign objectives, evidence review and spectator presentation | Game-specific identity, persistence and outcome evidence; no invented universal save or inventory semantics |
+
+Ordinary input is the foundation. CDDA menu categories, item-count provenance,
+coordinate conventions, engine turn units and registered save/identity transitions
+are integration details, not a universal model of how games must behave. Shared
+memory cannot silently transfer a procedure or world fact to another game: actual
+game/configuration applicability and current evidence still determine use.
+
+Current coupling remains in MissionRuntime, gameplay contracts, native input
+classification, lifecycle proofs and preparation. The engine patch is deliberately
+CDDA-specific. These are migration gaps to assess and track before claiming
+cross-game support. Reuse the present writer, ledger, archive and ordinary input
+path while extracting only demonstrated seams; no second executor, duplicate
+history or speculative game framework. An independently shaped second-game
+fixture tests a seam; a separate real integration is needed to qualify actual
+portability. Neither finite tests nor a seven-day CDDA result prove every game in
+the family works. Future broader genres may revisit assumptions explicitly.
 
 ## Scope and responsibilities
 
@@ -166,6 +202,13 @@ Typed item selection/count/commit and registered inspection have synthetic runti
 coverage. Quantity editing belongs only to the item phase whose returned
 MARK_WITH_COUNT opened it. Native007 qualified the selected counted drop/pickup
 path; other selector semantics require their own actual evidence.
+Semantic control-shape errors use the existing zero-input draft feedback only
+while prompt ownership, evidence, native pixels and original limits remain healthy.
+The same root permits player-chosen ordinary key/text/click children, including
+cancellation, without completing a semantic selection first. Ordinary exploration
+does not manufacture typed-count provenance or certify the intended effect.
+Real authority loss or uncertain delivery still stops; neither the lead nor a
+reflective actor supplies a rescue action. See the [draft contract](protocol.md#skill-request-binding-errors).
 An owned activity poll advances through one bounded observation, including native
 output menus or normal return; no poll sends input or certifies sleep/output.
 Activity control transport preserves terminal ACKs before persistence and sends no

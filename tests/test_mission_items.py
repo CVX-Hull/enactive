@@ -87,7 +87,7 @@ class MissionItemTests(unittest.TestCase):
         return self.control("edit", dict(purpose=purpose, text=text, commit=commit),
             phase_id="water-root", perception=view, request_id=request_id)
 
-    def begin_consumption_activity(self):
+    def open_consumption_selector(self):
         self.bridge.value["actions"].append("eat")
         self.start()
         normal = copy.deepcopy(self.bridge.value["scene"])
@@ -105,21 +105,29 @@ class MissionItemTests(unittest.TestCase):
                     bridge.value["revision"] += 1
                     self.inventory()
                     bridge.value["boundary"]["recovery_operations"] = []
-            elif action == "QUIT":
+            elif action == "QUIT" or (request["kind"] == "direct" and request["input"] ==
+                    dict(type="key", key="ESC", modifiers=[])):
                 bridge.value.update(category="DEFAULTMODE", scene=normal, ui=None, actions=["eat"])
                 bridge.value["boundary"].update(kind="normal_play", id="consume-return", recovery_operations=[])
             return True
         self.bridge.behavior = behavior
         goal = dict(purpose="consume", label="ration", quantity=1, quantity_unit="items",
             step="start", outcome="consumed")
-        self.assertEqual(self.send(self.control("item", goal, request_id="consume-root"))["state"], "partial")
+        self.root = self.control("item", goal, request_id="consume-root")
+        self.assertEqual(self.send(self.root)["state"], "partial")
+
+    def consumption_selection(self, request_id="consume-selection"):
         source = self.runtime.status()["current_source"]["observation_id"]
         view = dict(kind="item_selection", basis="player_interpretation", source_id=source,
             control="vertical", mode="single", rows=[dict(label="ration", enabled=True,
             available_quantity=1, quantity_unit="items", chosen_quantity=None)], selected=0,
             selection_coverage="all_selected", selected_items=[])
-        selected = self.send(self.control("item", {**goal, "step": "select"}, phase_id="consume-root",
-            perception=view, request_id="consume-selection"))
+        return self.control("item", {**self.root["goal"], "step": "select"}, phase_id="consume-root",
+            perception=view, request_id=request_id)
+
+    def begin_consumption_activity(self):
+        self.open_consumption_selector()
+        selected = self.send(self.consumption_selection())
         self.assertEqual(selected["result"]["phase"]["stage"], "activity_poll", selected)
 
     def observe_consumption(self, request_id="consume-observation"):

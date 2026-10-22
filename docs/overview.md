@@ -13,8 +13,15 @@ explains preserved work, historical PR records and the limits of metadata remova
 
 ## What we are building
 
-An agent plays real Cataclysm: Dark Days Ahead while you watch the graphical game
-and retain control. The harness makes observations, actions and uncertainty visible.
+An agent plays CDDA-class survival/roguelike games while you watch and retain
+control. Cataclysm: Dark Days Ahead is the first actual integration and validation
+target. Shared player, memory, learning and orchestration designs must apply
+across that class; engine/UI bindings and game-specific knowledge belong at the
+integration boundary. Actual support beyond CDDA is not yet qualified. Broader
+game genres remain a future extension. The [charter](charter.md) owns this current
+constraint and the [architecture](architecture.md#game-family-portability) records
+the intended separation and existing gaps.
+The harness makes observations, actions and uncertainty visible.
 It needs an active Codex player to choose plans and interpret scenes. A dedicated
 player sub-agent owns planning, memory use and typed semantic requests within a
 finite mission. The lead owns engineering, admission and acceptance. One local
@@ -59,7 +66,13 @@ remain separate from graphical acceptance. The [first fresh seven-day attempt](a
 then failed before adoption because identity projection unnecessarily constructed
 memory without its admitted library. #189uses the shared pure claim reducer
 directly, retaining actual retrieval guards. The attempt is exceptionally closed;
-a new fresh campaign remains required.
+a new fresh campaign remains required. The [second fresh attempt](acceptance/2026-10-21-independent-seven-day-second-attempt.md)
+then reached normal adoption, acquired three rations and waited thirty minutes,
+but failed when a zero-input menu draft revoked its consume prompt. #190 repairs
+healthy correction and ordinary Escape; #191 owns systemic organic-input and
+game-family portability gaps. Its 115 primitives, 64 requests, 285 images and
+1,804 game seconds remain a closed partial failure, with no daily milestone or
+normal ending. A fresh seven-day result is still required.
 
 The official MCP SDK adapter constructs and retains requests, collects original
 results and presents exact images over the existing mission ingress. Both024

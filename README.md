@@ -9,6 +9,9 @@ status: active
 A local harness for real **Cataclysm: Dark Days Ahead** with a normal graphical
 game window and browser spectator console. Codex chooses goals and interprets
 screens; the harness supplies checked inputs, observations and bounded movement.
+Designs must apply across **CDDA-class survival/roguelike games**; CDDA is the first
+implemented target, and other games are not yet qualified. Game-specific bindings
+must remain separate from shared player, memory and learning responsibilities.
 General survival planning requires an active Codex player. An unattended survival
 service is not implemented.
 

@@ -38,7 +38,7 @@ Controls: C-PORTABLE, C-RUNTIME, C-NATIVE, C-USABILITY.
 
 ## S-ARCH Explicit architectural boundaries
 
-Principles: P-CHANGE, P-ISOLATION, P-REVIEW.
+Principles: P-CHANGE, P-ISOLATION, P-REVIEW, P-GENERALITY.
 Describe responsibilities, owners, inputs/outputs, state/concurrency, authority,
 failure/recovery and acceptance for each consequential boundary. Keep controller
 logic independent of HTTP and build tooling. Explain consequential alternatives,
@@ -61,6 +61,34 @@ lead must not become the slow path or a per-procedure approver. Advisory learnin
 may remain provisional and revisable; current authority and delivery accounting
 must not depend on eventual correctness. C-REVIEW checks these distinctions;
 functional behavior and claims of improvement need their separate evidence.
+
+Ordinary interface actions are the player's base capability; semantic skills are
+optional shortcuts and stronger claims about those actions. Missing semantic
+coverage must not prevent otherwise supported ordinary exploration or cancellation.
+Separate a rejected request, an unexpected in-game outcome and actual loss of
+authority or uncertain delivery. A correctable request error must not revoke a
+healthy input scope. Review the entire observe/try/correct/cancel loop, including
+raw-input fallback, rather than only each adapter's successful path. C-REVIEW
+checks this distinction and C-PORTABLE exercises boundary regressions; actual
+keyboard/mouse capabilities still need their separate C-NATIVE evidence.
+
+For gameplay and learning boundaries, explain which assumptions concern the
+transport and which concern a particular game task or menu. Prefer the smallest
+general observation/input/feedback mechanism over enumerating menu types or
+engineering gameplay expectations. Shortcuts must retain a usable ordinary-input
+fallback. Design for unseen variants and changes after a sequence of interactions,
+including when a formerly useful procedure becomes wrong. C-REVIEW challenges
+new special cases and asks why existing general mechanisms are insufficient.
+
+Apply the charter's CDDA-class portability constraint to every new design. Name
+game-specific assumptions, place engine/UI bindings in the integration boundary,
+and keep player reasoning, memory, learning and orchestration independent of
+specific menu names, engine objects and world rules. An optional semantic skill
+may be game-specific; it cannot become a prerequisite for the general interaction
+loop. Identify existing coupling as migration work instead of claiming portability
+from an interface name. Review how a second game with different menus, time,
+inventory and persistence would fit. Do not build a universal adapter framework
+or compatibility layer without a demonstrated need.
 Controls: C-BOUNDARY, C-REVIEW, C-GOVERNANCE.
 
 ## S-PROTOCOL Command and observation authority
@@ -75,7 +103,7 @@ Controls: C-PROTOCOL, C-RUNTIME, C-PORTABLE, C-NATIVE.
 
 ## S-CODE Maintainable implementation
 
-Principles: P-CHANGE, P-UNCERTAINTY, P-KNOWLEDGE.
+Principles: P-CHANGE, P-UNCERTAINTY, P-KNOWLEDGE, P-GENERALITY.
 Use cohesive responsibilities, descriptive names, explicit types at Python
 boundaries and upstream conventions in C++ patches. Validate inputs at trust
 boundaries; bound sizes, waits and action counts. Use atomic publication and
@@ -106,6 +134,22 @@ to the remaining project rules. [ADR003](decisions/003-development-controls.md) 
 [ADR004](decisions/004-documentation-controls.md) record the existing choices.
 
 Test observable contracts, adversarial transitions and meaningful regressions.
+For changes to ordinary interaction, procedural applicability or transfer, select
+relevant unfamiliar menu labels/layouts/representations and a transition whose
+behavior changes after a controlled number of steps.
+Verify observe/attempt/reject-or-return/reconsider/cancel/continue using the same
+general input path. Keep the test's game behavior separate from adapter
+assumptions; a fixture that only reproduces known categories cannot establish
+generalization. Reuse unittest parameterization, real-component fixtures and
+retained trajectories before adding any evaluation framework. Report tested
+variation, cost and remaining gaps; finite cases cannot prove arbitrary
+adversarial robustness or causal learning benefit.
+Portability changes must exercise the proposed boundary with an independently
+shaped second-game fixture and explicitly identify the real-game qualification
+still missing. A synthetic adapter or renamed CDDA fixture does not establish
+actual cross-game support. Keep native integration tests separate from shared
+behavior tests; new game bindings migrate current contracts together.
+
 Separate causal concurrency/deadline assertions from measured performance targets.
 Use synchronization or an isolated controlled clock so fixture setup cannot consume
 the short deadline under test; keep real bounded watchdogs and adversarial checks.

@@ -40,7 +40,17 @@ null adopted game-time, normal ending unavailable. All actors/processes closed
 exceptionally, with original unknown confirmation and separate effect proof.
 #189repairs the pure-identity/procedure-memory construction coupling. A later
 attempt must use a new world/character and frozen admission; never resume or
-relabel the failed001run. These setup costs do not establish campaign throughput.
+relabel the failed001run. The [second fresh attempt](2026-10-21-independent-seven-day-second-attempt.md)
+then passed adoption but failed after 1,804 game seconds, food pickup and thirty
+minutes of wait. It retains 115 primitives/64 requests/285 images and exceptional
+closure, with no daily milestone or normal ending. #190 fixes the known healthy
+item-draft/ordinary-Escape gap; #192 fixes a separately reproduced exchange clock
+mismatch. #191 owns systemic organic-input and CDDA-class portability work.
+These setup-heavy partial costs do not establish long-run campaign throughput.
+The charter now requires generality across CDDA-class games; CDDA remains this
+actual assessment target, with no cross-game acceptance implied. New designs
+follow P-GENERALITY and preserve ordinary interaction despite missing semantic
+coverage.
 
 ## Evidence and remaining uncertainty
 

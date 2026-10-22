@@ -6,13 +6,21 @@ status: proposed
 
 # Procedure memory and the advisory exchange
 
-This is the proposed implementation boundary for #177/#178 within
+This records the selected implementation boundary for #177/#178 within
 [delivery057](../changes/057-discovery-learning-campaign.md). It extends the
 [organic loop](organic-discovery.md) and [reflection design](asynchronous-reflection.md),
 not the number of game executors. The player chooses current plans, interprets
 outcomes and accepts/revises procedure data. The lead maintains the substrate.
 Claims and unfinished Work continue to describe the current campaign; a procedure
 is advisory knowledge about how to attempt a goal under stated conditions.
+The delivery brief and current protocol own implemented status and actual
+qualification; remaining research/evaluation proposals below are not guarantees.
+Further design follows P-GENERALITY and the CDDA-class constraint: shared memory,
+learning and advisory machinery must not depend on CDDA menu categories or world
+rules. Game/configuration applicability stays explicit. Changing menus can
+invalidate a procedure while ordinary exploration remains available; the player
+and advisory path revise data from retained attempts, rather than requiring a
+new engineering handler. #191 owns remaining substrate/portability gaps.
 
 ## Representation and storage
 
@@ -176,9 +184,9 @@ ownership and unknown no-replay remain immediate, independently of evolving advi
 
 Use explicit finite limits, not an unbounded learner. Exact per-record/API shapes,
 numeric bounds, scheduling/claim semantics and cross-ledger validation tests must
-be frozen in the implementation brief before affected worker dispatch. The current
-proposal is not a schema implementation. Migrate campaign-memory4 with the shared
-native5/mission9/ledger11/archive4 change; old runtime inputs reject, historical
+be frozen in the implementation brief before affected worker dispatch. Delivery057
+implemented campaign-memory4 with the shared native5/mission9/ledger11/archive4
+change; the source schemas own exact shapes. Old runtime inputs reject; historical
 artifacts remain evidence. Do not add a compatibility reader to the live path.
 
 ## Acceptance, controls and maintenance

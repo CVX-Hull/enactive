@@ -2347,6 +2347,73 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(len(fake.requests), 1)
             self.assertEqual(fake.delivered, [])
 
+    def test_exchange_native_deadline_does_not_restart_after_scheduling_delay(self):
+        # Only the controller clock is synthetic. Real atomic request/admission
+        # files model one consumed input with no ACK, never a native exit proof.
+        clock = SimpleNamespace(mono=100.0, wall=1000.0, sampled=False)
+        publications = []
+        def wall():
+            if not clock.sampled:
+                clock.sampled = True
+                clock.mono += 0.25
+                clock.wall += 0.25
+            return clock.wall
+        def consume_and_expire(_):
+            request = read_json(self.controller.bridge / "request.json")
+            self.assertIsNotNone(request)
+            publications.append(request)
+            (self.controller.bridge / "request.json").unlink()
+            clock.mono, clock.wall = 100.801, 1000.801
+        proxy = SimpleNamespace(monotonic=lambda: clock.mono, time=wall, sleep=consume_and_expire)
+        self.controller.state = state()
+        self.controller.pause_requested = False
+        with patch("harness.controller.time", proxy):
+            result = self.controller._exchange("action", 0.8,
+                generation=self.controller.pause_generation, action="YES")
+            self.assertEqual(result["status"], "timeout", result)
+            self.assertEqual(len(publications), 1)
+            request = publications[0]
+            self.assertLessEqual(request["deadline_ms"], 1000800)
+            self.assertGreater(request["deadline_ms"], 1000700)
+            self.assertEqual(self.controller.pending, request)
+            self.assertEqual([row["request"] for row in self.controller.unknown_outcomes], [request])
+            binding = dict(expected_controller_boot_id=self.controller.authority["controller_boot_id"],
+                expected_operator_generation=self.controller.operator_pause_generation,
+                expected_generation=self.controller.pause_generation, expected_request=request,
+                launch_id="owned-exit", exit_request_id="exit", returncode=0)
+            # A later backward wall adjustment still cannot be treated as native
+            # expiry merely because the host monotonic allowance ran out.
+            clock.wall = 1000.0
+            with self.assertRaisesRegex(ControlError, "expired action or key"):
+                self.controller.retire_mission_exit(**binding)
+            self.assertEqual(self.controller.pending, request)
+            clock.wall = 1000.801
+            receipt = self.controller.retire_mission_exit(**binding)
+            self.assertTrue(receipt["retired_pending"])
+            self.assertIsNone(self.controller.pending)
+            self.assertEqual(len(self.controller.unknown_outcomes), 1)
+            self.assertTrue((self.controller.admissions / f'{request["id"]}.json').is_file())
+            self.assertEqual(len(publications), 1)
+
+    def test_exchange_construction_exhaustion_never_publishes_a_renewed_budget(self):
+        clock = SimpleNamespace(mono=100.0, wall=1000.0)
+        def wall():
+            clock.mono, clock.wall = 101.0, 1001.0
+            return clock.wall
+        proxy = SimpleNamespace(monotonic=lambda: clock.mono, time=wall,
+            sleep=lambda _: self.fail("An exhausted prepublication request must not wait"))
+        self.controller.state = state()
+        self.controller.pause_requested = False
+        with patch("harness.controller.time", proxy):
+            result = self.controller._exchange("action", 0.8,
+                generation=self.controller.pause_generation, action="YES")
+        self.assertEqual(result["status"], "controller_error", result)
+        self.assertIn("expired before publication", result["error"])
+        self.assertIsNone(self.controller.pending)
+        self.assertEqual(self.controller.unknown_outcomes, [])
+        self.assertEqual(list(self.controller.admissions.glob("*.json")), [])
+        self.assertFalse((self.controller.bridge / "request.json").exists())
+
     def test_original_absolute_deadline_expires_in_queue_and_after_preflight(self):
         for queued in (True, False):
             with self.subTest(queued=queued), FakeBridge(self.controller) as fake:

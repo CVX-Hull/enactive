@@ -1,0 +1,124 @@
+{
+  "closed_utc": "2026-10-22T00:33:04.168473+00:00",
+  "mission_id": "independent-seven-day-002",
+  "result": "FAILED after normal adoption; no daily milestone or normal ending",
+  "source_commit": "c57f4a8513e21ce07a2fa4c89310bfa7c3accf93",
+  "native_sha256": "9828263d32e3bb62a7035c7dca484576841da9f08c53a700b21eb733300fe898",
+  "defect_issue": 190,
+  "requests": {
+    "blocked": 3,
+    "completed": 12,
+    "partial": 48,
+    "unknown": 1
+  },
+  "request_total": 64,
+  "primitives": {
+    "returned": 114,
+    "unknown": 1
+  },
+  "primitive_total": 115,
+  "frames": 285,
+  "frame_bytes": 11791285,
+  "game_seconds": 1804,
+  "observed_first_turn": 5212800,
+  "observed_last_normal_turn": 5214604,
+  "reflection": {
+    "completed": 4
+  },
+  "reflection_original_charged_seconds": 240,
+  "files": {
+    "ledger": {
+      "original": ".runtime/missions/independent-seven-day-002/mission.sqlite3",
+      "copy": "mission-closed.sqlite3",
+      "bytes": 1146880,
+      "sha256": "cb7981393584a5526bbb06da38765c65035dd81a1fdfb8cd5c9641a7b97b2daf",
+      "byte_identical": true
+    },
+    "index": {
+      "original": ".runtime/missions/independent-seven-day-002/evidence/evidence.json",
+      "copy": "evidence-index-closed.json",
+      "bytes": 541764,
+      "sha256": "8409b62c411382eab4f789ecdb054e1a652dc7e77a05fb6212d6c7d076016ae0",
+      "byte_identical": true
+    },
+    "journal": {
+      "original": ".runtime/sessions/20261021-201755-33704dd2/events.jsonl",
+      "copy": "session-journal-closed.jsonl",
+      "bytes": 1227969,
+      "sha256": "29997810e945cb3d543c885332bf1be7bb566fe801c8c0fa5897cc49b53cd439",
+      "byte_identical": true
+    }
+  },
+  "closure": {
+    "stop_request": "seven002-stop-001",
+    "stop_epoch": 3,
+    "actors": "Both actual host handles FINAL and permanently quiescent before teardown; no pending tools/slots/leases/unresolved effects",
+    "native_pid": 63428,
+    "native_launch_id": "f0eb65415fe94c54aba75a694b9280fb",
+    "native_ending": "Exceptional TERM after Stop; observed defunct under exact parent before controller INT",
+    "normal_exit_verified": false,
+    "controller_pid": 60318,
+    "controller_exec": 63268,
+    "controller_exit": 0,
+    "exact_pid_absence_and_port8766_free_verified": true,
+    "journal_custody": {
+      "process": {
+        "launch_id": "f0eb65415fe94c54aba75a694b9280fb",
+        "pid": 63428,
+        "running": false,
+        "returncode": 0,
+        "outcome": "exited",
+        "error": null
+      },
+      "normal_exit_verified": false,
+      "restored_from_disk": false,
+      "grants_authority": false
+    },
+    "final_ledger_epoch": 5,
+    "final_ledger_phase": "paused",
+    "custody_evidence_scope": "Stop/result slots and final journal/native custody are retained; actor terminality/PID ownership/signal ordering and absence are separately observed lead evidence, not all established by the journal alone."
+  },
+  "unknown": "Original seven002-character-confirm-001 unknown remains, separate lifecycle effect reconciled; no replay",
+  "authority": "Old paused ledger not resumed or edited; a genuinely fresh later attempt needs new frozen source/scenario/admission.",
+  "figures": [
+    {
+      "path": "docs/assets/independent-seven-day002-identity.png",
+      "source_id": "aa1d2555ce14bc5dea5433742b851f49ab0a9e753e07bc62dc85b27784907d32",
+      "bytes": 62106,
+      "sha256": "d8b2dcb7fdd880bb845a184a353de6c1ea12873cd8f75b28301c311bfd1cee7f"
+    },
+    {
+      "path": "docs/assets/independent-seven-day002-consume-selector.png",
+      "source_id": "be5c22fcc6b5cd7008c52e06c6b7b4ac19b1c3b48e6c42c659066420a1b8b386",
+      "bytes": 49859,
+      "sha256": "44836949ff73337cdfb49bf452da424389d9b7ea9553f340a985a8d3d53ba1b7"
+    }
+  ],
+  "visible_evidence": {
+    "initial_inventory": "05bbe558aeb7051cd2fbf01859565346b1306d3e575b3077c18fc7d71d40fee8",
+    "selected_three_wrappers": "aab9359bfe189849ad6f85e7761314f7a4b67129f747e9444e8b6cbf4390b660",
+    "pickup_messages_one_plus_two": "6e86f2a68cfee493af13a01abcecff7b01d8cbfb03499e66d8a625b8e589b6c2",
+    "wait_before": {
+      "source_id": "0e4dab0224e73dc4801bb2d232adc2d223807ec12e3ac2d6986a852de3c5964f",
+      "turn": 5212804
+    },
+    "wait_after": {
+      "source_id": "62268eb974c936ed043657736c01afc29499cde65a8c4e4d6c3245b828c80a36",
+      "turn": 5214604
+    },
+    "interpretation": "Three protein rations acquired and unconsumed; Peckish, Drink/Pain/Rest clear at failed consume selector. Starting water frozen; usable liquid unverified. No hostile in retained scenes."
+  },
+  "procedure_scope": "Imported R2 selection and inherited pickup linkage independently verified. Player reported viewing five historical supporting PNGs; host-payload presentation not independently audited. No causal benefit claimed.",
+  "validation": {
+    "source": "c57f4a8513e21ce07a2fa4c89310bfa7c3accf93",
+    "hosted_run": "https://github.com/CVX-Hull/enactive/actions/runs/39698904090",
+    "hosted_conclusion": "success",
+    "local_full": {
+      "tests": 1454,
+      "seconds": 524.413,
+      "failures": 1,
+      "failure": "test_mission_finish.MissionFinishTests.test_pause_after_report_commit_keeps_history_and_writer_but_not_terminal_success setup exited with unexpired native request",
+      "diagnosis": "Host monotonic exchange timeout began before later wall deadline was stamped with a full renewed allowance; scheduling stall reproduced exact failure. Later source repair and regressions are separate from this run."
+    }
+  }
+}

@@ -419,6 +419,15 @@ plain blocked without Observe, rotation, reservation or input, retaining the
 original phase/checkpoint, lease/epoch and deadlines. It never substitutes fields
 or certifies freshness. Same-ID results are immutable; a new corrected request
 traverses every normal guard. Request counts and elapsed time remain spent.
+This also covers item-selector menu activation and quantity-editor drafts that
+conflict with the immutable item root. Prompt ownership and control representation
+are separate checks: a malformed semantic request does not prove lost ownership.
+The player may correct the semantic request, cancel, or use an ordinary direct
+key/text/click child under that same healthy root. It need not discover the
+preferred semantic adapter before trying an ordinary interface action. Such input
+still retains exact-image revalidation, original limits and delivery accounting;
+it supplies no typed quantity-editor attestation or automatic success claim.
+The runtime never sends a rescue key or chooses the player's next action.
 Null menu perception selects the native UILIST row policy, not automatic image
 interpretation. A source without that policy's menu/category/purpose/coverage
 requires an explicit source-bound visible-control interpretation. The eligible

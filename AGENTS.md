@@ -18,6 +18,10 @@ planner remains candidate-only; explorers/reviewers never send game inputs.
 
 - User instructions take precedence. Global skills are optional references;
   do not import ceremony without a concrete project need.
+- Apply the charter's CDDA-class portability constraint and P-GENERALITY.
+  Ordinary visible input is the foundation; semantic skills are optional aids.
+  Keep shared player/memory/learning/orchestration separate from game bindings;
+  document existing coupling rather than claiming unqualified portability.
 - Follow S-MIGRATION: one current contract; migrate every caller and persisted format
   together, remove old paths, and reject unsupported versions. No compatibility shims.
 - New dependencies, saves, caches and outputs stay project-local or in explicitly
