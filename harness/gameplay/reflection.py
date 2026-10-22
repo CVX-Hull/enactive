@@ -22,7 +22,7 @@ from .contracts import (
 from .mission_contracts import validate_request
 from .procedures import procedure_schema, validate_procedure
 
-VERSION = "reflection/1"
+VERSION = "reflection/2"
 MAX_JOB_BYTES = 65_536
 MAX_PROPOSAL_BYTES = 32_768
 MAX_COMMAND_BYTES = MAX_PROPOSAL_BYTES + 2048

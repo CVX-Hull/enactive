@@ -14,7 +14,7 @@ from harness.gameplay.procedures import (
 
 def procedure(**changes):
     return {
-        "schema": "procedure/1", "record_type": "Procedure", "id": "rev-1",
+        "schema": "procedure/2", "record_type": "Procedure", "id": "rev-1",
         "mission_id": "mission-a", "procedure_id": "collect-water", "revision": 1,
         "parent": None, "goal": "Collect usable water",
         "parameters": [{"name": "container", "description": "A suitable container"}],
@@ -24,8 +24,8 @@ def procedure(**changes):
                    "on_unexpected": "Stop and reassess"}],
         "progress": ["Water is visibly carried"], "stop_conditions": ["Target met"],
         "limits": ["Not assessed with hostile creatures nearby"],
-        "environment": {"engine_commit": "a" * 40, "native_protocol": 5,
-                        "mission_schema": "mission/9", "configuration": "Ordinary setup"},
+        "environment": {"engine_commit": "a" * 40, "native_protocol": 6,
+                        "mission_schema": "mission/10", "configuration": "Ordinary setup"},
         "support": [{"mission_id": "episode-mission", "request_ids": ["request-1"],
                      "source_ids": ["source-1"], "interpretation": "One observed attempt"}],
         "counterexamples": [], "status": "candidate", "reason": "Scoped advisory candidate",
@@ -91,7 +91,7 @@ class ProcedureValidationTests(unittest.TestCase):
 
     def test_strict_versions_status_and_integer_bounds(self):
         for field, values in {
-            "schema": ["procedure/0", "procedure/2"], "record_type": ["Claim"],
+            "schema": ["procedure/0", "procedure/1", "procedure/3"], "record_type": ["Claim"],
             "revision": [True, False, 1.0, 0, -1, 1025], "status": ["verified", ""],
         }.items():
             for invalid in values:
@@ -103,7 +103,7 @@ class ProcedureValidationTests(unittest.TestCase):
         for status in ("candidate", "active", "disputed", "retired"):
             self.assertEqual(validate_procedure(procedure(status=status))["status"], status)
         for field, invalid in (("native_protocol", True), ("native_protocol", 5.0),
-                               ("native_protocol", 4), ("mission_schema", "mission/8"),
+                               ("native_protocol", 4), ("native_protocol", 5), ("mission_schema", "mission/8"),
                                ("engine_commit", "a" * 39), ("engine_commit", "A" * 40),
                                ("engine_commit", "g" * 40)):
             with self.subTest(field=field, invalid=invalid):

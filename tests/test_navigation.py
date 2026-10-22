@@ -78,7 +78,7 @@ class NavigationTests(unittest.TestCase):
         if change:
             change(value)
         (self.bridge / value["frame"]).write_bytes(png() if data is None else data)
-        method = self.store.ingest if promote else self.store.retain_equivalent
+        method = self.store.ingest if promote else self.store.retain_preflight
         extra = {} if promote else {"rule": "native_state"}
         return method(value, received_monotonic=self.clocks["now_monotonic"], **self.clocks, **extra)
 

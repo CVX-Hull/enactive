@@ -76,8 +76,37 @@ healthy prompt without renewing the root or retaining stale quantity proof;
 automatic input refresh is still strict. The
 [delivery impact map](changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
 routes contract, caller, documentation, control, evidence and backlog updates.
-Broader preflight/receiver/delivery separation and real qualification remain #191
-work; fresh003 is preparation only, with no admission or running gameplay actors.
+The selected ordinary-input migration has passed scoped architecture review;
+native6 and controller candidates are locally integrated, with coordinated host/
+persistence migration still in progress. The reviewed native refusal-publication
+capture-failure repair now sets fault/Pause; composed source tests pass. Controller
+triage and evidence/policy clock/identity repairs have focused passing evidence in
+the delivery brief. The ACK/ledger/library candidate is locally integrated; its
+independent review found an after-source/ACK identity audit gap, now repaired in
+the shared mapper with settlement/reopen regressions. Runtime now preserves known
+ACK settlement independently of archive/current publication, using immutable
+preflight facts and separately validated actual-current prompt evidence. Scoped
+review and focused tests cover the implemented path. Explicit Observe now records
+local ordinary macro closure before clearing its private prompt, and stale queued
+children refuse without pausing healthy custody. The focused macro/prompt,
+activity/ACK and HTTP caller lanes pass. Known returned direct input now retains
+a read-only scope if the independent current snapshot is missing/aged; only
+explicit Observe across the authenticated rotation can publish the next binding.
+Local game overshoot returns partial work while healthy mission ownership survives;
+actual faults and global exhaustion still stop. Runtime regressions and fast
+checks pass; full/native/graphical integrated qualification remains open in#191.
+P-CHANGE/S-CODE and the existing review/maintenance controls now
+explicitly favor objective-oriented reuse and configured platform guarantees;
+the delivery brief records an applied removal of duplicate post-ACK verification.
+They also allow deliberate accelerator/enabler investment over the longer project
+horizon, without requiring immediate payoff; #75/#175/#191 carry the corresponding
+maintenance, reuse-assessment and delivery dispositions. This adds no new campaign
+gate. Published5f9a225 passed hosted
+run39703745808, separately from this unfinished migration. Broader preflight/
+receiver/delivery separation and real qualification remain #191 work; fresh003
+is preparation only, with no admission or running gameplay actors. A new finite
+current-contract learning run must supply its library; closed learning004 remains
+historical evidence and is not relabeled as current input.
 Source checks issue no run authority. The accepted024
 baseline and historical attempts below remain evidence, not a new admission.
 

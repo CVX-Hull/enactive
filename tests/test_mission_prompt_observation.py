@@ -122,13 +122,40 @@ class PromptObservationTests(unittest.TestCase):
         replay = self.runtime.command(old_choice)
         self.assertEqual(replay["operation"], self.result(old_choice["request_id"]))
 
-    def test_automatic_input_refresh_still_stops_changed_image(self):
+    def test_ordinary_key_keeps_physical_choice_and_lineage_across_changed_entry(self):
         root, _ = self.open_cancelable()
         choice = self.direct(root)
+        original_root = self.runtime._ledger.request(root["request_id"])
         self.changed()
-        before = copy.deepcopy(self.bridge.delivered)
+        result = self.send(choice)
+        self.assertEqual(result["state"], "partial", result)
+        self.assertIsNone(result["result"]["revalidation"])
+        relation = result["result"]["input_observation"]
+        self.assertEqual(relation["original"]["source_id"], choice["sources"][0])
+        self.assertNotEqual(relation["original"]["source_id"], relation["current"]["source_id"])
+        primitive = self.runtime._ledger.primitive_records()[-1]
+        self.assertEqual(primitive["state"], "returned")
+        self.assertEqual(primitive["intent"]["source_before"], relation["current"]["source_id"])
+        self.assertEqual(primitive["intent"]["input_observation"], relation)
+        self.assertNotEqual(primitive["intent"]["preflight_source"], primitive["intent"]["source_before"])
+        native = self.bridge.delivered[-1]
+        self.assertEqual(native["input"], choice["goal"]["input"])
+        self.assertFalse(native["require_exact_frame"])
+        self.assertEqual(native["revision"], primitive["intent"]["expected_revision"])
+        self.assertEqual(native["boundary_id"], primitive["intent"]["expected_boundary_id"])
+        self.assertEqual(self.runtime._ledger.request(root["request_id"]), original_root)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+
+    def test_semantic_interpretation_still_requires_its_exact_image_refresh(self):
+        root, _ = self.open_cancelable()
+        source = self.runtime.status()["current_source"]["observation_id"]
+        choice = self.control("menu", dict(purpose="Open nearby door", label="East", outcome="activated"),
+            phase_id=root["request_id"], perception=dict(kind="direction", basis="player_interpretation",
+                source_id=source, question="Open which nearby door?"))
+        self.changed("pixels")
+        delivered = copy.deepcopy(self.bridge.delivered)
         self.assert_stopped(self.send(choice))
-        self.assertEqual(self.bridge.delivered, before)
+        self.assertEqual(self.bridge.delivered, delivered)
 
     def test_old_age_and_already_visible_drift_do_not_prevent_explicit_look(self):
         self.open_direction()
@@ -248,14 +275,14 @@ class PromptObservationTests(unittest.TestCase):
 
     def test_pre_capture_original_authority_integrity_and_capacity_faults_stop(self):
         faults = ("boot", "operator", "pause-generation", "actor", "epoch", "lease", "pending", "control-pending",
-                  "binding", "store-generation", "corrupt", "missing", "disputed", "root-deadline", "observe-deadline",
-                  "mission-deadline", "root-inputs", "mission-inputs", "game-cap", "frames", "bytes")
+                  "binding", "store-generation", "corrupt", "missing", "disputed", "observe-deadline",
+                  "mission-deadline", "mission-inputs", "game-cap", "frames", "bytes")
         for fault in faults:
             with self.subTest(fault=fault):
                 case = type(self)()
                 case.setUp()
                 try:
-                    case.open_direction(limits=dict(primitives=1 if fault == "root-inputs" else 8,
+                    case.open_direction(limits=dict(primitives=8,
                         wall_seconds=120, game_seconds=1200))
                     phase = case.runtime._prompt_phase
                     before = len(case.bridge.requests)
@@ -289,8 +316,7 @@ class PromptObservationTests(unittest.TestCase):
                             elif fault == "disputed":
                                 case.runtime._store._disputed.append(owned.checkpoint.observation_id)
                             elif fault.endswith("deadline"):
-                                operation = case.runtime._ledger.request(owned.root_id if fault == "root-deadline"
-                                    else work.request["request_id"])
+                                operation = case.runtime._ledger.request(work.request["request_id"])
                                 limit = operation["deadline"] if fault != "mission-deadline" else (
                                     case.runtime._mission_deadline - case.a.cleanup_reserve.wall_seconds)
                                 case.runtime._wall = lambda: limit

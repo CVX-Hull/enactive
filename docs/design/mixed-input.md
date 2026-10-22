@@ -133,6 +133,70 @@ Known unpublished visual/representation/geometry refusal returns evidence while
 healthy ownership survives; actual custody, Pause, competing writer, exhausted
 mission resources or unavailable required trace capacity still stops input.
 
+Use the existing ledger receipt for a closed, bounded `native_ack` projection:
+protocol, id, session, revision, status, error, paused, pause_origin,
+takeover_generation, timestamp_ms, frame_ok, frame and boundary. Preserve the
+native diagnostic separately from `processing_error` and explicit `evidence_loss`.
+Scene/UI/geometry remain in the original after archive/controller journal; the
+compact projection is delivery evidence, not a complete native observation or
+proof of semantic effect. Bound and validate the worst-case encoded receipt under
+the existing65,536-byte ceiling without truncating correlation facts or enlarging
+the81,920-byte receipt reservation. Request.frame binds preflight;
+native_ack.frame binds after, whose identity must match when retained. Do not
+require a ready ACK's new frame to equal its preflight frame.
+
+Authenticate and preserve the ACK immediately, make the bounded retention attempt,
+then settle once with either source_after or explicit loss before stopping or
+publication. Never terminally settle missing evidence and later rewrite that
+immutable receipt. If publication bookkeeping failed, validate correlation and bind
+native_id atomically with known terminal settlement from prepared, extending the
+existing control fallback. Apply mapping checks during settlement and reopening.
+Returned-without-after settles known delivery, stops and raises explicit evidence
+loss; it must not construct a `gameplay/2` PrimitiveResult that requires after
+evidence. No gameplay format change or second feedback path is needed for a storage
+failure. Failed settlement remains failed storage, with available proof preserved;
+reopening is conservative when no durable ACK evidence exists. Scoped independent
+architecture review accepted this approach; runtime implementation remains pending.
+
+Apply S-CODE's platform-contract rule here. SQLite owns atomic row settlement;
+the bridge's existing publication/ACK contract owns delivery correlation. Keeping
+the validated preflight metadata through dispatch removes post-ACK archive rereads
+from authentication. Do not add another before/preflight file-integrity sweep on
+every ACK. Ordinary archive consumption/reopening/audit detects actual loss at its
+boundary without rewriting already settled delivery. Native frame counters order
+same-revision captures within one millisecond; this is transport ordering only,
+not a new game clock or authority mechanism. No additional journal, storage service
+or recovery framework is selected.
+
+Keep `source_after` as that authenticated ACK capture. An independently captured
+actual current snapshot may be ingested/published separately, under fresh receiver,
+same-session/custody, original first-receipt clocks, Pause and capacity checks.
+Expose its source separately; never substitute it for the ACK's after-source.
+Charge a genuinely distinct capture its actual frame/byte cost. If current differs
+from ACK, end the operation partial, even when pixels match; no automatic next
+scalar or semantic retargeting. Advance any prompt checkpoint from validated
+current evidence, preserving root, Work, deadlines, consent and cumulative costs
+and clearing incompatible quantity/focus assertions.
+
+If no eligible current capture exists, an old checkpoint cannot silently become
+current. Read-only Observe must account for the operation's authenticated lease
+rotation before another input: the existing prompt guard's exact host/store
+generation assumptions are insufficient unchanged. Preserve the original scope
+under the same live actor/epoch, lease, operator mark and session; require fresh
+evidence and a newly published binding before input. Storage/custody/global faults
+still stop. Independent scoped architecture review accepted these distinctions.
+The current source implements the direct-input fallback with the existing private
+prompt: an exact authenticated `observation_generation` is read-only, the old entry
+checkpoint remains historical, `awaiting_observation` tells the player to Observe,
+and the writer refuses input until a fresh capture publishes a binding and clears
+the marker. Original scope and costs survive; no new journal, retry or authority
+format is introduced. Local game overshoot yields partial work without revoking
+healthy ownership; an owned menu closes through explicit Observe, while normal
+return has already ended the root. Global/clock/custody faults and unknown delivery
+retain their stopping paths. Scoped synthetic regressions and independent review
+are source evidence only; full migration/native/graphical qualification remains
+#191 work.
+
 **Ordinary policy and scope.** Extract the direct policy from semantic menu
 planning; it remains passive and uses the existing writer's intents/results.
 One key/click/scalar is the base operation. An optional text batch retains its

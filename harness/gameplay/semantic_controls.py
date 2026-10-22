@@ -6,16 +6,14 @@ The caller alone owns authority, dispatch, phase and mission cost accounting.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import math
-from typing import Literal
 
 from .contracts import ContractError, EvidenceRef, PrimitiveResult
+from . import input_contracts as input_types
 from .evidence import EvidenceError, EvidenceStore
 from .mission_contracts import SourceRevalidation, validate_request
 from .interactions import check_visible_row_agreement, item_selection_plan
-from .native_input import validate_input
 
 _CHARACTER = frozenset({"NEW_CHAR_POINTS", "NEW_CHAR_STATS", "NEW_CHAR_TRAITS", "NEW_CHAR_PROFESSIONS",
                         "NEW_CHAR_SKILLS", "NEW_CHAR_SCENARIOS", "NEW_CHAR_DESCRIPTION"})
@@ -26,28 +24,6 @@ _COLUMNS = frozenset({"INVENTORY", "INVENTORY_SELECTOR"})
 _CONFIRMATIONS = frozenset({"YESNO", "CANCEL_ACTIVITY_OR_IGNORE_QUERY"})
 
 
-@dataclass(frozen=True)
-class ControlIntent:
-    logical_id: str
-    kind: Literal["action", "key", "direct"]
-    action: str | dict
-    before: EvidenceRef
-    expected_boundary_id: str
-    revalidation: SourceRevalidation | None = None
-
-
-@dataclass(frozen=True)
-class ControlOutcome:
-    disposition: Literal["completed", "partial", "blocked", "unknown"]
-    reason: str
-    proposed_count: int
-    evidence: tuple[EvidenceRef, ...]
-    pending_logical_id: str | None
-    verification_required: bool
-    basis: Literal["native_rows", "player_interpretation", "registered_action", "ordinary_input"]
-    revalidation: SourceRevalidation | None = None
-
-
 class _ControlBlocked(Exception):
     """Current evidence or remaining budget cannot support another proposal."""
 
@@ -56,7 +32,7 @@ class SemanticControlSkill:
     """One immutable request; explicit clocks and retained feedback, no executor."""
     def __init__(self, request: dict | str | bytes, *, deadline_monotonic: float):
         data = validate_request(request)
-        if (data["kind"] != "skill" or data["skill_kind"] not in ("menu", "edit", "interact", "item", "activity", "inspect", "direct")
+        if (data["kind"] != "skill" or data["skill_kind"] not in ("menu", "edit", "interact", "item", "activity", "inspect")
                 or data["skill_kind"] == "menu" and data["perception"] is None):
             raise ContractError("Semantic controls require edit/interact or an interpreted menu request")
         if (type(deadline_monotonic) not in (int, float) or not math.isfinite(deadline_monotonic)
@@ -65,8 +41,7 @@ class SemanticControlSkill:
         self._deadline_monotonic = deadline_monotonic
         self._request = data
         self._logical_prefix = "control-" + hashlib.sha256(data["request_id"].encode()).hexdigest()
-        self._basis = ("ordinary_input" if data["skill_kind"] == "direct" else
-                       "registered_action" if self._normal_root() else "player_interpretation")
+        self._basis = "registered_action" if self._normal_root() else "player_interpretation"
         self._store: EvidenceStore | None = None
         self._sources: tuple[EvidenceRef, ...] = ()
         self._start: EvidenceRef | None = None
@@ -76,16 +51,15 @@ class SemanticControlSkill:
         self._last_monotonic: float | None = None
         self._last_timestamp_ms: int | None = None
         self._proposals = 0
-        self._pending: ControlIntent | None = None
-        self._terminal: ControlOutcome | None = None
+        self._pending: input_types.ControlIntent | None = None
+        self._terminal: input_types.ControlOutcome | None = None
         self._revalidation: SourceRevalidation | None = None
         self._plan: tuple[tuple[str, str | dict], ...] = ()
         self._index = 0
 
     def _normal_root(self) -> bool:
         data = self._request
-        return (data["skill_kind"] == "direct" and data["phase_id"] is None
-                or data["skill_kind"] in ("interact", "inspect")) or (
+        return data["skill_kind"] in ("interact", "inspect") or (
             data["skill_kind"] in ("item", "activity") and data["goal"]["step"] == "start")
 
     def _root_action(self) -> str:
@@ -124,10 +98,10 @@ class SemanticControlSkill:
         self._last_monotonic, self._last_timestamp_ms = now_monotonic, now_timestamp_ms
 
     def _finish(self, reason: str, *, unknown: bool = False, inspected: bool = False,
-                blocked: bool = False, verification_required: bool = False) -> ControlOutcome:
+                blocked: bool = False, verification_required: bool = False) -> input_types.ControlOutcome:
         disposition = ("unknown" if unknown else "completed" if inspected else "blocked" if blocked
                        else "partial" if self._proposals or verification_required else "blocked")
-        self._terminal = ControlOutcome(disposition, reason, self._proposals, self._sources,
+        self._terminal = input_types.ControlOutcome(disposition, reason, self._proposals, self._sources,
                                         self._pending.logical_id if self._pending else None,
                                         verification_required, self._basis, self._revalidation)
         return self._terminal
@@ -177,7 +151,7 @@ class SemanticControlSkill:
         receipt.__post_init__()
         if (receipt.original.mission_id, receipt.original.epoch) != (self._request["mission_id"], self._request["epoch"]):
             raise ContractError("Semantic-control refresh must match its exact mission and epoch")
-        if (not self._normal_root() or self._request["skill_kind"] == "direct") and receipt.rule != "exact_png_bytes":
+        if not self._normal_root() and receipt.rule != "exact_png_bytes":
             raise EvidenceError("Player image interpretations require exact_png_bytes refresh")
         self._clocks(now_monotonic, now_timestamp_ms)
         self._bind(store)
@@ -221,7 +195,7 @@ class SemanticControlSkill:
         # Other axes describe another region and cannot acquire that assertion.
         check_visible_row_agreement(view, state)
 
-    def _native_focus_transition(self, pending: ControlIntent, before: dict, after: dict) -> None:
+    def _native_focus_transition(self, pending: input_types.ControlIntent, before: dict, after: dict) -> None:
         view = self._request["perception"]
         if (view is None or view["kind"] not in ("menu", "item_selection") or view["control"] != "vertical"
                 or before["ui"] is None or before["ui"]["purpose"] not in ("uilist", "inventory")
@@ -327,20 +301,7 @@ class SemanticControlSkill:
         self._scan_sources(store)
         self._ready(state)
         kind = self._request["skill_kind"]
-        if kind == "direct":
-            if (state["boundary"]["kind"] not in ("normal_play", "menu")
-                    or self._normal_root() and state["boundary"]["kind"] != "normal_play"):
-                raise _ControlBlocked("Direct input requires normal play or its owned ordinary menu")
-            direct = validate_input(self._request["goal"]["input"], text_limit=24)
-            if direct["type"] == "text":
-                if state["boundary"]["kind"] != "menu":
-                    raise _ControlBlocked("Direct text requires its owned ordinary menu")
-                plan = tuple(("direct", {"type": "text", "text": char}) for char in direct["text"])
-            else:
-                if direct["type"] == "click" and direct["geometry"] != state["frame_geometry"]:
-                    raise _ControlBlocked("Click geometry differs from its exact informing frame")
-                plan = (("direct", direct),)
-        elif kind == "menu":
+        if kind == "menu":
             plan = self._menu_plan(state)
         elif kind == "edit":
             plan = self._edit_plan(state)
@@ -372,7 +333,7 @@ class SemanticControlSkill:
             raise _ControlBlocked("Original control proposal/wall/game budget exhausted")
 
     def propose(self, store: EvidenceStore, *, now_monotonic: float,
-                now_timestamp_ms: int) -> ControlIntent | ControlOutcome:
+                now_timestamp_ms: int) -> input_types.ControlIntent | input_types.ControlOutcome:
         if self._terminal is not None: return self._terminal
         try:
             self._clocks(now_monotonic, now_timestamp_ms)
@@ -404,12 +365,12 @@ class SemanticControlSkill:
             return self._finish(str(exc), unknown=self._pending is not None,
                                 verification_required=self._proposals > 0)
         self._proposals += 1
-        self._pending = ControlIntent(f"{self._logical_prefix}-{self._proposals}", kind, action, current,
+        self._pending = input_types.ControlIntent(f"{self._logical_prefix}-{self._proposals}", kind, action, current,
                                       state["boundary"]["id"], self._revalidation if self._proposals == 1 else None)
         return self._pending
 
     def accept(self, result: PrimitiveResult, store: EvidenceStore, *, now_monotonic: float,
-               now_timestamp_ms: int) -> ControlOutcome | None:
+               now_timestamp_ms: int) -> input_types.ControlOutcome | None:
         if self._terminal is not None: return self._terminal
         pending = self._pending
         if pending is None:
@@ -459,11 +420,9 @@ class SemanticControlSkill:
             self._pending = None
             self._checkpoint, self._generation = current, expected_generation
             self._index += 1
-            direct = self._request["skill_kind"] == "direct"
-            one_effect = (direct and self._request["goal"]["input"]["type"] != "text" or
-                          not direct and (self._normal_root() or pending.action in
+            one_effect = (self._normal_root() or pending.action in
                           ("CONFIRM", "TEXT.CONFIRM", "MARK_WITH_COUNT") or self._request["perception"]["kind"] in
-                          ("direction", "confirmation", "dismissal")))
+                          ("direction", "confirmation", "dismissal"))
             self._budget(current, now_monotonic, completing=True)
             if one_effect:
                 return self._finish("Input returned; player verification of the semantic effect is required",

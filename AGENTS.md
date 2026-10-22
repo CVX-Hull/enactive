@@ -38,6 +38,8 @@ planner remains candidate-only; explorers/reviewers never send game inputs.
   reports, proposals and superseded ADRs are evidence, not current instructions.
 - Apply S-CODE's reuse review to tools, documentation and controls. Git owns tracked
   source history; custom infrastructure needs a concrete gap and maintenance owner.
+  Rely on configured DB/OS/library contracts; justify residual checks and recovery
+  against actual deployment, failure evidence, latency and maintenance cost.
 - Use the [development-first workflow](docs/project-management.md#development-first-delivery):
   fast checkpoint checks and relevant focused tests before development play;
   independent review, full checks and protected CI before formal acceptance/merge.

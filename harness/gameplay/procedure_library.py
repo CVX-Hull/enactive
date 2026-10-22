@@ -21,11 +21,12 @@ from typing import Any
 
 from .contracts import canonical, ContractError, EvidenceRef, _pairs, _reject_constant, json_object, validate_json
 from .evidence import (
-    MAX_FRAME_BYTES, MAX_FRAMES, MAX_METADATA_BYTES, _check_frame_bytes,
+    MAX_FRAME_BYTES, MAX_FRAMES, MAX_METADATA_BYTES, MAX_AGE_SECONDS, MAX_HISTORICAL_LAG_SECONDS, _check_frame_bytes,
     _identity, _validate_observation,
 )
 from .mission_contracts import MissionAdmission, validate_effect_reconciliation, validate_request
-from .mission_ledger import _intent, _primitive_parent
+from .mission_ledger import DB_VERSION, MissionLedger, _intent, _primitive_parent, _ordinary_sequence
+from .native_receipts import compact_native_ack, validate_ordinary_mapping
 from .procedures import MAX_PROCEDURE_RECORDS, procedure_schema, project_procedures, validate_procedure
 
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
@@ -193,7 +194,7 @@ class ProcedureLibrary:
         value = json.loads(encoded, object_pairs_hook=_pairs, parse_constant=_reject_constant)
         if (type(value) is not dict
                 or set(value) != {"store_version", "entries", "session", "retired_sessions", "blocked", "disputed"}
-                or type(value["store_version"]) is not int or value["store_version"] != 4
+                or type(value["store_version"]) is not int or value["store_version"] != 5
                 or type(value["entries"]) is not list or len(value["entries"]) > MAX_FRAMES
                 or type(value["retired_sessions"]) is not list or len(value["retired_sessions"]) > MAX_FRAMES
                 or type(value["blocked"]) is not list or len(value["blocked"]) > MAX_FRAMES
@@ -212,12 +213,15 @@ class ProcedureLibrary:
         entries = {}
         total_bytes = 0
         for item in value["entries"]:
-            if type(item) is not dict or set(item) != {"reference", "observation", "initial_lag_seconds"}:
+            if type(item) is not dict or set(item) != {"reference", "observation", "initial_lag_seconds", "retention"}:
                 raise ProcedureLibraryError("Malformed historical observation")
             reference = EvidenceRef.from_dict(item["reference"])
             observation = _validate_observation(item["observation"])
             lag = item["initial_lag_seconds"]
-            if type(lag) not in (int, float) or not math.isfinite(lag) or not 0 <= lag <= 3:
+            retention = item["retention"]
+            age_limit = MAX_HISTORICAL_LAG_SECONDS if retention == "terminal" else MAX_AGE_SECONDS
+            if (retention not in ("current", "preflight", "terminal") or type(lag) not in (int, float)
+                    or not math.isfinite(lag) or not 0 <= lag <= age_limit):
                 raise ProcedureLibraryError("Invalid original receipt age")
             identity = _identity(observation)
             _sha(reference.observation_id); _sha(reference.frame_sha256)
@@ -259,7 +263,7 @@ class ProcedureLibrary:
                 remaining -= 1
                 return int(remaining <= 0)
             database.set_progress_handler(progress, 1000)
-            if (database.execute("PRAGMA user_version").fetchone() != (11,)
+            if (database.execute("PRAGMA user_version").fetchone() != (DB_VERSION,)
                     or database.execute("PRAGMA quick_check").fetchmany(2) != [("ok",)]):
                 raise ProcedureLibraryError("Unsupported or corrupt historical mission ledger")
             required = {"metadata", "requests", "primitives", "memory", "reflection_jobs", "reflection_commands"}
@@ -331,14 +335,24 @@ class ProcedureLibrary:
 
     def _load_primitives(self, database: sqlite3.Connection, mission: str) -> None:
         seen = set()
-        for identity, parent, intent, state, result, effect in self._rows(database,
-                "SELECT id,request_id,intent,state,result,effect FROM primitives", MAX_PRIMITIVES):
+        positions = {}
+        dispositions = {}
+        for identity, parent, intent, native_id, state, result, effect in self._rows(database,
+                "SELECT id,request_id,intent,native_id,state,result,effect FROM primitives ORDER BY rowid", MAX_PRIMITIVES):
             _id(identity)
+            if native_id is not None:
+                _id(native_id)
             if identity in seen or parent not in self._requests[mission] or state not in _PRIMITIVE_TERMINAL:
                 raise ProcedureLibraryError("Historical primitive has no terminal retained request")
             seen.add(identity)
             intent = _intent(_object(intent))
-            _primitive_parent(intent, self._requests[mission][parent]["request"])
+            request = self._requests[mission][parent]["request"]
+            _primitive_parent(intent, request)
+            _ordinary_sequence(intent, request, positions.get(parent, 0), dispositions.get(parent))
+            positions[parent] = positions.get(parent, 0) + 1
+            dispositions[parent] = state
+            MissionLedger._check_source_transition(intent, request["epoch"], mission,
+                informing_sources=request["sources"])
             if state == "unknown":
                 if effect is None:
                     raise ProcedureLibraryError("Historical primitive effects remain unresolved")
@@ -364,6 +378,9 @@ class ProcedureLibrary:
             if result is None and state != "unknown":
                 raise ProcedureLibraryError("Historical terminal primitive lost its receipt")
             receipt = {} if result is None else _object(result)
+            validate_ordinary_mapping(intent, receipt, logical_id=identity, native_id=native_id, disposition=state)
+            if intent["kind"] in ("action", "key", "direct", "resume") and state in ("returned", "rejected"):
+                self._ordinary_captures(mission, intent, receipt)
             linked = set()
             for field in ("source_before", "preflight_source"):
                 linked.add(_id(intent[field]))
@@ -372,6 +389,31 @@ class ProcedureLibrary:
             if receipt.get("source_after") is not None:
                 linked.add(_id(receipt["source_after"]))
             self._links[mission][parent].update(linked)
+
+    def _ordinary_captures(self, mission: str, intent: dict, receipt: dict) -> None:
+        """Audit retained capture linkage separately from known delivery."""
+        entries = self._entries[mission]
+        preflight = entries.get(intent["preflight_source"])
+        if preflight is None:
+            raise ProcedureLibraryError("Known ordinary delivery lost its retained preflight")
+        request = _object(receipt["native_request_json"], 4096)
+        observed = preflight["observation"]
+        if (any(request[key] != observed[key] for key in ("session", "revision", "frame", "takeover_generation"))
+                or request["boundary_id"] != observed["boundary"]["id"]):
+            raise ProcedureLibraryError("Native admission contradicts its retained actual preflight capture")
+        if receipt.get("source_after") is None:
+            return
+        after = entries.get(receipt["source_after"])
+        if after is None:
+            raise ProcedureLibraryError("Known delivery names unavailable after evidence")
+        projected = compact_native_ack(after["observation"])
+        # A spectator may have first retained this same capture under its own
+        # request ID and transport result. All immutable capture fields agree.
+        ignored = {"id", "status", "error"}
+        ack = receipt["native_ack"]
+        if (any(ack[key] != value for key, value in projected.items() if key not in ignored)
+                or receipt["source_after"] != _identity(ack)):
+            raise ProcedureLibraryError("Native ACK contradicts its retained after capture identity")
 
     def _validate_closure(self) -> None:
         for dependencies in self._dependencies.values():

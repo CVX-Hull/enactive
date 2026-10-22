@@ -6,8 +6,9 @@ status: active
 
 # Current architecture
 
-Current source contracts are native5, mission/9, campaign-memory/4, gameplay/2,
-evidence archive4 and mission ledger11. One MissionRuntime owns the live mission API.
+Current source contracts are native6, mission/10, campaign-memory/5, procedure/2,
+reflection/2, gameplay/2, evidence archive5 and mission ledger12. One MissionRuntime
+owns the live mission API.
 The prior wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.
 Start is source-free and cannot adopt an unrelated already-running character. The
@@ -15,7 +16,7 @@ registered lifecycle must verify owned launch and admitted world/character befor
 normal-play authority or a game-time anchor can be established. This is not yet an
 accepted autonomous survival service. Earlier [foundation](acceptance/2026-10-17-foundation-implementation.md)
 and [MVP](acceptance/2026-10-17-mvp.md) reports retain their dated contract scopes.
-Protocol version: 5.
+Protocol version: 6.
 
 The [independent024 result](acceptance/2026-10-21-independent-supply-shelter.md)
 exercises the integrated supply/shelter, durable memory, actual fresh successor and
@@ -29,11 +30,14 @@ ordinary key/text/click discovery and source-linked procedural memory. It retain
 the existing mission writer, native input transport, SQLite history and image
 archive. A root's explicit procedure selection joins its actual child inputs and
 results automatically; adoption remains a player judgment over scoped data.
-The historical library reads pinned closed archives without restoring old-world
-facts or execution handles. See [the current contract](protocol.md#ordinary-discovery-and-procedure-data).
-The new native binary passed its local build. Earlier learning failures retain
+The read-only library accepts pinned closed current-contract archives without
+restoring old-world facts or execution handles. Old native5 libraries remain
+immutable historical evidence and cannot be mounted under native6. See
+[the current contract](protocol.md#ordinary-discovery-and-procedure-data).
+The prior native5 binary passed its local build; the native6 candidate still needs
+a matching build and real graphical qualification. Earlier learning failures retain
 their partial evidence. The [fourth run](acceptance/2026-10-21-discovery-learning-fourth-attempt.md)
-now qualifies bounded procedure reuse, fresh-context application, same-proposal
+qualifies bounded native5 procedure reuse, fresh-context application, same-proposal
 graphical advisory overlap/disposition and normal save/reload/final shutdown.
 Its changed-condition refinement does not demonstrate correction of an erroneous
 rule or causal improvement; the fresh seven-day campaign remains separate. The pure submission boundary now rejects malformed
@@ -59,15 +63,33 @@ categories changing after earlier inputs. These are bounded source checks, not
 proof of general player adaptation or cross-game portability; #191 tracks that
 broader boundary.
 
-Explicit Observe now separates looking again from revalidating an old decision.
-A changed healthy owned prompt can advance to a new checkpoint in the same root;
-changed evidence clears quantity-editor attestation, while original ownership,
-deadlines, costs and unsettled-delivery checks remain. The player then chooses
-again using the new source. Automatic input refresh still requires equivalence;
-the native category catalogue and ordinary input's exact-image gate also remain.
-This source repair is not the completed general input foundation or new native/
-graphical qualification. [Delivery057](changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
-maps the remaining work and affected authoritative artifacts to #191.
+Ordinary physical input now has a passive policy separate from semantic menu
+planning, through the same writer. Direct keys/scalars may reach changed visible
+evidence under uninterrupted owned custody; clicks keep the geometry of the
+player's selected image. Native6 attests an actual ordinary receiver independently
+of category names. Semantic shortcuts retain their stronger equivalence checks.
+Immutable informing source, entry observation, actual final preflight and terminal
+ACK capture remain separate. A known ACK records delivery before fallible storage
+or publication work; a separately validated current capture determines further
+input. A different current capture ends the operation partial for player review.
+See [ordinary input and receipt lineage](protocol.md#ordinary-discovery-and-procedure-data).
+
+Explicit Observe can advance a changed healthy prompt without renewing its root.
+If that ordinary macro exhausted its local input/wall/game cap, Observe records
+`macro_closure` in its own immutable result before clearing the private prompt.
+This reports local exhaustion, not task success or a new allowance. The player may
+explicitly choose a new direct root from the fresh owned menu; stale queued
+children refuse. Mission, custody, Pause, trace and unsettled-delivery faults
+retain their stops. After known direct input, an absent/aged current snapshot can
+retain a read-only scope across that exact authenticated operation rotation. Status
+requests explicit Observe and hides the old current source; further inputs refuse
+until a fresh capture publishes a new binding. The ACK stays historical. Local
+game-time overshoot ends a normal root partial or leaves an owned menu for Observe
+closure without pausing healthy mission ownership. Full shared
+game integration extraction, general setup/ending cancellation and a real second
+game qualification also remain open. [Delivery057](changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
+maps these limits to #191; this source candidate has no new native/graphical or
+hosted full-pass claim.
 
 The harness-enabled SDL ImGui context uses the library's steady text-caret setting.
 It preserves exact image validation without treating cosmetic blink as stable
@@ -89,7 +111,7 @@ All project-controlled boundaries follow
 [S-MIGRATION](engineering.md#s-migration-one-current-contract-coordinated-migration):
 one current contract, with producers, consumers, persisted formats and guidance
 migrated together. There is no runtime compatibility layer or downgrade. Current
-native wire v5, gameplay records `gameplay/2`, evidence store version 4 and build
+native wire v6, gameplay records `gameplay/2`, evidence store version 5 and build
 manifest version 1 name separate contracts, not alternate versions of one interface.
 Historical artifacts are retained as evidence without being accepted as runtime input.
 
@@ -124,6 +146,17 @@ the family works. Future broader genres may revisit assumptions explicitly.
 
 ## Scope and responsibilities
 
+Platform assumptions follow [S-CODE](engineering.md#s-code-maintainable-implementation):
+this is a local single-host system using SQLite and ordinary OS file/process
+contracts. The application owns gameplay intent, custody and uncertain delivery;
+it does not supply a second database transaction or filesystem recovery layer.
+Additional resilience needs a demonstrated deployment gap and proportionate cost.
+Architectural investment also considers the longer project horizon: reusable
+capabilities, learning infrastructure and better evaluation can justify upfront
+effort before a campaign benefits. Record the expected benefit, uncertainty,
+upkeep and reassessment trigger in the existing issue or design decision under
+S-CODE; immediate payoff is not required.
+
 The [overview](overview.md) provides the user-facing system picture. One local
 macOS game and one controller are supported. Prepared keyboard-driven launch
 requires project-local `ENABLE_MOUSE=false` and `FULLSCREEN=no`; native-image
@@ -132,7 +165,8 @@ background startup without activating the shown window, so launch should leave
 the user's typing in their current app. These are child-process hints, not global
 Mac settings; direct OS focus telemetry is not exposed by the harness.
 The designated active Codex player
-chooses plans, interprets visible outcomes and requests bounded semantic operations.
+chooses plans, interprets visible outcomes and requests ordinary physical inputs
+or bounded semantic operations.
 It uses the single [mission ingress](protocol.md#integrated-mission-lifecycle).
 The lead owns admission, source integration and final verification. The user retains
 Pause and native takeover. Role assignment is procedural, not operating-system isolation.
@@ -169,8 +203,8 @@ owns the exact source/byte bounds and later evidence-loss limits.
 | --- | --- | --- |
 | Lead / active Codex chat | Objective → frozen admission, reviewed source and acceptance | Owns shared runtime and integration; no ordinary gameplay rescue in the deciding mission |
 | Designated player / general-purpose agent | Visible evidence and memory → typed mission requests, plans and verification | One bounded actor; fresh-context handoff needs quiescence and one-use accounting; no authority from a summary |
-| Structured player adapter / harness maintainer | Explicit semantic arguments and returned handles → existing ingress, settled result and exact PNG | No capability, source refresh, replay, automatic Resume or new ledger; actual host review-free proof remains separate |
-| Mission runtime / harness maintainer | mission/9 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
+| Structured player adapter / harness maintainer | Explicit physical/semantic arguments and returned handles → existing ingress, settled result and exact PNG | No capability, source refresh, replay, automatic Resume or new ledger; actual host review-free proof remains separate |
+| Mission runtime / harness maintainer | mission/10 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
 | Controller / harness maintainer | State-bound command → native request and correlated receipt | Serialized ordinary/control writers, exact process-local lease, Pause revocation and native fences; never edits saves |
 | Native bridge / integration maintainer | Bounded request → actual input, visible metadata and rendered frame | Engine validates outcomes on its game thread; unsupported boundaries cannot claim success |
 | Spectator / viewer maintainer | Frame and mission snapshot → inspectable progress, uncertainty and Pause | Mission Observe uses typed ingress; raw input/Resume/recovery disabled while nonterminal; malformed state stays locked |
@@ -191,10 +225,10 @@ Implementation: [mission runtime](../harness/mission_runtime.py),
 Navigation, native-row focus and fallible image controls share the same mission
 writer. An ordinary interaction, item, activity, inspection or interrupted navigation root may own a returned prompt. Explicit control
 children retain its original scope, actor/epoch, deadlines and cumulative input
-ceiling. Automatic input entry refresh requires retained exact-PNG source
-revalidation. Explicit Observe may instead advance a changed healthy prompt for
-a new player decision, as described above. Typed PhaseReceipt audit data restores no private phase on
-reopen. A normal return closes the prompt without proving the desired effect.
+ceiling. Semantic input entry refresh retains its equivalence policy; direct
+input records a non-equivalent ordinary entry observation. Explicit Observe may
+also advance a changed healthy prompt for a new player decision, as described
+above. Typed PhaseReceipt audit data restores no private phase on reopen. A normal return closes the prompt without proving the desired effect.
 Returned navigation into an ordinary same-session menu retains its verified route
 prefix and last verified position, with no movement credit for the menu-opening
 input. Explicit menu/editor children remain under the original root,
@@ -379,7 +413,7 @@ and a fresh paused diagnostic source. Separate normal-play readmission charges
 one Resume. Navigation continuation retains the original goal, Work, game-time
 anchor and cumulative root limits; competing roots and handoff remain fenced.
 Reopen validates historical proof but restores no private phase or input consent.
-The single current effect envelope and ledger11 reject older shapes rather than
+The single current effect envelope and ledger12 reject older shapes rather than
 converting them. This source integration is not native recovery qualification or
 an additional executor/history store. Ambiguous delivery and unsupported semantic
 uncertainty remain stopped; a later expected-looking frame cannot supply proof.
@@ -450,13 +484,17 @@ flow, not a new API or fresh native verification.
 Read top to bottom: vertical columns identify responsibilities; solid arrows are
 requests/input and dashed arrows are observations/results. The two alternative
 outcomes are mutually exclusive paths for this request. The controller obtains
-current authority but rejects a stale planner choice instead of silently updating
-it. The native bridge validates again before delivery. A rejection dispatches no
-input. The eligible next boundary can be a prompt: `ready` does not prove success.
-After timeout, observe to reconcile and explicitly resume; never replay blindly.
-The spectator shows the returned frame/state. [Editable sequence](diagrams/action.mmd).
-The native commit check includes the positive boundary, matching rendered frame
-and durable host token; a later Pause cannot reverse that committed input.
+fresh dispatch evidence under the same custody. Semantic choices retain their
+equivalence policy; direct physical events can reach changed ordinary evidence
+without retargeting the player's event. The native bridge validates the actual
+receiver and authority again before delivery. A known pre-input rejection sends
+no input. A correlated `ready` records returned delivery even if its capture has
+already been superseded; the actual current source is checked separately before
+more input. Neither proves the objective succeeded. After uncertainty, collect
+the original result and reconcile without replay. [Editable sequence](diagrams/action.mmd).
+The result path includes separate historical ACK and actual current sources.
+The final commit includes a live eligible receiver, actual dispatch frame provenance
+and host token; a later Pause cannot reverse committed input.
 
 ### How do I recover control?
 

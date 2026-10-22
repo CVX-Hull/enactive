@@ -20,24 +20,46 @@ from tests.test_mission_contracts import admission, binding, claim, request, ski
 def intent(**changes):
     values = {"kind": "action", "value": "RIGHT", "expected_session": "native-session",
               "expected_revision": 30, "expected_boundary_id": "boundary-1",
-              "source_before": "source-1", "preflight_source": "preflight-1", "revalidation": None,
+              "source_before": "source-1", "preflight_source": "preflight-1", "revalidation": None, "input_observation": None,
               "reservation_id": "reservation-1"}
     values.update(changes)
     return values
 
 
 def published_receipt(*, native_id="native-uuid-1", logical_id="logical-1", proposed=None,
-                      controller_boot_id="controller-test", dispatch_epoch=0, actor_id="player-test"):
+                      controller_boot_id="controller-test", dispatch_epoch=0, actor_id="player-test", frame=None):
     """Pure SQLite correlation fixture, not evidence of actual file custody."""
     proposed = proposed or intent()
-    native = dict(protocol=5, id=native_id, kind=proposed["kind"], session=proposed["expected_session"],
+    payload = ({} if proposed["kind"] == "resume" else
+               {"input" if proposed["kind"] == "direct" else proposed["kind"]: proposed["value"]})
+    native = dict(protocol=6, id=native_id, kind=proposed["kind"], session=proposed["expected_session"],
         revision=proposed["expected_revision"], boundary_id=proposed["expected_boundary_id"], takeover_generation=0,
         authority=dict(controller_boot_id=controller_boot_id, counter=1), deadline_ms=1,
-        frame="synthetic.png", require_exact_frame=False, **{proposed["kind"]: proposed["value"]})
+        frame=frame or f"frame-{proposed['expected_session']}-{proposed['expected_revision']}.png",
+        require_exact_frame=False, **payload)
     return dict(published=True, native_request_id=native_id, logical_action_id=logical_id,
                 native_request_json=canonical(native), dispatch_binding=dict(controller_boot_id=controller_boot_id,
                     operator_pause_generation=0, takeover_generation=0, actor_id=actor_id,
                     epoch=dispatch_epoch, game_anchor_source_id=proposed["source_before"]))
+
+
+def known_receipt(*, native_id="native-uuid-1", logical_id="logical-1", proposed=None,
+                  disposition="returned", source_after=..., evidence_loss=None,
+                  after=None, frame=None):
+    """Current complete receipt fixture; no compatibility path in production."""
+    from harness.gameplay.native_receipts import compact_native_ack
+    from harness.gameplay.evidence import _identity
+    from tests.test_gameplay_evidence import observation
+    proposed = proposed or intent()
+    native = after or observation(proposed["expected_revision"] + 1, session=proposed["expected_session"])
+    native = dict(native, id=native_id, status="ready" if disposition == "returned" else "rejected")
+    return published_receipt(native_id=native_id, logical_id=logical_id, proposed=proposed, frame=frame) | {
+        **{key: proposed[key] for key in ("kind", "value", "expected_session", "expected_revision",
+                                         "expected_boundary_id", "source_before", "preflight_source")},
+        "transport_disposition": disposition, "received_monotonic": 100.5,
+        "native_ack": compact_native_ack(native),
+        "source_after": _identity(native) if source_after is ... else source_after,
+        "processing_error": None, "evidence_loss": evidence_loss}
 
 
 def delivery_resolution(ledger, *, now, logical_id="logical-1"):
@@ -226,7 +248,7 @@ class LedgerTests(unittest.TestCase):
         self.ledger.settle_primitive(logical_id, "not_dispatched", {"reason": "Synthetic accounting probe"}, now=now)
 
     def prompt_receipt(self, **changes):
-        value = dict(schema="mission/9", record_type="PhaseReceipt", origin_request_id="request-1",
+        value = dict(schema="mission/10", record_type="PhaseReceipt", origin_request_id="request-1",
             phase_kind="interact", operation="open_consume", stage="awaiting_control", epoch=0,
             actor_id="player-test", controller_boot_id="controller-test", operator_pause_generation=0,
             takeover_generation=0, source_ids=["source-1"], continuity=None, grants_authority=False)
@@ -734,7 +756,7 @@ class LedgerTests(unittest.TestCase):
 
     def test_earlier_ledger_format_is_rejected_without_conversion(self):
         self.ledger.close()
-        for version in (1, 2, 3, 4, 5, 6, 7, 8, 9):
+        for version in range(1, 12):
             with self.subTest(version=version):
                 with closing(sqlite3.connect(self.ledger.path)) as connection, connection:
                     connection.execute(f"PRAGMA user_version={version}")
@@ -847,7 +869,8 @@ class LedgerTests(unittest.TestCase):
         self.active_request()
         first = SourceRevalidation(binding(), binding(source_id="fresh-1", store_generation=2), "native_state")
         self.ledger.prepare_primitive("request-1", "logical-old", intent(source_before="fresh-1", revalidation=first.to_dict()), now=1002)
-        self.ledger.settle_primitive("logical-old", "returned", {"synthetic": True}, now=1003)
+        self.ledger.settle_primitive("logical-old", "returned", known_receipt(logical_id="logical-old",
+            proposed=intent(source_before="fresh-1", revalidation=first.to_dict())), now=1003)
         self.ledger.complete_request("request-1", "completed", {"synthetic": True}, now=1003)
         self.ledger.begin_request(request("handoff", request_id="handoff-actor", checkpoint_ids=["source-1"], successor_role="player"), now=1004)
         issued = self.ledger.issue_handoff("handoff-actor", binding=handoff_binding(), now=1005)
@@ -931,7 +954,8 @@ class LedgerTests(unittest.TestCase):
         self.active_request()
         for n in [1, 2]:
             self.ledger.prepare_primitive("request-1", f"logical-{n}", intent(), now=1001+n)
-            self.ledger.settle_primitive(f"logical-{n}", "returned", {"status": "ready"}, now=1001+n)
+            self.ledger.settle_primitive(f"logical-{n}", "returned", known_receipt(
+                logical_id=f"logical-{n}", native_id=f"native-{n}"), now=1001+n)
         with self.assertRaises(BudgetError): self.ledger.prepare_primitive("request-1", "logical-3", intent(), now=1004)
         self.assertEqual(self.ledger.snapshot(now=1004)["spent_inputs"], 2)
         state = self.ledger.begin_finishing(epoch=0, reason="Normal ending", now=1004)
@@ -940,7 +964,8 @@ class LedgerTests(unittest.TestCase):
                           expected_revision=30, expected_boundary_id="boundary-1", limits={"primitives": 2, "wall_seconds": 120, "game_seconds": 1})
         self.ledger.begin_request(cleanup, now=1004)
         self.ledger.prepare_primitive("cleanup", "logical-3", intent(), now=1005, cleanup=True)
-        self.ledger.settle_primitive("logical-3", "returned", {"status": "ready"}, now=1006)
+        self.ledger.settle_primitive("logical-3", "returned", known_receipt(
+            logical_id="logical-3", native_id="native-3"), now=1006)
         with self.assertRaises(BudgetError): self.ledger.prepare_primitive("cleanup", "logical-4", intent(), now=1007, cleanup=True)
         self.reopen(now=1010)
         self.assertEqual(self.ledger.snapshot(now=1010)["remaining_inputs"], 0)
@@ -973,7 +998,7 @@ class LedgerTests(unittest.TestCase):
         self.ledger.complete_request("request-1", "completed", {"goal": "reached", "delivery": "unknown"}, now=1006)
         self.assertEqual(self.ledger.primitive("logical-1")["state"], "unknown")
         self.assertEqual(self.ledger.primitive("logical-1")["result"], receipt)
-        with self.assertRaises(LedgerError): self.ledger.settle_primitive("logical-1", "returned", {"status": "ready"}, now=1007)
+        with self.assertRaises(LedgerError): self.ledger.settle_primitive("logical-1", "returned", known_receipt(), now=1007)
         self.assertEqual(self.ledger.snapshot(now=1007)["phase"], "paused")
         self.assertEqual(self.reopen().primitive("logical-1")["state"], "unknown")
 
@@ -987,7 +1012,7 @@ class LedgerTests(unittest.TestCase):
     def test_failure_settling_published_input_reopens_as_unknown(self):
         self.prepared(native=True)
         self.ledger._db.execute("CREATE TRIGGER fail_settle BEFORE UPDATE OF result ON primitives BEGIN SELECT RAISE(ABORT,'storage fault'); END")
-        with self.assertRaises(LedgerError): self.ledger.settle_primitive("logical-1", "returned", {"status": "ready"}, now=1004)
+        with self.assertRaises(LedgerError): self.ledger.settle_primitive("logical-1", "returned", known_receipt(), now=1004)
         self.assertEqual(self.ledger.primitive("logical-1")["state"], "published")
         self.ledger._db.execute("DROP TRIGGER fail_settle")
         self.reopen()
@@ -1013,7 +1038,7 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(LedgerError):
             self.ledger.prepare_primitive("observe-only", "bad-input", intent(), now=1003)
         with self.assertRaises(LedgerError):
-            self.ledger.begin_request({"schema": "mission/9", "kind": "status", "mission_id": "mission-test"}, now=1003)
+            self.ledger.begin_request({"schema": "mission/10", "kind": "status", "mission_id": "mission-test"}, now=1003)
         with self.assertRaises(LedgerError):
             self.ledger.begin_request(skill(mission_id="other", goal={"scope": {"mission_id": "other", "session": "native-session", "coordinate_epoch": 0}, "target": [2, -3, 0]}), now=1003)
         self.ledger.close()

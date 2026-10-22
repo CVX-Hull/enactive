@@ -219,7 +219,8 @@ observations separate from engineering discussion. It does not require a weaker
 model tier or another paid API. It inherits parent permissions; role instructions
 do not create security isolation, and delegation alone cannot remove approvals.
 
-The current designated player uses typed mission requests for semantic skills,
+The current designated player uses typed mission requests for ordinary physical
+input, optional semantic skills,
 memory and registered lifecycle. The passive waypoint planner has no live ingress.
 The lead retains admission, source/game/service custody, escalation and acceptance;
 it supplies no ordinary gameplay rescue during the deciding mission. Historical
@@ -230,7 +231,7 @@ loading checks; no activation claim follows from a policy-file edit.
 ### Constructing player requests
 
 Use `enactive_snapshot` or an explicitly returned next snapshot, choose a source
-and semantic intent, then call the named skill/lifecycle/memory tool with finite
+and physical or semantic intent, then call the named skill/lifecycle/memory tool with finite
 limits and a stable request ID. The adapter uses the
 [pure canonical producer](protocol.md#skill-request-binding-errors) internally;
 software owns serialization, durable staging, submission, bounded collection and
@@ -243,7 +244,22 @@ it does not ask software to interpret another screen. Other supported menus need
 the player's explicit source-bound control interpretation. An eligible mismatch
 returns a zero-input draft refusal with the original phase intact, so the player
 can submit a new corrected request; software neither invents the view nor switches
-adapters automatically. Genuine authority/evidence/budget faults still stop.
+adapters automatically. The player may instead explicitly choose direct physical
+input under the same healthy scope. Keys/scalars allow visual drift without
+retargeting; clicks retain the original image geometry. The original informing
+source, entry observation, actual preflight and ACK after-source remain distinct.
+Semantic shortcuts keep their strict preconditions. Known delivery is separate
+from current input eligibility and any later processing/evidence-loss stop. See
+[ordinary input](protocol.md#ordinary-discovery-and-procedure-data). Genuine
+authority/evidence/global-budget faults still stop.
+
+Explicit Observe can close an exhausted ordinary macro with `macro_closure` before
+the player chooses a new direct root from the fresh owned menu. It renews no
+mission allowance or consent. Old-source/queued children refuse; user Pause and
+unsettled delivery still stop. Current source/help is native6/mission10, while
+actual native6 graphical qualification and read-only Observe after known ACK
+across lease rotation with stale/unavailable current evidence remain pending.
+Historical preapproval/gameplay reports below retain their original scopes.
 
 Choose a whole returned snapshot/source consistently after focus changes. For
 memory/context/navigation scope, use the returned mission `coordinate_scope`

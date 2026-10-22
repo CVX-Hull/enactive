@@ -5,7 +5,7 @@ import unittest
 
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.mission_contracts import (
-    CleanupReserve, Configuration, MissionAdmission, MissionLimits, Scenario, SourceBinding, SourceRevalidation,
+    CleanupReserve, Configuration, InputObservation, MissionAdmission, MissionLimits, Scenario, SourceBinding, SourceRevalidation,
     MAX_REQUEST_BYTES, validate_memory_entry, validate_request, validate_submission, validate_visible_ui,
 )
 
@@ -16,7 +16,7 @@ def admission(**changes):
                   limits=MissionLimits(), cleanup_reserve=CleanupReserve(),
                   allowed_skills=("navigate", "item", "activity", "inspect", "menu", "edit", "interact"),
                   allowed_lifecycle=("launch", "create", "save", "exit", "load", "finish"),
-                  update_policy="facts-procedures-reflection/1",
+                  update_policy="facts-procedures-reflection/2",
                   configuration=Configuration("a" * 40, "b" * 64, "skills-1", "none", "unreported", "unreported"))
     fields.update(changes)
     return MissionAdmission(**fields)
@@ -27,7 +27,7 @@ def scope():
 
 
 def claim(**changes):
-    fields = dict(schema="campaign-memory/4", record_type="Claim", id="claim-1", kind="interpretation",
+    fields = dict(schema="campaign-memory/5", record_type="Claim", id="claim-1", kind="interpretation",
                   key={"subject": "water", "property": "supply", "unit": "charges", "coverage_id": "page-1"},
                   value={"quantity": 18, "state": None}, text="Visible clean water count",
                   scope=scope(), observed_time={"revision": 30, "turn": None}, received_time=100_000,
@@ -38,7 +38,7 @@ def claim(**changes):
 
 
 def request(kind="observe", **changes):
-    fields = dict(schema="mission/9", kind=kind, request_id="request-1", mission_id="mission-test", epoch=0)
+    fields = dict(schema="mission/10", kind=kind, request_id="request-1", mission_id="mission-test", epoch=0)
     if kind == "handoff":
         fields.update(unfinished_work_ids=[])
     if kind == "lifecycle":
@@ -63,6 +63,26 @@ def binding(**changes):
 
 
 class MissionContractTests(unittest.TestCase):
+    def test_input_observation_records_capture_without_claiming_equivalence_or_authority(self):
+        original = binding()
+        current = binding(source_id="fresh-ordinary", store_generation=2)
+        observed = InputObservation(original, current)
+        serialized = observed.to_dict()
+        self.assertEqual(InputObservation.from_dict(serialized), observed)
+        self.assertNotIn("rule", serialized)
+        self.assertFalse(serialized["grants_authority"])
+        for field, value in (("epoch", 1), ("actor_id", "other"), ("mission_id", "other"),
+                             ("controller_boot_id", "boot-2"), ("pause_generation", 5),
+                             ("takeover_generation", 1), ("store_generation", 3), ("source_id", "source-1")):
+            with self.subTest(field=field), self.assertRaises(ContractError):
+                InputObservation(original, replace(current, **{field: value}))
+        for change in ({"rule": "exact_png_bytes"}, {"grants_authority": True},
+                       {"schema": "mission/9"}, {"record_type": "SourceRevalidation"}):
+            with self.subTest(change=change), self.assertRaises(ContractError):
+                InputObservation.from_dict({**serialized, **change})
+        with self.assertRaises(ContractError):
+            SourceRevalidation.from_dict(serialized)
+
     def test_dismissal_requires_its_closed_source_view_and_exact_goal(self):
         valid = skill(skill_kind="menu", goal=dict(purpose="Close visible menu", label="Cancel", outcome="dismissed"),
             perception=dict(kind="dismissal", source_id="source-1", basis="player_interpretation", question="Visible menu"))
@@ -123,10 +143,10 @@ class MissionContractTests(unittest.TestCase):
             with self.assertRaises(ContractError): MissionLimits(wall_seconds=value)
 
     def test_closed_requests_and_scope_binding(self):
-        valid = [request(), {"schema": "mission/9", "kind": "start", "request_id": "start-1", "admission": admission().to_dict()},
-                 {"schema": "mission/9", "kind": "status", "mission_id": "mission-test"},
-                 {"schema": "mission/9", "kind": "result", "mission_id": "mission-test", "operation_id": "old-1"},
-                 {"schema": "mission/9", "kind": "context", "handoff": None, "mission_id": "mission-test", "query": "water", "scope": scope(), "max_bytes": 32768},
+        valid = [request(), {"schema": "mission/10", "kind": "start", "request_id": "start-1", "admission": admission().to_dict()},
+                 {"schema": "mission/10", "kind": "status", "mission_id": "mission-test"},
+                 {"schema": "mission/10", "kind": "result", "mission_id": "mission-test", "operation_id": "old-1"},
+                 {"schema": "mission/10", "kind": "context", "handoff": None, "mission_id": "mission-test", "query": "water", "scope": scope(), "max_bytes": 32768},
                  skill(), request("stop", reason="Pause")]
         for value in valid:
             with self.subTest(kind=value["kind"]): self.assertEqual(validate_request(value), value)
@@ -296,7 +316,7 @@ class MissionContractTests(unittest.TestCase):
         with self.assertRaises(ContractError): validate_request({**value, "entry": claim()})
 
     def test_decisions_require_an_explicit_context_packet_reference(self):
-        decision = dict(schema="campaign-memory/4", record_type="Decision", id="decision-1",
+        decision = dict(schema="campaign-memory/5", record_type="Decision", id="decision-1",
                         packet_id="packet-1", scope=scope(), query="water", memory_version=3,
                         claim_ids=["claim-1"], work_ids=[], source_ids=["source-1"],
                         procedure_refs=[], procedure_sources=[], omitted=0, reason="Check the last observed supply")
@@ -315,8 +335,8 @@ class MissionContractTests(unittest.TestCase):
             with self.assertRaises(ContractError): validate_visible_ui(bad)
 
     def test_duplicate_nonfinite_oversized_and_mutable_alias_inputs_reject(self):
-        for value in ['{"schema":"mission/9","kind":"observe","kind":"stop"}',
-                      '{"schema":"mission/9","kind":"observe","epoch":NaN}',
+        for value in ['{"schema":"mission/10","kind":"observe","kind":"stop"}',
+                      '{"schema":"mission/10","kind":"observe","epoch":NaN}',
                       ' ' * MAX_REQUEST_BYTES + json.dumps(request())]:
             with self.assertRaises(ContractError): validate_request(value)
         original = skill(); parsed = validate_request(original)

@@ -14,10 +14,19 @@ class scope
 {
     public:
         explicit scope( boundary_kind kind );
-        scope( const std::string &name, const std::vector<std::string> &actions );
+        scope( const std::string &name, const std::vector<std::string> &actions, const void *context );
         ~scope();
         scope( const scope & ) = delete;
         scope &operator=( const scope & ) = delete;
+};
+// Attests only a live engine receive under the current actual input context.
+class input_receiver
+{
+    public:
+        input_receiver();
+        ~input_receiver();
+        input_receiver( const input_receiver & ) = delete;
+        input_receiver &operator=( const input_receiver & ) = delete;
 };
 // Marks only the injected pause's native cancellation invocation.
 class interrupt_owner
@@ -36,17 +45,6 @@ class interrupt_query
         ~interrupt_query();
         interrupt_query( const interrupt_query & ) = delete;
         interrupt_query &operator=( const interrupt_query & ) = delete;
-    private:
-        bool active;
-};
-// Marks only pinned menu owners' input waits, preserving their native keymaps.
-class menu_query
-{
-    public:
-        explicit menu_query( const std::string &category );
-        ~menu_query();
-        menu_query( const menu_query & ) = delete;
-        menu_query &operator=( const menu_query & ) = delete;
     private:
         bool active;
 };

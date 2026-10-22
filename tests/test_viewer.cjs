@@ -111,7 +111,7 @@ const missionFixture = {
       "fresh": true
     },
     "memory_context": {
-      "schema": "campaign-memory/4",
+      "schema": "campaign-memory/5",
       "record_type": "Context",
       "packet_id": "packet-ac1dc299c52ffc7544309613bc667c06c4745ecc3f830ee3f9f79f01a5e23134",
       "scope": {
@@ -142,7 +142,7 @@ const missionFixture = {
           },
           "received_time": 1792476831563,
           "record_type": "Claim",
-          "schema": "campaign-memory/4",
+          "schema": "campaign-memory/5",
           "scope": {
             "coordinate_epoch": 0,
             "mission_id": "mission-test",
@@ -237,14 +237,14 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8'), 
 const run = source => vm.runInContext(source, context);
 function render(revision, frame, changes = {}, apply = true) {
   context.input = {connection: 'fresh', age_ms: 0, pause_requested: false, frozen: false,
-    mission: null, latency_ms: 10, goal: '', events: [], state: {protocol: 5, pause_origin: 'none', takeover_generation: 0, ui: null, boundary: {kind: 'normal_play', id: 'b-normal', control_generation: 0, recovery_operations: [], interrupt_request_id: null}, timestamp_ms: Date.now(), session: 'test', revision, frame,
+    mission: null, latency_ms: 10, goal: '', events: [], state: {protocol: 6, pause_origin: 'none', takeover_generation: 0, ui: null, boundary: {kind: 'normal_play', input_receiver: true, id: 'b-normal', control_generation: 0, recovery_operations: [], interrupt_request_id: null}, timestamp_ms: Date.now(), session: 'test', revision, frame,
       frame_ok: true, frame_geometry: {window_width: 800, window_height: 600, output_width: 800, output_height: 600, viewport: [0, 0, 800, 600]}, status: 'ready', actions: [], ...changes}};
   if (changes.frame_ok === false && !Object.hasOwn(changes, 'frame_geometry')) context.input.state.frame_geometry = null;
   if (apply) run('render(input)');
 }
 const tick = () => new Promise(setImmediate);
 function boundary(kind, generation = 1, owner = null) {
-  return {kind, id: `boundary-${kind}-${generation}`, control_generation: generation,
+  return {kind, input_receiver: ['normal_play', 'menu'].includes(kind), id: `boundary-${kind}-${generation}`, control_generation: generation,
     recovery_operations: {activity_poll: ['request_interrupt'], interrupt_confirmation: ['answer_interrupt'],
       debug_prompt: ['continue_debug_once']}[kind] || [], interrupt_request_id: owner};
 }
@@ -312,7 +312,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
     assert.throws(() => run('authority()'), /native control/);
     assert.match(element('category').textContent, new RegExp(kind.replaceAll('_', ' ').toUpperCase()));
   }
-  render(8, 'frame-menu.png', {boundary: {kind: 'menu'}});
+  render(8, 'frame-menu.png', {boundary: boundary('menu')});
   await decode();
   assert.equal(run('authority().expected_revision'), 8);
   // Required geometry and protocol guards reject metadata before requesting a PNG.
@@ -330,18 +330,27 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
     assert.equal(pending.length, pendingCount, 'malformed geometry must not start decode');
     assert.throws(() => run('authority()'), /Wait for/);
     assert.equal(element('resume').disabled, true);
-    assert.match(element('error').textContent, /protocol 5|geometry/i);
+    assert.match(element('error').textContent, /protocol 6|geometry/i);
     assert.equal(element('pause').disabled, false);
   }
-  render(9, 'frame-old.png', {protocol: 4});
-  assert.equal(pending.length, 0, 'native4 has no supported decode path');
-  assert.throws(() => run('authority()'), /Wait for/);
+  for (const protocol of [4, 5, 7, '6']) {
+    render(9, `unsupported-wire-${protocol}.png`, {protocol});
+    assert.equal(pending.length, 0, `native ${protocol} has no supported decode path`);
+    assert.throws(() => run('authority()'), /Wait for/);
+  }
+  for (const input_receiver of [false, undefined, null, 1, 'true']) {
+    render(9, `not-a-receiver-${input_receiver}.png`, {boundary: {...boundary('menu'), input_receiver}});
+    await decode();
+    assert.throws(() => run('authority()'), /native control/);
+    assert.equal(element('resume').disabled, true);
+    assert.equal(element('pause').disabled, false);
+  }
   render(9, 'no-frame-with-geometry.png', {frame_ok: false, frame_geometry: geometry});
   assert.throws(() => run('authority()'), /Wait for/);
   render(9, 'valid-after-bad.png');
   await decode();
   assert.equal(run('authority().expected_revision'), 9);
-  assert.doesNotMatch(element('error').textContent, /protocol 5|geometry/i);
+  assert.doesNotMatch(element('error').textContent, /protocol 6|geometry/i);
   render(9, 'mismatched-dimensions.png', {frame_geometry: {...geometry, output_width: 801}});
   await decode();
   assert.throws(() => run('authority()'), /Wait for/);
@@ -511,7 +520,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.match(element('recovery-evidence').textContent, /restored-control/);
   assert.match(element('recovery-result').textContent, /Delivery unknown/);
   assert.equal(element('recovery-debug').disabled, true);
-  // Mission observation uses the current mission/9 contract, with no admission controls.
+  // Mission observation uses the current mission/10 contract, with no admission controls.
   run('recoveryNeedsObserve = false');
   render(30, 'mission-current.png');
   context.input.mission = structuredClone(missionFixture);
@@ -680,7 +689,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.ok(sendButtons.every(button => button.disabled));
   context.input.connection = 'disconnected';
 
-  const normalExit = {schema: 'mission/9', record_type: 'OwnedNormalExit',
+  const normalExit = {schema: 'mission/10', record_type: 'OwnedNormalExit',
     origin_request_id: 'exit-root', launch_request_id: 'launch-root', launch_id: 'launch-test',
     terminal_logical_id: 'exit-logical', native_request_id: 'exit-native', source_ids: ['exit-checkpoint'],
     no_save_required: true, returncode: 0, grants_authority: false,
@@ -700,7 +709,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
     normal_exit: {...normalExit, no_save_required: false, saved_checkpoint_request_id: 'saved-checkpoint'}};
   run('render(input)');
   assert.match(element('mission-exit').textContent, /saved checkpoint saved-checkpoint/);
-  const finish = {schema: 'mission/9', record_type: 'NormalFinish', final_source_id: 'final-checkpoint',
+  const finish = {schema: 'mission/10', record_type: 'NormalFinish', final_source_id: 'final-checkpoint',
     normal_exit_result_request_id: 'exit-result', completed_work_event_id: 'objective-event',
     disposition: 'completed', grants_authority: false};
   mission.progress = {normal_finish: finish};
@@ -796,7 +805,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   const observeMission = request('/api/mission', 'observe');
   const payload = JSON.parse(observeMission.options.body);
   assert.deepEqual(Object.keys(payload).sort(), ['schema', 'kind', 'request_id', 'mission_id', 'epoch'].sort());
-  assert.equal(payload.schema, 'mission/9');
+  assert.equal(payload.schema, 'mission/10');
   assert.equal(payload.mission_id, 'mission-test');
   assert.equal(payload.epoch, 7);
   assert.match(payload.request_id, /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
@@ -1008,5 +1017,5 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
     assert.ok(html.includes(`<dd id="${id}">`), `${id} must exist in the mission facts`);
   }
   assert.doesNotMatch(html + app, /api\/gameplay|task-form|task-start|task-continue|task-abandon|goal-form|mission_lease|renderGameplay/);
-  console.log('Viewer regressions passed: native5 geometry and decoded authority/freshness; mission9 observation and memory4 history; terminal snapshot versus historical uncertainty; reconnect without replay; bounded monotonic status/decode/presentation timing; independent Pause and ordinary recovery; no implicit input, Resume or retry.');
+  console.log('Viewer regressions passed: native6 geometry and decoded authority/freshness; mission10 observation and memory5 history; terminal snapshot versus historical uncertainty; reconnect without replay; bounded monotonic status/decode/presentation timing; independent Pause and ordinary recovery; no implicit input, Resume or retry.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -18,9 +18,10 @@ from typing import Any
 
 from .contracts import ContractError, json_object
 from .contracts import canonical
-from .mission_contracts import VERSION, MissionAdmission, SourceRevalidation, validate_handoff_binding, effect_reconciliation, validate_effect_reconciliation, validate_delivery_resolution, validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption, validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission
+from .native_receipts import validate_ordinary_mapping
+from .mission_contracts import VERSION, MissionAdmission, InputObservation, SourceRevalidation, validate_handoff_binding, effect_reconciliation, validate_effect_reconciliation, validate_delivery_resolution, validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption, validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission
 
-DB_VERSION = 11
+DB_VERSION = 12
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
 MAX_RECEIPT_BYTES = 65_536
 MAX_EFFECT_BYTES = 32_768
@@ -84,14 +85,20 @@ def _json(value: dict, maximum=65_536) -> str:
 def _intent(value: dict | str) -> dict:
     data = json_object(value)
     expected = {"kind", "value", "expected_session", "expected_revision", "expected_boundary_id",
-                "source_before", "preflight_source", "revalidation", "reservation_id"}
+                "source_before", "preflight_source", "revalidation", "input_observation", "reservation_id"}
     if set(data) != expected or data["kind"] not in ("action", "key", "direct", "resume", "request_interrupt", "answer_interrupt"):
         raise LedgerError("Primitive intent fields do not match")
     for key in ("expected_session", "expected_boundary_id", "source_before", "preflight_source", "reservation_id"): _id(data[key])
     if data["revalidation"] is not None:
+        if data["kind"] == "direct" or data["input_observation"] is not None:
+            raise LedgerError("Ordinary observation cannot be semantic equivalence")
         refreshed = SourceRevalidation.from_dict(data["revalidation"])
         if refreshed.current.source_id != data["source_before"]:
             raise LedgerError("Revalidation current source differs from the proposal before-source")
+    if data["input_observation"] is not None:
+        observed = InputObservation.from_dict(data["input_observation"])
+        if data["kind"] != "direct" or observed.current.source_id != data["source_before"]:
+            raise LedgerError("Ordinary entry must name its exact direct before-source")
     if type(data["expected_revision"]) is not int or data["expected_revision"] < 0:
         raise LedgerError("Primitive requires exact observed revision")
     if data["kind"] in ("resume", "request_interrupt"):
@@ -119,6 +126,8 @@ def _primitive_parent(intent: dict, request: dict) -> None:
     kind = intent["kind"]
     if kind == "direct" and (request["kind"] != "skill" or request["skill_kind"] != "direct"):
         raise LedgerError("Direct input requires its exact ordinary skill parent")
+    if request["kind"] == "skill" and request["skill_kind"] == "direct" and kind != "direct":
+        raise LedgerError("An ordinary request cannot dispatch a semantic shortcut")
     if kind in ("request_interrupt", "answer_interrupt"):
         step = "interrupt" if kind == "request_interrupt" else "answer_interrupt"
         if not activity or request["goal"]["step"] != step or not request["goal"]["interrupt_allowed"]:
@@ -135,6 +144,26 @@ def _primitive_parent(intent: dict, request: dict) -> None:
             raise LedgerError("Activity recovery cannot dispatch an ordinary action/key")
     if request["kind"] == "readmit" and kind != "resume":
         raise LedgerError("Readmission permits only its charged Resume")
+
+
+def _ordinary_sequence(intent: dict, request: dict, position: int, previous: str | None) -> None:
+    """Audit exact physical selection and one entry record per direct request."""
+    if intent["kind"] != "direct":
+        return
+    if (intent["input_observation"] is not None) != (position == 0):
+        raise LedgerError("Only the first ordinary primitive must record its entry observation")
+    if position and previous != "returned":
+        raise LedgerError("An ordinary batch cannot continue after refused or uncertain delivery")
+    selected = request["goal"]["input"]
+    if selected["type"] == "text":
+        if position >= len(selected["text"]):
+            raise LedgerError("Ordinary text exceeded its selected scalar sequence")
+        selected = {"type": "text", "text": selected["text"][position]}
+    elif position:
+        raise LedgerError("A single physical event cannot be repeated under the same request")
+    if (intent["value"] != selected or intent["expected_session"] != request["expected_session"]
+            or intent["expected_revision"] < request["expected_revision"]):
+        raise LedgerError("Ordinary primitive retargeted its immutable physical event/session")
 
 
 def _control_mapping(intent: dict, result: dict, *, logical_id: str, native_id: str | None, disposition: str) -> None:
@@ -170,6 +199,13 @@ def _control_mapping(intent: dict, result: dict, *, logical_id: str, native_id: 
             raise LedgerError("Returned control lost its paused native state")
         if ack["status"] == "prompt_opened" and native.get("boundary", {}).get("interrupt_request_id") != native_id:
             raise LedgerError("Interrupt ACK lost its exact returned owner")
+
+
+def _ordinary_mapping(intent: dict, result: dict, *, logical_id: str, native_id: str | None, disposition: str) -> None:
+    try:
+        validate_ordinary_mapping(intent, result, logical_id=logical_id, native_id=native_id, disposition=disposition)
+    except ContractError as exc:
+        raise LedgerError(str(exc)) from exc
 
 
 def _effect(value: dict | str) -> dict:
@@ -387,8 +423,10 @@ class MissionLedger:
                     or rows[-1]["result"].get("normal_finish", {}).get("disposition") != "completed"):
                 raise LedgerError("Completed mission lost its final immutable NormalFinish report")
         count = 0
+        primitive_counts = {}
+        primitive_dispositions = {}
         for logical_id, request_id, intent, native_id, status, result, effect in self._db.execute(
-                "SELECT id,request_id,intent,native_id,state,result,effect FROM primitives"):
+                "SELECT id,request_id,intent,native_id,state,result,effect FROM primitives ORDER BY rowid"):
             _id(logical_id)
             if native_id is not None: _id(native_id)
             if status not in PRIMITIVE_STATES: raise LedgerError("Corrupt primitive state")
@@ -396,8 +434,12 @@ class MissionLedger:
             if intent != _json(data): raise LedgerError("Noncanonical primitive intent")
             parent = self.request(request_id)
             _primitive_parent(data, parent["request"])
+            position = primitive_counts.get(request_id, 0)
+            _ordinary_sequence(data, parent["request"], position, primitive_dispositions.get(request_id))
+            primitive_counts[request_id] = position + 1
+            primitive_dispositions[request_id] = status
             actor = next(player for epoch, player in reversed(actors) if epoch <= parent["epoch"])
-            self._check_revalidation(data, parent["epoch"], stored.mission_id,
+            self._check_source_transition(data, parent["epoch"], stored.mission_id,
                                      informing_sources=parent["request"]["sources"], actor_id=actor)
             if status == "prepared" and native_id is not None or status == "published" and native_id is None:
                 raise LedgerError("Corrupt publication identity")
@@ -405,6 +447,7 @@ class MissionLedger:
                 if result != _json(json_object(result)) or status in ("prepared", "published"):
                     raise LedgerError("Corrupt primitive receipt")
                 _control_mapping(data, json_object(result), logical_id=logical_id, native_id=native_id, disposition=status)
+                _ordinary_mapping(data, json_object(result), logical_id=logical_id, native_id=native_id, disposition=status)
             elif status not in ("prepared", "published", "unknown"):
                 raise LedgerError("Terminal primitive lost its receipt")
             if effect is not None and (status != "unknown" or effect != _json(_effect(effect))):
@@ -862,6 +905,8 @@ class MissionLedger:
             if now >= request["deadline"]:
                 raise BudgetError("Original operation deadline expired")
             count = self._db.execute("SELECT count(*) FROM primitives WHERE request_id=?", (request_id,)).fetchone()[0]
+            prior = self._db.execute("SELECT state FROM primitives WHERE request_id=? ORDER BY rowid DESC LIMIT 1", (request_id,)).fetchone()
+            _ordinary_sequence(data, request["request"], count, None if prior is None else prior[0])
             if count >= request["request"]["limits"]["primitives"]:
                 raise BudgetError("Per-operation primitive limit exhausted")
             if request["epoch"] != state["epoch"] or request["state"] not in ("accepted", "running"):
@@ -872,7 +917,7 @@ class MissionLedger:
                 if now >= root["deadline"]: raise BudgetError("Original phase deadline expired")
                 if self._phase_primitive_count(root["request"]["request_id"]) >= root["request"]["limits"]["primitives"]:
                     raise BudgetError("Phase primitive limit exhausted")
-            self._check_revalidation(data, request["epoch"], self.admission.mission_id,
+            self._check_source_transition(data, request["epoch"], self.admission.mission_id,
                                      informing_sources=request["request"]["sources"], actor_id=state["player_id"])
             reserve = 0 if cleanup else self.admission.cleanup_reserve.inputs
             if state["spent_inputs"] >= self.admission.limits.inputs - reserve:
@@ -890,15 +935,17 @@ class MissionLedger:
         return {"created": True, "primitive": self.primitive(logical_id)}
 
     @staticmethod
-    def _check_revalidation(intent: dict, epoch: int, mission_id: str, *, informing_sources: list[str],
-                            actor_id: str | None = None) -> None:
-        if intent["revalidation"] is not None:
-            refreshed = SourceRevalidation.from_dict(intent["revalidation"])
+    def _check_source_transition(intent: dict, epoch: int, mission_id: str, *, informing_sources: list[str],
+                                 actor_id: str | None = None) -> None:
+        for key, record in (("revalidation", SourceRevalidation), ("input_observation", InputObservation)):
+            if intent[key] is None:
+                continue
+            refreshed = record.from_dict(intent[key])
             current = refreshed.current
             if current.epoch != epoch or current.mission_id != mission_id or (actor_id is not None and current.actor_id != actor_id):
-                raise LedgerError("Revalidation belongs to another mission/epoch/actor")
+                raise LedgerError("Observation transition belongs to another mission/epoch/actor")
             if refreshed.original.source_id not in informing_sources:
-                raise LedgerError("Revalidation original source did not inform the immutable request")
+                raise LedgerError("Observation transition original source did not inform the immutable request")
 
     def primitive(self, logical_id: str) -> dict:
         _id(logical_id)
@@ -940,16 +987,19 @@ class MissionLedger:
             if p["state"] not in ("prepared", "published"):
                 if p["state"] == disposition and p["result"] == json_object(encoded): return p
                 raise LedgerError("Terminal receipt cannot be rewritten")
-            if (p["intent"]["kind"] in ("request_interrupt", "answer_interrupt") and p["native_id"] is None
+            if (p["native_id"] is None
+                    and (p["intent"]["kind"] in ("request_interrupt", "answer_interrupt") or disposition in ("returned", "rejected"))
                     and result.get("published") is True and result.get("native_request_id") is not None):
                 # A prior publication bookkeeping transaction may have failed
                 # after a real ACK. Bind and settle atomically; never resend.
                 native_id = result["native_request_id"]
                 _id(native_id)
                 _control_mapping(p["intent"], result, logical_id=logical_id, native_id=native_id, disposition=disposition)
+                _ordinary_mapping(p["intent"], result, logical_id=logical_id, native_id=native_id, disposition=disposition)
                 self._db.execute("UPDATE primitives SET native_id=? WHERE id=?", (native_id, logical_id))
                 p["native_id"] = native_id
             _control_mapping(p["intent"], result, logical_id=logical_id, native_id=p["native_id"], disposition=disposition)
+            _ordinary_mapping(p["intent"], result, logical_id=logical_id, native_id=p["native_id"], disposition=disposition)
             self._release(f"receipt:{logical_id}")
             if disposition != "unknown":
                 self._release(f"effect:{logical_id}")
@@ -1036,7 +1086,7 @@ class MissionLedger:
         resolution = self.request(proof["reconciliation_request_id"])
         root = self.request(proof["root_id"])
         native = json_object(proof["native_request_json"])
-        if type(native.get("authority")) is not dict or type(native.get("protocol")) is not int or native["protocol"] != 5:
+        if type(native.get("authority")) is not dict or type(native.get("protocol")) is not int or native["protocol"] != 6:
             raise LedgerError("Delivery proof lacks its original native authority envelope")
         receipt = p["result"] or {}
         binding = receipt.get("dispatch_binding") or {}
@@ -1477,7 +1527,7 @@ class MissionLedger:
                 or any(receipt.get(key) != intent[key] for key in ("kind", "value", "expected_session",
                     "expected_revision", "expected_boundary_id", "source_before", "preflight_source"))
                 or not receipt.get("source_after") or receipt.get("received_monotonic") is None
-                or native.get("protocol") != 5 or native.get("kind") != "resume"
+                or native.get("protocol") != 6 or native.get("kind") != "resume"
                 or native.get("id") != primitive["native_id"] or native.get("require_exact_frame") is not True
                 or native.get("session") != intent["expected_session"]
                 or native.get("revision") != intent["expected_revision"]

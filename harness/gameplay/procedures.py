@@ -14,7 +14,7 @@ from .contracts import (
 )
 from .contracts import canonical
 
-VERSION = "procedure/1"
+VERSION = "procedure/2"
 MAX_PROCEDURE_BYTES = 32_768
 MAX_PROCEDURE_RECORDS = 256
 
@@ -44,8 +44,8 @@ _SCHEMA = _object({
     "environment": _object({
         "engine_commit": {"type": "string", "minLength": 40, "maxLength": 40,
                           "pattern": "^[a-f0-9]{40}$"},
-        "native_protocol": {"type": "integer", "const": 5},
-        "mission_schema": {"const": "mission/9"}, "configuration": _TEXT,
+        "native_protocol": {"type": "integer", "const": 6},
+        "mission_schema": {"const": "mission/10"}, "configuration": _TEXT,
     }),
     "support": _array(_EPISODE, 8, 1), "counterexamples": _array(_EPISODE, 8),
     "status": _enum("candidate", "active", "disputed", "retired"), "reason": _TEXT,
@@ -53,7 +53,7 @@ _SCHEMA = _object({
 
 
 def procedure_schema() -> dict[str, Any]:
-    """Return a defensive copy of the closed procedure/1 record schema."""
+    """Return a defensive copy of the closed procedure/2 record schema."""
     return json_object(_SCHEMA)
 
 

@@ -16,6 +16,7 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+class input_refusal : public std::runtime_error { using std::runtime_error::runtime_error; };
 namespace fs = std::filesystem;
 long long clock_ms = 1000;
 long long now_ms() { return clock_ms; }
@@ -131,12 +132,20 @@ int main( int argc, char **argv )
             require( publish( "", "ready" ) && frame_name != first && frame_name != second );
         } else if( scenario == "failed-capture" ) {
             encode_ok = false;
-            require( !publish( "", "ready" ) && !saved_frame_ok && rejected( request ) );
+            bool hard = false;
+            try { publish( "", "ready" ); }
+            catch( const input_refusal & ) { throw; }
+            catch( const std::runtime_error & ) { hard = true; }
+            require( hard && !saved_frame_ok && rejected( request ) );
             encode_ok = true;
             require( publish( "", "ready" ) && frame_name != first );
         } else if( scenario == "missing-file" ) {
             fs::remove( first );
-            require( publish( "", "ready" ) && frame_name != first && rejected( request ) );
+            bool hard = false;
+            try { publish( "", "ready" ); }
+            catch( const input_refusal & ) { throw; }
+            catch( const std::runtime_error & ) { hard = true; }
+            require( hard );
         } else if( scenario == "authority" || scenario == "deadline" || scenario == "source-age" ) {
             require( publish( "", "ready" ) && frame_name == first );
             auto altered = request;

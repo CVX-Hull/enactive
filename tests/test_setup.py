@@ -159,7 +159,7 @@ class SetupTests(unittest.TestCase):
         return subprocess.run([sys.executable, str(repository / "tools/patch_game.py"), str(source)],
                               text=True, capture_output=True, check=False)
 
-    def test_native_v5_patch_is_repeatable_and_scopes_exact_input_paths(self):
+    def test_native_v6_patch_is_repeatable_and_scopes_exact_input_paths(self):
         repository, source = self.patch_fixture()
         first = self.run_patch(repository, source)
         self.assertEqual(first.returncode, 0, first.stderr)
@@ -176,36 +176,11 @@ class SetupTests(unittest.TestCase):
         self.assertIn('#include "cdda_harness.h"', imgui)
         self.assertEqual(imgui.count('if( cdda_harness::enabled() ) { io.ConfigInputTextCursorBlink = false; }'), 1)
         self.assertLess(imgui.index('ImGuiIO &io = ImGui::GetIO();'), imgui.index('io.ConfigInputTextCursorBlink = false;'))
-        self.assertIn("harness_input( category, registered_actions )", (source / "src/input_context.cpp").read_text())
+        self.assertIn("harness_input( category, registered_actions, this )", (source / "src/input_context.cpp").read_text())
         self.assertIn("harness_player( uquit == QUIT_WATCH", (source / "src/handle_action.cpp").read_text())
-        direction = (source / "src/action.cpp").read_text()
-        self.assertIn('input_context ctxt( "DEFAULTMODE", keyboard_mode::keycode );', direction)
-        self.assertEqual(direction.count('menu_query harness_menu( "DEFAULTMODE" )'), 1)
-        self.assertIn('return ctxt.handle_input();\n        }();\n'
-                      '        if( std::optional<tripoint_rel_ms> vec', direction)
-        for name, callback in (("ui_iteminfo.cpp", 'data.handle_scrolling && data.arrow_scrolling && action == "UP"'),
-                               ("game_inventory.cpp", 'action == "UP"')):
-            with self.subTest(owner=name):
-                text = (source / "src" / name).read_text()
-                self.assertIn('#include "cdda_harness.h"', text)
-                self.assertEqual(text.count('menu_query harness_menu( "default" )'), 1)
-                self.assertIn('return ctxt.handle_input();\n        }();\n\n'
-                              f'        if( {callback} )', text)
-                self.assertIn('void unrelated() { std::string action = ctxt.handle_input(); }', text)
-        self.assertIn('has_button_action() ? get_button_action() : [&]() {',
-                      (source / "src/game_inventory.cpp").read_text())
-        item_info = (source / "src/output.cpp").read_text()
-        self.assertIn('input_context ctxt( "default", keyboard_mode::keychar );', item_info)
-        self.assertEqual(item_info.count('menu_query harness_menu( "default" )'), 1)
-        self.assertIn('return ctxt.handle_input();\n        }();\n'
-                      '        std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );', item_info)
-        self.assertIn('void unrelated() { action = ctxt.handle_input(); }', item_info)
-        body = (source / "src/bodygraph.cpp").read_text()
-        self.assertIn('#include "cdda_harness.h"', body)
-        self.assertEqual(body.count('menu_query harness_menu( "BODYGRAPH" )'), 1)
-        self.assertIn('return ctxt.handle_input();\n        }();\n'
-                      '        if( action == "QUIT" || ( action == "LEFT" && id != bodygraph_full_body ) ) {', body)
-        self.assertIn('void unrelated() { std::string action = ctxt.handle_input(); }', body)
+        for name in ("action.cpp", "bodygraph.cpp", "ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp"):
+            self.assertEqual((source / "src" / name).read_bytes(),
+                             (source / ".harness-originals/src" / name).read_bytes())
         self.assertIn("boundary_kind::activity_poll", (source / "src/do_turn.cpp").read_text())
         self.assertIn("boundary_kind::debug_prompt", (source / "src/debug.cpp").read_text())
         activity = (source / "src/do_turn.cpp").read_text()
@@ -213,16 +188,17 @@ class SetupTests(unittest.TestCase):
         self.assertIn("cdda_harness::interrupt_owner harness_interrupt;", activity)
         self.assertEqual((source / "src/game.cpp").read_text().count("interrupt_query harness_query"), 2)
         distraction = (source / "src/game.cpp").read_text()
-        self.assertEqual(distraction.count('menu_query harness_menu( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )'), 1)
-        self.assertIn('const std::string action = [&]() {\n'
-                      '        cdda_harness::menu_query harness_menu( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" );\n'
-                      '        return query_popup()', distraction)
-        self.assertIn('.action;\n    }();\n    if( action == "YES" )', distraction)
+        self.assertNotIn('menu_query', distraction)
         for action in ("YES", "NO", "MANAGER", "IGNORE"):
             self.assertEqual(distraction.count(f'.option( "{action}", allow_key )'), 1)
         self.assertIn('void unrelated() { query_popup().context( "OTHER_QUERY" ).query(); }', distraction)
         sdl = (source / "src/sdltiles.cpp").read_text()
         self.assertEqual(sdl.count("cdda_harness::poll("), 3)
+        self.assertEqual(sdl.count("cdda_harness::input_receiver harness_receiver;"), 1)
+        receive = sdl[sdl.index('input_event input_manager::get_input_event('):sdl.index('bool gamepad_available()')]
+        self.assertLess(receive.index('input_receiver harness_receiver;'), receive.index('cdda_harness::boundary();'))
+        self.assertIn('harness_input( category, registered_actions, this )',
+                      (source / 'src/input_context.cpp').read_text())
         self.assertLess(sdl.index("cdda_harness::capture_frame();"), sdl.index("SDL_RenderPresent("))
         self.assertIn("frame_presented( static_cast<bool>( harness_presented_frame ) )", sdl)
         encoder = sdl[sdl.index('bool cdda_harness::write_frame('):sdl.index('void cdda_harness::feed_imgui(')]
@@ -232,7 +208,7 @@ class SetupTests(unittest.TestCase):
 
     def test_native_direct_schema_translation_and_commit_guards(self):
         native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
-        self.assertIn('integer_member( request, "protocol" ) != 5', native)
+        self.assertIn('integer_member( request, "protocol" ) != 6', native)
         self.assertNotIn('integer_member( request, "protocol" ) != 4', native)
         direct = native[native.index('direct_input direct_event('):native.index('bool uuid_id(')]
         for guard in ('input.size() != 3', 'input.size() != 2', 'input.size() != 5',
@@ -247,7 +223,7 @@ class SetupTests(unittest.TestCase):
         poll = native[native.index('bool poll( keyboard_mode'):]
         self.assertLess(poll.index('direct = direct_event('), poll.index('ordinary_commit_gate( request, false );'))
         self.assertLess(poll.index('ordinary_commit_gate( request, false );'), poll.index('feed_direct_imgui( *direct );'))
-        self.assertIn('kind == "direct" && !request.get_bool( "require_exact_frame" )', poll)
+        self.assertIn('kind == "direct" && request.get_bool( "require_exact_frame" )', poll)
         gate = native[native.index('void ordinary_commit_gate('):native.index('input_event action_event(')]
         self.assertIn('current_frame_geometry() != saved_geometry', gate)
         self.assertIn('cached_frame_geometry() != saved_geometry', gate)
@@ -289,9 +265,9 @@ class SetupTests(unittest.TestCase):
                       (source / "src/uilist.cpp").read_text())
         native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
         poll = native[native.index('bool poll( keyboard_mode'):]
-        self.assertLess(poll.index('direct_committed = true;'), poll.index('feed_direct_imgui( *direct );'))
-        fault = poll[poll.index('if( direct_committed )'):poll.index('publish( id, "rejected", e.what() );')]
-        for guard in ('paused = true', 'pause_origin = "fault"', 'pause_file();',
+        self.assertLess(poll.index('input_committed = true;'), poll.index('feed_direct_imgui( *direct );'))
+        fault = poll[poll.index('if( input_committed )'):poll.index('publish( id, "rejected", e.what() );')]
+        for guard in ('fault_pause();',
                       'publish( id, "dispatched", e.what(), false )', 'return false;'):
             self.assertIn(guard, fault)
 
@@ -382,10 +358,10 @@ class SetupTests(unittest.TestCase):
         manager = (source / "src/ui_manager.cpp").read_text()
         self.assertIn('cdda_harness::ui_redraw( ui.is_on_top );\n                        ui.redraw_cb( ui );', manager)
 
-    def test_native_v5_commit_and_presented_ui_guards(self):
+    def test_native_v6_commit_and_presented_ui_guards(self):
         # Source-lane checks establish executable guard placement, not C++ execution.
         native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
-        self.assertIn('out.member( "protocol", 5 )', native)
+        self.assertIn('out.member( "protocol", 6 )', native)
         self.assertNotIn(r'\"protocol\":3', native)
         self.assertIn('out.member( "pause_origin", pause_origin )', native)
         self.assertIn('out.member( "takeover_generation", takeover_generation )', native)
@@ -440,7 +416,7 @@ class SetupTests(unittest.TestCase):
         self.assertLess(temporary.index('if( descriptor < 0 )'), temporary.index('write_frame( latest )'))
         for guard in ('fstat( descriptor, &owned ) == 0', 'current.st_dev == owned.st_dev',
                       'current.st_ino == owned.st_ino', 'unlink( latest.c_str() ) == 0',
-                      'close( descriptor ) == 0', 'if( !removed )', 'if( !same || !closed )'):
+                      'close( descriptor ) == 0', 'if( !removed || !closed )', 'if( !same )'):
             self.assertIn(guard, temporary)
         self.assertNotIn('unlink( saved', temporary)
         for forbidden in ('capture_frame(', 'refresh_display(', 'ui_manager::redraw(', 'sync_scope('):
@@ -507,50 +483,8 @@ class SetupTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn(f"Upstream source differs from pinned release: {name}", result.stderr)
 
-    def test_patch_rejects_missing_and_ambiguous_item_owner_anchors(self):
-        for name in ("src/ui_iteminfo.cpp", "src/game_inventory.cpp", "src/output.cpp", "src/bodygraph.cpp"):
-            for change in ("missing", "duplicate"):
-                with self.subTest(owner=name, change=change), tempfile.TemporaryDirectory() as temporary:
-                    self.root = Path(temporary)
-                    repository, source = self.patch_fixture()
-                    path = source / name
-                    original = path.read_text()
-                    altered = (original.replace("ctxt.handle_input()", "ctxt.handle_input( 5 )")
-                               if change == "missing" else original * 2)
-                    path.write_text(altered)
-                    pin_path = repository / "native/upstream.json"
-                    pin = json.loads(pin_path.read_text())
-                    pin["source_files"][name] = hashlib.sha256(altered.encode()).hexdigest()
-                    pin_path.write_text(json.dumps(pin))
-                    result = self.run_patch(repository, source)
-                    self.assertNotEqual(result.returncode, 0)
-                    self.assertIn(f"Pinned source anchor changed: {path.resolve()}", result.stderr)
-
-    def test_patch_rejects_missing_or_duplicate_distraction_wait_anchors(self):
-        for anchor in ('CANCEL_ACTIVITY_OR_IGNORE_QUERY', '.option( "IGNORE", allow_key )'):
-            for change in ("missing", "duplicate"):
-                with self.subTest(anchor=anchor, change=change), tempfile.TemporaryDirectory() as temporary:
-                    previous = self.root
-                    self.root = Path(temporary)
-                    try:
-                        repository, source = self.patch_fixture()
-                        path = source / "src/game.cpp"
-                        original = path.read_text()
-                        altered = original.replace(anchor, "CHANGED") if change == "missing" else original * 2
-                        path.write_text(altered)
-                        pin_path = repository / "native/upstream.json"
-                        pin = json.loads(pin_path.read_text())
-                        pin["source_files"]["src/game.cpp"] = hashlib.sha256(altered.encode()).hexdigest()
-                        pin_path.write_text(json.dumps(pin))
-                        result = self.run_patch(repository, source)
-                        self.assertNotEqual(result.returncode, 0)
-                        self.assertIn(f"Pinned source anchor changed: {path.resolve()}", result.stderr)
-                    finally:
-                        self.root = previous
-
     def test_patch_rejects_ambiguous_normal_and_poll_anchors(self):
         for flags, message in (({"duplicate_normal": True}, "Pinned source anchor changed"),
-                               ({"duplicate_direction": True}, "Pinned source anchor changed"),
                                ({"extra_poll": True}, "SDL poll anchors changed")):
             with self.subTest(flags=flags), tempfile.TemporaryDirectory() as temporary:
                 previous = self.root

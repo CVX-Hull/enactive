@@ -49,7 +49,7 @@ class MissionLaunchTests(unittest.TestCase):
     def settled(self, identity):
         deadline = time.monotonic() + 3
         while time.monotonic() < deadline:
-            response = self.runtime.command(dict(schema="mission/9", kind="result",
+            response = self.runtime.command(dict(schema="mission/10", kind="result",
                 mission_id=self.a.mission_id, operation_id=identity))
             operation = response.get("operation")
             if operation is not None and operation["result"] is not None:
@@ -58,13 +58,13 @@ class MissionLaunchTests(unittest.TestCase):
         self.fail(f"Unsettled {identity}: {self.runtime.status()}")
 
     def start(self):
-        response = self.runtime.command(dict(schema="mission/9", kind="start", request_id="start",
+        response = self.runtime.command(dict(schema="mission/10", kind="start", request_id="start",
             admission=self.a.to_dict()))
         self.assertEqual(response["status"], "accepted", response)
         return self.settled("start")
 
     def request(self, identity="launch", **changes):
-        data = dict(schema="mission/9", kind="lifecycle", request_id=identity,
+        data = dict(schema="mission/10", kind="lifecycle", request_id=identity,
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], operation="launch",
             world=self.a.scenario.world, character=self.a.scenario.character,
             sources=[], expected_session=None, expected_revision=None, expected_boundary_id=None,
@@ -249,7 +249,7 @@ class MissionLaunchTests(unittest.TestCase):
         self.launch()
         other = replace(self.a, mission_id="other-mission", configuration=replace(self.a.configuration,
             native_sha256="c" * 64))
-        response = self.runtime.command(dict(schema="mission/9", kind="start", request_id="other-start",
+        response = self.runtime.command(dict(schema="mission/10", kind="start", request_id="other-start",
                                              admission=other.to_dict()))
         self.assertEqual(response["status"], "rejected", response)
         self.assertIn("settle owned process custody", response["reason"])

@@ -74,9 +74,9 @@ def tool_specs() -> tuple[ToolSpec, ...]:
         ToolSpec("enactive_snapshot", "Read current status and its exact retained image. Returns a new snapshot handle; never Observe or Resume.", _object({}), True),
         ToolSpec("enactive_source", "Read one explicitly selected historical source and its actual image; grants no input authority.", _object(dict(mission_id=identity, source_id=identity)), True),
         ToolSpec("enactive_result", "Collect only the original operation ID, including after interrupted submission. Never replays input.", _object(dict(mission_id=identity, operation_id=identity, wait_seconds=wait)), True),
-        ToolSpec("enactive_skill", "Choose a semantic skill using an explicit returned snapshot/source and finite limits. Software derives wire bindings and collects its result.", skill),
+        ToolSpec("enactive_skill", "Choose ordinary physical input (skill_kind=direct) or a semantic skill with an explicit returned snapshot/source and finite limits. Direct keys/scalars permit visual drift under owned custody; clicks keep original geometry. Semantic preconditions remain strict. Software retains lineage and collects delivery and actual current evidence separately.", skill),
         ToolSpec("enactive_lifecycle", "Explicit registered launch/create/save/exit/load/finish. No implicit Resume, save or restart.", lifecycle),
-        ToolSpec("enactive_observe", "Request one typed native observation using the chosen snapshot epoch. Does not Resume or reconcile an unknown input automatically.", _object(common)),
+        ToolSpec("enactive_observe", "Request one typed native observation using the chosen snapshot epoch. A healthy ordinary prompt may advance or record local macro_closure without task success or renewed mission allowance; explicitly choose any next root from fresh evidence. Does not Resume or reconcile unknown delivery. Known-ACK stale-current Observe across lease rotation remains unsupported.", _object(common)),
     ]
     # These operations keep their existing explicit semantic fields. Software
     # derives only the common envelope; memory provenance remains player-authored.
@@ -260,7 +260,7 @@ class PlayerTools:
             if offered["status"] == "claimed":
                 claim = self.client.reflection_collect(mission_id, reflector_id, identity, wait_seconds=wait)
             else:
-                command = validate_command(dict(schema="reflection/1", kind="claim", command_id=identity,
+                command = validate_command(dict(schema="reflection/2", kind="claim", command_id=identity,
                     mission_id=mission_id, reflector_id=reflector_id, job_id=job["id"]))
                 claim = self.client.reflection_command(command, wait_seconds=wait)
             if claim["status"] != "committed":
@@ -292,12 +292,12 @@ class PlayerTools:
             # Deliberately bypass source(), which populates player presentation
             # handles used by active-input and fresh-context handoff contracts.
             return self.client.reflection_source(mission_id, reflector_id, job["id"], data["source_id"])
-        proposal = validate_proposal(dict(schema="reflection/1", record_type="ReflectionProposal",
+        proposal = validate_proposal(dict(schema="reflection/2", record_type="ReflectionProposal",
             id="proposal-" + hashlib.sha256(data["request_id"].encode()).hexdigest(),
             job_id=job["id"], mission_id=job["mission_id"], reflector_id=job["reflector_id"],
             epoch=job["epoch"], cutoff_sequence=job["through_sequence"], memory_version=job["memory_version"],
             **{field: data[field] for field in ("candidates", "notes", "reason")}), job)
-        command = validate_command(dict(schema="reflection/1", kind="submit", command_id=data["request_id"],
+        command = validate_command(dict(schema="reflection/2", kind="submit", command_id=data["request_id"],
             mission_id=mission_id, reflector_id=reflector_id, job_id=job["id"], proposal=proposal))
         return self.client.reflection_command(command, wait_seconds=data["wait_seconds"]), None
 

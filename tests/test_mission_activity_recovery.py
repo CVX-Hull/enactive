@@ -53,7 +53,7 @@ class ActivityControls:
                 value["boundary"]["control_generation"] = req["control_generation"] + 1
                 if req["kind"] == "request_interrupt":
                     value.update(category="YESNO", scene=None, actions=["YES", "NO"])
-                    value["boundary"].update(kind="interrupt_confirmation", id="owned-interrupt",
+                    value["boundary"].update(kind="interrupt_confirmation", input_receiver=False, id="owned-interrupt",
                         recovery_operations=["answer_interrupt"], interrupt_request_id=req["id"])
                     case.bridge.publish(value)
                     native = read_json(bridge / "state.json")
@@ -65,14 +65,14 @@ class ActivityControls:
                         case.return_normal()
                     else:
                         value.update(category="DEFAULTMODE", scene=None, actions=[])
-                        value["boundary"].update(kind="activity_poll", id="continued-poll",
+                        value["boundary"].update(kind="activity_poll", input_receiver=False, id="continued-poll",
                             recovery_operations=["request_interrupt"], interrupt_request_id=None)
                     status = "answer_delivered"
                 (bridge / "control-claimed.json").unlink()
                 if self.after_commit:
                     self.after_commit(req)
                 if self.publish:
-                    atomic_json(bridge / "control-response.json", dict(protocol=5, id=req["id"],
+                    atomic_json(bridge / "control-response.json", dict(protocol=6, id=req["id"],
                         status=status, error="", state=native))
         except BaseException as exc:
             self.failures.append(exc)
@@ -105,7 +105,7 @@ class ActivityRecoveryTests(unittest.TestCase):
                                  actions=["sleep", "UP", "DOWN", "LEFT", "RIGHT"])
         self.bridge.value["scene"]["turn"] += 10
         self.bridge.value["revision"] += 1
-        self.bridge.value["boundary"].update(kind="normal_play", id="after-rest",
+        self.bridge.value["boundary"].update(kind="normal_play", input_receiver=True, id="after-rest",
             recovery_operations=[], interrupt_request_id=None)
 
     def recovery(self, step, identity=None, **changes):

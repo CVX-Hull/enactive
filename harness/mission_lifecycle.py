@@ -16,7 +16,8 @@ from .gameplay.evidence import MAX_FRAME_BYTES, CapacityReservation, EvidenceErr
 from .gameplay.interaction import MenuOutcome, MenuSkill
 from .gameplay.mission_contracts import VERSION, SourceRevalidation
 from .gameplay.mission_ledger import BudgetError, LedgerError
-from .gameplay.semantic_controls import ControlIntent, ControlOutcome, SemanticControlSkill
+from .gameplay.input_contracts import ControlIntent, ControlOutcome
+from .gameplay.semantic_controls import SemanticControlSkill
 
 if TYPE_CHECKING:
     from .mission_runtime import MissionRuntime, _OwnedLaunch, _ResumeIntent, _Work

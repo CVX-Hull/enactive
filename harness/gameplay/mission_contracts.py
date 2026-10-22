@@ -1,4 +1,4 @@
-"""Strict mission/9 data. Parsing never grants a controller capability.
+"""Strict mission/10 data. Parsing never grants a controller capability.
 
 The existing JSON decoder/schema helpers own duplicate, finite-number and strict
 integer validation. Request dictionaries are decoded copies, not mutable aliases.
@@ -17,8 +17,8 @@ from .contracts import (
 from .native_input import direct_goal_schema, validate_input
 from .procedures import procedure_schema, validate_procedure
 
-VERSION = "mission/9"
-MEMORY_VERSION = "campaign-memory/4"
+VERSION = "mission/10"
+MEMORY_VERSION = "campaign-memory/5"
 MAX_REQUEST_BYTES = 65_536
 MAX_CONTEXT_BYTES = 32_768
 MAX_HANDOFF_CONTEXT_BYTES = 131_072
@@ -82,7 +82,7 @@ _ADMISSION = _object({
     "scenario": _SCENARIO, "limits": _LIMITS, "cleanup_reserve": _RESERVE,
     "allowed_skills": {**_array(_enum(*SKILLS), len(SKILLS), 1), "uniqueItems": True},
     "allowed_lifecycle": {**_array(_enum(*LIFECYCLE), len(LIFECYCLE)), "uniqueItems": True},
-    "update_policy": {"const": "facts-procedures-reflection/1"}, "configuration": _CONFIGURATION,
+    "update_policy": {"const": "facts-procedures-reflection/2"}, "configuration": _CONFIGURATION,
     "learning": _nullable(_LEARNING),
 })
 _SCOPE = _object({"mission_id": _ID, "session": _ID, "coordinate_epoch": _integer()})
@@ -95,6 +95,11 @@ _REVALIDATION = _object({
     "schema": {"const": VERSION}, "record_type": {"const": "SourceRevalidation"},
     "original": _SOURCE_BINDING, "current": _SOURCE_BINDING,
     "rule": _enum("native_state", "exact_png_bytes"), "grants_authority": {"const": False},
+})
+_INPUT_OBSERVATION = _object({
+    "schema": {"const": VERSION}, "record_type": {"const": "InputObservation"},
+    "original": _SOURCE_BINDING, "current": _SOURCE_BINDING,
+    "grants_authority": {"const": False},
 })
 _SKILL_LIMITS = _object({"primitives": _integer(32, 1), "wall_seconds": _number(900),
                          "game_seconds": _integer(43_200, 1)})
@@ -252,7 +257,7 @@ _DELIVERY_RESOLUTION = _object({
 _PROMPT_RECEIPT = _object({
     "schema": {"const": VERSION}, "record_type": {"const": "PhaseReceipt"},
     "origin_request_id": _ID, "phase_kind": {"const": "interact"}, "operation": _enum(*INTERACTIONS),
-    "stage": _enum("awaiting_control", "activity_poll", "complete", "unknown"),
+    "stage": _enum("awaiting_control", "awaiting_observation", "activity_poll", "complete", "unknown"),
     "epoch": _integer(), "actor_id": _ID, "controller_boot_id": _ID,
     "operator_pause_generation": _integer(), "takeover_generation": _integer(),
     "source_ids": {**_IDS, "minItems": 1}, "continuity": {"type": "null"},
@@ -261,11 +266,11 @@ _PROMPT_RECEIPT = _object({
 _SEMANTIC_PHASE_RECEIPT = _object({
     **_PROMPT_RECEIPT["properties"], "phase_kind": _enum("item", "activity", "inspect", "direct"),
     "operation": _text(128),
-    "stage": _enum("awaiting_control", "activity_poll", "interrupt_confirmation", "awaiting_readmission", "complete", "unknown"),
+    "stage": _enum("awaiting_control", "awaiting_observation", "activity_poll", "interrupt_confirmation", "awaiting_readmission", "complete", "unknown"),
 })
 _NAVIGATION_PHASE_RECEIPT = _object({
     **_PROMPT_RECEIPT["properties"], "phase_kind": {"const": "navigate"},
-    "operation": {"const": "navigate"}, "stage": _enum("awaiting_control", "complete", "unknown"),
+    "operation": {"const": "navigate"}, "stage": _enum("awaiting_control", "awaiting_observation", "complete", "unknown"),
 })
 _EXIT_PHASE_RECEIPT = _object({
     **_PROMPT_RECEIPT["properties"], "phase_kind": {"const": "lifecycle"},
@@ -503,6 +508,42 @@ class SourceBinding:
         return cls(**_decode(value, _SOURCE_BINDING))
 
 
+def _source_transition(original: SourceBinding, current: SourceBinding) -> None:
+    if type(original) is not SourceBinding or type(current) is not SourceBinding:
+        raise ContractError("Observation transition requires immutable typed source bindings")
+    if original.source_id == current.source_id:
+        raise ContractError("An observation transition must identify a distinct current source")
+    unchanged = ("mission_id", "epoch", "actor_id", "controller_boot_id", "pause_generation", "takeover_generation")
+    if any(getattr(original, key) != getattr(current, key) for key in unchanged):
+        raise ContractError("Observation transition cannot cross actor/epoch/controller/Pause/takeover")
+    if current.store_generation != original.store_generation + 1:
+        raise ContractError("Observation transition permits exactly one deliberate source capture")
+
+
+@dataclass(frozen=True)
+class InputObservation:
+    """Ordinary entry observation; changed evidence is not an equivalence claim.
+
+    The explicit physical event remains the player's choice. Live receiver,
+    integrity, custody and dispatch checks belong to the writer, not this record.
+    """
+    original: SourceBinding
+    current: SourceBinding
+
+    def __post_init__(self):
+        _source_transition(self.original, self.current)
+        validate_json(self.to_dict(), _INPUT_OBSERVATION)
+
+    def to_dict(self) -> dict:
+        return {"schema": VERSION, "record_type": "InputObservation", "original": self.original.to_dict(),
+                "current": self.current.to_dict(), "grants_authority": False}
+
+    @classmethod
+    def from_dict(cls, value: dict) -> InputObservation:
+        data = _decode(value, _INPUT_OBSERVATION)
+        return cls(SourceBinding.from_dict(data["original"]), SourceBinding.from_dict(data["current"]))
+
+
 @dataclass(frozen=True)
 class SourceRevalidation:
     """One explicit refresh, preserving original model evidence and execution scope.
@@ -515,16 +556,8 @@ class SourceRevalidation:
     rule: str
 
     def __post_init__(self):
-        if type(self.original) is not SourceBinding or type(self.current) is not SourceBinding:
-            raise ContractError("Revalidation requires immutable typed source bindings")
+        _source_transition(self.original, self.current)
         validate_json(self.to_dict(), _REVALIDATION)
-        if self.original.source_id == self.current.source_id:
-            raise ContractError("A refresh must identify a distinct current source")
-        unchanged = ("mission_id", "epoch", "actor_id", "controller_boot_id", "pause_generation", "takeover_generation")
-        if any(getattr(self.original, key) != getattr(self.current, key) for key in unchanged):
-            raise ContractError("Revalidation cannot cross actor/epoch/controller/Pause/takeover")
-        if self.current.store_generation != self.original.store_generation + 1:
-            raise ContractError("Revalidation permits exactly one deliberate source refresh")
 
     def to_dict(self) -> dict:
         return {"schema": VERSION, "record_type": "SourceRevalidation", "original": self.original.to_dict(),
@@ -857,9 +890,7 @@ def validate_request(value: dict | str | bytes) -> dict:
         if result["phase_id"] is not None and result["procedure"] is not None:
             raise ContractError("A child inherits its root procedure use; it cannot replace that selection")
         if result["skill_kind"] == "direct":
-            direct = validate_input(result["goal"]["input"], text_limit=24)
-            if direct["type"] == "text" and result["phase_id"] is None:
-                raise ContractError("Direct text requires an owned ordinary menu")
+            validate_input(result["goal"]["input"], text_limit=24)
         if (result["skill_kind"] == "activity" and result["goal"]["operation"] == "direct"
                 and result["goal"]["step"] == "start"):
             raise ContractError("Direct activity observation requires its actual existing root")

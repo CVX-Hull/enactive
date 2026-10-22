@@ -17,24 +17,24 @@ from harness.gameplay.reflection import (
 
 
 def procedure():
-    return {"schema": "procedure/1", "record_type": "Procedure", "id": "revision-1",
+    return {"schema": "procedure/2", "record_type": "Procedure", "id": "revision-1",
             "mission_id": "mission-a", "procedure_id": "inspect", "revision": 1,
             "parent": None, "goal": "Inspect visible needs", "parameters": [],
             "applicability": ["Visible needs available"], "invalidators": [],
             "steps": [{"intent": "Inspect", "expected": "Visible needs",
                        "on_unexpected": "Reassess"}], "progress": ["Needs visible"],
             "stop_conditions": ["Needs interpreted"], "limits": [],
-            "environment": {"engine_commit": "a" * 40, "native_protocol": 5,
-                            "mission_schema": "mission/9", "configuration": "ordinary"},
+            "environment": {"engine_commit": "a" * 40, "native_protocol": 6,
+                            "mission_schema": "mission/10", "configuration": "ordinary"},
             "support": [{"mission_id": "mission-a", "request_ids": ["request-1"],
                          "source_ids": ["source-1"], "interpretation": "One example"}],
             "counterexamples": [], "status": "candidate", "reason": "Scoped data"}
 
 
 def job(**changes):
-    request = {"schema": "mission/9", "kind": "observe", "request_id": "request-1",
+    request = {"schema": "mission/10", "kind": "observe", "request_id": "request-1",
                "mission_id": "mission-a", "epoch": 0}
-    return {"schema": "reflection/1", "record_type": "ReflectionJob", "id": "job-1",
+    return {"schema": "reflection/2", "record_type": "ReflectionJob", "id": "job-1",
             "mission_id": "mission-a", "reflector_id": "reflector-a", "epoch": 0,
             "memory_version": 1, "after_sequence": 0, "through_sequence": 1,
             "included_request_ids": ["request-1"], "omitted_requests": 0,
@@ -46,7 +46,7 @@ def job(**changes):
 
 
 def proposal(**changes):
-    return {"schema": "reflection/1", "record_type": "ReflectionProposal", "id": "proposal-1",
+    return {"schema": "reflection/2", "record_type": "ReflectionProposal", "id": "proposal-1",
             "job_id": "job-1", "mission_id": "mission-a", "reflector_id": "reflector-a",
             "epoch": 0, "cutoff_sequence": 1, "memory_version": 1,
             "candidates": [procedure()],
@@ -57,7 +57,7 @@ def proposal(**changes):
 
 
 def command(command_id="command-1", *, submit=False, **changes):
-    value = {"schema": "reflection/1", "kind": "submit" if submit else "claim",
+    value = {"schema": "reflection/2", "kind": "submit" if submit else "claim",
              "command_id": command_id, "mission_id": "mission-a",
              "reflector_id": "reflector-a", "job_id": "job-1", **changes}
     if submit:
@@ -83,8 +83,8 @@ class ReflectionValidationTests(unittest.TestCase):
         self.assertIn("candidates", reflection.proposal_schema()["properties"])
 
     def test_real_current_validators_and_defensive_copy(self):
-        self.assertEqual(validate_request(job()["trajectory"][0]["request"])["schema"], "mission/9")
-        self.assertEqual(validate_procedure(procedure())["schema"], "procedure/1")
+        self.assertEqual(validate_request(job()["trajectory"][0]["request"])["schema"], "mission/10")
+        self.assertEqual(validate_procedure(procedure())["schema"], "procedure/2")
         for validator, original in ((validate_job, job()), (validate_proposal, proposal()),
                                     (validate_command, command(submit=True))):
             for value in (original, json.dumps(original), json.dumps(original).encode()):

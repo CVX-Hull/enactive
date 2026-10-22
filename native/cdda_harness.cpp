@@ -7,6 +7,7 @@
 #include <cstdlib>
 #include <deque>
 #include <filesystem>
+#include <exception>
 #include <fcntl.h>
 #include <fstream>
 #include <map>
@@ -89,9 +90,12 @@ struct input_scope {
     std::string category;
     std::vector<std::string> actions;
     bool input;
+    const void *context = nullptr;
+    bool recovery = false;
 };
 std::vector<input_scope> scopes;
-std::string active_menu_query;
+std::vector<std::pair<size_t, const void *>> receivers;
+const void *current_context = nullptr;
 boundary_kind current_kind = boundary_kind::unsupported;
 int boundary_counter = 0;
 int control_generation = 0;
@@ -118,6 +122,29 @@ bool scoped()
     return !scopes.empty() && ( scopes.back().input ||
                                scopes.back().kind == boundary_kind::debug_prompt );
 }
+// Receiver lifetime is deliberately absent from boundary identity: timeout retries
+// in the same context do not advance revision or renew the saved frame clock.
+bool live_receiver()
+{
+    return !receivers.empty() && !scopes.empty() && scopes.back().input && scopes.back().context != nullptr &&
+           receivers.back().first == scopes.size() &&
+           receivers.back().second == scopes.back().context;
+}
+bool ordinary_receiver()
+{
+    return live_receiver() && ( scopes.back().kind == boundary_kind::normal_play ||
+                               scopes.back().kind == boundary_kind::menu );
+}
+bool recovery_receiver( boundary_kind kind )
+{
+    return !scopes.empty() && scopes.back().kind == kind && scopes.back().recovery &&
+           ( !scopes.back().input || live_receiver() );
+}
+class input_refusal : public std::runtime_error
+{
+    public:
+        using std::runtime_error::runtime_error;
+};
 void new_boundary()
 {
     boundary_id = session + "-b" + std::to_string( ++boundary_counter );
@@ -130,9 +157,11 @@ void sync_scope()
     const input_scope &top = scopes.empty() ? empty : scopes.back();
     const boundary_kind effective = top.kind == boundary_kind::interrupt_confirmation && owned_interrupt.empty() ?
                                     boundary_kind::menu : top.kind;
-    if( current_kind != effective || category != top.category || actions != top.actions ||
+    if( current_kind != effective || current_context != top.context ||
+        category != top.category || actions != top.actions ||
         boundary_id.empty() ) {
         current_kind = effective;
+        current_context = top.context;
         category = top.category;
         actions = top.actions;
         new_boundary();
@@ -231,9 +260,16 @@ std::string path( const std::string &name )
 void pause_file()
 {
     std::ofstream out( path( "pause" ) );
+    out.exceptions( std::ios::badbit | std::ios::failbit );
     out << "paused\n";
     out.close();
     own_pause_time = fs::last_write_time( path( "pause" ) );
+}
+void fault_pause()
+{
+    paused = true;
+    if( pause_origin != "human" ) { pause_origin = "fault"; }
+    pause_file();
 }
 void scene( JsonOut &out )
 {
@@ -291,7 +327,7 @@ void write_observation( JsonOut &out, const std::string &id, const std::string &
                         long long capture_ms, const std::optional<frame_geometry> &geometry )
 {
     out.start_object();
-    out.member( "protocol", 5 );
+    out.member( "protocol", 6 );
     out.member( "id", id );
     out.member( "session", session );
     out.member( "revision", revision );
@@ -330,17 +366,18 @@ void write_observation( JsonOut &out, const std::string &id, const std::string &
     out.member( "kind", kind_name( current_kind ) );
     out.member( "id", boundary_id );
     out.member( "control_generation", control_generation );
+    out.member( "input_receiver", ordinary_receiver() );
     std::vector<std::string> operations;
-    if( current_kind == boundary_kind::activity_poll && activity_eligible ) {
+    if( recovery_receiver( boundary_kind::activity_poll ) && activity_eligible ) {
         operations.push_back( "request_interrupt" );
-    } else if( current_kind == boundary_kind::interrupt_confirmation && !owned_interrupt.empty() ) {
+    } else if( recovery_receiver( boundary_kind::interrupt_confirmation ) && !owned_interrupt.empty() ) {
         operations.push_back( "answer_interrupt" );
-    } else if( current_kind == boundary_kind::debug_prompt ) {
+    } else if( recovery_receiver( boundary_kind::debug_prompt ) ) {
         operations.push_back( "continue_debug_once" );
     }
     out.member( "recovery_operations", operations );
     out.member( "interrupt_request_id" );
-    if( current_kind == boundary_kind::interrupt_confirmation && !owned_interrupt.empty() ) {
+    if( recovery_receiver( boundary_kind::interrupt_confirmation ) && !owned_interrupt.empty() ) {
         out.write( owned_interrupt );
     } else {
         out.write_null();
@@ -374,7 +411,10 @@ bool publish( const std::string &id, const std::string &status,
         ui_manager::redraw();
         refresh_display();
         frame_ok = presented_boundary == boundary_id && presented_session == session &&
-                   presented_revision == revision && write_frame( path( "frame.tmp.png" ) );
+                   presented_revision == revision;
+        if( frame_ok && !write_frame( path( "frame.tmp.png" ) ) ) {
+            throw std::runtime_error( "attempted frame capture encoding or storage failed" );
+        }
         if( frame_ok ) {
             const auto geometry = cached_frame_geometry();
             const std::string metadata = capture_metadata( geometry );
@@ -435,7 +475,7 @@ void publish_control( const std::string &id, const std::string &status,
     std::ifstream snapshot( path( "state.json" ) );
     std::ofstream stream( path( "control-response.json.tmp" ) );
     stream.exceptions( std::ios::badbit | std::ios::failbit );
-    stream << "{\"protocol\":5,\"id\":";
+    stream << "{\"protocol\":6,\"id\":";
     { JsonOut out( stream ); out.write( id ); }
     stream << ",\"status\":";
     { JsonOut out( stream ); out.write( status ); }
@@ -481,7 +521,7 @@ input_event key_event( const std::string &key, keyboard_mode mode )
         }
         result.sequence.push_back( code );
     } else {
-        throw std::runtime_error( "key must be one ASCII character or supported named key" );
+        throw input_refusal( "key must be one ASCII character or supported named key" );
     }
     return result;
 }
@@ -526,60 +566,64 @@ void authority_gate( const TextJsonObject &request )
 }
 void ordinary_gate( const TextJsonObject &request )
 {
-    if( request.get_string( "session" ) != session || integer_member( request, "revision" ) != revision ||
-        request.get_string( "boundary_id" ) != boundary_id ||
-        integer_member( request, "takeover_generation" ) != takeover_generation ) {
-        throw std::runtime_error( "stale session, revision, boundary or human generation; observe again" );
+    authority_gate( request );
+    if( integer_member( request, "takeover_generation" ) != takeover_generation ) {
+        throw std::runtime_error( "human generation changed" );
     }
+    if( request.get_string( "session" ) != session ) { throw std::runtime_error( "session changed" ); }
+    if( integer_member( request, "revision" ) != revision ||
+        request.get_string( "boundary_id" ) != boundary_id ) {
+        throw input_refusal( "stale session, revision, boundary or human generation; observe again" );
+    }
+    if( !saved_frame_ok ) { throw std::runtime_error( "capture is unhealthy" ); }
     if( request.get_string( "frame" ) != frame_name || frame_name.empty() || !saved_frame_ok ||
         frame_boundary != boundary_id || frame_session != session || frame_revision != revision ||
         now_ms() - frame_ms > 3000 ||
         presented_boundary != boundary_id || presented_session != session ||
         presented_revision != revision || now_ms() - presented_ms > 3000 ||
         integer_member( request, "deadline_ms" ) < now_ms() ) {
-        throw std::runtime_error( "fresh matching rendered boundary and deadline required" );
+        throw input_refusal( "fresh matching rendered boundary and deadline required" );
     }
-    authority_gate( request );
 }
 bool same_frame_png( const std::string &saved, const std::string &latest, const struct stat &owned )
 {
     constexpr off_t maximum_frame_bytes = 32 * 1024 * 1024;
-    // Nonblocking opens cannot hang on a substituted FIFO; fstat rejects every
-    // nonregular file and O_NOFOLLOW rejects symlinks before reading anything.
     const int saved_fd = open( saved.c_str(), O_RDONLY | O_NOFOLLOW | O_NONBLOCK );
     const int latest_fd = open( latest.c_str(), O_RDONLY | O_NOFOLLOW | O_NONBLOCK );
     struct stat saved_info = {};
     struct stat latest_info = {};
-    bool same = saved_fd >= 0 && latest_fd >= 0 &&
-                fstat( saved_fd, &saved_info ) == 0 && fstat( latest_fd, &latest_info ) == 0 &&
-                S_ISREG( saved_info.st_mode ) && S_ISREG( latest_info.st_mode ) &&
-                saved_info.st_size > 0 && saved_info.st_size <= maximum_frame_bytes &&
-                saved_info.st_size == latest_info.st_size &&
-                latest_info.st_dev == owned.st_dev && latest_info.st_ino == owned.st_ino;
+    bool healthy = saved_fd >= 0 && latest_fd >= 0 &&
+                   fstat( saved_fd, &saved_info ) == 0 && fstat( latest_fd, &latest_info ) == 0 &&
+                   S_ISREG( saved_info.st_mode ) && S_ISREG( latest_info.st_mode ) &&
+                   saved_info.st_size > 0 && saved_info.st_size <= maximum_frame_bytes &&
+                   latest_info.st_size > 0 && latest_info.st_size <= maximum_frame_bytes &&
+                   latest_info.st_dev == owned.st_dev && latest_info.st_ino == owned.st_ino;
+    bool same = saved_info.st_size == latest_info.st_size;
     std::array<char, 32 * 1024> saved_chunk;
     std::array<char, 32 * 1024> latest_chunk;
     off_t remaining = saved_info.st_size;
-    while( same && remaining > 0 ) {
+    while( healthy && same && remaining > 0 ) {
         const off_t amount = std::min( remaining, static_cast<off_t>( saved_chunk.size() ) );
         const ssize_t saved_read = read( saved_fd, saved_chunk.data(), static_cast<size_t>( amount ) );
         const ssize_t latest_read = read( latest_fd, latest_chunk.data(), static_cast<size_t>( amount ) );
-        // A short read or error (including EINTR) rejects without retrying work
-        // beyond the request's original deadline.
-        same = saved_read == amount && latest_read == amount &&
-               std::equal( saved_chunk.begin(), saved_chunk.begin() + amount, latest_chunk.begin() );
+        healthy = saved_read == amount && latest_read == amount;
+        same = healthy && std::equal( saved_chunk.begin(), saved_chunk.begin() + amount, latest_chunk.begin() );
         remaining -= amount;
     }
-    char trailing;
-    same = same && read( saved_fd, &trailing, 1 ) == 0 && read( latest_fd, &trailing, 1 ) == 0;
-    if( saved_fd >= 0 && close( saved_fd ) != 0 ) { same = false; }
-    if( latest_fd >= 0 && close( latest_fd ) != 0 ) { same = false; }
+    // A real byte/length difference is ordinary drift. Unreadable, substituted,
+    // truncated or growing files are integrity/I/O faults, never harmless drift.
+    if( healthy && same ) {
+        char trailing;
+        healthy = read( saved_fd, &trailing, 1 ) == 0 && read( latest_fd, &trailing, 1 ) == 0;
+    }
+    if( saved_fd >= 0 && close( saved_fd ) != 0 ) { healthy = false; }
+    if( latest_fd >= 0 && close( latest_fd ) != 0 ) { healthy = false; }
+    if( !healthy ) { throw std::runtime_error( "frame comparison integrity or I/O failure" ); }
     return same;
 }
 void exact_frame_gate()
 {
-    // ordinary_gate has already matched the generated basename. Never capture
-    // here: refresh_display has restored a different renderer target. The
-    // existing encoder writes only the cached last-presented surface.
+    // Compare the cached presented surface; do not redraw or renew its clock.
     const std::string saved = path( frame_name );
     const std::string latest = path( "frame.compare.tmp.png" );
     const int descriptor = open( latest.c_str(), O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW, 0600 );
@@ -589,35 +633,41 @@ void exact_frame_gate()
     struct stat owned = {};
     const bool identified = fstat( descriptor, &owned ) == 0;
     struct stat current = {};
-    // One trusted bridge writer owns this pathname for the operation. The
-    // existing encoder reopens it by name; concurrent external filesystem
-    // mutation is outside this contract, not defeated by an inode check.
-    const bool same = identified && lstat( latest.c_str(), &current ) == 0 &&
-                      current.st_dev == owned.st_dev && current.st_ino == owned.st_ino &&
-                      write_frame( latest ) && same_frame_png( saved, latest, owned );
+    bool same = false;
+    std::exception_ptr failure;
+    try {
+        if( !identified || lstat( latest.c_str(), &current ) != 0 ||
+            current.st_dev != owned.st_dev || current.st_ino != owned.st_ino || !write_frame( latest ) ) {
+            throw std::runtime_error( "exact frame capture integrity or I/O failure" );
+        }
+        same = same_frame_png( saved, latest, owned );
+    } catch( ... ) { failure = std::current_exception(); }
     const bool closed = close( descriptor ) == 0;
-    // Reject observed replacement. This pathname check/unlink is not atomic
-    // protection against concurrent mutation by another same-user process.
     const bool removed = identified && lstat( latest.c_str(), &current ) == 0 &&
                          current.st_dev == owned.st_dev && current.st_ino == owned.st_ino &&
                          unlink( latest.c_str() ) == 0;
-    if( !removed ) {
+    if( !removed || !closed ) {
         throw std::runtime_error( "exact frame temporary file cleanup failed" );
     }
-    if( !same || !closed ) {
-        throw std::runtime_error( "latest presented PNG does not exactly match the saved frame or file I/O failed" );
-    }
+    if( failure ) { std::rethrow_exception( failure ); }
+    if( !same ) { throw input_refusal( "latest presented PNG changed" ); }
 }
 void ordinary_commit_gate( const TextJsonObject &request, bool resuming )
 {
     ordinary_gate( request );
+    if( !ordinary_receiver() ) { throw input_refusal( "no live ordinary input receiver" ); }
     if( !resuming && ( paused || fs::exists( path( "pause" ) ) ) ) {
         throw std::runtime_error( "pause interrupted dispatch" );
     }
-    if( request.get_string( "kind" ) == "direct" &&
+    const bool click = request.get_string( "kind" ) == "direct" &&
+                       request.get_object( "input" ).get_string( "type" ) == "click";
+    if( request.get_string( "kind" ) == "direct" && request.get_bool( "require_exact_frame" ) ) {
+        throw input_refusal( "direct input requires physical-event preflight" );
+    }
+    if( click &&
         ( !saved_geometry || current_frame_geometry() != saved_geometry ||
           cached_frame_geometry() != saved_geometry ) ) {
-        throw std::runtime_error( "direct input requires unchanged attested frame geometry" );
+        throw input_refusal( "direct input requires unchanged attested frame geometry" );
     }
     if( request.get_bool( "require_exact_frame" ) ) {
         exact_frame_gate();
@@ -627,26 +677,27 @@ void ordinary_commit_gate( const TextJsonObject &request, bool resuming )
     // Host Pause still revokes the durable authority token, including Resume,
     // whose existing sentinel is intentionally consumed only after this gate.
     ordinary_gate( request );
+    if( !ordinary_receiver() ) { throw input_refusal( "no live ordinary input receiver" ); }
     if( !waiting_interrupt.empty() || fs::exists( path( "control.json" ) ) ||
         fs::exists( path( "control-claimed.json" ) ) ) {
         throw std::runtime_error( "recovery is pending" );
     }
     if( integer_member( request, "deadline_ms" ) < now_ms() ) {
-        throw std::runtime_error( "request expired before input commit" );
+        throw input_refusal( "request expired before input commit" );
     }
     if( !resuming && ( paused || fs::exists( path( "pause" ) ) ) ) {
         throw std::runtime_error( "pause interrupted dispatch" );
     }
     // A window size/scale change during PNG comparison must also refuse before
     // committing the already-translated input, even without a processed event.
-    if( request.get_string( "kind" ) == "direct" && current_frame_geometry() != saved_geometry ) {
-        throw std::runtime_error( "frame geometry changed before input commit" );
+    if( click && current_frame_geometry() != saved_geometry ) {
+        throw input_refusal( "frame geometry changed before input commit" );
     }
 }
 input_event action_event( const std::string &action, keyboard_mode mode, bool confirmation = false )
 {
     if( std::find( actions.begin(), actions.end(), action ) == actions.end() ) {
-        throw std::runtime_error( "recovery action not registered" );
+        throw input_refusal( "recovery action not registered" );
     }
     const auto &bindings = inp_mngr.get_input_for_action( action, category );
     const auto type = mode == keyboard_mode::keychar ? input_event_t::keyboard_char : input_event_t::keyboard_code;
@@ -656,7 +707,7 @@ input_event action_event( const std::string &action, keyboard_mode mode, bool co
                  input_context::disallow_lower_case_or_non_modified_letters( candidate ) );
     } );
     if( binding == bindings.end() ) {
-        throw std::runtime_error( "recovery action has no usable single-key binding" );
+        throw input_refusal( "recovery action has no usable single-key binding" );
     }
     return *binding;
 }
@@ -665,18 +716,18 @@ input_event action_event( const std::string &action, keyboard_mode mode, bool co
 int single_printable_scalar( const std::string &text )
 {
     if( text.empty() || text.size() > 4 ) {
-        throw std::runtime_error( "text must be one printable Unicode scalar" );
+        throw input_refusal( "text must be one printable Unicode scalar" );
     }
     const uint32_t code = UTF8_getch( text );
     if( code > 0x10ffff || ( code >= 0xd800 && code <= 0xdfff ) ||
         code < 32 || ( code >= 127 && code <= 159 ) || code == 0x2028 || code == 0x2029 ||
         utf32_to_utf8( code ) != text ) {
-        throw std::runtime_error( "text must be one canonical noncontrol Unicode scalar" );
+        throw input_refusal( "text must be one canonical noncontrol Unicode scalar" );
     }
     // The pinned widget build uses ImWchar16. Refuse before dispatch instead
     // of allowing its UTF-8 decoder to silently substitute U+FFFD.
     if( code > IM_UNICODE_CODEPOINT_MAX ) {
-        throw std::runtime_error( "Unicode scalar exceeds the pinned widget range" );
+        throw input_refusal( "Unicode scalar exceeds the pinned widget range" );
     }
     return static_cast<int>( code );
 }
@@ -684,12 +735,12 @@ std::optional<frame_geometry> input_geometry( const TextJsonObject &input )
 {
     const TextJsonObject geometry = input.get_object( "geometry" );
     if( geometry.size() != 5 || !geometry.has_array( "viewport" ) ) {
-        throw std::runtime_error( "unsupported frame geometry" );
+        throw input_refusal( "unsupported frame geometry" );
     }
     frame_geometry result;
     const auto dimension = [&]( const std::string &name ) {
         const long long value = integer_member( geometry, name );
-        if( value <= 0 || value > 16384 ) { throw std::runtime_error( "invalid geometry dimension" ); }
+        if( value <= 0 || value > 16384 ) { throw input_refusal( "invalid geometry dimension" ); }
         return static_cast<int>( value );
     };
     result.window_width = dimension( "window_width" );
@@ -697,10 +748,10 @@ std::optional<frame_geometry> input_geometry( const TextJsonObject &input )
     result.output_width = dimension( "output_width" );
     result.output_height = dimension( "output_height" );
     if( static_cast<long long>( result.output_width ) * result.output_height > 16777216 ) {
-        throw std::runtime_error( "frame pixel limit exceeded" );
+        throw input_refusal( "frame pixel limit exceeded" );
     }
     TextJsonArray viewport = geometry.get_array( "viewport" );
-    if( viewport.size() != 4 ) { throw std::runtime_error( "invalid viewport" ); }
+    if( viewport.size() != 4 ) { throw input_refusal( "invalid viewport" ); }
     // Validate raw tokens as integer literals; upstream's integer reader alone
     // also accepts scientific notation, which this wire contract rejects.
     TextJsonIn *raw = geometry.get_raw( "viewport" );
@@ -714,17 +765,17 @@ std::optional<frame_geometry> input_geometry( const TextJsonObject &input )
             raw->seek( offset );
             const char ch = raw->peek();
             if( ch == ',' || ch == ']' || std::isspace( static_cast<unsigned char>( ch ) ) ) { break; }
-            if( ch < '0' || ch > '9' ) { throw std::runtime_error( "viewport requires nonnegative integer literals" ); }
+            if( ch < '0' || ch > '9' ) { throw input_refusal( "viewport requires nonnegative integer literals" ); }
         }
         raw->seek( end );
-        if( number < 0 || number > 16384 ) { throw std::runtime_error( "invalid viewport coordinate" ); }
+        if( number < 0 || number > 16384 ) { throw input_refusal( "invalid viewport coordinate" ); }
         result.viewport[index] = static_cast<int>( number );
     }
-    if( !raw->end_array() ) { throw std::runtime_error( "invalid viewport length" ); }
+    if( !raw->end_array() ) { throw input_refusal( "invalid viewport length" ); }
     if( result.viewport[2] <= 0 || result.viewport[3] <= 0 ||
         result.viewport[0] + result.viewport[2] > result.output_width ||
         result.viewport[1] + result.viewport[3] > result.output_height ) {
-        throw std::runtime_error( "viewport outside output" );
+        throw input_refusal( "viewport outside output" );
     }
     return result;
 }
@@ -734,23 +785,23 @@ direct_input direct_event( const TextJsonObject &input, keyboard_mode mode )
     const std::string type = input.get_string( "type" );
     if( type == "key" ) {
         if( input.size() != 3 || !input.has_array( "modifiers" ) ) {
-            throw std::runtime_error( "unsupported direct key shape" );
+            throw input_refusal( "unsupported direct key shape" );
         }
         const std::string key = input.get_string( "key" );
         // key_event is pure; unlike SDL's keychar translator it never reads
         // held physical keys or touches arrow-combination state.
         event.engine = key_event( key, keyboard_mode::keycode );
         TextJsonArray modifiers = input.get_array( "modifiers" );
-        if( modifiers.size() > 3 ) { throw std::runtime_error( "too many key modifiers" ); }
+        if( modifiers.size() > 3 ) { throw input_refusal( "too many key modifiers" ); }
         std::set<keymod_t> explicit_modifiers;
         for( const std::string modifier : modifiers ) {
             keymod_t parsed;
             if( modifier == "CTRL" ) { parsed = keymod_t::ctrl; }
             else if( modifier == "ALT" ) { parsed = keymod_t::alt; }
             else if( modifier == "SHIFT" ) { parsed = keymod_t::shift; }
-            else { throw std::runtime_error( "unsupported key modifier" ); }
+            else { throw input_refusal( "unsupported key modifier" ); }
             if( !explicit_modifiers.insert( parsed ).second ) {
-                throw std::runtime_error( "duplicate key modifier" );
+                throw input_refusal( "duplicate key modifier" );
             }
         }
         for( keymod_t modifier : explicit_modifiers ) {
@@ -776,7 +827,7 @@ direct_input direct_event( const TextJsonObject &input, keyboard_mode mode )
             if( alt || ( arrow && ( ctrl || shift ) ) ||
                 ( ctrl && ( event.widget_key < 'a' || event.widget_key > 'z' ) ) ||
                 ( shift && !printable && key != "TAB" ) ) {
-                throw std::runtime_error( "unsupported keychar modifier combination" );
+                throw input_refusal( "unsupported keychar modifier combination" );
             }
             event.engine = key_event( key, mode );
             event.engine.text = event.widget_text;
@@ -787,7 +838,7 @@ direct_input direct_event( const TextJsonObject &input, keyboard_mode mode )
             event.engine.text = event.widget_text;
         }
     } else if( type == "text" ) {
-        if( input.size() != 2 ) { throw std::runtime_error( "unsupported direct text shape" ); }
+        if( input.size() != 2 ) { throw input_refusal( "unsupported direct text shape" ); }
         const std::string text = input.get_string( "text" );
         const int code = single_printable_scalar( text );
         event.type = direct_input::kind::text;
@@ -795,15 +846,15 @@ direct_input direct_event( const TextJsonObject &input, keyboard_mode mode )
         event.engine.text = text;
         event.widget_text = text;
     } else if( type == "click" ) {
-        if( input.size() != 5 ) { throw std::runtime_error( "unsupported direct click shape" ); }
+        if( input.size() != 5 ) { throw input_refusal( "unsupported direct click shape" ); }
         const std::string button = input.get_string( "button" );
-        if( button != "left" && button != "right" ) { throw std::runtime_error( "unsupported click button" ); }
+        if( button != "left" && button != "right" ) { throw input_refusal( "unsupported click button" ); }
         const auto geometry = input_geometry( input );
         const long long x = integer_member( input, "x" );
         const long long y = integer_member( input, "y" );
         if( !geometry || geometry != saved_geometry || x < 0 || y < 0 ||
             x >= geometry->output_width || y >= geometry->output_height ) {
-            throw std::runtime_error( "click requires matching geometry and an in-frame pixel" );
+            throw input_refusal( "click requires matching geometry and an in-frame pixel" );
         }
         event.type = direct_input::kind::click;
         event.right_button = button == "right";
@@ -813,7 +864,7 @@ direct_input direct_event( const TextJsonObject &input, keyboard_mode mode )
                                        static_cast<int>( y * geometry->window_height / geometry->output_height ) );
         event.widget_position = point( static_cast<int>( x ), static_cast<int>( y ) );
     } else {
-        throw std::runtime_error( "unsupported direct input type" );
+        throw input_refusal( "unsupported direct input type" );
     }
     return event;
 }
@@ -844,6 +895,7 @@ bool poll_control( keyboard_mode mode, input_event &event )
     fs::rename( path( "control.json" ), path( "control-claimed.json" ), claim_error );
     if( claim_error ) { return false; }
     std::string id;
+    bool input_committed = false;
     try {
         if( fs::file_size( path( "control-claimed.json" ) ) > 4096 ) {
             throw std::runtime_error( "control exceeds 4096 bytes" );
@@ -863,7 +915,7 @@ bool poll_control( keyboard_mode mode, input_event &event )
         else if( kind != "request_interrupt" ) { throw std::runtime_error( "unsupported control kind" ); }
         const long long created = integer_member( request, "created_ms" );
         const long long deadline = integer_member( request, "deadline_ms" );
-        if( request.size() != fields || integer_member( request, "protocol" ) != 5 ||
+        if( request.size() != fields || integer_member( request, "protocol" ) != 6 ||
             created < 0 || created > now_ms() + 1000 || deadline != created + 2000 || deadline < now_ms() ) {
             throw std::runtime_error( "unsupported control envelope or expired request" );
         }
@@ -873,7 +925,7 @@ bool poll_control( keyboard_mode mode, input_event &event )
         }
         authority_gate( request );
         if( kind == "request_interrupt" ) {
-            if( current_kind != boundary_kind::activity_poll || !activity_eligible ) {
+            if( !recovery_receiver( boundary_kind::activity_poll ) || !activity_eligible ) {
                 publish_control( id, "not_applicable" );
                 fs::remove( path( "control-claimed.json" ) );
                 return false;
@@ -894,14 +946,14 @@ bool poll_control( keyboard_mode mode, input_event &event )
             }
             if( kind == "answer_interrupt" ) {
                 const std::string choice = request.get_string( "choice" );
-                if( current_kind != boundary_kind::interrupt_confirmation || owned_interrupt.empty() ||
+                if( !recovery_receiver( boundary_kind::interrupt_confirmation ) || owned_interrupt.empty() ||
                     request.get_string( "interrupt_request_id" ) != owned_interrupt ||
                     ( choice != "YES" && choice != "NO" ) ) {
                     throw std::runtime_error( "control does not own this confirmation" );
                 }
                 event = action_event( choice, mode, true );
             } else {
-                if( current_kind != boundary_kind::debug_prompt ) {
+                if( !recovery_receiver( boundary_kind::debug_prompt ) ) {
                     throw std::runtime_error( "debug continuation requires raw debug boundary" );
                 }
                 event = key_event( "SPACE", mode );
@@ -922,9 +974,16 @@ bool poll_control( keyboard_mode mode, input_event &event )
                     now_ms() - presented_ms > 3000 ) ) ) {
             throw std::runtime_error( "recovery frame expired before input commit" );
         }
+        const boundary_kind receiver_kind = kind == "request_interrupt" ? boundary_kind::activity_poll :
+                                            kind == "answer_interrupt" ? boundary_kind::interrupt_confirmation :
+                                            boundary_kind::debug_prompt;
+        if( !recovery_receiver( receiver_kind ) ) {
+            throw std::runtime_error( "recovery receiver changed before input commit" );
+        }
         ++control_generation;
         ++revision;
         dirty = true;
+        input_committed = true;
         if( kind == "request_interrupt" ) {
             injected_interrupt = id;
             interrupt_session = session;
@@ -938,9 +997,18 @@ bool poll_control( keyboard_mode mode, input_event &event )
         return true;
     } catch( const std::exception &error ) {
         event = input_event();
-        paused = true;
-        pause_origin = "fault";
-        pause_file();
+        fault_pause();
+        if( input_committed ) {
+            // Preserve uncertainty after any committed publication/feed failure.
+            // Do not let a later query manufacture a ready receipt for this input.
+            waiting_interrupt.clear();
+            injected_interrupt.clear();
+            try { publish_control( id, "dispatched", error.what(), false ); }
+            catch( const std::exception &publication_error ) {
+                std::ofstream( path( "bridge-error.txt" ) ) << publication_error.what();
+            }
+            return false;
+        }
         // Malformed/unidentified claims remain evidence and block subsequent recovery.
         if( !id.empty() ) {
             try {
@@ -979,50 +1047,54 @@ bool enabled()
 
 scope::scope( boundary_kind kind )
 {
-    scopes.push_back( { kind, kind == boundary_kind::debug_prompt ? "DEBUG_MSG" : "", {}, false } );
+    scopes.push_back( { kind, kind == boundary_kind::debug_prompt ? "DEBUG_MSG" : "", {}, false,
+                       nullptr, kind == boundary_kind::debug_prompt } );
     if( kind == boundary_kind::debug_prompt ) {
         sync_scope();
-        // Consecutive errors can have the same category with no rendered caller
-        // between them. Every raw prompt invocation still owns a new identity.
         new_boundary();
     }
 }
-scope::scope( const std::string &name, const std::vector<std::string> &registered )
+scope::scope( const std::string &name, const std::vector<std::string> &registered,
+              const void *context )
 {
-    // Coverage is deliberately explicit. In particular DEFAULTMODE in keybinding
-    // settings, deathcam and unknown callers is never promoted by its name.
-    static const std::set<std::string> menus = {
-        "MAIN_MENU", "UILIST", "YESNO", "POPUP_WAIT", "STRING_INPUT",
-        "INVENTORY", "INVENTORY_SELECTOR", "LIST_ITEMS", "LIST_MONSTERS",
-        "CRAFTING", "CONSTRUCTION", "SCROLLABLE_TEXT", "HELP_KEYBINDINGS",
-        "HELP", "LOOK", "LOOK_CLOSE", "OVERMAP", "CONFIRMATION",
-        "DISPLAY_HELP", "MESSAGE_LOG", "PLAYER_INFO", "PICK_WORLD_DIALOG",
-        "MODMANAGER_DIALOG", "WORLDGEN_CONFIRM_DIALOG", "MELEE_STYLE_PICKER",
-        "NEW_CHAR_POINTS", "NEW_CHAR_STATS", "NEW_CHAR_TRAITS", "NEW_CHAR_PROFESSIONS",
-        "NEW_CHAR_SKILLS", "NEW_CHAR_SCENARIOS", "NEW_CHAR_DESCRIPTION"
-    };
-    boundary_kind kind = menus.count( name ) ? boundary_kind::menu : boundary_kind::unsupported;
-    // Only an exact pinned owner wait may admit a generic category. Keep native
-    // bindings and exclude enclosing scopes and nested input contexts.
-    if( !active_menu_query.empty() && name == active_menu_query && scopes.empty() && in_game ) {
-        kind = boundary_kind::menu;
-    }
-    const bool nested = std::any_of( scopes.begin(), scopes.end(),
-    []( const input_scope & entry ) { return entry.input; } );
-    if( query_depth > 0 && !owned_interrupt.empty() && name == "YESNO" &&
-        static_cast<int>( scopes.size() ) == query_input_depth ) {
-        kind = boundary_kind::interrupt_confirmation;
-    } else if( !scopes.empty() && scopes.back().kind == boundary_kind::debug_prompt ) {
-        kind = boundary_kind::debug_prompt;
-    } else if( !nested && !scopes.empty() && name == "DEFAULTMODE" ) {
-        if( scopes.back().kind == boundary_kind::activity_poll ) {
-            kind = boundary_kind::activity_poll;
-        } else if( scopes.back().kind == boundary_kind::normal_play && in_game ) {
-            kind = boundary_kind::normal_play;
+    boundary_kind kind = boundary_kind::menu;
+    bool recovery = false;
+    // A context name never establishes authority. Explicit restricted owners
+    // propagate their prohibition through every nested context.
+    for( const input_scope &entry : scopes ) {
+        if( entry.kind == boundary_kind::unsupported || entry.kind == boundary_kind::debug_prompt ||
+            entry.kind == boundary_kind::activity_poll || entry.kind == boundary_kind::interrupt_confirmation ) {
+            kind = entry.kind;
+            break;
         }
     }
-    scopes.push_back( { kind, name, registered, true } );
+    if( kind == boundary_kind::menu && !scopes.empty() && !scopes.back().input &&
+        scopes.back().kind == boundary_kind::normal_play && name == "DEFAULTMODE" && in_game ) {
+        kind = boundary_kind::normal_play;
+    }
+    // Restrictions inherit; recovery permissions do not. Only the pinned direct
+    // owner's input depth, or exact cancellation query, may receive recovery.
+    if( query_depth > 0 && !owned_interrupt.empty() && name == "YESNO" &&
+        static_cast<int>( scopes.size() ) == query_input_depth &&
+        kind != boundary_kind::unsupported && kind != boundary_kind::debug_prompt ) {
+        kind = boundary_kind::interrupt_confirmation;
+        recovery = true;
+    } else if( kind == boundary_kind::activity_poll && !scopes.empty() &&
+               !scopes.back().input && scopes.back().kind == boundary_kind::activity_poll &&
+               name == "DEFAULTMODE" ) {
+        recovery = true;
+    }
+    scopes.push_back( { kind, name, registered, true, context, recovery } );
     sync_scope();
+}
+input_receiver::input_receiver()
+{
+    receivers.emplace_back( scopes.size(), !scopes.empty() && scopes.back().input ?
+                            scopes.back().context : nullptr );
+}
+input_receiver::~input_receiver()
+{
+    receivers.pop_back();
 }
 scope::~scope()
 {
@@ -1089,19 +1161,6 @@ interrupt_query::~interrupt_query()
         --query_depth;
         query_input_depth = -1;
         new_boundary();
-    }
-}
-menu_query::menu_query( const std::string &category ) :
-    active( in_game && scopes.empty() && active_menu_query.empty() && !category.empty() )
-{
-    if( active ) {
-        active_menu_query = category;
-    }
-}
-menu_query::~menu_query()
-{
-    if( active ) {
-        active_menu_query.clear();
     }
 }
 void playing( bool value )
@@ -1195,7 +1254,7 @@ void boundary()
             ++revision;
             dirty = true;
         }
-        if( !waiting_interrupt.empty() && current_kind == boundary_kind::interrupt_confirmation &&
+        if( !waiting_interrupt.empty() && recovery_receiver( boundary_kind::interrupt_confirmation ) &&
             !owned_interrupt.empty() ) {
             if( publish( "", "ready" ) ) {
                 publish_control( waiting_interrupt, "prompt_opened", "", false, true );
@@ -1209,9 +1268,7 @@ void boundary()
             publish( "", "ready" );
         }
     } catch( const std::exception &e ) {
-        paused = true;
-        pause_origin = "fault";
-        pause_file();
+        fault_pause();
         std::ofstream( path( "bridge-error.txt" ) ) << e.what();
     }
 }
@@ -1222,7 +1279,7 @@ bool poll( keyboard_mode mode, input_event &event )
     }
     last_poll = now_ms();
     std::string id;
-    bool direct_committed = false;
+    bool input_committed = false;
     try {
         if( fs::exists( path( "pause" ) ) &&
             ( !paused || !own_pause_time || fs::last_write_time( path( "pause" ) ) != *own_pause_time ) ) {
@@ -1240,9 +1297,7 @@ bool poll( keyboard_mode mode, input_event &event )
                 return true;
             }
         } catch( const std::exception &error ) {
-            paused = true;
-            pause_origin = "fault";
-            pause_file();
+            fault_pause();
             std::ofstream( path( "bridge-error.txt" ) ) << error.what();
             return false;
         }
@@ -1271,7 +1326,7 @@ bool poll( keyboard_mode mode, input_event &event )
         if( id.empty() || id.size() > 80 || !seen_ids.insert( id ).second ) {
             throw std::runtime_error( "invalid or duplicate request id" );
         }
-        if( integer_member( request, "protocol" ) != 5 ) {
+        if( integer_member( request, "protocol" ) != 6 ) {
             throw std::runtime_error( "unsupported protocol" );
         }
         const std::string kind = request.get_string( "kind" );
@@ -1301,8 +1356,8 @@ bool poll( keyboard_mode mode, input_event &event )
         }
         ordinary_gate( request );
         if( kind == "resume" ) {
-            if( current_kind != boundary_kind::normal_play && current_kind != boundary_kind::menu ) {
-                throw std::runtime_error( "unsupported boundary for resume" );
+            if( !ordinary_receiver() ) {
+                throw input_refusal( "unsupported boundary for resume" );
             }
             ordinary_commit_gate( request, true );
             fs::remove( path( "pause" ) );
@@ -1317,11 +1372,11 @@ bool poll( keyboard_mode mode, input_event &event )
         if( paused || fs::exists( path( "pause" ) ) ) {
             throw std::runtime_error( "paused; explicit resume required" );
         }
-        if( current_kind != boundary_kind::normal_play && current_kind != boundary_kind::menu ) {
-            throw std::runtime_error( "boundary does not permit ordinary input" );
+        if( !ordinary_receiver() ) {
+            throw input_refusal( "boundary does not permit ordinary input" );
         }
-        if( kind == "direct" && !request.get_bool( "require_exact_frame" ) ) {
-            throw std::runtime_error( "direct input requires exact frame preflight" );
+        if( kind == "direct" && request.get_bool( "require_exact_frame" ) ) {
+            throw input_refusal( "direct input requires physical-event preflight" );
         }
         std::optional<direct_input> direct;
         if( kind == "direct" ) {
@@ -1332,7 +1387,7 @@ bool poll( keyboard_mode mode, input_event &event )
         } else if( kind == "action" ) {
             const std::string action = request.get_string( "action" );
             if( std::find( actions.begin(), actions.end(), action ) == actions.end() ) {
-                throw std::runtime_error( "action not registered in active context" );
+                throw input_refusal( "action not registered in active context" );
             }
             const auto &bindings = inp_mngr.get_input_for_action( action, category );
             const auto type = mode == keyboard_mode::keychar ? input_event_t::keyboard_char : input_event_t::keyboard_code;
@@ -1340,7 +1395,7 @@ bool poll( keyboard_mode mode, input_event &event )
                 return candidate.type == type && candidate.sequence.size() == 1;
             } );
             if( binding == bindings.end() ) {
-                throw std::runtime_error( "action has no single-key binding in current mode" );
+                throw input_refusal( "action has no single-key binding in current mode" );
             }
             event = *binding;
         } else {
@@ -1349,10 +1404,10 @@ bool poll( keyboard_mode mode, input_event &event )
         ordinary_commit_gate( request, false );
         ++revision;
         pending = id;
+        input_committed = true;
         publish( id, "dispatched", "", false );
         fs::remove( path( "claimed.json" ) );
         if( direct ) {
-            direct_committed = true;
             feed_direct_imgui( *direct );
         }
         else { feed_imgui( event ); }
@@ -1360,17 +1415,34 @@ bool poll( keyboard_mode mode, input_event &event )
     } catch( const std::exception &e ) {
         event = input_event();
         pending.clear();
+        bool expected_refusal = dynamic_cast<const input_refusal *>( &e ) != nullptr;
+        if( expected_refusal ) {
+            try {
+                std::ifstream claimed( path( "claimed.json" ) );
+                // Upstream's JSON reader peeks beyond the closing brace and
+                // clears ordinary EOF while seeking members. EOF is not I/O loss.
+                claimed.exceptions( std::ios::badbit );
+                if( !claimed.is_open() ) { throw std::runtime_error( "cannot read refusal claim" ); }
+                TextJsonIn parser( claimed );
+                const TextJsonObject original = parser.get_object();
+                authority_gate( original );
+                if( integer_member( original, "takeover_generation" ) != takeover_generation ||
+                    ( original.get_string( "kind" ) != "resume" &&
+                      ( paused || fs::exists( path( "pause" ) ) ) ) || !saved_frame_ok ) {
+                    expected_refusal = false;
+                }
+            } catch( const std::exception & ) { expected_refusal = false; }
+        }
         std::error_code ignored;
         fs::remove( path( "claimed.json" ), ignored );
+        if( ignored ) { expected_refusal = false; }
         // Widget delivery can already have effects before its bounded frame
         // completion fails. Preserve the nonterminal dispatched receipt so the
         // host records unknown delivery; never publish a zero-input rejection
         // or a later ready ACK for this original request.
-        if( direct_committed ) {
-            paused = true;
-            pause_origin = "fault";
+        if( input_committed ) {
             try {
-                pause_file();
+                fault_pause();
                 publish( id, "dispatched", e.what(), false );
             } catch( const std::exception &fault ) {
                 std::fprintf( stderr, "CDDA direct delivery fault: %s\n", fault.what() );
@@ -1378,12 +1450,16 @@ bool poll( keyboard_mode mode, input_event &event )
             return false;
         }
         try {
+            if( !expected_refusal ) { fault_pause(); }
             publish( id, "rejected", e.what() );
         } catch( const std::exception &publication_error ) {
-            paused = true;
-            pause_origin = "fault";
-            pause_file();
-            std::fprintf( stderr, "CDDA harness publication failed: %s\n", publication_error.what() );
+            fault_pause();
+            // This request never committed input. Preserve that known rejection
+            // even when its fresh PNG failed; frame_ok=false cannot authorize input.
+            try { publish( id, "rejected", publication_error.what(), false ); }
+            catch( const std::exception &receipt_error ) {
+                std::fprintf( stderr, "CDDA harness rejection publication failed: %s\n", receipt_error.what() );
+            }
         }
         return false;
     }

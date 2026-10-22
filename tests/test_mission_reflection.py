@@ -41,7 +41,7 @@ class ReflectionCompositionTests(unittest.TestCase):
         self.reflection.reset()
 
     def settled(self, number, *, payload=None):
-        request = dict(schema="mission/9", kind="observe", request_id=f"request-{number}",
+        request = dict(schema="mission/10", kind="observe", request_id=f"request-{number}",
                        mission_id="mission-a", epoch=self.ledger.snapshot(now=self.wall)["epoch"])
         self.ledger.begin_request(request, now=self.wall)
         result = dict(source_ids=[f"source-{number}"], grants_authority=False, **(payload or {}))
@@ -143,7 +143,7 @@ class ReflectionCompositionTests(unittest.TestCase):
     def test_completed_publishes_phase_without_scheduling_or_replay_on_reset(self):
         self.settled(1)
         self.ledger.begin_finishing(epoch=0, reason="Testing reversible finish", now=self.wall)
-        request = dict(schema="mission/9", kind="observe", request_id="request-1", mission_id="mission-a", epoch=0)
+        request = dict(schema="mission/10", kind="observe", request_id="request-1", mission_id="mission-a", epoch=0)
         self.reflection.completed(request, "completed")
         self.assertEqual(self.reflection.summary()["phase"], "finishing")
         self.assertEqual(self.ledger.reflection_records(), ((), ()))
@@ -185,7 +185,7 @@ class ReflectionCompositionTests(unittest.TestCase):
             self.reflection.current("another", "reflector-a")
 
     def test_interrupted_missing_result_does_not_starve_subsequent_reflection(self):
-        request = dict(schema="mission/9", kind="observe", request_id="interrupted",
+        request = dict(schema="mission/10", kind="observe", request_id="interrupted",
                        mission_id="mission-a", epoch=0)
         self.ledger.begin_request(request, now=self.wall)
         self.ledger.close()

@@ -33,6 +33,7 @@ MAX_FRAMES = 4096
 MAX_BYTES = 1024 * 1024 * 1024
 MAX_FRAME_BYTES = 32 * 1024 * 1024
 MAX_AGE_SECONDS = 3.0
+MAX_HISTORICAL_LAG_SECONDS = 86_400.0
 MAX_METADATA_BYTES = 34 * 1024 * 1024
 # Preserve space for bounded dispute/blocked/session lists even at admission cap.
 METADATA_HEADROOM = 2 * 1024 * 1024
@@ -48,7 +49,7 @@ _SCENE = _object({
         "required": ["dx", "dy", "visible"], "additionalProperties": False}, 8, 8),
 })
 _OBSERVATION = _object({
-    "protocol": {"type": "integer", "const": 5},
+    "protocol": {"type": "integer", "const": 6},
     "pause_origin": {"enum": list(PAUSE_ORIGINS)}, "takeover_generation": _INT,
     "ui": {"anyOf": [visible_ui_schema(), {"type": "null"}]}, "id": _text(128, empty=True),
     "session": {**_ID, "pattern": "^[A-Za-z0-9_-]+$"}, "revision": _INT,
@@ -58,6 +59,7 @@ _OBSERVATION = _object({
     "frame": _text(300, empty=True), "in_game": {"type": "boolean"},
     "frame_geometry": {"anyOf": [geometry_schema(), {"type": "null"}]},
     "boundary": _object({"kind": _BOUNDARY, "id": _ID, "control_generation": _INT,
+                          "input_receiver": {"type": "boolean"},
                           "recovery_operations": {"type": "array", "maxItems": 1, "uniqueItems": True,
                                                   "items": {"enum": ["request_interrupt", "answer_interrupt", "continue_debug_once"]}},
                           "interrupt_request_id": {"anyOf": [_ID, {"type": "null"}]}}),
@@ -78,6 +80,7 @@ class CapacityReservation:
     """Opaque single-use reservation for one worst-case after/failure frame."""
     token: str
     before_observation_id: str
+    preflight_observation_id: str
     frame_slots: int = 1
     bytes_reserved: int = MAX_FRAME_BYTES
     metadata_reserved: int = MAX_ENTRY_BYTES
@@ -88,6 +91,7 @@ class _Entry:
     reference: EvidenceRef
     observation: dict[str, Any]
     initial_lag_seconds: float
+    retention: str
 
 
 def _canonical(value: Any) -> bytes:
@@ -116,9 +120,13 @@ def same_native_state(before: dict | None, after: dict | None) -> bool:
 
 
 def _scene_authority(observation: dict[str, Any]) -> dict[str, Any]:
-    # Host Pause changes transport permission, not game facts or scene revision.
-    # _metadata still forbids rewriting paused (or anything else) on one frame.
-    return {key: observation[key] for key in ("scene", "ui", "boundary", "category", "actions", "in_game", "takeover_generation", "frame_geometry")}
+    # Pause and live receiver availability affect transport permission without
+    # changing game facts/revision. Both remain immutable within one capture;
+    # semantic equivalence still compares every boundary/custody field.
+    result = {key: observation[key] for key in ("scene", "ui", "boundary", "category", "actions", "in_game", "takeover_generation", "frame_geometry")}
+    result["boundary"] = {key: value for key, value in observation["boundary"].items()
+                          if key != "input_receiver"}
+    return result
 
 
 def _validate_observation(value: dict[str, Any] | str | bytes) -> dict[str, Any]:
@@ -141,6 +149,8 @@ def _validate_observation(value: dict[str, Any] | str | bytes) -> dict[str, Any]
     expected_recovery = {"activity_poll": ["request_interrupt"], "interrupt_confirmation": ["answer_interrupt"],
                          "debug_prompt": ["continue_debug_once"]}.get(kind, [])
     boundary = observation["boundary"]
+    if boundary["input_receiver"] and kind not in ("normal_play", "menu"):
+        raise EvidenceError("Ordinary receiver cannot be asserted at a restricted boundary")
     if (boundary["recovery_operations"] not in ([], expected_recovery)
             or kind == "interrupt_confirmation" and (boundary["recovery_operations"] != expected_recovery or boundary["interrupt_request_id"] is None)
             or kind != "interrupt_confirmation" and boundary["interrupt_request_id"] is not None):
@@ -219,6 +229,9 @@ class EvidenceStore:
         self._blocked: list[str] = []
         self._disputed: list[str] = []
         self._reservation: CapacityReservation | None = None
+        # Only the latest final capture under this exact entry/rule/generation
+        # may reserve dispatch. Historical metadata never restores this binding.
+        self._preflight: tuple[EvidenceRef, EvidenceRef, str, int] | None = None
         self._interpretations: tuple[Interpretation, ...] = ()
         self.invalid_reason = "Observe after opening the store"
         try:
@@ -238,6 +251,7 @@ class EvidenceStore:
         self._authority_generation += 1
         self._current = None
         self._reservation = None
+        self._preflight = None
         self._lock.close()
 
     def _open(self) -> None:
@@ -275,7 +289,7 @@ class EvidenceStore:
                     raise EvidenceError("Invalid evidence manifest")
                 value = json.loads(manifest.read_bytes(), parse_constant=_reject_constant, object_pairs_hook=_pairs)
                 if (type(value) is not dict or set(value) != {"store_version", "entries", "session", "retired_sessions", "blocked", "disputed"}
-                        or type(value["store_version"]) is not int or value["store_version"] != 4
+                        or type(value["store_version"]) is not int or value["store_version"] != 5
                         or type(value["entries"]) is not list or len(value["entries"]) > MAX_FRAMES
                         or type(value["retired_sessions"]) is not list or len(value["retired_sessions"]) > MAX_FRAMES
                         or any(type(s) is not str or not 1 <= len(s) <= 128 for s in value["retired_sessions"])
@@ -291,17 +305,20 @@ class EvidenceStore:
                 self._blocked = value["blocked"]
                 self._disputed = value["disputed"]
                 for item in value["entries"]:
-                    if type(item) is not dict or set(item) != {"reference", "observation", "initial_lag_seconds"}:
+                    if type(item) is not dict or set(item) != {"reference", "observation", "initial_lag_seconds", "retention"}:
                         raise EvidenceError("Malformed retained observation")
                     ref = EvidenceRef.from_dict(item["reference"])
                     observation = _validate_observation(item["observation"])
                     lag = item["initial_lag_seconds"]
-                    if type(lag) not in (int, float) or not math.isfinite(lag) or not 0 <= lag <= 3:
+                    retention = item["retention"]
+                    maximum_lag = MAX_HISTORICAL_LAG_SECONDS if retention == "terminal" else MAX_AGE_SECONDS
+                    if (retention not in ("current", "preflight", "terminal")
+                            or type(lag) not in (int, float) or not math.isfinite(lag) or not 0 <= lag <= maximum_lag):
                         raise EvidenceError("Invalid original observation age")
                     expected = self._reference(observation, ref.received_monotonic, ref.frame_sha256)
                     if ref != expected or ref.observation_id in self._entries:
                         raise EvidenceError("Retained metadata contradicts observation identity")
-                    self._entries[ref.observation_id] = _Entry(ref, observation, lag)
+                    self._entries[ref.observation_id] = _Entry(ref, observation, lag, retention)
                 if not set(self._disputed) <= self._entries.keys():
                     raise EvidenceError("Disputed source is not retained")
                 # Preserve valid metadata even when an original image is lost.
@@ -323,10 +340,11 @@ class EvidenceStore:
         self._usage()
 
     def _manifest(self) -> dict[str, Any]:
-        return {"store_version": 4, "session": self._session, "retired_sessions": self._retired_sessions,
+        return {"store_version": 5, "session": self._session, "retired_sessions": self._retired_sessions,
                  "blocked": self._blocked, "disputed": self._disputed,
                  "entries": [{"reference": item.reference.to_dict(), "observation": item.observation,
-                              "initial_lag_seconds": item.initial_lag_seconds} for item in self._entries.values()]}
+                              "initial_lag_seconds": item.initial_lag_seconds,
+                              "retention": item.retention} for item in self._entries.values()]}
 
     def _save(self) -> None:
         encoded = _canonical(self._manifest())
@@ -351,6 +369,7 @@ class EvidenceStore:
                            digest, observation["boundary"]["kind"])
 
     def _invalidate(self, reason: str, *disputed: str) -> None:
+        self._preflight = None
         self._authority_generation += 1
         for identity in disputed:
             if identity in self._entries and identity not in self._disputed:
@@ -443,6 +462,14 @@ class EvidenceStore:
         if elapsed < 0 or wall_age < -1000 or wall_age > 3000 or entry.initial_lag_seconds + elapsed > MAX_AGE_SECONDS:
             raise EvidenceError("Observation is stale or clock continuity is unknown")
 
+    def _historical_age(self, entry: _Entry, now_monotonic: float, now_timestamp_ms: int) -> None:
+        """Bound historical receipt age without renewing its immutable clocks."""
+        elapsed = now_monotonic - entry.reference.received_monotonic
+        wall_age = now_timestamp_ms - entry.reference.timestamp_ms
+        if (elapsed < 0 or wall_age < -1000 or wall_age > MAX_HISTORICAL_LAG_SECONDS * 1000
+                or entry.initial_lag_seconds + elapsed > MAX_HISTORICAL_LAG_SECONDS):
+            raise EvidenceError("Historical observation exceeds its bounded original age")
+
     @staticmethod
     def _equivalence_rule(rule: str) -> None:
         if rule not in ("native_state", "exact_png_bytes"):
@@ -468,68 +495,108 @@ class EvidenceStore:
                        for value in (original, actual))
         return before.frame_sha256 == after.frame_sha256
 
+    def _ordinary_preflight(self, before: EvidenceRef, actual: EvidenceRef) -> None:
+        original, observed = self.observation(before), self.observation(actual)
+        if (before.session != actual.session or original["paused"] or original["pause_origin"] != "none"
+                or observed["status"] != "ready"
+                or observed["error"] or observed["paused"]
+                or observed["boundary"]["kind"] not in ("normal_play", "menu")
+                or not observed["boundary"]["input_receiver"]
+                or any(original[key] != observed[key] for key in ("takeover_generation", "pause_origin"))
+                or original["boundary"]["control_generation"] != observed["boundary"]["control_generation"]):
+            raise EvidenceError("Ordinary preflight crossed its session/custody or lacks a live receiver")
+
     @_serialized
     def ingest(self, value: dict[str, Any] | str | bytes, *, received_monotonic: float,
                now_monotonic: float, now_timestamp_ms: int,
                reservation: CapacityReservation | None = None) -> EvidenceRef:
-        """Retain a native-v4 normal/menu/activity/recovery observation with its actual first receipt.
+        """Retain a current native-v6 observation with its actual first receipt.
 
         Repeated source identity reuses original receipt/lag and immutable copied
         source; bridge-cache eviction is harmless after initial retention. Altered
         metadata for that identity is a contradiction, never a fresh observation.
         """
         return self._ingest(value, received_monotonic=received_monotonic, now_monotonic=now_monotonic,
-                            now_timestamp_ms=now_timestamp_ms, reservation=reservation, promote_current=True)
+                            now_timestamp_ms=now_timestamp_ms, reservation=reservation, retention="current")
 
     @_serialized
-    def retain_equivalent(self, value: dict[str, Any] | str | bytes, *, received_monotonic: float,
+    def retain_preflight(self, value: dict[str, Any] | str | bytes, *, received_monotonic: float,
                           now_monotonic: float, now_timestamp_ms: int, rule: str) -> EvidenceRef:
         """Archive final preflight with its actual receipt, preserving current attribution.
 
-        Requires fresh current evidence and no outstanding after-frame reservation.
+        Semantic rules require fresh equivalent current evidence. Ordinary input
+        permits an old entry but requires a fresh actual receiver under the same
+        uninterrupted custody. No outstanding after-frame reservation is allowed.
         A successful result is historical evidence only; any failed retention
         invalidates current authority and preserves available diagnostics.
         """
         return self._ingest(value, received_monotonic=received_monotonic, now_monotonic=now_monotonic,
-                            now_timestamp_ms=now_timestamp_ms, reservation=None, promote_current=False, rule=rule)
+                            now_timestamp_ms=now_timestamp_ms, reservation=None, retention="preflight", rule=rule)
+
+    @_serialized
+    def retain_terminal(self, value: dict[str, Any] | str | bytes, *, received_monotonic: float,
+                        now_monotonic: float, now_timestamp_ms: int,
+                        reservation: CapacityReservation | None = None) -> EvidenceRef:
+        """Archive authenticated terminal evidence without changing current authority.
+
+        The writer must establish ACK/request correlation first. Historical age
+        or a newer observation cannot turn returned delivery into an unknown ACK.
+        Bytes, identity, session membership and finite original clocks still matter.
+        """
+        return self._ingest(value, received_monotonic=received_monotonic, now_monotonic=now_monotonic,
+                            now_timestamp_ms=now_timestamp_ms, reservation=reservation, retention="terminal")
 
     def _ingest(self, value: dict[str, Any] | str | bytes, *, received_monotonic: float,
                 now_monotonic: float, now_timestamp_ms: int, reservation: CapacityReservation | None,
-                promote_current: bool, rule: str = "native_state") -> EvidenceRef:
+                retention: str, rule: str = "native_state") -> EvidenceRef:
         self._open()
+        promote_current = retention == "current"
+        historical = retention == "terminal"
         try:
             before = None
-            if not promote_current:
-                self._equivalence_rule(rule)
-                before = self.current_boundary(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
+            if retention == "preflight":
+                if rule == "ordinary_input":
+                    before, _ = self.inspect_current_boundary(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
+                    if before is None:
+                        raise EvidenceError("Ordinary preflight requires its retained entry source")
+                else:
+                    self._equivalence_rule(rule)
+                    before = self.current_boundary(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
                 self.observation(before)  # A disputed current source cannot support equivalence.
                 if self._reservation is not None:
                     raise CapacityError("An unresolved dispatch already reserves after evidence")
             observation = json_object(value)
             validate_json(observation, _OBSERVATION)
             session = observation["session"]
-            if not promote_current and session != before.session:
+            if retention == "preflight" and session != before.session:
                 raise EvidenceError("Equivalent preflight cannot adopt another world session")
-            if session in self._retired_sessions:
+            if historical and session not in (self._session, *self._retired_sessions):
+                raise EvidenceError("Historical terminal source cannot introduce an unowned session")
+            if not historical and session in self._retired_sessions:
                 raise EvidenceError("An old world session cannot become current again")
-            if self._session is not None and session != self._session:
+            if not historical and self._session is not None and session != self._session:
                 self._invalidate("World session changed")
                 if len(self._retired_sessions) >= MAX_FRAMES:
                     raise CapacityError("Too many world transitions for one task/run store")
                 self._retired_sessions.append(self._session)
-            self._session = session
+            if not historical:
+                self._session = session
             observation = _validate_observation(observation)
-            if not promote_current and (observation["status"] != "ready" or observation["error"] != ""):
+            if retention == "preflight" and (observation["status"] != "ready" or observation["error"] != ""):
                 raise EvidenceError("Equivalent preflight requires ready evidence without an error")
-            if type(received_monotonic) not in (int, float) or not math.isfinite(received_monotonic) or received_monotonic < 0:
+            if (type(received_monotonic) not in (int, float) or not math.isfinite(received_monotonic)
+                    or type(now_monotonic) not in (int, float) or not math.isfinite(now_monotonic)
+                    or not 0 <= received_monotonic <= now_monotonic or type(now_timestamp_ms) is not int):
                 raise EvidenceError("Invalid actual receipt time")
             identity = _identity(observation)
             if reservation is not None:
                 self._check_reservation(reservation)
-                if identity == reservation.before_observation_id:
+                if identity in (reservation.before_observation_id, reservation.preflight_observation_id):
                     raise CapacityError("A before-frame reread cannot consume an after-frame reservation")
-            if identity in self._blocked:
+            if not historical and identity in self._blocked:
                 raise EvidenceError("Invalidated source cannot regain current authority")
+            if historical and identity in self._disputed:
+                raise EvidenceError("Disputed source cannot supply terminal evidence")
             peers = [item for item in self._entries.values() if item.reference.session == session]
             entry = self._entries.get(identity)
             if entry is not None and _metadata(entry.observation) != _metadata(observation):
@@ -540,7 +607,12 @@ class EvidenceStore:
                                     if item.reference.revision == observation["revision"])
                 self._invalidate("Contradictory metadata for the same source identity", *disputed)
                 raise EvidenceError("Contradictory metadata for the same source identity")
-            if peers and observation["revision"] < max(item.reference.revision for item in peers):
+            # Late terminal captures are history, not a revision frontier for the
+            # live scene. Explicit fresh current/preflight ingestion can establish
+            # that role later, using the same original receipt and lag.
+            authoritative_peers = [item for item in peers if item.retention != "terminal"]
+            if (not historical and authoritative_peers
+                    and observation["revision"] < max(item.reference.revision for item in authoritative_peers)):
                 raise EvidenceError("Observation revision regressed")
             for peer in peers:
                 if (peer.reference.revision == observation["revision"]
@@ -550,10 +622,14 @@ class EvidenceStore:
                         if item.reference.revision == observation["revision"]))
                     raise EvidenceError("Contradictory scene or boundary at the same revision")
             if entry is not None:
-                self._fresh(entry, now_monotonic, now_timestamp_ms)
+                if historical:
+                    self._historical_age(entry, now_monotonic, now_timestamp_ms)
+                else:
+                    self._fresh(entry, now_monotonic, now_timestamp_ms)
                 self.verify(entry.reference)
             else:
-                if type(now_timestamp_ms) is not int or not -1000 <= now_timestamp_ms - observation["timestamp_ms"] <= 3000:
+                maximum_age = MAX_HISTORICAL_LAG_SECONDS * 1000 if historical else MAX_AGE_SECONDS * 1000
+                if not -1000 <= now_timestamp_ms - observation["timestamp_ms"] <= maximum_age:
                     raise EvidenceError("First observation is stale or from a future clock")
                 source = self.bridge / observation["frame"]
                 if source.is_symlink() or source.resolve() != source:
@@ -565,8 +641,16 @@ class EvidenceStore:
                     raise EvidenceError(f"Native source is unavailable or evicted: {exc}") from exc
                 _check_frame_bytes(data)
                 reference = self._reference(observation, received_monotonic, hashlib.sha256(data).hexdigest())
-                entry = _Entry(reference, observation, max(0, now_timestamp_ms - observation["timestamp_ms"]) / 1000)
-                self._fresh(entry, now_monotonic, now_timestamp_ms)
+                # Native lag belongs to actual receipt, not this later archive
+                # operation. Adding processing delay here would count it again
+                # when _fresh/_historical_age advance from the original receipt.
+                elapsed = now_monotonic - received_monotonic
+                initial_lag = max(0.0, (now_timestamp_ms - observation["timestamp_ms"]) / 1000 - elapsed)
+                entry = _Entry(reference, observation, initial_lag, retention)
+                if historical:
+                    self._historical_age(entry, now_monotonic, now_timestamp_ms)
+                else:
+                    self._fresh(entry, now_monotonic, now_timestamp_ms)
                 self._capacity(len(data), reservation, metadata_bytes=len(_canonical(observation)) + 8192)
                 destination = Path(reference.frame_path)
                 if destination.exists():
@@ -577,12 +661,22 @@ class EvidenceStore:
                     os.fsync(stream.fileno())
                 destination.chmod(0o444)
                 self._entries[identity] = entry
-            if not promote_current and not self.equivalent(before, entry.reference, rule=rule):
-                raise EvidenceError("Final preflight is not equivalent to current retained evidence")
+            if retention == "preflight":
+                if rule == "ordinary_input":
+                    self._ordinary_preflight(before, entry.reference)
+                elif not self.equivalent(before, entry.reference, rule=rule):
+                    raise EvidenceError("Final preflight is not equivalent to current retained evidence")
+            if not historical and entry.retention == "terminal":
+                entry = _Entry(entry.reference, entry.observation, entry.initial_lag_seconds, retention)
+                self._entries[identity] = entry
             if reservation is not None:
                 self._check_reservation(reservation)
                 self._reservation = None
+                self._preflight = None
+            if retention == "preflight":
+                self._preflight = (before, entry.reference, rule, self._authority_generation)
             if promote_current:
+                self._preflight = None
                 if self._current != entry.reference:
                     self._authority_generation += 1
                 self._current = entry.reference
@@ -689,16 +783,35 @@ class EvidenceStore:
         self._capacity(MAX_FRAME_BYTES, None)
 
     @_serialized
-    def reserve_dispatch(self, before: EvidenceRef, *, now_monotonic: float,
-                         now_timestamp_ms: int) -> CapacityReservation:
+    def reserve_dispatch(self, before: EvidenceRef, *, preflight: EvidenceRef, rule: str,
+                         now_monotonic: float, now_timestamp_ms: int) -> CapacityReservation:
         """Reserve one distinct slot and 32 MiB for required after/failure capture.
 
-        Consume by passing this token to ingest, or explicitly release after a
-        non-dispatch. Oversized/missing capture remains an error/unknown outcome;
+        Consume by passing this token to ingest or retain_terminal, or release
+        after a non-dispatch. Oversized/missing capture remains an error/unknown outcome;
         no reservation fabricates source evidence or promises engine capture.
         """
-        self.preflight_dispatch(before, now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
-        reservation = CapacityReservation(uuid.uuid4().hex, before.observation_id)
+        self._open()
+        if self._reservation is not None:
+            raise CapacityError("An unresolved dispatch already reserves after evidence")
+        if before != self._current or before == preflight:
+            raise EvidenceError("Dispatch requires its current entry and distinct actual preflight")
+        if self._preflight != (before, preflight, rule, self._authority_generation):
+            raise EvidenceError("Dispatch preflight is not the latest capture for its entry/rule/generation")
+        self.verify(before)
+        self.verify(preflight)
+        if self._entries[preflight.observation_id].retention != "preflight":
+            raise EvidenceError("Dispatch requires an actual retained preflight capture")
+        self._fresh(self._entries[preflight.observation_id], now_monotonic, now_timestamp_ms)
+        if rule == "ordinary_input":
+            self._ordinary_preflight(before, preflight)
+        else:
+            self._equivalence_rule(rule)
+            self._fresh(self._entries[before.observation_id], now_monotonic, now_timestamp_ms)
+            if not self.equivalent(before, preflight, rule=rule):
+                raise EvidenceError("Semantic dispatch preflight is not equivalent to its entry")
+        self.preflight_retention()
+        reservation = CapacityReservation(uuid.uuid4().hex, before.observation_id, preflight.observation_id)
         self._reservation = reservation
         return reservation
 
@@ -707,6 +820,7 @@ class EvidenceStore:
         self._open()
         self._check_reservation(reservation)
         self._reservation = None
+        self._preflight = None
 
     @property
     @_serialized

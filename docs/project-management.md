@@ -27,6 +27,13 @@ gates to owned Issues; this contract alone does not prove current settings.
 
 Use GitHub's issues, sub-issues, dependencies, milestones, pull requests, fields,
 saved views and built-in workflows. No custom tracker or background scheduler.
+Select work for the next independent-play outcome and the longer-term capabilities
+that enable future outcomes. Resolve demonstrated obstacles and make deliberate
+investments in useful accelerators. Apply P-CHANGE/S-CODE to available capabilities
+beyond this repository; adoption, integration and deletion can be more valuable
+than new implementation. Include setup, latency, review and ongoing operating cost
+in the choice. Do not turn a speculative framework, exhaustive defense or process
+improvement into a campaign prerequisite without a concrete outcome dependency.
 The Project README links this contract, the overview and these three saved views:
 
 | View | User question and contents |
@@ -143,6 +150,11 @@ Update authoritative contracts when behavior changes; mark incomplete support an
 unrun checks plainly. Keep chat updates brief and the overview understandable.
 An issue/PR brief is enough for a routine fix. A consequential workflow/boundary
 change may need one short design rationale, not parallel plan/status systems.
+Apply S-CODE's platform-contract rule during that review: state which configured
+DB/OS/library behavior already supplies the guarantee and what project requirement
+remains. Simplification and removal of duplicate validation/recovery are valid work
+outcomes. Track evidence-backed gaps in existing issues; speculative hardening is
+not a new campaign gate or a reason to add another approval layer.
 
 Development episodes used to select repairs remain development data. Freeze source,
 objective, conditions and limits before every run. Formal acceptance is a decision

@@ -74,11 +74,29 @@ are product capabilities with maintenance obligations.
 
 ## P-CHANGE Design for controlled change
 
+Choose architecture, tools and process by the value they add to the overall
+objective: reliable independent play, useful learning and a reviewable experience.
+Consider capabilities we can adopt or acquire across the existing ecosystem,
+including the game engine, platforms, libraries, tools, frameworks and services.
+Prefer the smallest effective integration and total delivery/operating cost over
+custom ownership or completeness for its own sake. Remove work that no longer
+contributes; adopting a framework is not itself progress.
+Value includes long-term capability and learning, not only immediate feature
+delivery. Invest in accelerators and enablers when their expected repeated use,
+future cost reduction, research value or new options justify the initial effort
+and upkeep. Keep assumptions and a useful reassessment point explicit; lack of an
+immediate payoff alone is not a reason to reject an investment.
+
 Separate responsibilities around likely changes, explicit authority and testable
 contracts. Select tools by capability and total maintenance cost. Keep alternatives
 and reversal conditions for consequential decisions. Evaluate mature tools and
 existing libraries before implementing generic infrastructure; record why custom
 code is needed when reuse cannot satisfy the requirement. Avoid speculative frameworks.
+Rely on documented, configured database, operating-system and library guarantees.
+Add project logic for the requirements those contracts do not cover, with assurance
+proportionate to this local game's actual deployment and consequences. Repeated
+checks, recovery layers and abstraction frameworks need a concrete benefit; more
+defensive code is not inherently more reliable or maintainable.
 Maintain one current contract per boundary. Migrate the whole system together;
 do not carry backward-compatibility paths or mixed-version operation.
 

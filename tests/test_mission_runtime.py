@@ -113,7 +113,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.fail(f"Timed out; status={self.runtime.status()}")
 
     def request(self, kind, **changes):
-        data = dict(schema="mission/9", kind=kind, request_id=kind + "-1",
+        data = dict(schema="mission/10", kind=kind, request_id=kind + "-1",
                     mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"])
         if kind == "handoff":
             data.update(unfinished_work_ids=[])
@@ -125,7 +125,7 @@ class MissionRuntimeTests(unittest.TestCase):
         return data
 
     def result(self, identity):
-        out = self.runtime.command(dict(schema="mission/9", kind="result",
+        out = self.runtime.command(dict(schema="mission/10", kind="result",
             mission_id=self.a.mission_id, operation_id=identity))
         self.assertEqual(out["status"], "accepted", out)
         return out["operation"]
@@ -138,7 +138,7 @@ class MissionRuntimeTests(unittest.TestCase):
             self.assertEqual(self.controller.execute("observe")["status"], "ready")
             self.assertEqual(self.controller.execute("resume")["status"], "ready")
             self._prepared_native = True
-        req = dict(schema="mission/9", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/10", kind="start", request_id="start-1", admission=self.a.to_dict())
         with patch.object(self.runtime, "_bootstrap", side_effect=lambda work: bootstrap_core_fixture(self.runtime, work)):
             response = self.runtime.command(req)
             self.assertEqual(response["status"], "accepted", response)
@@ -483,7 +483,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertIsNone(self.controller._mission_lease)
         self.assertIsNone(self.runtime._prompt_phase)
 
-    def test_native_takeover_after_menu_input_keeps_pending_unknown_policy_receipt(self):
+    def test_native_takeover_after_known_menu_input_blocks_continuation_without_losing_ack(self):
         def takeover(bridge, request):
             if request.get("action") == "UILIST.DOWN":
                 bridge.value.update(paused=True, pause_origin="human", takeover_generation=1)
@@ -494,10 +494,11 @@ class MissionRuntimeTests(unittest.TestCase):
                              phase_id=root["request_id"])
         self.runtime.command(child)
         operation = self.settled(child["request_id"])
-        self.assertEqual(operation["state"], "unknown", operation)
-        self.assertIsNotNone(operation["result"]["pending_logical_id"])
+        self.assertEqual(operation["state"], "blocked", operation)
+        self.assertIn("native custody", operation["result"]["reason"])
         self.assertEqual(self.runtime.status()["pause_cause"], "takeover")
         self.assertEqual([r["state"] for r in self.runtime._ledger.primitive_records()], ["returned", "returned"])
+        self.assertEqual(self.runtime.status()["unresolved_effects"], [])
         self.assertIsNone(self.runtime._prompt_phase)
         self.assertIsNone(self.controller._mission_lease)
 
@@ -541,10 +542,11 @@ class MissionRuntimeTests(unittest.TestCase):
         self.runtime.command(self.request("observe"))
         operation = self.settled("observe-1")
         self.assertEqual(operation["state"], "completed", operation)
-        self.assertIn("budget", operation["result"]["budget_stop"])
-        self.assertEqual(operation["result"]["phase"]["stage"], "complete")
+        self.assertEqual(operation["result"]["macro_closure"]["limit"], "game_seconds")
+        self.assertNotIn("phase", operation["result"])
         self.assertIsNone(self.runtime._prompt_phase)
-        self.assertIsNone(self.controller._mission_lease)
+        self.assertIs(self.controller._mission_lease, self.runtime._lease)
+        self.assertEqual(self.runtime.status()["phase"], "active")
         self.assertEqual(self.runtime.status()["spent_inputs"], 1)
 
     def test_interaction_without_prompt_does_not_block_following_navigation(self):
@@ -612,7 +614,7 @@ class MissionRuntimeTests(unittest.TestCase):
         initial = self.start()
         self.assertIsNone(initial["memory_context"])
         scope = dict(mission_id=self.a.mission_id, session=initial["current_source"]["session"], coordinate_epoch=0)
-        response = self.runtime.command(dict(schema="mission/9", kind="context", handoff=None, mission_id=self.a.mission_id,
+        response = self.runtime.command(dict(schema="mission/10", kind="context", handoff=None, mission_id=self.a.mission_id,
             scope=scope, query="position", max_bytes=32768))
         packet = copy.deepcopy(response["context"]["packet"])
         response["context"]["packet"]["query"] = "Modified caller copy"
@@ -746,12 +748,12 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_active_stop_revokes_now_and_never_queues_or_retargets_old_epoch(self):
         self.start()
         entered, release = threading.Event(), threading.Event()
-        real = self.runtime._store.retain_equivalent
+        real = self.runtime._store.retain_preflight
         def blocked(*args, **kwargs):
             entered.set()
             release.wait(3)
             return real(*args, **kwargs)
-        with patch.object(self.runtime._store, "retain_equivalent", blocked):
+        with patch.object(self.runtime._store, "retain_preflight", blocked):
             request = self.navigation()
             self.runtime.command(request)
             self.assertTrue(entered.wait(2))
@@ -768,7 +770,7 @@ class MissionRuntimeTests(unittest.TestCase):
             release.set()
             self.assertEqual(self.settled(request["request_id"])["state"], "paused")
         self.wait(lambda: self.runtime.status()["active_operation"] is None)
-        absent = self.runtime.command(dict(schema="mission/9", kind="result", mission_id=self.a.mission_id,
+        absent = self.runtime.command(dict(schema="mission/10", kind="result", mission_id=self.a.mission_id,
                                            operation_id=stop["request_id"]))
         self.assertEqual(absent["status"], "rejected")
         retry = self.request("stop", request_id="stop-new-epoch", reason=stop["reason"])
@@ -801,7 +803,7 @@ class MissionRuntimeTests(unittest.TestCase):
         req = self.request("remember", request_id="new-stock", entry_type="claim", entry=assertion("new", second, 0))
         self.runtime.command(req)
         self.assertEqual(self.settled("new-stock")["state"], "completed")
-        work = {"schema": "campaign-memory/4", "record_type": "Work", "predecessor_work_id": None, "id": "water-pending",
+        work = {"schema": "campaign-memory/5", "record_type": "Work", "predecessor_work_id": None, "id": "water-pending",
             "intent": "Treat water and verify storage", "scope": scope, "stage": "pending-storage",
             "progress": None, "available": [], "committed": [],
             "predicted_output": [{"subject": "clean-water", "quantity": 2, "unit": "charges", "coverage_id": "kettle"}],
@@ -811,7 +813,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.runtime.command(req)
         self.assertEqual(self.settled("pending-work")["state"], "completed")
         Path(second["frame_path"]).unlink()
-        context_request = dict(schema="mission/9", kind="context", handoff=None, mission_id=self.a.mission_id,
+        context_request = dict(schema="mission/10", kind="context", handoff=None, mission_id=self.a.mission_id,
                                scope=scope, query="water", max_bytes=32768)
         out = self.runtime.command(context_request)
         self.assertEqual(out["status"], "accepted", out)
@@ -830,10 +832,10 @@ class MissionRuntimeTests(unittest.TestCase):
         self.start()
         source = self.runtime.status()["current_source"]
         scope = dict(mission_id=self.a.mission_id, session=source["session"], coordinate_epoch=0)
-        out = self.runtime.command(dict(schema="mission/9", kind="context", handoff=None, mission_id=self.a.mission_id,
+        out = self.runtime.command(dict(schema="mission/10", kind="context", handoff=None, mission_id=self.a.mission_id,
             scope=scope, query="water", max_bytes=32768))
         packet = out["context"]["packet"]
-        decision = dict(schema="campaign-memory/4", record_type="Decision", id="decision-1",
+        decision = dict(schema="campaign-memory/5", record_type="Decision", id="decision-1",
             packet_id=packet["packet_id"], scope=scope, query=packet["query"], memory_version=packet["memory_version"],
             claim_ids=[], work_ids=[], source_ids=[], procedure_refs=packet["procedure_refs"], procedure_sources=[],
             omitted=packet["omitted"]["claims"] + packet["omitted"]["work"], reason="Inspect actual water")
@@ -962,7 +964,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.bridge.delivered, [])
 
     def test_paused_start_admits_without_native_resume_or_planning_binding(self):
-        req = dict(schema="mission/9", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/10", kind="start", request_id="start-1", admission=self.a.to_dict())
         self.assertEqual(self.runtime.command(req)["status"], "accepted")
         op = self.settled("start-1")
         self.assertTrue(op["result"]["lifecycle_needed"])
@@ -981,7 +983,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.controller.execute("observe")["status"], "ready")
         self.assertEqual(self.controller.execute("resume")["status"], "ready")
         delivered = copy.deepcopy(self.bridge.delivered)
-        req = dict(schema="mission/9", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/10", kind="start", request_id="start-1", admission=self.a.to_dict())
         with patch.object(self.controller, "acquire_mission", side_effect=AssertionError("Start cannot adopt identity")):
             self.assertEqual(self.runtime.command(req)["status"], "accepted")
             self.assertTrue(self.settled("start-1")["result"]["lifecycle_needed"])
@@ -996,7 +998,7 @@ class MissionRuntimeTests(unittest.TestCase):
 
     def test_missing_native_start_stays_admitted_without_launch(self):
         self.bridge.__exit__(None, None, None)
-        req = dict(schema="mission/9", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/10", kind="start", request_id="start-1", admission=self.a.to_dict())
         self.runtime.command(req)
         op = self.settled("start-1")
         self.assertTrue(op["result"]["lifecycle_needed"])
@@ -1055,11 +1057,12 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual([r for r in self.bridge.delivered if r["kind"] == "action"], [])
         self.assertIsNone(self.runtime._store._reservation)
 
-    def test_after_storage_failure_stays_unknown_and_does_not_fake_before_as_after(self):
+    def test_after_storage_failure_settles_known_ack_with_explicit_evidence_loss(self):
         self.start()
         request = self.navigation()
-        ingest, execute = self.runtime._store.ingest, self.controller.execute_mission
+        retain, execute = self.runtime._store.retain_terminal, self.controller.execute_mission
         published = threading.Event()
+        failed = []
         def dispatch(*args, **kwargs):
             result = execute(*args, **kwargs)
             if result["published"]:
@@ -1069,16 +1072,22 @@ class MissionRuntimeTests(unittest.TestCase):
             # Entry Observe is intentionally before dispatch. Inject failure on
             # the actual correlated input ACK, preserving this post-input probe.
             if published.is_set():
+                failed.append(value["id"])
                 raise OSError("after-frame fsync failed")
-            return ingest(value, **kwargs)
+            return retain(value, **kwargs)
         with patch.object(self.controller, "execute_mission", side_effect=dispatch), \
-                patch.object(self.runtime._store, "ingest", side_effect=fail_after_input):
+                patch.object(self.runtime._store, "retain_terminal", side_effect=fail_after_input):
             self.runtime.command(request)
             op = self.settled(request["request_id"])
-        self.assertEqual(op["state"], "unknown", op)
+        self.assertEqual(op["state"], "blocked", op)
         row, = self.runtime._ledger.primitive_records()
-        self.assertEqual(row["state"], "unknown")
+        self.assertEqual(row["state"], "returned")
         self.assertIsNone(row["result"]["source_after"])
+        self.assertEqual(failed, [row["native_id"]])
+        self.assertEqual(row["result"]["native_ack"]["id"], row["native_id"])
+        self.assertIn("after-frame fsync failed", row["result"]["evidence_loss"])
+        self.assertIsNone(self.runtime._store._reservation)
+        self.assertEqual(self.runtime.status()["unresolved_effects"], [])
         self.assertEqual(len([r for r in self.bridge.delivered if r["kind"] == "action"]), 1)
         self.wait(lambda: self.runtime.status()["active_operation"] is None)
         self.assertIsNone(self.runtime.status()["current_source"])
@@ -1087,7 +1096,7 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_crash_prepared_reopen_keeps_unknown_effect_and_no_authority(self):
         directory = self.controller.root / ".runtime" / "missions" / self.a.mission_id
         with MissionLedger(directory, admission=self.a, now=time.time()) as ledger:
-            start = dict(schema="mission/9", kind="start", request_id="start-1", admission=self.a.to_dict())
+            start = dict(schema="mission/10", kind="start", request_id="start-1", admission=self.a.to_dict())
             ledger.begin_request(start, now=time.time())
             ledger.complete_request("start-1", "completed", {"admitted": True}, now=time.time())
             ledger.activate(epoch=0, player_id=self.a.player_id, now=time.time())
@@ -1117,7 +1126,9 @@ class MissionRuntimeTests(unittest.TestCase):
         self.bridge.behavior = elapsed
         first = self.navigation()
         self.runtime.command(first)
-        self.assertEqual(self.settled(first["request_id"])["state"], "completed")
+        self.assertEqual(self.settled(first["request_id"])["state"], "partial")
+        self.assertEqual(self.runtime.status()["phase"], "paused")
+        self.assertIsNone(self.runtime._lease)
         second = self.navigation(target=(2, 0, 0), request_id="second")
         self.runtime.command(second)
         self.assertNotEqual(self.settled("second")["state"], "completed")
@@ -1194,7 +1205,7 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_context_journal_failure_never_issues_a_packet_or_allows_more_work(self):
         self.start()
         source = self.runtime.status()["current_source"]
-        request = dict(schema="mission/9", kind="context", handoff=None, mission_id=self.a.mission_id,
+        request = dict(schema="mission/10", kind="context", handoff=None, mission_id=self.a.mission_id,
             scope=dict(mission_id=self.a.mission_id, session=source["session"], coordinate_epoch=0),
             query="water", max_bytes=8192)
         record = self.controller._record
@@ -1212,12 +1223,12 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_close_wait_is_bounded_and_storage_stays_open_under_live_writer(self):
         self.start()
         entered, release = threading.Event(), threading.Event()
-        real = self.runtime._store.retain_equivalent
+        real = self.runtime._store.retain_preflight
         def blocked(*args, **kwargs):
             entered.set()
             release.wait(4)
             return real(*args, **kwargs)
-        with patch.object(self.runtime._store, "retain_equivalent", blocked):
+        with patch.object(self.runtime._store, "retain_preflight", blocked):
             request = self.navigation()
             self.runtime.command(request)
             self.assertTrue(entered.wait(2))
@@ -1304,12 +1315,12 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_pause_status_while_runtime_preflight_storage_blocked(self):
         self.start()
         entered, release = threading.Event(), threading.Event()
-        real = self.runtime._store.retain_equivalent
+        real = self.runtime._store.retain_preflight
         def blocked(*args, **kwargs):
             entered.set()
             release.wait(3)
             return real(*args, **kwargs)
-        with patch.object(self.runtime._store, "retain_equivalent", blocked):
+        with patch.object(self.runtime._store, "retain_preflight", blocked):
             req = self.navigation()
             self.runtime.command(req)
             self.assertTrue(entered.wait(2))
@@ -1359,7 +1370,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.start()
         source = self.runtime.status()["current_source"]
         scope = dict(mission_id=self.a.mission_id, session=source["session"], coordinate_epoch=0)
-        req = dict(schema="mission/9", kind="context", handoff=None, mission_id=self.a.mission_id,
+        req = dict(schema="mission/10", kind="context", handoff=None, mission_id=self.a.mission_id,
                    scope=scope, query="water and pending work", max_bytes=8192)
         response = self.runtime.command(req)
         self.assertEqual(response["status"], "accepted", response)
@@ -1424,7 +1435,7 @@ class MissionRuntimeTests(unittest.TestCase):
         with closing(sqlite3.connect(path)) as db:
             db.execute("PRAGMA user_version=2")
         before = path.read_bytes()
-        response = self.runtime.command(dict(schema="mission/9", kind="start", request_id="start-1", admission=self.a.to_dict()))
+        response = self.runtime.command(dict(schema="mission/10", kind="start", request_id="start-1", admission=self.a.to_dict()))
         self.assertEqual(response["status"], "rejected", response)
         self.assertEqual(path.read_bytes(), before)
         self.assertEqual(self.bridge.delivered, [])
@@ -1432,12 +1443,12 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_one_writer_blocks_concurrent_skill_and_pause_cancels_queue(self):
         self.start()
         entered, release = threading.Event(), threading.Event()
-        real = self.runtime._store.retain_equivalent
+        real = self.runtime._store.retain_preflight
         def blocked(*args, **kwargs):
             entered.set()
             release.wait(3)
             return real(*args, **kwargs)
-        with patch.object(self.runtime._store, "retain_equivalent", blocked):
+        with patch.object(self.runtime._store, "retain_preflight", blocked):
             req = self.navigation()
             self.runtime.command(req)
             self.assertTrue(entered.wait(2))

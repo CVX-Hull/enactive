@@ -6,11 +6,14 @@ status: active
 
 # Bridge and guarded-play contract
 
-Protocol version: 5.
+Protocol version: 6.
 
 This is the detailed current contract supporting [architecture](architecture.md).
 Authority rules are [S-PROTOCOL](engineering.md#s-protocol-command-and-observation-authority).
-Portable checks do not prove native engine behavior.
+Current source is native6/mission10/ledger12/archive5, with procedure/2,
+campaign-memory/5 and reflection/2; gameplay/2 is unchanged. A matching native6
+build and real graphical qualification remain pending. Dated native5 and earlier
+results retain their exact scopes. Portable checks do not prove native engine behavior.
 
 Unsupported versions and alternate response shapes are rejected. Startup validates
 stored admissions, claimed requests and any response before restoring uncertainty;
@@ -55,13 +58,15 @@ and blocks raw input/recovery. The viewer displays mission ownership; a model ca
 never holds controller locks. Only registered mission operations can request a
 lease; service startup, admission and transport Resume never establish identity.
 
-A leased call submits one registered action or permitted key, using native-v5
-observation and input checks. Intended boundary and human takeover generation are
+A leased call submits one registered action, permitted key or direct physical
+event, using native-v6 observation and input checks. Intended boundary and human takeover generation are
 bound in native action/key/resume requests and checked at native commit. The original command admission generation and exact live lease
 are checked around queueing/preflight and immediately before atomic publication.
 Every walk step uses its original entry generation. Pre-takeover or pre-acquisition
-queued inputs cannot become current merely by waiting. No stale expected revision
-is silently refreshed.
+queued inputs cannot become current merely by waiting. Semantic decisions retain
+their source-equivalence policy. Direct events retain their informing source while
+the actual fresh dispatch capture supplies the native expected triple; this is
+physical-event drift permission, not semantic retargeting.
 
 Pause and release revoke before returning; release requires the current capability
 and also pauses. Recovery, native takeover/session change, a paused native
@@ -75,9 +80,10 @@ work must add no lock that delays revocation, and native activity cancellation
 remains separate from revoking further harness inputs.
 `execute_mission` returns an envelope containing the logical action ID, exact native
 `request` or null, `result`, `published`, original terminal
-`received_monotonic` or null, and nullable `preflight`. The latter contains the
-copied final Observe, its original `received_monotonic`, and
-`expected_image_sha256` or null. Preflight Observe is not an action receipt. The
+`received_monotonic` or null, nullable `preflight` and separate nullable
+`processing_error`. Preflight contains the copied final Observe, its original
+`received_monotonic` and `expected_image_sha256` or null; direct preflight also
+retains its immutable `informing` triple. Preflight Observe is not an action receipt. The
 absolute monotonic intent/task deadline is checked after queueing/preflight and
 under the publication lock; it bounds both exchanges and the native deadline.
 `observation_snapshot()` returns a copied current observation and original first
@@ -85,8 +91,9 @@ receipt clock. Reading a snapshot does not renew its freshness.
 Live-versus-retained state comparison excludes transport id, timestamp and frame
 filename; it retains status/error/frame validity and complete semantic/Pause/takeover
 state. This comparison grants neither freshness nor image equivalence. Final
-preflight requires the exact retained frame identity, including recovery; a different
-basename refuses before publication even when its PNG bytes match.
+semantic preflight requires the exact retained frame identity, including recovery;
+a different basename refuses even when PNG bytes match. Direct preflight instead
+binds its actual fresh frame under the same uninterrupted custody.
 
 Native passive captures freshly present and encode. Only unchanged complete
 observation metadata, geometry and actual bounded PNG bytes may reuse the current
@@ -96,7 +103,7 @@ that metadata comparison. Reuse preserves the original timestamp, immutable file
 receipt age and retention entry. Explicit id-bearing captures always mint a fresh
 identity. Changed/expired/failed captures cannot reuse an older matching frame.
 No TTL renewal, automatic retry or input-gate relaxation follows. Immutable ACK/UUID,
-retained preflight correlation and current-PNG commit checks remain exact. Recovery
+retained preflight correlation and semantic exact-PNG commit checks remain exact. Recovery
 hashes the sampled live PNG outside the Pause lock and fences that same identity.
 
 The trusted Python-only `preflight` callback receives that copied Observe and
@@ -148,7 +155,7 @@ planner and supervisor components below remain source/study tools, not another
 execution ingress. The [mission design](design/player-owned-mission.md) owns the
 chosen records, lifecycle requirements and separate native acceptance.
 
-Authenticated `POST /api/mission` accepts one strict mission/9 record, at most65536
+Authenticated `POST /api/mission` accepts one strict mission/10 record, at most65536
 UTF-8 bytes. It reuses host/origin/token and finite/duplicate-key JSON validation;
 operator command/recovery bodies keep4096-byte limits. Required fields and closed
 variants live in [mission_contracts.py](../harness/gameplay/mission_contracts.py),
@@ -212,16 +219,28 @@ observation transition, not a SourceRevalidation or renewed authority, and clear
 derived quantity-editor proof. A genuinely equivalent menu may preserve that proof
 and its exact-PNG revalidation. Actual normal return closes only that prompt and
 reports observed budget overshoot without certifying the original goal.
-The player must make a new input decision using the new source. Automatic input
-entry refresh remains strict as described above; this explicit Observe change
-does not implement general preflight-drift recovery or expand native receivers.
+The player must make a new input decision using the new source. Semantic input
+entry refresh remains strict as described above. Direct entry
+uses the non-equivalent InputObservation and live receiver policy below. An
+explicit Observe has its own original fifteen-second deadline, capped by mission
+and ending reserve. Global ownership, mission input/game/wall and trace guards
+run before local macro limits. If the ordinary prompt's root input, wall or game
+cap is exhausted, the immutable Observe result records `macro_closure` with old
+root/checkpoint, fresh source, detection time and the specific limit before only
+the private prompt is cleared. It neither rewrites the old root result nor emits
+a complete PhaseReceipt, certifies success or renews any allowance. Lifecycle,
+exit, registered activity/recovery and unsettled delivery use their own paths.
+From the fresh owned menu, an adopted player may explicitly select a new direct
+root under the original mission limits. Old-source/stale queued children refuse
+at writer consumption while healthy custody survives.
 Save refresh precedes operation rotation and preserves its original normal-game
 time anchor. Changed state, Pause or expiry still stops input.
 An atomic controller snapshot keeps a frame's first-seen clock; a command reader
 can receive the same frame's matching ACK later. Terminal delivery checks validate
 both clocks independently, without imposing their ordering or renewing either.
-The original terminal clock remains fresh, after its preflight, and bound to the
-exact native UUID/state; source/PNG/authority checks remain. Snapshot mismatch
+The original terminal clock remains finite, after its preflight and bound to the
+exact native UUID/state. Authenticated historical ACK retention does not impose
+dispatch freshness retrospectively; source/PNG integrity checks remain. Snapshot mismatch
 records its actual state and valid clock for diagnosis before stopping. These
 historical receipts never restore a revoked phase or input consent.
 The harness-enabled SDL ImGui context disables only input-text cursor blinking
@@ -442,7 +461,8 @@ are separate checks: a malformed semantic request does not prove lost ownership.
 The player may correct the semantic request, cancel, or use an ordinary direct
 key/text/click child under that same healthy root. It need not discover the
 preferred semantic adapter before trying an ordinary interface action. Such input
-still retains exact-image revalidation, original limits and delivery accounting;
+retains ordinary entry/dispatch lineage, click geometry, original limits and
+delivery accounting;
 it supplies no typed quantity-editor attestation or automatic success claim.
 The runtime never sends a rescue key or chooses the player's next action.
 Null menu perception selects the native UILIST row policy, not automatic image
@@ -509,11 +529,11 @@ and user Pause do not dispatch inputs. Raising the software maximum extends no
 existing admission and establishes no native survival outcome.
 
 `lifecycle(operation=finish)` is the sole normal finish route. Stop carries only
-its Pause reason; former Stop `finish` fields and mission/2, mission/3, mission/4,
-mission/5, mission/6 or mission/7 records reject. The
-current mission/9 contract migrates CLI, viewer, requests, results and fixtures
-without an alias or automatic old-admission import. Campaign memory advances to
-campaign-memory/4 and SQLite to ledger11. Native wire5 and archive4 migrate together; gameplay/2 remains unchanged. Prior accepted reports and raw older mission/memory/ledger
+its Pause reason; former Stop `finish` fields and every prior mission schema
+reject. The current mission/10 contract migrates CLI, viewer, requests, results and fixtures
+without an alias or automatic old-admission import. Campaign-memory/5, procedure/2,
+reflection/2, SQLite ledger12, native wire6 and archive5 migrate together; gameplay/2
+remains unchanged. Prior accepted reports and raw older mission/memory/ledger
 artifacts remain historical evidence, not current request inputs. Closed failed
 missions stay closed; a new admission uses a new mission directory, with no
 automatic old-state import or restored authority.
@@ -542,7 +562,7 @@ native final shutdown or the independent mission.
 ### Selected item, inspection and activity composition
 
 A returned navigation input may open an ordinary in-game menu in the same session.
-Mission/9 records a `navigate` PhaseReceipt (`operation=navigate`) and terminal
+Mission/10 records a `navigate` PhaseReceipt (`operation=navigate`) and terminal
 partial result, retaining the verified prefix and last verified route position.
 The menu has no scene; the opening input receives no displacement credit or retry.
 Inspection uses the existing menu outcome `inspected`, with no input; standalone
@@ -558,7 +578,7 @@ and reopen; historical records restore no private phase or input authority. The
 [repair brief](changes/055-navigation-menu-interruption.md) records rationale and
 qualification limits.
 
-Mission/9 retains explicit item units (`items` or `charges`) and root/select/commit
+Mission/10 retains explicit item units (`items` or `charges`) and root/select/commit
 steps. The pure [item policy](../harness/gameplay/interactions.py) checks exact
 represented target, native row contradictions, known availability and chosen
 count. A focus batch sends at most eight observed arrows and never confirms.
@@ -634,7 +654,7 @@ Resume is a separate charged activity child, eligible only at a fresh paused
 normal/menu boundary under the original operator mark. It grants no lease until
 its verified return; root/child/mission time and actor fences still apply before
 publishing a new prompt or normal source. A newer user Pause wins throughout.
-Ledger10 rejects earlier formats before mutation; there is no compatibility reader.
+Ledger12 rejects earlier formats before mutation; there is no compatibility reader.
 Reopening restores neither the private phase nor authority. Source tests do not
 qualify native gameplay. Already-returned but uninterpretable semantic outcomes
 remain unsupported by delivery reconciliation.
@@ -849,7 +869,7 @@ verified terminal suffix or explicit stop. Historical phase IDs grant no authori
 This selected source path does not establish semantic success, native recovery or
 general recovery from already-returned but uninterpretable outcomes.
 
-Mission/9 and ledger11 migrate all current producers, callers and persisted readers
+Mission/10 and ledger12 migrate all current producers, callers and persisted readers
 together. Earlier mission versions, ledger7 and its old untyped effect shape reject
 without conversion. Retain old mission artifacts and saves as evidence; only a
 separately admitted current mission can start anew. Migration never resets input
@@ -866,25 +886,89 @@ bounds remain separate checks. Serialization changes no job claim or authority.
 
 ### Ordinary discovery and procedure data
 
-Mission9 adds `skill_kind=direct` to the existing writer. Its closed goal contains
-`input`, `intent`, `expected` and `interrupt_allowed`. Input is one explicit
-ASCII/named key with modifiers, one left/right click bound to the exact retained
-PNG geometry, or at most24 printable BMP text scalars in an owned ordinary menu.
-Text expands into separately charged scalars with fresh feedback and stops on
-changed structure, identical pixels, lost authority or uncertain delivery. There
-is no implicit Enter. Unsupported supplementary Unicode refuses before input in
-the pinned16-bit widget build. Every direct primitive requires exact-PNG
-preflight, including a current native geometry comparison for clicks.
+Mission10 keeps `skill_kind=direct` on the existing writer, with a passive ordinary
+policy separate from semantic menu planning. Its closed goal contains `input`,
+`intent`, `expected` and `interrupt_allowed`. Input is one explicit ASCII/named
+key with modifiers, one left/right click bound to the selected PNG's geometry,
+or at most24 printable BMP text scalars. Unsupported supplementary Unicode refuses
+before input in the pinned16-bit widget build. Text expands into separately
+charged scalars with fresh feedback, no implicit Enter, and stops for changed
+receiver structure, identical pixels, lost eligibility or uncertain delivery.
+Single keys/scalars permit visual drift at an owned ordinary receiver without
+requiring equal pixels, category names, labels or click geometry. A click keeps
+its original mapping and refuses changed geometry; it never follows an old label.
 
-Direct roots require an adopted normal character. Ordinary prompt children retain
-the original root, Work and cumulative limits. Direct input cannot borrow
-lifecycle/navigation authority or establish typed quantity proof. Activity
-children of a direct root use operation`direct`, the original expected outcome,
-time ceiling and interruption consent; they do not invent wait/rest/craft success.
-A returned input is partial work requiring the player's semantic verification.
-Native delivery uncertainty retains the same pause/collection/no-replay policy.
-The [mixed-input design](design/mixed-input.md) specifies mappings and native
-qualification; source/component checks are not real graphical acceptance.
+The exact informing request/source remains immutable. Non-authorizing
+`InputObservation` links its `original` and entry `current` SourceBindings under
+the same mission, epoch, actor, controller, Pause and takeover, with exactly one
+store-generation advance. It asserts no equivalence. Only the first ordinary
+intent after entry has non-null `input_observation`; `source_before` names entry.
+The prepared intent's expected triple and published native request/frame name
+the actual final preflight; after revision checks compare with that preflight.
+Entry age does not invalidate a separately fresh dispatch reservation. Semantic
+SourceRevalidation and stronger semantic/native-state preconditions remain strict.
+
+Native direct requests require `require_exact_frame=false`. The gate still checks
+the actual fresh receiver, session/revision/boundary/frame provenance, custody,
+Pause, expiry, capture health and click mapping. Healthy typed pre-input refusals
+retain ownership; malformed custody, integrity/storage faults, competing writers
+and global exhaustion retain their stops. Structured facts distinguish those
+cases, rather than matching diagnostic strings. Unknown delivery retains the
+original identity, collection, reconciliation, charges and no-replay policy.
+
+A correlated ready ACK is returned delivery even for unfamiliar or superseded
+evidence. Authenticate it before fallible acceptance, journaling or retention,
+then settle once with its actual `source_after` or explicit `evidence_loss` before
+Pause/current publication. The ledger's bounded `native_ack` contains protocol,
+id, session, revision, status, native error, paused/pause origin, takeover,
+timestamp, frame validity/identity and boundary. Scene/UI/geometry remain in the
+original archive/controller journal. Separate `processing_error` and `evidence_loss`
+never rewrite known delivery as unknown. Publication bookkeeping failure can bind
+the native UUID atomically while settling the prepared intent. When that mandatory
+settlement commits and custody/evidence remain healthy, the publication diagnostic
+does not itself force Pause. Raw controller processing faults, lost archive/current
+evidence and lifecycle proof failures still stop. SQLite owns the row transaction; no redundant post-ACK preflight-file sweep or second journal is
+required. Failed storage remains failed storage: reopening without durably saved
+ACK evidence is conservative. A returned receipt without after evidence stops
+with explicit loss and cannot construct a gameplay/2 PrimitiveResult requiring it.
+
+ACK retention is historical and non-promoting: it preserves bytes, identity,
+original receipt clocks and recorded lag without changing current source/session/
+generation. `source_after` always names that ACK capture. A separately validated
+actual current snapshot preserves its first receipt and pays its own frame/byte
+cost when distinct. It never replaces after. A different current source ends the
+operation partial and stops a text batch even when pixels match. An owned prompt
+advances only from eligible actual current evidence, retaining root, Work, consent,
+deadlines and costs while clearing incompatible focus/quantity assertions.
+After known returned direct input, an absent or aged independent snapshot can
+retain a read-only ordinary scope. Its checkpoint remains the entry source; the
+ACK remains historical. The private scope records the exact authenticated operation
+generation, preserving root, Work, actor/epoch, game anchor, deadlines, consent and
+cumulative costs. Its PhaseReceipt stage is `awaiting_observation`, status marks
+`observation_needed` and exposes no current source. At writer consumption, skills
+and lifecycle requests refuse without input, charges or a new Pause. Explicit
+Observe verifies that generation, unchanged store lineage, retained integrity and
+all existing custody/global limits before capturing and publishing a fresh binding.
+It clears the read-only marker, advances an actual menu or closes on actual normal
+return; a locally exhausted root instead gets the immutable `macro_closure` above.
+It never renews old-source authority or resumes a failed lease. Healthy local
+game-time overshoot returns partial work (`macro_exhausted`), retaining mission
+ownership; normal return ends that root and an owned menu awaits Observe closure.
+Unknown delivery, actual clock/session regression, controller processing,
+integrity/storage, lifecycle/activity/recovery and global exhaustion keep their
+stopping paths. A missing current frame alone neither undelivers an ACK nor
+permits another scalar. These are source-tested paths; new native/graphical
+qualification remains pending.
+
+Direct roots require an adopted normal character, or an explicit new root from a
+fresh owned menu after the ordinary macro closure described above. Prompt children
+retain the original root, Work and cumulative limits. Direct input cannot borrow
+lifecycle/navigation authority or establish typed quantity proof. Activity children
+of a direct root use operation `direct`, the original expected outcome, time cap
+and interruption consent; they invent no wait/rest/craft success. A returned input
+is partial work requiring player verification. The [mixed-input design](design/mixed-input.md)
+specifies mappings and pending integration work; source/component checks do not
+qualify a new native binary, graphical play or actual non-CDDA support.
 
 Every skill record has nullable`procedure`. A selected root names owning mission,
 immutable revision ID, root use ID and its applicability judgment. The structured
@@ -895,7 +979,7 @@ usage feedback. Neither an input ACK nor that linkage proves semantic success.
 
 Admission has required nullable`learning`. A policy freezes the exact environment,
 at most4 closed library mission pins (ledger/index SHA256), advisory actor and
-finite reflection limits. Procedure/1 records live in the existing immutable
+finite reflection limits. Procedure/2 records live in the existing immutable
 memory table. Full qualified ancestry resolves heads; branches/missing parents
 refuse. Episodes must join actual settled request/source evidence. Candidates can
 be tested; disputed/retired heads are inspectable and cannot be newly selected.
@@ -903,16 +987,19 @@ The current player judges descriptive applicability; memory grants no authority.
 
 The read-only library uses SQLite over hash-verified bytes, shared archive locks
 and derived project paths. It never reopens a runtime writer, restores a phase or
-imports old-world Claims/Work as current facts. Only current ledger11/archive4
-input is eligible; older campaign artifacts remain historical evidence.
+imports old-world Claims/Work as current facts. Only current ledger12/archive5
+input with the exact native6/mission10 procedure environment is eligible. Earlier
+native5/mission9 archives and learning004 remain immutable historical evidence,
+unmountable as current libraries. A fresh current-contract learning005 must close
+normally before its library can support fresh seven-day003; old failures never resume.
 Authority-blocked retained sources are historical evidence, as in EvidenceStore:
 a bounded unique list of valid retained blocked IDs does not itself dispute their
 bytes or support. Library exports remain historical and `grants_authority:false`.
 Disputed sources, malformed/foreign blocked IDs, missing/changed images or invalid
 episode/effect linkage still refuse; no archive is rewritten to gain eligibility.
 
-Campaign-memory4 replaces placeholder lesson IDs with qualified procedure refs,
-records, source requirements and explicit omissions. Decisions retain selected
+Campaign-memory/5 uses qualified procedure refs, records, source requirements and
+explicit omissions, rather than placeholder lesson IDs. Decisions retain selected
 procedure support. Complete handoff fit checks include every procedure head and
 its evidence, reserving room for the future post-Pause frame. Claim declarations
 include`read_procedure_sources` alongside current-world source reads, within one
@@ -920,7 +1007,8 @@ aggregate128-source bound. Source-read declarations and retrieval are evidence
 of presentation/selection, not proof of attention or causal improvement.
 
 The [procedure/exchange design](design/procedure-learning.md) owns the asynchronous
-integration contract. One private RegisteredReflection composes a per-admission
+integration boundary; current records use reflection/2. One private
+RegisteredReflection composes a per-admission
 passive mailbox/cache with the existing writer and SQLite ledger. Four routine
 root skill decisions coalesce a job; failures, recovery and handoff boundaries
 can trigger earlier work. Each job retains original request/result order and
@@ -962,14 +1050,14 @@ fresh-context/overlapping-play qualifications remain separate delivery057 work.
 
 
 The game enables the bridge only when CDDA_HARNESS_DIR names an existing private
-directory. Version 5 uses atomic JSON files and PNG snapshots, avoiding another
+directory. Version 6 uses atomic JSON files and PNG snapshots, avoiding another
 server thread in CDDA. Each channel admits one live request at a time; the host holds a
 process lock for both writers. Gameplay and recovery retain separate identities. Requests carry protocol, unique id, session, expected revision, intended boundary,
 human takeover generation,
 kind and payload. Size is bounded to 4096 bytes. World entry and exit replace the
 session, including a same-process save/reload; relative coordinates belong to that
 world lifetime. Stale session/revision commands are rejected, never replayed.
-Producer, controller, discovery, CLI, viewer and evidence validation require v5.
+Producer, controller, discovery, CLI, viewer and evidence validation require v6.
 Older and unknown versions are rejected; there is no fallback.
 
 Commands: observe, key, action, direct, pause, resume. Observe is side-effect-free in
@@ -1003,71 +1091,45 @@ requests focus, and consumes balanced widget press/release through bounded norma
 render frames. Postcommit consumption failure is dispatched/unknown with fault
 Pause, never a known zero-input rejection or a later success acknowledgment.
 
-The SDL input loop pumps normal events while polling. RAII scopes span
-`input_context::handle_input`, including retries and nested contexts. An explicit
-marker at ordinary avatar input distinguishes normal play; deathcam, unknown
-DEFAULTMODE callers, activity polling and raw debug prompts cannot inherit it.
-The pinned common direction helper marks only its own `handle_input()` wait as a
-menu, preserving DEFAULTMODE for native binding lookup. The same `menu_query(category)`
-RAII mechanism marks only the pinned item-detail waits in `iteminfo_window::execute`
-and `draw_item_info`, plus the comparison wait in `compare_item_menu::show`, with
-their original lowercase `default` category. Neither generic name is globally
-admitted. The marker activates only in-game with no enclosing scope or active query;
-classification requires an exact category match and the stack still empty when
-that input scope opens. Nested contexts and callbacks after the wait cannot inherit
-permission. The marker clears during return/unwinding and exports no structured
-scene. `in_game` means world lifetime, not living-character proof; visible death
-still ends an admitted survival study.
+The SDL input loop pumps normal events while polling. Context RAII scopes span
+`input_context::handle_input`; receiver RAII spans the existing game-thread
+`input_manager::get_input_event()` render/poll path. Required boolean
+`boundary.input_receiver` attests that the live receiver matches the actual top
+context and depth. A raw receive without an active context cannot attest ordinary
+eligibility. Receiver entry/exit alone does not mint a revision or boundary ID.
 
-The pinned `bodygraph_display::display` input wait uses the same marker with
-`BODYGRAPH`, ending before navigation or recursive body-graph callbacks. Its
-native bindings and renderer remain unchanged. Unmarked, enclosing or mismatched
-contexts gain no authority. This is menu coverage, not a structured health model.
+Ordinary contexts may have unfamiliar category/action names; no menu-name catalogue
+grants permission. Explicit avatar scope anchors normal play; deathcam/unsupported
+owner, debug, activity and owned interrupt restrictions take precedence through
+nested contexts. Inherited restriction does not confer inherited recovery power:
+activity interruption and its owned query remain tied to their actual owner/depth.
+Incidental animation polls are unscoped. The explicit lifecycle flag around
+main.cpp's do_turn loop gates gameplay metadata, not character identity. Visible
+death still ends an admitted survival study. Semantic adapters retain their narrow
+registered-category/control coverage; ordinary receiver support does not qualify
+a structured health model, recipe, consumption or other effect. Historical
+[direction](acceptance/2026-10-18-native-direction-menu.md),
+[distraction](acceptance/2026-10-18-activity-distraction.md) and
+[native5 discovery](acceptance/2026-10-21-discovery-learning-fourth-attempt.md)
+results retain their tested binary and scenario scopes.
 
-The same exact-owner marker covers the query expression in pinned
-`game::cancel_activity_or_ignore_query` with its original
-`CANCEL_ACTIVITY_OR_IGNORE_QUERY` category. It ends before cancellation, ignore
-or manager callbacks. Empty-stack/in-game/exact-category checks still apply;
-unmarked or nested instances remain unsupported. This is an ordinary event
-question, separate from the injected pause's owned YESNO recovery. The
-[real native probe](acceptance/2026-10-18-activity-distraction.md) verified an actual
-feral-cop distraction and ordinary Yes followed by fresh normal play; other choices
-and nested negative cases were not exercised natively.
-Semantic confirmation uses the existing explicit Yes/No goal at this exact-owned
-menu as well as `YESNO`, and still requires the selected registered action and
-source/phase/Pause/limit checks. Unknown categories are not promoted by advertising
-those names. One answer requires fresh effect assessment; it cannot credit rest
-or retry the activity. `IGNORE`/`MANAGER` are outside that binary goal. The
-[independent005 failure](acceptance/2026-10-20-independent-mission-fifth-attempt.md)
-exposed the former semantic category mismatch; its source correction is not a
-new native or independent-mission pass.
+Each observation's required `boundary` has `kind`, nonempty `id`, nonnegative
+`control_generation`, boolean `input_receiver`, zero or one `recovery_operations`
+and `interrupt_request_id` (nonnull only for owned interruption confirmation).
+Boundary instances change with context, session and takeover, rather than repaint
+or receiver timeout retries. Remote key/text/click translation feeds the existing
+engine/widget path without OS input; physical takeover retains precedence.
 
-The finite ordinary-menu set also includes nearby `LIST_ITEMS`/`LIST_MONSTERS`,
-`CRAFTING` and `CONSTRUCTION`, with the engine retaining binding and outcome
-validation. Other unknown categories stay unsupported. Entry/exit coverage does
-not establish a recipe, activity, target safety, consumption or task outcome.
-Activity and debug scopes override enclosing input. Incidental animation polls are
-unscoped and cannot dispatch or acknowledge commands. An explicit lifecycle flag
-around main.cpp's do_turn loop gates gameplay metadata. Remote input_event delivery includes an
-SDL/ImGui adapter for key/text events without sending OS events; native events
-are separately observed for takeover.
-
-Each observation has a required `boundary` object: `kind`, nonempty `id`,
-nonnegative `control_generation`, `recovery_operations` (zero or one operation), and
-`interrupt_request_id` (nonnull only at an owned interruption confirmation). Boundary instances change with context,
-session and native takeover, rather than every repaint. The supported matrix is:
-
-| Kind | Observe | key/action/resume | Structured scene |
+| Kind | Observe | Ordinary input | Structured scene |
 | --- | --- | --- | --- |
-| `normal_play` | Yes | Fresh matching frame and authority required | Player-visible allowlist |
-| `menu` | Yes | Fresh matching frame and authority required | None |
+| `normal_play` | Yes | Live receiver, fresh dispatch evidence and authority; semantic policy also applies | Player-visible allowlist |
+| `menu` | Yes | Live receiver, fresh dispatch evidence and authority; semantic policy also applies | None |
 | `activity_poll`, `debug_prompt`, `unsupported` | Yes at instrumented polls | Rejected | None |
 | `interrupt_confirmation` | Yes at the owned rendered question | Rejected | None |
 
-Menu classification is explicit in the native scope constructor; unrecognized
-categories remain unsupported. A registered action is not permission to act at an
-unsupported boundary. Recovery uses the separate channel below. Ordinary key/action/resume never
-gains permission from a recovery operation. Native keyboard input remains available.
+Observe and an advertised action alone grant no permission. Recovery uses its
+separate exact-owner channel below; nested help cannot borrow it. Native keyboard
+input remains available.
 
 At an eligible rendered boundary the bridge publishes observation metadata and
 PNG. Publication redraws the current UI and captures the window backbuffer
@@ -1077,12 +1139,14 @@ PNG names are immutable session/frame-counter identities, with metadata
 published after the corresponding atomic file rename. The viewer grants input
 authority only after that image decodes and matches the latest session/revision;
 old asynchronous decodes cannot restore a fresh label or authorize an old choice.
-Every ordinary action/key/resume wire envelope requires the exact generated
+Every ordinary action/key/direct/resume wire envelope requires the actual generated
 `frame` and a strict boolean `require_exact_frame`; prior field sets reject.
 When true, host preflight verifies the retained encoded PNG hash and native commit
 encodes the latest cached presented surface through the existing PNG encoder,
 compares bounded bytes exactly, then rechecks authority/deadline/boundary/Pause.
-False still requires matching saved-frame provenance and the native boundary.
+Direct must use false, allowing changed pixels while retaining actual saved-frame
+provenance, receiver/custody and click-geometry checks. Semantic/lifecycle policies
+retain their stronger requirements; false alone is never input authority.
 This source path assumes the one trusted bridge writer owns the comparison
 temporary file; it does not claim exclusion of arbitrary same-user filesystem
 mutation or physical events queued during synchronous encoding. Real encoder
@@ -1209,7 +1273,7 @@ and journal evidence, granting no authority, replay or inferred resolution.
 
 The lead designates one general-purpose player for a finite mission. It chooses
 plans, interprets evidence, retrieves/updates memory and requests semantic skills
-and registered normal lifecycle through mission/9. The lead owns source/release
+and registered normal lifecycle through mission/10. The lead owns source/release
 acceptance, finite admission, shared runtime custody, escalation and final
 verification. It supplies no ordinary gameplay rescue in the deciding mission.
 Explorers/reviewers never send inputs. Actor names and instructions are workflow
@@ -1306,7 +1370,7 @@ claims. JSON is bounded to 1 MiB. The injected planner below consumes these reco
 the runtime above connects the passive planner, supervisor and bounded skill.
 Broader task formation remains outside this [first slice](design/gameplay.md).
 
-[EvidenceStore](../harness/gameplay/evidence.py) retains successful native-v5
+[EvidenceStore](../harness/gameplay/evidence.py) retains successful native-v6
 normal/menu/activity/recovery/unsupported diagnostic frames with their actual
 coverage. `current()` requires a positively marked normal scene for movement;
 `current_boundary()` checks freshness/integrity without granting input permission.
@@ -1327,7 +1391,7 @@ revision, native timestamp, actual first receipt and `cdda-visible/1` provenance
 It checks bounded PNG signature/size and byte integrity, not image decoding; native
 capture and viewer/native graphical acceptance own rendering quality.
 
-At first ingestion, native wall-clock age must be -1000 through 3000 ms. Effective
+For current ingestion, native wall-clock age must be -1000 through 3000 ms. Effective
 age adds nonnegative initial lag to monotonic time elapsed since the original
 receipt, with a three-second ceiling. Duplicate reads and reopening never renew
 that receipt. Clock discontinuity, missing/corrupt source, unsupported boundary,
@@ -1337,7 +1401,10 @@ when it was not the current frame; same-revision scene conflicts invalidate
 retained peers. Transport-only Pause may produce distinct frames at the same
 scene revision: `paused` remains immutable within one frame but is excluded from
 cross-frame scene comparison. Actual scene/boundary conflicts still dispute peers.
-Historical references remain verifiable but cannot authorize input.
+Historical terminal retention instead validates bounded historical age and original
+lag without imposing current dispatch freshness or promoting authority. Archive5
+records the retention kind, so reopening preserves that distinction. Historical
+references remain verifiable but cannot authorize input.
 Reopening starts without current authority or a dispatch reservation.
 Valid retained metadata remains inspectable when an original image is missing or
 corrupt. Reopening records that source as disputed; verification still rejects

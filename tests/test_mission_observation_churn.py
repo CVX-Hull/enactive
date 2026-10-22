@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 from harness import controller as controller_module
 from harness.gameplay.contracts import ContractError
-from harness.gameplay.semantic_controls import ControlIntent
+from harness.gameplay.input_contracts import ControlIntent
 from harness.gameplay.evidence import same_native_state
 from harness.mission_runtime import _Work
 from tests.test_mission_creation import MissionCreationFixture, expire_selected_at_dispatch
@@ -46,12 +46,12 @@ def poll_at_boundaries(stack, controller, bridge, runtime):
             receipts.append((original, received))
         return result, received
     stack.enter_context(patch.object(controller, "observe_mission", side_effect=observed))
-    retain = runtime._store.retain_equivalent
+    retain = runtime._store.retain_preflight
     def retained(*args, **kwargs):
         result = retain(*args, **kwargs)
         passive_capture(controller, bridge)
         return result
-    stack.enter_context(patch.object(runtime._store, "retain_equivalent", side_effect=retained))
+    stack.enter_context(patch.object(runtime._store, "retain_preflight", side_effect=retained))
     for name in ("execute_mission", "resume_mission"):
         original = getattr(controller, name)
         def returned(*args, _original=original, **kwargs):
@@ -140,7 +140,7 @@ class LifecycleObservationChurnTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(ref.received_monotonic, raw["received_monotonic"])
         self.assertEqual(self.runtime.status()["spent_inputs"], 2)
 
-    def test_independent_receipt_clocks_keep_invalid_clock_state_and_uuid_checks(self):
+    def test_known_ack_is_independent_of_current_snapshot_but_keeps_receipt_and_uuid_checks(self):
         self.ready()
         self.run_request(self.lifecycle("create"))
         data = self.control("world-form", "Create World")
@@ -162,12 +162,13 @@ class LifecycleObservationChurnTests(MissionCreationFixture, unittest.TestCase):
                                  raw["request"]["boundary_id"])
         work = _Work(data)
         def check(value):
-            return self.runtime._envelope(value, work, proposal, preflight, image_informed=True)
+            return self.runtime._envelope(value, work, proposal, preflight, image_informed=True,
+                preflight_observation=self.runtime._store.observation(preflight))
         for bad in (None, True, -1, float("nan"), float("inf"), time.monotonic() + 100, 10**1000):
             with self.subTest(snapshot_clock=type(bad).__name__), \
-                    patch.object(self.controller, "observation_snapshot", return_value=(raw["result"], bad)):
-                with self.assertRaisesRegex(ContractError, "current atomic"):
-                    check(raw)
+                    patch.object(self.controller, "observation_snapshot", return_value=(raw["result"], bad)) as snapshot:
+                self.assertEqual(check(raw)[0], "returned")
+                snapshot.assert_not_called()
         variants = []
         for field, value in (("session", "other"), ("revision", raw["result"]["revision"] + 1),
                 ("paused", True), ("takeover_generation", 1)):
@@ -180,9 +181,11 @@ class LifecycleObservationChurnTests(MissionCreationFixture, unittest.TestCase):
         for state in variants:
             with self.subTest(changed_snapshot=state["boundary"]["id"]), \
                     patch.object(self.controller, "observation_snapshot",
-                                 return_value=(state, raw["received_monotonic"])):
-                with self.assertRaisesRegex(ContractError, "current atomic"):
-                    check(raw)
+                                 return_value=(state, raw["received_monotonic"])) as snapshot:
+                self.assertEqual(check(raw)[0], "returned")
+                snapshot.assert_not_called()
+        with patch.object(self.runtime, "_clock", return_value=time.monotonic() + 10):
+            self.assertEqual(check(raw)[0], "returned")
         for clock in (time.monotonic() - 4, time.monotonic() + 100,
                       preflight.received_monotonic - 0.001):
             value = copy.deepcopy(raw)
@@ -198,10 +201,7 @@ class LifecycleObservationChurnTests(MissionCreationFixture, unittest.TestCase):
         events = [json.loads(line) for line in self.controller.journal.read_text().splitlines()]
         diagnostic = [event["outcome"] for event in events
                       if event["request"].get("kind") == "mission_ready_snapshot_mismatch"]
-        self.assertEqual(len(diagnostic), 12)
-        self.assertTrue(all(row["native_request_id"] == raw["request"]["id"]
-                            and row["ready"] == raw["result"] for row in diagnostic))
-        self.assertFalse(diagnostic[0]["snapshot_clock_valid"])
+        self.assertEqual(diagnostic, [])
 
     def test_binding_does_not_turn_a_changed_image_into_input_consent(self):
         self.ready()

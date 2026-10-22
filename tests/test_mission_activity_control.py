@@ -50,7 +50,8 @@ class MissionActivityControlTests(unittest.TestCase):
     def assert_unpublished(self, receipt):
         self.assertEqual(receipt["result"]["status"], "controller_error", receipt)
         self.assertEqual(set(receipt), {"logical_action_id", "request", "result", "published",
-                                        "received_monotonic", "preflight"})
+                                        "received_monotonic", "preflight", "processing_error"})
+        self.assertIsNone(receipt["processing_error"])
         self.assertFalse(receipt["published"], receipt)
         self.assertIsNone(receipt["received_monotonic"])
         self.assertFalse((self.controller.bridge / "control.json").exists())
@@ -72,7 +73,7 @@ class MissionActivityControlTests(unittest.TestCase):
             digest = hashlib.sha256(b"informing image").hexdigest()
             receipt = self.call(binding, expected_image_sha256=digest, preflight=preflight)
             self.assertEqual(set(receipt), {"logical_action_id", "request", "result", "published",
-                                            "received_monotonic", "preflight"})
+                                            "received_monotonic", "preflight", "processing_error"})
             self.assertEqual(receipt["logical_action_id"], binding["logical_action_id"])
             self.assertTrue(receipt["published"], receipt)
             validate_control_request(receipt["request"])
@@ -447,7 +448,7 @@ class MissionActivityControlTests(unittest.TestCase):
             value = copy.deepcopy(self.controller.state)
             value["revision"] += 1
             value["boundary"]["control_generation"] = request["control_generation"] + 1
-            atomic_json(self.controller.bridge / "control-response.json", dict(protocol=5, id=request["id"],
+            atomic_json(self.controller.bridge / "control-response.json", dict(protocol=6, id=request["id"],
                 status="dispatched", error="", state=value))
             self.assertTrue(seen.wait(1))
         with FakeBridge(self.controller) as fake, ControlBridge(self.controller, after_commit=progress):

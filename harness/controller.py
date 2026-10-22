@@ -39,6 +39,10 @@ class ControlError(Exception):
     """A visible controller failure; never evidence of game success."""
 
 
+class _MissionInputRefusal(ControlError):
+    """Known unpublished visual or representation refusal; custody is healthy."""
+
+
 class _MissionPreflightFailure(ControlError):
     """A stopped mission preparation, before any native input admission."""
 
@@ -102,7 +106,7 @@ def validate_state(value: dict[str, Any], request_id: str | None = None) -> None
                 "actions": list, "status": str, "error": str, "paused": bool,
                 "timestamp_ms": int, "frame_ok": bool, "in_game": bool, "frame": str,
                 "pause_origin": str, "takeover_generation": int}
-    if type(value.get("protocol")) is not int or value["protocol"] != 5:
+    if type(value.get("protocol")) is not int or value["protocol"] != 6:
         raise ControlError("Unsupported response protocol; observe after fixing the bridge")
     if request_id is not None and value.get("id") != request_id:
         raise ControlError("Response id does not match request")
@@ -127,11 +131,13 @@ def validate_state(value: dict[str, Any], request_id: str | None = None) -> None
         raise ControlError("Dispatched response cannot assert a fresh frame")
     boundary = value.get("boundary")
     if (not isinstance(boundary, dict)
-            or set(boundary) != {"kind", "id", "control_generation", "recovery_operations", "interrupt_request_id"}
+            or set(boundary) != {"kind", "id", "control_generation", "recovery_operations", "interrupt_request_id", "input_receiver"}
             or not isinstance(boundary["kind"], str) or boundary["kind"] not in BOUNDARY_KINDS
             or not isinstance(boundary["id"], str) or not boundary["id"]
             or type(boundary["control_generation"]) is not int or boundary["control_generation"] < 0
-            or not isinstance(boundary["recovery_operations"], list)):
+            or not isinstance(boundary["recovery_operations"], list)
+            or type(boundary["input_receiver"]) is not bool
+            or boundary["input_receiver"] and boundary["kind"] not in INPUT_BOUNDARIES):
         raise ControlError("Malformed or unsupported native boundary")
     operations = boundary["recovery_operations"]
     owner = boundary["interrupt_request_id"]
@@ -170,7 +176,7 @@ def validate_control_request(request: dict[str, Any]) -> None:
         valid_id = str(uuid.UUID(request.get("id", ""))) == request.get("id")
     except (ValueError, TypeError, AttributeError):
         valid_id = False
-    if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 5
+    if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 6
             or not valid_id or len(request["id"]) > 80
             or not isinstance(request.get("session"), str) or not request["session"]
             or type(request.get("control_generation")) is not int or request["control_generation"] < 0
@@ -186,7 +192,7 @@ def validate_control_request(request: dict[str, Any]) -> None:
 
 def validate_control_response(value: dict[str, Any], request_id: str | None = None) -> None:
     if (set(value) != {"protocol", "id", "status", "error", "state"}
-            or type(value.get("protocol")) is not int or value["protocol"] != 5
+            or type(value.get("protocol")) is not int or value["protocol"] != 6
             or not isinstance(value.get("id"), str) or not value["id"]
             or not isinstance(value.get("status"), str) or value["status"] not in CONTROL_TERMINAL | {"dispatched"}
             or not isinstance(value.get("error"), str) or not isinstance(value.get("state"), dict)
@@ -388,7 +394,7 @@ class Controller:
                 # Correlated dispatched progress still owns the live slot; it
                 # is neither a takeover nor an acknowledgment timeout. Only an
                 # actual unknown path records uncertainty for this same input.
-                self._accept(native, known_control_id=request["id"])
+                self._accept(native, known_control_id=request["id"], historical=status in CONTROL_TERMINAL)
             if retire and status in CONTROL_TERMINAL:
                 if self.control_pending is not None and self.control_pending["id"] == request["id"]:
                     self.control_pending = None
@@ -465,7 +471,7 @@ class Controller:
                 if kind not in boundary["recovery_operations"]:
                     raise ControlError("Recovery operation is not advertised at this boundary")
                 created = int(time.time() * 1000)
-                request = {"protocol": 5, "id": str(uuid.uuid4()), "kind": kind, "session": state["session"],
+                request = {"protocol": 6, "id": str(uuid.uuid4()), "kind": kind, "session": state["session"],
                            "control_generation": boundary["control_generation"], "authority": self.authority.copy(),
                            "created_ms": created, "deadline_ms": created + 2000}
                 if kind != "request_interrupt":
@@ -535,7 +541,7 @@ class Controller:
         ingress. Native recovery requests/admissions keep their existing format.
         """
         receipt = {"logical_action_id": logical_action_id, "request": None, "result": None,
-                   "published": False, "received_monotonic": None, "preflight": None}
+                   "published": False, "received_monotonic": None, "preflight": None, "processing_error": None}
         binding = {"session": expected_session, "revision": expected_revision,
                    "boundary_id": expected_boundary_id, "takeover_generation": expected_takeover_generation,
                    "pause_origin": expected_pause_origin, "control_generation": expected_control_generation,
@@ -622,7 +628,7 @@ class Controller:
                         check_preflight()
                         authority = self.authority.copy()
                     created = int(time.time() * 1000)
-                    request = {"protocol": 5, "id": str(uuid.uuid4()), "kind": kind,
+                    request = {"protocol": 6, "id": str(uuid.uuid4()), "kind": kind,
                                "session": observed["session"], "control_generation": expected_control_generation,
                                "authority": authority, "created_ms": created, "deadline_ms": created + 2000}
                     if kind == "answer_interrupt":
@@ -699,6 +705,8 @@ class Controller:
         except (ControlError, OSError) as exc:
             failed = True
             known_terminal = receipt["received_monotonic"] is not None
+            if known_terminal:
+                self._mission_processing_failure(receipt, exc)
             if not known_terminal:
                 receipt["result"] = {"status": "controller_error", "error": str(exc)}
             with self.data_lock:
@@ -796,9 +804,9 @@ class Controller:
                 validate_input(request.get("input"))
             except ContractError as exc:
                 raise ControlError(f"Malformed stored direct input: {exc}") from exc
-            if request["require_exact_frame"] is not True:
-                raise ControlError("Direct input requires exact informing-frame equality")
-        if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 5
+            if request["require_exact_frame"] is not False:
+                raise ControlError("Direct input must bind the actual receiver without exact-image equality")
+        if (set(request) != fields or type(request.get("protocol")) is not int or request["protocol"] != 6
                 or not isinstance(request.get("id"), str) or not request["id"]
                 or type(request.get("deadline_ms")) is not int):
             raise ControlError("Unsupported stored request format; migrate or archive offline")
@@ -998,8 +1006,40 @@ class Controller:
                 stream.flush()
                 os.fsync(stream.fileno())
 
-    def _accept(self, response: dict[str, Any], *, known_control_id: str | None = None) -> None:
+    def _accept(self, response: dict[str, Any], *, known_control_id: str | None = None,
+                historical: bool = False) -> None:
+        def newer_capture(candidate: dict, previous: dict) -> bool:
+            if candidate["session"] == previous["session"]:
+                if candidate["revision"] != previous["revision"]:
+                    return candidate["revision"] > previous["revision"]
+                if candidate["timestamp_ms"] == previous["timestamp_ms"]:
+                    # Native frame counters order distinct captures minted in
+                    # one millisecond. This is bridge ordering, not game time,
+                    # image equivalence, receipt freshness or input authority.
+                    pattern = r"frame-" + re.escape(candidate["session"]) + r"-([1-9][0-9]{0,19})\.png"
+                    first = re.fullmatch(pattern, candidate["frame"])
+                    second = re.fullmatch(pattern, previous["frame"])
+                    return bool(first and second and int(first[1]) > int(second[1]))
+            return candidate["timestamp_ms"] > previous["timestamp_ms"]
+
+        if historical:
+            # A terminal ACK is evidence about its request, not a current-screen
+            # promotion. Prefer a newer atomic capture even across session exit.
+            current = read_json(self.bridge / "state.json")
+            if current is not None:
+                validate_state(current)
+                if newer_capture(current, response):
+                    response = current
         with self.data_lock:
+            if historical and self.state is not None:
+                if (self.state["session"] == response["session"] and self.state["revision"] > response["revision"]
+                        or self.state["session"] == response["session"]
+                        and self.state["revision"] == response["revision"] and self.state["status"] == "ready"
+                        and self.state["frame"] != response["frame"]
+                        and not newer_capture(response, self.state)
+                        or self.state["session"] != response["session"]
+                        and self.state["timestamp_ms"] >= response["timestamp_ms"]):
+                    return
             changed_session = self.state is not None and response["session"] != self.state["session"]
             takeover = self.state is not None and (
                 response["takeover_generation"] != self.state["takeover_generation"] or response["paused"] and
@@ -1023,6 +1063,11 @@ class Controller:
             self.state = copy.deepcopy(response)
             if response["paused"]:
                 self.pause_requested = True
+            if response["pause_origin"] == "fault":
+                self.frozen = True
+                self.pause_requested = True
+                self._mission_lease = None
+                self._pause_file()
 
     def observation_snapshot(self) -> tuple[dict[str, Any] | None, float | None]:
         """Atomic observation and original receipt clock; reads never renew age."""
@@ -1046,7 +1091,7 @@ class Controller:
         remaining = started + timeout - time.monotonic()
         if remaining <= 0:
             return {"status": "controller_error", "error": "Original dispatch deadline expired before publication"}
-        request = {"protocol": 5, "id": request_id, "kind": kind,
+        request = {"protocol": 6, "id": request_id, "kind": kind,
                    "deadline_ms": int((wall_sample + remaining) * 1000), **payload}
         if kind not in {"observe", "pause"}:
             if self.state is None:
@@ -1059,6 +1104,7 @@ class Controller:
             request.setdefault("require_exact_frame", False)
         if len(json.dumps(request).encode()) > MAX_REQUEST:
             raise ControlError("Request exceeds 4096 bytes")
+        terminal_response = None
         terminal_received = False
         admitted_input = False
         published = False
@@ -1111,18 +1157,25 @@ class Controller:
                 # Prior responses are expected; only the exact UUID can finish this command.
                 if response is not None and response.get("id") == request_id:
                     received_monotonic = time.monotonic()
-                    if receipt is not None and response.get("status") != "dispatched" and receipt["received_monotonic"] is None:
-                        receipt["received_monotonic"] = received_monotonic
                     validate_state(response, request_id)
                     if observation_receipt is not None and response["status"] != "dispatched":
                         observation_receipt["received_monotonic"] = received_monotonic
+                    # A structurally valid correlated terminal closes transport
+                    # waiting even when custody/session checks cannot attribute
+                    # its effect. Preserve that unknown action, then permit a
+                    # deliberate Observe without waiting out a completed request.
                     terminal_received = response["status"] != "dispatched"
                     if (response["status"] == "ready" and kind in {"key", "action", "direct", "resume"}
                             and (response["session"] != request["session"]
                                  or response["revision"] <= request["revision"])):
                         raise ControlError("Ready response has stale or changed session/revision")
-                    self._accept(response)
-                    if response["status"] != "dispatched":
+                    if terminal_received:
+                        terminal_response = copy.deepcopy(response)
+                        if receipt is not None:
+                            receipt["received_monotonic"] = received_monotonic
+                            receipt["result"] = copy.deepcopy(response)
+                    self._accept(response, historical=terminal_received and kind in {"key", "action", "direct", "resume"})
+                    if terminal_received:
                         with self.data_lock:
                             self.pending = None
                             self.latency_ms = round((time.monotonic() - started) * 1000)
@@ -1145,6 +1198,11 @@ class Controller:
             self._record(request, outcome)
             return outcome
         except (ControlError, OSError) as exc:
+            if terminal_response is not None:
+                self._mission_processing_failure(receipt, exc)
+                with self.data_lock:
+                    self.pending = None
+                return terminal_response
             with self.data_lock:
                 self._revoke()
                 if admitted_input and published:
@@ -1298,12 +1356,14 @@ class Controller:
             self.command_lock.release()
 
     @staticmethod
-    def _mission_frame(state: dict[str, Any], operation: str) -> None:
+    def _mission_frame(state: dict[str, Any], operation: str, *, direct: bool = False) -> None:
         validate_state(state)
         age = int(time.time() * 1000) - state["timestamp_ms"]
         boundary = state["boundary"]["kind"]
         supported = boundary == "normal_play" and state["in_game"] and state["scene"] is not None
         if operation in ("interaction", "lifecycle") and boundary == "menu": supported = True
+        if direct:
+            supported = boundary in INPUT_BOUNDARIES and state["boundary"]["input_receiver"]
         if (state["status"] != "ready" or state["error"] or state["paused"] or not supported
                 or not state["frame_ok"] or not state["frame"] or not -1000 <= age <= 3000):
             raise ControlError("Mission input requires a fresh successful boundary eligible for its operation")
@@ -1328,7 +1388,7 @@ class Controller:
                         preflight: Callable[[dict[str, Any], float], None] | None = None) -> dict[str, Any]:
         """One ordinary input with its exact logical/native receipt."""
         receipt = {"logical_action_id": logical_action_id, "request": None, "result": None,
-                   "published": False, "received_monotonic": None, "preflight": None}
+                   "published": False, "received_monotonic": None, "preflight": None, "processing_error": None}
         preflight_failed = False
         if (type(logical_action_id) is not str or not 1 <= len(logical_action_id) <= 128
                 or type(deadline_monotonic) not in (int, float)
@@ -1357,15 +1417,35 @@ class Controller:
                 except OSError as persistence_error:
                     receipt["result"]["error"] += f"; {label} failed: {persistence_error}"
 
+    def _mission_processing_failure(self, receipt: dict[str, Any] | None, exc: Exception) -> None:
+        diagnostic = str(exc)[:1024]
+        if receipt is not None:
+            prior = receipt["processing_error"]
+            receipt["processing_error"] = (f"{prior}; {diagnostic}" if prior else diagnostic)[:1024]
+        with self.data_lock:
+            self.frozen = True
+            self.pause_requested = True
+            self._mission_lease = None
+            self.transport_error = diagnostic
+            for operation in (self._revoke, self._pause_file):
+                try:
+                    operation()
+                except (ControlError, OSError):
+                    # Independent stop barriers; failure cannot discard a known ACK.
+                    pass
+
     def _finish_mission_receipt(self, receipt: dict[str, Any], preflight_failed: bool) -> dict[str, Any]:
         logical_action_id = receipt["logical_action_id"]
         if type(logical_action_id) is str:
             try:
                 self._record({"kind": "mission_receipt", "logical_action_id": logical_action_id}, receipt)
-            except OSError as exc:
-                if not preflight_failed:
+            except (ControlError, OSError) as exc:
+                if receipt["received_monotonic"] is not None:
+                    self._mission_processing_failure(receipt, exc)
+                elif preflight_failed:
+                    receipt["result"]["error"] += f"; mission receipt persistence failed: {exc}"
+                else:
                     raise
-                receipt["result"]["error"] += f"; mission receipt persistence failed: {exc}"
         if preflight_failed:
             with self.data_lock:
                 self.last_result = receipt["result"]
@@ -1396,7 +1476,7 @@ class Controller:
                    "pause_origin": expected_pause_origin, "operator_pause_generation": expected_operator_generation,
                    "controller_boot_id": expected_controller_boot_id}
         receipt = {"logical_action_id": logical_action_id, "request": None, "result": None,
-                   "published": False, "received_monotonic": None, "preflight": None}
+                   "published": False, "received_monotonic": None, "preflight": None, "processing_error": None}
         preflight_failed = False
         if (type(logical_action_id) is not str or not 1 <= len(logical_action_id) <= 128
                 or type(deadline_monotonic) not in (int, float) or not 0 <= deadline_monotonic <= 1e12):
@@ -1509,8 +1589,10 @@ class Controller:
             if set(payload) - {"key", "action", "direction", "steps", "text", "input", "expected_session", "expected_revision", "expected_boundary_id"}:
                 raise ControlError("Unknown command fields")
             if kind == "direct":
-                if lease is None or lease.operation != "interaction" or expected_image_sha256 is None:
-                    raise ControlError("Direct input requires an exact-image mission interaction lease")
+                if lease is None or lease.operation != "interaction":
+                    raise ControlError("Direct input requires a mission interaction lease")
+                if expected_image_sha256 is not None:
+                    raise ControlError("Direct input requires expected_image_sha256=None")
                 try:
                     payload["input"] = validate_input(payload.get("input"))
                 except ContractError as exc:
@@ -1560,11 +1642,21 @@ class Controller:
                 with self.data_lock:
                     self.last_result = result
                 return result
+        except _MissionInputRefusal as exc:
+            return {"status": "rejected", "error": str(exc)}
         except _MissionPreflightFailure:
             # The mission boundary preserves its determinate unpublished receipt
             # even when persisting this diagnostic would fail again.
             raise
         except (ControlError, OSError) as exc:
+            if lease is not None and admitted:
+                with self.data_lock:
+                    if self._mission_lease is lease:
+                        self.frozen = True
+                        self.pause_requested = True
+                        self._mission_lease = None
+                        self.transport_error = str(exc)
+                        raise _MissionPreflightFailure(str(exc)) from exc
             result = {"status": "controller_error", "error": str(exc)}
             with self.data_lock:
                 self.last_result = result
@@ -1617,30 +1709,46 @@ class Controller:
                 self._record({"kind": "reconcile"}, {"status": "ready", "id": result["id"],
                              "detail": "Fresh observe returned at an eligible native input boundary"})
             return result
-        # Observe verifies authority; it must never silently refresh a planner decision.
+        # Direct drift preserves custody from the owned entry screen.
+        with self.data_lock:
+            entry_control_generation = self.state["boundary"]["control_generation"] if self.state else None
         observation_receipt: dict[str, float] = {}
         observed = self._exchange("observe", timeout, deadline_monotonic=deadline_monotonic,
                                   observation_receipt=observation_receipt)
         if observed["status"] != "ready":
             return observed
+        if receipt is not None and (lease is not None or resume_binding is not None):
+            receipt["preflight"] = {"observation": copy.deepcopy(observed),
+                "received_monotonic": observation_receipt["received_monotonic"],
+                "expected_image_sha256": expected_image_sha256}
+            if kind == "direct":
+                receipt["preflight"]["informing"] = {name: payload.get(name) for name in
+                    ("expected_session", "expected_revision", "expected_boundary_id")}
         with self.data_lock:
             self._check_owner(lease, generation)
             if kind in {"key", "action", "direct", "resume"} and generation != self.pause_generation:
                 return {"status": "pause_requested", "error": "Resume superseded by a later pause"}
             if lease is not None:
-                self._mission_frame(observed, lease.operation)
+                self._mission_frame(observed, lease.operation, direct=kind == "direct")
         if (observed["boundary"]["kind"] not in INPUT_BOUNDARIES or not observed["frame_ok"]
                 or int(time.time() * 1000) - observed["timestamp_ms"] > 3000):
             raise ControlError("Input requires a fresh matching normal-play or supported menu frame")
         if kind != "resume" and (observed["paused"] or self.pause_requested):
             raise ControlError("Native input is paused; explicit resume required")
-        if kind != "resume":
+        if kind == "direct" and (not observed["boundary"]["input_receiver"]
+                or observed["boundary"]["control_generation"] != entry_control_generation):
+            raise ControlError("Ordinary receiver or control custody changed")
+        if kind not in {"resume", "direct"}:
             self._expect(observed, payload.get("expected_session"), payload.get("expected_revision"))
+        elif kind == "direct":
+            if payload.get("expected_session") != observed["session"]:
+                raise ControlError("Direct informing session differs from the owned receiver")
         elif resume_binding is not None:
             with self.data_lock:
                 self._check_mission_resume(observed, resume_binding, generation)
         if lease is not None:
-            self._expect_boundary(observed, payload.get("expected_boundary_id"))
+            if kind != "direct":
+                self._expect_boundary(observed, payload.get("expected_boundary_id"))
             if lease.operation == "navigate":
                 if kind != "action" or payload.get("action") not in {"UP", "DOWN", "LEFT", "RIGHT"}:
                     raise ControlError("Navigation lease admits only registered cardinal movement")
@@ -1650,16 +1758,13 @@ class Controller:
             raise ControlError("Action is not registered in the current input context")
         if (kind == "direct" and payload["input"]["type"] == "click"
                 and payload["input"]["geometry"] != observed["frame_geometry"]):
-            raise ControlError("Click geometry differs from the exact informing frame")
+            raise _MissionInputRefusal("Click geometry differs from the actual receiver mapping")
         if lease is not None or resume_binding is not None:
             try:
                 pause_snapshot = self._pause_snapshot() if resume_binding is not None else None
                 if expected_image_sha256 is not None and self._frame_sha256(observed) != expected_image_sha256:
-                    raise ControlError("Final preflight image differs from the informing image")
+                    raise _MissionInputRefusal("Final preflight image differs from the informing image")
                 received = observation_receipt["received_monotonic"]
-                if receipt is not None:
-                    receipt["preflight"] = {"observation": copy.deepcopy(observed),
-                        "received_monotonic": received, "expected_image_sha256": expected_image_sha256}
                 if preflight is not None:
                     try:
                         preflight(copy.deepcopy(observed), received)
@@ -1683,11 +1788,13 @@ class Controller:
                     else:
                         if (self.bridge / "pause").exists():
                             raise ControlError("Native boundary or frame changed during preflight")
-                        self._mission_frame(observed, lease.operation)
+                        self._mission_frame(observed, lease.operation, direct=kind == "direct")
                     if not 0 <= time.monotonic() - received <= 3:
                         raise ControlError("Final preflight observation expired")
                     if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:
                         raise ControlError("Original dispatch deadline expired during preflight")
+            except _MissionInputRefusal:
+                raise
             except (ControlError, OSError) as exc:
                 with self.data_lock:
                     self.frozen = True
@@ -1700,14 +1807,13 @@ class Controller:
         result = self._exchange(kind, timeout, generation=generation, lease=lease, session=observed["session"],
                                 revision=observed["revision"], boundary_id=observed["boundary"]["id"],
                                 takeover_generation=observed["takeover_generation"], deadline_monotonic=deadline_monotonic,
-                                frame=observed["frame"], require_exact_frame=expected_image_sha256 is not None,
+                                frame=observed["frame"], require_exact_frame=kind != "direct" and expected_image_sha256 is not None,
                                 receipt=receipt, **primitive)
         if kind == "resume" and result["status"] == "ready":
             with self.data_lock:
                 if generation != self.pause_generation:
                     self._pause_file()
                     self.pause_requested = True
-                    result = {**result, "status": "pause_requested", "error": "Resume interrupted by pause"}
                 else:
                     self.pause_requested = result["paused"]
         return result

@@ -31,9 +31,15 @@ It returns a new source under the same root, deadlines and costs; inspect that
 source before making a new decision. Changed evidence clears quantity-editor
 proof. Observation sends no input, grants no new authority and never erases an
 unknown ACK or its costs. Prepared/published inputs and unresolved effects still
-stop advancement. Automatic input preflight remains strict; looking again is
-distinct from silently retargeting an old request. See the
+stop advancement. Semantic preflight remains strict; direct physical events use
+their separate drift policy and never silently retarget an old label. See the
 [prompt observation contract](protocol.md#integrated-mission-lifecycle).
+If only the ordinary macro's local cap is spent, Observe can record `macro_closure`
+and clear that prompt under its own finite deadline. Inspect the fresh source and
+explicitly choose a new direct root; closure is neither success nor renewed mission
+budget. Stale children refuse. Global exhaustion/custody/storage faults still stop.
+Read-only Observe after known delivery with stale/unavailable current evidence
+across lease rotation remains pending; do not treat an old checkpoint as current.
 
 Eligible lifecycle Resume, stage commit, save, identity inspection and owned quit
 confirmation refresh the selected checkpoint once at operation entry
@@ -309,7 +315,7 @@ an incident archive and document the explicit transition to a fresh bridge with
 unresolved work still tracked. No replay or save editing is permitted. Historical
 reports and journals stay immutable; they need no runtime reader.
 
-Build manifests require `schema_version: 1`; current evidence stores require store version 4.
+Build manifests require `schema_version: 1`; current evidence stores require store version 5.
 Never just relabel an unknown file. A reviewed one-time build-manifest migration
 must first verify workspace ownership, pinned source/headers and binary hashes,
 then record before/after hashes. Alternatively preserve the old manifest/workspace
@@ -323,10 +329,12 @@ unresolved identities as verified `incident/1` references in
 `historical-incidents.json`; startup validates referenced bytes without parsing
 old protocol records. These remain visible historical unknowns and grant no
 execution permission. Its evidence format3 accepted native4 observations.
-For the current native5/mission9/ledger11/archive4/memory4 cutover, apply the same
+For the current native6/mission10/ledger12/archive5/memory5 cutover, apply the same
 stopped, hash-inventoried incident archive procedure. Preserve prior mission
 ledgers/archives as historical evidence; do not relabel them as eligible procedure
-libraries or restore their execution authority. Current stores accept native5 only.
+libraries or restore their execution authority. Current stores accept native6
+only. Procedure/2 and reflection/2 also reject older records. Do not migrate/relabel historical learning004 into a current library;
+first complete fresh current-contract learning005, then admit fresh seven-day003.
 
 ## Passive skill acceptance
 
@@ -390,7 +398,7 @@ separates implemented components from remaining independent-play acceptance.
 2. Configure and verify the [structured player tools](setup.md#configure-the-structured-player-tools).
    The designated player uses `enactive_snapshot` and explicitly selects the
    returned snapshot/source IDs for `enactive_skill` or `enactive_lifecycle`.
-   Software constructs and retains the current mission/9 request before submission,
+   Software constructs and retains the current mission/10 request before submission,
    collects its bounded result and returns the actual retained PNG in the same call.
    The lead uses `enactive_start` for the explicit frozen source-free admission;
    it does not launch or adopt a character. Raw engineering contract diagnostics
@@ -412,6 +420,12 @@ separates implemented components from remaining independent-play acceptance.
    Identical previously staged requests collect only; a changed body under that
    identity refuses. Descriptive handles expire with the adapter or bounded cache;
    explicitly read a new snapshot/source instead of reconstructing authority.
+   Known returned/rejected ACKs retain delivery even if capture storage or later
+   processing fails. Inspect separate evidence-loss/processing diagnostics. A
+   publication bookkeeping diagnostic alone permits continuation when mandatory
+   atomic settlement succeeds and custody/evidence remain healthy. The
+   ACK's historical after-source is separate from actual current evidence; a
+   different current source ends the operation partial for another player decision.
 5. The player requests bounded context, reads needed retained sources, records
    fallible claims/corrections/Work and chooses semantic goals. The observer's last
    context packet is historical, query-specific and possibly incomplete. Its labels
@@ -420,7 +434,12 @@ separates implemented components from remaining independent-play acceptance.
    and truthful support/read declarations remain the player's responsibility.
    Handoff, claim and separately charged readmission are explicit tools. A client
    process replacement is not evidence that a fresh model context read the memory.
-6. Owned menus support bounded focusing, literal text and direction/confirmation
+6. Use `skill_kind=direct` for an explicitly chosen physical key, scalar/text batch
+   or click at a live ordinary receiver. Keys/scalars permit changed pixels under
+   the same custody; clicks retain the selected image's geometry. Inspect returned
+   evidence and choose again after a partial result. Semantic shortcuts retain
+   their strict source/control requirements. Owned menus support bounded focusing,
+   literal text and direction/confirmation
    handling. Dismissal uses its exact registered context action (TEXT.QUIT,
    UILIST.QUIT, WORLDGEN_CONFIRM.QUIT or ordinary QUIT). A rowless any-key
    POPUP_WAIT supports one SPACE acknowledgement under the exact signature in
@@ -444,7 +463,9 @@ use the existing32-primitive ceiling, with room for all child selections/editing
 verification and return; lifecycle setup uses its prospective whole-phase preset.
 One opening input is not the whole inspection. Limits spend only actual admitted
 primitives. Child limits can narrow their root, never enlarge it. Zero-input local
-budget refusals permit a new corrected request; exhausted live roots remain stopped.
+budget refusals permit a new corrected request. An exhausted ordinary macro can
+close only through explicit Observe as described above; other exhausted live
+roots retain their existing stops.
 
 The lead owns source/integration/admission and verification. The deciding player
 owns ordinary tactics and supported lifecycle; source faults or unsupported required

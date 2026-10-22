@@ -92,6 +92,13 @@ startup failure, repaired and verified in [public workflow acceptance](acceptanc
 Required checks must pass before integration. Other interpreter/host combinations
 require their own validation before a support claim.
 
+The current source uses native6/mission10/ledger12/archive5 with procedure/2,
+campaign-memory/5 and reflection/2; gameplay/2 is unchanged. Build and qualify the
+matching native6 binary before new native support claims. Historical native5
+learning and lifecycle results do not qualify this candidate. See
+[coordinated migration](runbook.md#coordinated-migration) before using existing
+runtime state; old libraries are not current-contract inputs.
+
 ## Configure the structured player tools
 
 After installing the lock, inspect then write only this trusted checkout's MCP table:
@@ -115,7 +122,9 @@ two configurations.
 The current generated catalogue has20 named tools, including advisory
 claim/source/submit/original-result collection and passive advice. Complete context,
 reflection-job and advice replies have explicit output limits to preserve bounded
-records. These project settings do not prove the running host loaded new names.
+records. Direct input is an intent on `enactive_skill`, not a new input tool;
+Observe macro closure likewise uses `enactive_observe`. These project settings
+do not prove the running host loaded the current schemas/help or grant authority.
 
 The [official MCP setup](https://learn.chatgpt.com/docs/extend/mcp) documents
 project configuration and host loading. Confirm the active chat has loaded the
@@ -272,8 +281,11 @@ not permission to skip those tests.
 The prepared keyboard-driven game uses CDDA's `ENABLE_MOUSE=false` in its
 project userdir, alongside `FULLSCREEN=no`. Owned launch rejects missing, duplicate
 or enabled mouse options. This prevents native menu hover from silently changing
-selection between exact captures. Keyboard takeover and browser Pause remain;
-no global input preference or image-validation rule changes.
+selection between captures. Harness-local synthetic pointer handling permits
+ordinary engine/widget clicks while suppressing physical hover/polling; deliberate
+physical button-down/wheel still triggers takeover before filtering. Keyboard
+takeover and browser Pause remain. Game options stay project-local; semantic
+exact-image checks and the separate direct-input drift policy still apply.
 The fixed wrapper also exports `SDL_MAC_BACKGROUND_APP=1` and
 `SDL_WINDOW_NO_ACTIVATION_WHEN_SHOWN=1` only to its child. These existing SDL2
 hints prevent startup from activating the application/window; the game remains

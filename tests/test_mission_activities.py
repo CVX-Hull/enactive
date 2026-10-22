@@ -24,7 +24,7 @@ class MissionActivityTests(unittest.TestCase):
         def behavior(bridge, request):
             if request.get("action") == "sleep":
                 bridge.value.update(category="DEFAULTMODE", scene=None, ui=None, actions=[])
-                bridge.value["boundary"].update(kind="activity_poll", id="rest-poll",
+                bridge.value["boundary"].update(kind="activity_poll", input_receiver=False, id="rest-poll",
                     recovery_operations=["request_interrupt"])
             elif request["kind"] == "observe" and bridge.value["boundary"]["kind"] == "activity_poll":
                 bridge.value["revision"] += 1
@@ -33,7 +33,7 @@ class MissionActivityTests(unittest.TestCase):
                     scene = copy.deepcopy(self.normal)
                     scene["turn"] += self.finish
                     bridge.value.update(scene=scene, actions=["sleep"])
-                    bridge.value["boundary"].update(kind="normal_play", recovery_operations=[])
+                    bridge.value["boundary"].update(kind="normal_play", input_receiver=True, recovery_operations=[])
             return True
         self.bridge.behavior = behavior
         self.goal = dict(operation="rest", target="rest in shelter", game_seconds=300,
@@ -99,7 +99,7 @@ class MissionActivityTests(unittest.TestCase):
             behavior(bridge, request)
             if request["kind"] == "observe":
                 bridge.value.update(category="YESNO", actions=["YES", "NO"])
-                bridge.value["boundary"].update(kind="menu", id="output-question", recovery_operations=[])
+                bridge.value["boundary"].update(kind="menu", input_receiver=True, id="output-question", recovery_operations=[])
             return True
         self.bridge.behavior = output
         result = self.poll()
@@ -122,16 +122,16 @@ class MissionActivityTests(unittest.TestCase):
                 bridge.value.update(category="DEFAULTMODE", ui=None)
                 if request["action"] == "YES":
                     bridge.value.update(scene=copy.deepcopy(self.normal), actions=["sleep"])
-                    bridge.value["boundary"].update(kind="normal_play", id="cancelled-rest", recovery_operations=[])
+                    bridge.value["boundary"].update(kind="normal_play", input_receiver=True, id="cancelled-rest", recovery_operations=[])
                 else:
                     bridge.value.update(scene=None, actions=[])
-                    bridge.value["boundary"].update(kind="activity_poll", id="continued-rest",
+                    bridge.value["boundary"].update(kind="activity_poll", input_receiver=False, id="continued-rest",
                         recovery_operations=["request_interrupt"])
             elif request["kind"] == "observe" and not shown:
                 shown = True
                 bridge.value.update(category="CANCEL_ACTIVITY_OR_IGNORE_QUERY", scene=None, ui=None,
                     actions=["YES", "NO", "MANAGER", "IGNORE", "LEFT", "RIGHT"])
-                bridge.value["boundary"].update(kind="menu", id="sound-question", recovery_operations=[])
+                bridge.value["boundary"].update(kind="menu", input_receiver=True, id="sound-question", recovery_operations=[])
             return True
 
         self.bridge.behavior = distracted

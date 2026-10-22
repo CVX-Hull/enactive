@@ -107,7 +107,7 @@ class MissionClient:
             with self._runtime() as runtime, _directory("bridge", parent=runtime) as bridge:
                 config = json_object(_regular_bytes(bridge, "controller.json", _CONFIG_BYTES))
             port, token = config.get("port"), config.get("token")
-            if (type(config.get("protocol")) is not int or config["protocol"] != 5
+            if (type(config.get("protocol")) is not int or config["protocol"] != 6
                     or type(port) is not int or not 1 <= port <= 65535
                     or type(token) is not str or not token
                     or not token.isascii() or any(ord(character) < 33 or ord(character) == 127 for character in token)):
@@ -280,7 +280,7 @@ class MissionClient:
     @staticmethod
     def _reflection_scope(mission_id: str, reflector_id: str, job_id: str = "read",
                           command_id: str = "read") -> dict:
-        return validate_command(dict(schema="reflection/1", kind="claim", mission_id=mission_id,
+        return validate_command(dict(schema="reflection/2", kind="claim", mission_id=mission_id,
             reflector_id=reflector_id, job_id=job_id, command_id=command_id))
 
     @staticmethod

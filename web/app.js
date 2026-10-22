@@ -36,7 +36,7 @@ function renderMeasurements() {
   $('observer-measurements').textContent = JSON.stringify(observerMeasurementSnapshot(), null, 2);
 }
 function validFrameGeometry(state) {
-  if (state?.protocol !== 5 || typeof state.frame_ok !== 'boolean') return false;
+  if (state?.protocol !== 6 || typeof state.frame_ok !== 'boolean') return false;
   const geometry = state.frame_geometry;
   if (!state.frame_ok) return geometry === null;
   if (!record(geometry) || Object.keys(geometry).sort().join(',') !==
@@ -78,13 +78,13 @@ function authority() {
   if (!currentFrame()) {
     throw new Error('Wait for the current game frame before choosing an input.');
   }
-  if (displayed.protocol !== 5 || !['normal_play', 'menu'].includes(displayed.boundary?.kind)) {
+  if (displayed.protocol !== 6 || displayed.boundary?.input_receiver !== true || !['normal_play', 'menu'].includes(displayed.boundary?.kind)) {
     throw new Error('This input boundary needs native control. Observe again after returning to supported play or a menu.');
   }
   return {expected_session: displayed.session, expected_revision: displayed.revision};
 }
 function eligibleRecovery(kind) {
-  if (!currentFrame() || displayed.protocol !== 5) return false;
+  if (!currentFrame() || displayed.protocol !== 6) return false;
   const boundary = displayed.boundary;
   const expected = {request_interrupt: 'activity_poll', answer_interrupt: 'interrupt_confirmation',
     continue_debug_once: 'debug_prompt'};
@@ -144,7 +144,7 @@ function updateControls() {
     button.disabled = missionLocked || gameplayBusy || recoveryPending || !currentFrame() || !!latest?.frozen || !!latest?.pause_requested;
   });
   $('resume').disabled = missionLocked || gameplayBusy || recoveryPending || !currentFrame() || !!latest?.frozen ||
-    !['normal_play', 'menu'].includes(displayed?.boundary?.kind);
+    displayed?.boundary?.input_receiver !== true || !['normal_play', 'menu'].includes(displayed?.boundary?.kind);
   $('observe').disabled = observeBusy || missionState().kind === 'invalid';
   $('pause').disabled = false;
   for (const [id, kind] of [['recovery-interrupt', 'request_interrupt'], ['recovery-yes', 'answer_interrupt'],
@@ -288,7 +288,7 @@ async function missionObserve() {
   missionError = '';
   updateControls();
   try {
-    const request = {schema: 'mission/9', kind: 'observe', request_id: crypto.randomUUID(),
+    const request = {schema: 'mission/10', kind: 'observe', request_id: crypto.randomUUID(),
       mission_id: mission.mission_id, epoch: mission.epoch};
     const response = await fetch('/api/mission', {
       method: 'POST', headers: {'Content-Type': 'application/json', 'X-CDDA-Token': token},
@@ -344,12 +344,12 @@ function renderLifecycle(mission) {
   const result = mission?.progress;
   const proof = record(result) ? result.normal_exit : null;
   const finish = record(result) ? result.normal_finish : null;
-  const finishRecorded = record(finish) && finish.schema === 'mission/9' && finish.record_type === 'NormalFinish' &&
+  const finishRecorded = record(finish) && finish.schema === 'mission/10' && finish.record_type === 'NormalFinish' &&
     finish.grants_authority === false && [finish.final_source_id, finish.normal_exit_result_request_id].every(recordedId) &&
     ((finish.disposition === 'stopped' && finish.completed_work_event_id === null) ||
      (finish.disposition === 'completed' && recordedId(finish.completed_work_event_id)));
   // Summarize the producer's recorded proof; process samples and ACKs cannot supply it.
-  const verified = record(proof) && proof.schema === 'mission/9' && proof.record_type === 'OwnedNormalExit' &&
+  const verified = record(proof) && proof.schema === 'mission/10' && proof.record_type === 'OwnedNormalExit' &&
     proof.grants_authority === false && proof.returncode === 0 &&
     (proof.no_save_required === true || proof.no_save_required === false && recordedId(proof.saved_checkpoint_request_id)) &&
     [proof.origin_request_id, proof.launch_request_id, proof.launch_id,
@@ -437,7 +437,7 @@ function quantities(value) {
 }
 function renderMemory(mission) {
   const memory = mission?.memory_context;
-  const usable = record(memory) && memory.schema === 'campaign-memory/4' && memory.grants_authority === false;
+  const usable = record(memory) && memory.schema === 'campaign-memory/5' && memory.grants_authority === false;
   $('mission-memory-summary').textContent = usable ?
     `Historical, query-specific last journaled context · packet ${known(memory.packet_id)} · memory version ${known(memory.memory_version)} · query ${known(memory.query)} · as of ${known(memory.as_of)} · scope ${known(memory.scope)}. Status labels belong to that packet, not the current world. This preview is not current authority and is not recomputed by the viewer.` :
     `No journaled context preview available${memory == null ? '' : ' (unavailable or inconsistent packet)'}. Memory version ${known(mission?.memory_version)} · last packet ${known(mission?.last_context_id)}.`;
@@ -604,7 +604,7 @@ function render(data, statusSample = null) {
   $('position').textContent = position ? `Relative position ${position.join(', ')}` : 'Player position unavailable';
   $('frame-shell').classList.toggle('stale', !currentFrame());
   const validGeometry = validFrameGeometry(state);
-  if (state && !validGeometry) frameError = 'Unsupported native protocol 5 metadata or invalid required frame geometry; current frame unavailable.';
+  if (state && !validGeometry) frameError = 'Unsupported native protocol 6 metadata or invalid required frame geometry; current frame unavailable.';
   else if (frameError.startsWith('Unsupported native protocol')) frameError = '';
   if (validGeometry && state.frame_ok && state.status !== 'dispatched') {
     loadFrame(state, statusSample);

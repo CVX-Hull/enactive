@@ -185,7 +185,7 @@ class MissionCreationFixture:
         else:
             perception.update(kind="menu", control="vertical", rows=[dict(label=label, enabled=True)], selected=0, question="")
             goal = dict(purpose=purpose or "Select visible setup option", label=label, outcome="activated")
-        return dict(schema="mission/9", kind="skill", request_id=identity, mission_id=self.a.mission_id,
+        return dict(schema="mission/10", kind="skill", request_id=identity, mission_id=self.a.mission_id,
             epoch=self.runtime.status()["epoch"], skill_kind=kind, phase_id=parent, work_id=None,
             sources=[ref.observation_id], expected_session=ref.session, expected_revision=ref.revision,
             expected_boundary_id=observed["boundary"]["id"], perception=perception, goal=goal,
@@ -198,7 +198,7 @@ class MissionCreationFixture:
             scope=dict(mission_id=self.a.mission_id, session=ref.session, coordinate_epoch=epoch),
             observed_time=dict(revision=ref.revision, turn=ref.turn), received_time=int(time.time() * 1000),
             sources=[ref.observation_id], supports=[dict(sources=[ref.observation_id], claims=[])])
-        operation = self.run_request(dict(schema="mission/9", kind="remember", request_id=f"remember-{identity}",
+        operation = self.run_request(dict(schema="mission/10", kind="remember", request_id=f"remember-{identity}",
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], entry_type="claim", entry=entry))
         self.assertEqual(operation["state"], "completed", operation)
         return entry["id"]
@@ -243,13 +243,13 @@ class MissionCreationFixture:
         self.assertEqual(entered["state"], "unknown", entered)
         self.assertIsNone(self.runtime._registered_lifecycle.phase)
         self.assertIsNotNone(self.runtime._registered_lifecycle.candidate)
-        observed = self.run_request(dict(schema="mission/9", kind="observe", request_id="create-observe",
+        observed = self.run_request(dict(schema="mission/10", kind="observe", request_id="create-observe",
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
         self.assertEqual(observed["state"], "completed", observed)
         return self.finish_identity("create", world)
 
     def observe(self, identity):
-        operation = self.run_request(dict(schema="mission/9", kind="observe", request_id=identity,
+        operation = self.run_request(dict(schema="mission/10", kind="observe", request_id=identity,
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
         self.assertEqual(operation["state"], "completed", operation)
         return operation
@@ -290,7 +290,7 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual((timeline.elapsed_seconds, timeline.coordinate_epoch), (0, 0))
         self.assertEqual(len(timeline.segments), 1)
         self.assertIsNotNone(self.runtime._map)
-        response = self.runtime.command(dict(schema="mission/9", kind="context", handoff=None,
+        response = self.runtime.command(dict(schema="mission/10", kind="context", handoff=None,
             mission_id=self.a.mission_id, scope=adopted["result"]["normal_adoption"]["scope"],
             query="water", max_bytes=32768))
         self.assertEqual(response["status"], "accepted", response)
@@ -724,7 +724,7 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
         self.create()
         self.runtime.close()
         self.runtime = MissionRuntime(self.controller)
-        self.runtime.command(dict(schema="mission/9", kind="start", request_id="reopened-start", admission=self.a.to_dict()))
+        self.runtime.command(dict(schema="mission/10", kind="start", request_id="reopened-start", admission=self.a.to_dict()))
         self.assertEqual(self.settled("reopened-start")["state"], "completed")
         self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 0)
         self.assertIsNone(self.runtime._registered_lifecycle.phase)

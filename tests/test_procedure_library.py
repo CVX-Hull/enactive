@@ -1,5 +1,6 @@
 """Sealed synthetic archives: integrity/closure, never gameplay acceptance."""
 import fcntl
+from copy import deepcopy
 import hashlib
 import json
 from pathlib import Path
@@ -13,7 +14,7 @@ from harness.gameplay.mission_contracts import LearningPolicy
 from harness.gameplay.contracts import canonical
 from harness.gameplay.procedure_library import ProcedureLibrary
 from harness.gameplay.procedures import project_procedures
-from tests.test_mission_ledger import intent
+from tests.test_mission_ledger import intent, known_receipt
 from tests.test_gameplay_evidence import observation, png
 from tests.test_procedures import procedure, successor
 from tests.test_mission_contracts import admission
@@ -44,9 +45,9 @@ class ProcedureLibraryTests(unittest.TestCase):
         frame.write_bytes(png())
         reference = EvidenceRef(identity, native["session"], native["revision"], native["timestamp_ms"],
             100.0, native["scene"]["turn"], str(frame), digest(png()), "normal_play").to_dict()
-        index = {"store_version": 4, "session": mission, "retired_sessions": [], "blocked": [],
+        index = {"store_version": 5, "session": mission, "retired_sessions": [], "blocked": [],
                  "disputed": [], "entries": [{"reference": reference, "observation": native,
-                                               "initial_lag_seconds": 0.0}]}
+                                               "initial_lag_seconds": 0.0, "retention": "current"}]}
         (frames.parent / "evidence.json").write_text(canonical(index))
         row = procedure(mission_id=mission, support=[{"mission_id": mission, "request_ids": ["request-1"],
             "source_ids": [identity], "interpretation": "Scoped synthetic interpretation"}])
@@ -55,17 +56,17 @@ class ProcedureLibraryTests(unittest.TestCase):
                 "context_bytes": 65536, "result_bytes": 32768, "job_seconds": 180, "total_seconds": 3600}}
         db = sqlite3.connect(directory / "mission.sqlite3")
         with db:
-            db.execute("PRAGMA user_version=11")
+            db.execute("PRAGMA user_version=12")
             db.execute("CREATE TABLE metadata(key TEXT PRIMARY KEY,value TEXT NOT NULL)")
             db.execute("CREATE TABLE requests(id TEXT PRIMARY KEY,payload TEXT,digest TEXT,state TEXT,result TEXT)")
-            db.execute("CREATE TABLE primitives(id TEXT PRIMARY KEY,request_id TEXT,intent TEXT,state TEXT,result TEXT,effect TEXT)")
+            db.execute("CREATE TABLE primitives(id TEXT PRIMARY KEY,request_id TEXT,intent TEXT,native_id TEXT,state TEXT,result TEXT,effect TEXT)")
             db.execute("CREATE TABLE memory(sequence INTEGER PRIMARY KEY,event_id TEXT UNIQUE,entry_type TEXT,record_id TEXT,body TEXT)")
             db.execute("CREATE TABLE reflection_jobs(state TEXT NOT NULL)")
             db.execute("CREATE TABLE reflection_commands(id TEXT PRIMARY KEY)")
             db.execute("INSERT INTO metadata VALUES ('admission',?)", (canonical(admission(
                 mission_id=mission, learning=LearningPolicy.from_dict(learning)).to_dict()),))
             db.execute("INSERT INTO metadata VALUES ('state',?)", (canonical({"phase": "stopped"}),))
-            payload = canonical({"schema": "mission/9", "kind": "observe", "request_id": "request-1",
+            payload = canonical({"schema": "mission/10", "kind": "observe", "request_id": "request-1",
                                  "mission_id": mission, "epoch": 0})
             db.execute("INSERT INTO requests VALUES (?,?,?,?,?)", ("request-1", payload, digest(payload.encode()),
                 "completed", canonical({"source_ids": [identity], "grants_authority": False})))
@@ -100,9 +101,9 @@ class ProcedureLibraryTests(unittest.TestCase):
         return library
 
     def skill_request(self, directory, identity):
-        payload = canonical({"schema": "mission/9", "kind": "skill", "request_id": "request-1",
+        payload = canonical({"schema": "mission/10", "kind": "skill", "request_id": "request-1",
             "mission_id": directory.name, "epoch": 0, "skill_kind": "inspect", "procedure": None, "goal": {"purpose": "inventory"},
-            "sources": [identity], "expected_session": "native-session", "expected_revision": 30,
+            "sources": [identity], "expected_session": directory.name, "expected_revision": 1,
             "expected_boundary_id": "boundary-1", "limits": {"primitives": 1, "wall_seconds": 60, "game_seconds": 60},
             "work_id": None, "phase_id": None, "perception": None})
         return self.edit_db(directory, "UPDATE requests SET payload=?,digest=?,result=?",
@@ -137,7 +138,7 @@ class ProcedureLibraryTests(unittest.TestCase):
     def test_truncated_current_admission_refuses_even_with_matching_pin(self):
         directory, _, _, _ = self.archive()
         pin = self.edit_db(directory, "UPDATE metadata SET value=? WHERE key='admission'",
-            (canonical({"schema": "mission/9", "record_type": "MissionAdmission", "mission_id": directory.name,
+            (canonical({"schema": "mission/10", "record_type": "MissionAdmission", "mission_id": directory.name,
                         "learning": None}),))
         with self.assertRaises(ContractError):
             self.library(pin)
@@ -241,7 +242,7 @@ class ProcedureLibraryTests(unittest.TestCase):
             self.library({**original, "ledger_sha256": "0" * 64})
         with self.assertRaises(ContractError):
             self.library({**original, "index_sha256": "0" * 64})
-        for sql in ("PRAGMA user_version=10", "UPDATE metadata SET value='{\"phase\":\"active\"}' WHERE key='state'",
+        for sql in ("PRAGMA user_version=10", "PRAGMA user_version=11", "UPDATE metadata SET value='{\"phase\":\"active\"}' WHERE key='state'",
                     "UPDATE requests SET state='running'", "UPDATE requests SET result=NULL",
                     "UPDATE requests SET digest='bad'", "UPDATE memory SET record_id='foreign'"):
             data = (directory / "mission.sqlite3").read_bytes()
@@ -249,7 +250,7 @@ class ProcedureLibraryTests(unittest.TestCase):
             with self.subTest(sql=sql), self.assertRaises(ContractError):
                 self.library(pin)
             (directory / "mission.sqlite3").write_bytes(data)
-        for field, value in (("store_version", 3), ("blocked", ["0" * 64]), ("disputed", ["0" * 64])):
+        for field, value in (("store_version", 3), ("store_version", 4), ("blocked", ["0" * 64]), ("disputed", ["0" * 64])):
             path = directory / "evidence" / "evidence.json"
             before = path.read_bytes()
             pin = self.edit_index(directory, lambda index: index.update({field: value}))
@@ -335,25 +336,95 @@ class ProcedureLibraryTests(unittest.TestCase):
         reference = dict(index["entries"][0]["reference"])
         reference.update(observation_id=second_id, revision=2,
             frame_path=str(directory / "evidence" / "frames" / (second_id + ".png")))
-        index["entries"].append({"reference": reference, "observation": second, "initial_lag_seconds": 0.0})
+        index["entries"].append({"reference": reference, "observation": second, "initial_lag_seconds": 0.0, "retention": "terminal"})
         (directory / "evidence" / "evidence.json").write_text(canonical(index))
         (directory / "evidence" / "frames" / (second_id + ".png")).write_bytes(png())
         record["support"][0]["source_ids"] = [second_id]
         self.edit_db(directory, "UPDATE memory SET body=?", (canonical(record),))
-        pin = self.edit_db(directory, "INSERT INTO primitives VALUES (?,?,?,?,?,?)", ("logical-1", "request-1",
-            canonical(intent(source_before=identity, preflight_source=identity)), "returned",
-            canonical({"source_before": identity, "preflight_source": identity, "source_after": second_id}), None))
+        proposed = intent(source_before=identity, preflight_source=identity, expected_session="mission-a", expected_revision=1)
+        receipt = known_receipt(proposed=proposed, after=second, source_after=second_id)
+        pin = self.edit_db(directory, "INSERT INTO primitives VALUES (?,?,?,?,?,?,?)", ("logical-1", "request-1",
+            canonical(proposed), "native-uuid-1", "returned", canonical(receipt), None))
         self.assertEqual(self.library(pin).records(), (record,))
 
     def test_unknown_primitive_needs_settled_effect_and_live_primitive_refuses(self):
         directory, identity, _, _ = self.archive()
         self.skill_request(directory, identity)
         for state, effect in (("prepared", None), ("published", None), ("unknown", None), ("unknown", "{}")):
-            pin = self.edit_db(directory, "INSERT OR REPLACE INTO primitives VALUES (?,?,?,?,?,?)",
-                ("p-1", "request-1", canonical(intent(source_before=identity, preflight_source=identity)),
+            pin = self.edit_db(directory, "INSERT OR REPLACE INTO primitives VALUES (?,?,?,?,?,?,?)",
+                ("p-1", "request-1", canonical(intent(source_before=identity, preflight_source=identity)), None,
                  state, canonical({"source_after": identity}), effect))
             with self.subTest(state=state, effect=effect), self.assertRaises(ContractError):
                 self.library(pin)
+
+    def known_archive(self, *, source_after=True, disposition="returned"):
+        directory, before_id, record, _ = self.archive()
+        self.skill_request(directory, before_id)
+        after = observation(2, session=directory.name)
+        after_id = _identity(after)
+        path = directory / "evidence" / "evidence.json"
+        index = json.loads(path.read_bytes())
+        reference = dict(index["entries"][0]["reference"], observation_id=after_id, revision=2,
+            frame_path=str(directory / "evidence" / "frames" / (after_id + ".png")))
+        index["entries"].append({"reference": reference, "observation": after,
+                                 "initial_lag_seconds": 0.0, "retention": "terminal"})
+        path.write_text(canonical(index))
+        (directory / "evidence" / "frames" / (after_id + ".png")).write_bytes(png())
+        proposed = intent(source_before=before_id, preflight_source=before_id,
+                          expected_session=directory.name, expected_revision=1)
+        receipt = known_receipt(proposed=proposed, after=after, disposition=disposition,
+            source_after=after_id if source_after else None,
+            evidence_loss="After retention failed" if not source_after and disposition == "returned" else None)
+        pin = self.edit_db(directory, "INSERT INTO primitives VALUES (?,?,?,?,?,?,?)", ("logical-1", "request-1",
+            canonical(proposed), "native-uuid-1", disposition, canonical(receipt), None))
+        return directory, before_id, after_id, receipt, record, pin
+
+    def test_known_receipt_cross_checks_preflight_and_after_capture_not_transport_metadata(self):
+        directory, before_id, after_id, receipt, _, pin = self.known_archive()
+        library = self.library(pin)
+        self.assertFalse(library.source("mission-a", after_id)[0]["grants_authority"])
+        library.close()
+        # Archive was first retained under a spectator request with a different
+        # transport result; those three fields do not identify the capture.
+        pin = self.edit_index(directory, lambda data: data["entries"][1]["observation"].update(
+            id="spectator", status="rejected", error="spectator diagnostic"))
+        self.library(pin).close()
+        mutations = [lambda r: r["native_ack"].update(id="wrong"),
+            lambda r: r["native_ack"].update(frame="frame-mission-a-99.png"),
+            lambda r: r["native_ack"].update(timestamp_ms=999),
+            lambda r: r["native_ack"].update(takeover_generation=1),
+            lambda r: r.update(source_after=before_id),
+            lambda r: r.update(source_after="missing"),
+            lambda r: r.update(source_before="wrong"),
+            lambda r: r.update(native_request_json=canonical(
+                json.loads(r["native_request_json"]) | dict(frame="frame-mission-a-99.png"))),
+            lambda r: r.update(native_request_json=canonical(
+                json.loads(r["native_request_json"]) | dict(takeover_generation=1)))]
+        for mutate in mutations:
+            changed = deepcopy(receipt)
+            mutate(changed)
+            pin = self.edit_db(directory, "UPDATE primitives SET result=?", (canonical(changed),))
+            with self.subTest(changed=changed), self.assertRaises(ContractError):
+                self.library(pin)
+
+    def test_known_delivery_without_after_remains_advisory_history_with_explicit_loss(self):
+        directory, before_id, _, receipt, record, pin = self.known_archive(source_after=False)
+        library = self.library(pin)
+        self.assertEqual(library.records(), (record,))
+        self.assertFalse(library.source("mission-a", before_id)[0]["grants_authority"])
+        library.close()
+        changed = receipt | dict(evidence_loss=None)
+        pin = self.edit_db(directory, "UPDATE primitives SET result=?", (canonical(changed),))
+        with self.assertRaises(ContractError):
+            self.library(pin)
+
+    def test_rejected_hard_fault_without_capture_preserves_delivery_without_authority(self):
+        directory, _, _, receipt, _, _ = self.known_archive(source_after=False, disposition="rejected")
+        receipt["native_ack"].update(session="changed", revision=0, paused=True, pause_origin="fault",
+            frame_ok=False, frame="", error="Hard fault")
+        receipt["native_ack"]["boundary"].update(kind="unsupported", input_receiver=False)
+        pin = self.edit_db(directory, "UPDATE primitives SET result=?", (canonical(receipt),))
+        self.assertEqual(self.library(pin).request("mission-a", "request-1")["state"], "completed")
 
     def test_unknown_ack_with_exact_settled_original_effect_stays_unknown(self):
         directory, identity, record, _ = self.archive()
@@ -364,26 +435,26 @@ class ProcedureLibraryTests(unittest.TestCase):
         reference = dict(index["entries"][0]["reference"])
         reference.update(observation_id=after_id, revision=2,
             frame_path=str(directory / "evidence" / "frames" / (after_id + ".png")))
-        index["entries"].append({"reference": reference, "observation": after, "initial_lag_seconds": 0.0})
+        index["entries"].append({"reference": reference, "observation": after, "initial_lag_seconds": 0.0, "retention": "terminal"})
         (directory / "evidence" / "evidence.json").write_text(canonical(index))
         (directory / "evidence" / "frames" / (after_id + ".png")).write_bytes(png())
-        payload = canonical({"schema": "mission/9", "kind": "lifecycle", "request_id": "request-1",
+        payload = canonical({"schema": "mission/10", "kind": "lifecycle", "request_id": "request-1",
             "mission_id": "mission-a", "epoch": 0, "operation": "save", "world": "world", "character": "person",
             "sources": [identity], "expected_session": "native-session", "expected_revision": 30,
             "expected_boundary_id": "boundary-1", "limits": {"primitives": 1, "wall_seconds": 60, "game_seconds": 60},
             "work_id": None, "phase_id": None, "identity_claim_ids": []})
         self.edit_db(directory, "UPDATE requests SET payload=?,digest=?,state='unknown'",
                      (payload, digest(payload.encode())))
-        proof = {"schema": "mission/9", "record_type": "LifecycleTransition", "operation": "save",
+        proof = {"schema": "mission/10", "record_type": "LifecycleTransition", "operation": "save",
             "origin_request_id": "request-1", "terminal_request_id": "request-1", "terminal_logical_id": "logical-1",
             "native_request_id": "native-1", "launch_request_id": "launch-1", "launch_id": "owned-launch",
             "before_source_id": identity, "after_source_id": after_id, "origin_epoch": 0, "reconciled_epoch": 0,
             "actor_id": "player", "controller_boot_id": "boot", "operator_pause_generation": 0,
             "before_takeover_generation": 0, "after_takeover_generation": 0, "grants_authority": False}
-        effect = {"schema": "mission/9", "record_type": "EffectReconciliation", "basis": "LifecycleTransition",
+        effect = {"schema": "mission/10", "record_type": "EffectReconciliation", "basis": "LifecycleTransition",
             "sources": [identity, after_id], "note": "Scoped typed fixture", "proof": proof}
-        pin = self.edit_db(directory, "INSERT INTO primitives VALUES (?,?,?,?,?,?)", ("logical-1", "request-1",
-            canonical(intent(value="save", source_before=identity, preflight_source=identity)), "unknown", None,
+        pin = self.edit_db(directory, "INSERT INTO primitives VALUES (?,?,?,?,?,?,?)", ("logical-1", "request-1",
+            canonical(intent(value="save", source_before=identity, preflight_source=identity)), "native-1", "unknown", None,
             canonical(effect)))
         library = self.library(pin)
         self.assertEqual(library.records(), (record,))

@@ -10,6 +10,7 @@ source = Path(sys.argv[1]).resolve()
 
 pin = json.loads((ROOT / "native" / "upstream.json").read_text())
 originals = source / ".harness-originals"
+# Retained original-file pins also restore retired per-menu hooks on reapplication.
 for name, checksum in pin["source_files"].items():
     target = source / name
     original = originals / name
@@ -36,7 +37,7 @@ def replace_once(path: Path, old: str, new: str) -> None:
 
 for name in ("cdda_harness.h", "cdda_harness.cpp"):
     shutil.copyfile(ROOT / "native" / name, source / "src" / name)
-for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp", "game.cpp", "action.cpp", "ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp", "uilist.cpp", "inventory_ui.cpp", "ui_manager.cpp", "cata_imgui.cpp"):
+for name in ("input_context.cpp", "sdltiles.cpp", "main.cpp", "handle_action.cpp", "do_turn.cpp", "debug.cpp", "game.cpp", "uilist.cpp", "inventory_ui.cpp", "ui_manager.cpp", "cata_imgui.cpp"):
     path = source / "src" / name
     text = path.read_text()
     if '#include "cdda_harness.h"' not in text:
@@ -128,68 +129,12 @@ replace_once(source / "src/inventory_ui.cpp",
 replace_once(source / "src/input_context.cpp",
     'const std::string &input_context::handle_input( const int timeout )\n{',
     'const std::string &input_context::handle_input( const int timeout )\n{\n'
-    '    cdda_harness::scope harness_input( category, registered_actions );')
+    '    cdda_harness::scope harness_input( category, registered_actions, this );')
 replace_once(source / "src/handle_action.cpp",
     'input_context game::get_player_input( std::string &action )\n{',
     'input_context game::get_player_input( std::string &action )\n{\n'
     '    cdda_harness::scope harness_player( uquit == QUIT_WATCH ?\n'
     '        cdda_harness::boundary_kind::unsupported : cdda_harness::boundary_kind::normal_play );')
-# Preserve DEFAULTMODE and its local bindings; end permission before callbacks.
-replace_once(source / "src/action.cpp",
-    '        action = ctxt.handle_input();\n'
-    '        if( std::optional<tripoint_rel_ms> vec = ctxt.get_direction_rel_ms( action ) ) {',
-    '        action = [&]() {\n'
-    '            cdda_harness::menu_query harness_menu( "DEFAULTMODE" );\n'
-    '            return ctxt.handle_input();\n'
-    '        }();\n'
-    '        if( std::optional<tripoint_rel_ms> vec = ctxt.get_direction_rel_ms( action ) ) {')
-# Body status keeps its native bindings; ownership ends before nested graphs.
-replace_once(source / "src/bodygraph.cpp",
-    '    bool done = false;\n'
-    '    while( !done ) {\n        ui_manager::redraw();\n'
-    '        std::string action = ctxt.handle_input();\n'
-    '        if( action == "QUIT" || ( action == "LEFT" && id != bodygraph_full_body ) ) {',
-    '    bool done = false;\n'
-    '    while( !done ) {\n        ui_manager::redraw();\n'
-    '        std::string action = [&]() {\n'
-    '            cdda_harness::menu_query harness_menu( "BODYGRAPH" );\n'
-    '            return ctxt.handle_input();\n'
-    '        }();\n'
-    '        if( action == "QUIT" || ( action == "LEFT" && id != bodygraph_full_body ) ) {')
-# Generic lowercase default is admitted only at these exact item-menu waits.
-# Include each owner in its unique anchor and end permission before callbacks.
-replace_once(source / "src/ui_iteminfo.cpp",
-    'void iteminfo_window::execute()\n{\n'
-    '    if( data.without_getch ) {\n        ui_manager::redraw();\n        return;\n    }\n\n'
-    '    while( true ) {\n        ui_manager::redraw();\n'
-    '        std::string action = ctxt.handle_input();',
-    'void iteminfo_window::execute()\n{\n'
-    '    if( data.without_getch ) {\n        ui_manager::redraw();\n        return;\n    }\n\n'
-    '    while( true ) {\n        ui_manager::redraw();\n'
-    '        std::string action = [&]() {\n'
-    '            cdda_harness::menu_query harness_menu( "default" );\n'
-    '            return ctxt.handle_input();\n'
-    '        }();')
-replace_once(source / "src/game_inventory.cpp",
-    'bool game_menus::inv::compare_item_menu::show()\n{\n'
-    '    while( true ) {\n        ui_manager::redraw();\n\n'
-    '        std::string action = has_button_action() ? get_button_action() : ctxt.handle_input();',
-    'bool game_menus::inv::compare_item_menu::show()\n{\n'
-    '    while( true ) {\n        ui_manager::redraw();\n\n'
-    '        std::string action = has_button_action() ? get_button_action() : [&]() {\n'
-    '            cdda_harness::menu_query harness_menu( "default" );\n'
-    '            return ctxt.handle_input();\n'
-    '        }();')
-# Nearby-list examination uses the current curses item-info renderer, not the
-# separate iteminfo_window owner above. Mark only its wait, before coordinates.
-replace_once(source / "src/output.cpp",
-    '        action = ctxt.handle_input();\n'
-    '        std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );',
-    '        action = [&]() {\n'
-    '            cdda_harness::menu_query harness_menu( "default" );\n'
-    '            return ctxt.handle_input();\n'
-    '        }();\n'
-    '        std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );')
 replace_once(source / "src/do_turn.cpp", 'void handle_key_blocking_activity()\n{',
     'void handle_key_blocking_activity()\n{\n'
     '    cdda_harness::scope harness_activity( cdda_harness::boundary_kind::activity_poll );')
@@ -217,25 +162,6 @@ replace_once(source / "src/game.cpp",
     '        cdda_harness::interrupt_query harness_query;\n'
     '        return query_yn( "%s %s", text, u.activity.get_stop_phrase() );\n'
     '    }() ) {')
-# Ordinary event distractions use a different owner from injected keyboard pause.
-# End the exact-category marker before YES/NO/manager callbacks can open other UI.
-replace_once(source / "src/game.cpp",
-    '    const std::string &action = query_popup()\n'
-    '                                .preferred_keyboard_mode( keyboard_mode::keycode )\n'
-    '                                .context( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )',
-    '    const std::string action = [&]() {\n'
-    '        cdda_harness::menu_query harness_menu( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" );\n'
-    '        return query_popup()\n'
-    '                                .preferred_keyboard_mode( keyboard_mode::keycode )\n'
-    '                                .context( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )')
-replace_once(source / "src/game.cpp",
-    '                                .option( "IGNORE", allow_key )\n'
-    '                                .query()\n'
-    '                                .action;',
-    '                                .option( "IGNORE", allow_key )\n'
-    '                                .query()\n'
-    '                                .action;\n'
-    '    }();')
 replace_once(source / "src/debug.cpp",
     '    for( bool stop = false; !stop; ) {\n        ui_manager::redraw();',
     '    cdda_harness::scope harness_debug( cdda_harness::boundary_kind::debug_prompt );\n'
@@ -292,6 +218,12 @@ text = path.read_text()
 start = text.index('input_event input_manager::get_input_event( const keyboard_mode')
 end = text.index('\nbool gamepad_available()', start)
 section = text[start:end]
+receiver_anchor = 'input_event input_manager::get_input_event( const keyboard_mode preferred_keyboard_mode )\n{'
+receiver = receiver_anchor + '\n    cdda_harness::input_receiver harness_receiver;'
+if 'cdda_harness::input_receiver harness_receiver;' not in section:
+    if section.count(receiver_anchor) != 1:
+        raise SystemExit('Pinned source anchor changed: SDL input receiver')
+    section = section.replace(receiver_anchor, receiver)
 old = 'CheckMessages();'
 new = ('CheckMessages();\n'
        '            if( last_input.type == input_event_t::gamepad ) {\n'

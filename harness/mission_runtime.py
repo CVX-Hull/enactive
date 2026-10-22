@@ -25,13 +25,16 @@ from .mission_recovery import RecoveryEvidenceError, RecoveryPhase, RegisteredRe
 from .mission_reflection import RegisteredReflection
 from .gameplay.campaign_memory import CampaignMemory
 from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
-from .gameplay.evidence import MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore, same_native_state
+from .gameplay.evidence import MAX_AGE_SECONDS, MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore, same_native_state
 from .gameplay.interaction import MenuIntent, MenuOutcome, MenuSkill
 from .gameplay.contracts import canonical
-from .gameplay.mission_contracts import VERSION, MissionAdmission, SourceBinding, SourceRevalidation, validate_submission
+from .gameplay.mission_contracts import VERSION, MissionAdmission, InputObservation, SourceBinding, SourceRevalidation, validate_submission
 from .gameplay.mission_ledger import BudgetError, LedgerError, MissionLedger, TERMINAL
+from .gameplay.native_receipts import compact_native_ack
 from .gameplay.navigation import NavigationIntent, NavigationOutcome, NavigationSkill, ObservedMap
-from .gameplay.semantic_controls import ControlIntent, ControlOutcome, SemanticControlSkill
+from .gameplay.input_contracts import ControlIntent, ControlOutcome
+from .gameplay.semantic_controls import SemanticControlSkill
+from .gameplay.ordinary_input import OrdinaryInputSkill
 from .gameplay.timeline import SessionContinuity, game_timeline
 
 MissionIntent = NavigationIntent | MenuIntent | ControlIntent
@@ -39,6 +42,10 @@ MissionIntent = NavigationIntent | MenuIntent | ControlIntent
 
 class _Cancelled(ContractError):
     pass
+
+
+class _LocalGameLimit(BudgetError):
+    """An original macro/child game cap, distinct from custody or mission loss."""
 
 
 @dataclass
@@ -63,6 +70,7 @@ class _PromptPhase:
     operator_generation: int
     takeover_generation: int
     quantity_editor: bool = False
+    observation_generation: int | None = None
 
 
 @dataclass(frozen=True)
@@ -338,7 +346,8 @@ class MissionRuntime:
         measured = self._ledger.measured_counts()
         limits, reserve = self._admission.limits, self._admission.cleanup_reserve
         active = self._active.request if self._active is not None else None
-        current_available = self._current is not None
+        current_available = self._current is not None and not (
+            self._prompt_phase is not None and self._prompt_phase.observation_generation is not None)
         inspected = None
         if current_available:
             try:
@@ -360,7 +369,8 @@ class MissionRuntime:
             "coordinate_scope": coordinate_scope,
             "prompt_phase": None if self._prompt_phase is None else {
                 "origin_request_id": self._prompt_phase.root_id,
-                "checkpoint_id": self._prompt_phase.checkpoint.observation_id, "grants_authority": False},
+                "checkpoint_id": self._prompt_phase.checkpoint.observation_id,
+                "observation_needed": self._prompt_phase.observation_generation is not None, "grants_authority": False},
             "lifecycle_phase": self._registered_lifecycle.summary() if self._exit_phase is None else {
                 "origin_request_id": self._exit_phase.root_id, "operation": "exit",
                 "checkpoint_id": self._exit_phase.checkpoint.observation_id, "grants_authority": False},
@@ -383,7 +393,9 @@ class MissionRuntime:
             "native_process": {"owner_mission_id": None if self._native_owner is None else self._native_owner[0],
                 "last_sample": copy.deepcopy(self._native_facts),
                 "unresolved_custody_requests": list(self._lost_process_custody), "restored_from_disk": False},
-            "next_needed_decision": "Player semantic decision" if state["phase"] == "active" else
+            "next_needed_decision": "Explicit Observe needed before input" if state["phase"] == "active"
+                and self._prompt_phase is not None and self._prompt_phase.observation_generation is not None else
+                "Player semantic decision" if state["phase"] == "active" else
                 "Mission ended; historical evidence only" if state["phase"] in TERMINAL else
                 "Registered lifecycle/readmission needed" if state["phase"] == "admitted" else
                 "Explicit supported transition required", "grants_authority": False,
@@ -469,7 +481,7 @@ class MissionRuntime:
             raise BudgetError("Game-time anchor cannot cross an unexplained session or regression")
         elapsed = latest.turn - anchor.turn
         if elapsed > limit or not after and elapsed == limit:
-            raise BudgetError("Original observed root/child game-time budget exhausted")
+            raise _LocalGameLimit("Original observed root/child game-time budget exhausted")
 
     @staticmethod
     def _item_control_reason(data: dict, root: dict, category: str, quantity_editor: bool) -> str | None:
@@ -495,6 +507,8 @@ class MissionRuntime:
             if data["phase_id"] is not None or data["skill_kind"] in ("menu", "edit"):
                 raise ControlError("Control requires its actual live owned prompt phase")
             return None
+        if phase.observation_generation is not None:
+            raise ControlError("Fresh explicit Observe is required before another input")
         if data["phase_id"] != phase.root_id or data["skill_kind"] not in ("menu", "edit", "inspect", "item", "activity", "direct"):
             raise ControlError("An owned prompt permits only its explicit control children")
         root = self._ledger.request(phase.root_id)["request"]
@@ -544,12 +558,12 @@ class MissionRuntime:
             "continuity": None, "grants_authority": False}
 
     def _advance_prompt(self, work: _Work, before: EvidenceRef, after: EvidenceRef,
-                        *, action: str | dict | None = None) -> _PromptPhase | None:
+                        *, action: str | dict | None = None, observed_only: bool = False) -> _PromptPhase | None:
         phase = self._prompt_guard(work.request, before)
         if phase is None:
             return None
-        quantity_editor = phase.quantity_editor
-        if self._ledger.request(phase.root_id)["request"].get("skill_kind") == "item":
+        quantity_editor = False if observed_only or work.request["skill_kind"] == "direct" else phase.quantity_editor
+        if not observed_only and self._ledger.request(phase.root_id)["request"].get("skill_kind") == "item":
             entering_editor = (self._store.observation(before)["category"] != "STRING_INPUT"
                                and self._store.observation(after)["category"] == "STRING_INPUT")
             if entering_editor:
@@ -572,22 +586,55 @@ class MissionRuntime:
         return advanced
 
     def _open_prompt(self, work: _Work, original: EvidenceRef, after: EvidenceRef,
-                     mark: tuple[str, int]) -> _PromptPhase:
+                     mark: tuple[str, int], *, observation_generation: int | None = None) -> _PromptPhase:
         state, _, boot = self._check_lease()
         ledger = self._ledger.snapshot(now=self._wall())
         if (mark != self._operator_mark() or boot != mark[0] or ledger["epoch"] != work.request["epoch"]
                 or state["takeover_generation"] != self._store.observation(original)["takeover_generation"]
-                or original.boundary_kind != "normal_play" or after.session != original.session):
+                or (original.boundary_kind != "normal_play" and not
+                    (work.request["skill_kind"] == "direct" and original.boundary_kind == "menu"))
+                or after.session != original.session):
             raise ControlError("Interaction cannot open a prompt across changed authority/session")
-        phase = _PromptPhase(work.request.get("phase_id") or work.request["request_id"], after, original, ledger["player_id"],
-            ledger["epoch"], boot, mark[1], state["takeover_generation"])
+        phase = _PromptPhase(work.request.get("phase_id") or work.request["request_id"], after,
+            work.game_anchor or original, ledger["player_id"],
+            ledger["epoch"], boot, mark[1], state["takeover_generation"],
+            observation_generation=observation_generation)
         with self._metadata:
             self._check_cancelled(work)
             if self._prompt_phase is not None:
                 raise ControlError("A second prompt cannot replace its owner")
-            if after.boundary_kind in ("menu", "activity_poll"):
+            if observation_generation is not None or after.boundary_kind in ("menu", "activity_poll"):
                 self._prompt_phase = phase
         return phase
+
+    def _await_current_observation(self, work: _Work, proposal: ControlIntent, original: EvidenceRef,
+                                   mark: tuple[str, int], reason: str) -> None:
+        """Keep only the existing scope's read-only lineage across this rotation."""
+        _, generation, _ = self._check_lease()
+        binding = self._bindings[proposal.before.observation_id][1]
+        if binding.pause_generation != generation:
+            rotation = self._rotation
+            if (rotation is None or rotation[:3] != (work.request["request_id"],
+                    proposal.before.observation_id, binding.pause_generation)
+                    or rotation[3].pause_generation != binding.pause_generation
+                    or rotation[4] is not self._lease or generation != binding.pause_generation + 1):
+                raise EvidenceError("Read-only observation lacks its exact authenticated operation rotation")
+        phase = self._prompt_phase
+        if phase is None:
+            phase = self._open_prompt(work, original, proposal.before, mark,
+                                      observation_generation=generation)
+        else:
+            if phase.checkpoint != proposal.before:
+                raise EvidenceError("Read-only observation cannot replace an unrelated prompt checkpoint")
+            phase = replace(phase, observation_generation=generation, quantity_editor=False)
+            with self._metadata:
+                self._check_cancelled(work)
+                self._prompt_phase = phase
+        self._update_game_time()
+        self._prompt_observation_guard(work, phase)
+        self._record("mission_awaiting_observation", {"root_id": phase.root_id,
+            "checkpoint_source_id": phase.checkpoint.observation_id, "reason": reason,
+            "pause_generation": generation, "grants_authority": False})
 
     def _stop_unknown_policy(self) -> None:
         # The immutable primitive may already be returned. Semantic uncertainty
@@ -785,15 +832,19 @@ class MissionRuntime:
         if prior is None or prior[0] != phase.checkpoint or self._current != (reference or phase.checkpoint):
             raise EvidenceError("Observe requires its original current prompt checkpoint/binding")
         binding = prior[1]
+        pending = phase.observation_generation is not None
         if ((binding.source_id, binding.mission_id, binding.epoch, binding.actor_id,
-             binding.controller_boot_id, binding.pause_generation, binding.takeover_generation) !=
+             binding.controller_boot_id, binding.takeover_generation) !=
                 (phase.checkpoint.observation_id, self._admission.mission_id, phase.epoch, phase.actor_id,
-                 phase.controller_boot_id, generation, phase.takeover_generation)
+                 phase.controller_boot_id, phase.takeover_generation)
+                or (phase.observation_generation != generation or binding.pause_generation not in (generation, generation - 1)
+                    if pending else binding.pause_generation != generation)
                 or self._store.authority_generation() != binding.store_generation + (reference is not None)
                 or self._store.source_status(phase.checkpoint) != "retained"):
             raise EvidenceError("Observe lost its original prompt source integrity or binding authority")
         before = self._store.observation(phase.checkpoint)
-        if (phase.checkpoint.boundary_kind != "menu" or state["session"] != phase.checkpoint.session
+        if (phase.checkpoint.boundary_kind not in (("normal_play", "menu") if pending else ("menu",))
+                or state["session"] != phase.checkpoint.session
                 or state["status"] != "ready" or state["error"] or state["paused"] or not state["frame_ok"]
                 or state["boundary"]["kind"] not in ("menu", "normal_play")
                 or state["takeover_generation"] != phase.takeover_generation
@@ -803,22 +854,30 @@ class MissionRuntime:
         primitive_states = self._ledger.measured_counts()["primitives"]["by_state"]
         if ledger["unreconciled"] or any(primitive_states.get(state, 0) for state in ("prepared", "published")):
             raise LedgerError("Unsettled input cannot advance a prompt observation")
-        root = self._ledger.request(phase.root_id)
-        deadline_wall = min(root["deadline"], self._ledger.request(work.request["request_id"])["deadline"],
+        deadline_wall = min(self._ledger.request(work.request["request_id"])["deadline"],
                             self._mission_deadline - self._admission.cleanup_reserve.wall_seconds)
         if self._wall() >= deadline_wall:
-            raise BudgetError("Original prompt/root observation deadline exhausted")
-        if (self._ledger._phase_primitive_count(phase.root_id) >= root["request"]["limits"]["primitives"]
-                or ledger["spent_inputs"] >= min(self._admission.limits.inputs - self._admission.cleanup_reserve.inputs,
-                                                self._admission.limits.primitive_mappings)):
-            raise BudgetError("Original prompt/mission input capacity exhausted")
-        # A newly captured normal return must be published and close this root
-        # before its actual overshoot is reported, as on the existing path.
-        if reference is None or reference.boundary_kind != "normal_play":
-            self._game_guard(phase.game_anchor, root["request"]["limits"]["game_seconds"])
-            if self._game_cost is None or self._game_cost >= self._admission.limits.game_seconds:
-                raise BudgetError("Original observed mission game budget exhausted")
+            raise BudgetError("Original Observe/mission deadline exhausted")
+        if ledger["spent_inputs"] >= min(self._admission.limits.inputs - self._admission.cleanup_reserve.inputs,
+                                        self._admission.limits.primitive_mappings):
+            raise BudgetError("Mission input capacity exhausted")
+        if self._game_cost is None or self._game_cost >= self._admission.limits.game_seconds:
+            raise BudgetError("Observed mission game budget exhausted")
         return self._clock() + deadline_wall - self._wall()
+
+    def _ordinary_macro_limit(self, phase: _PromptPhase) -> str | None:
+        """Local execution exhaustion, never a global fault or goal verdict."""
+        root = self._ledger.request(phase.root_id)
+        if self._wall() >= root["deadline"]:
+            return "wall_seconds"
+        if self._ledger._phase_primitive_count(phase.root_id) >= root["request"]["limits"]["primitives"]:
+            return "primitives"
+        latest = self._last_normal()
+        if latest.session != phase.game_anchor.session or latest.turn < phase.game_anchor.turn:
+            raise BudgetError("Macro clock crossed an unexplained session or regression")
+        if latest.turn - phase.game_anchor.turn >= root["request"]["limits"]["game_seconds"]:
+            return "game_seconds"
+        return None
 
     def _observe_prompt(self, work: _Work, phase: _PromptPhase) -> dict:
         deadline = self._prompt_observation_guard(work, phase)
@@ -829,7 +888,8 @@ class MissionRuntime:
         self._prompt_observation_guard(work, phase, reference)
         self._capacity(frames=0, byte_count=0)
         relation = None
-        if reference.boundary_kind == "menu" and self._store.equivalent(phase.checkpoint, reference, rule="exact_png_bytes"):
+        if (phase.observation_generation is None and reference.boundary_kind == "menu"
+                and self._store.equivalent(phase.checkpoint, reference, rule="exact_png_bytes")):
             relation = SourceRevalidation(self._bindings[phase.checkpoint.observation_id][1],
                                           self._binding(reference), "exact_png_bytes")
             self._record("mission_prompt_revalidation", relation.to_dict())
@@ -837,7 +897,23 @@ class MissionRuntime:
                       "after": reference.observation_id, "grants_authority": False}
         self._publish_source(reference, authoritative=True)
         self._prompt_observation_guard(work, phase, reference)
-        advanced = replace(phase, checkpoint=reference, quantity_editor=phase.quantity_editor if relation else False)
+        local_limit = self._ordinary_macro_limit(phase)
+        if local_limit is not None:
+            result = {"source_ids": list(dict.fromkeys((phase.checkpoint.observation_id, reference.observation_id))),
+                "lifecycle_needed": False, "observation": transition, "grants_authority": False,
+                "macro_closure": {"root_request_id": phase.root_id,
+                    "checkpoint_source_id": phase.checkpoint.observation_id, "fresh_source_id": reference.observation_id,
+                    "detected_at": self._wall(), "limit": local_limit, "grants_authority": False}}
+            self._capture_memory(reference)
+            # Reuse SQLite's immutable operation result, before clearing the
+            # private scope. No new table/history or old-result rewrite.
+            self._ledger.complete_request(work.request["request_id"], "completed", result, now=self._wall())
+            with self._metadata:
+                if self._prompt_phase is phase:
+                    self._prompt_phase = None
+            return result
+        advanced = replace(phase, checkpoint=reference, quantity_editor=phase.quantity_editor if relation else False,
+                           observation_generation=None)
         with self._metadata:
             self._check_cancelled(work)
             if self._prompt_phase is not phase:
@@ -853,7 +929,7 @@ class MissionRuntime:
             root = self._ledger.request(phase.root_id)["request"]
             try:
                 self._game_guard(phase.game_anchor, root["limits"]["game_seconds"], after=True)
-                if self._game_cost is None or self._game_cost > self._admission.limits.game_seconds:
+                if self._game_cost is None or self._game_cost >= self._admission.limits.game_seconds:
                     raise BudgetError("Observed mission game time unavailable or exceeded")
             except BudgetError as exc:
                 self._stop_after_failure(str(exc))
@@ -965,7 +1041,7 @@ class MissionRuntime:
             self._game_guard(phase.game_anchor, root["request"]["limits"]["game_seconds"], after=True)
             if data["kind"] == "skill":
                 self._game_guard(phase.game_anchor, data["limits"]["game_seconds"], after=True)
-            if self._game_cost is None or self._game_cost > self._admission.limits.game_seconds:
+            if self._game_cost is None or self._game_cost >= self._admission.limits.game_seconds:
                 raise BudgetError("Observed mission game time unavailable or exceeded")
         except BudgetError as exc:
             result["budget_stop"] = str(exc)
@@ -1596,13 +1672,22 @@ class MissionRuntime:
         if original is None or original[1].store_generation != self._store.authority_generation():
             raise EvidenceError("Another observation invalidated this informing source")
         observed = self._store.observation(original[0])
-        if not same_native_state(state, observed):
+        if data.get("skill_kind") == "direct":
+            if (state["session"] != observed["session"]
+                    or state["boundary"]["control_generation"] != observed["boundary"]["control_generation"]):
+                raise EvidenceError("Ordinary informing source crossed native session/control custody")
+        elif not same_native_state(state, observed):
             raise EvidenceError("Informing source differs from exact live controller state")
         return original
 
     def _rotate(self, work: _Work, proposal: MissionIntent) -> None:
         state, generation, _ = self._check_lease()
-        if not same_native_state(self._store.observation(proposal.before), state):
+        observed = self._store.observation(proposal.before)
+        if proposal.kind == "direct":
+            if (state["session"] != observed["session"] or state["takeover_generation"] != observed["takeover_generation"]
+                    or state["boundary"]["control_generation"] != observed["boundary"]["control_generation"]):
+                raise EvidenceError("Ordinary proposal crossed its live native custody")
+        elif not same_native_state(observed, state):
             raise EvidenceError("Proposal before-source is not the exact live controller state")
         self._check_cancelled(work)
         old = self._lease
@@ -1779,10 +1864,14 @@ class MissionRuntime:
         return deadline
 
     def _envelope(self, raw: dict, work: _Work, proposal: MissionIntent | _ResumeIntent,
-                  preflight: EvidenceRef | None, *, image_informed: bool) -> tuple[str, str]:
-        fields = {"logical_action_id", "request", "result", "published", "received_monotonic", "preflight"}
+                  preflight: EvidenceRef | None, *, image_informed: bool,
+                  preflight_observation: dict | None) -> tuple[str, str]:
+        fields = {"logical_action_id", "request", "result", "published", "received_monotonic", "preflight", "processing_error"}
         if type(raw) is not dict or set(raw) != fields or raw["logical_action_id"] != proposal.logical_id or type(raw["published"]) is not bool:
             raise ContractError("Malformed exact mission receipt envelope")
+        if raw["processing_error"] is not None and (type(raw["processing_error"]) is not str
+                or len(raw["processing_error"]) > 1024):
+            raise ContractError("Malformed mission processing diagnostic")
         request, result = raw["request"], raw["result"]
         if type(result) is not dict:
             raise ContractError("Mission receipt lacks terminal result")
@@ -1790,8 +1879,14 @@ class MissionRuntime:
             if raw["published"]:
                 raise ContractError("Published receipt lost native request identity")
         else:
-            expected = {"kind": proposal.kind, "session": proposal.before.session,
-                "revision": proposal.before.revision, "boundary_id": proposal.expected_boundary_id}
+            self.controller._validate_stored_request(request)
+            actual = preflight_observation if proposal.kind == "direct" else None
+            if proposal.kind == "direct" and actual is None:
+                raise ContractError("Ordinary publication lost its actual final preflight")
+            expected = {"kind": proposal.kind,
+                "session": actual["session"] if actual is not None else proposal.before.session,
+                "revision": actual["revision"] if actual is not None else proposal.before.revision,
+                "boundary_id": actual["boundary"]["id"] if actual is not None else proposal.expected_boundary_id}
             if proposal.kind != "resume":
                 expected["input" if proposal.kind == "direct" else proposal.kind] = proposal.action
             if any(request.get(key) != value for key, value in expected.items()) or not isinstance(request.get("id"), str):
@@ -1804,8 +1899,14 @@ class MissionRuntime:
                 raise ContractError("Mission native result identity differs")
         if raw["preflight"] is not None:
             proof = raw["preflight"]
-            if type(proof) is not dict or set(proof) != {"observation", "received_monotonic", "expected_image_sha256"}:
+            proof_fields = {"observation", "received_monotonic", "expected_image_sha256"}
+            if proposal.kind == "direct":
+                proof_fields.add("informing")
+            if type(proof) is not dict or set(proof) != proof_fields:
                 raise ContractError("Malformed mission preflight receipt")
+            if proposal.kind == "direct" and proof["informing"] != dict(expected_session=proposal.before.session,
+                    expected_revision=proposal.before.revision, expected_boundary_id=proposal.expected_boundary_id):
+                raise ContractError("Ordinary preflight lost its immutable entry binding")
             if proof["expected_image_sha256"] != (proposal.before.frame_sha256 if image_informed else None):
                 raise ContractError("Mission preflight hash contradicts the admitted image policy")
             validate_state(proof["observation"])
@@ -1822,13 +1923,13 @@ class MissionRuntime:
                 if request is not None or raw["published"]:
                     raise ContractError("Published input lacks retained preflight source")
             elif (preflight.received_monotonic != proof_time
-                    or raw["published"] and self._store.observation(preflight) != proof["observation"]):
+                    or raw["published"] and preflight_observation != proof["observation"]):
                 raise ContractError("Preflight receipt differs from actual retained source")
         elif request is not None:
             raise ContractError("Native request lacks retained final preflight")
         received = raw["received_monotonic"]
         if received is not None and (type(received) not in (int, float) or not math.isfinite(received)
-                or not 0 <= self._clock() - received <= 3 or preflight is not None and received < preflight.received_monotonic):
+                or not 0 <= received <= self._clock() or preflight is not None and received < preflight.received_monotonic):
             raise ContractError("Invalid original terminal receipt time")
         if not raw["published"]:
             if (result.get("status") in ("ready", "dispatched") or request is not None
@@ -1842,25 +1943,10 @@ class MissionRuntime:
             return "rejected", str(result.get("error") or "Native rejected input")[:1024]
         if result.get("status") == "ready":
             validate_state(result, request["id"])
-            if (received is None or result["session"] != proposal.before.session
-                    or result["revision"] <= proposal.before.revision
-                    or result["boundary"]["kind"] not in ("normal_play", "menu", "activity_poll")):
+            if (received is None or result["session"] != request["session"]
+                    or result["revision"] <= request["revision"]):
                 raise ContractError("Ready receipt lacks exact advanced same-session source")
-            actual, actual_received = self.controller.observation_snapshot()
-            # A spectator can first accept this same frame before the command
-            # reader sees its ACK. These are independent receipt clocks, not an
-            # ordering guarantee; neither may renew the other's original time.
-            snapshot_clock_valid = (type(actual_received) in (int, float)
-                and 0 <= actual_received <= self._clock())
-            if not same_native_state(actual, result) or not snapshot_clock_valid:
-                self._record("mission_ready_snapshot_mismatch", {
-                    "logical_action_id": proposal.logical_id, "native_request_id": request["id"],
-                    "terminal_received_monotonic": received,
-                    "snapshot_received_monotonic": actual_received if snapshot_clock_valid else None,
-                    "snapshot_clock_valid": snapshot_clock_valid, "snapshot": actual,
-                    "ready": result, "grants_authority": False})
-                raise ContractError("Ready receipt is not the exact current atomic observation")
-            return "returned", "Exact terminal ready receipt; displacement requires independent verification"
+            return "returned", "Correlated terminal ready ACK; current eligibility and semantic effect are separate"
         return "unknown", str(result.get("error") or "Input acknowledgment is unresolved")[:1024]
 
     def _dispatch(self, work: _Work, proposal: MissionIntent | _ResumeIntent | ActivityIntent, original: EvidenceRef,
@@ -1868,11 +1954,18 @@ class MissionRuntime:
                   activity: ActivityPhase | None = None) -> PrimitiveResult | ActivityFeedback:
         reservation = None
         preflight_source = None
+        preflight_observation = None
         prepared = False
+        prepared_intent = None
         after = None
         raw = None
         disposition, reason = "not_dispatched", "Dispatch not admitted"
         envelope_valid = False
+        native_ack = None
+        processing_error = None
+        processing_fatal = False
+        evidence_loss = None
+        current_error = None
         game_budget_exhausted = False
         operator_mark = self._operator_mark()
         dispatch_actor = self._ledger.snapshot(now=self._wall())["player_id"]
@@ -1881,9 +1974,10 @@ class MissionRuntime:
                        self._registered_recovery.continuation.game_anchor if self._registered_recovery.continuation is not None else
                        self._prompt_phase.game_anchor if self._prompt_phase is not None else original)
         control = isinstance(proposal, ActivityIntent)
-        image_informed = (proposal.kind == "direct" or work.request.get("perception") is not None
+        ordinary = proposal.kind == "direct"
+        image_informed = not ordinary and (work.request.get("perception") is not None
                           or lifecycle is not None or activity is not None)
-        rule = "exact_png_bytes" if image_informed else "native_state"
+        rule = "ordinary_input" if ordinary else "exact_png_bytes" if image_informed else "native_state"
         def guard() -> None:
             nonlocal game_budget_exhausted
             # Check every input lane. Startup/provisional identity has no
@@ -1904,23 +1998,30 @@ class MissionRuntime:
             else:
                 self._exit_guard(work, lifecycle, proposal)
         def preflight(observed: dict, received: float) -> None:
-            nonlocal reservation, preflight_source, prepared
+            nonlocal reservation, preflight_source, preflight_observation, prepared, prepared_intent
             guard()
             self._capacity(frames=2, byte_count=2 * MAX_FRAME_BYTES)
-            preflight_source = self._store.retain_equivalent(observed,
+            preflight_source = self._store.retain_preflight(observed,
                 received_monotonic=received, rule=rule, **self._clocks())
             if (preflight_source == proposal.before or preflight_source.received_monotonic != received
                     or self._store.observation(preflight_source) != observed):
                 raise EvidenceError("Preflight retention must attest its actual distinct source and original receipt")
+            preflight_observation = copy.deepcopy(observed)
             guard()
             self._capacity()
-            reservation = self._store.reserve_dispatch(proposal.before, **self._clocks())
+            reservation = self._store.reserve_dispatch(proposal.before, preflight=preflight_source, rule=rule, **self._clocks())
+            actual = self._store.observation(preflight_source) if ordinary else None
             intent = {"kind": proposal.kind, "value": proposal.action,
-                "expected_session": proposal.before.session, "expected_revision": proposal.before.revision,
-                "expected_boundary_id": proposal.expected_boundary_id, "source_before": proposal.before.observation_id,
+                "expected_session": actual["session"] if actual is not None else proposal.before.session,
+                "expected_revision": actual["revision"] if actual is not None else proposal.before.revision,
+                "expected_boundary_id": actual["boundary"]["id"] if actual is not None else proposal.expected_boundary_id,
+                "source_before": proposal.before.observation_id,
                 "preflight_source": preflight_source.observation_id,
                 "revalidation": None if proposal.revalidation is None else proposal.revalidation.to_dict(),
+                "input_observation": (proposal.input_observation.to_dict() if isinstance(proposal, ControlIntent)
+                                      and proposal.input_observation is not None else None),
                 "reservation_id": reservation.token}
+            prepared_intent = intent
             self._ledger.prepare_primitive(work.request["request_id"], proposal.logical_id, intent, now=self._wall())
             prepared = True
             self._cache_operation(self._ledger.request(work.request["request_id"]))
@@ -1963,48 +2064,72 @@ class MissionRuntime:
                     expected_image_sha256=proposal.before.frame_sha256 if image_informed else None)
             if not prepared:
                 prepared = any(row["logical_id"] == proposal.logical_id for row in self._ledger.primitive_records())
-            disposition, reason = (self._registered_activity.envelope(raw, proposal, preflight_source) if control else
-                self._envelope(raw, work, proposal, preflight_source, image_informed=image_informed))
+            disposition, reason = (self._registered_activity.envelope(raw, proposal, preflight_source,
+                preflight_observation=preflight_observation, takeover_generation=takeover_generation) if control else
+                self._envelope(raw, work, proposal, preflight_source, image_informed=image_informed,
+                    preflight_observation=preflight_observation))
             envelope_valid = True
+            processing_error = raw["processing_error"]
+            processing_fatal = processing_error is not None
+            if not control and disposition in ("returned", "rejected"):
+                native_ack = compact_native_ack(raw["result"])
             if raw["published"]:
-                self._ledger.published(proposal.logical_id, raw["request"]["id"], now=self._wall())
+                try:
+                    self._ledger.published(proposal.logical_id, raw["request"]["id"], now=self._wall())
+                except Exception as exc:
+                    if disposition not in ("returned", "rejected"):
+                        raise
+                    # The mandatory known settlement below can atomically
+                    # repair this row state; no extra recovery if it commits.
+                    processing_error = ((processing_error + "; " if processing_error else "")
+                        + f"Publication bookkeeping: {type(exc).__name__}: {exc}")[:1024]
                 if isinstance(lifecycle, NormalPhase):
                     self._registered_lifecycle.published(lifecycle, proposal, raw["request"], reservation)
                 elif lifecycle is not None and proposal.kind == "action" and proposal.action == "YES":
                     self._exit_candidate = (lifecycle, proposal.logical_id, copy.deepcopy(raw["request"]), reservation)
             native_after = raw["result"].get("state") if control else raw["result"]
             if disposition == "returned" and (not control or native_after.get("frame_ok") and native_after.get("status") == "ready"):
-                after = self._ingest(native_after, raw["received_monotonic"], reservation=reservation)
+                # Delivery has already been authenticated. Archival retention
+                # must neither require freshness nor promote this ACK to current.
+                after = self._store.retain_terminal(native_after, received_monotonic=raw["received_monotonic"],
+                    reservation=reservation, **self._clocks())
                 reservation = None
                 if self._exit_candidate is not None and self._exit_candidate[1] == proposal.logical_id:
                     self._exit_candidate = (*self._exit_candidate[:3], None)
                 candidate = self._registered_lifecycle.candidate
                 if candidate is not None and candidate.logical_id == proposal.logical_id:
                     self._registered_lifecycle.candidate = replace(candidate, reservation=None)
-                live = self._live()
-                authoritative = (live[3] is self._lease and self._lease is not None and not live[4]
-                    and not work.cancelled.is_set() and after.boundary_kind in ("normal_play", "menu"))
-                if isinstance(lifecycle, NormalPhase):
-                    self._registered_lifecycle.retain_after(after)
-                else:
-                    self._publish_source(after, authoritative=authoritative)
         except Exception as exc:
-            if not (control and envelope_valid and disposition in ("returned", "rejected")):
+            if not (envelope_valid and disposition in ("returned", "rejected")):
                 disposition = "unknown" if raw is not None and (not envelope_valid or raw.get("published")) or prepared and raw is None else "not_dispatched"
+            elif disposition == "returned" and after is None:
+                evidence_loss = f"{type(exc).__name__}: {exc}"[:1024]
+            else:
+                processing_error = f"{type(exc).__name__}: {exc}"[:1024]
+                processing_fatal = True
             reason = f"{type(exc).__name__}: {exc}"[:1024]
             # An exception from execute_mission may occur after input publication.
             if prepared and raw is None:
                 disposition = "unknown"
         if raw is not None and (type(raw) is not dict or set(raw) != {
-                "logical_action_id", "request", "result", "published", "received_monotonic", "preflight"}):
+                "logical_action_id", "request", "result", "published", "received_monotonic", "preflight", "processing_error"}):
             disposition = "unknown"
-        if reservation is not None and (disposition in ("not_dispatched", "rejected") or control and disposition == "returned"):
-            self._store.release(reservation)
+        if reservation is not None and disposition != "unknown":
+            try:
+                self._store.release(reservation)
+            except Exception as exc:
+                processing_error = f"Reservation release: {type(exc).__name__}: {exc}"[:1024]
+                processing_fatal = True
+        # Preserve correlation from the prepared admission itself. A subsequent
+        # archive failure may make even a preflight reread unavailable.
+        actual_preflight = prepared_intent if ordinary else None
         receipt = {"logical_action_id": proposal.logical_id,
             "native_request_id": raw["request"].get("id") if envelope_valid and type(raw.get("request")) is dict
                 and (not control or raw["published"]) else None,
-            "kind": proposal.kind, "value": proposal.action, "expected_session": proposal.before.session,
-            "expected_revision": proposal.before.revision, "expected_boundary_id": proposal.expected_boundary_id,
+            "kind": proposal.kind, "value": proposal.action,
+            "expected_session": actual_preflight["expected_session"] if actual_preflight is not None else proposal.before.session,
+            "expected_revision": actual_preflight["expected_revision"] if actual_preflight is not None else proposal.before.revision,
+            "expected_boundary_id": actual_preflight["expected_boundary_id"] if actual_preflight is not None else proposal.expected_boundary_id,
             "published": raw.get("published") is True if type(raw) is dict else False,
             "native_request_json": canonical(raw["request"]) if envelope_valid and raw.get("published") is True else None,
             "dispatch_binding": dict(controller_boot_id=operator_mark[0], operator_pause_generation=operator_mark[1],
@@ -2015,13 +2140,63 @@ class MissionRuntime:
             "source_after": None if after is None else after.observation_id,
             "received_monotonic": raw.get("received_monotonic") if envelope_valid and
                 type(raw.get("received_monotonic")) in (int, float) and math.isfinite(raw["received_monotonic"]) else None,
+            "native_ack": native_ack, "processing_error": processing_error, "evidence_loss": evidence_loss,
             "reason": reason}
         if control and envelope_valid:
             receipt["control"] = {"request": copy.deepcopy(raw["request"]), "result": copy.deepcopy(raw["result"])}
-        # Pause may already own the epoch/cause. Settle cost without rewriting it.
-        self._apply_pauses()
+        # Unknown settlement must preserve an already recorded user Pause.
+        # Known delivery is durable before fallible Pause/publication work.
+        known = envelope_valid and disposition in ("returned", "rejected")
+        if not known:
+            self._apply_pauses()
         if prepared:
             self._ledger.settle_primitive(proposal.logical_id, disposition, receipt, now=self._wall())
+        self._last_receipt = receipt
+        self._apply_pauses()
+        if known and (processing_fatal or evidence_loss is not None):
+            self._stop_after_failure(processing_error or evidence_loss)
+        elif known and after is not None:
+            # Current authority comes from an independent snapshot and its
+            # original receipt clock, never from a historical ACK's existence.
+            try:
+                state, received = self.controller.observation_snapshot()
+                unavailable = "Current snapshot is absent" if state is None and received is None else None
+                if unavailable is None:
+                    validate_state(state)
+                    if (state["session"] != after.session
+                            or state["takeover_generation"] != takeover_generation
+                            or state["boundary"]["control_generation"] != native_after["boundary"]["control_generation"]):
+                        raise EvidenceError("Current snapshot crossed the dispatch session or native custody")
+                    if (type(received) not in (int, float) or not math.isfinite(received)
+                            or received > self._clock() or self._wall() * 1000 - state["timestamp_ms"] < -1000):
+                        raise EvidenceError("Current snapshot lacks its original finite clock continuity")
+                    if (self._clock() - received > MAX_AGE_SECONDS
+                            or self._wall() * 1000 - state["timestamp_ms"] > MAX_AGE_SECONDS * 1000):
+                        unavailable = "Current snapshot is stale"
+                if unavailable is not None:
+                    if not ordinary or lifecycle is not None or activity is not None:
+                        raise EvidenceError(unavailable)
+                    self._await_current_observation(work, proposal, original, operator_mark, unavailable)
+                else:
+                    # A genuinely different current capture consumes its own slot.
+                    if state["frame"] != native_after["frame"]:
+                        self._capacity()
+                    current = self._ingest(state, received)
+                    live = self._live()
+                    authoritative = (live[3] is self._lease and self._lease is not None and not live[4]
+                        and not work.cancelled.is_set() and current.boundary_kind in ("normal_play", "menu"))
+                    if isinstance(lifecycle, NormalPhase):
+                        self._registered_lifecycle.retain_after(current)
+                    else:
+                        self._publish_source(current, authoritative=authoritative)
+                    if current != after:
+                        self._record("mission_post_dispatch_current", {"logical_action_id": proposal.logical_id,
+                            "source_after": after.observation_id, "source_current": current.observation_id,
+                            "grants_authority": False})
+            except Exception as exc:
+                # The immutable terminal receipt remains known and unchanged.
+                current_error = f"Current observation unavailable after known ACK: {type(exc).__name__}: {exc}"[:1024]
+                self._stop_after_failure(current_error)
         live = self._live()
         if game_budget_exhausted:
             # Keep revocation outside controller preflight and after any
@@ -2029,7 +2204,6 @@ class MissionRuntime:
             self._stop_after_failure(reason)
         elif disposition != "unknown" and (activity is None or disposition != "returned") and (live[3] is not self._lease or live[4]):
             self._stop_after_failure(reason)
-        self._last_receipt = receipt
         if disposition == "unknown":
             # Settlement owns the unknown epoch transition. Do not advance it again
             # or replace an already recorded user/takeover Pause with a late receipt.
@@ -2039,6 +2213,10 @@ class MissionRuntime:
                     operator_mark=operator_mark, takeover_generation=takeover_generation, game_anchor=game_anchor)
         if control:
             return ActivityFeedback(proposal.before, after, disposition, reason, raw)
+        if disposition == "returned" and after is None:
+            raise EvidenceError("Known returned delivery settled without after evidence: " + (evidence_loss or "Capture unavailable"))
+        if known and (processing_fatal or evidence_loss is not None or current_error is not None):
+            raise EvidenceError("Known delivery settled before processing stopped: " + (processing_error or evidence_loss or current_error))
         displacement = None if (after is None or after.session != proposal.before.session
             or after.boundary_kind != "normal_play" or proposal.before.boundary_kind != "normal_play") else tuple(
             b - a for a, b in zip(self._store.position(proposal.before), self._store.position(after)))
@@ -2065,6 +2243,8 @@ class MissionRuntime:
             "basis": "native_rows" if isinstance(outcome, MenuOutcome) else outcome.basis,
             "verified_focus_steps": outcome.verified_focus_steps if isinstance(outcome, MenuOutcome) else None,
             "revalidation": None if outcome.revalidation is None else outcome.revalidation.to_dict(),
+            "input_observation": (outcome.input_observation.to_dict() if isinstance(outcome, ControlOutcome)
+                                  and outcome.input_observation is not None else None),
             "grants_authority": False}
 
     def _semantic(self, work: _Work) -> tuple[str, dict]:
@@ -2073,7 +2253,8 @@ class MissionRuntime:
         phase = self._prompt_guard(data, original)
         work.game_anchor = original if original.boundary_kind == "normal_play" else self._last_normal()
         deadline = self._deadline(work, original)
-        skill = (MenuSkill(data, deadline_monotonic=deadline) if data["skill_kind"] == "menu" and data["perception"] is None
+        skill = (OrdinaryInputSkill(data, deadline_monotonic=deadline) if data["skill_kind"] == "direct" else
+                 MenuSkill(data, deadline_monotonic=deadline) if data["skill_kind"] == "menu" and data["perception"] is None
                  else SemanticControlSkill(data, deadline_monotonic=deadline))
         self._skill = data["skill_kind"]
         mark = self._operator_mark()
@@ -2085,16 +2266,22 @@ class MissionRuntime:
         state, received = self._observe_native(work, deadline_monotonic=self._deadline(work, original))
         current = self._ingest(state, received)
         refreshed = self._binding(current)
-        relation = SourceRevalidation(binding, refreshed, "exact_png_bytes"
-            if data["skill_kind"] == "direct" or data["perception"] is not None else "native_state")
-        skill.revalidate(relation, self._store, **self._clocks())
-        self._record("mission_revalidation", relation.to_dict())
+        if data["skill_kind"] == "direct":
+            relation = InputObservation(binding, refreshed)
+            skill.observe(relation, self._store, **self._clocks())
+            self._record("mission_input_observation", relation.to_dict())
+        else:
+            relation = SourceRevalidation(binding, refreshed,
+                "exact_png_bytes" if data["perception"] is not None else "native_state")
+            skill.revalidate(relation, self._store, **self._clocks())
+            self._record("mission_revalidation", relation.to_dict())
         self._publish_source(current, authoritative=True)
         if phase is not None:
             phase = self._advance_prompt(work, original, current)
         self._capture_memory(self._current)
         rotated = False
         receipt_phase = phase
+        proposed_count = 0
         while True:
             self._check_cancelled(work)
             proposal = skill.propose(self._store, **self._clocks())
@@ -2105,26 +2292,51 @@ class MissionRuntime:
                 if not rotated:
                     self._rotate(work, proposal)
                     rotated = True
+                proposed_count += 1
                 feedback = self._dispatch(work, proposal, original)
                 if work.cancelled.is_set() or self._closed.is_set():
                     return ("unknown" if feedback.transport_disposition == "unknown" else "paused"), {
                         "reason": "Authority revoked; actual control receipt retained", "source_ids": [
                             ref.observation_id for ref in (feedback.before, feedback.after) if ref is not None],
                         "pending_logical_id": proposal.logical_id, "grants_authority": False}
-                outcome = skill.accept(feedback, self._store, **self._clocks())
-                if (feedback.transport_disposition == "returned" and feedback.after is not None and phase is not None
+                pending_observation = (self._prompt_phase is not None
+                    and self._prompt_phase.observation_generation is not None)
+                actual_current, current_fresh = self._store.inspect_current_boundary(**self._clocks())
+                current_changed = (feedback.transport_disposition == "returned" and current_fresh
+                    and actual_current == self._current and actual_current != feedback.after)
+                if pending_observation:
+                    receipt_phase = self._prompt_phase
+                    outcome = ControlOutcome("partial", "Known input returned; explicit Observe required before a new input decision",
+                        proposed_count, tuple(dict.fromkeys((original, proposal.before, feedback.after))), None, True,
+                        "ordinary_input", input_observation=relation if isinstance(relation, InputObservation) else None)
+                elif current_changed:
+                    # Delivery is known; a different actual current capture ends
+                    # this operation without attributing its meaning or taking
+                    # another focus/text step against the changed interface.
+                    outcome = ControlOutcome("partial", "Known input returned; current capture changed and needs a new player decision",
+                        proposed_count, tuple(dict.fromkeys((original, proposal.before, feedback.after, actual_current))),
+                        None, True, "ordinary_input" if data["skill_kind"] == "direct" else
+                        "native_rows" if isinstance(skill, MenuSkill) else "player_interpretation",
+                        relation if isinstance(relation, SourceRevalidation) else None,
+                        relation if isinstance(relation, InputObservation) else None)
+                else:
+                    outcome = skill.accept(feedback, self._store, **self._clocks())
+                checkpoint = actual_current if current_changed else feedback.after
+                if (not pending_observation and feedback.transport_disposition == "returned" and feedback.after is not None and phase is not None
                         and (outcome is None or outcome.disposition != "unknown")):
-                    receipt_phase = self._advance_prompt(work, proposal.before, feedback.after, action=proposal.action)
+                    receipt_phase = self._advance_prompt(work, proposal.before, checkpoint, action=proposal.action,
+                        observed_only=current_changed)
                     phase = self._prompt_phase
                 if outcome is None:
                     self._publish()
                     continue
-                if (data["phase_id"] is None and data["skill_kind"] in ("interact", "item", "activity", "inspect", "direct") and outcome.disposition == "partial"
+                if (not pending_observation and data["phase_id"] is None and data["skill_kind"] in ("interact", "item", "activity", "inspect", "direct") and outcome.disposition == "partial"
                         and feedback.transport_disposition == "returned" and feedback.after is not None):
-                    receipt_phase = self._open_prompt(work, original, feedback.after, mark)
+                    receipt_phase = self._open_prompt(work, original, checkpoint, mark)
             result = self._control_result(outcome)
             if receipt_phase is not None:
-                stage = ("unknown" if outcome.disposition == "unknown" else "complete"
+                stage = ("unknown" if outcome.disposition == "unknown" else "awaiting_observation"
+                    if receipt_phase.observation_generation is not None else "complete"
                     if receipt_phase.checkpoint.boundary_kind == "normal_play" else "activity_poll"
                     if receipt_phase.checkpoint.boundary_kind == "activity_poll" else "awaiting_control")
                 result["phase"] = self._prompt_receipt(receipt_phase, stage)
@@ -2134,12 +2346,24 @@ class MissionRuntime:
             if outcome.disposition == "unknown" and self._lease is not None:
                 self._stop_unknown_policy()
             try:
+                if self._game_cost is None or self._game_cost >= self._admission.limits.game_seconds:
+                    raise BudgetError("Observed mission game time unavailable or exceeded")
                 self._game_guard(work.game_anchor, data["limits"]["game_seconds"], after=True)
                 if receipt_phase is not None:
                     root = self._ledger.request(receipt_phase.root_id)["request"]
                     self._game_guard(receipt_phase.game_anchor, root["limits"]["game_seconds"], after=True)
-                if self._game_cost is None or self._game_cost > self._admission.limits.game_seconds:
-                    raise BudgetError("Observed mission game time unavailable or exceeded")
+            except _LocalGameLimit as exc:
+                if outcome.disposition == "unknown":
+                    # Unknown already revoked authority above; do not replace
+                    # its original unknown epoch/cause with another Pause.
+                    result["budget_stop"] = str(exc)
+                    return "unknown", result
+                else:
+                    # Normal return ends this root; an owned menu awaits
+                    # explicit Observe closure. Neither replenishes a limit.
+                    result["macro_exhausted"] = "game_seconds"
+                result.update(disposition="partial", reason=str(exc))
+                return "partial", result
             except BudgetError as exc:
                 result["budget_stop"] = str(exc)
                 if outcome.disposition == "unknown":
@@ -2197,21 +2421,37 @@ class MissionRuntime:
                     "pending_logical_id": proposal.logical_id, "grants_authority": False}
             outcome = skill.accept(feedback, self._store, **self._clocks())
             self._publish()
+            if self._game_cost >= self._admission.limits.game_seconds:
+                result = self._navigation_result(outcome) if outcome is not None else {
+                    "verified_steps": skill._steps, "source_ids": [self._current.observation_id], "grants_authority": False}
+                if outcome is not None and outcome.disposition == "unknown":
+                    result["budget_stop"] = "Observed mission game budget overshot; cost retained"
+                    return "unknown", result
+                self.pause("Observed mission game budget overshot", cause="internal_recovery")
+                self._apply_pauses()
+                result.update(disposition="partial", reason="Observed mission game budget overshot; cost retained")
+                return "partial", result
             try:
                 self._game_guard(anchor, game_limit, after=True)
+            except _LocalGameLimit as exc:
+                result = self._navigation_result(outcome) if outcome is not None else {
+                    "verified_steps": skill._steps, "source_ids": [self._current.observation_id], "grants_authority": False}
+                if outcome is not None and outcome.disposition == "unknown":
+                    result["budget_stop"] = str(exc)
+                    return "unknown", result
+                if feedback.after is not None and feedback.after.boundary_kind == "menu":
+                    phase = self._open_prompt(work, anchor, feedback.after, mark)
+                    result["phase"] = self._prompt_receipt(phase, "awaiting_control")
+                self._registered_recovery.finish_continuation(work, "partial")
+                result.update(disposition="partial", reason=str(exc), macro_exhausted="game_seconds")
+                self._capture_memory(self._current)
+                return "partial", result
             except BudgetError as exc:
                 result = self._navigation_result(outcome) if outcome is not None else {
                     "verified_steps": skill._steps, "source_ids": [self._current.observation_id], "grants_authority": False}
                 self._stop_after_failure(str(exc))
                 result.update(disposition="partial", reason=str(exc), budget_stop=str(exc))
                 return "unknown" if outcome is not None and outcome.disposition == "unknown" else "partial", result
-            if self._game_cost > self._admission.limits.game_seconds:
-                self.pause("Observed mission game budget overshot", cause="internal_recovery")
-                self._apply_pauses()
-                result = self._navigation_result(outcome) if outcome is not None else {
-                    "verified_steps": skill._steps, "source_ids": [self._current.observation_id], "grants_authority": False}
-                result.update(disposition="partial", reason="Observed mission game budget overshot; cost retained")
-                return "partial", result
             if outcome is not None:
                 result = self._navigation_result(outcome)
                 if (outcome.disposition == "partial" and feedback.transport_disposition == "returned"
@@ -2302,6 +2542,21 @@ class MissionRuntime:
             work.response = {"status": "accepted", "context": result}
             work.ready.set()
             return
+        if (data["kind"] in ("skill", "lifecycle") and self._prompt_phase is not None
+                and self._prompt_phase.observation_generation is not None):
+            work.response = {"status": "rejected", "reason": "Fresh explicit Observe is required before another input"}
+            work.ready.set()
+            return
+        # Queue consumption owns the current scope. An Observe ahead of this
+        # child may have closed its macro after the request was enqueued.
+        if (data["kind"] == "skill" and data["phase_id"] is not None and self._prompt_phase is None
+                and self._exit_phase is None and self._registered_lifecycle.phase is None
+                and self._registered_activity.phase is None and self._registered_recovery.phase is None
+                and self._registered_recovery.continuation is None):
+            work.response = {"status": "rejected",
+                "reason": "No live prompt owns this child; observe and choose a new root from current evidence"}
+            work.ready.set()
+            return
         admitted = self._ledger.begin_request(data, now=self._wall())
         operation = admitted["operation"]
         self._cache_operation(operation)
@@ -2336,9 +2591,11 @@ class MissionRuntime:
         if disposition == "unknown" and self._lease is not None:
             self._stop_unknown_policy()
         committed = self._ledger.request(data["request_id"])
-        if data["kind"] in ("handoff", "claim") and committed["state"] == "completed":
-            # Issuance/consumption commit receipt + actor epoch atomically. A
-            # later Pause may revoke continuation, never rewrite that history.
+        if (committed["state"] == "completed" and (data["kind"] in ("handoff", "claim")
+                or data["kind"] == "observe" and committed["result"] is not None
+                and "macro_closure" in committed["result"])):
+            # Atomic handoff or Observe closure is already immutable. A later
+            # Pause revokes continuation, never rewrites that committed history.
             operation = committed
             disposition, result = operation["state"], operation["result"]
         else:

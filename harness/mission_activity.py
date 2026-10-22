@@ -318,12 +318,15 @@ class RegisteredActivity:
             "verification_required": True, "grants_authority": False,
             "reason": "Separate charged Resume returned; task/rest/craft success remains interpretive"}
 
-    def envelope(self, raw, proposal, preflight):
+    def envelope(self, raw, proposal, preflight, *, preflight_observation, takeover_generation):
         """Validate ACK correlation, independently of a usable rendered after-state."""
         r = self.runtime
-        fields = {"logical_action_id", "request", "result", "published", "received_monotonic", "preflight"}
+        fields = {"logical_action_id", "request", "result", "published", "received_monotonic", "preflight", "processing_error"}
         if type(raw) is not dict or set(raw) != fields or raw["logical_action_id"] != proposal.logical_id or type(raw["published"]) is not bool:
             raise ContractError("Malformed exact activity receipt envelope")
+        if raw["processing_error"] is not None and (type(raw["processing_error"]) is not str
+                or len(raw["processing_error"]) > 1024):
+            raise ContractError("Malformed activity processing diagnostic")
         request, result = raw["request"], raw["result"]
         if type(result) is not dict:
             raise ContractError("Activity receipt lacks terminal result")
@@ -340,7 +343,7 @@ class RegisteredActivity:
             if (type(proof) is not dict or set(proof) != {"observation", "received_monotonic", "expected_image_sha256"}
                     or preflight is None or proof["expected_image_sha256"] != proposal.before.frame_sha256
                     or proof["received_monotonic"] != preflight.received_monotonic
-                    or r._store.observation(preflight) != proof["observation"]
+                    or preflight_observation != proof["observation"]
                     or proposal.kind == "answer_interrupt" and request["frame"] != proof["observation"]["frame"]):
                 raise ContractError("Activity publication lacks exact retained preflight")
         if not raw["published"]:
@@ -360,7 +363,7 @@ class RegisteredActivity:
             raise ContractError("Activity terminal receipt lost operation or original clock")
         state = result["state"]
         if result["status"] != "rejected" and (state["session"] != proposal.before.session or not state["paused"]
-                or state["takeover_generation"] != r._store.observation(proposal.before)["takeover_generation"]
+                or state["takeover_generation"] != takeover_generation
                 or state["boundary"]["control_generation"] < proposal.control_generation
                 or result["status"] != "not_applicable" and state["boundary"]["control_generation"] <= proposal.control_generation):
             raise ContractError("Activity receipt crossed native session/control/takeover")
