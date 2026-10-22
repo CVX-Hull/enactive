@@ -12,8 +12,11 @@ This is the detailed current contract supporting [architecture](architecture.md)
 Authority rules are [S-PROTOCOL](engineering.md#s-protocol-command-and-observation-authority).
 Current source is native6/mission10/ledger12/archive5, with procedure/2,
 campaign-memory/5 and reflection/2; gameplay/2 is unchanged. The matching native6
-build passed and is installed locally; real graphical qualification remains pending. Dated native5 and earlier
-results retain their exact scopes. Portable checks do not prove native engine behavior.
+build passed and is installed locally. [Learning006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
+and [native001](acceptance/2026-10-22-native-save-refresh.md) provide bounded
+graphical qualification; wider input/geometry and the full independent campaign
+retain their explicit limits. Dated native5 and earlier results retain their exact
+scopes. Portable checks do not prove native engine behavior.
 
 Unsupported versions and alternate response shapes are rejected. Startup validates
 stored admissions, claimed requests and any response before restoring uncertainty;
@@ -822,6 +825,11 @@ later successes; inspect current operation results and phase/ownership/provenanc
 before concluding that a historical string is a current fatal fault. The
 spectator uses mission Observe and disables ordinary input/Resume/recovery while
 nonterminal; malformed mission state stays locked and Pause remains available.
+At a terminal mission, recorded last-command errors are labeled historical;
+controller/native snapshot diagnostics are explicitly not gameplay instructions.
+Their complete text remains visible, including genuine faults. Current local
+transport/manual errors remain separate. These labels neither establish that a
+fault is stale nor reconcile unknown effects or authorize Resume.
 Rendering sends no gameplay or memory request. Normal native input can still take
 over; it is not an automatic mission continuation.
 

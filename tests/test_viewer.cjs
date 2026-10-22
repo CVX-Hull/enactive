@@ -1305,7 +1305,22 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.doesNotMatch(element('error').textContent, /old credential generation image failed/);
   assert.equal(requests.length, 0);
 
-  // Terminal command history is labeled; live native/controller/manual/transport failures stay visible.
+  // Native001 retained its timeout in controller.error after normal Finish;
+  // stop_input had replaced last_result with an error-free Pause receipt.
+  context.input.mission = {...mission, phase: 'stopped', lease_owner: null, active_operation: null};
+  context.input.last_result = {status: 'pause_requested', error: ''};
+  context.input.error = 'Deadline reached; outcome unknown. Observe to reconcile, then resume.';
+  context.input.connection = 'disconnected';
+  context.input.frozen = true;
+  run('render(input)');
+  assert.match(element('error').textContent,
+    /Controller snapshot diagnostic \(mission ended; not a gameplay instruction\): Deadline reached/);
+  assert.doesNotMatch(element('error').textContent, /Recorded last-command history/);
+  assert.equal(JSON.parse(element('last-result').textContent).error, '');
+  assert.equal(element('resume').disabled, true);
+
+  // Terminal snapshots are qualified; actual faults remain visible alongside
+  // distinct current manual/transport failures. No error text is discarded.
   context.input.mission = {...mission, phase: 'completed'};
   context.input.last_result = {status: 'unknown', error: 'Old timeout. Observe to reconcile, then resume.'};
   context.input.error = 'New controller fault';
@@ -1317,8 +1332,10 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   await statusReply();
   assert.match(element('error').textContent,
     /Recorded last-command history \(not a current mission decision\): Old timeout\. Observe to reconcile, then resume\./);
-  assert.match(element('error').textContent, /Controller snapshot diagnostic: New controller fault/);
-  assert.match(element('error').textContent, /Native snapshot diagnostic: New native fault/);
+  assert.match(element('error').textContent,
+    /Controller snapshot diagnostic \(mission ended; not a gameplay instruction\): New controller fault/);
+  assert.match(element('error').textContent,
+    /Native snapshot diagnostic \(mission ended; not a gameplay instruction\): New native fault/);
   assert.match(element('error').textContent, /New manual Pause transport failure/);
   assert.equal(JSON.parse(element('last-result').textContent).error, context.input.last_result.error);
   assert.match(element('gameplay-evidence').textContent, /retained-unknown/);

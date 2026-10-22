@@ -63,10 +63,12 @@ function showError(message) {
 }
 function showErrors(extra = '') {
   const lastError = latest?.last_result?.error;
+  const terminal = missionState().kind === 'terminal';
+  const snapshotQualifier = terminal ? ' (mission ended; not a gameplay instruction)' : '';
   showError([...new Set([localError, missionError, recoveryError, frameError, credentialError, transportError,
-    latest?.error && `Controller snapshot diagnostic: ${latest.error}`,
-    latest?.state?.error && `Native snapshot diagnostic: ${latest.state.error}`,
-    lastError && (missionState().kind === 'terminal' ?
+    latest?.error && `Controller snapshot diagnostic${snapshotQualifier}: ${latest.error}`,
+    latest?.state?.error && `Native snapshot diagnostic${snapshotQualifier}: ${latest.state.error}`,
+    lastError && (terminal ?
       `Recorded last-command history (not a current mission decision): ${lastError}` : lastError), extra].filter(Boolean))].join('\n'));
 }
 function refreshCredentials() {

@@ -54,8 +54,10 @@ The full independent seven-day outcome remains unaccepted. The
 [work map](work.md#current-integrated-checkpoint) links accepted baselines and
 failed campaign evidence; [GitHub](https://github.com/CVX-Hull/enactive/issues/145)
 owns live follow-through. Current support is qualified for CDDA only. General
-setup cancellation, native click/geometry and wider game-family behavior retain
-their explicit limits in the architecture/protocol and linked evidence.
+setup cancellation and wider game-family behavior retain their explicit limits.
+[Native001](acceptance/2026-10-22-native-save-refresh.md) qualifies one actual
+unit-geometry inventory click and exact normal lifecycle; non-unit mapping,
+wider mouse behavior and the Save-image correction branch remain unqualified.
 
 The official MCP SDK adapter constructs and retains requests, collects original
 results and presents exact images over the existing mission ingress. Both024
@@ -68,11 +70,15 @@ security isolation.
 The observer exposes objective/owner, historical memory/Work, cumulative requests,
 charged admissions and uncertainty. The actual006terminal view separates
 STOPPED/HISTORY/DISCONNECTED, no current decision and zero unresolved effects.
-The subsequent viewer repair labels recorded terminal command diagnostics and
-refreshes normal local credentials after a service reconnect. A paused no-game
+The viewer labels recorded terminal command diagnostics and refreshes normal
+local credentials after a service reconnect. Native001 exposed the same imperative
+in a separate controller snapshot field after the last-command error cleared.
+The subsequent source repair qualifies terminal controller/native snapshots as
+not gameplay instructions while retaining their diagnostic text; its actual
+new native rendering remains unqualified. A paused no-game
 restart verifies Pause succeeds without reloading the page; ordinary operations
 are never automatically repeated. Real terminal rendering of the new diagnostic
-label and paired native/browser timing remain future evidence. Historical Work
+wording and paired native/browser timing remain future evidence. Historical Work
 uncertainty is not silently relabeled current progress. The [observer report](acceptance/2026-10-20-mission-observer.md)
 and actual mission screenshots distinguish synthetic layout tests from native
 usage. The unchanged real spectator Pause qualification remains scoped user-control

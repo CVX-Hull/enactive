@@ -26,6 +26,16 @@ retained file was verified unchanged. Mission ledgers, journals, frames, host
 traces and acceptance artifacts were untouched; archived failed campaigns remain
 failed and closed. Saves and the archive remain local and excluded from Git.
 
+After native001's two normal exits and controller shutdown, separately retired its
+closed `EnactiveSaveRefreshOne` / Robin technical world. The ordinary archive
+`.runtime/save-retirement/2026-10-22-native001/closed-technical-world.tar.gz`
+is 459,025 bytes, SHA-256
+`a063c4d701e2ab846962a716cf110ce165f2e51857f7f292e98acca5dc553294`;
+its adjacent manifest verifies every archived file. All 191 files in the three
+accepted worlds above remained byte-identical. Native001's mission evidence and
+original host traces remain intact; the active menu again contains those three
+accepted worlds only.
+
 ## Structured player SDK, 2026-10-20
 
 Added official MCP Python SDK 2.3.0 for the optional local stdio adapter. The shared
