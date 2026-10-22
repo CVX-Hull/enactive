@@ -31,18 +31,20 @@ archive. A root's explicit procedure selection joins its actual child inputs and
 results automatically; adoption remains a player judgment over scoped data.
 The historical library reads pinned closed archives without restoring old-world
 facts or execution handles. See [the current contract](protocol.md#ordinary-discovery-and-procedure-data).
-The new native binary passed its local build. The two failed learning attempts
-have partial actual ordinary-input/procedure/concurrency evidence; the
-[second attempt](acceptance/2026-10-21-discovery-learning-second-attempt.md) supports
-useful graphical play during advisory computation and later same-proposal
-disposition. Normal learner save/reload/shutdown and the coherent learning mission
-remain unqualified. The pure submission boundary now rejects malformed
+The new native binary passed its local build. Earlier learning failures retain
+their partial evidence. The [fourth run](acceptance/2026-10-21-discovery-learning-fourth-attempt.md)
+now qualifies bounded procedure reuse, fresh-context application, same-proposal
+graphical advisory overlap/disposition and normal save/reload/final shutdown.
+Its changed-condition refinement does not demonstrate correction of an erroneous
+rule or causal improvement; the fresh seven-day campaign remains separate. The pure submission boundary now rejects malformed
 create/save/load roots before queue admission while historical record validation
 retains original rejected evidence. Control policies now receive the original
 admission-based deadline before equivalent refresh, separating execution allowance
 from image age. Canonical compact UTF-8 HTTP responses match advisory byte sizing.
-#184/#185 and the failed003attempt own actual requalification; no failure becomes
-execution authority.
+#184/#185 and the failed003attempt retain the repair rationale;004provides
+scoped requalification, not authority from a failure. The subsequent#187repair
+distinguishes reversible advisory closing from permanent termination and rolls
+back a nonterminal Finish refusal; exact source checks remain a separate lane.
 
 The harness-enabled SDL ImGui context uses the library's steady text-caret setting.
 It preserves exact image validation without treating cosmetic blink as stable

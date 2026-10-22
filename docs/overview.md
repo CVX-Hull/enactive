@@ -46,9 +46,14 @@ but failed on lifecycle-root submission validation. The later003attempt failed
 before normal adoption on control timing; #184/#185 own timing and advisory
 transport repairs. All three attempts are closed failures. Their partial results
 gain no normal-ending or coherent-mission credit.
-The subsequent004run ended normally after actual successor application and exact
-save/restart/reload. Its complete learning qualification is under independent
-audit. #187 repairs a separately reproduced advisory-finalization race: temporary
+The [fourth run](acceptance/2026-10-21-discovery-learning-fourth-attempt.md)
+completed normal same-character save/restart/reload/final shutdown. Independent
+review verifies source-linked procedure reuse, actual fresh-context application
+and useful graphical work during same-proposal advisory computation with later
+disposition. The lead accepts narrow changed-condition refinement; correction of
+an erroneous rule and causal learning benefit remain unproved. This supports the
+next fresh seven-day assessment, not seven-day success. #187 repairs a separately
+reproduced advisory-finalization race: temporary
 sealing must not terminate the learner. Source tests and protected publication
 remain separate from graphical acceptance and the fresh seven-day campaign.
 

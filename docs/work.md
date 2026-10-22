@@ -32,13 +32,20 @@ owns new-control deadlines versus source age; [#185](https://github.com/CVX-Hull
 owns valid advisory jobs exceeding their HTTP envelope through serialization
 overhead. The retained003job is ASCII-only; Unicode expansion is a separate
 regression case, and the exact failed wire body remains unavailable. All003actors
-and processes are closed. New004ended through normal save/restart/reload and final
-shutdown with178primitives/148requests/467frames/1845game seconds; its full learning
-qualification is under independent audit. All004actors/processes are closed.
+and processes are closed. The [fourth run](acceptance/2026-10-21-discovery-learning-fourth-attempt.md)
+completed normal save/restart/reload/final shutdown and independently verified
+procedure reuse, fresh-context application and same-proposal graphical advisory
+overlap/disposition. Its178primitives/148requests/467frames/1845game seconds remain
+retained. The lead accepts scoped changed-condition refinement, not correction of
+an erroneous R1 rule or causal improvement. All004actors/processes are closed.
 [#187](https://github.com/CVX-Hull/enactive/issues/187) repairs reversible advisory
 finishing, the exact82bdd10CI failure, in the subsequent source checkpoint.
-Independent source review and focused tests passed; full checks remain separate.
-The coherent learning verdict and fresh seven-day assessment remain pending. Source checks issue no run authority. The accepted024
+Independent source review and focused tests passed; the exact repair checkpoint
+passed1,448local tests. Hosted/protected checks remain separate. #188owns the
+actual pre-campaign library refusal: authority-blocked retained images must not
+be confused with disputed history. Original004pins and files remain unchanged.
+The bounded learning verdict supports preparing the fresh seven-day assessment;
+seven-day survival and protected publication remain pending. Source checks issue no run authority. The accepted024
 baseline and historical attempts below remain evidence, not a new admission.
 
 [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) has

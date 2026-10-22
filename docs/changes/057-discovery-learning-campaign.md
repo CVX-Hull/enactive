@@ -26,11 +26,14 @@ closed with48requests/89charged primitives(88returned,1unknown),218frames/5,242,
 and no adopted game-time; owned exceptional exit is not normal ending. #184/#185
 repair control deadlines and valid advisory jobs whose old HTTP encoding exceeded
 the transport cap. That exact retained job is ASCII-only: whitespace suffices for
-overflow; Unicode is a separate regression. Normal004subsequently closed with
-178primitives/148requests/467frames/1845game seconds and actual successor/reload
-evidence under independent audit. #187 repairs the separate advisory-finishing
+overflow; Unicode is a separate regression. The [normal fourth run](../acceptance/2026-10-21-discovery-learning-fourth-attempt.md)
+closed with178primitives/148requests/467frames/1845game seconds, actual successor
+application, same-proposal graphical reflection/disposition and exact normal
+reload/final ending. Independent review supports narrow changed-condition
+refinement, not falsification of an erroneous R1 rule or causal learning benefit. #187 repairs the separate advisory-finishing
 publication/rollback defect exposed by exact82bdd10CI, with independent review and
-focused tests. A coherent learning verdict and fresh campaign remain pending. Earlier failures
+focused tests. The lead accepts the bounded learning checkpoint within that
+qualification; fresh seven-day survival and protected publication remain pending. Earlier failures
 remain failures, including the empty-popup mapping,
 handoff/reference errors and item-activity return defect.
 
@@ -132,7 +135,8 @@ helps this work, with new admission provenance and no rollback/old authority.
 
 ## Maintenance and current status
 
-This active delivery brief records implementation, not an accepted graphical run.
+This active delivery brief records implementation and the bounded004graphical
+checkpoint. It does not accept a fresh seven-day campaign or protected release.
 Current source uses native5/mission9/ledger11/archive4/campaign-memory4, with
 procedure/1 and reflection/1 records. The installed wrapper and actual loaded
 host catalogue must match before new play. Current callers, validators, persisted

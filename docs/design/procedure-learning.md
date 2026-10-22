@@ -301,5 +301,6 @@ new accepted memory revision. Retain original claimed-time/known elapsed/unknown
 remaining computation separately; no refund or fabricated exact model duration.
 Verify advisory quiescence before final controller/storage closure and immutable
 library hashing. If computation cannot terminate within its declared bounds,
-record the actual host failure and close the attempt honestly. After sealing,
-library ledgers are immutable; no late proposal write is allowed.
+record the actual host failure and close the attempt honestly. After permanent
+closure and verified actor quiescence, library ledgers are immutable; no late
+proposal write is allowed. Temporary sealing is not that archival boundary.

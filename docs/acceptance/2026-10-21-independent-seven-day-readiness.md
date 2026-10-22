@@ -6,8 +6,8 @@ status: active
 
 # Independent seven-day readiness
 
-Decision: the [mission024 functional evidence](2026-10-21-independent-supply-shelter.md)
-supports preparing **one bounded fresh seven-day development assessment** through
+Decision: the [mission024 evidence](2026-10-21-independent-supply-shelter.md) and
+[bounded learning004 result](2026-10-21-discovery-learning-fourth-attempt.md) support preparing **one bounded fresh seven-day development assessment** through
 the current player-owned mission system. It does not establish seven-day success,
 general survival competence or measured memory benefit. For the user's selected
 [delivery057](../changes/057-discovery-learning-campaign.md), freeze reviewed
@@ -24,9 +24,12 @@ campaign outcome is met. At the024 baseline, mixed interaction/procedural learni
 reflection were separate follow-through. The user subsequently selected
 delivery057's explicit learning mission before this fresh campaign;
 [#176–178](../work.md#campaign-delivery-path) now supply its source capabilities.
-Reforecast from that mission's actual costs before admission. Failed learning002
-used165primitives/429frames;003used89/218before normal adoption. These are partial
-costs, not campaign rates. The earlier4,352-input/3,456-frame forecast did not
+Learning004closed normally with178primitives/148requests/467frames/25,411,298bytes
+and1845game seconds. All146actual host image presentations match retained bytes.
+It supports scoped condition refinement and fresh-context application, not
+correction of an erroneous rule or measured efficacy. Failed learning002used
+165primitives/429frames;003used89/218before normal adoption. All remain retained;
+none provides an independent long-run campaign rate. The earlier4,352-input/3,456-frame forecast did not
 adequately couple capture demand; the revised envelope below is still prospective.
 Optional additional curator, training, paid model tiers and causal efficacy studies
 are not admission gates.
@@ -81,8 +84,10 @@ for them. The larger prospective frame/byte provision matches the same ending
 input stress scenario; it changes no schema and is not admitted until the actual
 learning outcome and a new frozen forecast justify it. The0.25MiB/frame assumption
 is roughly five times002's observed mean, not a confidence interval or a guarantee
-against the32MiB per-frame bound. No new accounting framework or unimplemented
-automatic reservation is claimed.
+against the32MiB per-frame bound. Learning004observed2.62frames/charged primitive
+and about53KiB/frame on average; neither is a worst-case guarantee. The selected
+3frames/input stress assumption and0.25MiB/frame budget remain prospective. No
+new accounting framework or unimplemented automatic reservation is claimed.
 
 At each meaningful boundary forecast **all seven resources together**, including
 normal final Save/Quit/Finish. Use actual cumulative ledger/archive usage and the
@@ -92,6 +97,34 @@ If a justified next segment and protected ending cannot jointly fit, normally en
 the attempt and publish its partial result. Unknown delivery stays unreplayed;
 collect/reconcile the original operation only through supported paths. No live
 ceiling increase, new admission for the same failed run or retroactive refund.
+
+## Scoped memory and advisory preparation
+
+Pin only normally closed learning004's ledger and evidence index, verifying both
+hashes and current ProcedureLibrary eligibility before freezing admission. The
+first actual pin check refused because its five authority-blocked prompt images
+were incorrectly treated as unavailable historical evidence; all467images verify
+and none is disputed. #188 owns that source repair and exact read-only retry; no
+archive is edited and admission waits for actual eligibility. Its
+R1/R2 counted-pickup family is scoped advisory data. Retrieve original supporting
+images and assess current applicability; do not import Riley's stock, locations,
+world identity, handles or authority. R2 has a documented step-order ambiguity;
+actual execution and visible verification remain the player's responsibility.
+Exceptional failed archives remain under #186 rather than being edited into
+eligible history. No new history or memory database is needed for this campaign.
+
+Learning004spent20×180=3600conservatively charged advisory seconds while observed
+claim-to-submit intervals ranged3.57–16.03seconds. A prospective campaign selection
+is64offered jobs,2pending,32requests/8sources/64KiB context/32KiB output per job,
+60seconds per original claim and3600total seconds: at most60full claimed windows.
+Sixty seconds is a planning choice, not a proven deadline bound; retain any actual
+miss without renewing it. Software remains responsible for scheduling/coalescing,
+and the deciding player need not wait for a proposal. The advisory actor must
+interpret actual source images, disclose omissions and remain fallible; five004
+claims before adoption motivate #178's relevance/coverage follow-through, without
+proving harm. Temporary Finish sealing returns bounded idle; only terminal phase
+or permanent closure means closed under #187. Actual host-handle quiescence is
+still required before controller/storage closure.
 
 ## One coherent campaign
 
