@@ -273,8 +273,10 @@ class ActivityRecoveryTests(unittest.TestCase):
         paused = [snapshot for snapshot in snapshots if snapshot["phase"] == "paused"]
         self.assertTrue(paused)
         for snapshot in paused:
-            for key in ("activity_phase", "lease_owner", "prompt_phase", "lifecycle_phase"):
+            for key in ("activity_phase", "lease_owner", "prompt_phase", "lifecycle_phase",
+                        "current_source", "coordinate_scope"):
                 self.assertIsNone(snapshot[key], key)
+            self.assertEqual(snapshot["freshness"], {"age_seconds": None, "fresh": False})
         self.assertEqual(len(self.bridge.delivered), count)
 
     def test_control_timeout_remains_unknown_and_same_request_never_replays(self):

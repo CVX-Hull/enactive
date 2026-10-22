@@ -135,3 +135,18 @@ No corrected-source graphical or fresh seven-day result follows from
 these checks. A later documentation-only publication checkpoint may run its own
 CI alongside finite development play when runtime/native identity is verified;
 formal acceptance and protected publication still require that exact head's CI.
+
+Hosted `5d66781` [CI](https://github.com/CVX-Hull/enactive/actions/runs/39867983281)
+subsequently failed one assertion after 1,619 tests in 1,207.024 seconds. This
+exposed a real Pause presentation gap rather than a reason to wait in the test:
+immediate cached revocation left `current_source` and `coordinate_scope` intact,
+and an in-flight publication could restore them. Clear both in the existing
+immediate Pause update and preserve those cleared fields in its existing pending
+publication overlay. Freshness already derives from source availability.
+Regress both a blocked writer and Pause during normal/activity summary publication;
+historical sources remain readable and controller-first input revocation is unchanged.
+
+This bounded follow-up is prepared in an isolated project-local worktree while
+campaign010 retains frozen `77d02fa`. Integrate only after its actual actors are
+terminal; do not patch a deciding run or relabel the failed CI. Focused/source
+qualification and the run's actual native outcome remain separate evidence lanes.

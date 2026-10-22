@@ -369,6 +369,65 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.runtime.status()["spent_inputs"], charged)
         self.assertNotIn("UILIST.QUIT", [r.get("action") for r in self.bridge.delivered])
 
+    def test_pause_hides_current_source_before_writer_can_publish(self):
+        self.start()
+        before = self.runtime.status()
+        self.assertIsNotNone(before["current_source"])
+        self.assertIsNotNone(before["coordinate_scope"])
+        entered, release = threading.Event(), threading.Event()
+        apply_pauses = self.runtime._apply_pauses
+
+        def blocked_writer():
+            entered.set()
+            release.wait(3)
+            return apply_pauses()
+
+        with patch.object(self.runtime, "_apply_pauses", side_effect=blocked_writer):
+            try:
+                self.assertTrue(entered.wait(2))
+                self.runtime.pause("Pause while writer cannot refresh status")
+                paused = self.runtime.status()
+                self.assertEqual(paused["phase"], "paused")
+                self.assertIsNone(paused["current_source"])
+                self.assertIsNone(paused["coordinate_scope"])
+                self.assertEqual(paused["freshness"], {"age_seconds": None, "fresh": False})
+                self.assertIsNone(self.controller._mission_lease)
+                retained, image = self.runtime.source(self.a.mission_id, before["current_source"]["observation_id"])
+                self.assertEqual(retained["reference"], before["current_source"])
+                self.assertTrue(image)
+            finally:
+                release.set()
+
+    def test_pause_during_normal_summary_cannot_restore_source_or_scope(self):
+        self.start()
+        self.assertIsNotNone(self.runtime.status()["coordinate_scope"])
+        summary, publish = self.runtime._registered_activity.summary, self.runtime._publish
+        interrupted, snapshots = [], []
+
+        def pause_after_summary():
+            value = summary()
+            active = self.runtime._active
+            if not interrupted and active is not None and active.request["request_id"] == "normal-summary-race":
+                interrupted.append(True)
+                self.runtime.pause("Pause after normal source and scope summary")
+            return value
+
+        def capture_publication():
+            publish()
+            snapshots.append(self.runtime.status())
+
+        with patch.object(self.runtime._registered_activity, "summary", side_effect=pause_after_summary), \
+             patch.object(self.runtime, "_publish", side_effect=capture_publication):
+            self.runtime.command(self.request("observe", request_id="normal-summary-race"))
+            self.settled("normal-summary-race")
+        self.assertTrue(interrupted)
+        paused = [snapshot for snapshot in snapshots if snapshot["phase"] == "paused"]
+        self.assertTrue(paused)
+        for snapshot in paused:
+            self.assertIsNone(snapshot["current_source"])
+            self.assertIsNone(snapshot["coordinate_scope"])
+            self.assertEqual(snapshot["freshness"], {"age_seconds": None, "fresh": False})
+
     def test_prompt_dismissal_is_one_accounted_input_with_partial_effect_verification(self):
         normal = copy.deepcopy(self.bridge.value["scene"])
         def dismiss(bridge, request):

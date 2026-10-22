@@ -324,6 +324,7 @@ class MissionRuntime:
             if self._snapshot is not None and self._snapshot["phase"] not in TERMINAL:
                 self._snapshot.update(phase="paused", pause_cause=cause, reason=reason, lease_owner=None,
                     prompt_phase=None, lifecycle_phase=None, activity_phase=None,
+                    current_source=None, coordinate_scope=None,
                     epoch=self._snapshot["epoch"] + 1, next_needed_decision="Explicit supported readmission required")
         return result
 
@@ -430,7 +431,8 @@ class MissionRuntime:
         with self._metadata:
             if self._pending_pauses and self._snapshot is not None:
                 for key in ("phase", "epoch", "pause_cause", "reason", "next_needed_decision",
-                            "lease_owner", "prompt_phase", "lifecycle_phase", "activity_phase"):
+                            "lease_owner", "prompt_phase", "lifecycle_phase", "activity_phase",
+                            "current_source", "coordinate_scope"):
                     value[key] = self._snapshot[key]
             self._snapshot = value
             self._presentation_store = (self._admission.mission_id, self._store, self._memory)
