@@ -43,6 +43,7 @@ class NativeReceiverTests(unittest.TestCase):
         for scenario in ('unfamiliar', 'identity', 'timeouts', 'normal-owner', 'unsupported-owner',
                          'debug', 'activity', 'interrupt', 'outside', 'direct-key-resize',
                          'direct-text-resize', 'direct-click-resize', 'direct-exact-rejected',
+                         'direct-key-stale-frame', 'direct-text-stale-frame', 'direct-click-stale-frame',
                          'translated-key', 'translated-text', 'translated-click', 'translated-click-resize',
                          'semantic-exact', 'semantic-drift', 'comparison-io', 'comparison-symlink',
                          'stale', 'authority', 'pause', 'receiver-exit', 'receiver-changed-at-commit',

@@ -1775,14 +1775,18 @@ class Controller:
                         # A normal storage/capacity/contract failure proves no input
                         # publication. Crashes/BaseException retain durable unknowns.
                         raise ControlError(f"Mission preflight failed: {type(exc).__name__}: {exc}") from exc
-                checked_frame = self._preflight_capture(observed)
+                # Ordinary capture churn may be correctable nondelivery, but
+                # only after every fatal guard below passes. Never replace its
+                # retained frame/receipt or weaken the native filename gate.
+                checked_frame = observed["frame"] if kind == "direct" else self._preflight_capture(observed)
                 with self.data_lock:
                     self._check_owner(lease, generation)
                     if (self.control_lock.locked() or self.control_pending is not None
                             or self.pending is not None or any((self.bridge / name).exists() for name in
                             ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
                         raise ControlError("Native or recovery work appeared during preflight")
-                    if not same_native_state(self.state, observed) or self.state["frame"] != checked_frame:
+                    if (not same_native_state(self.state, observed)
+                            or kind != "direct" and self.state["frame"] != checked_frame):
                         raise ControlError("Native boundary or frame changed during preflight")
                     if resume_binding is not None:
                         self._check_mission_resume(observed, resume_binding, generation)
@@ -1796,6 +1800,9 @@ class Controller:
                         raise ControlError("Final preflight observation expired")
                     if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:
                         raise ControlError("Original dispatch deadline expired during preflight")
+                    if kind == "direct" and self.state["frame"] != checked_frame:
+                        raise _MissionInputRefusal(
+                            "Native frame identity changed during final preflight; observe and choose a new input")
             except _MissionInputRefusal:
                 raise
             except (ControlError, OSError) as exc:

@@ -19,9 +19,10 @@ accepted baseline and remaining outcome, rather than every intermediate failure.
 | Area | Evidence and next consequence |
 | --- | --- |
 | Integrated learning | [Normal006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md) has an independently accepted bounded functional outcome, scoped native6v2 procedure library, actual clean-context application and exact normal save/reload/shutdown. It does not prove causal learning benefit or seven-day survival. |
-| Fresh independent campaign | [Fresh003](acceptance/2026-10-22-independent-seven-day-third-attempt.md) failed after398inputs/258game seconds because the optional512-coordinate map stopped ordinary observation. Actual clean-context retrieval/readmission/continuation is supported; no daily milestone, midpoint reload or normal ending. Failed001/002/003 remain closed. |
-| Immediate repair | [#193](https://github.com/CVX-Hull/enactive/issues/193) makes the map a bounded lossy routing cache, preserving retained evidence and current guards. Old-source whole-runtime reproduction failed at input171; the repair's runtime regression and46navigation tests pass. Independent review passed; exact candidate CI and new real qualification remain required. |
-| Source qualification | Earlier6288b5a CI39735590480 passed1,571tests. Decidingc2245b9 CI39737790740 failed a shared-fsync test-fixture race. Its independently reviewed test-only repair stayed isolated until003closed; three focused tests pass. No passing final-candidate/protected-main claim yet. |
+| Fresh independent campaign | [Fresh004](acceptance/2026-10-22-independent-seven-day-fourth-attempt.md) failed after440charged inputs/339game seconds when a capture-identity refusal revoked its lease and blocked normal save. Actual clean-context handoff and independent continuation are supported; no daily milestone, midpoint reload or normal ending. All failed attempts remain closed. |
+| Immediate repair | [#194](https://github.com/CVX-Hull/enactive/issues/194) preserves capture enforcement and classifies only healthy ordinary frame-only nonpublication as correctable feedback after all original guards pass. No retry, refund or failed-run renewal. Source regressions/review and a new finite native campaign are separate gates. |
+| Cache qualification | [#193](https://github.com/CVX-Hull/enactive/issues/193)'s bounded lossy map supports a reviewed real native prefix beyond its old512-coordinate limit:345publications/530coordinates. Offline current projection stays512bounded. This is observation qualification, not route/recovery or campaign success. |
+| Source qualification | Published73c3d84 CI39749635989 passed1,575tests/full portable checks. Failedc224CI and its later isolated test-fixture repair remain history. The new194candidate and protected-main/full-campaign acceptance remain pending. |
 | Remaining actual evidence | #176/#181 native direct click/geometry, #138 navigation recovery, #139/#152 activity interruption, #143 observer presentation and #164 representative request/display timing retain their scoped qualifications. Synthetic source tests do not substitute for these lanes. |
 
 The next fresh seven-day assessment must preserve the original full outcome:
@@ -30,7 +31,7 @@ decisions, actual retained-memory succession, exact midpoint reload and normal
 final ending. No failed authority resumes and no deciding source/limit is patched.
 The [coupled readiness plan](acceptance/2026-10-21-independent-seven-day-readiness.md#joint-finite-preparation-budget)
 uses existing optional8192-frame/2GiB ceilings; it is a finite planning envelope,
-not a survival guarantee. Closed006 remains the current eligible library; failed003
+not a survival guarantee. Closed006 remains the current eligible library; failed004
 is retained evidence, not an eligible normal-closure library.
 
 P-CHANGE/S-CODE permit deliberate accelerators over the longer project horizon,

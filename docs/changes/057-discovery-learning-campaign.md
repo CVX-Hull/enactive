@@ -512,3 +512,22 @@ eviction choice if observed routing usefulness or cost warrants it, under the
 existing owner/issue. No new approval layer, tracker or generic semantic checker.
 The engineering lead remains outside tactics and curation; the next player still
 owns its full survival strategy and eventual seven-day result.
+
+## Fresh004 capture refusal and independent continuation
+
+The [fourth fresh campaign](../acceptance/2026-10-22-independent-seven-day-fourth-attempt.md)
+is closed FAILED after339game seconds/440charged inputs. Its actual clean player
+handoff and narrow native cache observation prefix are separately reviewed;
+neither supplies a daily milestone, midpoint reload or normal ending. Exact73c3CI
+passed1,575tests/full portable checks. The current failed admission never resumes.
+
+[#194](https://github.com/CVX-Hull/enactive/issues/194), under191/176, repairs the
+classification of an ordinary capture-filename-only preflight refusal. It reuses
+`_MissionInputRefusal`, original ledger settlement, batch closure and explicit
+Observe/new intent; every fatal guard must pass first. Native stale-frame,
+semantic, Resume and recovery checks remain strict. Source/schema/native formats
+are unchanged, with no new retry or recovery framework. Red-before/green-after
+controller/runtime regressions separate known nonpublication, charged prefix and
+healthy custody from combined fatal faults and exhausted root limits. Independent
+review, exact full candidate CI and a new frozen actual campaign remain separate
+qualification lanes. Normally closed006 remains the only eligible library.

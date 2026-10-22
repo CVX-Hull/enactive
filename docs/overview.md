@@ -95,8 +95,17 @@ exploration, but failed after258game seconds when an optional512-coordinate
 navigation map stopped ordinary observation. No daily milestone or normal ending
 is credited. [#193](https://github.com/CVX-Hull/enactive/issues/193) changes that
 map to a bounded lossy cache, preserving evidence and current guards; source
-regressions and independent source/evidence review pass; exact candidate CI and a
-new real campaign remain pending.
+regressions and independent source/evidence review pass. Exact73c3CI passed1,575
+tests/full portable checks. The [fourth fresh campaign](acceptance/2026-10-22-independent-seven-day-fourth-attempt.md)
+then supplied a reviewed real native observation prefix beyond the old bound:
+345publications/530projected coordinates, with offline current projection bounded
+at512. It later failed on a distinct capture-identity refusal after339game seconds;
+the lease was revoked and normal save blocked. All actors/processes are closed,
+with no daily milestone or normal ending. [#194](https://github.com/CVX-Hull/enactive/issues/194)
+keeps the capture checks and makes proven ordinary nonpublication correctable only
+after every original guard passes. The player must Observe and choose a new
+intent; no old batch or failed admission resumes. New source qualification,
+native assessment and protected-main acceptance remain required.
 The full independent seven-day outcome is still outstanding.
 
 The official MCP SDK adapter constructs and retains requests, collects original

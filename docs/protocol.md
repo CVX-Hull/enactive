@@ -94,6 +94,24 @@ state. This comparison grants neither freshness nor image equivalence. Final
 semantic preflight requires the exact retained frame identity, including recovery;
 a different basename refuses even when PNG bytes match. Direct preflight instead
 binds its actual fresh frame under the same uninterrupted custody.
+If that ordinary direct capture's filename changes during host preflight while
+all existing ownership, complete state, receiver, Pause, pending-work, original
+freshness and deadline guards still pass, input is refused before publication
+without revoking the healthy lease. Its prepared primitive remains charged and
+the batch ends; no native request, ACK or after-source is invented. The runtime
+retains only the existing authenticated read-only observation scope across its
+operation rotation. Explicit Observe supplies a fresh binding before a distinct
+new input intent under the original
+mission/prompt limits. This neither retries the old batch nor refreshes its
+receipt, replaces its frame or restores expired/lost authority. Combined guard
+failures keep their existing stop behavior. Native filename enforcement remains
+strict, including for ordinary events; semantic/Resume/recovery classification
+and exact-capture checks are unchanged.
+Known early ordinary nonpublication, such as a changed click mapping before
+primitive preparation, uses that same observation scope without inventing a
+primitive charge. Prepared refusal retains its actual charge. Processing/storage
+faults still stop. Observe may close an exhausted local macro through the existing
+closure receipt; it cannot renew its root or spend protected mission reserves.
 
 Native passive captures freshly present and encode. Only unchanged complete
 observation metadata, geometry and actual bounded PNG bytes may reuse the current

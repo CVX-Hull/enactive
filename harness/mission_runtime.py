@@ -2197,6 +2197,15 @@ class MissionRuntime:
                 # The immutable terminal receipt remains known and unchanged.
                 current_error = f"Current observation unavailable after known ACK: {type(exc).__name__}: {exc}"[:1024]
                 self._stop_after_failure(current_error)
+        if ordinary and envelope_valid and disposition == "not_dispatched":
+            live = self._live()
+            if processing_fatal or evidence_loss is not None:
+                self._stop_after_failure(processing_error or evidence_loss)
+            elif self._lease is not None and live[3] is self._lease and not live[4]:
+                # Rotation is already committed even when this first input was
+                # not published. Preserve only authenticated read-only lineage
+                # until Observe, never an old binding for another input.
+                self._await_current_observation(work, proposal, original, operator_mark, reason)
         live = self._live()
         if game_budget_exhausted:
             # Keep revocation outside controller preflight and after any
@@ -2306,9 +2315,12 @@ class MissionRuntime:
                     and actual_current == self._current and actual_current != feedback.after)
                 if pending_observation:
                     receipt_phase = self._prompt_phase
-                    outcome = ControlOutcome("partial", "Known input returned; explicit Observe required before a new input decision",
-                        proposed_count, tuple(dict.fromkeys((original, proposal.before, feedback.after))), None, True,
-                        "ordinary_input", input_observation=relation if isinstance(relation, InputObservation) else None)
+                    if feedback.transport_disposition == "returned":
+                        outcome = ControlOutcome("partial", "Known input returned; explicit Observe required before a new input decision",
+                            proposed_count, tuple(dict.fromkeys((original, proposal.before, feedback.after))), None, True,
+                            "ordinary_input", input_observation=relation if isinstance(relation, InputObservation) else None)
+                    else:
+                        outcome = skill.accept(feedback, self._store, **self._clocks())
                 elif current_changed:
                     # Delivery is known; a different actual current capture ends
                     # this operation without attributing its meaning or taking

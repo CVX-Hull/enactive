@@ -254,6 +254,13 @@ int main( int argc, char **argv ) {
                 } else if( scenario == "direct-exact-rejected" ) {
                     packet.booleans["require_exact_frame"] = true;
                     require( refusal( [&]() { ordinary_commit_gate( packet, false, false ); } ) );
+                } else if( scenario == "direct-key-stale-frame" || scenario == "direct-text-stale-frame" ||
+                           scenario == "direct-click-stale-frame" ) {
+                    if( scenario == "direct-text-stale-frame" ) { packet.objects["input"].strings["type"] = "text"; }
+                    if( scenario == "direct-click-stale-frame" ) { packet.objects["input"].strings["type"] = "click"; }
+                    packet.strings["frame"] = "frame-original-capture.png";
+                    require( refusal( [&]() { ordinary_commit_gate( packet, false,
+                                             scenario == "direct-click-stale-frame" ); } ) );
                 } else if( scenario == "semantic-exact" || scenario == "semantic-drift" || scenario == "comparison-io" || scenario == "comparison-symlink" ) {
                     packet.strings["kind"] = "key"; packet.booleans["require_exact_frame"] = true;
                     if( scenario == "semantic-drift" ) { pixels = "different bytes"; }

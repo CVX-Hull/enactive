@@ -2813,6 +2813,109 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 self.assertEqual(list(self.controller.admissions.glob("*.json")), [])
                 self.controller.pause()
 
+    def test_direct_capture_refresh_refuses_without_revoking_healthy_owner(self):
+        inputs = (dict(type="key", key="ESC", modifiers=[]), dict(type="text", text="a"),
+                  dict(type="click", button="left", x=0, y=0, geometry=frame_geometry()))
+        for direct in inputs:
+            for stage in ("callback", "final_fence"):
+                with self.subTest(input=direct["type"], stage=stage), FakeBridge(self.controller) as fake:
+                    self.ready()
+                    lease = self.acquire(operation="interaction")
+                    original_owner_check = self.controller._check_owner
+                    captured = []
+                    changed = []
+
+                    def refresh():
+                        replacement = copy.deepcopy(self.controller.state)
+                        replacement.update(id="", frame="frame-game-test-2.png")
+                        self.controller._accept(replacement)
+                        changed.append(replacement)
+
+                    def preflight(observation, received):
+                        captured.append((copy.deepcopy(observation), received))
+                        if stage == "callback":
+                            refresh()
+
+                    def owner_check(*args):
+                        original_owner_check(*args)
+                        if stage == "final_fence" and captured and not changed:
+                            refresh()
+
+                    with patch.object(self.controller, "_check_owner", owner_check):
+                        envelope = self.mission_dispatch(lease, kind="direct", value=direct,
+                                                        preflight=preflight)
+                    self.assertEqual(envelope["result"]["status"], "rejected", envelope)
+                    self.assertIn("frame identity changed", envelope["result"]["error"])
+                    self.assertFalse(envelope["published"])
+                    self.assertIsNone(envelope["request"])
+                    self.assertIsNone(envelope["received_monotonic"])
+                    self.assertEqual(envelope["preflight"]["observation"], captured[0][0])
+                    self.assertEqual(envelope["preflight"]["received_monotonic"], captured[0][1])
+                    self.assertIs(self.controller._mission_lease, lease)
+                    self.assertFalse(self.controller.frozen)
+                    self.assertFalse(self.controller.pause_requested)
+                    self.assertEqual(self.controller.unknown_outcomes, [])
+                    self.assertFalse(any(r["kind"] == "direct" for r in fake.requests))
+                    self.assertEqual(list(self.controller.admissions.glob("*.json")), [])
+                    self.controller.release_mission(lease)
+
+    def test_direct_capture_refresh_cannot_mask_a_fatal_preflight_guard(self):
+        faults = ("deadline", "monotonic_age", "wall_age", "recovery_pending", "pending", "pause",
+                  "session", "revision", "scene", "geometry", "receiver", "control_generation")
+        for stage in ("callback", "final_fence"):
+            for fault in faults:
+                with self.subTest(stage=stage, fault=fault), FakeBridge(self.controller) as fake:
+                    self.ready()
+                    lease = self.acquire(operation="interaction")
+                    clock = SimpleNamespace(mono=time.monotonic(), wall=time.time())
+                    proxy = SimpleNamespace(monotonic=lambda: clock.mono, time=lambda: clock.wall,
+                                            sleep=time.sleep)
+                    armed, changed = [], []
+                    original_owner_check = self.controller._check_owner
+
+                    def refresh_and_fault():
+                        replacement = copy.deepcopy(self.controller.state)
+                        replacement["frame"] = "frame-game-test-2.png"
+                        if fault == "deadline": clock.mono += 2
+                        elif fault == "monotonic_age": clock.mono += 3.01
+                        elif fault == "wall_age": clock.wall = replacement["timestamp_ms"] / 1000 + 3.01
+                        elif fault == "recovery_pending": self.controller.control_pending = {"id": "pending"}
+                        elif fault == "pending": self.controller.pending = {"id": "pending"}
+                        elif fault == "pause": (fake.bridge / "pause").touch()
+                        elif fault == "session": replacement["session"] = "different-game"
+                        elif fault == "revision": replacement["revision"] += 1
+                        elif fault == "scene": replacement["scene"]["position"][0] += 1
+                        elif fault == "geometry": replacement["frame_geometry"]["window_width"] += 1
+                        elif fault == "receiver": replacement["boundary"]["input_receiver"] = False
+                        elif fault == "control_generation": replacement["boundary"]["control_generation"] += 1
+                        self.controller._accept(replacement)
+                        changed.append(True)
+
+                    def preflight(*args):
+                        armed.append(True)
+                        if stage == "callback": refresh_and_fault()
+
+                    def owner_check(*args):
+                        original_owner_check(*args)
+                        if stage == "final_fence" and armed and not changed: refresh_and_fault()
+
+                    try:
+                        with patch("harness.controller.time", proxy), \
+                                patch.object(self.controller, "_check_owner", owner_check):
+                            envelope = self.mission_dispatch(lease, kind="direct",
+                                value=dict(type="key", key="ESC", modifiers=[]), preflight=preflight,
+                                deadline_monotonic=clock.mono + (2 if fault == "deadline" else 10))
+                        self.assertEqual(envelope["result"]["status"], "controller_error", envelope)
+                        self.assertFalse(envelope["published"])
+                        self.assertIsNone(envelope["request"])
+                        self.assertIsNone(self.controller._mission_lease)
+                        self.assertTrue(self.controller.pause_requested)
+                        self.assertEqual(self.controller.unknown_outcomes, [])
+                        self.assertFalse(any(r["kind"] == "direct" for r in fake.requests))
+                    finally:
+                        self.controller.pending = self.controller.control_pending = None
+                        self.controller.state = None
+
     def test_final_preflight_image_failure_never_calls_callback_or_admits_input(self):
         for fault in ("changed", "missing", "empty", "oversized", "symlink", "directory", "foreign", "traversal"):
             with self.subTest(fault=fault), FakeBridge(self.controller) as fake:

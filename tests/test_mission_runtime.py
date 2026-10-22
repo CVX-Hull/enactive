@@ -1284,6 +1284,222 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(primitive["native_id"], self.bridge.delivered[-1]["id"])
         self.assertEqual(self.runtime.command(req)["operation"], op)
 
+    def test_capture_refresh_settles_text_prefix_then_allows_explicit_new_intent(self):
+        self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        original = self.start()
+        self.bridge.editor_text = ""
+
+        def type_scalar(bridge, request):
+            if request["kind"] == "direct":
+                bridge.editor_text += request["input"]["text"]
+            return True
+
+        self.bridge.behavior = type_scalar
+        prepare = self.runtime._ledger.prepare_primitive
+        prepared = []
+        dispatched_leases = []
+
+        def refresh_second_capture(*args, **kwargs):
+            result = prepare(*args, **kwargs)
+            prepared.append(result)
+            dispatched_leases.append(self.controller._mission_lease)
+            if len(prepared) == 2:
+                # A new capture with unchanged state is not permission to send
+                # input using the retained filename. No engine input is invented.
+                current = copy.deepcopy(self.controller.state)
+                current.update(id="", frame="frame-game-test-999999.png")
+                (self.controller.bridge / current["frame"]).write_bytes(self.bridge.visible_bytes(current))
+                self.controller._accept(current)
+            return result
+
+        goal = dict(input=dict(type="text", text="abc"), interrupt_allowed=False,
+                    intent="Type the desired text", expected="Inspect the visible result")
+        request = self.control("direct", goal, request_id="text-original")
+        with patch.object(self.runtime._ledger, "prepare_primitive", refresh_second_capture):
+            self.assertEqual(self.runtime.command(request)["status"], "accepted")
+            operation = self.settled(request["request_id"])
+        self.assertEqual(operation["state"], "partial", operation)
+        rows = self.runtime._ledger.primitive_records()
+        self.assertEqual([row["state"] for row in rows], ["returned", "not_dispatched"])
+        refused = rows[-1]
+        self.assertFalse(refused["result"]["published"])
+        self.assertIsNone(refused["native_id"])
+        self.assertIsNone(refused["result"]["native_ack"])
+        self.assertIn("frame identity changed", refused["result"]["reason"])
+        self.assertEqual(self.bridge.editor_text, "a")
+        current = self.runtime.status()
+        self.assertEqual(current["phase"], "active", current)
+        self.assertEqual(current["epoch"], original["epoch"])
+        self.assertEqual(current["spent_inputs"], 2)
+        self.assertEqual(current["unresolved_effects"], [])
+        self.assertIs(self.controller._mission_lease, dispatched_leases[-1])
+        for field in ("player_id", "started_at", "deadline", "cleanup_reserve"):
+            self.assertEqual(current[field], original[field], field)
+
+        # Dedup returns the old terminated batch; it cannot send its suffix.
+        self.assertEqual(self.runtime.command(request)["operation"], operation)
+        self.assertEqual(self.bridge.editor_text, "a")
+        observe = self.request("observe", request_id="explicit-refresh")
+        self.assertEqual(self.runtime.command(observe)["status"], "accepted")
+        self.settled(observe["request_id"])
+        remaining = self.control("direct", {**goal, "input": dict(type="text", text="bc")},
+                                 request_id="new-remaining-intent")
+        self.assertEqual(self.runtime.command(remaining)["status"], "accepted")
+        self.assertEqual(self.settled(remaining["request_id"])["state"], "partial")
+        self.assertEqual(self.bridge.editor_text, "abc")
+        self.assertEqual([r["input"]["text"] for r in self.bridge.delivered if r["kind"] == "direct"],
+                         ["a", "b", "c"])
+        self.assertEqual([row["state"] for row in self.runtime._ledger.primitive_records()],
+                         ["returned", "not_dispatched", "returned", "returned"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 4)
+        self.assertEqual(self.runtime.status()["unresolved_effects"], [])
+        self.assertEqual(self.runtime.status()["deadline"], original["deadline"])
+
+    def test_capture_refusal_does_not_restore_exhausted_prompt_root_budget(self):
+        self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        root, _ = self.open_direction(limits=dict(primitives=2, wall_seconds=120, game_seconds=1200))
+        deadline = self.runtime._ledger.request(root["request_id"])["deadline"]
+        prepare = self.runtime._ledger.prepare_primitive
+
+        def refresh_capture(*args, **kwargs):
+            result = prepare(*args, **kwargs)
+            current = copy.deepcopy(self.controller.state)
+            current.update(id="", frame="frame-game-test-999999.png")
+            (self.controller.bridge / current["frame"]).write_bytes(self.bridge.visible_bytes(current))
+            self.controller._accept(current)
+            return result
+
+        goal = dict(input=dict(type="key", key="ESC", modifiers=[]), interrupt_allowed=False,
+                    intent="Close the visible prompt", expected="Inspect the returned screen")
+        child = self.control("direct", goal, phase_id=root["request_id"], request_id="refused-close")
+        with patch.object(self.runtime._ledger, "prepare_primitive", refresh_capture):
+            self.assertEqual(self.runtime.command(child)["status"], "accepted")
+            self.assertEqual(self.settled(child["request_id"])["state"], "blocked")
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        observe = self.request("observe", request_id="observe-exhausted-root")
+        self.assertEqual(self.runtime.command(observe)["status"], "accepted")
+        observed = self.settled(observe["request_id"])
+        self.assertEqual(observed["state"], "completed", observed)
+        self.assertEqual(observed["result"]["macro_closure"]["limit"], "primitives")
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertIsNone(self.runtime._prompt_phase)
+        retry = {**child, "request_id": "new-close"}
+        response = self.runtime.command(retry)
+        self.assertEqual(response["status"], "rejected", response)
+        self.assertFalse(any(r["kind"] == "direct" for r in self.bridge.delivered))
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertEqual(self.runtime._ledger.request(root["request_id"])["deadline"], deadline)
+
+    def test_first_prompt_capture_refusal_keeps_authenticated_read_only_observe(self):
+        self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        root, _ = self.open_direction()
+        before = self.runtime.status()
+        deadline = self.runtime._ledger.request(root["request_id"])["deadline"]
+        prepare = self.runtime._ledger.prepare_primitive
+
+        def refresh_capture(*args, **kwargs):
+            result = prepare(*args, **kwargs)
+            current = copy.deepcopy(self.controller.state)
+            current.update(id="", frame="frame-game-test-999999.png")
+            (self.controller.bridge / current["frame"]).write_bytes(self.bridge.visible_bytes(current))
+            self.controller._accept(current)
+            return result
+
+        goal = dict(input=dict(type="key", key="ESC", modifiers=[]), interrupt_allowed=False,
+                    intent="Close the visible prompt", expected="Inspect the returned screen")
+        child = self.control("direct", goal, phase_id=root["request_id"], request_id="first-close-refused")
+        with patch.object(self.runtime._ledger, "prepare_primitive", refresh_capture):
+            self.assertEqual(self.runtime.command(child)["status"], "accepted")
+            refused = self.settled(child["request_id"])
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertEqual(refused["result"]["phase"]["stage"], "awaiting_observation")
+        self.assertEqual(self.runtime.status()["epoch"], before["epoch"])
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertIsNone(self.runtime.status()["current_source"])
+        self.assertFalse(any(r["kind"] == "direct" for r in self.bridge.requests))
+        premature = {**child, "request_id": "input-before-observe"}
+        self.assertEqual(self.runtime.command(premature)["status"], "rejected")
+        observe = self.request("observe", request_id="look-after-first-refusal")
+        self.assertEqual(self.runtime.command(observe)["status"], "accepted")
+        self.assertEqual(self.settled(observe["request_id"])["state"], "completed")
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertFalse(self.runtime.status()["prompt_phase"]["observation_needed"])
+        chosen = self.control("direct", goal, phase_id=root["request_id"], request_id="new-close-intent")
+        self.assertEqual(self.runtime.command(chosen)["status"], "accepted")
+        self.assertEqual(self.settled(chosen["request_id"])["state"], "partial")
+        self.assertEqual(len([r for r in self.bridge.delivered if r["kind"] == "direct"]), 1)
+        self.assertEqual([r["state"] for r in self.runtime._ledger.primitive_records()],
+                         ["returned", "not_dispatched", "returned"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 3)
+        self.assertEqual(self.runtime.status()["unresolved_effects"], [])
+        self.assertEqual(self.runtime._ledger.request(root["request_id"])["deadline"], deadline)
+
+    def test_unprepared_click_refusal_retains_read_only_rotation_without_input_charge(self):
+        self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        original = self.start()
+        execute = self.controller.execute_mission
+
+        def resize_before_preflight(*args, **kwargs):
+            self.bridge.value["frame_geometry"]["window_width"] = 2
+            # Publish changed observation metadata under a distinct revision;
+            # same-revision geometry contradiction must still fail integrity.
+            self.bridge.value["revision"] += 1
+            return execute(*args, **kwargs)
+
+        geometry = copy.deepcopy(self.bridge.value["frame_geometry"])
+        request = self.control("direct", dict(input=dict(type="click", button="left", x=0, y=0,
+            geometry=geometry), interrupt_allowed=False, intent="Select visible position",
+            expected="Inspect actual effect"), request_id="click-before-resize")
+        with patch.object(self.controller, "execute_mission", resize_before_preflight):
+            self.assertEqual(self.runtime.command(request)["status"], "accepted")
+            refused = self.settled(request["request_id"])
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIn("Click geometry", refused["result"]["reason"])
+        self.assertEqual(refused["result"]["phase"]["stage"], "awaiting_observation")
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertEqual(self.runtime.status()["spent_inputs"], 0)
+        self.assertEqual(self.runtime._ledger.primitive_records(), ())
+        self.assertFalse(any(r["kind"] == "direct" for r in self.bridge.requests))
+        observe = self.request("observe", request_id="look-after-resize")
+        self.assertEqual(self.runtime.command(observe)["status"], "accepted")
+        observed = self.settled(observe["request_id"])
+        self.assertEqual(observed["state"], "completed", observed)
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertIsNotNone(self.runtime.status()["current_source"])
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime.status()["epoch"], original["epoch"])
+        self.assertEqual(self.runtime.status()["deadline"], original["deadline"])
+
+    def test_unpublished_capture_refusal_with_reservation_fault_still_stops(self):
+        self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        root, _ = self.open_direction()
+        prepare = self.runtime._ledger.prepare_primitive
+
+        def refresh_capture(*args, **kwargs):
+            result = prepare(*args, **kwargs)
+            current = copy.deepcopy(self.controller.state)
+            current.update(id="", frame="frame-game-test-999999.png")
+            self.controller._accept(current)
+            return result
+
+        request = self.control("direct", dict(input=dict(type="key", key="ESC", modifiers=[]),
+            interrupt_allowed=False, intent="Close this prompt", expected="Inspect resulting screen"),
+            phase_id=root["request_id"], request_id="refusal-with-storage-fault")
+        with patch.object(self.runtime._ledger, "prepare_primitive", refresh_capture), \
+                patch.object(self.runtime._store, "release", side_effect=OSError("reservation storage failed")):
+            self.assertEqual(self.runtime.command(request)["status"], "accepted")
+            self.settled(request["request_id"])
+        self.assertEqual(self.runtime.status()["phase"], "paused")
+        self.assertIsNone(self.controller._mission_lease)
+        self.assertIsNone(self.runtime._prompt_phase)
+        row = self.runtime._ledger.primitive_records()[-1]
+        self.assertEqual(row["state"], "not_dispatched")
+        self.assertFalse(row["result"]["published"])
+        self.assertIn("reservation storage failed", row["result"]["processing_error"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertFalse(any(r["kind"] == "direct" for r in self.bridge.requests))
+
     def test_wide_ordinary_exploration_keeps_bounded_map_and_current_navigation(self):
         # Reproduce the fresh003 publication failure with real runtime components,
         # not native gameplay: this visible transport supplies a broad trajectory.

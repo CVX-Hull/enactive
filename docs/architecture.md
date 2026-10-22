@@ -89,7 +89,12 @@ children refuse. Mission, custody, Pause, trace and unsettled-delivery faults
 retain their stops. After known direct input, an absent/aged current snapshot can
 retain a read-only scope across that exact authenticated operation rotation. Status
 requests explicit Observe and hides the old current source; further inputs refuse
-until a fresh capture publishes a new binding. The ACK stays historical. Local
+until a fresh capture publishes a new binding. The ACK stays historical. Known
+ordinary nonpublication uses the same scope after settlement, including a
+first refused prompt child whose operation already rotated the lease. Prepared
+costs remain spent; early unprepared refusal invents no charge. Only healthy
+custody survives, while processing faults stop. Old batches never resume and
+Observe cannot renew exhausted root limits. Local
 game-time overshoot ends a normal root partial or leaves an owned menu for Observe
 closure without pausing healthy mission ownership. Full shared
 game integration extraction, general setup/ending cancellation and a real second

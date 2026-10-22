@@ -136,6 +136,15 @@ existing identity, collection, reconciliation, costs and no-replay rules.
 Known unpublished visual/representation/geometry refusal returns evidence while
 healthy ownership survives; actual custody, Pause, competing writer, exhausted
 mission resources or unavailable required trace capacity still stops input.
+The frame-name-only direct refusal is classified only after all original fatal
+guards pass. Native filename enforcement stays strict. A settled unpublished
+ordinary refusal retains the existing authenticated `observation_generation`
+scope across operation rotation, including the first refused prompt child;
+explicit Observe must publish a fresh binding before another input. This is
+read-only continuity, not a new recovery framework or rebinding of old evidence.
+Prepared refusal retains its charge; an early unprepared geometry refusal adds
+none. Processing/storage faults still stop and exhausted local roots close
+through the existing Observe receipt without extending their allowance.
 
 Use the existing ledger receipt for a closed, bounded `native_ack` projection:
 protocol, id, session, revision, status, error, paused, pause_origin,
