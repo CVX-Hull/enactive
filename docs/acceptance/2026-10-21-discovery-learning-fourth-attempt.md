@@ -111,7 +111,7 @@ maximum15.034s. Completion here means tool transport, not gameplay success.
 Separate local errors remain in the JSON. Host interval/gap summaries include
 the passive preflight turn; skill samples are from actual deciding play. Representative five-input focus3.503s,
 eight-input focus7.883s and three-step return2.215s identify batch overhead for
-#154/#164. Adjacent nonoverlapping MCP gaps have medians
+#164, using the accepted #154 integration. Adjacent nonoverlapping MCP gaps have medians
 5.154s/player and
 4.522s/successor; they include
 interpretation, other work and host scheduling, not pure model inference.
@@ -152,12 +152,17 @@ for that Python lifecycle repair. Native click/nonunit-geometry qualifications
 remain separate lanes; this run does not claim them.
 
 Next: freeze a genuinely fresh seven-day mission, scoped library pins to this
-normally closed procedure archive (after#188fixes an actual eligibility refusal
-that conflated five authority-blocked prompts with disputed history), a coupled forecast from these actual costs,
+normally closed procedure archive, a coupled forecast from these actual costs,
 windowed/background preflight and finite reflective limits. Preserve the
 [seven-day requirements](2026-10-21-independent-seven-day-readiness.md), meaningful
 survival work, actual handoff/reload/final ending and all prior failures. Optional
 paid models, extra tiers and causal efficacy studies are not blanket gates.
+
+Subsequent preparation found#188: the library rejected five authority-blocked
+prompts despite undisputed intact history. The reviewed source repair passed77
+focused tests; a separate lead read-only check retrieved both revisions and ten
+exact sources, all historical/authority-free, with both original pins unchanged.
+It changes no004outcome or archive and restores no old input authority.
 
 Images contain CDDA content; upstream licenses remain under [the notices](../../NOTICE.md).
 Original harness/documentation licensing does not replace game/tileset licenses.

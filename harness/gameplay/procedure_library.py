@@ -196,8 +196,14 @@ class ProcedureLibrary:
                 or type(value["store_version"]) is not int or value["store_version"] != 4
                 or type(value["entries"]) is not list or len(value["entries"]) > MAX_FRAMES
                 or type(value["retired_sessions"]) is not list or len(value["retired_sessions"]) > MAX_FRAMES
-                or value["blocked"] != [] or value["disputed"] != []):
+                or type(value["blocked"]) is not list or len(value["blocked"]) > MAX_FRAMES
+                or value["disputed"] != []):
             raise ProcedureLibraryError("Unsupported or unavailable historical evidence index")
+        blocked = value["blocked"]
+        for identity in blocked:
+            _sha(identity)
+        if len(set(blocked)) != len(blocked):
+            raise ProcedureLibraryError("Duplicate blocked historical source identity")
         if value["session"] is not None:
             _id(value["session"])
         retired = value["retired_sessions"]
@@ -227,6 +233,9 @@ class ProcedureLibrary:
                 raise ProcedureLibraryError("Historical frame archive exceeds byte bound")
             entries[identity] = {"reference": reference.to_dict(), "observation": observation,
                                  "disposition": "retained", "grants_authority": False}
+        # Revocation prevents current input authority; it does not dispute history.
+        if not set(blocked) <= entries.keys():
+            raise ProcedureLibraryError("Blocked historical source is not retained")
         self._entries[mission] = entries
 
     def _load_ledger(self, mission: str, pin: dict) -> None:

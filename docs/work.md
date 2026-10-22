@@ -43,7 +43,9 @@ finishing, the exact82bdd10CI failure, in the subsequent source checkpoint.
 Independent source review and focused tests passed; the exact repair checkpoint
 passed1,448local tests. Hosted/protected checks remain separate. #188owns the
 actual pre-campaign library refusal: authority-blocked retained images must not
-be confused with disputed history. Original004pins and files remain unchanged.
+be confused with disputed history. Its reviewed repair passed77focused tests;
+the lead independently retrieved both004revisions and ten original sources
+without changing either pin. Exact final full/hosted checks remain separate.
 The bounded learning verdict supports preparing the fresh seven-day assessment;
 seven-day survival and protected publication remain pending. Source checks issue no run authority. The accepted024
 baseline and historical attempts below remain evidence, not a new admission.

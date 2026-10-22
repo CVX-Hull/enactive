@@ -104,8 +104,10 @@ Pin only normally closed learning004's ledger and evidence index, verifying both
 hashes and current ProcedureLibrary eligibility before freezing admission. The
 first actual pin check refused because its five authority-blocked prompt images
 were incorrectly treated as unavailable historical evidence; all467images verify
-and none is disputed. #188 owns that source repair and exact read-only retry; no
-archive is edited and admission waits for actual eligibility. Its
+and none is disputed. #188 now repairs that distinction. Independent source review passed; the lead
+repeated the exact read-only pin check successfully: two revisions, three support/
+contrary episodes and ten exported sources including all five blocked images,
+each retained with no authority. Original ledger/index hashes are unchanged. Its
 R1/R2 counted-pickup family is scoped advisory data. Retrieve original supporting
 images and assess current applicability; do not import Riley's stock, locations,
 world identity, handles or authority. R2 has a documented step-order ambiguity;
@@ -128,7 +130,7 @@ still required before controller/storage closure.
 
 ## One coherent campaign
 
-1. Freeze the final protected source/native/configuration, new world/character,
+1. Freeze the reviewed source/native/configuration, new world/character,
    player role, update policy, total/root/child limits and ending provisions.
    Verify no stale owned runtime, background/windowed options and actual structured
    tool access without routine approval review. Use ordinary default Evacuee/

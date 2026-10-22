@@ -8,7 +8,7 @@ import tempfile
 import unittest
 
 from harness.gameplay.contracts import ContractError, EvidenceRef
-from harness.gameplay.evidence import _identity
+from harness.gameplay.evidence import EvidenceStore, MAX_FRAMES, _identity
 from harness.gameplay.mission_contracts import LearningPolicy
 from harness.gameplay.contracts import canonical
 from harness.gameplay.procedure_library import ProcedureLibrary
@@ -141,6 +141,82 @@ class ProcedureLibraryTests(unittest.TestCase):
                         "learning": None}),))
         with self.assertRaises(ContractError):
             self.library(pin)
+
+    def test_stopped_archive_retains_revoked_support_and_menu_without_restoring_authority(self):
+        directory, identity, record, _ = self.archive()
+        bridge = self.root / "bridge"
+        bridge.mkdir()
+        normal = observation(session=directory.name)
+        menu = observation(2, session=directory.name)
+        menu.update(category="UILIST", scene=None, ui={"purpose": "UILIST", "title": "Alarm",
+            "rows": [{"id": "rendered-1", "text": "8 hours", "enabled": True, "hotkey": "8"}],
+            "selected": "rendered-1", "filter": None, "count": None, "coverage": "rendered_rows_only"})
+        menu["boundary"]["kind"] = "menu"
+        originals = {}
+        # Use the production writer's ordinary stale-boundary revocation. Neither
+        # lost current authority nor the stopped ledger disputes retained history.
+        with EvidenceStore(bridge, directory / "evidence") as store:
+            for value in (normal, menu):
+                (bridge / value["frame"]).write_bytes(png())
+                reference = store.ingest(value, received_monotonic=100.0,
+                    now_monotonic=100.0, now_timestamp_ms=1_000_000)
+                with self.assertRaises(ContractError):
+                    store.current_boundary(now_monotonic=104.0, now_timestamp_ms=1_004_000)
+                self.assertEqual(store.source_status(reference), "retained")
+                originals[reference.observation_id] = store.export_source(reference.observation_id)
+        index_path = directory / "evidence" / "evidence.json"
+        index = json.loads(index_path.read_bytes())
+        self.assertEqual(index["blocked"], [identity, _identity(menu)])
+        self.assertEqual(index["disputed"], [])
+        before = {p.relative_to(self.root): p.read_bytes() for p in self.root.rglob("*") if p.is_file()}
+        with self.library(self.pin(directory.name)) as library:
+            self.assertEqual(library.records(), (record,))
+            self.assertEqual(library.validate_episode(record["support"][0]), ((directory.name, identity),))
+            for source_id, original in originals.items():
+                self.assertEqual(library.source(directory.name, source_id), original)
+                self.assertEqual(original[0]["disposition"], "retained")
+                self.assertFalse(original[0]["grants_authority"])
+        with EvidenceStore(bridge, directory / "evidence") as store:
+            with self.assertRaises(ContractError):
+                store.current_boundary(now_monotonic=100.0, now_timestamp_ms=1_000_000)
+            for value in (normal, menu):
+                with self.assertRaisesRegex(ContractError, "cannot regain current authority"):
+                    store.ingest(value, received_monotonic=100.0,
+                        now_monotonic=100.0, now_timestamp_ms=1_000_000)
+        after = {p.relative_to(self.root): p.read_bytes() for p in self.root.rglob("*") if p.is_file()}
+        self.assertEqual(before, after)
+
+    def test_blocked_ids_must_be_bounded_unique_retained_sha256_identities(self):
+        directory, identity, _, _ = self.archive()
+        malformed = (None, {}, identity, True, [None], [1], [{}], [True],
+                     ["A" * 64], ["0" * 63], ["0" * 64 + "\n"], ["foreign"],
+                     ["0" * 64], [identity, identity])
+        for blocked in malformed:
+            pin = self.edit_index(directory, lambda index: index.update(blocked=blocked))
+            before = {p.relative_to(directory): p.read_bytes() for p in directory.rglob("*") if p.is_file()}
+            with self.subTest(blocked=blocked), self.assertRaises(ContractError):
+                self.library(pin)
+            self.assertEqual(before,
+                {p.relative_to(directory): p.read_bytes() for p in directory.rglob("*") if p.is_file()})
+        oversized = [f"{number:064x}" for number in range(MAX_FRAMES + 1)]
+        pin = self.edit_index(directory, lambda index: index.update(blocked=oversized))
+        with self.assertRaisesRegex(ContractError, "Unsupported or unavailable historical evidence index"):
+            self.library(pin)
+
+    def test_revoked_sources_do_not_bypass_disputes_integrity_or_support_linkage(self):
+        directory, identity, _, _ = self.archive()
+        pin = self.edit_index(directory, lambda index: index.update(blocked=[identity], disputed=[identity]))
+        with self.assertRaises(ContractError):
+            self.library(pin)
+        self.edit_index(directory, lambda index: index.update(disputed=[]))
+        pin = self.edit_db(directory, "UPDATE requests SET result=?", (canonical({"source_ids": []}),))
+        with self.assertRaisesRegex(ContractError, "unrelated to its episode requests"):
+            self.library(pin)
+        self.edit_db(directory, "UPDATE requests SET result=?", (canonical({"source_ids": [identity]}),))
+        frame = directory / "evidence" / "frames" / (identity + ".png")
+        frame.write_bytes(png() + b"changed")
+        with self.assertRaisesRegex(ContractError, "pinned hash differs"):
+            self.library(self.pin(directory.name))
 
     def test_empty_sources_and_exact_bounded_unique_pins(self):
         self.assertEqual(self.library().records(), ())
@@ -313,6 +389,10 @@ class ProcedureLibraryTests(unittest.TestCase):
         self.assertEqual(library.records(), (record,))
         self.assertEqual(library.request("mission-a", "request-1")["state"], "unknown")
         library.close()
+        pin = self.edit_index(directory, lambda index: index.update(blocked=[identity, after_id]))
+        with self.library(pin) as library:
+            self.assertEqual(library.records(), (record,))
+            self.assertEqual(library.request("mission-a", "request-1")["state"], "unknown")
         effect["proof"]["terminal_logical_id"] = "different-input"
         pin = self.edit_db(directory, "UPDATE primitives SET effect=?", (canonical(effect),))
         with self.assertRaisesRegex(ContractError, "original primitive"):

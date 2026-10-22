@@ -879,6 +879,11 @@ The read-only library uses SQLite over hash-verified bytes, shared archive locks
 and derived project paths. It never reopens a runtime writer, restores a phase or
 imports old-world Claims/Work as current facts. Only current ledger11/archive4
 input is eligible; older campaign artifacts remain historical evidence.
+Authority-blocked retained sources are historical evidence, as in EvidenceStore:
+a bounded unique list of valid retained blocked IDs does not itself dispute their
+bytes or support. Library exports remain historical and `grants_authority:false`.
+Disputed sources, malformed/foreign blocked IDs, missing/changed images or invalid
+episode/effect linkage still refuse; no archive is rewritten to gain eligibility.
 
 Campaign-memory4 replaces placeholder lesson IDs with qualified procedure refs,
 records, source requirements and explicit omissions. Decisions retain selected

@@ -52,7 +52,11 @@ and name the selected predecessor. Original source history remains authoritative
 Git remains the source-code history, not a game-memory database.
 
 Library source validation must enforce project-owned paths, no symlinks, exact
-hashes/schema, finite records/bytes and closed source availability. Never copy old
+hashes/schema, finite records/bytes and closed source availability. Input-authority
+revocation in an archive's bounded blocked-ID list does not invalidate otherwise
+retained undisputed history; validate those IDs against retained entries and keep
+all exports authority-free. Disputed support and integrity/closure failures still
+refuse. Never copy old
 inventory, map coordinates, identity or unfinished world Work into the new world
 as facts. A procedure may refer to a scoped UI prerequisite while current evidence
 still determines the actual source/target. Fresh-context transfer within a mission
