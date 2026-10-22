@@ -357,6 +357,11 @@ report package. Current contracts change with behavior; historical observations
 stay historical. Follow the workflow's evidence cadence without duplicating its
 procedures here.
 
+Respect the [documentation/GitHub authority split](project-management.md#authority-and-review-surfaces).
+C-REVIEW checks that an updated summary links its authoritative source instead of
+mirroring live fields or accumulating another run narrative. Retire obsolete
+summaries through ordinary Git edits; retain dated evidence and owned action items.
+
 ### Visual explanations
 
 Each diagram must answer a named reader question at a stated scope, with a title

@@ -299,9 +299,16 @@ journals until resolved. Routine unreferenced journals/frames can be pruned afte
 This initial policy is manual; no scheduled deletion is installed. Native frame
 rotation within a live process remains the game's existing bounded behavior.
 
-Never delete saves as routine cleanup. Preserve manifests before removing owned
-build directories/downloads. Identify the exact path from the build manifest and
-verify its checkout ownership marker; never use broad /tmp or global-cache cleanup.
+Never delete saves as routine cleanup. For user-directed stale-world cleanup,
+stop the owned game/controller first, identify closed test/failed worlds and
+preserve accepted campaign saves and current reusable checkpoints. Prefer an
+ordinary project-local archive outside `.runtime/user/save/`; verify its contents
+before removing the selected active directories and record the archive location
+and retained worlds in the environment ledger. Keep campaign evidence separately;
+retiring a save does not renew a failed mission or establish a normal ending.
+Preserve manifests before removing owned build directories/downloads. Identify
+the exact path from the build manifest and verify its checkout ownership marker;
+never use broad /tmp or global-cache cleanup.
 For a lost temporary build, re-extract using setup. For an unreadable archive,
 remove only the named corrupt cache entry after preserving diagnostics.
 

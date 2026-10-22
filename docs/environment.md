@@ -6,7 +6,25 @@ status: active
 
 # Environment ledger
 
-Installation history through 2026-10-17; this is not live environment status.
+Recorded setup and maintenance history; this is not live environment status.
+
+## User-directed stale-save cleanup, 2026-10-22
+
+With no native game or controller listener running, retired 36 closed test/failed
+worlds containing 20 saved characters from the project userdir's active save
+directory. All 1,363 files (33,647,175 bytes) were verified against the ordinary
+local archive `.runtime/save-retirement/2026-10-22/stale-worlds.tar.gz` before
+removing their active copies. Archive: 22,149,842 bytes, SHA-256
+`09bb362a5f57a9ac7ca76e5b1bee4a2ff39c394bd904c4b2d164bfaf659086f0`.
+The adjacent private `manifest.json` records each file hash, retired world,
+retained file and restoration instructions; no new backup service was installed.
+
+The remaining active worlds are `Belgium` (Ned Meyers, first seven-day campaign),
+`Enactive Twenty Four` (Alex Enactive, accepted supply/shelter checkpoint) and
+`EnactiveLearningSix` (Casey, current normally closed learning checkpoint). Every
+retained file was verified unchanged. Mission ledgers, journals, frames, host
+traces and acceptance artifacts were untouched; archived failed campaigns remain
+failed and closed. Saves and the archive remain local and excluded from Git.
 
 ## Structured player SDK, 2026-10-20
 

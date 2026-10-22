@@ -14,13 +14,16 @@ independent review and a real graphical gameplay demonstration.
 
 ## Current independent-player delivery
 
-The active goal is to complete [#144](https://github.com/CVX-Hull/enactive/issues/144),
-an independent supply-and-shelter mission, and deliver
-[#145](https://github.com/CVX-Hull/enactive/issues/145)'s evidence-backed readiness
-decision and prospective plan for a fresh seven-day campaign. The broader
-[#136](https://github.com/CVX-Hull/enactive/issues/136) remains open through the
-fresh seven-day assessment. This refines the existing active goal; it does not
-reset work, costs, failed attempts or gameplay authority.
+The active goal is the [discovery-and-learning delivery](changes/057-discovery-learning-campaign.md)
+and a fresh independent seven-day campaign, including actual retained-memory
+handoff, maintained needs/supplies/shelter, purposeful travel/threat decisions,
+exact normal midpoint reload and final ending, independent assessment and protected
+publication/cleanup. [#136](https://github.com/CVX-Hull/enactive/issues/136) and
+[#145](https://github.com/CVX-Hull/enactive/issues/145) own live delivery scope.
+Readiness, a repaired blocker or a short mission cannot complete this goal. The
+[accepted supply/shelter mission](acceptance/2026-10-21-independent-supply-shelter.md)
+and [bounded learning mission](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
+are scoped evidence; later failures, costs and uncertainty remain retained.
 
 Complete selected navigation, item, inspection and native-activity skills through
 one executor; source-linked Claims, corrections and unfinished Work; bounded
@@ -40,8 +43,9 @@ rest as development cases. Prefer composed engine activities and bounded travel
 over a model decision per key. Keep optional curator, model-tier comparisons,
 training and broader efficacy studies outside this iteration unless an observed
 blocker makes them necessary. [The work map](work.md#selected-independent-player-iteration)
-and GitHub own sequencing and allocation; finite deciding/cleanup limits are
-frozen only after integrated source and native preflight, not by this goal.
+explains the path; GitHub owns live sequencing and allocation. Finite deciding/
+cleanup limits are frozen only after integrated source and native preflight,
+not by this goal.
 
 ## Seven-day survival milestone
 

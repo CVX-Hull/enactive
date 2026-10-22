@@ -42,71 +42,20 @@ The successor actually received all seven required retained images; their output
 hashes match the archive. Claim and separate charged readmission preserve original
 costs and limits. Retrieved memory never grants input authority. Actual image
 presentation and independent continuation do not prove mental attention or causal
-usefulness. Delivery057 adds source for reusable procedural records and a pinned
-read-only library. The [failed first learning attempt](acceptance/2026-10-21-discovery-learning-first-attempt.md)
-has actual scoped procedure derivation/revision/reuse, fresh-successor application
-and useful play during advisory computation. It failed on a capture-identity race;
-normal lifecycle and the coherent learning mission remained unqualified. The
-[second attempt](acceptance/2026-10-21-discovery-learning-second-attempt.md) supports
-responsive food, procedure application and the same-proposal reflection join,
-but failed on lifecycle-root submission validation. The later003attempt failed
-before normal adoption on control timing; #184/#185 own timing and advisory
-transport repairs. All three attempts are closed failures. Their partial results
-gain no normal-ending or coherent-mission credit.
-The [fourth run](acceptance/2026-10-21-discovery-learning-fourth-attempt.md)
-completed normal same-character save/restart/reload/final shutdown. Independent
-review verifies source-linked procedure reuse, actual fresh-context application
-and useful graphical work during same-proposal advisory computation with later
-disposition. The lead accepts narrow changed-condition refinement; correction of
-an erroneous rule and causal learning benefit remain unproved. This supports the
-next fresh seven-day assessment, not seven-day success. #187 repairs a separately
-reproduced advisory-finalization race: temporary
-sealing must not terminate the learner. Source tests and protected publication
-remain separate from graphical acceptance. The [first fresh seven-day attempt](acceptance/2026-10-21-independent-seven-day-first-attempt.md)
-then failed before adoption because identity projection unnecessarily constructed
-memory without its admitted library. #189uses the shared pure claim reducer
-directly, retaining actual retrieval guards. The attempt is exceptionally closed;
-a new fresh campaign remains required. The [second fresh attempt](acceptance/2026-10-21-independent-seven-day-second-attempt.md)
-then reached normal adoption, acquired three rations and waited thirty minutes,
-but failed when a zero-input menu draft revoked its consume prompt. #190 repairs
-healthy correction and ordinary Escape; #191 owns systemic organic-input and
-game-family portability gaps. Its 115 primitives, 64 requests, 285 images and
-1,804 game seconds remain a closed partial failure, with no daily milestone or
-normal ending. A fresh seven-day result is still required.
+usefulness. The [normally closed learning006 mission](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
+demonstrates ordinary discovery, scoped procedure reuse/branch refinement,
+actual fresh-context application, useful play during background advice and exact
+normal lifecycle. Its procedure library is advisory. Technical creation assistance
+is disclosed; causal improvement, general procedural learning and zero assistance
+are not established. The [delivery brief](changes/057-discovery-learning-campaign.md)
+connects the input, memory and reflection designs with their prior research.
 
-The next input-foundation work and its
-[artifact impact map](changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
-link current contracts, procedures, controls, learning feedback and evidence to
-their backlog owners. The current foundation separates ordinary physical input
-from strict semantic refresh and permits explicit Observe under healthy custody.
-The [fifth learning attempt](acceptance/2026-10-22-discovery-learning-fifth-attempt.md)
-failed on a native JSON-object lifetime error during the first ordinary pickup
-key and remains closed. After the repair, the
-[normal sixth run](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
-supports current native6 discovery, scoped procedure branch refinement, actual
-fresh-context application and exact normal lifecycle. Its v2 procedure is eligible
-as advisory library input. A technical creation-recovery clarification is disclosed;
-zero assistance, causal benefit and seven-day survival are not claimed.
-Source/CI support is distinct from real qualification and game-family portability.
-
-The [third fresh campaign](acceptance/2026-10-22-independent-seven-day-third-attempt.md)
-then demonstrated an actual clean retained-memory successor and independent
-exploration, but failed after258game seconds when an optional512-coordinate
-navigation map stopped ordinary observation. No daily milestone or normal ending
-is credited. [#193](https://github.com/CVX-Hull/enactive/issues/193) changes that
-map to a bounded lossy cache, preserving evidence and current guards; source
-regressions and independent source/evidence review pass. Exact73c3CI passed1,575
-tests/full portable checks. The [fourth fresh campaign](acceptance/2026-10-22-independent-seven-day-fourth-attempt.md)
-then supplied a reviewed real native observation prefix beyond the old bound:
-345publications/530projected coordinates, with offline current projection bounded
-at512. It later failed on a distinct capture-identity refusal after339game seconds;
-the lease was revoked and normal save blocked. All actors/processes are closed,
-with no daily milestone or normal ending. [#194](https://github.com/CVX-Hull/enactive/issues/194)
-keeps the capture checks and makes proven ordinary nonpublication correctable only
-after every original guard passes. The player must Observe and choose a new
-intent; no old batch or failed admission resumes. New source qualification,
-native assessment and protected-main acceptance remain required.
-The full independent seven-day outcome is still outstanding.
+The full independent seven-day outcome remains unaccepted. The
+[work map](work.md#current-integrated-checkpoint) links accepted baselines and
+failed campaign evidence; [GitHub](https://github.com/CVX-Hull/enactive/issues/145)
+owns live follow-through. Current support is qualified for CDDA only. General
+setup cancellation, native click/geometry and wider game-family behavior retain
+their explicit limits in the architecture/protocol and linked evidence.
 
 The official MCP SDK adapter constructs and retains requests, collects original
 results and presents exact images over the existing mission ingress. Both024
@@ -163,7 +112,8 @@ general autonomous survival policy nor a controlled model-performance result.
 [#71](https://github.com/CVX-Hull/enactive/issues/71) owns evidence/memory readiness,
 [#40](https://github.com/CVX-Hull/enactive/issues/40) outcome monitoring and
 [#75](https://github.com/CVX-Hull/enactive/issues/75) workflow/control improvements.
-The [work map](work.md) links current priorities and the retained campaign lineage.
+The [work map](work.md) links the delivery path and retained campaign evidence;
+the public Project owns current priorities.
 [Operator permissions](operator-permissions.md) distinguishes tested literal CLI
 access from rule activation and actor instructions from security isolation.
 
