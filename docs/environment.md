@@ -36,6 +36,16 @@ accepted worlds above remained byte-identical. Native001's mission evidence and
 original host traces remain intact; the active menu again contains those three
 accepted worlds only.
 
+After failed independent campaign006's actors and owned processes stopped,
+separately archived its closed `EnactiveSevenDaySix` world at
+`.runtime/save-retirement/2026-10-22-campaign006/closed-failed-world.tar.gz`.
+Archive: 2,269,996 bytes, SHA-256
+`7f9e955a289df2c95858f720c37bcade55063aa648dc8c285b23e5da49d2ea0b`.
+All 88 archived files were verified before removing the active world; all 191
+accepted-world files remained unchanged. The adjacent manifest records restoration
+instructions. Its mission evidence remains intact, and exceptional cleanup does
+not establish a normal ending or reusable failed-campaign authority.
+
 ## Structured player SDK, 2026-10-20
 
 Added official MCP Python SDK 2.3.0 for the optional local stdio adapter. The shared

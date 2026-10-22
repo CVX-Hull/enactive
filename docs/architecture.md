@@ -95,6 +95,14 @@ first refused prompt child whose operation already rotated the lease. Prepared
 costs remain spent; early unprepared refusal invents no charge. Only healthy
 custody survives, while processing faults stop. Old batches never resume and
 Observe cannot renew exhausted root limits. Local
+request/root exhaustion is a typed refusal, separate from loss of mission
+authority. The controller's existing unpublished-input path accepts a trusted
+read-only health classification before publication, preserving final fatal fences
+and any prepared charge. Entry and publication share the same custody/work
+checks; retained checkpoint and game-anchor integrity remain mandatory. Explicit
+Observe performs any subsequent fresh capture or macro closure. This adds no
+player tool, stored authority or automatic input. Passive skill verification may
+finish before another input is considered. Local
 game-time overshoot ends a normal root partial or leaves an owned menu for Observe
 closure without pausing healthy mission ownership. Full shared
 game integration extraction, general setup/ending cancellation and a real second

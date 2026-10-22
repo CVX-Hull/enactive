@@ -208,8 +208,12 @@ format is introduced. Local game overshoot yields partial work without revoking
 healthy ownership; an owned menu closes through explicit Observe, while normal
 return has already ended the root. Global/clock/custody faults and unknown delivery
 retain their stopping paths. Scoped synthetic regressions and independent review
-are source evidence only. The matching native6 build passed and is installed;
-real graphical qualification remains #191 work.
+are source evidence only. The matching native6 build is installed. Normally closed
+[learning006](../acceptance/2026-10-22-discovery-learning-sixth-attempt.md) qualifies
+bounded graphical ordinary discovery/procedure application;
+[Native001](../acceptance/2026-10-22-native-save-refresh.md) qualifies one unit-scale
+click and normal lifecycle. Non-unit/wider mouse behavior, cross-game integration
+and the later local-exhaustion correction remain separate unqualified lanes.
 
 **Ordinary policy and scope.** Extract the direct policy from semantic menu
 planning; it remains passive and uses the existing writer's intents/results.
@@ -235,6 +239,31 @@ children receive known refusal while healthy custody survives. Exclude lifecycle
 exit, registered activity/recovery and unsettled delivery. Do not implement this
 by catching generic BudgetError: global exhaustion, clock and trace faults still
 stop. No additional root-replacement field or new MCP tool is selected.
+
+Fresh campaign006 exposed a missing entry to that loop: a player tried a prompt
+child after spending its root's single input. Controller preflight treated the
+local accounting refusal as lost custody, so Observe could no longer close the
+root. Refuse an already exhausted prompt child before controller rotation/input
+preflight, retaining its immutable zero-input result and the original prompt.
+Verify actual custody, source integrity and global capacity before returning that
+local refusal. Explicit Observe still owns closure and the player still chooses
+any new root. This uses the existing ledger, result and observation mechanisms;
+there is no menu handler, automatic Escape, renewed root or generic budget-error
+suppression. The [failed campaign report](../acceptance/2026-10-22-independent-seven-day-sixth-attempt.md)
+separates the demonstrated failure from later source and native qualification.
+
+Local wall expiry can also race with preparation or atomic publication. Reuse
+the controller's positive known-unpublished refusal, with a trusted read-only
+runtime classifier for local request/root allowance only. Keep the existing final
+fatal fences and ordinary-input receipt shape; never infer local refusal by
+matching an error string or forgive a published request. Preserve prepared charges
+and remove only an allocated unpublished admission, treating cleanup failure as
+fatal. Existing authenticated rotation/`awaiting_observation` then leads to
+explicit Observe. The classifier is an internal Python callback, not a new player
+tool, wire version, execution ingress or stored authority. It performs no native
+input, recovery or memory curation. Passive terminal verification precedes refusal
+of another input, so reaching an expected focus on the final allowed input retains
+its actual result. These changes need their separate native qualification.
 
 **Game integration and finite costs.** Owned process/session, inputs, wall time,
 trace capacity and Pause are shared requirements. Character/save/turn/neighbor
@@ -414,7 +443,9 @@ authority or relabeling them as current-contract learning evidence.
 [Delivery057](../changes/057-discovery-learning-campaign.md) retains failed runs and
 source/build/install receipts. The matching native6 build passed and is installed;
 actual host catalogue/preapproval activation and graphical acceptance remain
-separate qualifications.
+separate qualifications. Learning006 and Native001 above provide their scoped
+actual host/graphical evidence; this is no blanket pending claim or proof of
+every subsequent source change.
 
 Lead owns coupled Python integration, tests, documentation, shared build/runtime
 and final verification. The isolated native implementation has been integrated;

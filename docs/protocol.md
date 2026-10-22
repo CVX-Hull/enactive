@@ -995,6 +995,25 @@ return; a locally exhausted root instead gets the immutable `macro_closure` abov
 It never renews old-source authority or resumes a failed lease. Healthy local
 game-time overshoot returns partial work (`macro_exhausted`), retaining mission
 ownership; normal return ends that root and an owned menu awaits Observe closure.
+An exhausted ordinary prompt child is refused before operation rotation or
+controller input preflight, with `macro_exhausted` and no primitive charge.
+This applies to ordinary and semantic roots, without recognizing a menu type.
+The original root and prompt remain unchanged until explicit Observe commits
+their closure. Custody, retained-source integrity and global limits must still
+pass; local exhaustion cannot hide their failure. Refusal does not choose a new
+root, close a menu or establish task success.
+Request/root allowance exceptions are typed separately from mission, clock,
+storage and authority failures. A trusted read-only classifier can translate only
+eligible, healthy ordinary-scope expiry into the controller's existing known
+unpublished refusal. The controller checks fatal ownership/Pause/competing-work/
+boundary/capture fences before preserving custody, including at final atomic
+publication. It never classifies a published request this way. Any allocated but
+unpublished admission must be removed successfully; a prepared primitive keeps
+its original charge and settles not-dispatched. The existing authenticated
+rotation records a read-only `awaiting_observation` scope; explicit Observe still
+owns fresh evidence and any macro closure. Lifecycle, registered activity/recovery
+and actual global exhaustion are excluded. Passive terminal verification may
+establish a skill's result before declining an additional input proposal.
 Unknown delivery, actual clock/session regression, controller processing,
 integrity/storage, lifecycle/activity/recovery and global exhaustion keep their
 stopping paths. A missing current frame alone neither undelivers an ACK nor

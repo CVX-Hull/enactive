@@ -56,6 +56,10 @@ class BudgetError(LedgerError):
     """Original budget/reserve cannot admit another side effect."""
 
 
+class LocalBudgetRefusal(BudgetError):
+    """A request/root allowance refused input; says nothing about custody."""
+
+
 class ReflectionRefusal(LedgerError):
     """A semantic advisory refusal that may be retained as a zero-input result."""
 
@@ -750,7 +754,7 @@ class MissionLedger:
                         else min(state["deadline"], now + data.get("limits", {}).get("wall_seconds", self.admission.limits.wall_seconds)))
             root = self._phase_parent(data)
             if root is not None:
-                if now >= root["deadline"]: raise BudgetError("Original phase deadline expired")
+                if now >= root["deadline"]: raise LocalBudgetRefusal("Original phase deadline expired")
                 deadline = min(deadline, root["deadline"])
             if data["kind"] == "readmit":
                 deadline = self._readmit_deadline(data, admitted_at=now, admitting=True)
@@ -903,20 +907,20 @@ class MissionLedger:
             request = self.request(request_id)
             _primitive_parent(data, request["request"])
             if now >= request["deadline"]:
-                raise BudgetError("Original operation deadline expired")
+                raise LocalBudgetRefusal("Original operation deadline expired")
             count = self._db.execute("SELECT count(*) FROM primitives WHERE request_id=?", (request_id,)).fetchone()[0]
             prior = self._db.execute("SELECT state FROM primitives WHERE request_id=? ORDER BY rowid DESC LIMIT 1", (request_id,)).fetchone()
             _ordinary_sequence(data, request["request"], count, None if prior is None else prior[0])
             if count >= request["request"]["limits"]["primitives"]:
-                raise BudgetError("Per-operation primitive limit exhausted")
+                raise LocalBudgetRefusal("Per-operation primitive limit exhausted")
             if request["epoch"] != state["epoch"] or request["state"] not in ("accepted", "running"):
                 raise LedgerError("Request is stale or no longer dispatchable")
             root = self._phase_parent(request["request"])
             if root is None and self._is_phase_root(request["request"]): root = request
             if root is not None:
-                if now >= root["deadline"]: raise BudgetError("Original phase deadline expired")
+                if now >= root["deadline"]: raise LocalBudgetRefusal("Original phase deadline expired")
                 if self._phase_primitive_count(root["request"]["request_id"]) >= root["request"]["limits"]["primitives"]:
-                    raise BudgetError("Phase primitive limit exhausted")
+                    raise LocalBudgetRefusal("Phase primitive limit exhausted")
             self._check_source_transition(data, request["epoch"], self.admission.mission_id,
                                      informing_sources=request["request"]["sources"], actor_id=state["player_id"])
             reserve = 0 if cleanup else self.admission.cleanup_reserve.inputs

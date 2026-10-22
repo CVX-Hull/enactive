@@ -16,7 +16,7 @@ import time
 from typing import Any
 from uuid import UUID
 
-from .controller import Controller, ControlError, MissionLease, validate_state
+from .controller import Controller, ControlError, MissionInputRefusal, MissionLease, validate_state
 from .native_process import NativeProcess
 from .mission_lifecycle import NormalPhase, RegisteredLifecycle
 from .mission_handoff import HandoffEvidenceError, HandoffPhase, RegisteredHandoff
@@ -29,7 +29,7 @@ from .gameplay.evidence import MAX_AGE_SECONDS, MAX_FRAME_BYTES, CapacityError, 
 from .gameplay.interaction import MenuIntent, MenuOutcome, MenuSkill
 from .gameplay.contracts import canonical
 from .gameplay.mission_contracts import VERSION, MissionAdmission, InputObservation, SourceBinding, SourceRevalidation, validate_submission
-from .gameplay.mission_ledger import BudgetError, LedgerError, MissionLedger, TERMINAL
+from .gameplay.mission_ledger import BudgetError, LedgerError, LocalBudgetRefusal, MissionLedger, TERMINAL
 from .gameplay.native_receipts import compact_native_ack
 from .gameplay.navigation import NavigationIntent, NavigationOutcome, NavigationSkill, ObservedMap
 from .gameplay.input_contracts import ControlIntent, ControlOutcome
@@ -44,7 +44,7 @@ class _Cancelled(ContractError):
     pass
 
 
-class _LocalGameLimit(BudgetError):
+class _LocalGameLimit(LocalBudgetRefusal):
     """An original macro/child game cap, distinct from custody or mission loss."""
 
 
@@ -607,7 +607,7 @@ class MissionRuntime:
                 self._prompt_phase = phase
         return phase
 
-    def _await_current_observation(self, work: _Work, proposal: ControlIntent, original: EvidenceRef,
+    def _await_current_observation(self, work: _Work, proposal: MissionIntent, original: EvidenceRef,
                                    mark: tuple[str, int], reason: str) -> None:
         """Keep only the existing scope's read-only lineage across this rotation."""
         _, generation, _ = self._check_lease()
@@ -854,8 +854,11 @@ class MissionRuntime:
         primitive_states = self._ledger.measured_counts()["primitives"]["by_state"]
         if ledger["unreconciled"] or any(primitive_states.get(state, 0) for state in ("prepared", "published")):
             raise LedgerError("Unsettled input cannot advance a prompt observation")
-        deadline_wall = min(self._ledger.request(work.request["request_id"])["deadline"],
-                            self._mission_deadline - self._admission.cleanup_reserve.wall_seconds)
+        # A refused child performs no capture/input and may already be locally
+        # expired. Only actual Observe pays its own finite capture deadline.
+        deadline_wall = self._mission_deadline - self._admission.cleanup_reserve.wall_seconds
+        if work.request["kind"] == "observe":
+            deadline_wall = min(deadline_wall, self._ledger.request(work.request["request_id"])["deadline"])
         if self._wall() >= deadline_wall:
             raise BudgetError("Original Observe/mission deadline exhausted")
         if ledger["spent_inputs"] >= min(self._admission.limits.inputs - self._admission.cleanup_reserve.inputs,
@@ -878,6 +881,31 @@ class MissionRuntime:
         if latest.turn - phase.game_anchor.turn >= root["request"]["limits"]["game_seconds"]:
             return "game_seconds"
         return None
+
+    def _exhausted_prompt_refusal(self, work: _Work) -> dict | None:
+        """Refuse spent local scope before rotation or controller preflight.
+
+        Only explicit Observe may close this scope. Its original root and all
+        costs remain immutable; a new player decision still needs a new root.
+        """
+        phase = self._prompt_phase
+        if (phase is None or work.request["phase_id"] != phase.root_id
+                or self._exit_phase is not None or self._registered_lifecycle.phase is not None
+                or self._registered_activity.phase is not None or self._registered_recovery.phase is not None
+                or self._registered_recovery.continuation is not None):
+            return None
+        limit = self._ordinary_macro_limit(phase)
+        if limit is None:
+            return None
+        self._prompt_authority_guard(work.request)
+        self._prompt_observation_guard(work, phase)
+        self.controller.check_mission_refusal(self._lease, self._lease.pause_generation, command_work=0)
+        self._store.verify(phase.checkpoint)
+        self._store.verify(phase.game_anchor)
+        self._capacity(frames=0, byte_count=0)
+        return {"reason": "Original local macro allowance exhausted; explicitly Observe before choosing a new root",
+            "macro_exhausted": limit, "source_ids": [phase.checkpoint.observation_id],
+            "phase": self._prompt_receipt(phase, "awaiting_control"), "grants_authority": False}
 
     def _observe_prompt(self, work: _Work, phase: _PromptPhase) -> dict:
         deadline = self._prompt_observation_guard(work, phase)
@@ -1704,7 +1732,7 @@ class MissionRuntime:
             "source_id": proposal.before.observation_id, "before": asdict(old), "after": asdict(new)})
         self._check_cancelled(work)
 
-    def _dispatch_authority_guard(self, work: _Work, before: EvidenceRef) -> None:
+    def _dispatch_authority_guard(self, work: _Work, before: EvidenceRef, *, local_limits: bool = True) -> None:
         self._check_cancelled(work)
         state, generation, boot = self._check_lease()
         ledger = self._ledger.snapshot(now=self._wall())
@@ -1729,15 +1757,71 @@ class MissionRuntime:
         if self._game_cost is None or self._game_cost >= self._admission.limits.game_seconds:
             raise BudgetError("Game time unavailable or exhausted")
         phase = self._prompt_authority_guard(work.request, before)
-        if phase is not None:
+        if local_limits and phase is not None:
             root = self._ledger.request(phase.root_id)["request"]
             self._game_guard(phase.game_anchor, root["limits"]["game_seconds"])
-        if work.game_anchor is not None:
+        if local_limits and work.game_anchor is not None:
             self._game_guard(work.game_anchor, work.request["limits"]["game_seconds"])
 
     def _dispatch_guard(self, work: _Work, before: EvidenceRef) -> None:
         self._dispatch_authority_guard(work, before)
         self._prompt_guard(work.request, before)
+
+    def _local_input_refusal(self, work: _Work, before: EvidenceRef,
+                             logical_id: str | None = None, *, command_work: int = 0) -> str | None:
+        """Positive local expiry proof, never authority from an error message.
+
+        Called only before publication. The current prepared intent may remain
+        charged; every other unsettled input, real fault and global limit stops.
+        """
+        data, phase = work.request, self._prompt_phase
+        if (data["kind"] != "skill" or (phase is None and data["skill_kind"] != "direct")
+                or self._exit_phase is not None or self._registered_lifecycle.phase is not None
+                or self._registered_activity.phase is not None or self._registered_recovery.phase is not None
+                or self._registered_recovery.continuation is not None):
+            return None
+        self._dispatch_authority_guard(work, before, local_limits=False)
+        native = self.controller.check_mission_refusal(self._lease, self._lease.pause_generation, command_work=command_work)
+        observed = self._store.observation(before)
+        if (native["session"] != observed["session"]
+                or native["takeover_generation"] != observed["takeover_generation"]
+                or native["boundary"]["control_generation"] != observed["boundary"]["control_generation"]):
+            raise EvidenceError("Local refusal crossed the retained source's native custody")
+        state = self._ledger.snapshot(now=self._wall())
+        if not state["clock_valid"] or state["unreconciled"]:
+            raise LedgerError("Local refusal cannot hide clock faults or unresolved delivery")
+        if (self._wall() >= self._mission_deadline - self._admission.cleanup_reserve.wall_seconds
+                or state["remaining_inputs"] <= self._admission.cleanup_reserve.inputs
+                or state["spent_inputs"] >= self._admission.limits.primitive_mappings):
+            raise BudgetError("Mission allowance or ending reserve exhausted")
+        # This proof can run under the controller's publication RLock. Query
+        # counters/pending identities in SQLite, not all historical ACK bodies.
+        with self._ledger._mutex:
+            pending = self._ledger._db.execute(
+                "SELECT id,request_id,state FROM primitives WHERE state IN ('prepared','published')").fetchall()
+            count = self._ledger._db.execute("SELECT count(*) FROM primitives WHERE request_id=?",
+                                            (data["request_id"],)).fetchone()[0]
+        if any((identity, request, status) != (logical_id, data["request_id"], "prepared")
+               for identity, request, status in pending):
+            raise LedgerError("Local refusal cannot hide another unsettled input")
+        self._store.verify(before)
+        self._capacity(frames=0, byte_count=0)
+        local = None
+        if phase is not None:
+            self._store.verify(phase.checkpoint)
+            self._store.verify(phase.game_anchor)
+            local = self._ordinary_macro_limit(phase)
+        operation = self._ledger.request(data["request_id"])
+        if self._wall() >= operation["deadline"]:
+            local = "wall_seconds"
+        elif count >= data["limits"]["primitives"]:
+            local = "primitives"
+        if work.game_anchor is not None:
+            try:
+                self._game_guard(work.game_anchor, data["limits"]["game_seconds"])
+            except _LocalGameLimit:
+                local = "game_seconds"
+        return None if local is None else f"Original local {local} allowance exhausted; Observe before a new input decision"
 
     def _skill_draft_rejection(self, work: _Work) -> dict | None:
         """Reject metadata/representation drafts only while their scope is eligible.
@@ -1860,6 +1944,8 @@ class MissionRuntime:
         if work.request["kind"] == "skill" and work.request["skill_kind"] == "navigate":
             deadline = min(deadline, original.received_monotonic + work.request["limits"]["wall_seconds"])
         if deadline <= self._clock():
+            if self._wall() < self._mission_deadline - self._admission.cleanup_reserve.wall_seconds:
+                raise LocalBudgetRefusal("Original operation deadline exhausted")
             raise BudgetError("Original operation/mission deadline exhausted")
         return deadline
 
@@ -1967,6 +2053,7 @@ class MissionRuntime:
         evidence_loss = None
         current_error = None
         game_budget_exhausted = False
+        local_nonpublication = False
         operator_mark = self._operator_mark()
         dispatch_actor = self._ledger.snapshot(now=self._wall())["player_id"]
         takeover_generation = self._store.observation(proposal.before)["takeover_generation"]
@@ -1978,6 +2065,14 @@ class MissionRuntime:
         image_informed = not ordinary and (work.request.get("perception") is not None
                           or lifecycle is not None or activity is not None)
         rule = "ordinary_input" if ordinary else "exact_png_bytes" if image_informed else "native_state"
+        def unpublished_refusal() -> str | None:
+            nonlocal local_nonpublication
+            if lifecycle is not None or activity is not None:
+                return None
+            local = self._local_input_refusal(work, proposal.before, proposal.logical_id, command_work=1)
+            local_nonpublication = local is not None
+            return local
+
         def guard() -> None:
             nonlocal game_budget_exhausted
             # Check every input lane. Startup/provisional identity has no
@@ -2028,6 +2123,15 @@ class MissionRuntime:
             guard()
             self._store.verify(proposal.before)
             self._store.verify(preflight_source)
+
+        def bounded_preflight(observed: dict, received: float) -> None:
+            try:
+                preflight(observed, received)
+            except LocalBudgetRefusal:
+                local = unpublished_refusal()
+                if local is None:
+                    raise
+                raise MissionInputRefusal(local) from None
         try:
             guard()
             deadline = self._deadline(work, proposal.before if lifecycle is not None or activity is not None else original)
@@ -2060,7 +2164,8 @@ class MissionRuntime:
                 raw = self.controller.execute_mission(self._lease, kind=proposal.kind, value=proposal.action,
                     expected_session=proposal.before.session, expected_revision=proposal.before.revision,
                     expected_boundary_id=proposal.expected_boundary_id, logical_action_id=proposal.logical_id,
-                    deadline_monotonic=deadline, preflight=preflight,
+                    deadline_monotonic=deadline, preflight=bounded_preflight,
+                    unpublished_refusal=unpublished_refusal if lifecycle is None else None,
                     expected_image_sha256=proposal.before.frame_sha256 if image_informed else None)
             if not prepared:
                 prepared = any(row["logical_id"] == proposal.logical_id for row in self._ledger.primitive_records())
@@ -2100,6 +2205,10 @@ class MissionRuntime:
                 if candidate is not None and candidate.logical_id == proposal.logical_id:
                     self._registered_lifecycle.candidate = replace(candidate, reservation=None)
         except Exception as exc:
+            if isinstance(exc, LocalBudgetRefusal) and raw is None and not prepared:
+                # No controller input call/prepared intent exists at this point.
+                # Any failed health proof still propagates to the fatal path.
+                local_nonpublication = self._local_input_refusal(work, proposal.before, proposal.logical_id) is not None
             if not (envelope_valid and disposition in ("returned", "rejected")):
                 disposition = "unknown" if raw is not None and (not envelope_valid or raw.get("published")) or prepared and raw is None else "not_dispatched"
             elif disposition == "returned" and after is None:
@@ -2197,7 +2306,7 @@ class MissionRuntime:
                 # The immutable terminal receipt remains known and unchanged.
                 current_error = f"Current observation unavailable after known ACK: {type(exc).__name__}: {exc}"[:1024]
                 self._stop_after_failure(current_error)
-        if ordinary and envelope_valid and disposition == "not_dispatched":
+        if (ordinary and envelope_valid or local_nonpublication) and disposition == "not_dispatched":
             live = self._live()
             if processing_fatal or evidence_loss is not None:
                 self._stop_after_failure(processing_error or evidence_loss)
@@ -2297,6 +2406,17 @@ class MissionRuntime:
             if isinstance(proposal, (MenuOutcome, ControlOutcome)):
                 outcome = proposal
             else:
+                refusal = self._exhausted_prompt_refusal(work)
+                if refusal is not None:
+                    disposition = "partial" if proposed_count else "blocked"
+                    outcome = ControlOutcome(disposition, refusal["reason"], proposed_count,
+                        tuple(dict.fromkeys((original, self._current))), None, proposed_count > 0,
+                        "ordinary_input" if data["skill_kind"] == "direct" else
+                        "native_rows" if isinstance(skill, MenuSkill) else "player_interpretation",
+                        relation if isinstance(relation, SourceRevalidation) else None,
+                        relation if isinstance(relation, InputObservation) else None)
+                    self._capture_memory(self._current)
+                    return disposition, {**self._control_result(outcome), **refusal}
                 self._progress = {"pending_logical_id": proposal.logical_id, "source_before": proposal.before.observation_id}
                 if not rotated:
                     self._rotate(work, proposal)
@@ -2491,6 +2611,9 @@ class MissionRuntime:
                     return "blocked", {"reason": "Procedure selection refused before input: " + str(exc),
                         "source_ids": list(work.request["sources"]), "grants_authority": False}
             self._registered_recovery.executable_guard(work.request)
+            refusal = self._exhausted_prompt_refusal(work)
+            if refusal is not None:
+                return "blocked", refusal
             rejection = self._skill_draft_rejection(work)
             if rejection is not None:
                 return "blocked", rejection
@@ -2591,6 +2714,19 @@ class MissionRuntime:
         except _Cancelled as exc:
             self._apply_pauses()
             disposition, result = "paused", {"reason": str(exc), "grants_authority": False}
+        except LocalBudgetRefusal as exc:
+            try:
+                refusal = self._exhausted_prompt_refusal(work) if data["kind"] == "skill" else None
+                local = (self._local_input_refusal(work, self._current)
+                    if data["kind"] == "skill" and self._current is not None else None)
+            except (ContractError, ControlError, OSError, ValueError) as health_error:
+                local, refusal, exc = None, None, health_error
+            disposition = "blocked"
+            result = refusal or {"reason": str(exc) if local is None else local,
+                "source_ids": [] if self._current is None else [self._current.observation_id],
+                "grants_authority": False}
+            if local is None:
+                self._stop_after_failure(result["reason"])
         except (ContractError, ControlError, OSError, ValueError) as exc:
             disposition, result = "blocked", {"reason": f"{type(exc).__name__}: {exc}"[:1024], "grants_authority": False}
             result["source_ids"] = [] if self._current is None else [self._current.observation_id]

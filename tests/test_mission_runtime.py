@@ -338,7 +338,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.runtime._ledger.request(root["request_id"])["result"], opened["result"])
         self.assertEqual(self.runtime.status()["spent_inputs"], 5)
 
-    def test_navigation_menu_children_keep_root_budget_and_pause_revokes_ownership(self):
+    def test_navigation_menu_exhaustion_keeps_observe_until_actual_pause(self):
         root, opened = self.navigation_menu(primitives=2)
         self.assertEqual(opened["state"], "partial", opened)
         self.runtime.command(self.navigation_cancel(root))
@@ -346,7 +346,16 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(rejected["state"], "blocked", rejected)
         self.assertEqual(self.runtime.status()["spent_inputs"], 3)
         self.assertEqual(len([r for r in self.bridge.delivered if r.get("action") == "UILIST.QUIT"]), 0)
+        self.assertEqual(rejected["result"]["macro_exhausted"], "primitives")
+        self.assertEqual(self.runtime._prompt_phase.root_id, root["request_id"])
+        self.assertIs(self.controller._mission_lease, self.runtime._lease)
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.runtime.command(self.request("observe"))
+        observed = self.settled("observe-1")
+        self.assertEqual(observed["result"]["macro_closure"]["limit"], "primitives")
         self.assertIsNone(self.runtime._prompt_phase)
+        self.runtime.pause("Actual user Pause after local exhaustion")
+        self.wait(lambda: not self.runtime._pending_pauses)
         self.assertIsNone(self.controller._mission_lease)
 
     def test_user_pause_revokes_navigation_menu_without_automatic_response(self):

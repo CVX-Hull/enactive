@@ -39,8 +39,14 @@ class ControlError(Exception):
     """A visible controller failure; never evidence of game success."""
 
 
-class _MissionInputRefusal(ControlError):
-    """Known unpublished visual or representation refusal; custody is healthy."""
+class MissionInputRefusal(ControlError):
+    """Trusted known-unpublished refusal; fatal custody guards still take priority."""
+
+    def __init__(self, reason: str, *, status: str = "controller_error"):
+        if type(reason) is not str or not 1 <= len(reason) <= 1024:
+            raise ControlError("Mission refusal requires 1 to 1024 characters")
+        super().__init__(reason)
+        self.status = status
 
 
 class _MissionPreflightFailure(ControlError):
@@ -1078,12 +1084,15 @@ class Controller:
     def _exchange(self, kind: str, timeout: float, *, generation: int | None = None,
                   lease: MissionLease | None = None, deadline_monotonic: float | None = None,
                   receipt: dict[str, Any] | None = None,
-                  observation_receipt: dict[str, float] | None = None, **payload: Any) -> dict[str, Any]:
+                  observation_receipt: dict[str, float] | None = None,
+                  unpublished_refusal: Callable[[], str | None] | None = None, **payload: Any) -> dict[str, Any]:
         request_id = str(uuid.uuid4())
         started = time.monotonic()
         if deadline_monotonic is not None:
             timeout = min(timeout, deadline_monotonic - started)
             if timeout <= 0:
+                if unpublished_refusal is not None:
+                    self._expired_before_publication("Original dispatch deadline expired before publication", unpublished_refusal)
                 return {"status": "controller_error", "error": "Original dispatch deadline expired before publication"}
         # Both clocks describe the original exchange allowance. Sampling wall
         # first makes conversion conservative if scheduling intervenes; adding
@@ -1091,6 +1100,8 @@ class Controller:
         wall_sample = time.time()
         remaining = started + timeout - time.monotonic()
         if remaining <= 0:
+            if unpublished_refusal is not None:
+                self._expired_before_publication("Original dispatch deadline expired before publication", unpublished_refusal)
             return {"status": "controller_error", "error": "Original dispatch deadline expired before publication"}
         request = {"protocol": 6, "id": request_id, "kind": kind,
                    "deadline_ms": int((wall_sample + remaining) * 1000), **payload}
@@ -1108,6 +1119,7 @@ class Controller:
         terminal_response = None
         terminal_received = False
         admitted_input = False
+        unpublished_cleanup_failed = False
         published = False
         try:
             if self.closed:
@@ -1135,12 +1147,12 @@ class Controller:
                         self._record({"kind": "mission_admission", "logical_action_id": receipt["logical_action_id"]},
                                      {"request": copy.deepcopy(request)})
                 if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:
-                    raise ControlError("Original dispatch deadline expired before publication")
+                    self._expired_before_publication("Original dispatch deadline expired before publication", unpublished_refusal)
                 if self.pending is not None:
                     self._unknown(self.pending, "reconciliation does not establish original outcome")
                 def before_publish() -> None:
                     if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:
-                        raise ControlError("Original dispatch deadline expired at publication")
+                        self._expired_before_publication("Original dispatch deadline expired at publication", unpublished_refusal)
 
                 def on_publish() -> None:
                     nonlocal published
@@ -1206,11 +1218,20 @@ class Controller:
                 with self.data_lock:
                     self.pending = None
                 return terminal_response
+            if isinstance(exc, MissionInputRefusal) and not published:
+                try:
+                    if admitted_input:
+                        (self.admissions / f"{request_id}.json").unlink(missing_ok=True)
+                except OSError as cleanup_error:
+                    unpublished_cleanup_failed = True
+                    exc = cleanup_error
+                else:
+                    return {"status": exc.status, "id": request_id, "error": str(exc)}
             with self.data_lock:
                 self._revoke()
                 if admitted_input and published:
                     self._unknown(request, str(exc))
-                elif admitted_input:
+                elif admitted_input and not unpublished_cleanup_failed:
                     (self.admissions / f"{request_id}.json").unlink(missing_ok=True)
                 if terminal_received:
                     self.pending = None
@@ -1388,7 +1409,8 @@ class Controller:
                         expected_revision: int, expected_boundary_id: str, logical_action_id: str,
                         deadline_monotonic: float, timeout: float | None = None,
                         expected_image_sha256: str | None = None,
-                        preflight: Callable[[dict[str, Any], float], None] | None = None) -> dict[str, Any]:
+                        preflight: Callable[[dict[str, Any], float], None] | None = None,
+                        unpublished_refusal: Callable[[], str | None] | None = None) -> dict[str, Any]:
         """One ordinary input with its exact logical/native receipt."""
         receipt = {"logical_action_id": logical_action_id, "request": None, "result": None,
                    "published": False, "received_monotonic": None, "preflight": None, "processing_error": None}
@@ -1403,7 +1425,8 @@ class Controller:
                     {"input" if kind == "direct" else kind: value, "expected_session": expected_session,
                      "expected_revision": expected_revision, "expected_boundary_id": expected_boundary_id}, lease,
                     deadline_monotonic=deadline_monotonic, receipt=receipt,
-                    expected_image_sha256=expected_image_sha256, preflight=preflight)
+                    expected_image_sha256=expected_image_sha256, preflight=preflight,
+                    unpublished_refusal=unpublished_refusal)
             except _MissionPreflightFailure as exc:
                 preflight_failed = True
                 self._stop_mission_preflight(receipt, exc)
@@ -1448,6 +1471,7 @@ class Controller:
                 elif preflight_failed:
                     receipt["result"]["error"] += f"; mission receipt persistence failed: {exc}"
                 else:
+                    self._mission_processing_failure(receipt, exc)
                     raise
         if preflight_failed:
             with self.data_lock:
@@ -1538,13 +1562,15 @@ class Controller:
         return (value.st_dev, value.st_ino, value.st_size, value.st_mtime_ns, value.st_ctime_ns)
 
     @contextmanager
-    def _command_slot(self, deadline_monotonic: float | None):
+    def _command_slot(self, deadline_monotonic: float | None, *, allow_expired: bool = False):
         if deadline_monotonic is None:
             with self.command_lock:
                 yield
             return
         remaining = deadline_monotonic - time.monotonic()
-        if remaining <= 0 or not self.command_lock.acquire(timeout=min(MAX_WAIT, remaining)):
+        acquired = (self.command_lock.acquire(blocking=False) if remaining <= 0 and allow_expired else
+                    remaining > 0 and self.command_lock.acquire(timeout=min(MAX_WAIT, remaining)))
+        if not acquired:
             raise ControlError("Original dispatch deadline expired or command writer unavailable")
         try:
             yield
@@ -1567,7 +1593,8 @@ class Controller:
                  receipt: dict[str, Any] | None = None, expected_generation: int | None = None,
                  resume_binding: dict[str, Any] | None = None,
                  expected_image_sha256: str | None = None,
-                 preflight: Callable[[dict[str, Any], float], None] | None = None) -> dict[str, Any]:
+                 preflight: Callable[[dict[str, Any], float], None] | None = None,
+                 unpublished_refusal: Callable[[], str | None] | None = None) -> dict[str, Any]:
         wait = self.timeout if timeout is None else timeout
         admitted = False
         with self.data_lock:
@@ -1581,6 +1608,13 @@ class Controller:
                 raise ControlError("Expected image hash must be exactly 64 lowercase hexadecimal characters")
             if preflight is not None and not callable(preflight):
                 raise ControlError("Mission preflight must be a trusted Python callback")
+            if unpublished_refusal is not None and (not callable(unpublished_refusal) or lease is None
+                    or lease.operation == "lifecycle" or kind not in {"key", "action", "direct"}):
+                raise ControlError("Unpublished refusal classifier requires trusted ordinary mission input")
+            classifier = unpublished_refusal
+            if classifier is not None:
+                def unpublished_refusal() -> str | None:
+                    return self._classify_unpublished_refusal(classifier, lease, admitted_generation, kind, receipt)
             if expected_generation is not None and (type(expected_generation) is not int or expected_generation < 0):
                 raise ControlError("Expected host generation requires a nonnegative integer")
             if expected_generation is not None and expected_generation != admitted_generation:
@@ -1624,7 +1658,7 @@ class Controller:
                     self._check_owner(lease, admitted_generation)
                 self._command_work += 1
                 admitted = True
-            with self._command_slot(deadline_monotonic):
+            with self._command_slot(deadline_monotonic, allow_expired=unpublished_refusal is not None):
                 if self.closed:
                     raise ControlError("Controller is closed")
                 with self.data_lock:
@@ -1633,7 +1667,7 @@ class Controller:
                         if kind == "walk" and admitted_generation != self.pause_generation:
                             raise ControlError("Admission superseded by pause or takeover")
                 if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:
-                    raise ControlError("Original dispatch deadline expired in command queue")
+                    self._expired_before_publication("Original dispatch deadline expired in command queue", unpublished_refusal)
                 if kind == "walk":
                     result = self._walk(payload.get("direction"), payload.get("steps"), wait,
                                         payload.get("expected_session"), payload.get("expected_revision"),
@@ -1641,12 +1675,13 @@ class Controller:
                 else:
                     result = self._command(kind, wait, payload, admitted_generation, lease,
                                            deadline_monotonic=deadline_monotonic, receipt=receipt, resume_binding=resume_binding,
-                                           expected_image_sha256=expected_image_sha256, preflight=preflight)
+                                           expected_image_sha256=expected_image_sha256, preflight=preflight,
+                                           unpublished_refusal=unpublished_refusal)
                 with self.data_lock:
                     self.last_result = result
                 return result
-        except _MissionInputRefusal as exc:
-            return {"status": "rejected", "error": str(exc)}
+        except MissionInputRefusal as exc:
+            return {"status": exc.status, "error": str(exc)}
         except _MissionPreflightFailure:
             # The mission boundary preserves its determinate unpublished receipt
             # even when persisting this diagnostic would fail again.
@@ -1677,7 +1712,8 @@ class Controller:
                  receipt: dict[str, Any] | None = None,
                  resume_binding: dict[str, Any] | None = None,
                  expected_image_sha256: str | None = None,
-                 preflight: Callable[[dict[str, Any], float], None] | None = None) -> dict[str, Any]:
+                 preflight: Callable[[dict[str, Any], float], None] | None = None,
+                 unpublished_refusal: Callable[[], str | None] | None = None) -> dict[str, Any]:
         with self.data_lock:
             if kind != "observe":
                 self._check_owner(lease, generation)
@@ -1717,7 +1753,7 @@ class Controller:
             entry_control_generation = self.state["boundary"]["control_generation"] if self.state else None
         observation_receipt: dict[str, float] = {}
         observed = self._exchange("observe", timeout, deadline_monotonic=deadline_monotonic,
-                                  observation_receipt=observation_receipt)
+                                  observation_receipt=observation_receipt, unpublished_refusal=unpublished_refusal)
         if observed["status"] != "ready":
             return observed
         if receipt is not None and (lease is not None or resume_binding is not None):
@@ -1761,16 +1797,21 @@ class Controller:
             raise ControlError("Action is not registered in the current input context")
         if (kind == "direct" and payload["input"]["type"] == "click"
                 and payload["input"]["geometry"] != observed["frame_geometry"]):
-            raise _MissionInputRefusal("Click geometry differs from the actual receiver mapping")
+            raise MissionInputRefusal("Click geometry differs from the actual receiver mapping", status="rejected")
         if lease is not None or resume_binding is not None:
             try:
                 pause_snapshot = self._pause_snapshot() if resume_binding is not None else None
                 if expected_image_sha256 is not None and self._frame_sha256(observed) != expected_image_sha256:
-                    raise _MissionInputRefusal("Final preflight image differs from the informing image")
+                    raise MissionInputRefusal("Final preflight image differs from the informing image", status="rejected")
                 received = observation_receipt["received_monotonic"]
+                deferred_refusal = None
                 if preflight is not None:
                     try:
                         preflight(copy.deepcopy(observed), received)
+                    except MissionInputRefusal as exc:
+                        if lease is None or lease.operation == "lifecycle" or kind == "resume":
+                            raise ControlError("Local refusal cannot preserve lifecycle or recovery authority") from exc
+                        deferred_refusal = exc
                     except Exception as exc:
                         # A normal storage/capacity/contract failure proves no input
                         # publication. Crashes/BaseException retain durable unknowns.
@@ -1798,12 +1839,16 @@ class Controller:
                         self._mission_frame(observed, lease.operation, direct=kind == "direct")
                     if not 0 <= time.monotonic() - received <= 3:
                         raise ControlError("Final preflight observation expired")
+                    if deferred_refusal is not None:
+                        self.check_mission_refusal(lease, generation, command_work=1)
                     if deadline_monotonic is not None and time.monotonic() >= deadline_monotonic:
-                        raise ControlError("Original dispatch deadline expired during preflight")
+                        self._expired_before_publication("Original dispatch deadline expired during preflight", unpublished_refusal)
                     if kind == "direct" and self.state["frame"] != checked_frame:
-                        raise _MissionInputRefusal(
-                            "Native frame identity changed during final preflight; observe and choose a new input")
-            except _MissionInputRefusal:
+                        raise MissionInputRefusal(
+                            "Native frame identity changed during final preflight; observe and choose a new input", status="rejected")
+                    if deferred_refusal is not None:
+                        raise deferred_refusal
+            except MissionInputRefusal:
                 raise
             except (ControlError, OSError) as exc:
                 with self.data_lock:
@@ -1818,7 +1863,7 @@ class Controller:
                                 revision=observed["revision"], boundary_id=observed["boundary"]["id"],
                                 takeover_generation=observed["takeover_generation"], deadline_monotonic=deadline_monotonic,
                                 frame=observed["frame"], require_exact_frame=kind != "direct" and expected_image_sha256 is not None,
-                                receipt=receipt, **primitive)
+                                receipt=receipt, unpublished_refusal=unpublished_refusal, **primitive)
         if kind == "resume" and result["status"] == "ready":
             with self.data_lock:
                 if generation != self.pause_generation:
@@ -1827,6 +1872,62 @@ class Controller:
                 else:
                     self.pause_requested = result["paused"]
         return result
+
+    @staticmethod
+    def _expired_before_publication(message: str,
+                                    unpublished_refusal: Callable[[], str | None] | None) -> None:
+        if unpublished_refusal is not None:
+            try:
+                reason = unpublished_refusal()
+            except Exception as exc:
+                raise ControlError(f"Unpublished refusal classification failed: {type(exc).__name__}: {exc}") from exc
+            if reason is not None:
+                raise MissionInputRefusal(reason)
+        raise ControlError(message)
+
+    def check_mission_refusal(self, lease: MissionLease, generation: int, *, command_work: int) -> dict[str, Any]:
+        """Read-only common custody fence for a healthy zero-input refusal."""
+        with self.data_lock:
+            self._check_owner(lease, generation)
+            if (self._command_work != command_work or command_work == 0 and self.command_lock.locked()
+                    or self.control_lock.locked() or self.control_pending is not None or self.pending is not None
+                    or any((self.bridge / name).exists() for name in
+                        ("pause", "request.json", "claimed.json", "control.json", "control-claimed.json"))):
+                raise ControlError("Competing work or Pause prevents local refusal")
+            state = self.state
+            validate_state(state)
+            if (state["status"] != "ready" or state["error"] or state["paused"]
+                    or not state["frame_ok"] or not state["frame"]
+                    or state["boundary"]["kind"] not in INPUT_BOUNDARIES
+                    or not state["boundary"]["input_receiver"]):
+                raise ControlError("Local refusal requires healthy capture and an owned ordinary receiver")
+            # Read-only refusal is not a freshness promotion. Explicit Observe
+            # may refresh aged evidence; actual publication still checks age.
+            return copy.deepcopy(state)
+
+    def _classify_unpublished_refusal(self, classifier: Callable[[], str | None], lease: MissionLease,
+                                     generation: int, kind: str, receipt: dict[str, Any] | None) -> str | None:
+        """Read-only runtime proof may reenter data_lock, never either writer lock."""
+        if receipt is None or receipt["published"]:
+            raise ControlError("Local refusal requires a known unpublished mission receipt")
+        with self.data_lock:
+            preflight = receipt["preflight"]
+            observed = copy.deepcopy(preflight["observation"] if preflight else self.state)
+            received = preflight["received_monotonic"] if preflight else self._state_received_monotonic
+
+            def fence() -> None:
+                self.check_mission_refusal(lease, generation, command_work=1)
+                if (not same_native_state(self.state, observed)
+                        or kind != "direct" and self.state["frame"] != observed["frame"]):
+                    raise ControlError("Native boundary or frame changed before local refusal")
+                self._mission_frame(observed, lease.operation, direct=kind == "direct")
+                if received is None or not 0 <= time.monotonic() - received <= 3:
+                    raise ControlError("Final preflight observation expired")
+
+            fence()
+            reason = classifier()
+            fence()
+            return reason
 
     def _preflight_capture(self, observed: dict) -> str:
         """Retain the exact immutable preflight identity and its original clock.

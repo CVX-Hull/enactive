@@ -100,6 +100,24 @@ churn still prevents real Save, assess command-relevant equivalence across the
 whole boundary; this observation correction does not guarantee liveness.
 [#195](https://github.com/CVX-Hull/enactive/issues/195) owns live follow-through.
 
+### Local requests and continuing gameplay
+
+Fresh006 exposed another composition gap: exhausting a small ordinary root
+refused its next child before input but controller preflight revoked the whole
+mission. [The dated report](../acceptance/2026-10-22-independent-seven-day-sixth-attempt.md)
+owns that failure and its costs; #176 owns the repair, #145 the full outcome.
+Retain explicit Observe closure and player-selected new roots, using the existing
+known-unpublished controller path for healthy local expiry. Typed local allowance
+classification must not catch global resource, clock, custody or storage failures.
+The trusted callback performs no input or curation and preserves final fatal
+fences through atomic publication. Prepared nondelivery remains charged; actual
+passive completion verification is evaluated before refusing another input.
+This is a correction to existing ownership/accounting composition, without a new
+recovery system, player ingress, wire shape, menu handler or renewed allowance.
+The protocol and mixed-input design own the exact behavior and source/native
+qualification limits. Pre-admission refusals remain ingress rejections; they are
+not invented accepted operations or primitive charges.
+
 ### Artifact reconciliation
 
 At interface/integration checkpoints, use this map to update the affected
