@@ -1284,6 +1284,92 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(primitive["native_id"], self.bridge.delivered[-1]["id"])
         self.assertEqual(self.runtime.command(req)["operation"], op)
 
+    def test_wide_ordinary_exploration_keeps_bounded_map_and_current_navigation(self):
+        # Reproduce the fresh003 publication failure with real runtime components,
+        # not native gameplay: this visible transport supplies a broad trajectory.
+        self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        original = self.start()
+        first = self.runtime._current
+        observed_map = self.runtime._map
+        projected = set()
+
+        def footprint(scene):
+            x, y, z = scene["position"]
+            projected.add((x, y, z))
+            projected.update((x + cell["dx"], y + cell["dy"], z)
+                for cell in scene["neighbors"] if abs(cell["dx"]) + abs(cell["dy"]) == 1)
+
+        footprint(self.bridge.value["scene"])
+        directions = {"RIGHT": (1, 0), "DOWN": (0, 1), "LEFT": (-1, 0)}
+        def move(bridge, request):
+            if request["kind"] == "direct":
+                dx, dy = directions[request["input"]["key"]]
+                bridge.value["scene"]["position"][0] += dx
+                bridge.value["scene"]["position"][1] += dy
+            if request["kind"] in ("direct", "action"):
+                bridge.value["scene"]["turn"] += 1
+                footprint(bridge.value["scene"])
+            return True
+        self.bridge.behavior = move
+        keys = ["RIGHT"] * 60 + ["DOWN"] * 4 + ["LEFT"] * 60 + ["DOWN"] * 4 + ["RIGHT"] * 60
+        for index, key in enumerate(keys, 1):
+            request = self.control("direct", dict(input=dict(type="key", key=key, modifiers=[]),
+                interrupt_allowed=False, intent="Explore the visible surroundings",
+                expected="Inspect the resulting position"), request_id=f"explore-{index}")
+            response = self.runtime.command(request)
+            self.assertEqual(response["status"], "accepted", response)
+            operation = self.settled(request["request_id"])
+            # A known delivered key must remain returned even at cache eviction.
+            primitive = self.runtime._ledger.primitive_records()[-1]
+            self.assertEqual(primitive["state"], "returned", primitive)
+            self.assertEqual(primitive["result"]["native_ack"]["id"], primitive["native_id"])
+            self.assertIsNone(primitive["result"]["evidence_loss"])
+            self.assertEqual(operation["state"], "partial",
+                f"Input {index}, {len(projected)} projected coordinates: {operation['result']}")
+            self.assertEqual(operation["result"]["basis"], "ordinary_input")
+            self.assertIsNone(operation["result"]["pending_logical_id"])
+            self.assertIs(self.runtime._map, observed_map)
+            self.assertLessEqual(observed_map.node_count, 512)
+
+        self.assertGreater(len(projected), 512)
+        self.assertEqual(self.runtime._store.position(self.runtime._current), (60, 8, 0))
+        # The retained current footprint still supports a useful guarded request.
+        request = self.navigation(target=(61, 8, 0), request_id="navigate-after-wide-exploration")
+        self.assertEqual(self.runtime.command(request)["status"], "accepted")
+        operation = self.settled(request["request_id"])
+        self.assertEqual(operation["state"], "completed", operation)
+        self.assertEqual(operation["result"]["verified_steps"], 1)
+        self.assertEqual(self.runtime._store.position(self.runtime._current), (61, 8, 0))
+        self.assertIs(self.runtime._map, observed_map)
+        self.assertLessEqual(observed_map.node_count, 512)
+
+        rows = self.runtime._ledger.primitive_records()
+        delivered = [r for r in self.bridge.delivered if r["kind"] in ("direct", "action")]
+        self.assertEqual(len(rows), len(keys) + 1)
+        self.assertEqual([r["native_id"] for r in rows], [r["id"] for r in delivered])
+        self.assertEqual([r["input"]["key"] for r in delivered[:-1]], keys)
+        self.assertEqual(delivered[-1]["action"], "RIGHT")
+        retained = {ref.observation_id: ref for ref in self.runtime._store.historical_references}
+        self.runtime._store.verify(first)
+        for row in rows:
+            self.assertEqual(row["state"], "returned")
+            self.assertEqual(row["result"]["transport_disposition"], "returned")
+            self.assertIsNone(row["result"]["evidence_loss"])
+            self.runtime._store.verify(retained[row["intent"]["source_before"]])
+            self.runtime._store.verify(retained[row["result"]["source_after"]])
+        status = self.runtime.status()
+        self.assertEqual(status["phase"], "active")
+        self.assertEqual(status["unresolved_effects"], [])
+        self.assertIsNotNone(status["lease_owner"])
+        self.assertEqual(status["spent_inputs"], len(rows))
+        self.assertEqual(status["metrics"]["game_seconds"], len(rows))
+        self.assertEqual(status["remaining_limits"]["inputs"], self.a.limits.inputs - len(rows))
+        self.assertEqual(status["remaining_limits"]["game_seconds"], self.a.limits.game_seconds - len(rows))
+        for field in ("epoch", "player_id", "started_at", "deadline", "cleanup_reserve", "coordinate_scope"):
+            self.assertEqual(status[field], original[field], field)
+        self.assertEqual(self.runtime._admission, self.a)
+        self.assertFalse(status["grants_authority"])
+
     def test_already_reached_and_unknown_route_do_not_rotate_or_send(self):
         self.start()
         lease = self.controller._mission_lease

@@ -164,6 +164,16 @@ effort before a campaign benefits. Record the expected benefit, uncertainty,
 upkeep and reassessment trigger in the existing issue or design decision under
 S-CODE; immediate payoff is not required.
 
+The observed navigation map is a lossy512-coordinate candidate cache, separate
+from retained evidence and player memory. Projection validates updates atomically,
+keeps the current position/cardinal footprint and evicts older cached coordinates
+using their existing source revisions. Forgotten routes become unavailable until
+reobserved; current movement guards still verify each dispatched step. Cache
+growth must not stop ordinary observation/input. The
+[failed third fresh campaign](acceptance/2026-10-22-independent-seven-day-third-attempt.md)
+records why the former lifetime bound was unsuitable. This uses existing Python
+containers; no new world store, recency journal, dependency or persisted format.
+
 The [overview](overview.md) provides the user-facing system picture. One local
 macOS game and one controller are supported. Prepared keyboard-driven launch
 requires project-local `ENABLE_MOUSE=false` and `FULLSCREEN=no`; native-image

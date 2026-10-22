@@ -89,6 +89,16 @@ as advisory library input. A technical creation-recovery clarification is disclo
 zero assistance, causal benefit and seven-day survival are not claimed.
 Source/CI support is distinct from real qualification and game-family portability.
 
+The [third fresh campaign](acceptance/2026-10-22-independent-seven-day-third-attempt.md)
+then demonstrated an actual clean retained-memory successor and independent
+exploration, but failed after258game seconds when an optional512-coordinate
+navigation map stopped ordinary observation. No daily milestone or normal ending
+is credited. [#193](https://github.com/CVX-Hull/enactive/issues/193) changes that
+map to a bounded lossy cache, preserving evidence and current guards; source
+regressions and independent source/evidence review pass; exact candidate CI and a
+new real campaign remain pending.
+The full independent seven-day outcome is still outstanding.
+
 The official MCP SDK adapter constructs and retains requests, collects original
 results and presents exact images over the existing mission ingress. Both024
 players used the then-current fifteen project-preapproved tools without visible routine

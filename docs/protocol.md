@@ -1361,6 +1361,19 @@ its conservative movement guards remain shared with mission navigation.
 
 ## Passive gameplay records and evidence
 
+Mission navigation's `ObservedMap` is a bounded candidate cache, not durable world
+memory or a lifetime exploration budget. Each valid projection keeps its current
+position and four cardinal coordinates within512cached coordinates, atomically
+evicting oldest other coordinates by their newest cell/anchor source revision,
+with deterministic coordinate tie-breaks. Both cell and anchor entries are removed
+together. A test configuration too small for one footprint refuses before mutation.
+Eviction never removes retained frames or Claims, renews authority, changes scope
+or refunds mission costs. An old route may become blocked/unknown until reobserved;
+ordinary observation/input and fresh guarded navigation continue within the
+original mission limits. Source integrity, regression, session, Pause/takeover and
+uncertain delivery remain separate stopping conditions. This process-local cache
+change adds no persisted or tool format and no compatibility path.
+
 [Contracts](../harness/gameplay/contracts.py) define eight frozen records:
 TaskSpec, EvidenceRef, EvidencePacket, SkillDescriptor, PlanCandidate,
 PrimitiveResult, StageResult and RunStatus. Serialized records carry

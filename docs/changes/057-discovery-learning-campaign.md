@@ -479,3 +479,36 @@ than another review scheduler. Reconcile the proposals, authoritative contracts,
 control limitations and backlog at interface acceptance, integration and real-run
 findings. Existing maintenance dates do not reset. Functional learning and
 reflection are required; optional training/model tiers/causal research are separate.
+
+## Fresh003 map-cache failure and bounded repair
+
+The [closed third fresh campaign](../acceptance/2026-10-22-independent-seven-day-third-attempt.md)
+exposed a shared-foundation defect rather than a missing menu handler:
+`_publish_source` made every normal observation depend on an optional navigation
+map's512-coordinate lifetime bound. The last input was known returned; source
+publication failed after retaining its evidence. All actors and owned processes
+are closed, with no seven-day or normal-ending credit. The original exactc224CI
+failure is also retained; its test-only fsync fixture correction was integrated
+only after deciding play ended.
+
+[#193](https://github.com/CVX-Hull/enactive/issues/193) applies the existing
+[organic-input design](../design/organic-discovery.md), S-ARCH ordinary-input
+foundation and P-CHANGE/S-CODE reuse principles. Retain the512-coordinate working
+set as a lossy candidate cache: validate before mutation, retain the new cardinal
+footprint, evict older other coordinates using existing EvidenceRefs, and leave
+durable evidence/player memory/current movement guards intact. Old routes can
+require reobservation. This changes process-local candidate retention, not input
+authority, world facts, mission limits or a persisted/tool format. Existing Python
+containers suffice; a world database, generic cache framework, duplicate recency
+history or cap increase would add no demonstrated value here.
+
+The whole-runtime regression reproduces old failure at171inputs/514projected
+coordinates; the repair passes188ordinary requests followed by guarded navigation.
+Unit tests cover bounded growth beyond512, reobservation, lost-route uncertainty
+and atomic regression rejection. These fixtures qualify component behavior only;
+independent source/evidence review is clear; exact CI and new native exploration
+remain separate. Revisit the
+eviction choice if observed routing usefulness or cost warrants it, under the
+existing owner/issue. No new approval layer, tracker or generic semantic checker.
+The engineering lead remains outside tactics and curation; the next player still
+owns its full survival strategy and eventual seven-day result.

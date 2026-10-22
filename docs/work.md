@@ -12,156 +12,35 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 
 ## Current integrated checkpoint
 
-The next selected delivery is [discovery, learning and the fresh campaign](changes/057-discovery-learning-campaign.md):
-mixed interaction#176, player-derived procedures#177, nonblocking reflection#178,
-observer/measurement follow-through#143/#164, then actual seven-day assessment#145.
-The latest [normal learning006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
-has an independently accepted bounded functional outcome and eligible native6v2
-advisory library. It retains155primitives/128requests/409images/1,850game seconds,
-all six unknown ACKs with separate effect proofs, normal exact reload/shutdown
-and a disclosed technical creation-recovery clarification. Deciding1947b3a passed
-exact hosted CI39728016010/1,571tests. Published observer6288b5a subsequently passed
-exact CI39735590480/1,571tests/851.285seconds. The observer candidate fixes an actual
-paused no-game stale-credential/Pause failure, with independent source review and
-real reconnect/Pause verification; native/browser clock correlation and protected
-publication remain separate. Next is a newly frozen genuinely fresh seven-day
-campaign, not resumption of earlier failed authority. Historical checkpoints below
-retain their earlier source-specific findings.
-Its [coupled preparation](acceptance/2026-10-21-independent-seven-day-readiness.md#joint-finite-preparation-budget)
-now accommodates the first seven-day run's larger workload through the existing
-optional8192-frame/2GiB store/ledger/library ceiling. Existing defaults/admissions
-and metadata/database bounds remain fixed. Independent review and114focused tests
-pass; actual fresh-host preflight and finite freeze remain required, with no
-large-archive performance or new gameplay outcome inferred.
-The [procedure/exchange boundary](design/procedure-learning.md) has passed scoped
-design review. Native5 ordinary input, current host migration, procedure memory/
-library/handoff and observer changes have source implementations; the native build
-passed. Reflection has coalesced writer scheduling and structured advisory
-claim/source/submit/result/advice tools. The actual twenty-tool host and concurrent
-player/advisory actors were exercised in the [failed first learning attempt](acceptance/2026-10-21-discovery-learning-first-attempt.md).
-Player-derived revision/reuse and fresh-context application have supported partial
-evidence. The [second attempt](acceptance/2026-10-21-discovery-learning-second-attempt.md)
-adds food and same-proposal reflection/disposition evidence but failed normal
-saving. #182 has the capture repair; #183 owns correcting lifecycle-root drafts
-before admission without losing authority. Both attempts are closed failures.
-The subsequent003attempt failed before normal adoption:48requests/89primitives,
-218frames, no adopted game-time. [#184](https://github.com/CVX-Hull/enactive/issues/184)
-owns new-control deadlines versus source age; [#185](https://github.com/CVX-Hull/enactive/issues/185)
-owns valid advisory jobs exceeding their HTTP envelope through serialization
-overhead. The retained003job is ASCII-only; Unicode expansion is a separate
-regression case, and the exact failed wire body remains unavailable. All003actors
-and processes are closed. The [fourth run](acceptance/2026-10-21-discovery-learning-fourth-attempt.md)
-completed normal save/restart/reload/final shutdown and independently verified
-procedure reuse, fresh-context application and same-proposal graphical advisory
-overlap/disposition. Its178primitives/148requests/467frames/1845game seconds remain
-retained. The lead accepts scoped changed-condition refinement, not correction of
-an erroneous R1 rule or causal improvement. All004actors/processes are closed.
-[#187](https://github.com/CVX-Hull/enactive/issues/187) repairs reversible advisory
-finishing, the exact82bdd10CI failure, in the subsequent source checkpoint.
-Independent source review and focused tests passed; the exact repair checkpoint
-passed1,448local tests. Hosted/protected checks remain separate. #188owns the
-actual pre-campaign library refusal: authority-blocked retained images must not
-be confused with disputed history. Its reviewed repair passed77focused tests;
-the lead independently retrieved both004revisions and ten original sources
-without changing either pin. Exact final full/hosted checks remain separate.
-The bounded learning verdict supported the [first fresh campaign attempt](acceptance/2026-10-21-independent-seven-day-first-attempt.md),
-which failed before identity adoption with91primitives/45requests/219frames and no
-adopted game-time. Its exact c2b9117source passed1,451local tests, but lacked the
-library-plus-lifecycle composition regression. #189reuses the pure claim reducer
-without constructing procedure memory; independent review,108worker/44reviewer
-focused tests passed. All001actors/processes are closed exceptionally. A genuinely
-fresh next attempt and protected publication remain pending. The
-[second fresh attempt](acceptance/2026-10-21-independent-seven-day-second-attempt.md)
-passed normal adoption but failed after food pickup and thirty minutes of wait:
-115 primitives/64 requests/285 frames/1,804 game seconds, no daily milestone or
-normal ending. All actors/processes are closed exceptionally. #190 preserves
-healthy zero-input draft correction and player-chosen ordinary Escape; independent
-source review and 109 lead-focused tests passed. #192 fixes the independently
-reproduced native/host exchange deadline mismatch; 145 reviewer-focused tests
-passed. Exact9950f78 passed1,464local tests and hosted run39701438167.
-Those passes apply to that source, not subsequent repairs or new real play.
+The selected [discovery, learning and fresh-campaign delivery](changes/057-discovery-learning-campaign.md)
+remains open. GitHub owns live execution status; this checkpoint records the
+accepted baseline and remaining outcome, rather than every intermediate failure.
 
-The user now requires applicability across CDDA-class games and general discovery
-instead of accumulating menu handlers. P-GENERALITY, S-ARCH/S-CODE and existing
-controls record this constraint. [#191](https://github.com/CVX-Hull/enactive/issues/191)
-owns whole-loop recovery, CDDA coupling/migration, unfamiliar/time-changing
-interface tests and independent second-game evidence. Existing ordinary-input,
-memory/reflection, native and latency issues retain their acceptance lanes. Filing
-work or passing synthetic variants does not establish game-family support.
-The selected foundation reuses the existing writer with semantic shortcuts above
-ordinary input. Its first source repair permits explicit Observe on a changed
-healthy prompt without renewing the root or retaining stale quantity proof.
-Semantic refresh remains strict; ordinary physical keys/scalars permit visual
-drift under uninterrupted custody and clicks retain their original geometry. The
-[delivery impact map](changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
-routes contract, caller, documentation, control, evidence and backlog updates.
-The selected ordinary-input migration has passed scoped architecture review;
-native6, controller, host-source and persistence migrations are locally integrated;
-actual host loading and graphical qualification remain separate. The reviewed native refusal-publication
-capture-failure repair now sets fault/Pause; composed source tests pass. Controller
-triage and evidence/policy clock/identity repairs have focused passing evidence in
-the delivery brief. The ACK/ledger/library candidate is locally integrated; its
-independent review found an after-source/ACK identity audit gap, now repaired in
-the shared mapper with settlement/reopen regressions. Runtime now preserves known
-ACK settlement independently of archive/current publication, using immutable
-preflight facts and separately validated actual-current prompt evidence. Scoped
-review and focused tests cover the implemented path. Explicit Observe now records
-local ordinary macro closure before clearing its private prompt, and stale queued
-children refuse without pausing healthy custody. The focused macro/prompt,
-activity/ACK and HTTP caller lanes pass. Known returned direct input now retains
-a read-only scope if the independent current snapshot is missing/aged; only
-explicit Observe across the authenticated rotation can publish the next binding.
-Local game overshoot returns partial work while healthy mission ownership survives;
-actual faults and global exhaustion still stop. Runtime regressions and fast
-checks pass. The initial full suite failed1567tests with10failures/186errors;
-current-only fixture and lifecycle receipt corrections have focused passing
-evidence and independent review. The complete repaired check ran1,569tests with
-one stale diagnostic assertion failure; that assertion is repaired and its
-27-test caller/lifecycle lane passes. Exact3f17f7c hosted CI39723564882 then
-passed1,569tests/827.945s plus portable/viewer checks. Native6 compiled and was
-installed, but the [fifth learning attempt](acceptance/2026-10-22-discovery-learning-fifth-attempt.md)
-failed on its first ordinary pickup key: a fresh partially consumed native JSON
-object triggered CDDA DEBUG_MSG. Its53requests/87primitives/218frames/1game second
-and two unknown ACKs remain retained; no current library or normal ending is
-accepted. Both actors and owned processes are closed exceptionally. The actual
-pinned-parser probe reproduces the fault without another character-creation run;
-reviewed native lifetime and known-ACK/custody repairs received exact-source CI,
-actual rebuilt/signed native and the separate normal006graphical evidence above.
-#176/#191 retain broader ordinary-input and portability follow-through.
-P-CHANGE/S-CODE and the existing review/maintenance controls now
-explicitly favor objective-oriented reuse and configured platform guarantees;
-the delivery brief records an applied removal of duplicate post-ACK verification.
-They also allow deliberate accelerator/enabler investment over the longer project
-horizon, without requiring immediate payoff; #75/#175/#191 carry the corresponding
-maintenance, reuse-assessment and delivery dispositions. This adds no new campaign
-gate. Published5f9a225 passed hosted
-run39703745808, separately from this unfinished migration. Broader preflight/
-receiver/delivery separation and real qualification remain #191 work; fresh003
-is preparation only, with no admission or running gameplay actors. Closed006now
-supplies the scoped current-contract library; closed learning004 remains
-historical evidence and is not relabeled as current input.
-Source checks issue no run authority. The accepted024
-baseline and historical attempts below remain evidence, not a new admission.
+| Area | Evidence and next consequence |
+| --- | --- |
+| Integrated learning | [Normal006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md) has an independently accepted bounded functional outcome, scoped native6v2 procedure library, actual clean-context application and exact normal save/reload/shutdown. It does not prove causal learning benefit or seven-day survival. |
+| Fresh independent campaign | [Fresh003](acceptance/2026-10-22-independent-seven-day-third-attempt.md) failed after398inputs/258game seconds because the optional512-coordinate map stopped ordinary observation. Actual clean-context retrieval/readmission/continuation is supported; no daily milestone, midpoint reload or normal ending. Failed001/002/003 remain closed. |
+| Immediate repair | [#193](https://github.com/CVX-Hull/enactive/issues/193) makes the map a bounded lossy routing cache, preserving retained evidence and current guards. Old-source whole-runtime reproduction failed at input171; the repair's runtime regression and46navigation tests pass. Independent review passed; exact candidate CI and new real qualification remain required. |
+| Source qualification | Earlier6288b5a CI39735590480 passed1,571tests. Decidingc2245b9 CI39737790740 failed a shared-fsync test-fixture race. Its independently reviewed test-only repair stayed isolated until003closed; three focused tests pass. No passing final-candidate/protected-main claim yet. |
+| Remaining actual evidence | #176/#181 native direct click/geometry, #138 navigation recovery, #139/#152 activity interruption, #143 observer presentation and #164 representative request/display timing retain their scoped qualifications. Synthetic source tests do not substitute for these lanes. |
 
-[Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) has
-independently verified original gameplay outcomes: supplies/needs, six credited
-navigation steps including a three-step return, genuine replan/corrections,
-thirty actual minutes of shelter waiting, retained unfinished Work, actual fresh
-successor with seven hash-verified image exports, exact normal save/new-child/reload
-and normal final shutdown.156charges/123requests/408frames/1845game seconds;
-six original unknown ACKs retain separately settled effects. The deciding source
-502ca0f passed1291hosted tests. Final publication, candidate/protected-main CI
-and Issue/Project receipts belong to [PR158](https://github.com/CVX-Hull/enactive/pull/158)
-and#144, separately from this gameplay result. Failed001–023remain
-closed with1468charges/982requests, not repaired successes.
+The next fresh seven-day assessment must preserve the original full outcome:
+maintained needs/supplies, shelter/rest, purposeful travel and observed-threat
+decisions, actual retained-memory succession, exact midpoint reload and normal
+final ending. No failed authority resumes and no deciding source/limit is patched.
+The [coupled readiness plan](acceptance/2026-10-21-independent-seven-day-readiness.md#joint-finite-preparation-budget)
+uses existing optional8192-frame/2GiB ceilings; it is a finite planning envelope,
+not a survival guarantee. Closed006 remains the current eligible library; failed003
+is retained evidence, not an eligible normal-closure library.
 
-[Seven-day readiness](acceptance/2026-10-21-independent-seven-day-readiness.md)
-selects a bounded prospective assessment and jointly forecasts existing caps and
-protected ending. It grants no live authority or seven-day success. #145/#136 stay
-open. Terminal observer wording/historical Work ambiguity remains owned by#143/#164;
-organic interaction/procedure learning/reflection remain#176–178 below. The attempt
-notes below retain historical checkpoint states; this section and the linked
-current report supersede their former “pending full mission” assessment.
+P-CHANGE/S-CODE permit deliberate accelerators over the longer project horizon,
+without demanding immediate payback. #75/#175/#191 retain maintenance, reuse and
+foundation follow-through. The pinned native-parser probe already avoids repeated
+character creation for a reproduced parser failure. Cross-admission Save/Load
+reuse remains conditional under #175, with ordinary engine behavior and new
+provenance, rather than a custom snapshot/history framework. Current contracts,
+prior research and artifact impacts remain linked in the delivery brief. Earlier
+source-specific failures are preserved in their dated acceptance reports and Git.
 
 ## Campaign delivery path
 

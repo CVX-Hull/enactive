@@ -2900,10 +2900,11 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 lease = self.acquire()
                 callback_failed = threading.Event()
                 original_fsync = os.fsync
+                controller_thread = threading.get_ident()
                 original_pause = self.controller._pause_file
                 attempts = []
                 def fsync(fd):
-                    if callback_failed.is_set():
+                    if callback_failed.is_set() and threading.get_ident() == controller_thread:
                         attempts.append("fsync")
                         raise OSError(errno.ENOSPC, "persistent synthetic disk full")
                     return original_fsync(fd)
@@ -2917,6 +2918,10 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     original_pause()
                 def preflight(*args):
                     callback_failed.set()
+                    # Native publication is a different writer from the injected
+                    # controller failure, including while the callback is failing.
+                    with ThreadPoolExecutor(1) as pool:
+                        pool.submit(fake.publish, fake.value.copy()).result(1)
                     raise OSError(errno.ENOSPC, "callback archive unavailable")
                 with patch("harness.controller.os.fsync", side_effect=fsync), patch.object(
                         self.controller, "_pause_file", side_effect=pause_file):

@@ -65,6 +65,12 @@ functional behavior and claims of improvement need their separate evidence.
 Ordinary interface actions are the player's base capability; semantic skills are
 optional shortcuts and stronger claims about those actions. Missing semantic
 coverage must not prevent otherwise supported ordinary exploration or cancellation.
+Treat optional accelerators and derived caches accordingly: bound their working
+set and forget/recompute candidates when appropriate, rather than make historical
+cache growth a lifetime limit on ordinary observation/input. Preserve durable
+evidence, current guards, explicit uncertainty and original resource accounting.
+Exercise exploration beyond the cache working set in the existing component and
+whole-runtime lanes; this is not permission to ignore integrity or storage failure.
 Separate a rejected request, an unexpected in-game outcome and actual loss of
 authority or uncertain delivery. A correctable request error must not revoke a
 healthy input scope. Review the entire observe/try/correct/cancel loop, including
