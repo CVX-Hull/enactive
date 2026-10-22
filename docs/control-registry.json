@@ -322,20 +322,21 @@
         "docs/changes/053-operation-entry-refresh.md",
         "docs/acceptance/2026-10-21-independent-supply-shelter.md",
         "docs/acceptance/2026-10-21-independent-seven-day-readiness.md",
-        "docs/acceptance/2026-10-22-independent-seven-day-fourth-attempt.md"
+        "docs/acceptance/2026-10-22-independent-seven-day-fourth-attempt.md",
+        "docs/acceptance/2026-10-22-native-local-refusal.md"
       ],
       "failure_response": "Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.",
-      "limitations": "Independent024 qualifies the bounded supplies/rest, correction/unfinished Work, actual fresh successor and normal same-character save/new-child/reload/final NormalFinish path on502ca0f/nativecd031. It does not qualify general native activity interruption/answer/resumption, general setup abort, combat/damage safety or seven-day independence. Earlier native/independent failures remain failed evidence. Portable fake-bridge fixtures alone cannot establish real effects. Frameless ACKs are not fresh images; unknown ACKs retain separate effect proofs. Pause cannot undo committed input or cancel an activity; filesystem stalls can delay revocation. Actual primary/successor tools show no visible routine reviews; hidden host telemetry is unavailable. Terminal viewer wording and historical Work ambiguity remain owned by#143/#164. No causal memory/learning or latency benefit is established. Current source adds ordinary input, procedure/reflection support and explicit changed-prompt observation. Bounded learning004 evidence and failed fresh001/002 evidence are linked through docs/changes/057-discovery-learning-campaign.md. Broader preflight drift, receiver classification, delivery/meaning and CDDA coupling remain #191 work; no real cross-game support is qualified. Dated exercise and maintenance records below retain their original024-baseline scope.",
+      "limitations": "Independent024 qualifies the bounded supplies/rest, correction/unfinished Work, actual fresh successor and normal same-character save/new-child/reload/final NormalFinish path on502ca0f/nativecd031. It does not qualify general native activity interruption/answer/resumption, general setup abort, combat/damage safety or seven-day independence. Earlier native/independent failures remain failed evidence. Portable fake-bridge fixtures alone cannot establish real effects. Frameless ACKs are not fresh images; unknown ACKs retain separate effect proofs. Pause cannot undo committed input or cancel an activity; filesystem stalls can delay revocation. Actual primary/successor tools show no visible routine reviews; hidden host telemetry is unavailable. Terminal viewer wording and historical Work ambiguity remain owned by#143/#164. No causal memory/learning or latency benefit is established. Current source adds ordinary input, procedure/reflection support and explicit changed-prompt observation. Bounded learning004 evidence and failed fresh001/002 evidence are linked through docs/changes/057-discovery-learning-campaign.md. Broader preflight drift, receiver classification, delivery/meaning and CDDA coupling remain #191 work; no real cross-game support is qualified. The dated maintenance review below retains its original024-baseline scope; the later exercise has its own narrower qualification.",
       "enforcement": "Implemented at runtime; regression execution is C-PORTABLE. Source references alone establish no behavioral pass.",
       "status": "active",
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-21",
-        "outcome": "Independent024 reached registered NormalFinish with original gameplay outcomes independently audited; six original unknown ACKs retain separate settled-effect proofs, zero unresolved effects and normal owned runtime closure.",
-        "scope": "Frozen502ca0f/nativecd031;024development mission,408verified original PNGs/20,541,928bytes,1845game seconds. Actual fifteen-tool primary/successor paths report no visible routine review; hidden host telemetry unknown. Earlier failures retained; protected final publication/CI separate.",
+        "date": "2026-10-22",
+        "outcome": "Local-refusal001 exercised a one-primitive ordinary root, zero-input exhausted child refusal, explicit Observe closure and separately chosen fresh-root cancellation, preserving healthy custody/original costs. Exact same-character Save/new-child reload/postreload input/final normal exits and FinishStopped also passed.",
+        "scope": "Frozen409b8ac/nativece810d; independent closed-evidence review clean. The dated report owns counts, unknown/effect proofs and unexercised branches. No seven-day, deadline-race, wider mouse or causal-learning claim; full exact CI/publication remain separate.",
         "evidence": [
-          "docs/acceptance/2026-10-21-independent-supply-shelter.md"
+          "docs/acceptance/2026-10-22-native-local-refusal.md"
         ]
       },
       "maintenance_review": {
@@ -451,7 +452,8 @@
         "docs/acceptance/2026-10-20-mission-observer.md",
         "docs/acceptance/2026-10-21-independent-supply-shelter.md",
         "docs/acceptance/2026-10-21-independent-seven-day-readiness.md",
-        "docs/acceptance/2026-10-22-discovery-learning-sixth-attempt.md"
+        "docs/acceptance/2026-10-22-discovery-learning-sixth-attempt.md",
+        "docs/acceptance/2026-10-22-native-local-refusal.md"
       ],
       "failure_response": "Correct misleading flows or guidance and retain consequential limits before milestone acceptance.",
       "limitations": "Human judgment; no automated usability score or user study is claimed. Document links alone do not demonstrate comprehension.",
@@ -461,21 +463,23 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-22",
-        "outcome": "Actual006 terminal view separates STOPPED/HISTORY/DISCONNECTED and current effects; old last-command banner remains misleading. Subsequent reviewed browser-only repair passes actual paused no-game unchanged-tab reconnect/Pause; new terminal diagnostic label has source/synthetic coverage only.",
-        "scope": "Frozen1947b3a/nativece810d;128requests/155primitives/409verified PNGs/22,190,684bytes/1850game seconds. Six unknown ACKs remain with separate effect proofs. Technical creation-contract pointer disclosed. Source/native/graphical/CI lanes separate; no seven-day or causal benefit claim.",
+        "outcome": "Actual local-refusal001 stopped spectator shows STOPPED/HISTORY/DISCONNECTED, no current mission decision and controller snapshot timeout explicitly labelled mission ended/not gameplay instruction. Original screenshots/AX independently reviewed. Existing paused no-game reconnect/Pause evidence remains separate.",
+        "scope": "Frozen409b8ac/nativece810d, normal closed technical run only. Dated report owns full evidence and limits; source/native/gameplay/CI lanes remain distinct. No real-user usability study or full campaign latency claim.",
         "evidence": [
+          "docs/acceptance/2026-10-22-native-local-refusal.md",
           "docs/acceptance/2026-10-22-discovery-learning-sixth-attempt.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-22",
         "effectiveness": "partially_effective",
-        "findings": "Terminal history/current separation improves; actual restart exposed stale credentials rejecting Pause. Standard same-origin page refresh repairs reconnect without ordinary-action replay, with independent Pause and image-generation regression coverage. Actual new live-game terminal-label rendering and native/browser timing remain unqualified.",
-        "cost": "Learning006155primitives/128requests/409frames;20advisory windows charge3600seconds versus296.295observed claim elapsed. Exact1947b3a hosted1571tests/823.325seconds. Separate browser probe used no game or mission, one explicit Pause in each service, all controllers normally closed. Inference/token/quota/full workflow cost unknown.",
-        "follow_up": "#145 fresh seven-day campaign and protected publication;#143 actual new terminal rendering;#164 representative paired timing/batching;#177/#178 efficacy/scheduling limits;#138/#139/#152 specifically scoped native qualifications. #175 assesses checkpoint reuse against repeated setup costs. Existing periodic due dates unchanged.",
+        "findings": "Actual local-refusal001 now qualifies the formerly unexercised terminal controller-snapshot wording. Existing same-origin reconnect repair and Pause regressions retain their scoped evidence. Overview/work summaries were consolidated around linked authoritative sources and the architecture diagram no longer embeds stale project-status claims. Reader comprehension and long-term reduction in upkeep cost remain unmeasured.",
+        "cost": "Reuse of existing closed mission artifacts, one independent evidence review and ordinary diagram/document tooling; the dated technical report owns runtime counts/timing. No new documentation tracker, semantic parser or routine gameplay review. Model/inference/token/full workflow cost unavailable.",
+        "follow_up": "#145 full fresh seven-day outcome and protected publication; #143 wider observer behavior; #164 representative whole-skill/tool/display timing; #75 bounded documentation authority/maintenance review; other native and efficacy gaps retain their owning Issues. Periodic due dates unchanged.",
         "evidence": [
           "docs/acceptance/2026-10-22-discovery-learning-sixth-attempt.md",
-          "docs/acceptance/2026-10-21-independent-seven-day-readiness.md"
+          "docs/acceptance/2026-10-21-independent-seven-day-readiness.md",
+          "docs/acceptance/2026-10-22-native-local-refusal.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -818,7 +822,8 @@
         "docs/changes/053-operation-entry-refresh.md",
         "docs/changes/054-development-first-delivery.md",
         "docs/acceptance/2026-10-22-independent-seven-day-third-attempt.md",
-        "docs/acceptance/2026-10-22-independent-seven-day-fourth-attempt.md"
+        "docs/acceptance/2026-10-22-independent-seven-day-fourth-attempt.md",
+        "docs/acceptance/2026-10-22-native-local-refusal.md"
       ],
       "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",

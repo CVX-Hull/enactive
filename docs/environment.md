@@ -46,6 +46,15 @@ accepted-world files remained unchanged. The adjacent manifest records restorati
 instructions. Its mission evidence remains intact, and exceptional cleanup does
 not establish a normal ending or reusable failed-campaign authority.
 
+After local-refusal001's normal final exit, actual operator quiescence and
+controller shutdown, archived `EnactiveLocalRefusalOne` / Taylor at
+`.runtime/save-retirement/2026-10-22-local-refusal001/closed-technical-world.tar.gz`.
+All 45 files were hash-verified in the archive before removing their active copy.
+Archive: 1,161,802 bytes, SHA-256
+`c141338e426971fc1b6ba69e7433c11f0be5825978620710e05f8fefb763fa7e`.
+Its adjacent manifest owns file hashes and restoration instructions. All 191
+accepted-world files and all mission evidence remain unchanged.
+
 ## Structured player SDK, 2026-10-20
 
 Added official MCP Python SDK 2.3.0 for the optional local stdio adapter. The shared

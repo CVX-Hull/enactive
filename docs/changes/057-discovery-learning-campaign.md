@@ -22,7 +22,8 @@ technical assistance and unproved causal benefit. The
 failed fresh-campaign evidence; Issues/Project own live follow-through. The full
 fresh independent seven-day outcome and protected closeout remain required.
 
-This brief owns the integrated boundary and acceptance, not another live tracker.
+This brief owns integrated design decisions and cross-component proof obligations,
+not another live tracker. Issue acceptance remains authoritative for delivery scope.
 GitHub Issues/Project own stages, remaining estimates and assignments. Relevant
 work is #176 mixed input, #177 procedures, #178 reflection, #143 observer,
 #164 workflow measurement, #145 campaign and parent #136. Remaining native
@@ -202,27 +203,13 @@ owned investment decision, not a blanket campaign prerequisite.
 
 ## Ownership and checkpoints
 
-The lead owns design, coupled runtime/ledger/schema integration, shared native
-runtime, admissions and verification. After interface freeze, at most two workers
-use separate worktrees and disjoint paths; tightly coupled writer migrations stay
-with one integrator. Briefs specify paths, APIs, decisions and acceptance. Use
-clean-context source/evidence reviewers where the risk warrants them.
-
-Follow [development-first delivery](../project-management.md#development-first-delivery):
-fast/focused checks and an exact source commit permit a finite development run;
-cohesive independent review, full exact CI and protected-main validation qualify
-formal acceptance. Freeze source/native/scenario, actors, update policy, library,
-attempt count and all input/mapping/request/frame/byte/wall/game/ending limits
-before deciding input. Forecast resources together using actual retained costs;
-reflection has its own finite coverage. Do not refund spent work, silently extend
-a deciding run or relabel development evidence as held-out efficacy evidence.
-
-The player and a genuinely clean successor own plans, ordinary exploration,
-memory updates and routine recovery. No lead/user key rescue or curation is part
-of the deciding outcome. Handoff requires actual terminal tool handles and empty
-input slots. Qualify exact normal midpoint save/owned exit/new child/reload and
-final ending with ordinary engine behavior. Preserve original unknown ACKs,
-interventions, failures and costs even when later evidence reconciles effects.
+[S-AGENT](../engineering.md#s-agent-accountable-agent-assisted-work) owns delegation
+and shared-runtime rules; [development-first delivery](../project-management.md#development-first-delivery)
+owns checkpoint timing and publication. This design separates the deciding player
+and asynchronous adviser from engineering admission/integration. The lead cannot
+supply routine tactics, inputs or procedure curation when either path needs help.
+The campaign's prospective plan and Issue own its actual finite admission,
+handoff and normal lifecycle acceptance; this brief does not maintain another queue.
 
 ## Evidence and maintenance
 
