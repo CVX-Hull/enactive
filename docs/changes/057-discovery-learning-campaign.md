@@ -92,12 +92,14 @@ where the physical event requires it; and separate game-specific identity/time/
 scene assumptions from shared orchestration. Preserve immutable model-informing
 sources separately from actual preflight and after-evidence. Do not simply disable
 an exact-image flag while leaving equivalence-only history and refusal handling.
-Before coupled implementation, the lead must settle physical-event drift policy,
-minimum receiver attestation, finite-cost treatment without a reliable game clock,
-and exact contract/version changes. They are unresolved design tasks, not implied
-permission to bypass existing checks. Local macro exhaustion versus mission
-exhaustion, setup/ending cancellation and safe new decisions after known
-unpublished refusal are explicit #191 acceptance cases.
+The [selected migration](../design/mixed-input.md#selected-ordinary-input-migration-for-review)
+now resolves physical-event drift, receiver attestation and finite-cost policy
+for independent design review. Its review found concrete receiver-depth,
+historical-ACK, correlation/refusal and macro-closure requirements, which are
+incorporated there. The bounded reread found no remaining design blocker to a
+native worker brief; implementation remains unverified. Local macro exhaustion
+versus mission exhaustion, setup/ending cancellation and safe new decisions after
+known unpublished refusal remain explicit #191 acceptance cases.
 
 The current patcher wraps `input_context::handle_input()` and native scope
 classification exposes category/registered actions. That establishes scope

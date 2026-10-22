@@ -39,6 +39,161 @@ Independent013's unbound consume action demonstrates a catalogue/binding trap;
 it does not demonstrate mouse support or general learning. Player-learned
 procedures (#177) and background reflection (#178) remain separate work.
 
+## Selected ordinary-input migration for review
+
+This is the next #191 implementation boundary, not current runtime behavior.
+Current source remains native5/mission9/ledger11/archive4 until the coordinated
+candidate below is implemented, reviewed and built. The lead selected these
+decisions from the actual002 failure and independent controller/receiver reviews;
+the existing research crosswalk remains the evidence basis and its limits.
+
+**Physical-event drift policy.** A direct request means the explicitly selected
+key, scalar or coordinate, not an inferred semantic target. It may reach a changed
+ordinary screen under the same owned session and uninterrupted actor/Pause/custody.
+Retain immutable model-informing sources, entry observation, actual final preflight
+and terminal evidence separately. Do not call changed evidence equivalent or change
+the physical event to follow an old label. Clicks keep their original geometry;
+changed mapping returns a known refusal and fresh evidence for another decision.
+Keys/scalars do not require identical pixels or click geometry. Optional semantic
+shortcuts retain their appropriate exact-image/native-state preconditions.
+
+**Receiver attestation.** Native6 adds mandatory boolean
+`boundary.input_receiver`. It attests a live ordinary engine event receiver, not
+semantic coverage or a desired effect. Instrument the existing SDL
+`input_manager::get_input_event()` with a game-thread RAII receiver scope before
+its existing rendering and polling; the active input-context scope supplies the
+actual top context. A raw receive with no active context cannot attest eligibility.
+Remove the menu-name catalogue as the ordinary-input boundary: ordinary contexts
+can present unfamiliar names/actions. Preserve explicit deathcam/unsupported-owner,
+debug, activity and owned-interrupt precedence through nested scopes; none gains
+ordinary permission merely by opening another context. A context's name alone
+cannot establish normal play. Receiver scope exit revokes receiver availability;
+publication and commit attest the active receiver, not an earlier cached scope.
+Existing key/text/click translation feeds that same receiver and widget path.
+Receiver entry/exit must not itself mint revisions or boundary IDs on every
+timeout retry; only actual observed boundary/presentation changes do so. Inherited
+restrictions prohibit ordinary input but do not grant inherited recovery powers:
+activity recovery operations remain tied to their exact owner/depth, as does the
+existing owned interrupt query. Nested help or a transient context is not an
+activity-interruption receiver merely because an ancestor is an activity.
+
+**Native contract.** All ordinary/control requests and observations use native6;
+native5 rejects. The direct event payload stays key/text/click. Direct requests
+must use `require_exact_frame=false`; their exact transport session/revision/
+boundary/frame are the actual fresh dispatch capture, not the old model image.
+The final native gate still checks ownership token, Pause, pending work, expiry,
+receiver and capture health. Click geometry must match the actual receiver's
+current mapping; keys/scalars have no coordinate precondition. Semantic action/key
+and lifecycle operations retain their admitted stronger policies. Typed expected
+pre-input refusals preserve healthy ownership; unrelated/native storage, malformed
+custody and integrity exceptions remain hard faults and set fault/Pause. Keep
+physical takeover precedence. The host reads structured status/Pause/custody facts,
+never error-string patterns, to distinguish them. Post-commit uncertainty remains
+unknown. A new explicit Observe can read after a healthy authenticated rejection;
+that read does not treat a rejected packet as input-ready or clear an actual fault.
+
+**Host lineage and one writer.** Mission10 adds `InputObservation`, a closed
+non-authorizing record containing `original` and `current` SourceBindings, with
+the same mission/epoch/actor/controller/Pause/takeover and exactly one store
+generation advance. It records a new ordinary entry observation without an
+equivalence claim; SourceRevalidation remains semantic equivalence only.
+Primitive intents gain required nullable `input_observation`, non-null only for
+the first ordinary proposal after entry. The original source must inform the
+immutable request and the current binding must name its actual before-source.
+Use the existing source-before/preflight/after fields for dispatch lineage.
+For ordinary intents, `source_before` is the entry source; `expected_*` and the
+published native request name the actual final preflight, and after-revision
+checks compare with that preflight. Entry age cannot invalidate a separately
+fresh actual dispatch reservation.
+Final ordinary preflight retention permits changed evidence under the same live
+custody without promoting or rewriting model evidence; correlate its actual
+session/revision/boundary with the published native request. Preserve required
+capacity reservation and durable preparation before publication. Retain strict
+equivalence for semantic preflight. No second executor, history or transport.
+
+**Delivery and further input.** A correlated ready ACK is returned delivery even
+when its screen is unfamiliar, unclassified or already superseded by a later
+observation. Its actual capture is historical evidence; readiness for another
+input is checked separately. Retain original receipt clocks without imposing the
+three-second dispatch freshness window retrospectively on settled history.
+Use a genuinely historical, non-promoting retention path: it preserves original
+receipt clocks, bytes and recorded lag without changing current session/source/
+generation or rejecting a receipt merely because a newer revision exists.
+Archive5 reopening validates this historical age rather than imposing the old
+three-second current-observation bound. Missing/corrupt capture remains explicit
+evidence loss. Preserve validated ACK/request correlation before fallible snapshot
+acceptance, logging, unlinking or after-frame retention; a subsequent failure
+records a separate stop while keeping known returned/rejected delivery. A crash
+without durably retained ACK evidence still reopens conservatively; failed storage
+cannot be made reliable by a convincing in-memory receipt.
+Storage/integrity failure can still stop the run, but cannot rewrite an
+authenticated returned input as an unknown ACK. Unknown or missing ACKs retain
+existing identity, collection, reconciliation, costs and no-replay rules.
+Known unpublished visual/representation/geometry refusal returns evidence while
+healthy ownership survives; actual custody, Pause, competing writer, exhausted
+mission resources or unavailable required trace capacity still stops input.
+
+**Ordinary policy and scope.** Extract the direct policy from semantic menu
+planning; it remains passive and uses the existing writer's intents/results.
+One key/click/scalar is the base operation. An optional text batch retains its
+finite scalar count and stops for player reconsideration on changed receiver
+structure or no visible progress; that stop does not undo known scalar delivery.
+Masked text still permits individual-scalar experiments. Switching to direct
+invalidates incompatible quantity/focus assertions while retaining the original
+root, Work, actor, deadlines, interruption consent and cumulative costs. Local
+macro exhaustion must remain distinct from exhaustion of the whole admission;
+no silent root renewal or new allowance follows.
+
+An explicit Observe may end an exhausted ordinary macro without ending a healthy
+mission. Separate global custody/resource checks from local root input/wall/game
+limits; capture under Observe's own original finite deadline capped by mission/
+ending reserve, then check actual global limits again. Persist `macro_closure`
+naming old root/checkpoint, fresh source, detection time and specific local limit
+before clearing only the private prompt. It is not `PhaseReceipt.stage=complete`,
+menu/task success, a rewritten old result or a new allowance. The player may then
+explicitly choose a direct new_root from that fresh owned menu under actual
+session/adoption and all original mission costs/limits. Stale old-source/queued
+children receive known refusal while healthy custody survives. Exclude lifecycle,
+exit, registered activity/recovery and unsettled delivery. Do not implement this
+by catching generic BudgetError: global exhaustion, clock and trace faults still
+stop. No additional root-replacement field or new MCP tool is selected.
+
+**Game integration and finite costs.** Owned process/session, inputs, wall time,
+trace capacity and Pause are shared requirements. Character/save/turn/neighbor
+proofs are integration/campaign requirements, not universal keyboard semantics.
+CDDA's current campaign still requires its registered identity and actual game
+clock; a game without a reliable visible clock must use an explicit unmeasured
+clock policy with finite input/wall bounds, never substitute zero or claim elapsed
+game time. Test the passive ordinary seam with an independently shaped fixture
+without CDDA menu/neighbor/save assumptions. Full runtime extraction, setup/ending
+cancellation and a real second integration remain explicit #191 work; this slice
+does not claim those qualifications or replace authentic CDDA lifecycle proofs.
+
+**Migration and retained evidence.** Native6/mission10/ledger12/archive5 form the
+coordinated replacement. Update producers, validators, reservation/receipt
+readers, recovery/procedure provenance, SDK/catalogue, fixtures and current
+guidance together; reject superseded formats and remove the old direct branch.
+Choose any necessary nested procedure/memory record version changes from the
+actual changed schema, not a blanket version bump. No compatibility reader or
+flag-based old path. Closed native5/mission9 runs, original pins and accepted
+learning004 evidence remain immutable historical artifacts. Do not relabel their
+captured data or procedure environment. Prepare a fresh finite current-contract
+learning run before using its normally closed library in the fresh campaign;
+old004 is not silently mounted under a changed contract. No save is deleted.
+
+The lead owns coupled host/schema/ledger/evidence/tooling/docs integration and
+the shared native build/runtime. After this boundary passes independent review,
+one separate-worktree worker owns native bridge/header, pinned patcher/source
+manifest and focused native-source tests only. A second bounded worker may own
+the passive ordinary policy and its isolated tests after its exact Python API
+is frozen; neither worker changes shared runtime/source outside its ownership.
+Qualification covers unfamiliar and time-changing receivers, preflight-only drift,
+known refusals, resize/scale and masked text, negative custody/Pause/unknown ACKs,
+exact immutable lineage/charges and actual independent graphical discovery. Full
+campaign outcome, native click proof and causal learning/latency claims retain
+their separate evidence lanes. Keep all affected artifacts aligned through057's
+existing impact map and existing issue owners.
+
 ## Prefer visible targets over coordinates
 
 Select the highest useful supported abstraction: gameplay skill, visible UI
