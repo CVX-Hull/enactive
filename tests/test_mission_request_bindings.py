@@ -328,6 +328,8 @@ class RequestBindingTests(unittest.TestCase):
                     bad = case.control('menu', dict(purpose='Choose', label='Two', outcome='focused'),
                         phase_id=root['request_id'], expected_boundary_id='copied-old-boundary')
                     delivered, spent = copy.deepcopy(case.bridge.delivered), case.runtime.status()['spent_inputs']
+                    phase, lease = case.runtime._prompt_phase, case.runtime._lease
+                    original_root = case.runtime._ledger.request(root['request_id'])
                     if fault in ('takeover', 'native_drift'):
                         with case.controller.data_lock:
                             if fault == 'takeover':
@@ -358,8 +360,18 @@ class RequestBindingTests(unittest.TestCase):
                     self.assertNotIn('No input or refresh was attempted', result['result']['reason'])
                     self.assertEqual(case.bridge.delivered, delivered)
                     self.assertEqual(case.runtime.status()['spent_inputs'], spent)
-                    self.assertIsNone(case.runtime._prompt_phase)
-                    self.assertIsNone(case.controller._mission_lease)
+                    if fault == 'root_input':
+                        self.assertEqual(result['result']['macro_exhausted'], 'primitives')
+                        self.assertIs(case.runtime._prompt_phase, phase)
+                        self.assertIs(case.runtime._lease, lease)
+                        self.assertEqual(case.controller._mission_lease, lease)
+                        self.assertEqual(case.runtime.status()['phase'], 'active')
+                        self.assertEqual(case.runtime._ledger.request(root['request_id']), original_root)
+                        self.assertFalse(any(p['request_id'] == bad['request_id']
+                            for p in case.runtime._ledger.primitive_records()))
+                    else:
+                        self.assertIsNone(case.runtime._prompt_phase)
+                        self.assertIsNone(case.controller._mission_lease)
                 finally:
                     case.doCleanups()
 
@@ -777,6 +789,8 @@ class ItemControlDraftTests(unittest.TestCase):
                         self.assertEqual(case.send(case.select())["state"], "partial")
                     bad = case.bad_menu()
                     phase, current = case.runtime._prompt_phase, case.runtime._current
+                    lease = case.runtime._lease
+                    original_root = case.runtime._ledger.request(phase.root_id)
                     if fault in ("takeover", "native_drift", "operator_pause"):
                         with case.controller.data_lock:
                             if fault == "operator_pause":
@@ -829,8 +843,18 @@ class ItemControlDraftTests(unittest.TestCase):
                     self.assertNotIn("No input or refresh was attempted", refused["result"]["reason"])
                     self.assertEqual(case.bridge.delivered, delivered)
                     self.assertEqual(case.runtime.status()["spent_inputs"], spent)
-                    self.assertIsNone(case.runtime._lease)
-                    self.assertIsNone(case.runtime._prompt_phase)
+                    if fault == "root_input":
+                        self.assertEqual(refused["result"]["macro_exhausted"], "primitives")
+                        self.assertIs(case.runtime._lease, lease)
+                        self.assertEqual(case.controller._mission_lease, lease)
+                        self.assertIs(case.runtime._prompt_phase, phase)
+                        self.assertEqual(case.runtime.status()["phase"], "active")
+                        self.assertEqual(case.runtime._ledger.request(phase.root_id), original_root)
+                        self.assertFalse(any(p["request_id"] == bad["request_id"]
+                            for p in case.runtime._ledger.primitive_records()))
+                    else:
+                        self.assertIsNone(case.runtime._lease)
+                        self.assertIsNone(case.runtime._prompt_phase)
                 finally:
                     case.doCleanups()
 
