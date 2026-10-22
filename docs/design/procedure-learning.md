@@ -14,7 +14,13 @@ outcomes and accepts/revises procedure data. The lead maintains the substrate.
 Claims and unfinished Work continue to describe the current campaign; a procedure
 is advisory knowledge about how to attempt a goal under stated conditions.
 The delivery brief and current protocol own implemented status and actual
-qualification; remaining research/evaluation proposals below are not guarantees.
+qualification. Current source uses procedure/2, campaign-memory/5 and reflection/2
+with native6/mission10/ledger12/archive5; gameplay/2 is unchanged. Admission uses
+`facts-procedures-reflection/2`. Remaining research/evaluation proposals below are
+not guarantees. The matching native6 build passed and is installed; graphical
+qualification, a current-contract learning library and a fresh campaign remain
+pending. Earlier learning004 evidence keeps its original environment and scope;
+it is not silently mounted under the current contract.
 Further design follows P-GENERALITY and the CDDA-class constraint: shared memory,
 learning and advisory machinery must not depend on CDDA menu categories or world
 rules. Game/configuration applicability stays explicit. Changing menus can
@@ -31,7 +37,7 @@ ledger and original frame archive; missing or disputed support stays unavailable
 
 | Record | Selected content and meaning |
 | --- | --- |
-| Procedure revision (`procedure/1`) | Stable family ID and immutable revision ID/number; expected parent revision; goal; named parameters/descriptions; applicability and invalidation conditions; closed-loop steps expressed as intent/expected observation/response to surprise; progress/termination and known limits; supporting and contrary episode references; candidate/active/disputed/retired disposition and explanation. Text is advisory data, never evaluated code or a ready-to-replay key macro. |
+| Procedure revision (`procedure/2`) | Stable family ID and immutable revision ID/number; expected parent revision; goal; named parameters/descriptions; applicability and invalidation conditions; closed-loop steps expressed as intent/expected observation/response to surprise; progress/termination and known limits; supporting and contrary episode references; candidate/active/disputed/retired disposition and explanation. Text is advisory data, never evaluated code or a ready-to-replay key macro. |
 | Episode reference | Mission identity, existing request IDs and source IDs, plus the player's scoped interpretation where needed. Resolve actual requests, delivery/effects and original image support; no invented support or automatic success label. |
 | Procedure selection | Explicit family/revision and use-instance ID attached once to a skill root, with the player's applicability judgment. The runtime resolves the exact retrieved version, validates it exists and propagates linkage to children. It does not infer mental influence or reselect a new revision mid-skill. |
 | Context export | Exact packet/library revision and included procedure versions, with source availability, omissions and scope. Record supply by the runtime separately from host delivery/mental attention; no mandatory feedback narration per action. |
@@ -82,11 +88,10 @@ it never accepts a caller path or opens an old ledger as a runtime actor.
 Validate the complete bounded dependency graph, its source availability and
 parent family/revision invariants before exposing an eligible procedure. Resolve
 heads by ancestry, never import order or wall-clock date. Identical copies dedupe;
-two incomparable heads make that family disputed/ineligible for selection until
-an explicit player-authored adjudicating revision names the supported resolution.
-No implicit merge or numeric revision tie-break. For this first implementation,
-the pure linear-family projector rejects incomparable branches; the integration
-may report that rejection without selecting a branch. Cross-mission revision
+two incomparable heads cause the pure linear-family projector to reject the
+closure, so the integration cannot select a branch. The current schema offers no
+branch merge or adjudicating-revision mechanism; no import-order, timestamp or
+numeric revision tie-break resolves that rejection. Cross-mission revision
 requires the exact admitted predecessor, with missing closure reported instead
 of silently fetching new dependencies. Historical frame exports use this bounded
 library resolver, separately from the current mission's existing source reader;
@@ -94,9 +99,9 @@ both verify original bytes and neither refreshes native state or authority.
 
 ## Bounded asynchronous work
 
-The source checkpoint freezes`reflection/1` job/proposal/command records in
-`harness/gameplay/reflection.py`. A job keeps its exact current request/result
-trajectory, request cutoff, accepted-memory version, at most8 qualified images
+Current job/proposal/command records use `reflection/2`; the closed schemas in
+[reflection.py](../../harness/gameplay/reflection.py) own their exact shapes.
+A job keeps its exact current request/result trajectory, request cutoff, accepted-memory version, at most8 qualified images
 and16 procedures, with explicit request/source/procedure omissions. Bounds remain
 at most64 jobs,2 pending bodies (including a callback in flight),32 requests and
 64KiB input per job,32KiB output,180s per claimed window and3600s aggregate.
@@ -184,10 +189,15 @@ ownership and unknown no-replay remain immediate, independently of evolving advi
 
 Use explicit finite limits, not an unbounded learner. Exact per-record/API shapes,
 numeric bounds, scheduling/claim semantics and cross-ledger validation tests must
-be frozen in the implementation brief before affected worker dispatch. Delivery057
-implemented campaign-memory4 with the shared native5/mission9/ledger11/archive4
-change; the source schemas own exact shapes. Old runtime inputs reject; historical
-artifacts remain evidence. Do not add a compatibility reader to the live path.
+be frozen in the implementation brief before affected worker dispatch. The
+[mission and memory schemas](../../harness/gameplay/mission_contracts.py) and
+[ordinary-input protocol](../protocol.md#ordinary-discovery-and-procedure-data)
+own the current coordinated contracts. Delivery057's first October21 checkpoint
+used campaign-memory/4 with native5/mission9/ledger11/archive4, procedure/1 and
+reflection/1. Those versions describe historical run evidence only. Old runtime
+and library inputs reject; no compatibility reader or relabeling of old procedure
+environments is supported. A fresh finite current-contract learning run must
+normally close before its pinned library is used in the fresh campaign.
 
 ## Acceptance, controls and maintenance
 
@@ -212,67 +222,54 @@ prospectively, keep authoritative contracts truthful during implementation and
 review library/worker cost and usefulness at actual campaign findings. Retain
 counterexamples and retire superseded assumptions instead of rewriting history.
 
-## Candidate pure-module interface
+## Pure procedure interface and exchange bounds
 
-The following bounded pure interface was accepted after independent design review
-on October21 and is frozen for the disjoint procedure worker. This does not freeze
-or implement the remaining runtime/transport migration. The worker owns only
-`harness/gameplay/procedures.py` and `tests/test_procedures.py`. It imports existing
-strict schema/canonical helpers, never ledger/controller/runtime/network code.
+The October21 reviewed pure-module interface is implemented in
+[procedures.py](../../harness/gameplay/procedures.py). Its current closed
+`procedure/2` schema owns exact fields and bounds; the initial procedure/1 contract
+is historical. The pure module imports strict schema/canonical helpers and has no
+ledger/controller/runtime/network execution role.
 
-`procedure_schema()` returns a defensive copy of one closed JSON Schema;
+`procedure_schema()` returns a defensive copy of the closed JSON Schema;
 `validate_procedure(value)` returns a validated decoded copy; and
-`project_procedures(records)` validates a bounded sequence of revisions
-and returns a mapping from family ID to a decoded copy of its latest revision,
-preserving full input history outside
-the returned projection. These functions confer no input authority and do not
-certify semantic truth or source availability. The lead validates actual episode
-references, authorized library ancestry and policy before persistence/retrieval.
+`project_procedures(records)` returns a mapping from family ID to its latest
+revision, preserving full input history outside the projection. These functions
+confer no input authority and do not certify truth or source availability. The
+serialized runtime validates actual episode references, admitted library ancestry,
+environment pins and update policy before persistence/retrieval.
 
-The revision fields are `schema="procedure/1"`, `record_type="Procedure"`,
-`id`, `mission_id`, `procedure_id`, `revision`, nullable `parent`, `goal`, `parameters`,
-`applicability`, `invalidators`, `steps`, `progress`, `stop_conditions`, `limits`,
-`environment`, `support`, `counterexamples`, `status`, and `reason`.
-IDs use the current bounded ASCII ID shape. `mission_id` owns this revision;
-`parent` is null or the exact object `mission_id`/`revision_id`. The family ID is
-stable across transfer and cannot be independently recreated with a second root
-inside the admitted closure. Revision is1–1024, starts at1 with null parent, and
-advances exactly once from the current family's qualified ID/revision. A qualified
-ID is immutable; identical repeated copies dedupe, changed copies refuse.
-Conflicting/stale parent or duplicate revision refuses rather than overwriting.
-Resolve the complete graph by ancestry regardless of input/import order; a
-reversed complete sequence returns the same head, while missing/cyclic closure
-refuses. Input order is never a version or conflict tie-break.
+A revision has an immutable mission-qualified ID and stable family ID, an exact
+nullable parent and consecutive revision number, bounded descriptive procedure
+content, environment pins, supporting/contrary episodes and disposition. Complete
+linear ancestry resolves independently of input order. Identical copies dedupe;
+changed copies, missing parents, multiple roots or incomparable branches refuse.
+No branch selection or merge is inferred from timestamps or numeric revisions.
 
-Goal/reason/condition/progress/limit text is at most1024characters. Parameters are
-at most8 unique names with `name`/`description`; steps are1–16 objects with
-`intent`/`expected`/`on_unexpected`, each at most1024characters. Applicability,
-invalidators, progress, stop_conditions and limits are lists of at most8 bounded
-strings; applicability/progress/stop_conditions require at least one. Status is
-candidate/active/disputed/retired. `environment` contains exact pinned
-`engine_commit`, `native_protocol=5`, `mission_schema="mission/9"` and a bounded
-`configuration` description. Matching this identifies interface applicability,
-not equivalence of world facts or a guarantee every described condition holds.
+The current environment pins `engine_commit`, `native_protocol=6`,
+`mission_schema="mission/10"` and a bounded configuration description. Matching
+these identifies interface applicability, not equivalent world facts or a guarantee
+that the described conditions hold. Episode references qualify request/source IDs
+by their own mission; the runtime resolves original informing, entry, actual
+preflight and after evidence through the ledger/archive rather than inventing a
+second trajectory. Known ACK delivery, current input eligibility and semantic
+success remain separate when interpreting support.
 
-Support and counterexamples each contain at most8 episode objects with
-`mission_id`,1–16 unique `request_ids`,1–8 unique `source_ids` and bounded
-`interpretation`. Support requires at least one episode. No current-world stock,
-position or input capability field is embedded in a procedure. The schema can
-enforce that structural separation; semantic leakage through prose still requires
-player judgment and evidence review. Each revision is at most32KiB canonical JSON;
-the pure projection accepts at most256 records and refuses exceeded bounds.
-Omitted retrieval is handled by the lead's bounded context selection, not silently
-discarded by this function. Unit tests must distinguish shape/lineage from truth.
+Each revision is at most32KiB canonical JSON and the pure projection accepts at
+most256 records. The schema bounds parameters, steps, conditions and episode
+references; omission accounting belongs to bounded context selection. No
+current-world stock, position or input capability field is embedded in a procedure.
+Structural validation cannot exclude semantic leakage through prose; player judgment
+and source review remain necessary. Tests distinguish shape/lineage from truth.
 
-The candidate exchange bounds are at most64jobs per mission,2pending including
-claimed work,32request results and8sources per immutable task,64KiB text input,
-32KiB output,180seconds per claimed job and3600seconds aggregate charged worker
-wall time. These are upper bounds for prospective admission selection, not current
-authority or a promise of sufficient time. Passive work waits are at most15seconds
-and hold no game-input/MCP-handle/database write lock. First issue/claim/result and
-expiry retain stable IDs and original costs; the exact job claim/writer transaction
-shape remains the lead's integration boundary to freeze before that implementation.
-No unbounded retry, automatic input, replaced queue or silently reviewed backlog.
+Current admission and reflection schemas bound the exchange to at most64 jobs per
+mission,2 pending including claimed work,32 request results and8 sources per job,
+16 procedures,64KiB text input,32KiB output,180seconds per claimed job and
+3600seconds aggregate charged wall time. Admission may select lower limits; these
+upper bounds grant no authority or promise sufficient compute. Passive waits are
+at most15seconds without game-input/MCP-handle/database write locks. Stable
+job/command IDs, original receipt/deadline checks and durable writer transactions
+are implemented by the existing advisory exchange. No unbounded retry, automatic
+input, replaced queue or silently reviewed backlog follows.
 
 ## Lifecycle ordering for advisory mutations
 

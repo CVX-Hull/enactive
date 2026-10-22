@@ -13,8 +13,8 @@ retained observations and bounded movement.
 Designs must apply across **CDDA-class survival/roguelike games**; CDDA is the first
 implemented target, and other games are not yet qualified. Game-specific bindings
 must remain separate from shared player, memory and learning responsibilities.
-The current ordinary-input source migration has a matching local native6 build;
-installation and graphical qualification remain pending. [Architecture](docs/architecture.md) separates
+The current ordinary-input source migration has a matching local native6 build
+installed in the isolated project app; graphical qualification remains pending. [Architecture](docs/architecture.md) separates
 implemented contracts from the remaining integration limits.
 General survival planning requires an active Codex player. An unattended survival
 service is not implemented.

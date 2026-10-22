@@ -12,7 +12,7 @@ This is the detailed current contract supporting [architecture](architecture.md)
 Authority rules are [S-PROTOCOL](engineering.md#s-protocol-command-and-observation-authority).
 Current source is native6/mission10/ledger12/archive5, with procedure/2,
 campaign-memory/5 and reflection/2; gameplay/2 is unchanged. The matching native6
-build passed locally; installation and real graphical qualification remain pending. Dated native5 and earlier
+build passed and is installed locally; real graphical qualification remains pending. Dated native5 and earlier
 results retain their exact scopes. Portable checks do not prove native engine behavior.
 
 Unsupported versions and alternate response shapes are rejected. Startup validates

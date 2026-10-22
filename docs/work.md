@@ -72,13 +72,14 @@ memory/reflection, native and latency issues retain their acceptance lanes. Fili
 work or passing synthetic variants does not establish game-family support.
 The selected foundation reuses the existing writer with semantic shortcuts above
 ordinary input. Its first source repair permits explicit Observe on a changed
-healthy prompt without renewing the root or retaining stale quantity proof;
-automatic input refresh is still strict. The
+healthy prompt without renewing the root or retaining stale quantity proof.
+Semantic refresh remains strict; ordinary physical keys/scalars permit visual
+drift under uninterrupted custody and clicks retain their original geometry. The
 [delivery impact map](changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
 routes contract, caller, documentation, control, evidence and backlog updates.
 The selected ordinary-input migration has passed scoped architecture review;
-native6 and controller candidates are locally integrated, with coordinated host/
-persistence migration still in progress. The reviewed native refusal-publication
+native6, controller, host-source and persistence migrations are locally integrated;
+actual host loading and graphical qualification remain separate. The reviewed native refusal-publication
 capture-failure repair now sets fault/Pause; composed source tests pass. Controller
 triage and evidence/policy clock/identity repairs have focused passing evidence in
 the delivery brief. The ACK/ledger/library candidate is locally integrated; its
@@ -96,9 +97,11 @@ Local game overshoot returns partial work while healthy mission ownership surviv
 actual faults and global exhaustion still stop. Runtime regressions and fast
 checks pass. The initial full suite failed1567tests with10failures/186errors;
 current-only fixture and lifecycle receipt corrections have focused passing
-evidence and independent review, with exact-source full rerun pending. Native6
-compiled successfully from committed source; installation and graphical integrated
-qualification remain open in#191.
+evidence and independent review. The complete repaired check ran1,569tests with
+one stale diagnostic assertion failure; that assertion is repaired and its
+27-test caller/lifecycle lane passes. Exact candidate full CI remains required.
+Native6 compiled successfully from committed source and is installed in the
+isolated project app; graphical integrated qualification remains open in#191.
 P-CHANGE/S-CODE and the existing review/maintenance controls now
 explicitly favor objective-oriented reuse and configured platform guarantees;
 the delivery brief records an applied removal of duplicate post-ACK verification.

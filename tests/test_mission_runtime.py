@@ -495,7 +495,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.runtime.command(child)
         operation = self.settled(child["request_id"])
         self.assertEqual(operation["state"], "blocked", operation)
-        self.assertIn("native custody", operation["result"]["reason"])
+        self.assertIn("takeover", operation["result"]["reason"])
         self.assertEqual(self.runtime.status()["pause_cause"], "takeover")
         self.assertEqual([r["state"] for r in self.runtime._ledger.primitive_records()], ["returned", "returned"])
         self.assertEqual(self.runtime.status()["unresolved_effects"], [])

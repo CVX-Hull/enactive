@@ -22,16 +22,18 @@ and lifecycle attestations belong at the integration boundary. #190 fixes the
 known zero-input item-draft revocation; #191 tracks broader recovery and portability.
 Source support for clicks is not full mouse qualification or cross-game support.
 
-The selected next boundary is an ordinary-input foundation through the existing
-writer, with optional semantic preconditions above it. The current source first
-separates explicit Observe/redecision from automatic input refresh: a changed
-healthy owned prompt can return new evidence under the same original root and
-costs, clearing stale quantity proof. Automatic input still requires the exact
-preflight described below. The
-[delivery impact map](../changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
-and #191 identify remaining native receiver, delivery/meaning, provenance and
-game-integration coupling. The native5 requirements below describe the present
-implementation; they are not a claim that the broader foundation is delivered.
+The source now implements the ordinary-input foundation through the existing
+writer, with optional semantic preconditions above it. Current contracts are
+native6/mission10/ledger12/archive5, with procedure/2, campaign-memory/5 and
+reflection/2; gameplay/2 is unchanged. Physical events may reach changed ordinary
+screens under uninterrupted custody, while semantic refresh remains strict.
+Explicit Observe permits a new decision from a changed healthy owned prompt,
+clearing stale quantity proof while preserving original scope and costs. Known
+ACK evidence remains immutable and separate from any actual current snapshot.
+The [delivery impact map](../changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
+and #191 identify remaining game-integration and qualification gaps. The matching
+native6 build passed and is installed in the project app; real graphical
+qualification, a current-contract learning library and a fresh campaign remain pending.
 
 The [organic-discovery crosswalk](organic-discovery.md#cross-check-against-prior-work)
 retains prior mixed-control research, campaign findings and memory distinctions.
@@ -41,11 +43,13 @@ procedures (#177) and background reflection (#178) remain separate work.
 
 ## Selected ordinary-input migration for review
 
-This is the next #191 implementation boundary, not current runtime behavior.
-Current source remains native5/mission9/ledger11/archive4 until the coordinated
-candidate below is implemented, reviewed and built. The lead selected these
-decisions from the actual002 failure and independent controller/receiver reviews;
-the existing research crosswalk remains the evidence basis and its limits.
+This selected #191 boundary is implemented in current source. The heading retains
+its original review link; it does not mark the migration as pending. The lead
+selected these decisions from the actual002 failure and independent controller/
+receiver reviews. The research crosswalk preserves their evidence basis and limits;
+source review and a matching build do not qualify real graphical behavior.
+The [ordinary-input protocol](../protocol.md#ordinary-discovery-and-procedure-data)
+and [schemas](../../harness/gameplay/mission_contracts.py) own exact current shapes.
 
 **Physical-event drift policy.** A direct request means the explicitly selected
 key, scalar or coordinate, not an inferred semantic target. It may reach a changed
@@ -156,7 +160,8 @@ loss; it must not construct a `gameplay/2` PrimitiveResult that requires after
 evidence. No gameplay format change or second feedback path is needed for a storage
 failure. Failed settlement remains failed storage, with available proof preserved;
 reopening is conservative when no durable ACK evidence exists. Scoped independent
-architecture review accepted this approach; runtime implementation remains pending.
+architecture review accepted this approach; the runtime now implements it.
+Source tests and review do not establish real native gameplay behavior.
 
 Apply S-CODE's platform-contract rule here. SQLite owns atomic row settlement;
 the bridge's existing publication/ACK contract owns delivery correlation. Keeping
@@ -194,8 +199,8 @@ format is introduced. Local game overshoot yields partial work without revoking
 healthy ownership; an owned menu closes through explicit Observe, while normal
 return has already ended the root. Global/clock/custody faults and unknown delivery
 retain their stopping paths. Scoped synthetic regressions and independent review
-are source evidence only; full migration/native/graphical qualification remains
-#191 work.
+are source evidence only. The matching native6 build passed and is installed;
+real graphical qualification remains #191 work.
 
 **Ordinary policy and scope.** Extract the direct policy from semantic menu
 planning; it remains passive and uses the existing writer's intents/results.
@@ -237,22 +242,21 @@ does not claim those qualifications or replace authentic CDDA lifecycle proofs.
 coordinated replacement. Update producers, validators, reservation/receipt
 readers, recovery/procedure provenance, SDK/catalogue, fixtures and current
 guidance together; reject superseded formats and remove the old direct branch.
-Choose any necessary nested procedure/memory record version changes from the
-actual changed schema, not a blanket version bump. No compatibility reader or
-flag-based old path. Closed native5/mission9 runs, original pins and accepted
-learning004 evidence remain immutable historical artifacts. Do not relabel their
+The nested records are procedure/2, campaign-memory/5 and reflection/2, with
+admission update policy `facts-procedures-reflection/2`. Their source schemas own
+exact shapes. No compatibility reader or flag-based old path. Closed native5/
+mission9 runs, original pins and accepted learning004 evidence remain immutable
+historical artifacts. Do not relabel their
 captured data or procedure environment. Prepare a fresh finite current-contract
 learning run before using its normally closed library in the fresh campaign;
 old004 is not silently mounted under a changed contract. No save is deleted.
 
-The lead owns coupled host/schema/ledger/evidence/tooling/docs integration and
-the shared native build/runtime. After this boundary passes independent review,
-one separate-worktree worker owns native bridge/header, pinned patcher/source
-manifest and focused native-source tests only. A second bounded worker may own
-the passive ordinary policy and its isolated tests after its exact Python API
-is frozen; neither worker changes shared runtime/source outside its ownership.
-Qualification covers unfamiliar and time-changing receivers, preflight-only drift,
-known refusals, resize/scale and masked text, negative custody/Pause/unknown ACKs,
+The lead owns coupled host/schema/ledger/evidence/tooling/docs integration,
+the shared native build/runtime and final verification. The native bridge and
+passive ordinary policy are integrated in source; the prior isolated worker
+briefs do not define a pending implementation or a second execution path.
+Qualification still covers unfamiliar and time-changing receivers, preflight-only
+drift, known refusals, resize/scale and masked text, negative custody/Pause/unknown ACKs,
 exact immutable lineage/charges and actual independent graphical discovery. Full
 campaign outcome, native click proof and causal learning/latency claims retain
 their separate evidence lanes. Keep all affected artifacts aligned through057's
@@ -315,7 +319,7 @@ context. Target activation is delivery, not acquisition or other game success.
 
 ## Selected boundary
 
-Extend the existing `enactive_skill` with `skill_kind=direct`. The player selects
+The existing `enactive_skill` supports `skill_kind=direct`. The player selects
 intent, desired outcome, finite limits and the exact informing source. Software
 constructs the request and retains input/after-evidence through the current
 composer, mission runtime, controller, ledger and official MCP adapter. No second
@@ -324,11 +328,14 @@ executor, arbitrary host commands, private JSON workflow or input transport.
 | Interaction | Meaning and limit |
 | --- | --- |
 | Key | One printable ASCII or named key with explicit CTRL/ALT/SHIFT modifiers; one logical press/release, no held state. Preserve upstream character/keycode semantics; unsupported combinations are known refusals before input. |
-| Text | At most24 printable Unicode scalars in an owned ordinary menu. Expand to individually charged native scalars with fresh feedback; stop on changed structure, no visible progress, authority/budget loss or unknown delivery. No implicit Enter or blind macro. |
+| Text | At most24 printable BMP Unicode scalars in an owned ordinary menu. Expand to individually charged native scalars with fresh feedback; stop on changed structure, no visible progress, authority/budget loss or unknown delivery. No implicit Enter or blind macro. |
 | Click | One left/right click at a pixel in the exact retained PNG. Validate current capture geometry and point, feed engine/widget input in process and release the button. No Mac pointer movement, focus change, drag or persistent held button. |
 
-Every direct input requires exact-image preflight even without a semantic menu
-interpretation. A returned input is partial work requiring outcome verification;
+Every direct input requires a fresh actual dispatch capture and an attested
+ordinary receiver under the same live custody. Keys/scalars permit physical-event
+drift; clicks additionally retain the informing PNG's geometry. Native direct
+requests require `require_exact_frame=false`; semantic operations keep their
+stronger exact-frame preconditions. A returned input requires outcome verification;
 an unfamiliar semantic effect does not by itself stop the mission. Unknown
 delivery still requires reconciliation without replay. Real authority/storage/
 budget faults retain their existing failure handling.
@@ -336,9 +343,10 @@ budget faults retain their existing failure handling.
 ## Ownership and continuation
 
 Direct roots require the mission's already-adopted character and current normal
-scene. Direct children may continue an owned ordinary interact/item/inspect/
-activity/direct prompt. They inherit its original root, Work, costs and ceilings;
-changing control style cannot renew the phase. Record deviation from the original
+scene, or an explicit new root from a fresh owned menu after recorded ordinary
+macro closure. Direct children may continue an owned ordinary interact/item/
+inspect/activity/direct prompt. They inherit its original root, Work, costs and
+ceilings; changing control style cannot renew the phase. Record deviation from the original
 semantic goal and do not claim that goal succeeded merely because direct input
 returned. A direct quantity-editor entry cannot invent typed-count proof.
 
@@ -358,8 +366,8 @@ or live phase handles.
 
 ## Native mouse and keyboard decisions
 
-Source review found that capture allocates for the viewport but requests the full
-render target. Capture the complete default output target into a matching buffer;
+The first source review found a viewport allocation/full-render-target mismatch.
+The implemented capture uses the complete default output target and matching buffer;
 retain window/output dimensions with the frame and reject changed, minimized or
 invalid geometry before input. Map PNG pixels separately to engine window-local
 coordinates and the pinned ImGui backend's renderer-output coordinates. Its unit
@@ -387,23 +395,24 @@ untouched; do not claim complete keyboard emulation from a schema alone.
 
 ## Delivery and evidence
 
-The implemented coordinated migration is native5, mission/9, ledger11 and evidence
-archive4, with campaign-memory/4 for the selected procedure/reflection integration
-and gameplay/2 record shapes unchanged. The [procedure boundary](procedure-learning.md)
-and [delivery057](../changes/057-discovery-learning-campaign.md) own that combined
-selection; no procedure support follows from native input alone. The historical
-starting point was mission/8 and ledger10; these are no longer current contracts.
-The source migrated producers, callers, strict validators, correlation/reopen
-rules, fixtures and guidance together and rejects prior runtime contracts. Preserve closed
-historical evidence without importing authority. The matching native build and
-actual host MCP catalogue/preapproval activation are separate gates.
+The current coordinated contracts are recorded in the
+[protocol](../protocol.md#ordinary-discovery-and-procedure-data); the
+[procedure boundary](procedure-learning.md) explains the advisory integration.
+The first October21 checkpoint used native5/mission9/ledger11/archive4 and
+campaign-memory/4; those versions describe historical artifacts, not supported
+runtime inputs. Preserve their exact captured data and pins without importing
+authority or relabeling them as current-contract learning evidence.
+[Delivery057](../changes/057-discovery-learning-campaign.md) retains failed runs and
+source/build/install receipts. The matching native6 build passed and is installed;
+actual host catalogue/preapproval activation and graphical acceptance remain
+separate qualifications.
 
 Lead owns coupled Python integration, tests, documentation, shared build/runtime
-and final verification. After interface review, one worker may own only native
-bridge/header, upstream pin and patcher in a separate project-local worktree.
-Worker syntax/apply checks are source evidence, not a build or gameplay result.
-Existing controller/schema/ledger tooling owns dispatch and accounting; the reuse
-probe determines the remaining widget-targeting gap. No separate input executor,
+and final verification. The isolated native implementation has been integrated;
+its syntax/apply checks remain source evidence. The later matching build proves
+compilation, while gameplay requires separate qualification. Existing controller/
+schema/ledger tooling owns dispatch and accounting; the reuse probe determines the
+remaining widget-targeting gap. No separate input executor,
 event bus or history system is justified.
 
 Focused regressions cover strict events/Unicode/modifiers/coordinates, exact
@@ -428,28 +437,26 @@ only after quiescence and runtime closure. No old failed admission resumes.
 Native click success is not procedural learning; one complete mission does not
 prove learning efficacy or complete the independent seven-day outcome.
 
-## Candidate native5 interface for the isolated worker
+## Native event translation and capture
 
-This exact native side of delivery057 passed focused interface review on
-October21 and is frozen for isolated implementation. This does not activate5 or
-claim native qualification. The worker owns only
-`native/cdda_harness.cpp`, `native/cdda_harness.h`, `native/upstream.json`,
-`tools/patch_game.py` and `tests/test_setup.py`. The lead owns all Python wire/
-mission/controller/ledger/SDK/evidence migration, shared build/runtime and actual
-native qualification. No worker launches or patches the shared build.
+The October21 isolated native5 brief was the first implementation checkpoint.
+Its exact-frame direct-input requirement is superseded by native6's physical-event
+drift policy above. Current [native source](../../native/cdda_harness.cpp),
+[input schemas](../../harness/gameplay/native_input.py) and
+[protocol](../protocol.md#transport-and-state) own the executable contract; no
+historical worker brief activates a runtime or establishes graphical qualification.
 
-All native requests/responses/control envelopes become protocol5; protocol4
-rejects. Existing semantic `key`/`action` and registered lifecycle/control shapes
-retain their meaning under5. They are not a second version or compatibility path.
-Add ordinary `kind="direct"` with one `input` member in place of the key/action
-payload: the same11 common ordinary fields plus this one payload, no new channel.
-The common exact-source/authority/created/deadline/boundary/revision/frame checks
-are unchanged. Direct requests additionally require `require_exact_frame=true`;
-false refuses before translation/commit. No direct input at activity, interrupt,
-debug or unsupported boundaries. The mission layer restricts lifecycle/identity
-ownership; native cannot infer a higher-level mission from event text.
+All native requests/responses/control envelopes require protocol6 and reject older
+versions. Existing semantic `key`/`action` and registered lifecycle/control requests
+keep their stronger eligibility policies. Ordinary `kind="direct"` uses one
+`input` payload on the same channel. Actual fresh dispatch source, authority,
+created/deadline, boundary, revision, receiver and capture checks remain mandatory;
+direct requires `require_exact_frame=false`, while clicks also require unchanged
+mapping. No ordinary input at activity, interrupt, debug or unsupported boundaries.
+The mission layer restricts lifecycle/identity ownership; native cannot infer a
+higher-level mission from event text.
 
-The closed input shapes are:
+The current closed input shapes are summarized here; the schema owns exact fields:
 
 - Key: `type="key"`, `key`, `modifiers`. Key is one printable ASCII or the
   existing supported named key; modifiers is a unique list of CTRL/ALT/SHIFT,
@@ -481,7 +488,7 @@ named arrows may refuse in keychar mode before commit rather than emulate
 diagonal/held-key policy; supported combinations must not read or mutate physical
 key state during preflight. Full Unicode/category/shortcut parity is not claimed.
 
-Every protocol5 observation adds `frame_geometry`, null when its frame is not
+Every protocol6 observation requires `frame_geometry`, null when its frame is not
 attested; otherwise an object with positive `window_width`, `window_height`,
 `output_width`, `output_height` (each at most16384) and `viewport` as four integers
 `[x,y,width,height]` wholly inside that output. Capture the full default render
@@ -490,9 +497,9 @@ surface; its PNG origin is output `[0,0]`. Record geometry
 alongside the cached presented surface, not from a later unrelated render target.
 Invalid/minimized/default-target or capture failure cannot attest a click frame.
 At final click commit compare retained/request geometry with current window/output/
-viewport geometry AND exact saved PNG; reject changed size/scale/viewport even if
-the image comparison alone could look identical. Non-unit geometry is a required
-native qualification, not established by arithmetic tests.
+viewport geometry; reject changed size/scale/viewport. Physical clicks do not
+require equal PNG bytes, and never retarget an old label to a new coordinate.
+Non-unit geometry is a required native qualification, not established by arithmetic tests.
 
 Map PNG pixel `(x,y)` to engine window-local
 `(floor(x*window_width/output_width),floor(y*window_height/output_height))`.
@@ -514,5 +521,5 @@ or global mouse option change is sufficient.
 Source tests cover exact fields/version, pure unsupported translation, capture
 dimensions/geometry and separate coordinate transforms, injected-coordinate
 preservation, stable pointer backend handling, physical takeover order and
-unchanged non-harness paths. Any additional concrete native API needed must be
-reported to the lead before changing this interface or worker ownership.
+unchanged non-harness paths. Any further native API change requires coordinated
+source/schema/caller migration under the existing engineering standards.

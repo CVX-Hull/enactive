@@ -38,8 +38,11 @@ If only the ordinary macro's local cap is spent, Observe can record `macro_closu
 and clear that prompt under its own finite deadline. Inspect the fresh source and
 explicitly choose a new direct root; closure is neither success nor renewed mission
 budget. Stale children refuse. Global exhaustion/custody/storage faults still stop.
-Read-only Observe after known delivery with stale/unavailable current evidence
-across lease rotation remains pending; do not treat an old checkpoint as current.
+After known returned direct input, stale/absent current evidence can leave a
+read-only scope across that exact authenticated lease rotation. Status requests
+explicit Observe and hides the old current source; further inputs refuse until
+fresh evidence publishes a new binding. The ACK remains historical, and genuine
+custody/storage/global faults still stop. Do not treat an old checkpoint as current.
 
 Eligible lifecycle Resume, stage commit, save, identity inspection and owned quit
 confirmation refresh the selected checkpoint once at operation entry

@@ -194,7 +194,12 @@ integrity on reopen. The lead repaired item-poll receiver fields, distinct
 preflight setup, known delivery versus failed semantic adoption expectations and
 local recovery-suffix exhaustion. The final80-test lifecycle/receipt/request-binding
 lane passed in31.213s; independent review passed53focused tests and found no
-remaining issue in that scope. A new full run is required for the repaired source.
+remaining issue in that scope. The complete c7800bb check then ran1,569tests in
+570.312s with one failure: an assertion still expected the superseded diagnostic
+phrase `native custody` rather than the explicit takeover diagnostic. The actual
+custody, delivery and Pause assertions were unchanged. The targeted assertion is
+repaired; the27-test caller/lifecycle rerun passed in99.559s. Exact candidate
+full CI remains separate evidence.
 
 Source7324c3f631233f061d9f3bc86c88bfdf99418e10 has a successful fresh native6
 build with pinned upstream source and the documented build flags. The new owned
@@ -203,18 +208,21 @@ manifest/receipt; the old stale manifest was preserved without touching its
 unverified former workspace. Binary SHA256:
 `c5df54c3960837f967549c28ba425a171a90f700740d571dc36773b24e34877c`.
 The compiled C++/header bytes match the committed native sources. This proves
-compilation/byte identity only: the binary is not installed or graphically
-qualified, no current learning005/library or fresh003 has been admitted, and
-protected publication remains pending.
+compilation/byte identity only. The existing setup tool subsequently installed
+and ad-hoc signed that binary into the isolated windowed project app; installed
+SHA256 is `bbfc8979a0c8b72be6804263e43f5771c45ac32bd4fc668843e9e6b0413d3dce`.
+Installation is not graphical qualification. No current learning005/library or
+fresh003 has been admitted, and protected publication remains pending.
 Published5f9a225 passed hosted run39703745808; that pass applies only to the
 earlier changed-prompt Observe checkpoint.
 
-The current patcher wraps `input_context::handle_input()` and native scope
-classification exposes category/registered actions. That establishes scope
-provenance, not by itself readiness of the actual event receiver. Receiver design
-must examine the SDL polling/dispatch seam and nested/transient contexts while
-preserving real debug, activity and owned-interruption precedence. Do not relabel
-every unknown category as an ordinary menu and call that native qualification.
+The current patcher retains `input_context::handle_input()` scope provenance and
+also instruments `input_manager::get_input_event()` to attest the actual ordinary
+receiver independently of semantic categories. Nested/transient contexts retain
+debug, activity and owned-interruption precedence. This is implemented source and
+built/installed native code; unfamiliar and time-changing graphical receivers
+still need actual qualification. Relabeling every unknown category as a menu would
+not establish that qualification.
 
 This map answers what must stay aligned; it is not another status tracker. The
 lead owns integration, verifies worker/reviewer evidence and checks applicable
@@ -226,7 +234,7 @@ GitHub owns owners, sequencing, estimates and dispositions.
 | Artifact / reader question | Authoritative update and evidence route |
 | --- | --- |
 | Purpose and big picture: what changes for me? | [Charter](../charter.md), [overview](../overview.md), README and [work](../work.md). Keep the CDDA-class constraint, player/lead roles and current capability limits understandable; update diagrams only when their boundary changes. |
-| Current behavior: what is permitted and recorded? | [Architecture](../architecture.md), [protocol](../protocol.md), schemas, native bridge, mission/controller/composer/SDK callers, ledger/archive readers and focused tests. Migrate the coherent set with unsupported-version rejection; no compatibility path. Explicit Observe changes no public request or persisted schema shape. The next foundation migrates to native6/mission10/ledger12/archive5 together, including nested procedure2/campaign-memory5/reflection2, `InputObservation`, actual-preflight lineage and separate delivery/processing failure. Update all producers, strict readers, examples, tool descriptions and negative-version fixtures; do not advertise the target as current while integration is incomplete. |
+| Current behavior: what is permitted and recorded? | [Architecture](../architecture.md), [protocol](../protocol.md), schemas, native bridge, mission/controller/composer/SDK callers, ledger/archive readers and focused tests. Migrate the coherent set with unsupported-version rejection; no compatibility path. Explicit Observe changes no public request or persisted schema shape. The implemented foundation migrates to native6/mission10/ledger12/archive5 together, including nested procedure2/campaign-memory5/reflection2, `InputObservation`, actual-preflight lineage and separate delivery/processing failure. Producers, strict readers, examples, tool descriptions and negative-version fixtures are migrated in source; actual host loading and graphical qualification remain separate. |
 | Why this design, and what remains proposed? | This brief, [mixed input](../design/mixed-input.md), [organic discovery](../design/organic-discovery.md), [procedure learning](../design/procedure-learning.md) and the existing research crosswalk. Preserve prior findings, conflicts, applicability limits and unverified assumptions; do not redate a literature review without researching it. |
 | How does one prepare, operate and recover? | [Setup](../setup.md), [runbook](../runbook.md), [permissions](../operator-permissions.md), player/adviser tooling guidance and prospective preparation. Change only affected instructions; verify the actual configured player path before admission. Never patch a frozen run or restore a failed run. |
 | Who owns learning and feedback? | Existing #177/#178 and procedure/reflection contracts. Software links recorded context offers, explicit procedure selection, delivery and results; that does not prove attention or causal use. Player/adviser judge applicability and outcomes. Source-before/preflight/after changes must reach procedure provenance and fresh-context retrieval. No engineering-lead memory curation or per-action review. |
@@ -252,10 +260,9 @@ gate per experiment or gameplay input. The lead checks each applicable route abo
 against the actual diff and findings at the coherent checkpoint, including stale
 normative wording, generated references, loaded tool catalogue, build/install
 provenance, prospective preparations, acceptance claims and issue dependencies.
-The latest bounded coverage sweep found no additional artifact category. Concrete
-remaining caller/help examples include the viewer's mission/9 Observe and finish
-checks and CLI native-v5 restart text; migrate these with their validators/tests,
-not by adding alternate-version acceptance. GitHub readback and the actually
+The latest bounded coverage sweep found no additional artifact category. The viewer's Observe/finish validators and CLI restart guidance now use the current
+contract, with explicit unsupported-version fixtures; no alternate-version
+acceptance was added. GitHub readback and the actually
 loaded player-tool catalogue need their own verification; a repository sweep
 cannot establish either.
 Record consequential deferrals and no-change decisions in #191/PR180. S-DOCS,
@@ -362,12 +369,35 @@ Fix terminal viewer wording/reconnect in the same delivery. Evaluate #175 using
 actual repeated setup cost; implement normal checkpoint reuse only if it materially
 helps this work, with new admission provenance and no rollback/old authority.
 
+The October22 read-only audit of closed historical SQLite copies separates setup
+through first adoption-request admission from whole-attempt totals:
+
+| Historical attempt | Start to adoption-request admission | Requests / inputs through that point | Whole-attempt inputs |
+| --- | --- | --- | --- |
+| Learning004 | 294.711s | 42 / 79 | 178 |
+| Fresh seven-day002 (failed) | 238.647s | 41 / 81 | 115 |
+
+The lead verified the request/admission and primitive joins against the closed
+ledgers; no current runtime reader, old library import or restored authority was
+used. These wall spans include orchestration, model/tool and engine work; request
+admission is not settlement and no pure inference time or reuse speedup is measured.
+Repeated setup is a credible accelerator opportunity, not negligible work. Keep
+#175 conditional/Next for cross-admission DEVELOPMENT loading: the current learning
+mission and seven-day acceptance both still require fresh starts. Existing normal
+Save/Load within one admission is implemented and required in these runs. Pinned
+CDDA also has character-construction templates, distinct from existing-world saves;
+their preservation of scenario/randomization and actual tool path would need a
+bounded qualification, not an assumed portable checkpoint. Reassess cross-admission
+reuse after a current-contract engineering failure if repeated setup materially
+delays investigation; preserve all old costs and new provenance. No extra snapshot
+framework, precise ROI requirement or blanket campaign gate follows.
+
 ## Maintenance and current status
 
 This active delivery brief records implementation and the bounded004graphical
 checkpoint. It does not accept a fresh seven-day campaign or protected release.
-Current source uses native5/mission9/ledger11/archive4/campaign-memory4, with
-procedure/1 and reflection/1 records. The installed wrapper and actual loaded
+Current source uses native6/mission10/ledger12/archive5/campaign-memory5, with
+procedure/2 and reflection/2 records. The installed wrapper and actual loaded
 host catalogue must match before new play. Current callers, validators, persisted
 formats, SDK schemas and guidance migrate together; old runtime versions reject
 and historical evidence grants no authority.
