@@ -74,6 +74,13 @@ game-family portability gaps. Its 115 primitives, 64 requests, 285 images and
 1,804 game seconds remain a closed partial failure, with no daily milestone or
 normal ending. A fresh seven-day result is still required.
 
+The next input-foundation work and its
+[artifact impact map](changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
+link current contracts, procedures, controls, learning feedback and evidence to
+their backlog owners. Explicit Observe now permits a new decision on a changed
+healthy owned prompt; strict automatic input refresh and broader native/game
+coupling remain unresolved. Source support is distinct from real qualification.
+
 The official MCP SDK adapter constructs and retains requests, collects original
 results and presents exact images over the existing mission ingress. Both024
 players used the then-current fifteen project-preapproved tools without visible routine

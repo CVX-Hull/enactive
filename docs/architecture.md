@@ -59,6 +59,16 @@ categories changing after earlier inputs. These are bounded source checks, not
 proof of general player adaptation or cross-game portability; #191 tracks that
 broader boundary.
 
+Explicit Observe now separates looking again from revalidating an old decision.
+A changed healthy owned prompt can advance to a new checkpoint in the same root;
+changed evidence clears quantity-editor attestation, while original ownership,
+deadlines, costs and unsettled-delivery checks remain. The player then chooses
+again using the new source. Automatic input refresh still requires equivalence;
+the native category catalogue and ordinary input's exact-image gate also remain.
+This source repair is not the completed general input foundation or new native/
+graphical qualification. [Delivery057](changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
+maps the remaining work and affected authoritative artifacts to #191.
+
 The harness-enabled SDL ImGui context uses the library's steady text-caret setting.
 It preserves exact image validation without treating cosmetic blink as stable
 pixels. Game options and non-harness rendering retain upstream defaults.
@@ -181,8 +191,9 @@ Implementation: [mission runtime](../harness/mission_runtime.py),
 Navigation, native-row focus and fallible image controls share the same mission
 writer. An ordinary interaction, item, activity, inspection or interrupted navigation root may own a returned prompt. Explicit control
 children retain its original scope, actor/epoch, deadlines and cumulative input
-ceiling. A settled owned menu may be refreshed only through retained exact-PNG
-source revalidation. Typed PhaseReceipt audit data restores no private phase on
+ceiling. Automatic input entry refresh requires retained exact-PNG source
+revalidation. Explicit Observe may instead advance a changed healthy prompt for
+a new player decision, as described above. Typed PhaseReceipt audit data restores no private phase on
 reopen. A normal return closes the prompt without proving the desired effect.
 Returned navigation into an ordinary same-session menu retains its verified route
 prefix and last verified position, with no movement credit for the menu-opening

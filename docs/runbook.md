@@ -25,6 +25,16 @@ a phase after user Pause or service restart. The
 [independent024 mission](acceptance/2026-10-21-independent-supply-shelter.md) exercises
 actual clean-context retrieval/claim/readmission and useful continuation; future
 admissions still require their own current readiness.
+
+An explicit mission Observe can look again at a changed healthy ordinary prompt.
+It returns a new source under the same root, deadlines and costs; inspect that
+source before making a new decision. Changed evidence clears quantity-editor
+proof. Observation sends no input, grants no new authority and never erases an
+unknown ACK or its costs. Prepared/published inputs and unresolved effects still
+stop advancement. Automatic input preflight remains strict; looking again is
+distinct from silently retargeting an old request. See the
+[prompt observation contract](protocol.md#integrated-mission-lifecycle).
+
 Eligible lifecycle Resume, stage commit, save, identity inspection and owned quit
 confirmation refresh the selected checkpoint once at operation entry
 inside the operation under exact-state/image and original authority/deadline

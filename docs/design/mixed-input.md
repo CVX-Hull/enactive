@@ -22,6 +22,17 @@ and lifecycle attestations belong at the integration boundary. #190 fixes the
 known zero-input item-draft revocation; #191 tracks broader recovery and portability.
 Source support for clicks is not full mouse qualification or cross-game support.
 
+The selected next boundary is an ordinary-input foundation through the existing
+writer, with optional semantic preconditions above it. The current source first
+separates explicit Observe/redecision from automatic input refresh: a changed
+healthy owned prompt can return new evidence under the same original root and
+costs, clearing stale quantity proof. Automatic input still requires the exact
+preflight described below. The
+[delivery impact map](../changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
+and #191 identify remaining native receiver, delivery/meaning, provenance and
+game-integration coupling. The native5 requirements below describe the present
+implementation; they are not a claim that the broader foundation is delivered.
+
 The [organic-discovery crosswalk](organic-discovery.md#cross-check-against-prior-work)
 retains prior mixed-control research, campaign findings and memory distinctions.
 Independent013's unbound consume action demonstrates a catalogue/binding trap;

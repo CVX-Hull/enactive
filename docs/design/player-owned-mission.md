@@ -810,11 +810,14 @@ precedence over a simultaneous budget overshoot; both diagnostics are retained.
 Root and child game ceilings use separate observed normal anchors; menu time is
 unknown, never zero. Root deadlines/inputs are shared through the existing ledger.
 
-A settled owned menu may be refreshed by Observe only through an explicit retained
-exact-PNG SourceRevalidation, under unchanged actor/epoch/controller/operator/native
-ownership and no unresolved input. The relation is verified and recorded before
-the new input binding is published. No root deadline, anchor or child refresh
-allowance is renewed. Poll observations remain input-ineligible; actual normal
+A settled owned menu's automatic input entry refresh requires retained exact-PNG
+SourceRevalidation. Explicit Observe now supports changed healthy prompt evidence
+for a new player decision under unchanged actor/epoch/controller/operator/native
+ownership and settled input. Changed evidence records an observation transition
+and clears derived quantity proof, without claiming equivalence; equivalent
+evidence may retain its revalidation. The current
+[protocol](../protocol.md#integrated-mission-lifecycle) owns that implemented rule.
+No root deadline, anchor or child refresh allowance is renewed. Poll observations remain input-ineligible; actual normal
 return may close the prompt and record budget overshoot without semantic success.
 Malformed views, unrelated roots and wrong-phase children cannot send input.
 User Pause clears the private phase; unknown delivery cannot create or restore one.

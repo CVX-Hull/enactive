@@ -41,8 +41,9 @@ That attempt is exceptionally closed, never renewed. The
 passed adoption and acquired food but failed on zero-input prompt revocation;
 115 primitives/64 requests/285 frames/1,804 game seconds remain retained. #190
 repairs healthy draft correction/raw Escape and #192 the separate exchange clock
-mismatch. Both have independent source review and focused checks; exact integrated
-full/hosted checks and real requalification remain separate. Fresh seven-day survival
+mismatch. Both have independent source review and focused checks. Exact9950f78
+later passed1,464local tests/526.054s and hosted39701438167; subsequent source changes
+need their own applicable checks, and real requalification remains separate. Fresh seven-day survival
 and protected publication remain pending. Earlier failures
 remain failures, including the empty-popup mapping,
 handoff/reference errors and item-activity return defect.
@@ -69,6 +70,66 @@ they cannot supply current world stock or count as new successful reuse.
 Native click qualification and interrupted-activity qualification remain separate
 from learning and campaign acceptance. Do not manufacture a gameplay failure to
 tick a box; retain genuine partial/changed conditions and their disposition.
+
+## Ordinary-input foundation and artifact impact
+
+After the second fresh campaign, independent source review selected an ordinary
+input foundation through the existing writer, with optional semantic shortcuts
+above it. [#191](https://github.com/CVX-Hull/enactive/issues/191) owns implementation,
+dependencies and acceptance. The current source first permits explicit Observe
+on a changed healthy owned prompt: new evidence, same root/costs, cleared stale
+quantity proof, no invented equivalence. The worker's114focused tests and the
+independent review's127focused tests passed; the integrated summary-query cleanup
+passed114lead-focused tests/66.497s and ten reviewer prompt tests/12.170s.
+These source results do not qualify native input or actual player adaptation.
+Automatic input refresh remains strict.
+
+Remaining work is systemic: distinguish physical-event eligibility from optional
+shortcut preconditions; attest the actual native ordinary receiver independently
+of menu names; separate authenticated delivery from uncertain meaning; retain
+execution scope without requiring item/count assertions; apply geometry only
+where the physical event requires it; and separate game-specific identity/time/
+scene assumptions from shared orchestration. Preserve immutable model-informing
+sources separately from actual preflight and after-evidence. Do not simply disable
+an exact-image flag while leaving equivalence-only history and refusal handling.
+Before coupled implementation, the lead must settle physical-event drift policy,
+minimum receiver attestation, finite-cost treatment without a reliable game clock,
+and exact contract/version changes. They are unresolved design tasks, not implied
+permission to bypass existing checks. Local macro exhaustion versus mission
+exhaustion, setup/ending cancellation and safe new decisions after known
+unpublished refusal are explicit #191 acceptance cases.
+
+The current patcher wraps `input_context::handle_input()` and native scope
+classification exposes category/registered actions. That establishes scope
+provenance, not by itself readiness of the actual event receiver. Receiver design
+must examine the SDL polling/dispatch seam and nested/transient contexts while
+preserving real debug, activity and owned-interruption precedence. Do not relabel
+every unknown category as an ordinary menu and call that native qualification.
+
+This map answers what must stay aligned; it is not another status tracker. The
+lead owns integration, verifies worker/reviewer evidence and checks applicable
+rows at interface, integration and real-run findings under S-WORK/S-DOCS. Update
+affected artifacts and explain consequential no-change/defer decisions in the
+existing PR/issue; unaffected material needs no boilerplate or empty new document.
+GitHub owns owners, sequencing, estimates and dispositions.
+
+| Artifact / reader question | Authoritative update and evidence route |
+| --- | --- |
+| Purpose and big picture: what changes for me? | [Charter](../charter.md), [overview](../overview.md), README and [work](../work.md). Keep the CDDA-class constraint, player/lead roles and current capability limits understandable; update diagrams only when their boundary changes. |
+| Current behavior: what is permitted and recorded? | [Architecture](../architecture.md), [protocol](../protocol.md), schemas, native bridge, mission/controller/composer/SDK callers, ledger/archive readers and focused tests. Migrate the coherent set with unsupported-version rejection; no compatibility path. Explicit Observe changes no public request or persisted schema shape. |
+| Why this design, and what remains proposed? | This brief, [mixed input](../design/mixed-input.md), [organic discovery](../design/organic-discovery.md), [procedure learning](../design/procedure-learning.md) and the existing research crosswalk. Preserve prior findings, conflicts, applicability limits and unverified assumptions; do not redate a literature review without researching it. |
+| How does one prepare, operate and recover? | [Setup](../setup.md), [runbook](../runbook.md), [permissions](../operator-permissions.md), player/adviser tooling guidance and prospective preparation. Change only affected instructions; verify the actual configured player path before admission. Never patch a frozen run or restore a failed run. |
+| Who owns learning and feedback? | Existing #177/#178 and procedure/reflection contracts. Software links recorded context offers, explicit procedure selection, delivery and results; that does not prove attention or causal use. Player/adviser judge applicability and outcomes. Source-before/preflight/after changes must reach procedure provenance and fresh-context retrieval. No engineering-lead memory curation or per-action review. |
+| What is required and enforced? | [Engineering standards](../engineering.md), control registry and generated [control map](../controls.md). Existing C-REVIEW/C-PORTABLE/C-NATIVE/C-USABILITY cover appropriate lanes. Update control definitions/gaps only when mechanisms or obligations change; retain dated exercise/maintenance facts and existing review dates. No new semantic-completeness checker is justified. |
+| What really worked, failed or remains unknown? | Retain original admissions, ledgers, images, ACKs, costs and cleanup. Consolidate public evidence at a coherent checkpoint; historical reports remain historical. #176/#138/#139/#152 own relevant native qualification, #164 latency/round trips, #143 observer clarity, #145 fresh campaign and protected closeout. A second-game fixture and real non-CDDA qualification remain distinct #191 work. |
+| What must happen next? | Existing Issues/Project and draft PR180. Give every actionable finding an owner, next action/acceptance, dependency and implementation, duplicate, deferred or rejected disposition. Read back actual Project fields and PR closure references; filing work is not completion. |
+
+The older control-maintenance follow-ups describing #176–178 as proposed retain
+their earlier024-baseline scope; current control limitations and this checkpoint
+record later source and bounded learning evidence. Do not rewrite dated evidence
+or renew maintenance/exercise dates to make current status appear green.
+Fresh003 preparation must be regenerated and reverified against the final
+coherent source/native/contracts and coupled forecast before any admission.
 
 ## Reuse and tradeoffs
 

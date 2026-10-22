@@ -800,8 +800,8 @@ class MissionRuntime:
                 or state["boundary"]["control_generation"] != before["boundary"]["control_generation"]
                 or state["pause_origin"] != before["pause_origin"] or state["pause_origin"] in ("human", "fault")):
             raise ControlError("Observe changed prompt session/native control/Pause or capture health")
-        if any(p["state"] in ("prepared", "published") or p["state"] == "unknown" and p["effect"] is None
-               for p in self._ledger.primitive_records()):
+        primitive_states = self._ledger.measured_counts()["primitives"]["by_state"]
+        if ledger["unreconciled"] or any(primitive_states.get(state, 0) for state in ("prepared", "published")):
             raise LedgerError("Unsettled input cannot advance a prompt observation")
         root = self._ledger.request(phase.root_id)
         deadline_wall = min(root["deadline"], self._ledger.request(work.request["request_id"])["deadline"],

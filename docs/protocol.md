@@ -198,6 +198,23 @@ the child still consumes the overall mission and existing root allowances.
 Navigation retains its existing additional source-origin passive wall cap and
 original continuation clock; this control repair does not extend a route.
 [Entry-refresh rationale](changes/053-operation-entry-refresh.md).
+Explicit mission Observe on an already-owned ordinary prompt is a new look, not
+automatic revalidation of an old input decision. It may retain changed pixels,
+labels or menu categories as a new checkpoint under the original root, Work,
+actor, game anchor, deadlines and cumulative costs. Old image age alone does not
+prevent looking again; retained evidence must remain intact and undisputed.
+Before capture, after capture and before checkpoint advancement, the runtime
+checks current ownership, session/control generations, user Pause/takeover,
+ready/unpaused/error-free capture, original limits and settled delivery. Prepared,
+published or unresolved unknown primitives prevent advancement; historical unknown
+ACKs with separately resolved effects do not. A changed menu produces an
+observation transition, not a SourceRevalidation or renewed authority, and clears
+derived quantity-editor proof. A genuinely equivalent menu may preserve that proof
+and its exact-PNG revalidation. Actual normal return closes only that prompt and
+reports observed budget overshoot without certifying the original goal.
+The player must make a new input decision using the new source. Automatic input
+entry refresh remains strict as described above; this explicit Observe change
+does not implement general preflight-drift recovery or expand native receivers.
 Save refresh precedes operation rotation and preserves its original normal-game
 time anchor. Changed state, Pause or expiry still stops input.
 An atomic controller snapshot keeps a frame's first-seen clock; a command reader

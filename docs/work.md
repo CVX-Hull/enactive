@@ -60,7 +60,8 @@ normal ending. All actors/processes are closed exceptionally. #190 preserves
 healthy zero-input draft correction and player-chosen ordinary Escape; independent
 source review and 109 lead-focused tests passed. #192 fixes the independently
 reproduced native/host exchange deadline mismatch; 145 reviewer-focused tests
-passed. Exact integrated full/hosted checks remain pending.
+passed. Exact9950f78 passed1,464local tests and hosted run39701438167.
+Those passes apply to that source, not subsequent repairs or new real play.
 
 The user now requires applicability across CDDA-class games and general discovery
 instead of accumulating menu handlers. P-GENERALITY, S-ARCH/S-CODE and existing
@@ -69,6 +70,14 @@ owns whole-loop recovery, CDDA coupling/migration, unfamiliar/time-changing
 interface tests and independent second-game evidence. Existing ordinary-input,
 memory/reflection, native and latency issues retain their acceptance lanes. Filing
 work or passing synthetic variants does not establish game-family support.
+The selected foundation reuses the existing writer with semantic shortcuts above
+ordinary input. Its first source repair permits explicit Observe on a changed
+healthy prompt without renewing the root or retaining stale quantity proof;
+automatic input refresh is still strict. The
+[delivery impact map](changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
+routes contract, caller, documentation, control, evidence and backlog updates.
+Broader preflight/receiver/delivery separation and real qualification remain #191
+work; fresh003 is preparation only, with no admission or running gameplay actors.
 Source checks issue no run authority. The accepted024
 baseline and historical attempts below remain evidence, not a new admission.
 
@@ -337,12 +346,15 @@ owns the input design; [player-learned procedures #177](https://github.com/CVX-H
 owns the separate functional memory/abstraction baseline. Neither is a claim of
 current autonomy or a requirement to adopt optional training/curator infrastructure.
 The [asynchronous-reflection design](design/asynchronous-reflection.md) and
-[exchange #178](https://github.com/CVX-Hull/enactive/issues/178) specify proposed
-player-owned background learning, automatic feedback and evidence-linked revision;
+[exchange #178](https://github.com/CVX-Hull/enactive/issues/178) specify the source
+implementation and remaining qualification of player-owned background learning,
+automatic feedback and evidence-linked revision. The bounded learning004 report
+above records actual concurrency and fresh-context application within its limits;
 the engineering lead must not become the player's slow reasoning path.
 
 The following map connects that discussion to owned work; live sequencing and
-estimates remain in Issues/Project. Proposed capability is not deployed behavior.
+estimates remain in Issues/Project. Remaining proposals are not deployed behavior;
+the current integrated checkpoint above distinguishes source and actual evidence.
 
 | Follow-through | Owner and acceptance boundary |
 | --- | --- |

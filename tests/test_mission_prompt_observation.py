@@ -182,11 +182,19 @@ class PromptObservationTests(unittest.TestCase):
                 try:
                     case.open_direction()
                     original = case.runtime._ledger.primitive_records()
-                    injected = ({**original[0], "state": state, "effect": effect},)
-                    # Inject only the historical effect classification; native
-                    # transport, source checks and observation remain real.
-                    with patch.object(case.runtime._ledger, "primitive_records", return_value=injected):
-                        observed = case.observe()
+                    # Inject only a historical classification, not a legal
+                    # effect proof. Exercise the real SQLite summary queries;
+                    # proof validation has separate ledger tests. Controller,
+                    # source and observation components use the synthetic bridge.
+                    with case.runtime._ledger._mutex:
+                        case.runtime._ledger._db.execute(
+                            "UPDATE primitives SET state=?,effect=? WHERE id=?",
+                            (state, None if effect is None else json.dumps(effect), original[0]["logical_id"]))
+                        case.runtime._ledger._db.commit()
+                    self.assertEqual(case.runtime._ledger.snapshot(now=case.runtime._wall())["unreconciled"],
+                        int(state == "unknown" and effect is None))
+                    self.assertEqual(case.runtime._ledger.measured_counts()["primitives"]["by_state"][state], 1)
+                    observed = case.observe()
                     if effect is None:
                         case.assert_stopped(observed)
                     else:

@@ -35,9 +35,11 @@ any narrower assumption explicitly. Broader game genres are a future extension,
 not a reason to build speculative infrastructure now. Only the user may relax
 this constraint; record a later relaxation as a versioned decision.
 
-Current assumptions: one local operator, game and controller; active Codex chat
-provides high-level planning; this Mac is the validated host. Recheck these before
-concurrency, unattended operation, distribution or platform expansion.
+Current assumptions: one game/controller and one designated deciding player;
+the active player owns planning and ordinary interpretation, with a separately
+assigned advisory actor for reflection. The engineering lead owns the project,
+admission and verification. This Mac is the validated host. Recheck these before
+additional concurrent games, unattended operation, distribution or platform expansion.
 
 Current validation uses CDDA on this Mac; family-wide support is not yet qualified.
 Current technical decisions are [native Tiles](decisions/001-native-platform.md)
