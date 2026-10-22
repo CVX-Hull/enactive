@@ -1134,11 +1134,14 @@ class MissionRuntimeTests(unittest.TestCase):
             return True
         self.bridge.behavior = elapsed
         first = self.navigation()
+        second = self.navigation(target=(2, 0, 0), request_id="second")
         self.runtime.command(first)
         self.assertEqual(self.settled(first["request_id"])["state"], "partial")
         self.assertEqual(self.runtime.status()["phase"], "paused")
         self.assertIsNone(self.runtime._lease)
-        second = self.navigation(target=(2, 0, 0), request_id="second")
+        self.assertIsNone(self.runtime.status()["current_source"])
+        # Retained source data remains readable; stopped status is not a new source.
+        second["epoch"] = self.runtime.status()["epoch"]
         self.runtime.command(second)
         self.assertNotEqual(self.settled("second")["state"], "completed")
         self.assertEqual(self.runtime.status()["spent_inputs"], 1)
@@ -1754,16 +1757,19 @@ class MissionRuntimeTests(unittest.TestCase):
             return real(*args, **kwargs)
         with patch.object(self.runtime._store, "retain_preflight", blocked):
             req = self.navigation()
+            competing = self.navigation(request_id="competing")
             self.runtime.command(req)
             self.assertTrue(entered.wait(2))
-            competing = self.navigation(request_id="competing")
-            self.assertEqual(self.runtime.command(competing)["status"], "rejected")
-            with ThreadPoolExecutor(1) as pool:
-                queued = pool.submit(self.runtime.command, self.request("observe"))
-                self.wait(lambda: self.runtime._queue.qsize() == 1)
-                self.runtime.pause()
+            try:
+                self.assertEqual(self.runtime.command(competing)["status"], "rejected")
+                with ThreadPoolExecutor(1) as pool:
+                    queued = pool.submit(self.runtime.command, self.request("observe"))
+                    self.wait(lambda: self.runtime._queue.qsize() == 1)
+                    self.runtime.pause()
+                    release.set()
+                    self.assertEqual(queued.result(3)["status"], "rejected")
+            finally:
                 release.set()
-                self.assertEqual(queued.result(3)["status"], "rejected")
         self.assertEqual([r for r in self.bridge.delivered if r["kind"] == "action"], [])
 
 

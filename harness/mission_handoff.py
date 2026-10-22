@@ -206,9 +206,17 @@ class RegisteredHandoff:
         self._empty(work, phase.operator_mark, dispatch=proposal is not None)
         state = r._ledger.snapshot(now=r._wall())
         live = r._live()
+        self.check_binding(phase, state, live, ledger_phase=ledger_phase)
+        if proposal is not None and (proposal.kind != "resume" or proposal.before != phase.checkpoint):
+            raise ControlError("Handoff permits only its separately charged exact Resume")
+
+    def check_binding(self, phase: HandoffPhase, state: dict, live: tuple, *, ledger_phase: str) -> None:
+        """Share the live private proof; presenting a sample never grants Resume."""
+        r = self.runtime
         expected = r._store.observation(phase.checkpoint)
         actual = live[0]
-        if (self.phase is not phase or state["epoch"] != phase.epoch or state["phase"] != ledger_phase
+        if (self.phase is not phase or r._operator_mark() != phase.operator_mark
+                or state["epoch"] != phase.epoch or state["phase"] != ledger_phase
                 or state["unreconciled"] or state["pause_cause"] != "internal_handoff"
                 or live[1] != phase.pause_generation or actual is None or not actual["paused"]
                 or any(actual[key] != expected[key] for key in
@@ -216,8 +224,6 @@ class RegisteredHandoff:
                 or actual["takeover_generation"] != phase.takeover_generation
                 or actual["pause_origin"] in ("human", "fault")):
             raise ControlError("Handoff lost its exact live epoch/source/controller/Pause binding")
-        if proposal is not None and (proposal.kind != "resume" or proposal.before != phase.checkpoint):
-            raise ControlError("Handoff permits only its separately charged exact Resume")
 
     def claim(self, work: _Work) -> tuple[str, dict]:
         r, data, phase = self.runtime, work.request, self.phase

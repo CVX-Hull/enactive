@@ -112,3 +112,13 @@ containment. Correct those through the existing common proof/binding paths;
 retain explicitly owned private checkpoints and result collection. Migrate
 fixtures that contradicted immutable clocks/revision semantics. These findings
 and source/graphical lane differences remain evidence, not retrospective success.
+
+The subsequent `dea2a9d` full lane ran 1,619 tests in 740.636 seconds with four
+errors: two negative fixtures tried to obtain a new source after revocation or
+while another request held rotation, one fixture cleanup cascaded from that error,
+and a real handoff presentation regression hid a newer read-only Observe. Reuse
+the existing exact handoff phase-binding proof for that presentation; retain the
+issued post-Pause checkpoint, newer-source readmission refusal and separate Resume.
+Build negative requests from previously retained source data rather than exposing
+revoked current sources. The controller and both preflight-only actors were
+quiescent before this correction; no new campaign had been admitted.

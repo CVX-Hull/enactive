@@ -357,7 +357,13 @@ class MissionRuntime:
                     and self._native is not None
                     and self._native_owner == (self._admission.mission_id, self._admission.configuration.native_sha256)
                     and self._native.status()["running"])
-                private_checkpoint = owned_menu_checkpoint or any(phase is not None and phase.checkpoint == self._current for phase in
+                handoff = self._registered_handoff.phase
+                handoff_observation = handoff is not None and state["phase"] in ("handoff", "paused")
+                if handoff_observation:
+                    # Observe may publish a newer read-only sample while the
+                    # issued post-Pause checkpoint stays fixed for readmission.
+                    self._registered_handoff.check_binding(handoff, state, self._live(), ledger_phase=state["phase"])
+                private_checkpoint = handoff_observation or owned_menu_checkpoint or any(phase is not None and phase.checkpoint == self._current for phase in
                     (self._registered_lifecycle.phase, self._registered_activity.phase,
                      self._registered_handoff.phase, self._exit_phase,
                      self._prompt_phase if self._prompt_phase is not None

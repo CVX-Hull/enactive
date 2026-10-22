@@ -1000,6 +1000,9 @@ The initial activity poll and an exact owned launch/saved-menu checkpoint also
 retain their existing presentation path. The owned menu requires the original
 operator mark, admitted/active mission and retained running native-process custody;
 Pause or process exit cannot expose it as current.
+During a live handoff, a newer read-only Observe may remain current under the
+existing handoff epoch/controller/Pause/source proof. The issued post-Pause
+checkpoint stays fixed; selecting the newer sample for readmission still refuses.
 Passive malformed-state validation makes the current sample unavailable without
 closing result collection; execution still fails closed. The controller checks
 the archive's clock/revision progression at ordinary entry and late refusal

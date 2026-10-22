@@ -462,6 +462,7 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         newer = selected["source"]["reference"]["observation_id"]
         self.assertNotEqual(newer, issued["post_pause_source_id"])
         phase = self.runtime._registered_handoff.phase
+        self.assertEqual(phase.checkpoint.observation_id, issued["post_pause_source_id"])
         before = self.runtime.status()
         delivered = deepcopy(self.bridge.delivered)
         arguments = dict(snapshot_id=selected["snapshot_id"], request_id="wrong-observe-source", wait_seconds=3,
