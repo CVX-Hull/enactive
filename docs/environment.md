@@ -105,6 +105,20 @@ restoration instructions. Ledgers, original frames, host evidence and the raw
 options-pin discrepancy remain. Restoration would still require a new admission
 and ordinary Load; the archive grants no old-world authority.
 
+After failed campaign009's actual player/adviser FINAL records, retained closed
+evidence and exceptionally stopped only its owned native13901 (SIGTERM) and
+controller95258 (ordinary interrupt). Both returned0; the native shutdown receipt
+explicitly records `normal_exit_verified:false`. Exact PIDs and port8766 were
+absent. These are cleanup facts, not normal gameplay ending.
+Archived78 failed-world files before active-menu retirement:
+`.runtime/save-retirement/2026-10-22-campaign009/failed-world.tar.gz`,
+1,566,725bytes, SHA-256
+`49c84bf02debbc1d17ac1896ce5841787e91838a2d24170613cac74eaa23102a`.
+All archive members were hash-verified and all191 accepted-world files remained
+unchanged. The adjacent manifest owns restoration instructions; the
+[failed009 report](acceptance/2026-10-22-independent-seven-day-ninth-attempt.md)
+owns costs, delivery uncertainty and evidence limits. No global change was made.
+
 ## Structured player SDK, 2026-10-20
 
 Added official MCP Python SDK 2.3.0 for the optional local stdio adapter. The shared

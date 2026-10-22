@@ -28,6 +28,7 @@ explains the integrated design. Its owned work is linked from
 | [Fresh006](acceptance/2026-10-22-independent-seven-day-sixth-attempt.md) | Failed independent campaign and retained handoff/local-exhaustion evidence; no day or normal ending credited |
 | [Fresh007](acceptance/2026-10-22-independent-seven-day-seventh-attempt.md) | Failed semantic START preflight, partial independent play/handoff and bounded latency evidence; exceptional closure, no day or normal ending |
 | [Fresh008](acceptance/2026-10-22-independent-seven-day-eighth-attempt.md) | Actual fresh-context continuation and ordinary refusal recovery, then native rejections and persistent Save image drift; exceptional closure, no day or normal ending |
+| [Fresh009](acceptance/2026-10-22-independent-seven-day-ninth-attempt.md) | 341 game seconds; known returned input followed by current-source publication failure; exceptional closure, no day/handoff/reload/normal ending |
 | [Capture001](acceptance/2026-10-22-native-capture-preconditions.md) | Rebuilt boundary: ordinary input and coherent normal save/new-child exact reload/ending; capture names changed, persistent PNG drift/native commit race unexercised |
 | [Native001](acceptance/2026-10-22-native-save-refresh.md) | One unit-geometry click and exact normal save/reload/ending |
 | [Local-refusal001](acceptance/2026-10-22-native-local-refusal.md) | Closed real menu refusal/Observe/new-root cancellation loop and normal lifecycle; source checks and independent qualification remain separate |

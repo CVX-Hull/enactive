@@ -121,6 +121,20 @@ def same_native_state(before: dict | None, after: dict | None) -> bool:
             == {key: value for key, value in after.items() if key not in ignored})
 
 
+def same_native_custody(before: dict | None, after: dict | None) -> bool:
+    """Compare custody of two samples, never their action applicability or age.
+
+    A new capture may show a newer scene or receiver. Reusing one immutable
+    capture identity for different state is still a contradiction.
+    """
+    if before is None or after is None:
+        return False
+    return (all(before[key] == after[key] for key in
+                ("session", "takeover_generation", "paused", "pause_origin"))
+            and before["boundary"]["control_generation"] == after["boundary"]["control_generation"]
+            and (before["frame"] != after["frame"] or _metadata(before) == _metadata(after)))
+
+
 def _scene_authority(observation: dict[str, Any]) -> dict[str, Any]:
     # Pause and live receiver availability affect transport permission without
     # changing game facts/revision. Both remain immutable within one capture;
@@ -129,6 +143,20 @@ def _scene_authority(observation: dict[str, Any]) -> dict[str, Any]:
     result["boundary"] = {key: value for key, value in observation["boundary"].items()
                           if key != "input_receiver"}
     return result
+
+
+def validate_native_progression(before: dict, after: dict, *, now_timestamp_ms: int) -> None:
+    """Check live sample integrity without requiring age or semantic equivalence.
+
+    Uses the archive's existing clock/revision contract. A read-only refusal may
+    preserve an aged source, but cannot hide a future clock or contradictory view.
+    """
+    if any(value["timestamp_ms"] > now_timestamp_ms + 1000 for value in (before, after)):
+        raise EvidenceError("Native sample is from a future clock")
+    if after["revision"] < before["revision"]:
+        raise EvidenceError("Native observation revision regressed")
+    if after["revision"] == before["revision"] and _scene_authority(before) != _scene_authority(after):
+        raise EvidenceError("Contradictory scene or boundary at the same revision")
 
 
 def _validate_observation(value: dict[str, Any] | str | bytes) -> dict[str, Any]:

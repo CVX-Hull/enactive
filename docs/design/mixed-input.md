@@ -127,6 +127,15 @@ custody without promoting or rewriting model evidence; correlate its actual
 session/revision/boundary with the published native request. Preserve required
 capacity reservation and durable preparation before publication. Retain strict
 equivalence for semantic preflight. No second executor, history or transport.
+Captured evidence remains an immutable as-of sample when a healthy newer native
+view appears under the same custody. Binding and Observe preserve that sample's
+original receipt; semantic applicability is checked separately. A non-equivalent
+semantic entry refresh publishes fresh evidence and refuses input. Later ordinary
+applicability drift uses the existing typed refusal and explicit-Observe lineage
+after complete integrity/custody/resource proofs. Custody-only retention of a
+semantic preflight is selected only for proven nondelivery and must end before
+reservation or preparation; strict retention failure is never caught and retried
+with weaker rules. See [design059](../changes/059-observation-custody-and-applicability.md).
 
 **Delivery and further input.** A correlated ready ACK is returned delivery even
 when its screen is unfamiliar, unclassified or already superseded by a later

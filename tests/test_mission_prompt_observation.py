@@ -146,7 +146,7 @@ class PromptObservationTests(unittest.TestCase):
         self.assertEqual(self.runtime._ledger.request(root["request_id"]), original_root)
         self.assertEqual(self.runtime.status()["spent_inputs"], 2)
 
-    def test_semantic_interpretation_still_requires_its_exact_image_refresh(self):
+    def test_semantic_image_mismatch_refuses_input_without_ending_healthy_custody(self):
         root, _ = self.open_cancelable()
         source = self.runtime.status()["current_source"]["observation_id"]
         choice = self.control("menu", dict(purpose="Open nearby door", label="East", outcome="activated"),
@@ -154,8 +154,16 @@ class PromptObservationTests(unittest.TestCase):
                 source_id=source, question="Open which nearby door?"))
         self.changed("pixels")
         delivered = copy.deepcopy(self.bridge.delivered)
-        self.assert_stopped(self.send(choice))
+        before = self.runtime.status()
+        operation = self.send(choice)
+        self.assertEqual(operation["state"], "blocked", operation)
         self.assertEqual(self.bridge.delivered, delivered)
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
+        self.assertEqual(self.runtime._prompt_phase.root_id, root["request_id"])
+        self.assertEqual(self.runtime._prompt_phase.checkpoint, self.runtime._current)
+        self.assertNotEqual(self.runtime._current.observation_id, source)
+        self.assertEqual(self.observe()["state"], "completed")
 
     def test_old_age_and_already_visible_drift_do_not_prevent_explicit_look(self):
         self.open_direction()

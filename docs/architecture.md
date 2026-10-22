@@ -80,6 +80,12 @@ Immutable informing source, entry observation, actual final preflight and termin
 ACK capture remain separate. A known ACK records delivery before fallible storage
 or publication work; a separately validated current capture determines further
 input. A different current capture ends the operation partial for player review.
+Captured-source custody is independent of semantic applicability: an immutable
+as-of sample remains bindable while a healthy owned view advances. Semantic
+non-equivalence refuses input locally and returns actual evidence for a new player
+decision; clock/revision contradictions, lost custody and trace faults still stop.
+The [observation-boundary design](changes/059-observation-custody-and-applicability.md)
+explains the distinction and retained specialized proofs.
 See [ordinary input and receipt lineage](protocol.md#ordinary-discovery-and-procedure-data).
 
 Explicit Observe can advance a changed healthy prompt without renewing its root.
@@ -409,10 +415,13 @@ and preserves the original normal-game time anchor. [Native qualification001](ac
 retains the timing failures and successful normal stopped cleanup; the source
 repair is not a character-lifecycle or independent-mission pass.
 
-Live native comparisons tolerate only capture/transport id, timestamp and filename
-churn, reusing EvidenceStore's state comparison without archiving passive polls.
-Observe keeps its exact response/original receipt; image and input-authority checks
-remain separate. A proven returned-Resume-only startup can adopt a fresh internally
+Observe and source binding preserve the actual captured sample and original
+receipt across healthy later visual change under the same custody. Current-source
+availability describes that retained as-of sample, not equality with an instantaneous
+native frame. Semantic dispatch equivalence still compares complete native state
+(excluding capture/transport identity), with exact pixels when image-conditioned;
+the archive's clock/revision/immutable-source integrity checks remain mandatory.
+A proven returned-Resume-only startup can adopt a fresh internally
 paused copy of the original menu for a separate normal cleanup root. Ledger audits
 its immutable input lineage; runtime/store verify pixels and live custody.
 [Native006](acceptance/2026-10-20-native-character-lifecycle.md) established

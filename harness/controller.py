@@ -20,7 +20,7 @@ from typing import Any, Callable
 
 from harness.movement import DIRECTIONS, MovementBlocked, guard, observed_step
 from harness.gameplay.contracts import ContractError
-from harness.gameplay.evidence import same_native_state
+from harness.gameplay.evidence import same_native_custody, same_native_state
 from harness.gameplay.mission_contracts import PAUSE_ORIGINS, validate_visible_ui
 from harness.gameplay.native_input import validate_geometry, validate_input
 
@@ -1333,7 +1333,8 @@ class Controller:
 
     def acquire_mission(self, mission_id: str, epoch: int, actor_id: str, *, operation: str,
                         expected_session: str, expected_revision: int,
-                        expected_boundary_id: str, replace: MissionLease | None = None) -> MissionLease:
+                        expected_boundary_id: str, replace: MissionLease | None = None,
+                        refuse_changed_context: bool = False) -> MissionLease:
         """Claim one admitted operation at a supported boundary; sends no input."""
         if operation not in ("navigate", "interaction", "lifecycle"):
             raise ControlError("Unknown mission operation")
@@ -1366,7 +1367,16 @@ class Controller:
                         raise ControlError("Native or recovery work is pending")
                     if self.state is None:
                         raise ControlError("Run acquisition requires a current observation")
-                    self._mission_frame(self.state, operation)
+                    changed_context = (refuse_changed_context and replace is not None and operation != "lifecycle"
+                        and self.state["session"] == expected_session
+                        and (self.state["revision"] != expected_revision
+                             or self.state["boundary"]["id"] != expected_boundary_id))
+                    self._mission_frame(self.state, operation, direct=changed_context)
+                    if changed_context:
+                        # No revocation/rotation occurred. Runtime must still prove
+                        # complete source/custody/resource health after locks release.
+                        raise MissionInputRefusal("Semantic applicability changed during rotation; Observe and choose again",
+                                                  status="rejected")
                     self._expect(self.state, expected_session, expected_revision)
                     self._expect_boundary(self.state, expected_boundary_id)
                     self._revoke()
@@ -1756,6 +1766,11 @@ class Controller:
                                   observation_receipt=observation_receipt, unpublished_refusal=unpublished_refusal)
         if observed["status"] != "ready":
             return observed
+        ordinary_input = lease is not None and lease.operation != "lifecycle" and kind in {"key", "action", "direct"}
+        context_changed = (ordinary_input and kind != "direct"
+            and observed["session"] == payload.get("expected_session")
+            and (observed["revision"] != payload.get("expected_revision")
+                 or observed["boundary"]["id"] != payload.get("expected_boundary_id")))
         if receipt is not None and (lease is not None or resume_binding is not None):
             receipt["preflight"] = {"observation": copy.deepcopy(observed),
                 "received_monotonic": observation_receipt["received_monotonic"],
@@ -1768,16 +1783,16 @@ class Controller:
             if kind in {"key", "action", "direct", "resume"} and generation != self.pause_generation:
                 return {"status": "pause_requested", "error": "Resume superseded by a later pause"}
             if lease is not None:
-                self._mission_frame(observed, lease.operation, direct=kind == "direct")
+                self._mission_frame(observed, lease.operation, direct=kind == "direct" or context_changed)
         if (observed["boundary"]["kind"] not in INPUT_BOUNDARIES or not observed["frame_ok"]
                 or int(time.time() * 1000) - observed["timestamp_ms"] > 3000):
             raise ControlError("Input requires a fresh matching normal-play or supported menu frame")
         if kind != "resume" and (observed["paused"] or self.pause_requested):
             raise ControlError("Native input is paused; explicit resume required")
-        if kind == "direct" and (not observed["boundary"]["input_receiver"]
+        if ordinary_input and (not observed["boundary"]["input_receiver"]
                 or observed["boundary"]["control_generation"] != entry_control_generation):
             raise ControlError("Ordinary receiver or control custody changed")
-        if kind not in {"resume", "direct"}:
+        if kind not in {"resume", "direct"} and not context_changed:
             self._expect(observed, payload.get("expected_session"), payload.get("expected_revision"))
         elif kind == "direct":
             if payload.get("expected_session") != observed["session"]:
@@ -1786,14 +1801,15 @@ class Controller:
             with self.data_lock:
                 self._check_mission_resume(observed, resume_binding, generation)
         if lease is not None:
-            if kind != "direct":
+            if kind != "direct" and not context_changed:
                 self._expect_boundary(observed, payload.get("expected_boundary_id"))
             if lease.operation == "navigate":
                 if kind != "action" or payload.get("action") not in {"UP", "DOWN", "LEFT", "RIGHT"}:
                     raise ControlError("Navigation lease admits only registered cardinal movement")
                 dx, dy = {"UP": (0,-1), "DOWN": (0,1), "LEFT": (-1,0), "RIGHT": (1,0)}[payload["action"]]
-                self._walk_guard(observed, dx, dy)
-        if kind == "action" and payload["action"] not in observed["actions"]:
+                if not context_changed:
+                    self._walk_guard(observed, dx, dy)
+        if kind == "action" and payload["action"] not in observed["actions"] and not context_changed:
             raise ControlError("Action is not registered in the current input context")
         if (kind == "direct" and payload["input"]["type"] == "click"
                 and payload["input"]["geometry"] != observed["frame_geometry"]):
@@ -1804,7 +1820,9 @@ class Controller:
                 if expected_image_sha256 is not None and self._frame_sha256(observed) != expected_image_sha256:
                     raise MissionInputRefusal("Final preflight image differs from the informing image", status="rejected")
                 received = observation_receipt["received_monotonic"]
-                deferred_refusal = None
+                deferred_refusal = (MissionInputRefusal(
+                    "Semantic input no longer matches the current revision or boundary; Observe and choose again", status="rejected")
+                    if context_changed else None)
                 if preflight is not None:
                     try:
                         preflight(copy.deepcopy(observed), received)
@@ -1820,7 +1838,6 @@ class Controller:
                 # only after every fatal guard below passes. Never replace its
                 # retained frame/receipt. Native validates the original issued
                 # capture, clock and metadata; image/spatial choices stay strict.
-                ordinary_input = lease is not None and lease.operation != "lifecycle" and kind in {"key", "action", "direct"}
                 exact_capture = (expected_image_sha256 is not None
                     or kind == "direct" and payload["input"]["type"] == "click")
                 checked_frame = (observed["frame"] if ordinary_input or not exact_capture
@@ -1833,9 +1850,14 @@ class Controller:
                             or self.pending is not None or any((self.bridge / name).exists() for name in
                             ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
                         raise ControlError("Native or recovery work appeared during preflight")
-                    if (not same_native_state(self.state, observed)
-                            or exact_capture and not ordinary_input and self.state["frame"] != checked_frame):
-                        raise ControlError("Native boundary or frame changed during preflight")
+                    if not same_native_state(self.state, observed):
+                        if not ordinary_input or not same_native_custody(self.state, observed):
+                            raise ControlError("Native custody or specialized boundary changed during preflight")
+                        self.check_mission_refusal(lease, generation, command_work=1)
+                        deferred_refusal = MissionInputRefusal(
+                            "Native view advanced during preflight; Observe and choose again", status="rejected")
+                    if exact_capture and not ordinary_input and self.state["frame"] != checked_frame:
+                        raise ControlError("Native frame changed during specialized preflight")
                     if resume_binding is not None:
                         self._check_mission_resume(observed, resume_binding, generation)
                         if self._pause_snapshot() != pause_snapshot:
@@ -1843,7 +1865,8 @@ class Controller:
                     else:
                         if (self.bridge / "pause").exists():
                             raise ControlError("Native boundary or frame changed during preflight")
-                        self._mission_frame(observed, lease.operation, direct=kind == "direct")
+                        self._mission_frame(observed, lease.operation,
+                            direct=kind == "direct" or ordinary_input and deferred_refusal is not None)
                     if not 0 <= time.monotonic() - received <= 3:
                         raise ControlError("Final preflight observation expired")
                     capture_changed = ordinary_input and exact_capture and self.state["frame"] != checked_frame
@@ -1925,12 +1948,9 @@ class Controller:
 
             def fence() -> None:
                 self.check_mission_refusal(lease, generation, command_work=1)
-                if (not same_native_state(self.state, observed)
-                        or kind != "direct" and preflight is not None
-                        and preflight["expected_image_sha256"] is not None
-                        and self.state["frame"] != observed["frame"]):
-                    raise ControlError("Native boundary or frame changed before local refusal")
-                self._mission_frame(observed, lease.operation, direct=kind == "direct")
+                if not same_native_custody(self.state, observed):
+                    raise ControlError("Native custody changed before local refusal")
+                self._mission_frame(observed, lease.operation, direct=True)
                 if received is None or not 0 <= time.monotonic() - received <= 3:
                     raise ControlError("Final preflight observation expired")
 

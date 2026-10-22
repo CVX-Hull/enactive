@@ -25,7 +25,7 @@ from .mission_recovery import RecoveryEvidenceError, RecoveryPhase, RegisteredRe
 from .mission_reflection import RegisteredReflection
 from .gameplay.campaign_memory import CampaignMemory
 from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
-from .gameplay.evidence import MAX_AGE_SECONDS, MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore, same_native_state
+from .gameplay.evidence import MAX_AGE_SECONDS, MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore, same_native_custody, same_native_state, validate_native_progression
 from .gameplay.interaction import MenuIntent, MenuOutcome, MenuSkill
 from .gameplay.contracts import canonical
 from .gameplay.mission_contracts import VERSION, MissionAdmission, InputObservation, SourceBinding, SourceRevalidation, validate_submission
@@ -352,7 +352,9 @@ class MissionRuntime:
         if current_available:
             try:
                 inspected, _ = self._store.inspect_current_boundary(**self._clocks())
-                current_available = inspected == self._current and self._live()[0] == self._store.observation(self._current)
+                observed, live = self._store.observation(self._current), self._live()[0]
+                self._capture_custody(observed, live)
+                current_available = inspected == self._current
             except EvidenceError:
                 current_available = False
                 inspected = None
@@ -607,24 +609,24 @@ class MissionRuntime:
                 self._prompt_phase = phase
         return phase
 
-    def _await_current_observation(self, work: _Work, proposal: MissionIntent, original: EvidenceRef,
+    def _await_current_observation(self, work: _Work, before: EvidenceRef, original: EvidenceRef,
                                    mark: tuple[str, int], reason: str) -> None:
         """Keep only the existing scope's read-only lineage across this rotation."""
         _, generation, _ = self._check_lease()
-        binding = self._bindings[proposal.before.observation_id][1]
+        binding = self._bindings[before.observation_id][1]
         if binding.pause_generation != generation:
             rotation = self._rotation
             if (rotation is None or rotation[:3] != (work.request["request_id"],
-                    proposal.before.observation_id, binding.pause_generation)
+                    before.observation_id, binding.pause_generation)
                     or rotation[3].pause_generation != binding.pause_generation
                     or rotation[4] is not self._lease or generation != binding.pause_generation + 1):
                 raise EvidenceError("Read-only observation lacks its exact authenticated operation rotation")
         phase = self._prompt_phase
         if phase is None:
-            phase = self._open_prompt(work, original, proposal.before, mark,
+            phase = self._open_prompt(work, original, before, mark,
                                       observation_generation=generation)
         else:
-            if phase.checkpoint != proposal.before:
+            if phase.checkpoint != before:
                 raise EvidenceError("Read-only observation cannot replace an unrelated prompt checkpoint")
             phase = replace(phase, observation_generation=generation, quantity_editor=False)
             with self._metadata:
@@ -676,10 +678,21 @@ class MissionRuntime:
         state, generation, boot = self._check_lease()
         ledger = self._ledger.snapshot(now=self._wall())
         observed = self._store.observation(reference)
-        if not same_native_state(state, observed):
-            raise EvidenceError("Source differs from the exact live controller observation")
+        self._capture_custody(observed, state)
         return SourceBinding(reference.observation_id, self._admission.mission_id, ledger["epoch"],
             ledger["player_id"], boot, generation, state["takeover_generation"], self._store.authority_generation())
+
+    def _capture_custody(self, observed: dict, state: dict | None) -> None:
+        """A captured sample survives healthy visible change, never custody loss."""
+        if state is None:
+            raise EvidenceError("Current native custody is unavailable")
+        for value in (observed, state):
+            validate_state(value)
+            if value["status"] != "ready" or value["error"] or not value["frame_ok"]:
+                raise EvidenceError("Captured or current native observation is unhealthy")
+        if not same_native_custody(observed, state):
+            raise EvidenceError("Captured source crossed native custody or immutable capture identity")
+        validate_native_progression(observed, state, now_timestamp_ms=int(self._wall() * 1000))
 
     def _publish_source(self, reference: EvidenceRef, *, authoritative: bool) -> SourceBinding | None:
         self._current = reference
@@ -713,8 +726,9 @@ class MissionRuntime:
         result, received = self.controller.observe_mission(deadline_monotonic=deadline_monotonic, timeout=timeout)
         self._check_cancelled(work)
         state, _ = self.controller.observation_snapshot()
-        if result.get("status") != "ready" or not same_native_state(state, result) or received is None:
-            raise ControlError("Fresh exact Observe unavailable; registered lifecycle may be needed")
+        if result.get("status") != "ready" or received is None:
+            raise ControlError("Fresh captured Observe unavailable; registered lifecycle may be needed")
+        self._capture_custody(result, state)
         if not math.isfinite(received) or received > self._clock():
             raise EvidenceError("Observe lacks a finite original receipt")
         return result, received
@@ -1700,30 +1714,29 @@ class MissionRuntime:
         if original is None or original[1].store_generation != self._store.authority_generation():
             raise EvidenceError("Another observation invalidated this informing source")
         observed = self._store.observation(original[0])
-        if data.get("skill_kind") == "direct":
-            if (state["session"] != observed["session"]
-                    or state["boundary"]["control_generation"] != observed["boundary"]["control_generation"]):
-                raise EvidenceError("Ordinary informing source crossed native session/control custody")
-        elif not same_native_state(state, observed):
-            raise EvidenceError("Informing source differs from exact live controller state")
+        self._capture_custody(observed, state)
         return original
 
     def _rotate(self, work: _Work, proposal: MissionIntent) -> None:
         state, generation, _ = self._check_lease()
         observed = self._store.observation(proposal.before)
-        if proposal.kind == "direct":
-            if (state["session"] != observed["session"] or state["takeover_generation"] != observed["takeover_generation"]
-                    or state["boundary"]["control_generation"] != observed["boundary"]["control_generation"]):
-                raise EvidenceError("Ordinary proposal crossed its live native custody")
-        elif not same_native_state(observed, state):
-            raise EvidenceError("Proposal before-source is not the exact live controller state")
+        self._capture_custody(observed, state)
+        if proposal.kind != "direct" and not same_native_state(observed, state):
+            if work.request["kind"] != "skill" or not self._ordinary_refusal_guard(work, proposal.before):
+                raise EvidenceError("Specialized proposal lost its exact live native state")
+            raise MissionInputRefusal("Semantic applicability changed before rotation; Observe and choose again",
+                                      status="rejected")
         self._check_cancelled(work)
         old = self._lease
         new = self.controller.acquire_mission(old.mission_id, old.epoch, old.actor_id,
             operation="lifecycle" if work.request["kind"] == "lifecycle" else (
                 "navigate" if work.request["skill_kind"] == "navigate" else "interaction"),
             expected_session=state["session"], expected_revision=state["revision"],
-            expected_boundary_id=state["boundary"]["id"], replace=old)
+            expected_boundary_id=state["boundary"]["id"], replace=old,
+            refuse_changed_context=work.request["kind"] == "skill"
+                and self._exit_phase is None and self._registered_lifecycle.phase is None
+                and self._registered_activity.phase is None and self._registered_recovery.phase is None
+                and self._registered_recovery.continuation is None)
         self._lease = new
         if new.pause_generation != generation + 1:
             raise ControlError("Operation rotation did not make exactly one host generation")
@@ -1779,10 +1792,7 @@ class MissionRuntime:
         self._dispatch_authority_guard(work, before, local_limits=False)
         native = self.controller.check_mission_refusal(self._lease, self._lease.pause_generation, command_work=command_work)
         observed = self._store.observation(before)
-        if (native["session"] != observed["session"]
-                or native["takeover_generation"] != observed["takeover_generation"]
-                or native["boundary"]["control_generation"] != observed["boundary"]["control_generation"]):
-            raise EvidenceError("Local refusal crossed the retained source's native custody")
+        self._capture_custody(observed, native)
         state = self._ledger.snapshot(now=self._wall())
         if not state["clock_valid"] or state["unreconciled"]:
             raise LedgerError("Local refusal cannot hide clock faults or unresolved delivery")
@@ -1833,7 +1843,7 @@ class MissionRuntime:
         return None if local is None else f"Original local {local} allowance exhausted; Observe before a new input decision"
 
     def _unpublished_refusal_guard(self, work: _Work, before: EvidenceRef,
-                                   logical_id: str, raw: dict) -> None:
+                                   logical_id: str, raw: dict, preflight: EvidenceRef | None) -> None:
         """Authenticate an existing rejected receipt before preserving read-only lineage.
 
         Image/geometry refusals may precede controller preparation. Their status
@@ -1846,8 +1856,11 @@ class MissionRuntime:
             raise EvidenceError("Unpublished refusal lacks its actual preflight observation")
         native, _ = self.controller.observation_snapshot()
         observed, received = proof["observation"], proof["received_monotonic"]
-        if not same_native_state(native, observed):
-            raise EvidenceError("Unpublished refusal crossed its actual preflight native state")
+        if (preflight is None or self._store.observation(preflight) != observed
+                or preflight.received_monotonic != received
+                or self._store.source_status(preflight) != "retained"):
+            raise EvidenceError("Unpublished refusal lost its actual retained preflight and original receipt")
+        self._capture_custody(observed, native)
         if (not 0 <= self._clock() - received <= MAX_AGE_SECONDS
                 or not -1000 <= self._wall() * 1000 - observed["timestamp_ms"] <= MAX_AGE_SECONDS * 1000):
             raise EvidenceError("Unpublished refusal preflight observation expired")
@@ -1937,14 +1950,17 @@ class MissionRuntime:
             work.game_anchor = current if current.boundary_kind == "normal_play" else self._last_normal()
             self._dispatch_authority_guard(work, current)
         actual = self._live()[0]
-        if not same_native_state(actual, observed):
-            raise EvidenceError("Inconsistent request cannot bypass changed native source state")
+        self._capture_custody(observed, actual)
         image_informed = (data["skill_kind"] == "direct" or missing_native_rows or item_control_reason is not None
             or data["perception"] is not None or self._registered_lifecycle.phase is not None
             or self._exit_phase is not None or self._registered_activity.phase is not None
             or data["skill_kind"] == "activity" and data["goal"]["step"] in ("interrupt", "answer_interrupt", "resume"))
-        if image_informed and self.controller._frame_sha256(actual) != current.frame_sha256:
-            raise EvidenceError("Inconsistent request cannot bypass changed native pixels")
+        if (not same_native_state(actual, observed)
+                or image_informed and self.controller._frame_sha256(actual) != current.frame_sha256):
+            if not self._ordinary_refusal_guard(work, current):
+                raise EvidenceError("Inconsistent specialized request lost its exact native source")
+            raise MissionInputRefusal("Native view changed during draft validation; Observe before correcting the request",
+                                      status="rejected")
         self._check_cancelled(work)
         reasons = []
         if incompatible_support:
@@ -2128,13 +2144,24 @@ class MissionRuntime:
             nonlocal reservation, preflight_source, preflight_observation, prepared, prepared_intent
             guard()
             self._capacity(frames=2, byte_count=2 * MAX_FRAME_BYTES)
+            inapplicable = (lifecycle is None and activity is None and not ordinary
+                and not same_native_state(self._store.observation(proposal.before), observed))
+            if inapplicable:
+                self._capture_custody(self._store.observation(proposal.before), observed)
             preflight_source = self._store.retain_preflight(observed,
-                received_monotonic=received, rule=rule, **self._clocks())
+                received_monotonic=received, rule="ordinary_input" if inapplicable else rule, **self._clocks())
             if (preflight_source == proposal.before or preflight_source.received_monotonic != received
                     or self._store.observation(preflight_source) != observed):
                 raise EvidenceError("Preflight retention must attest its actual distinct source and original receipt")
             preflight_observation = copy.deepcopy(observed)
             guard()
+            if inapplicable:
+                # This custody-only source is refusal evidence, never a weaker
+                # semantic preflight. Return before reservation or preparation.
+                if not self._ordinary_refusal_guard(work, proposal.before, command_work=1):
+                    raise ControlError("Semantic refusal lacks ordinary custody")
+                raise MissionInputRefusal("Semantic intent is not applicable to the actual preflight; Observe and choose again",
+                                          status="rejected")
             self._capacity()
             reservation = self._store.reserve_dispatch(proposal.before, preflight=preflight_source, rule=rule, **self._clocks())
             actual = self._store.observation(preflight_source) if ordinary else None
@@ -2206,6 +2233,20 @@ class MissionRuntime:
                 self._envelope(raw, work, proposal, preflight_source, image_informed=image_informed,
                     preflight_observation=preflight_observation))
             envelope_valid = True
+            if (disposition == "not_dispatched" and lifecycle is None and activity is None
+                    and raw["result"].get("status") == "rejected" and preflight_source is None):
+                # Early image/geometry refusals precede the callback. Preserve
+                # their actual captured proof without promoting current or
+                # preparing a semantic input under a custody-only rule.
+                if not self._ordinary_refusal_guard(work, proposal.before, proposal.logical_id):
+                    raise ControlError("Unpublished refusal lacks ordinary custody")
+                proof = raw["preflight"]
+                if proof is None:
+                    raise EvidenceError("Unpublished refusal lacks an actual preflight")
+                self._capacity()
+                preflight_observation = copy.deepcopy(proof["observation"])
+                preflight_source = self._store.retain_preflight(preflight_observation,
+                    received_monotonic=proof["received_monotonic"], rule="ordinary_input", **self._clocks())
             processing_error = raw["processing_error"]
             processing_fatal = processing_error is not None
             if not control and disposition in ("returned", "rejected"):
@@ -2317,7 +2358,7 @@ class MissionRuntime:
                 if unavailable is not None:
                     if not ordinary or lifecycle is not None or activity is not None:
                         raise EvidenceError(unavailable)
-                    self._await_current_observation(work, proposal, original, operator_mark, unavailable)
+                    self._await_current_observation(work, proposal.before, original, operator_mark, unavailable)
                 else:
                     # A genuinely different current capture consumes its own slot.
                     if state["frame"] != native_after["frame"]:
@@ -2346,11 +2387,11 @@ class MissionRuntime:
                 self._stop_after_failure(processing_error or evidence_loss)
             elif self._lease is not None and live[3] is self._lease and not live[4]:
                 if typed_refusal:
-                    self._unpublished_refusal_guard(work, proposal.before, proposal.logical_id, raw)
+                    self._unpublished_refusal_guard(work, proposal.before, proposal.logical_id, raw, preflight_source)
                 # Rotation is already committed even when this first input was
                 # not published. Preserve only authenticated read-only lineage
                 # until Observe, never an old binding for another input.
-                self._await_current_observation(work, proposal, original, operator_mark, reason)
+                self._await_current_observation(work, proposal.before, original, operator_mark, reason)
         live = self._live()
         if game_budget_exhausted:
             # Keep revocation outside controller preflight and after any
@@ -2401,6 +2442,25 @@ class MissionRuntime:
                                   and outcome.input_observation is not None else None),
             "grants_authority": False}
 
+    def _applicability_refusal(self, work: _Work, original: EvidenceRef,
+                              current: EvidenceRef, mark: tuple[str, int]) -> tuple[str, dict]:
+        """A verified refresh invalidated this intent, not observation custody."""
+        if self._operator_mark() != mark:
+            raise ControlError("Applicability refusal crossed operator Pause")
+        phase = self._prompt_phase
+        advanced = self._advance_prompt(work, original, current, observed_only=True) if phase is not None else None
+        if not self._ordinary_refusal_guard(work, current):
+            raise EvidenceError("Applicability refusal cannot replace specialized authority")
+        result = {"disposition": "blocked", "reason": "Fresh evidence does not support this semantic intent; inspect it and choose again",
+            "source_ids": list(dict.fromkeys((original.observation_id, current.observation_id))),
+            "proposals": 0, "verification_required": False, "grants_authority": False}
+        if advanced is not None:
+            result["phase"] = self._prompt_receipt(advanced,
+                "complete" if current.boundary_kind == "normal_play" else "awaiting_control")
+        self._capture_memory(current)
+        self._record("mission_applicability_refusal", result)
+        return "blocked", result
+
     def _semantic(self, work: _Work) -> tuple[str, dict]:
         data = work.request
         original, binding = self._informing(data)
@@ -2425,8 +2485,12 @@ class MissionRuntime:
             skill.observe(relation, self._store, **self._clocks())
             self._record("mission_input_observation", relation.to_dict())
         else:
+            rule = "exact_png_bytes" if data["perception"] is not None else "native_state"
+            if not self._store.equivalent(original, current, rule=rule):
+                self._publish_source(current, authoritative=True)
+                return self._applicability_refusal(work, original, current, mark)
             relation = SourceRevalidation(binding, refreshed,
-                "exact_png_bytes" if data["perception"] is not None else "native_state")
+                rule)
             skill.revalidate(relation, self._store, **self._clocks())
             self._record("mission_revalidation", relation.to_dict())
         self._publish_source(current, authoritative=True)
@@ -2467,8 +2531,15 @@ class MissionRuntime:
                 pending_observation = (self._prompt_phase is not None
                     and self._prompt_phase.observation_generation is not None)
                 actual_current, current_fresh = self._store.inspect_current_boundary(**self._clocks())
-                current_changed = (feedback.transport_disposition == "returned" and current_fresh
-                    and actual_current == self._current and actual_current != feedback.after)
+                live_changed = False
+                if (feedback.transport_disposition == "returned" and actual_current is not None
+                        and actual_current.boundary_kind in ("normal_play", "menu")):
+                    observed = self._store.observation(actual_current)
+                    live = self._live()[0]
+                    self._capture_custody(observed, live)
+                    live_changed = not same_native_state(observed, live)
+                current_changed = (feedback.transport_disposition == "returned" and actual_current == self._current
+                    and (live_changed or current_fresh and actual_current != feedback.after))
                 if pending_observation:
                     receipt_phase = self._prompt_phase
                     if feedback.transport_disposition == "returned":
@@ -2501,6 +2572,10 @@ class MissionRuntime:
                 if (not pending_observation and data["phase_id"] is None and data["skill_kind"] in ("interact", "item", "activity", "inspect", "direct") and outcome.disposition == "partial"
                         and feedback.transport_disposition == "returned" and feedback.after is not None):
                     receipt_phase = self._open_prompt(work, original, checkpoint, mark)
+                if live_changed and not pending_observation:
+                    self._await_current_observation(work, checkpoint, original, mark,
+                        "Native view advanced after the retained ACK; Observe before choosing another input")
+                    receipt_phase = self._prompt_phase
             result = self._control_result(outcome)
             if receipt_phase is not None:
                 stage = ("unknown" if outcome.disposition == "unknown" else "awaiting_observation"
@@ -2564,6 +2639,8 @@ class MissionRuntime:
         state, received = self._observe_native(work, deadline_monotonic=self._deadline(work, original))
         current = self._ingest(state, received)
         refreshed = self._publish_source(current, authoritative=True)
+        if not self._store.equivalent(original, current, rule="native_state"):
+            return self._applicability_refusal(work, original, current, self._operator_mark())
         relation = SourceRevalidation(binding, refreshed, "native_state")
         skill.revalidate(relation, self._store, **self._clocks())
         self._record("mission_revalidation", relation.to_dict())
@@ -2587,7 +2664,31 @@ class MissionRuntime:
                     "reason": "Authority revoked; actual primitive receipt retained", "source_ids": [
                         r.observation_id for r in (feedback.before, feedback.after) if r is not None],
                     "pending_logical_id": proposal.logical_id, "grants_authority": False}
-            outcome = skill.accept(feedback, self._store, **self._clocks())
+            current, _ = self._store.inspect_current_boundary(**self._clocks())
+            changed = False
+            if feedback.transport_disposition == "returned" and current is not None:
+                observed = self._store.observation(current)
+                live = self._live()[0]
+                self._capture_custody(observed, live)
+                changed = current != feedback.after or not same_native_state(observed, live)
+            if changed and current != feedback.after:
+                # The separate current sample cannot prove this step's effect.
+                # Preserve delivery and the already verified route prefix.
+                outcome = NavigationOutcome("partial", "Current capture changed after returned navigation",
+                    skill._steps, skill._proposals, skill._position,
+                    tuple(dict.fromkeys((*skill._sources, feedback.after, current))), None, skill._revalidation)
+            else:
+                outcome = skill.accept(feedback, self._store, **self._clocks())
+            if changed:
+                if outcome is None:
+                    outcome = NavigationOutcome("partial", "Native view advanced after returned navigation",
+                        skill._steps, skill._proposals, skill._position, skill._sources, None, skill._revalidation)
+                elif outcome.disposition != "unknown":
+                    outcome = replace(outcome, disposition="partial", reason="Native view advanced after returned navigation")
+                if not self._ordinary_refusal_guard(work, current):
+                    raise EvidenceError("Specialized navigation continuation lost its exact current source")
+                self._await_current_observation(work, current, anchor, mark,
+                    "Navigation returned; Observe before a new input decision")
             self._publish()
             if self._game_cost >= self._admission.limits.game_seconds:
                 result = self._navigation_result(outcome) if outcome is not None else {
@@ -2764,6 +2865,20 @@ class MissionRuntime:
                 "source_ids": [] if self._current is None else [self._current.observation_id],
                 "grants_authority": False}
             if local is None:
+                self._stop_after_failure(result["reason"])
+        except MissionInputRefusal as exc:
+            try:
+                before = self._current
+                if before is None or not self._ordinary_refusal_guard(work, before):
+                    raise EvidenceError("Applicability refusal lacks an ordinary owned source")
+                self._await_current_observation(work, before, work.game_anchor or before,
+                    self._operator_mark(), str(exc))
+                disposition, result = "blocked", {"reason": str(exc), "source_ids": [before.observation_id],
+                    "phase": self._prompt_receipt(self._prompt_phase, "awaiting_observation"),
+                    "proposals": 0, "grants_authority": False}
+            except (ContractError, ControlError, OSError, ValueError) as health_error:
+                disposition, result = "blocked", {"reason": f"{type(health_error).__name__}: {health_error}"[:1024],
+                    "grants_authority": False}
                 self._stop_after_failure(result["reason"])
         except (ContractError, ControlError, OSError, ValueError) as exc:
             disposition, result = "blocked", {"reason": f"{type(exc).__name__}: {exc}"[:1024], "grants_authority": False}

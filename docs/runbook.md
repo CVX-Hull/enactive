@@ -445,6 +445,11 @@ separates implemented components from remaining independent-play acceptance.
    atomic settlement succeeds and custody/evidence remain healthy. The
    ACK's historical after-source is separate from actual current evidence; a
    different current source ends the operation partial for another player decision.
+   A healthy newer native view does not erase the actual captured source or ACK.
+   Semantic non-equivalence sends no input; inspect the returned fresh evidence.
+   If the result requests Observe, make that explicit observation before choosing
+   a distinct input. Old text batches never resume. Actual custody, clock/revision,
+   source-integrity and unresolved-delivery failures retain their stopping path.
 5. The player requests bounded context, reads needed retained sources, records
    fallible claims/corrections/Work and chooses semantic goals. The observer's last
    context packet is historical, query-specific and possibly incomplete. Its labels

@@ -1,0 +1,103 @@
+---
+owner: lead
+review_trigger: Observation custody, semantic applicability or source publication changes
+status: proposed
+---
+
+# Observation custody and action applicability
+
+## Outcome and evidence
+
+Fresh campaign009 failed after 341 game seconds. A filter-confirmation input has
+a durable, correlated ready ACK, but subsequent source publication failed the
+comparison with a later controller observation. No day, handoff, midpoint reload
+or normal ending is accepted. Both actors are FINAL; the failed world is archived
+and the owned processes are closed. The admission is never renewed.
+
+The exact second observation at failure was not retained. A deterministic
+real-component source test reproduces the same stop by publishing a healthy next
+menu between ingestion and binding. This establishes a source defect, not the
+precise native interleaving. The general problem also affects Observe, semantic
+entry refresh and status publication; fixing only the reported post-ACK line
+would leave the same assumption elsewhere.
+
+An actual observation is an immutable sample with an original receipt, not a
+promise that the application will remain unchanged until storage or model work
+finishes. Separate its provenance and uninterrupted custody from whether a
+particular proposed action still applies. This extends [design058](058-capture-provenance-action-preconditions.md)
+and the existing ordinary-input/explicit-observation paths; it does not invent a
+menu taxonomy, a second state store or another executor.
+
+## Selected boundary
+
+Bind a verified captured source to the same live lease, actor/epoch, controller
+and operator origin, session, takeover, native control and Pause origin. Validate
+source and live capture health separately. A later healthy revision, boundary,
+scene, UI or image does not itself invalidate the immutable source or prove an
+integrity failure. Keep pending-work, original clocks, retained-byte integrity,
+store generation, resource and dispatch checks. Do not replace captured fields
+with the latest fields or renew the receipt.
+Reuse the archive's revision/scene comparison for live integrity: future clocks,
+regressed revisions and contradictory scenes at the same revision remain faults,
+even on a zero-input path. Aged evidence may support a read-only refusal without
+being promoted to fresh input authority. At acquisition, classify expected ordinary
+context mismatch inside the existing controller fence before rotation; after its
+locks release, prove complete runtime health before retaining Observe lineage.
+
+Observe authenticates its actual returned capture and original receipt. A later
+healthy controller sample may differ visually while retaining custody. The
+latest retained source in mission status is an as-of sample, separately from the
+spectator's native frame and its freshness. Its availability and next-decision
+fields must agree; neither the source binding nor status grants input authority.
+
+Semantic intent still requires its existing state/image equivalence. At entry,
+perform the actual bounded refresh under custody rather than declaring a changed
+visible state an integrity failure before refresh. If verified fresh evidence
+does not support the intent, send no input, retain both observations and return a
+local applicability refusal. Advance an existing prompt checkpoint only through
+its observation transition; do not restore an old EvidenceStore generation. A
+new physical or semantic choice belongs to the player.
+
+If applicability changes later, reuse `MissionInputRefusal`, the existing complete
+health proof and read-only explicit-Observe lineage. An expected refusal is
+eligible only after every fatal custody, queue, clock, storage and global-resource
+guard passes. Preserve any delivered prefix, original source, ACK, charges, root
+and deadlines. Do not catch arbitrary `EvidenceError`, silently refresh/retry an
+input, reinterpret a rejected key as success or authorize a remaining text batch.
+
+Registered creation, identity, Save, handoff, activity, recovery and exit retain
+their specialized transition, identity, exact-image/native-state, owned-process
+and separate Resume/readmission proofs. Review their shared binding callers;
+do not weaken those proofs while separating source custody from applicability.
+
+Reuse existing locks for short state snapshots, SQLite for durable operations,
+the source archive for immutable evidence and existing typed refusal/observation
+mechanisms. Add no controller/runtime lock spanning filesystem or SQLite I/O;
+existing refusal-classifier locking limitations remain documented. No new
+dependency, event store, retry service, compatibility path or game-specific key
+handler is justified. Existing source-binding and relation fields can express
+the distinction; challenge that decision if implementation requires new meaning
+that cannot be represented truthfully by the current contracts.
+
+## Verification and delivery
+
+Lead owns the tightly coupled runtime/controller/evidence/test integration;
+independent reviewers own design and closed-evidence/source review. No worker
+shares these paths during the repair. GitHub #176 owns work and #145 the unchanged
+full campaign outcome; this document is the design, not a mirrored tracker.
+
+Regress healthy transitions after Observe returns, after ingestion, during
+semantic refresh and before dispatch, including standalone Observe and owned
+prompts. Semantic non-equivalence must dispatch nothing and permit explicit
+observation and a distinct decision with coherent current/checkpoint/generation.
+Keep ACK UUID, source_after, bytes, clocks and costs immutable; stop a text batch
+when its informing context changes. Pair positive cases with Pause, session,
+control/takeover, pending work, stale/contradictory/missing sources, storage and
+global exhaustion. Exercise ordinary keys/text/clicks and image-conditioned
+semantic intent without merging their preconditions.
+
+Run focused checks and independent review, then full portable/exact-candidate CI
+and relevant native qualification before another genuinely fresh finite full
+campaign. Record actual native disposition and limits; a synthetic interleaving
+does not retrospectively pass009 or prove a native race. Keep prior failures,
+all original campaign requirements and normal-ending acceptance intact.

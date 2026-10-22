@@ -33,7 +33,7 @@ See [coordinated migration](runbook.md#coordinated-migration).
 
 The in-process controller API exposes `acquire_mission(mission_id, epoch,
 actor_id, *, operation, expected_session, expected_revision, expected_boundary_id,
-replace=None)`,
+replace=None, refuse_changed_context=False)`,
 `execute_mission(lease, *, kind, value, expected_session, expected_revision,
 expected_boundary_id, logical_action_id, deadline_monotonic, timeout=None,
 expected_image_sha256=None, preflight=None)` and
@@ -56,6 +56,12 @@ It preserves mission/epoch/actor/session and requires the same empty writer slot
 and unchanged Pause/takeover state. Rotation revokes the old capability and advances
 host generation under the admission locks, without Pause or an input gap for an
 external writer. A serialized lease description cannot request replacement.
+For an ordinary operation replacement only, `refuse_changed_context` can report a
+typed zero-input applicability mismatch under that same acquisition fence before
+rotation. The runtime must then prove complete ordinary custody, source integrity
+and resource health after the locks release before retaining read-only Observe
+lineage. It never retargets acquisition or applies to specialized lifecycle,
+activity, recovery or exit authority.
 
 Ordinary external key/action/walk/resume reject while leased. Existing HTTP/CLI
 input reaches this same controller gate; it cannot supply or obtain a capability.
@@ -532,7 +538,10 @@ interpretation. A source without that policy's menu/category/purpose/coverage
 requires an explicit source-bound visible-control interpretation. The eligible
 zero-input refusal preserves the original scope; it does not infer the view,
 switch adapters, relax native-state equivalence or provide a general recovery
-from EvidenceError. Actual changed pixels still stop this refusal path.
+from EvidenceError. If healthy visible state or pixels changed during an ordinary
+draft check, refuse without input and require explicit Observe before correcting
+the request. Preserve the original root and costs; specialized lifecycle/activity/
+exit proofs remain strict. No automatic corrected request or rescue key is sent.
 Additional skill sources must share the current mission, actor, epoch, controller
 boot, host Pause generation and native takeover generation. Older observations
 within that authority may support a transition; historical sources from an earlier
@@ -975,6 +984,29 @@ the actual final preflight; after revision checks compare with that preflight.
 Entry age does not invalidate a separately fresh dispatch reservation. Semantic
 SourceRevalidation and stronger semantic/native-state preconditions remain strict.
 
+Captured-source custody and action applicability are separate. A verified source
+is an immutable as-of sample with its original receipt. Binding it, returning
+Observe or exposing it as `current_source` does not require the native application
+to stay visually unchanged during storage. Verify uninterrupted lease/actor/epoch,
+controller/operator origin, session, takeover, native control and Pause origin,
+both samples' health and clock/revision integrity. A future clock, regressed
+revision, contradictory same-revision scene or changed immutable capture remains
+a fault. Mission status names the latest retained sample, separately from the
+spectator's newer native frame; neither grants input authority.
+
+Semantic entry refresh still requires positive state/image equivalence before
+input. A verified non-equivalent refresh publishes actual fresh evidence, advances
+any ordinary prompt through its observation transition and returns blocked with
+zero input. Later healthy applicability drift returns a typed local refusal only
+after complete custody, queue, source-integrity and global-budget checks. Preserve
+the root, deadlines, charges and read-only Observe lineage; never restore an old
+store generation, retarget an input or resume a remaining text suffix. Custody-only
+preflight retention is permissible solely on this proven nondelivery branch,
+selected before strict semantic retention and ending before reservation/preparation.
+Registered creation, Save/identity, handoff, activity, recovery and exit retain
+their stronger proofs. [Design059](changes/059-observation-custody-and-applicability.md)
+owns the rationale and source-versus-native evidence limits.
+
 Native direct requests require `require_exact_frame=false`. The gate still checks
 the actual fresh receiver, session/revision/boundary/frame provenance, custody,
 Pause, expiry, capture health and click mapping. Healthy typed pre-input refusals
@@ -1004,7 +1036,9 @@ original receipt clocks and recorded lag without changing current source/session
 generation. `source_after` always names that ACK capture. A separately validated
 actual current snapshot preserves its first receipt and pays its own frame/byte
 cost when distinct. It never replaces after. A different current source ends the
-operation partial and stops a text batch even when pixels match. An owned prompt
+operation partial and stops a text batch even when pixels match. Healthy native
+advancement beyond the retained ACK also ends the batch and requires Observe;
+the actual ACK and its receipt remain unchanged. An owned prompt
 advances only from eligible actual current evidence, retaining root, Work, consent,
 deadlines and costs while clearing incompatible focus/quantity assertions.
 After known returned direct input, an absent or aged independent snapshot can

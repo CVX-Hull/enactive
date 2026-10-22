@@ -102,7 +102,7 @@ class RequestBindingTests(unittest.TestCase):
         self.runtime.command(corrected)
         self.assertEqual(self.settled(corrected['request_id'])['state'], 'partial')
 
-    def test_missing_native_rows_in_ordinary_prompt_cannot_hide_changed_pixels(self):
+    def test_changed_pixels_require_observation_before_correcting_an_ordinary_draft(self):
         root, _ = self.open_direction()
         bad = self.control('menu', dict(purpose='Direction', label='Here', outcome='activated'),
             phase_id=root['request_id'], request_id='native-draft-changed-pixels')
@@ -117,8 +117,11 @@ class RequestBindingTests(unittest.TestCase):
         self.assertNotIn('No input or refresh was attempted', refused['result']['reason'])
         self.assertEqual(self.runtime.status()['spent_inputs'], spent)
         self.assertEqual(self.bridge.delivered, delivered)
-        self.assertIsNone(self.runtime._lease)
-        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime.status()['phase'], 'active')
+        self.assertIsNotNone(self.runtime._lease)
+        self.assertEqual(self.runtime._prompt_phase.root_id, root['request_id'])
+        self.assertIsNotNone(self.runtime._prompt_phase.observation_generation)
+        self.assertIsNone(self.runtime.status()['current_source'])
 
     def test_expired_or_unknown_extra_support_rejects_only_draft_and_new_id_executes(self):
         root, old = self.completed_prompt()
@@ -369,6 +372,13 @@ class RequestBindingTests(unittest.TestCase):
                         self.assertEqual(case.runtime._ledger.request(root['request_id']), original_root)
                         self.assertFalse(any(p['request_id'] == bad['request_id']
                             for p in case.runtime._ledger.primitive_records()))
+                    elif fault == 'changed_pixels':
+                        self.assertIs(case.runtime._lease, lease)
+                        self.assertEqual(case.runtime._prompt_phase.root_id, phase.root_id)
+                        self.assertEqual(case.runtime._prompt_phase.checkpoint, phase.checkpoint)
+                        self.assertIsNotNone(case.runtime._prompt_phase.observation_generation)
+                        self.assertEqual(case.runtime.status()['phase'], 'active')
+                        self.assertIsNone(case.runtime.status()['current_source'])
                     else:
                         self.assertIsNone(case.runtime._prompt_phase)
                         self.assertIsNone(case.controller._mission_lease)
@@ -751,7 +761,7 @@ class ItemControlDraftTests(unittest.TestCase):
         self.assertEqual(selected["result"]["revalidation"]["original"]["source_id"], original.observation_id)
         self.assertTrue(self.runtime._prompt_phase.quantity_editor)
 
-    def test_aged_changed_pixels_stop_item_draft_even_without_perception(self):
+    def test_aged_changed_pixels_require_observation_before_correcting_item_draft(self):
         self.open_items()
         bad = self.bad_menu()
         source = self.runtime._current
@@ -762,12 +772,15 @@ class ItemControlDraftTests(unittest.TestCase):
         before, spent = copy.deepcopy(self.bridge.delivered), self.runtime.status()["spent_inputs"]
         with self.age_source(source):
             refused = self.send(bad)
-        self.assertIn("changed native pixels", refused["result"]["reason"])
+        self.assertIn("Observe before correcting", refused["result"]["reason"])
         self.assertNotIn("No input or refresh was attempted", refused["result"]["reason"])
         self.assertEqual(self.bridge.delivered, before)
         self.assertEqual(self.runtime.status()["spent_inputs"], spent)
-        self.assertIsNone(self.runtime._lease)
-        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime.status()['phase'], 'active')
+        self.assertIsNotNone(self.runtime._lease)
+        self.assertEqual(self.runtime._prompt_phase.root_id, self.root['request_id'])
+        self.assertIsNotNone(self.runtime._prompt_phase.observation_generation)
+        self.assertIsNone(self.runtime.status()['current_source'])
 
     def test_item_draft_cannot_conceal_authority_evidence_or_budget_faults(self):
         faults = ("takeover", "native_drift", "wrong_actor", "wrong_epoch", "lease", "operator_pause",
