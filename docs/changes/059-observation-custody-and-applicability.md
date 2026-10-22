@@ -96,9 +96,12 @@ control/takeover, pending work, stale/contradictory/missing sources, storage and
 global exhaustion. Exercise ordinary keys/text/clicks and image-conditioned
 semantic intent without merging their preconditions.
 
-Run focused checks and independent review, then full portable/exact-candidate CI
-and relevant native qualification before another genuinely fresh finite full
-campaign. Record actual native disposition and limits; a synthetic interleaving
+Pass focused checks, independent review and the applicable native disposition
+before another frozen finite development campaign. Full portable/exact-candidate
+CI qualifies coherent integration and formal acceptance under the
+[development-first workflow](../project-management.md#development-first-delivery);
+hosted CI may run alongside finite development after relevant local checks pass.
+Record actual native disposition and limits; a synthetic interleaving
 does not retrospectively pass009 or prove a native race. Keep prior failures,
 all original campaign requirements and normal-ending acceptance intact.
 
@@ -122,3 +125,13 @@ issued post-Pause checkpoint, newer-source readmission refusal and separate Resu
 Build negative requests from previously retained source data rather than exposing
 revoked current sources. The controller and both preflight-only actors were
 quiescent before this correction; no new campaign had been admitted.
+
+Corrected source `5d667818c50c3e2cdebac860505f6ac5f97af59c` passes the full
+local portable lane: 1,619 tests in 737.743 seconds, rendered diagrams, viewer
+regressions and structural/governance checks. Independent source review and 33
+focused handoff/runtime tests also pass. [Exact source CI](https://github.com/CVX-Hull/enactive/actions/runs/39867983281)
+is a separate receipt, required before formal acceptance and protected merge.
+No corrected-source graphical or fresh seven-day result follows from
+these checks. A later documentation-only publication checkpoint may run its own
+CI alongside finite development play when runtime/native identity is verified;
+formal acceptance and protected publication still require that exact head's CI.

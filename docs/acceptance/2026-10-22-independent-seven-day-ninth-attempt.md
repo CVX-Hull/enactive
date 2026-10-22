@@ -147,9 +147,27 @@ There is no causal batching speedup or useful navigation throughput claim.
 
 An earlier selected browser prefix has 29 exact retained-frame/clock joins with
 capture-to-DOM median 182 ms (45–283 ms); three ring samples lack archive matches.
-It is not whole-campaign display latency or browser paint latency. Host token
-telemetry exists (201 player/178 adviser records), but aggregate totals are not
-reconciled. No model inference, billing or token-cost total is claimed.
+It is not whole-campaign display latency or browser paint latency.
+
+Subsequent closed-host reconciliation separates six preflight responses per actor
+from each activated role turn through FINAL. Independent review verified all 379
+response IDs are unique and every response's usage equals the increment in both
+its turn and thread counters, including final-response usage after the FINAL
+message. Repeated context records retain the same activated turn.
+
+| Activated role turn | Responses | Input | Cached input (subset) | Output | Reasoning output (subset) | Total |
+| --- | --- | --- | --- | --- | --- | --- |
+| Player | 195 | 45,086,140 | 43,943,808 | 65,445 | 12,220 | 45,151,585 |
+| Adviser | 172 | 33,995,725 | 33,739,520 | 30,312 | 2,407 | 34,026,037 |
+
+Cache-write input is zero. Total is input plus output; cached input and reasoning
+output must not be added again. These response-level totals include repeated
+context, tool-result context, ending and reporting overhead. They are not unique
+context size, per-operation attribution, exact Start-to-Stop usage, inference
+latency, billing or a model comparison. Counter continuity proves consistency of
+the retained telemetry, not independent provider billing completeness. The
+existing closed-run analysis reproduces these groups and original host hashes;
+raw hosts, account data and identifiers remain private.
 
 ## Closure, custody and reproducibility
 
