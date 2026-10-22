@@ -1,0 +1,89 @@
+{
+  "closed_utc": "2026-10-22T00:13:40.882730+00:00",
+  "mission_id": "independent-seven-day-001",
+  "result": "FAILED before normal identity adoption; no normal ending or seven-day outcome",
+  "source_commit": "c2b9117b48271e1944eee6373b6f51608d273dab",
+  "native_sha256": "9828263d32e3bb62a7035c7dca484576841da9f08c53a700b21eb733300fe898",
+  "defect_issue": 189,
+  "requests": {
+    "blocked": 5,
+    "completed": 9,
+    "partial": 30,
+    "unknown": 1
+  },
+  "request_total": 45,
+  "primitives": {
+    "returned": 90,
+    "unknown": 1
+  },
+  "primitive_total": 91,
+  "frames": 219,
+  "frame_bytes": 5522697,
+  "game_seconds": null,
+  "observed_first_last_turn": 5212800,
+  "reflection": {
+    "completed": 6
+  },
+  "reflection_original_charged_seconds": 360,
+  "files": {
+    "ledger": {
+      "original": ".runtime/missions/independent-seven-day-001/mission.sqlite3",
+      "copy": "mission-closed.sqlite3",
+      "bytes": 929792,
+      "sha256": "755b800f3b3941b2a89121c040bb52b8fdbd74aff98e1baa98f672b0d78613b6",
+      "byte_identical": true
+    },
+    "index": {
+      "original": ".runtime/missions/independent-seven-day-001/evidence/evidence.json",
+      "copy": "evidence-index-closed.json",
+      "bytes": 337970,
+      "sha256": "20e50de959855d286cd0f486494f351331c4129a0242d40e0d68e3551c779272",
+      "byte_identical": true
+    },
+    "journal": {
+      "original": ".runtime/sessions/20261021-200616-47708013/events.jsonl",
+      "copy": "session-journal-closed.jsonl",
+      "bytes": 739357,
+      "sha256": "5e21b4e08c8964a49490a6ace34706b7f70e364c4677e75625d42d04054295b2",
+      "byte_identical": true
+    }
+  },
+  "closure": {
+    "stop_request": "seven001-player-stop-engineering-001",
+    "phase": "paused",
+    "epoch": 4,
+    "actors": "Both actual host handles FINAL and permanently quiescent before teardown; no pending tools/slots/leases/unresolved effects",
+    "native_pid": 19996,
+    "native_launch_id": "be0f6ecd508a4fc8bf5754a76e08229c",
+    "native_ending": "Exceptional TERM after Stop; observed defunct under exact parent before controller INT",
+    "normal_exit_verified": false,
+    "controller_pid": 17484,
+    "controller_exec": 26380,
+    "controller_exit": 0,
+    "exact_pid_absence_and_port8766_free_verified": true,
+    "custody_evidence_scope": "Stop/result slots and final journal/native custody are retained; exact actor-handle terminality/PID ownership/TERM-defunct-INT ordering/absence are lead tool observations, not independently supplied by the journal alone."
+  },
+  "unknown": "Originalseven001-char-confirm-001 unknown remains, separate LifecycleTransition effect reconciled; no replay",
+  "authority": "Old paused ledger not resumed or edited; a genuinely fresh later attempt needs new frozen source/scenario/admission.",
+  "figure": {
+    "path": "docs/assets/independent-seven-day001-identity.png",
+    "source_id": "c626328deb44eee581928f0dd190e31a8f7825c8207aaea047c1b54cebfb2fb7",
+    "bytes": 63015,
+    "sha256": "966ed4cbb10971ca188221fc4bce72a6857bd7333e67f25d21243c36b6fc082b"
+  },
+  "scope": "Original current-contract failed campaign accounting/provenance; no raw host reasoning/account metadata. Archive copies byte-identical only after all actors/controller closed.",
+  "creation_sources": {
+    "scenario_Evacuee": {
+      "source_id": "493a9287173283a7db63480538f77c387b630fb8ce61b52e98d645d1eab6b7a1",
+      "frame_sha256": "8e80ded4a063f2529376ca93a3d5d1d0f539626b30425beccb5c2c2d2a196080"
+    },
+    "profession_Survivor": {
+      "source_id": "82456101484dd99527ea2aed95b70e5efe2f11c650dd66f2f0c5007919edf10d",
+      "frame_sha256": "e345e699a7234a8fc25536e60b09b92c55a8dbff61b3dd49c52a8275a0230900"
+    },
+    "final_description_Jordan_Evacuee_Survivor_random": {
+      "source_id": "be7313a2c446de6b6d1cd1c3d4991b231ac8aabd1e7a3fb494d5849c3fd82d72",
+      "frame_sha256": "feaa179ed5493ad5ddca4732bfc1d6213db749181eb6760b65d9994d1967d316"
+    }
+  }
+}

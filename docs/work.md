@@ -46,8 +46,13 @@ actual pre-campaign library refusal: authority-blocked retained images must not
 be confused with disputed history. Its reviewed repair passed77focused tests;
 the lead independently retrieved both004revisions and ten original sources
 without changing either pin. Exact final full/hosted checks remain separate.
-The bounded learning verdict supports preparing the fresh seven-day assessment;
-seven-day survival and protected publication remain pending. Source checks issue no run authority. The accepted024
+The bounded learning verdict supported the [first fresh campaign attempt](acceptance/2026-10-21-independent-seven-day-first-attempt.md),
+which failed before identity adoption with91primitives/45requests/219frames and no
+adopted game-time. Its exact c2b9117source passed1,451local tests, but lacked the
+library-plus-lifecycle composition regression. #189reuses the pure claim reducer
+without constructing procedure memory; independent review,108worker/44reviewer
+focused tests passed. All001actors/processes are closed exceptionally. A genuinely
+fresh next attempt and protected publication remain pending. Source checks issue no run authority. The accepted024
 baseline and historical attempts below remain evidence, not a new admission.
 
 [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) has

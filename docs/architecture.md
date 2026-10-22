@@ -45,6 +45,12 @@ from image age. Canonical compact UTF-8 HTTP responses match advisory byte sizin
 scoped requalification, not authority from a failure. The subsequent#187repair
 distinguishes reversible advisory closing from permanent termination and rolls
 back a nonterminal Finish refusal; exact source checks remain a separate lane.
+The first fresh campaign exposed a library/lifecycle composition defect. Identity
+projection now calls the existing pure claim-frontier reducer directly rather
+than constructing procedure memory without its admitted library (#189). Actual
+memory construction still validates the mounted library and exact environment;
+identity/source/continuity checks are unchanged. Its source regressions are not
+new native survival evidence.
 
 The harness-enabled SDL ImGui context uses the library's steady text-caret setting.
 It preserves exact image validation without treating cosmetic blink as stable

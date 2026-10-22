@@ -33,7 +33,11 @@ reload/final ending. Independent review supports narrow changed-condition
 refinement, not falsification of an erroneous R1 rule or causal learning benefit. #187 repairs the separate advisory-finishing
 publication/rollback defect exposed by exact82bdd10CI, with independent review and
 focused tests. The lead accepts the bounded learning checkpoint within that
-qualification; fresh seven-day survival and protected publication remain pending. Earlier failures
+qualification. The [first fresh campaign](../acceptance/2026-10-21-independent-seven-day-first-attempt.md)
+failed before adoption on an unnecessary memory constructor in pure identity
+projection; #189removes that coupling with real-component regression coverage.
+That attempt is exceptionally closed, never renewed. Fresh seven-day survival
+and protected publication remain pending. Earlier failures
 remain failures, including the empty-popup mapping,
 handoff/reference errors and item-activity return defect.
 

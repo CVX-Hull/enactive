@@ -1,5 +1,6 @@
 """Synthetic ledger/source adoption proofs; no native acceptance or input authority."""
 from copy import deepcopy
+from dataclasses import replace
 import json
 from pathlib import Path
 import tempfile
@@ -11,6 +12,9 @@ from harness.gameplay.evidence import EvidenceError, EvidenceStore
 from harness.gameplay.lifecycle import adopted_timeline, candidate_timeline
 from harness.gameplay.contracts import canonical
 from harness.gameplay.mission_ledger import LedgerError, MissionLedger
+from harness.gameplay.mission_contracts import LearningPolicy, LibrarySource
+from harness.gameplay.procedure_library import ProcedureLibrary
+from tests import test_procedure_library as library_fixtures
 from tests.test_gameplay_evidence import observation, png
 from tests.test_mission_contracts import admission, claim, request, skill
 from tests.test_mission_ledger import intent, published_receipt
@@ -28,6 +32,7 @@ class LifecycleTests(unittest.TestCase):
         self.store = EvidenceStore(self.bridge, self.root / "evidence", max_frames=128)
         self.addCleanup(self.store.close)
         self.a = admission()
+        self.library = None
         self.ledger = MissionLedger(self.root / "ledger", admission=self.a, now=1000)
         self.addCleanup(self.ledger.close)
         self.ledger.activate(epoch=0, player_id=self.a.player_id, now=1000)
@@ -80,14 +85,14 @@ class LifecycleTests(unittest.TestCase):
     def remember(self, entry):
         data = request("remember", request_id="remember-" + entry["id"], entry_type="claim", entry=entry)
         self.begin(data)
-        result = CampaignMemory(self.ledger, self.store).apply(data, now=1000)
+        result = CampaignMemory(self.ledger, self.store, self.library).apply(data, now=1000)
         self.complete(data["request_id"], result)
 
     def correct(self, entry):
         data = request("correct", request_id="correct-" + entry["id"], entry_type="claim", entry=entry,
             retired_ids=entry["supersedes"], reason="Correct visible character identity transcription")
         self.begin(data)
-        result = CampaignMemory(self.ledger, self.store).apply(data, now=1000)
+        result = CampaignMemory(self.ledger, self.store, self.library).apply(data, now=1000)
         self.complete(data["request_id"], result)
 
     def primitive(self, request_id, before, after, *, value="CONFIRM", preflight=None, unknown_operation=None):
@@ -477,6 +482,54 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(self.store.authority_generation(), generation)
         self.complete(created["result"], proposed)
         self.assertEqual(adopted_timeline(self.ledger, self.store), timeline)
+
+    def admit_library(self):
+        archive = library_fixtures.ProcedureLibraryTests()
+        archive.root = self.root
+        archive.environment = library_fixtures.procedure()["environment"]
+        _, _, record, pin = archive.archive()
+        self.library = self.enterContext(ProcedureLibrary(self.root, [pin], current_mission_id=self.a.mission_id))
+        self.ledger.close()
+        self.a = replace(self.a, learning=LearningPolicy(archive.environment, (LibrarySource(**pin),)))
+        self.ledger = MissionLedger(self.root / "learning-ledger", admission=self.a, now=1000)
+        self.addCleanup(self.ledger.close)
+        self.ledger.activate(epoch=0, player_id=self.a.player_id, now=1000)
+        return record
+
+    def test_learning_library_supports_candidate_and_committed_timeline(self):
+        record = self.admit_library()
+        created = self.create(pending=True, unknown=True)
+        before = self.ledger.request(created["result"])
+        generation = self.store.authority_generation()
+        timeline = candidate_timeline(self.ledger, self.store,
+            request_id=created["result"], result=created["proposed"])
+        self.assertEqual((timeline.elapsed_seconds, timeline.coordinate_epoch), (0, 0))
+        self.assertEqual(self.ledger.request(created["result"]), before)
+        self.assertEqual(self.store.authority_generation(), generation)
+        invalid = deepcopy(created["proposed"])
+        invalid["normal_adoption"]["checkpoint_source_id"] = "missing-source"
+        with self.assertRaises(EvidenceError):
+            candidate_timeline(self.ledger, self.store, request_id=created["result"], result=invalid)
+        self.complete(created["result"], created["proposed"])
+        self.assertEqual(adopted_timeline(self.ledger, self.store), timeline)
+        packet = CampaignMemory(self.ledger, self.store, self.library).context(
+            created["adoption"]["scope"], "water", max_bytes=32768,
+            now_monotonic=100, now_timestamp_ms=1_000_000)
+        self.assertEqual(packet["procedures"], [record])
+        self.assertEqual(self.ledger.primitive("logical-create-yes")["state"], "unknown")
+        self.ledger._db.execute("UPDATE primitives SET effect=NULL WHERE id='logical-create-yes'")
+        with self.assertRaises(EvidenceError):
+            adopted_timeline(self.ledger, self.store)
+
+    def test_learning_memory_still_requires_library_and_matching_environment(self):
+        self.admit_library()
+        with self.assertRaisesRegex(ContractError, "requires its admitted library and environment"):
+            CampaignMemory(self.ledger, self.store)
+        policy = replace(self.a.learning, environment=dict(self.a.learning.environment, configuration="Other setup"))
+        ledger = self.enterContext(MissionLedger(self.root / "other-environment",
+            admission=replace(self.a, learning=policy), now=1000))
+        with self.assertRaisesRegex(ContractError, "crosses its admitted environment"):
+            CampaignMemory(ledger, self.store, self.library)
 
     def test_candidate_invalid_source_rejects_before_immutable_commit(self):
         created = self.create(pending=True)

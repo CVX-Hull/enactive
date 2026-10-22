@@ -5,13 +5,17 @@ The fake bridge supplies controlled visible boundaries and expected session loss
 """
 import copy
 from contextlib import contextmanager
+from dataclasses import replace
 import threading
 import time
 import unittest
 from unittest.mock import patch
 
 from harness.mission_runtime import MissionRuntime
+from harness.gameplay.lifecycle import adopted_timeline
+from harness.gameplay.mission_contracts import LearningPolicy, LibrarySource
 from tests import test_mission_launch as launch_fixtures
+from tests import test_procedure_library as library_fixtures
 from tests.test_gameplay_evidence import observation
 from tests.test_mission_contracts import claim
 
@@ -274,6 +278,25 @@ class MissionCreationFixture:
 
 
 class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
+    def test_creation_adopts_and_retrieves_with_real_pinned_library(self):
+        archive = library_fixtures.ProcedureLibraryTests()
+        archive.root = self.controller.root
+        archive.environment = library_fixtures.procedure()["environment"]
+        _, _, record, pin = archive.archive()
+        self.a = replace(self.a, learning=LearningPolicy(archive.environment, (LibrarySource(**pin),)))
+        adopted = self.create()
+        self.assertEqual(adopted["result"]["normal_adoption"]["scope"]["coordinate_epoch"], 0)
+        timeline = adopted_timeline(self.runtime._ledger, self.runtime._store)
+        self.assertEqual((timeline.elapsed_seconds, timeline.coordinate_epoch), (0, 0))
+        self.assertEqual(len(timeline.segments), 1)
+        self.assertIsNotNone(self.runtime._map)
+        response = self.runtime.command(dict(schema="mission/9", kind="context", handoff=None,
+            mission_id=self.a.mission_id, scope=adopted["result"]["normal_adoption"]["scope"],
+            query="water", max_bytes=32768))
+        self.assertEqual(response["status"], "accepted", response)
+        self.assertEqual(response["context"]["packet"]["procedures"], [record])
+        self.assertFalse(response["context"]["grants_authority"])
+
     def test_world_finish_refusal_preserves_phase_for_registered_stage_commit(self):
         self.ready()
         self.run_request(self.lifecycle("create"))

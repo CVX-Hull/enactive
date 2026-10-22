@@ -92,7 +92,7 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
     claim_rows = {row["entry"]["id"]: row for row in ledger.memory_records("claim")}
     claims = {identity: validate_memory_entry(row["entry"], "claim") for identity, row in claim_rows.items()}
     # Identity selection shares the campaign reducer's correction/partial order.
-    frontiers, retired = CampaignMemory(ledger, store)._frontier(claims)
+    frontiers, retired = CampaignMemory._frontier(claims)
     frontier_ids = {identity for group in frontiers for identity in group}
     proofs: dict[str, dict[str, dict]] = {}
     validators = {"lifecycle_transition": validate_lifecycle_transition,

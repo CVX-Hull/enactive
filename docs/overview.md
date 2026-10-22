@@ -55,7 +55,11 @@ an erroneous rule and causal learning benefit remain unproved. This supports the
 next fresh seven-day assessment, not seven-day success. #187 repairs a separately
 reproduced advisory-finalization race: temporary
 sealing must not terminate the learner. Source tests and protected publication
-remain separate from graphical acceptance and the fresh seven-day campaign.
+remain separate from graphical acceptance. The [first fresh seven-day attempt](acceptance/2026-10-21-independent-seven-day-first-attempt.md)
+then failed before adoption because identity projection unnecessarily constructed
+memory without its admitted library. #189uses the shared pure claim reducer
+directly, retaining actual retrieval guards. The attempt is exceptionally closed;
+a new fresh campaign remains required.
 
 The official MCP SDK adapter constructs and retains requests, collects original
 results and presents exact images over the existing mission ingress. Both024

@@ -34,6 +34,14 @@ adequately couple capture demand; the revised envelope below is still prospectiv
 Optional additional curator, training, paid model tiers and causal efficacy studies
 are not admission gates.
 
+The [first actual fresh attempt](2026-10-21-independent-seven-day-first-attempt.md)
+failed before identity adoption:91primitives/45requests/219frames/5,522,697bytes,
+null adopted game-time, normal ending unavailable. All actors/processes closed
+exceptionally, with original unknown confirmation and separate effect proof.
+#189repairs the pure-identity/procedure-memory construction coupling. A later
+attempt must use a new world/character and frozen admission; never resume or
+relabel the failed001run. These setup costs do not establish campaign throughput.
+
 ## Evidence and remaining uncertainty
 
 Mission024 demonstrates ordinary creation, food/water verification, purposeful

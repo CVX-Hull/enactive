@@ -283,7 +283,8 @@ class CampaignMemory:
                 entries.append(entry)
         return _copy({"memory_version": sequence, "entries": entries, "grants_authority": False})
 
-    def _frontier(self, claims: dict[str, dict]) -> tuple[list[list[str]], set[str]]:
+    @staticmethod
+    def _frontier(claims: dict[str, dict]) -> tuple[list[list[str]], set[str]]:
         seen = set()
         for identity, claim in claims.items():
             parents = set(claim["supersedes"]) | {c for group in claim["supports"] for c in group["claims"]}
@@ -407,7 +408,7 @@ class CampaignMemory:
         work, work_reasons = self._work_views(rows["work"], refs)
         if complete and (len(required_work_ids) > MAX_WORK or not required_work_ids <= work.keys()):
             raise CapacityError("Complete handoff context requires every bounded Work identity")
-        frontiers, retired = self._frontier(claims)
+        frontiers, retired = CampaignMemory._frontier(claims)
         primitives = self.ledger.primitive_records()
         frontier_ids = {identity for ids in frontiers for identity in ids}
         disputed = set()
