@@ -1,6 +1,11 @@
 'use strict';
 const $ = (id) => document.getElementById(id);
-const token = document.querySelector('meta[name="controller-token"]').content;
+let token = document.querySelector('meta[name="controller-token"]').content;
+let credentialRefresh = null;
+let credentialEpoch = 0;
+let credentialError = '';
+let statusTransportFailed = false;
+let transportError = '';
 let latest = null;
 let displayed = null;
 let requestedFrame = '';
@@ -25,8 +30,9 @@ function retainMeasurement(lane, sample) {
   if (observerMeasurements[lane].length > 32) observerMeasurements[lane].shift();
 }
 function observerMeasurementSnapshot() {
-  return {schema: 'observer-timing/1', clock: 'browser performance.now() milliseconds',
-    scope: 'Local status, image decode, DOM replacement and next animation callback only; native capture and end-to-end player latency unmeasured',
+  return {schema: 'observer-timing/2',
+    clock: 'browser performance.now() monotonic milliseconds; browser Date.now() and native state.timestamp_ms epoch milliseconds',
+    scope: 'Local monotonic status/decode/DOM intervals and next animation callback opportunity, not paint; raw epoch anchors support offline correlation assuming a shared host wall clock. Native capture uses frame_ms/presented_ms via state.timestamp_ms when frame_ok; wall-clock discontinuities and negative cross-clock durations need interpretation. Failed, superseded and stale frames are not successful fresh presentation; native-to-browser and end-to-end player latency unmeasured',
     connection: latest?.connection || 'unavailable', displayed_frame_fresh: !!currentFrame(),
     displayed_frame_identity: frameIdentity(displayed),
     status: observerMeasurements.status.map(sample => ({...sample})),
@@ -56,8 +62,52 @@ function showError(message) {
   $('error').hidden = !message;
 }
 function showErrors(extra = '') {
-  showError([...new Set([localError, missionError, recoveryError, frameError, latest?.error,
-    latest?.last_result?.error, latest?.state?.error, extra].filter(Boolean))].join('\n'));
+  const lastError = latest?.last_result?.error;
+  showError([...new Set([localError, missionError, recoveryError, frameError, credentialError, transportError,
+    latest?.error && `Controller snapshot diagnostic: ${latest.error}`,
+    latest?.state?.error && `Native snapshot diagnostic: ${latest.state.error}`,
+    lastError && (missionState().kind === 'terminal' ?
+      `Recorded last-command history (not a current mission decision): ${lastError}` : lastError), extra].filter(Boolean))].join('\n'));
+}
+function refreshCredentials() {
+  if (credentialRefresh) return credentialRefresh;
+  credentialRefresh = (async () => {
+    try {
+      const response = await fetch('/', {cache: 'no-store', credentials: 'same-origin'});
+      if (!response.ok) throw new Error('Controller page unavailable');
+      const page = new DOMParser().parseFromString(await response.text(), 'text/html');
+      const freshToken = page.querySelector('meta[name="controller-token"]')?.content;
+      if (typeof freshToken !== 'string' || !freshToken.trim()) throw new Error('Controller credentials unavailable');
+      token = freshToken;
+      credentialError = '';
+    } catch {
+      credentialError = 'Local controller credentials could not be refreshed. Reload this page before another request.';
+      throw new Error(credentialError);
+    } finally {
+      credentialRefresh = null;
+      showErrors();
+      updateControls();
+    }
+  })();
+  credentialEpoch += 1;
+  if (requestedFrame !== displayed?.frame) requestedFrame = '';
+  invalidateAuthority();
+  return credentialRefresh;
+}
+async function submit(url, payload, pause = false) {
+  const sentToken = token;
+  const send = credential => fetch(url, {
+    method: 'POST', headers: {'Content-Type': 'application/json', 'X-CDDA-Token': credential},
+    body: JSON.stringify(payload), credentials: 'same-origin'
+  });
+  const response = await send(sentToken);
+  if (response.status === 403) {
+    try { await refreshCredentials(); }
+    catch { return response; }
+    // Only an explicit Pause can repeat after the server rejected admission.
+    if (pause && token !== sentToken) return send(token);
+  }
+  return response;
 }
 function frameIdentity(state) {
   if (!state) return '';
@@ -67,7 +117,7 @@ function frameIdentity(state) {
     boundary?.recovery_operations, state.takeover_generation, state.pause_origin, state.frame_geometry]);
 }
 function currentFrame() {
-  return displayed && validFrameGeometry(displayed) && validFrameGeometry(latest?.state) && latest.state.frame_ok && latest.connection === 'fresh' &&
+  return !credentialRefresh && !statusTransportFailed && displayed && validFrameGeometry(displayed) && validFrameGeometry(latest?.state) && latest.state.frame_ok && latest.connection === 'fresh' &&
     latest.state.status !== 'dispatched' && displayed.frame &&
     Number.isInteger(latest.state.timestamp_ms) && Date.now() - latest.state.timestamp_ms <= 3000 &&
     Date.now() - latest.state.timestamp_ms >= -1000 &&
@@ -128,7 +178,7 @@ function renderControlState() {
   const paused = latest?.pause_requested || latest?.state?.paused;
   const disconnected = latest?.connection === 'disconnected';
   const statusSuffix = disconnected ? ' · DISCONNECTED' : latest?.connection !== 'fresh' ? ' · STATUS STALE' : '';
-  $('control-state').textContent = mode.kind === 'invalid' ? `MISSION STATUS INCONSISTENT${statusSuffix}` :
+  $('control-state').textContent = credentialRefresh ? 'REFRESHING LOCAL CONTROLLER CREDENTIALS · PAUSE AVAILABLE' : mode.kind === 'invalid' ? `MISSION STATUS INCONSISTENT${statusSuffix}` :
     mode.kind === 'terminal' ? `MISSION ${mode.mission.phase.toUpperCase()} · HISTORY${statusSuffix}` :
     mode.kind === 'nonterminal' ? `MISSION ${mode.mission.phase.toUpperCase()} · ${known(mode.mission.actor_id)}${paused || latest?.frozen ? ' · CONTROL PAUSED' : ''}${statusSuffix}` :
     latest?.connection !== 'fresh' ? 'CONTROL UNAVAILABLE · STATUS DISCONNECTED OR STALE' :
@@ -145,7 +195,7 @@ function updateControls() {
   });
   $('resume').disabled = missionLocked || gameplayBusy || recoveryPending || !currentFrame() || !!latest?.frozen ||
     displayed?.boundary?.input_receiver !== true || !['normal_play', 'menu'].includes(displayed?.boundary?.kind);
-  $('observe').disabled = observeBusy || missionState().kind === 'invalid';
+  $('observe').disabled = !!credentialRefresh || observeBusy || missionState().kind === 'invalid';
   $('pause').disabled = false;
   for (const [id, kind] of [['recovery-interrupt', 'request_interrupt'], ['recovery-yes', 'answer_interrupt'],
     ['recovery-no', 'answer_interrupt'], ['recovery-debug', 'continue_debug_once']]) {
@@ -170,10 +220,13 @@ function invalidateAuthority() {
 async function loadFrame(state, statusSample) {
   if (!state.frame || state.frame === requestedFrame) return;
   requestedFrame = state.frame;
+  const frameCredentialEpoch = credentialEpoch;
   const timing = {frame_identity: frameIdentity(state), session: state.session, revision: state.revision,
-    frame: state.frame, status_sequence: statusSample?.sequence ?? null,
-    status_ready_ms: statusSample?.response_ready_ms ?? null, decode_started_ms: performance.now(),
-    decoded_ms: null, decode_ms: null, dom_replaced_ms: null, status_to_dom_ms: null,
+    frame: state.frame, native_capture_epoch_ms: state.timestamp_ms ?? null,
+    status_sequence: statusSample?.sequence ?? null,
+    status_ready_ms: statusSample?.response_ready_ms ?? null,
+    status_ready_epoch_ms: statusSample?.response_ready_epoch_ms ?? null, decode_started_ms: performance.now(),
+    decoded_ms: null, decode_ms: null, dom_replaced_ms: null, dom_replaced_epoch_ms: null, status_to_dom_ms: null,
     presentation_opportunity_ms: null, outcome: 'decoding'};
   retainMeasurement('frames', timing);
   renderMeasurements();
@@ -185,13 +238,16 @@ async function loadFrame(state, statusSample) {
     await candidate.decode();
     timing.decoded_ms = performance.now();
     timing.decode_ms = timing.decoded_ms - timing.decode_started_ms;
-    if (requestedFrame !== state.frame) { timing.outcome = 'superseded'; renderMeasurements(); return; }
+    if (requestedFrame !== state.frame || frameCredentialEpoch !== credentialEpoch) {
+      timing.outcome = 'superseded'; renderMeasurements(); return;
+    }
     if (candidate.naturalWidth !== state.frame_geometry.output_width ||
         candidate.naturalHeight !== state.frame_geometry.output_height) {
       throw new Error('Decoded PNG dimensions disagree with frame geometry.');
     }
     $('frame').replaceWith(candidate);
     timing.dom_replaced_ms = performance.now();
+    timing.dom_replaced_epoch_ms = Date.now();
     timing.status_to_dom_ms = timing.status_ready_ms === null ? null : timing.dom_replaced_ms - timing.status_ready_ms;
     timing.outcome = 'dom_replaced';
     // A callback offers a presentation opportunity; it is not proof of screen paint.
@@ -223,7 +279,7 @@ async function loadFrame(state, statusSample) {
   } catch (error) {
     timing.outcome = 'decode_failed';
     renderMeasurements();
-    if (requestedFrame === state.frame) {
+    if (requestedFrame === state.frame && frameCredentialEpoch === credentialEpoch) {
       requestedFrame = '';
       displayed = null;
       $('frame-shell').classList.add('stale');
@@ -239,6 +295,7 @@ function showResult(result, recovery = false) {
   if (!recovery) $('result-status').textContent = result.status || 'ERROR';
 }
 async function command(kind, payload = {}) {
+  if (credentialRefresh && kind !== 'pause') return;
   if (kind === 'observe') {
     const mode = missionState().kind;
     if (mode === 'nonterminal') return missionObserve();
@@ -257,10 +314,7 @@ async function command(kind, payload = {}) {
   if (kind === 'pause' || ordinary) invalidateAuthority();
   updateControls();
   try {
-    const response = await fetch('/api/command', {
-      method: 'POST', headers: {'Content-Type': 'application/json', 'X-CDDA-Token': token},
-      body: JSON.stringify({kind, ...payload}), credentials: 'same-origin'
-    });
+    const response = await submit('/api/command', {kind, ...payload}, kind === 'pause');
     const result = await response.json();
     showResult(result);
     localError = result.error || (response.ok ? '' : `Command failed (${response.status})`);
@@ -281,7 +335,7 @@ async function command(kind, payload = {}) {
   }
 }
 async function missionObserve() {
-  if (observeBusy) return;
+  if (credentialRefresh || observeBusy) return;
   const {kind, mission} = missionState();
   if (kind !== 'nonterminal') return;
   observeBusy = true;
@@ -290,10 +344,7 @@ async function missionObserve() {
   try {
     const request = {schema: 'mission/10', kind: 'observe', request_id: crypto.randomUUID(),
       mission_id: mission.mission_id, epoch: mission.epoch};
-    const response = await fetch('/api/mission', {
-      method: 'POST', headers: {'Content-Type': 'application/json', 'X-CDDA-Token': token},
-      body: JSON.stringify(request), credentials: 'same-origin'
-    });
+    const response = await submit('/api/mission', request);
     const result = await response.json();
     const admission = response.ok && result.status === 'accepted' ?
       'Admission recorded; not ready or effect proof. Watch status for the outcome.' :
@@ -536,10 +587,7 @@ async function recover(kind, choice) {
   recoveryBusy = true;
   invalidateAuthority();
   try {
-    const response = await fetch('/api/recovery', {
-      method: 'POST', headers: {'Content-Type': 'application/json', 'X-CDDA-Token': token},
-      body: JSON.stringify({kind, ...payload}), credentials: 'same-origin'
-    });
+    const response = await submit('/api/recovery', {kind, ...payload});
     recoveryResult = await response.json();
     showResult(recoveryResult, true);
     recoveryError = recoveryResult.error || (response.ok ? '' : `Recovery failed (${response.status})`);
@@ -657,7 +705,8 @@ function render(data, statusSample = null) {
 }
 async function refresh() {
   const sequence = ++refreshSequence;
-  const sample = {sequence, started_ms: performance.now(), response_ready_ms: null,
+  const sample = {sequence, started_ms: performance.now(), started_epoch_ms: Date.now(),
+    response_ready_ms: null, response_ready_epoch_ms: null,
     status_round_trip_ms: null, frame_identity: '', outcome: 'pending'};
   retainMeasurement('status', sample);
   try {
@@ -665,16 +714,30 @@ async function refresh() {
     if (!response.ok) throw new Error(`Status request failed (${response.status})`);
     const data = await response.json();
     sample.response_ready_ms = performance.now();
+    sample.response_ready_epoch_ms = Date.now();
     sample.status_round_trip_ms = sample.response_ready_ms - sample.started_ms;
     sample.frame_identity = frameIdentity(data.state);
+    if (sequence === refreshSequence) {
+      if (statusTransportFailed || credentialRefresh) await refreshCredentials();
+      if (sequence === refreshSequence) {
+        statusTransportFailed = false;
+        transportError = '';
+        render(data, sample);
+      }
+    }
     sample.outcome = sequence === refreshSequence ? 'rendered' : 'superseded';
-    if (sequence === refreshSequence) render(data, sample);
+    renderMeasurements();
   } catch (error) {
-    sample.response_ready_ms = performance.now();
+    if (sample.response_ready_ms === null) {
+      sample.response_ready_ms = performance.now();
+      sample.response_ready_epoch_ms = Date.now();
+    }
     sample.status_round_trip_ms = sample.response_ready_ms - sample.started_ms;
     sample.outcome = 'failed';
     renderMeasurements();
     if (sequence !== refreshSequence) return;
+    statusTransportFailed = true;
+    transportError = error.message;
     if (latest) latest = {...latest, connection: 'disconnected'};
     renderMission();
     updateControls();
@@ -682,7 +745,7 @@ async function refresh() {
     $('connection-dot').className = 'dot disconnected';
     $('frame-shell').classList.add('stale');
     $('frame-note').textContent = 'DISCONNECTED · LAST FRAME';
-    showErrors(error.message);
+    showErrors();
     renderMeasurements();
   }
 }

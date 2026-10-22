@@ -219,6 +219,18 @@ function renderedText(id) {
   return content(element(id));
 }
 let monotonic = 0;
+let epoch = null;
+let bootstrapToken = 'test-token';
+class PageParser {
+  parseFromString(source, type) {
+    assert.equal(source, 'normal controller page');
+    assert.equal(type, 'text/html');
+    return {querySelector(selector) {
+      assert.equal(selector, 'meta[name="controller-token"]');
+      return bootstrapToken === null ? null : {content: bootstrapToken};
+    }};
+  }
+}
 const presentationCallbacks = [];
 const pending = [];
 const requests = [];
@@ -229,7 +241,7 @@ class DeferredImage {
   decode() { return new Promise((resolve, reject) => pending.push({resolve, reject})); }
   replaceWith(other) { elements.set('frame', other); }
 }
-const context = vm.createContext({performance: {now: () => monotonic}, requestAnimationFrame: callback => presentationCallbacks.push(callback), crypto: {randomUUID}, Image: DeferredImage, document: {
+const context = vm.createContext({DOMParser: PageParser, Date: class extends Date { static now() { return epoch ?? Date.now(); } }, performance: {now: () => monotonic}, requestAnimationFrame: callback => presentationCallbacks.push(callback), crypto: {randomUUID}, Image: DeferredImage, document: {
   getElementById: element, querySelector: () => ({content: 'test-token'}),
   querySelectorAll: selector => selector === '.send' ? sendButtons : [], createElement: () => element(Symbol()), activeElement: null
 }, fetch: (url, options) => new Promise((resolve, reject) => requests.push({url, options, resolve, reject})), setTimeout() {}});
@@ -237,7 +249,7 @@ vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8'), 
 const run = source => vm.runInContext(source, context);
 function render(revision, frame, changes = {}, apply = true) {
   context.input = {connection: 'fresh', age_ms: 0, pause_requested: false, frozen: false,
-    mission: null, latency_ms: 10, goal: '', events: [], state: {protocol: 6, pause_origin: 'none', takeover_generation: 0, ui: null, boundary: {kind: 'normal_play', input_receiver: true, id: 'b-normal', control_generation: 0, recovery_operations: [], interrupt_request_id: null}, timestamp_ms: Date.now(), session: 'test', revision, frame,
+    mission: null, latency_ms: 10, goal: '', events: [], state: {protocol: 6, pause_origin: 'none', takeover_generation: 0, ui: null, boundary: {kind: 'normal_play', input_receiver: true, id: 'b-normal', control_generation: 0, recovery_operations: [], interrupt_request_id: null}, timestamp_ms: epoch ?? Date.now(), session: 'test', revision, frame,
       frame_ok: true, frame_geometry: {window_width: 800, window_height: 600, output_width: 800, output_height: 600, viewport: [0, 0, 800, 600]}, status: 'ready', actions: [], ...changes}};
   if (changes.frame_ok === false && !Object.hasOwn(changes, 'frame_geometry')) context.input.state.frame_geometry = null;
   if (apply) run('render(input)');
@@ -253,8 +265,23 @@ function request(url, kind) {
   assert.notEqual(index, -1, `Missing request ${url} ${kind || ''}`);
   return requests.splice(index, 1)[0];
 }
-async function reply(item, result, ok = true) { item.resolve({ok, status: ok ? 200 : 409, json: async () => result}); await tick(); }
-async function statusReply() { await reply(request('/api/status'), context.input); }
+async function reply(item, result, status = true) {
+  const code = typeof status === 'boolean' ? (status ? 200 : 409) : status;
+  item.resolve({ok: code >= 200 && code < 300, status: code, json: async () => result}); await tick();
+}
+async function pageReply(value = 'test-token') {
+  const item = request('/');
+  assert.equal(item.options.cache, 'no-store');
+  assert.equal(item.options.credentials, 'same-origin');
+  bootstrapToken = value;
+  item.resolve({ok: true, text: async () => 'normal controller page'});
+  await tick();
+}
+async function forbidden(item) { await reply(item, {error: 'Valid local controller token required'}, 403); }
+async function statusReply(reconnectedToken) {
+  await reply(request('/api/status'), context.input);
+  if (reconnectedToken !== undefined) await pageReply(reconnectedToken);
+}
 async function decode() { pending.shift().resolve(); await new Promise(setImmediate); }
 (async () => {
   render(1, 'frame-1-1-1.png');
@@ -817,7 +844,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   run('void command("pause")');
   const immediatePause = request('/api/command', 'pause');
   await reply(immediatePause, {status: 'pause_requested'});
-  await statusReply();
+  await statusReply('test-token');
   assert.equal(run('observeBusy'), true, 'Pause must complete independently of mission Observe');
   await reply(observeMission, {status: 'accepted', operation_id: payload.request_id});
   await statusReply();
@@ -863,7 +890,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.equal(element('resume').disabled, true);
   assert.ok(sendButtons.every(button => button.disabled));
   run('void refresh()');
-  await statusReply();
+  await statusReply('test-token');
   assert.match(element('mission-result').textContent, /unknown.*do not retry/is);
   assert.equal(requests.length, 0, 'reconnect cannot replay a lost POST');
 
@@ -959,22 +986,38 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   await statusReply();
   assert.equal(requests.length, 0);
 
-  // Timing uses one local monotonic clock, frame identity and a bounded snapshot.
+  // Raw wall anchors correlate retained native frames; durations keep the monotonic clock.
   requests.length = 0;
   run('recoveryNeedsObserve = false');
+  epoch = 2000000000100;
   monotonic = 100;
   run('void refresh()');
+  assert.equal(run('observerMeasurementSnapshot().status.at(-1).response_ready_epoch_ms'), null);
+  epoch = 2000000000080; // A wall-clock adjustment must not change monotonic durations.
   monotonic = 130;
-  render(40, 'measured.png', {}, false);
+  render(40, 'measured.png', {timestamp_ms: 2000000000000}, false);
   await statusReply();
   assert.equal(element('resume').disabled, true, 'status receipt cannot stand in for decode');
+  epoch = 2000000000060;
   monotonic = 150;
   await decode();
   monotonic = 160;
   presentationCallbacks.splice(0).forEach(callback => callback(monotonic));
   const snapshot = JSON.parse(run('JSON.stringify(observerMeasurementSnapshot())'));
   const frameTiming = snapshot.frames.at(-1);
-  assert.equal(snapshot.clock, 'browser performance.now() milliseconds');
+  assert.equal(snapshot.schema, 'observer-timing/2');
+  assert.match(snapshot.clock, /performance.now.*monotonic.*Date.now.*epoch/);
+  assert.equal(snapshot.status.at(-1).started_epoch_ms, 2000000000100);
+  assert.equal(snapshot.status.at(-1).response_ready_epoch_ms, 2000000000080);
+  assert.equal(frameTiming.native_capture_epoch_ms, 2000000000000);
+  assert.equal(frameTiming.status_ready_ms, 130);
+  assert.equal(frameTiming.status_ready_epoch_ms, 2000000000080);
+  assert.equal(frameTiming.dom_replaced_epoch_ms, 2000000000060);
+  assert.equal(frameTiming.dom_replaced_epoch_ms - frameTiming.status_ready_epoch_ms, -20,
+    'raw wall-clock discontinuities remain visible for offline interpretation');
+  assert.equal(element('resume').disabled, false);
+  assert.ok(sendButtons.every(button => !button.disabled));
+  assert.equal(element('pause').disabled, false);
   assert.equal(snapshot.status.at(-1).status_round_trip_ms, 30);
   assert.equal(frameTiming.decode_ms, 20);
   assert.equal(frameTiming.status_to_dom_ms, 20);
@@ -983,7 +1026,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.match(frameTiming.frame_identity, /measured.png/);
   assert.equal(frameTiming.status_sequence, snapshot.status.at(-1).sequence);
   assert.match(element('observer-measurements').textContent, /measured.png/);
-  context.input.state.timestamp_ms = Date.now() - 5000;
+  context.input.state.timestamp_ms = epoch - 5000;
   run('render(input)');
   assert.equal(run('observerMeasurementSnapshot().displayed_frame_fresh'), false,
     'successful decode metrics do not imply continuing freshness');
@@ -993,7 +1036,81 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
     run('void refresh()');
     await statusReply();
   }
-  assert.equal(run('observerMeasurementSnapshot().status.length'), 32);
+  const rolled = JSON.parse(run('JSON.stringify(observerMeasurementSnapshot())'));
+  assert.equal(rolled.status.length, 32);
+  assert.ok(!rolled.status.some(sample => sample.sequence === frameTiming.status_sequence));
+  assert.deepEqual(rolled.frames.find(sample => sample.frame === 'measured.png'), frameTiming,
+    'a frame keeps its original native and status clock anchors after status rollover');
+  assert.equal(rolled.displayed_frame_fresh, false, 'retained anchors do not refresh stale authority');
+  assert.equal(requests.length, 0);
+
+  // Failed/superseded status records retain raw anchors and cannot acquire frame authority.
+  epoch = 2000000000200;
+  monotonic = 300;
+  run('void refresh()');
+  epoch = 2000000000190;
+  monotonic = 315;
+  request('/api/status').reject(new Error('timing transport failure'));
+  await tick();
+  const failedStatus = JSON.parse(run('JSON.stringify(observerMeasurementSnapshot().status.at(-1))'));
+  assert.equal(failedStatus.outcome, 'failed');
+  assert.equal(failedStatus.started_epoch_ms, 2000000000200);
+  assert.equal(failedStatus.response_ready_epoch_ms, 2000000000190);
+  assert.equal(failedStatus.status_round_trip_ms, 15);
+  assert.equal(element('resume').disabled, true);
+  assert.equal(element('pause').disabled, false);
+
+  monotonic = 320;
+  run('void refresh()');
+  const supersededRequest = request('/api/status');
+  epoch = 2000000000210;
+  monotonic = 325;
+  run('void refresh()');
+  epoch = 2000000000220;
+  monotonic = 330;
+  render(41, 'superseded-decode.png', {}, false);
+  await statusReply('test-token');
+  const supersededFrame = context.input;
+  epoch = 2000000000230;
+  monotonic = 340;
+  render(42, 'failed-decode.png', {}, false);
+  await reply(supersededRequest, context.input);
+  const supersededStatus = JSON.parse(run('JSON.stringify(observerMeasurementSnapshot().status.at(-2))'));
+  assert.equal(supersededStatus.outcome, 'superseded');
+  assert.equal(supersededStatus.started_epoch_ms, 2000000000190);
+  assert.equal(supersededStatus.response_ready_epoch_ms, 2000000000230);
+  assert.equal(supersededStatus.status_round_trip_ms, 20);
+  assert.equal(run('latest.state.frame'), supersededFrame.state.frame);
+  monotonic = 345;
+  run('void refresh()');
+  epoch = 2000000000240;
+  monotonic = 350;
+  await statusReply();
+  epoch = 2000000000250;
+  monotonic = 360;
+  await decode(); // The newer frame requested above supersedes this completed decode.
+  pending.shift().reject(new Error('timing decode failure'));
+  await tick();
+  const outcomes = JSON.parse(run('JSON.stringify(observerMeasurementSnapshot().frames.slice(-2))'));
+  assert.deepEqual(outcomes.map(sample => sample.outcome), ['superseded', 'decode_failed']);
+  assert.deepEqual(outcomes.map(sample => sample.native_capture_epoch_ms), [2000000000220, 2000000000230]);
+  assert.deepEqual(outcomes.map(sample => sample.status_ready_epoch_ms), [2000000000220, 2000000000240]);
+  assert.deepEqual(outcomes.map(sample => sample.status_ready_ms), [330, 350]);
+  assert.ok(outcomes.every(sample => sample.dom_replaced_ms === null && sample.dom_replaced_epoch_ms === null &&
+    sample.status_to_dom_ms === null && sample.presentation_opportunity_ms === null));
+  assert.equal(element('resume').disabled, true);
+  assert.equal(element('pause').disabled, false);
+
+  render(43, 'unavailable-anchors.png', {timestamp_ms: undefined});
+  await decode();
+  const unavailable = JSON.parse(run('JSON.stringify(observerMeasurementSnapshot().frames.at(-1))'));
+  assert.equal(unavailable.native_capture_epoch_ms, null);
+  assert.equal(unavailable.status_sequence, null);
+  assert.equal(unavailable.status_ready_ms, null);
+  assert.equal(unavailable.status_ready_epoch_ms, null);
+  assert.equal(unavailable.status_to_dom_ms, null);
+  assert.equal(unavailable.dom_replaced_epoch_ms, epoch);
+  assert.equal(element('resume').disabled, true, 'missing anchors do not create authority');
   assert.equal(requests.length, 0);
   for (let index = 0; index < 40; index++) {
     render(50 + index, `bounded-timing-${index}.png`);
@@ -1004,9 +1121,227 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.equal(run('observerMeasurementSnapshot().frames.length'), 32);
   assert.equal(requests.length, 0, 'local timing cannot submit remote requests');
 
+  // A native disconnect with a successful status transport does not rotate credentials.
+  context.input.connection = 'disconnected';
+  run('void refresh()');
+  await statusReply();
+  assert.equal(requests.length, 0);
+  render(100, 'credentials-before-reconnect.png');
+  await decode();
+  assert.equal(element('resume').disabled, false);
+  run('void refresh()');
+  request('/api/status').reject(new Error('controller restarted'));
+  await tick();
+  run('void refresh()');
+  await statusReply();
+  assert.equal(requests.filter(item => item.url === '/').length, 1);
+  assert.equal(element('observe').disabled, true);
+  assert.equal(element('resume').disabled, true);
+  assert.ok(sendButtons.every(button => button.disabled));
+  assert.equal(element('pause').disabled, false);
+  for (const kind of ['key', 'resume', 'observe']) await run(`command('${kind}')`);
+  assert.equal(requests.length, 1, 'only the shared credential request is in flight');
+  await pageReply('reconnect-token');
+  assert.equal(requests.length, 0, 'reconnect refreshes credentials without sending commands');
+  assert.throws(() => run('authority()'), /Wait for/);
+  assert.equal(element('resume').disabled, true, 'token rotation cannot rearm the old decoded frame');
+  assert.equal(element('observe').disabled, false);
+
+  // A fast restart can reject Pause before any status poll sees a transport failure.
+  render(101, 'credentials-before-pause.png');
+  await decode();
+  run('void command("pause")');
+  const stalePause = request('/api/command', 'pause');
+  assert.equal(stalePause.options.headers['X-CDDA-Token'], 'reconnect-token');
+  await forbidden(stalePause);
+  await pageReply('pause-token');
+  const retriedPause = request('/api/command', 'pause');
+  assert.equal(retriedPause.options.headers['X-CDDA-Token'], 'pause-token');
+  assert.deepEqual(JSON.parse(retriedPause.options.body), {kind: 'pause'});
+  await reply(retriedPause, {status: 'pause_requested'});
+  await statusReply();
+  assert.equal(requests.length, 0, 'the explicit Pause has exactly one retry');
+  assert.equal(element('resume').disabled, true);
+
+  // Other requests are never replayed after a known credential rejection.
+  for (const kind of ['key', 'resume', 'observe']) {
+    render(102, `credential-rejection-${kind}.png`);
+    await decode();
+    run(`void command('${kind}', ${kind === 'key' ? '{key: "x", ...authority()}' : '{}'})`);
+    await forbidden(request('/api/command', kind));
+    await pageReply(`after-${kind}`);
+    await statusReply();
+    assert.equal(requests.length, 0, `${kind} must not be replayed after 403`);
+    assert.match(element('error').textContent, /Valid local controller token required/);
+    assert.equal(element('resume').disabled, true);
+  }
+  render(103, 'credential-recovery.png', {boundary: activity});
+  await decode();
+  run('void recover("request_interrupt")');
+  await forbidden(request('/api/recovery', 'request_interrupt'));
+  await pageReply('after-recovery');
+  await statusReply();
+  assert.equal(requests.length, 0, 'recovery is not replayed');
+  assert.equal(run('recoveryNeedsObserve'), true);
+
+  context.input.mission = {...mission, phase: 'active'};
+  run('render(input); void command("observe")');
+  await forbidden(request('/api/mission', 'observe'));
+  assert.equal(element('observe').disabled, true);
+  assert.equal(element('pause').disabled, false);
+  // Explicit Pause sends immediately even if the credential page request is stalled.
+  run('void command("pause")');
+  const independentPause = request('/api/command', 'pause');
+  assert.equal(independentPause.options.headers['X-CDDA-Token'], 'after-recovery');
+  assert.equal(requests.length, 1, 'the credential request is still pending during the first Pause POST');
+  assert.equal(requests[0].url, '/');
+  assert.equal(requests.filter(item => item.url === '/api/mission').length, 0);
+  await reply(independentPause, {status: 'pause_requested'});
+  await statusReply();
+  assert.equal(requests.length, 1, 'a successful Pause does not await or repeat through the stalled page');
+  await pageReply('after-mission-observe');
+  await statusReply();
+  assert.equal(requests.length, 0);
+  assert.equal(run('missionLocksControls()'), true);
+  assert.equal(element('resume').disabled, true);
+
+  // Unknown transport results never cause a credential refresh or a retry, including Pause.
+  context.input.mission = null;
+  run('render(input); recoveryNeedsObserve = false');
+  for (const kind of ['pause', 'observe', 'key']) {
+    run(`void command('${kind}')`);
+    request('/api/command', kind).reject(new Error(`lost ${kind} response`));
+    await tick();
+    await statusReply();
+    assert.equal(requests.length, 0, `${kind} unknown outcome cannot retry or bootstrap`);
+    assert.match(element('error').textContent, new RegExp(`lost ${kind} response`));
+  }
+
+  // Refresh failures, missing tokens, unchanged tokens and repeated 403s are bounded.
+  for (const mode of ['network', 'missing', 'unchanged', 'second-403']) {
+    run('void command("pause")');
+    await forbidden(request('/api/command', 'pause'));
+    if (mode === 'network') {
+      request('/').reject(new Error('page unavailable'));
+      await tick();
+    } else {
+      await pageReply(mode === 'missing' ? null : mode === 'unchanged' ? 'after-mission-observe' : 'last-token');
+    }
+    if (mode === 'second-403') await forbidden(request('/api/command', 'pause'));
+    await statusReply();
+    assert.equal(requests.length, 0, `${mode} cannot loop or retry again`);
+    assert.equal(element('pause').disabled, false);
+    assert.match(element('error').textContent, /Valid local controller token required/);
+    if (mode === 'network' || mode === 'missing') assert.match(element('error').textContent, /credentials.*refreshed/i);
+  }
+  // A reconnect can rotate the token before an older Pause's 403 arrives.
+  run('void command("pause")');
+  const lateRejectedPause = request('/api/command', 'pause');
+  assert.equal(lateRejectedPause.options.headers['X-CDDA-Token'], 'last-token');
+  run('void refresh()');
+  request('/api/status').reject(new Error('second restart'));
+  await tick();
+  run('void refresh()');
+  await statusReply();
+  await pageReply('concurrent-token');
+  await forbidden(lateRejectedPause);
+  await pageReply('concurrent-token'); // Already current globally, but changed from this POST's token.
+  const lateRetry = request('/api/command', 'pause');
+  assert.equal(lateRetry.options.headers['X-CDDA-Token'], 'concurrent-token');
+  await reply(lateRetry, {status: 'pause_requested'});
+  await statusReply();
+  assert.equal(requests.length, 0);
+
+  // Both reconnect and a rejected POST share one credential request in flight.
+  run('void command("pause")');
+  const sharedPause = request('/api/command', 'pause');
+  run('void refresh()');
+  request('/api/status').reject(new Error('third restart'));
+  await tick();
+  run('void refresh()');
+  await statusReply();
+  await forbidden(sharedPause);
+  assert.equal(requests.filter(item => item.url === '/').length, 1);
+  await pageReply('shared-token');
+  await reply(request('/api/command', 'pause'), {status: 'pause_requested'});
+  await statusReply();
+  assert.equal(requests.length, 0);
+
+  // A decode started before token refresh cannot become the post-refresh authority.
+  render(110, 'decode-before-bootstrap.png');
+  run('void command("pause")');
+  await forbidden(request('/api/command', 'pause'));
+  await pageReply('decode-token');
+  await reply(request('/api/command', 'pause'), {status: 'pause_requested'});
+  await statusReply();
+  run('void command("observe")');
+  await reply(request('/api/command', 'observe'), {status: 'ready'});
+  await statusReply();
+  await decode(); // Old candidate, even though explicit Observe has since cleared invalidation.
+  assert.equal(run('observerMeasurementSnapshot().frames.at(-2).outcome'), 'superseded');
+  assert.throws(() => run('authority()'), /Wait for/);
+  assert.equal(element('resume').disabled, true);
+  await decode(); // Candidate requested from the post-refresh status.
+  assert.equal(run('authority().expected_revision'), 110);
+  assert.equal(element('resume').disabled, false);
+  assert.equal(requests.length, 0);
+
+  // Failure of a pre-refresh decode also cannot erase a newer same-name candidate.
+  render(111, 'failed-decode-before-bootstrap.png');
+  run('void command("pause")');
+  await forbidden(request('/api/command', 'pause'));
+  await pageReply('failure-fence-token');
+  await reply(request('/api/command', 'pause'), {status: 'pause_requested'});
+  await statusReply();
+  pending.pop().resolve(); // Decode the candidate requested after credential refresh first.
+  await tick();
+  run('void command("observe")');
+  await reply(request('/api/command', 'observe'), {status: 'ready'});
+  await statusReply();
+  assert.equal(run('authority().expected_revision'), 111);
+  pending.shift().reject(new Error('old credential generation image failed'));
+  await tick();
+  assert.equal(run('authority().expected_revision'), 111);
+  assert.doesNotMatch(element('error').textContent, /old credential generation image failed/);
+  assert.equal(requests.length, 0);
+
+  // Terminal command history is labeled; live native/controller/manual/transport failures stay visible.
+  context.input.mission = {...mission, phase: 'completed'};
+  context.input.last_result = {status: 'unknown', error: 'Old timeout. Observe to reconcile, then resume.'};
+  context.input.error = 'New controller fault';
+  context.input.state.error = 'New native fault';
+  context.input.unknown_outcomes = [{id: 'retained-unknown', status: 'unknown'}];
+  run('render(input); void command("pause")');
+  request('/api/command', 'pause').reject(new Error('New manual Pause transport failure'));
+  await tick();
+  await statusReply();
+  assert.match(element('error').textContent,
+    /Recorded last-command history \(not a current mission decision\): Old timeout\. Observe to reconcile, then resume\./);
+  assert.match(element('error').textContent, /Controller snapshot diagnostic: New controller fault/);
+  assert.match(element('error').textContent, /Native snapshot diagnostic: New native fault/);
+  assert.match(element('error').textContent, /New manual Pause transport failure/);
+  assert.equal(JSON.parse(element('last-result').textContent).error, context.input.last_result.error);
+  assert.match(element('gameplay-evidence').textContent, /retained-unknown/);
+  assert.doesNotMatch(element('error').textContent, /unresolved historical mission effect/i);
+  run('void refresh()');
+  request('/api/status').reject(new Error('New status transport failure'));
+  await tick();
+  run('render(input)');
+  assert.match(element('error').textContent, /New status transport failure/,
+    'a later render cannot erase the current transport error');
+  assert.match(element('error').textContent, /Recorded last-command history/);
+  run('void refresh()');
+  await statusReply('final-token');
+  assert.doesNotMatch(element('error').textContent, /New status transport failure/);
+  assert.match(element('error').textContent, /New manual Pause transport failure/);
+  assert.equal(requests.length, 0);
+
+  assert.doesNotMatch(element('observer-measurements').textContent + element('error').textContent,
+    /reconnect-token|pause-token|after-key|after-resume|after-observe|after-recovery|after-mission-observe|last-token|concurrent-token|shared-token|decode-token|failure-fence-token|final-token/);
+
   const html = fs.readFileSync(path.join(__dirname, '../web/index.html'), 'utf8');
   const app = fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8');
-  assert.match(html, /id="observer-timing-note">.*not native capture or end-to-end player latency/);
+  assert.match(html, /id="observer-timing-note">.*same computer.*wall-clock.*not.*end-to-end player latency/);
   assert.match(html, /<section class="recorded-objective" aria-labelledby="recorded-objective-heading">/);
   assert.match(html, /id="recorded-objective-text" tabindex="0">No objective recorded\.</);
   assert.ok(html.indexOf('id="recorded-objective-text"') < html.indexOf('id="frame-shell"'));
@@ -1017,5 +1352,5 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
     assert.ok(html.includes(`<dd id="${id}">`), `${id} must exist in the mission facts`);
   }
   assert.doesNotMatch(html + app, /api\/gameplay|task-form|task-start|task-continue|task-abandon|goal-form|mission_lease|renderGameplay/);
-  console.log('Viewer regressions passed: native6 geometry and decoded authority/freshness; mission10 observation and memory5 history; terminal snapshot versus historical uncertainty; reconnect without replay; bounded monotonic status/decode/presentation timing; independent Pause and ordinary recovery; no implicit input, Resume or retry.');
+  console.log('Viewer regressions passed: native6 geometry and decoded authority/freshness; mission10 observation and memory5 history; terminal snapshot versus historical uncertainty; reconnect without replay; bounded native/status/DOM clock correlation with monotonic durations; independent Pause and ordinary recovery; rotated credentials without action replay; one bounded rejected-Pause retry; recorded terminal diagnostics.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

@@ -404,18 +404,37 @@ reproduce partial-child and secondary-root visitation errors without repeating
 character creation. The reviewed repair carries translated click classification
 and uses the documented partial-read API only for the secondary custody reread;
 primary validation stays strict. A separate ACK/custody repair retains known
-terminal delivery under a later takeover/session capture. Both require new source,
-installed native and graphical evidence; never resume005 or reuse its authority.
+terminal delivery under a later takeover/session capture. Exact1947b3aCI passed
+1,571tests; the pinned engine was rebuilt/signed and used unchanged in the
+[normal sixth run](../acceptance/2026-10-22-discovery-learning-sixth-attempt.md).
+That run independently supports the bounded functional learning outcome and a
+current native6v2advisory library, with disclosed technical creation clarification
+and narrow branch-refinement limits. Never resume005 or reuse its authority.
 This small reuse of compiled engine objects is a concrete accelerator under
 P-CHANGE/S-CODE; #175 retains the larger checkpoint-reuse assessment.
 
-This active delivery brief records implementation and the bounded004graphical
+This active delivery brief records implementation and the bounded004/006graphical
 checkpoint. It does not accept a fresh seven-day campaign or protected release.
 Current source uses native6/mission10/ledger12/archive5/campaign-memory5, with
 procedure/2 and reflection/2 records. The installed wrapper and actual loaded
 host catalogue must match before new play. Current callers, validators, persisted
 formats, SDK schemas and guidance migrate together; old runtime versions reject
 and historical evidence grants no authority.
+
+The closed006observer correctly separates STOPPED/HISTORY/DISCONNECTED from current
+decisions/effects, but its retained last-command timeout still looks actionable.
+A subsequent paused no-game service restart independently reproduces stale-page
+credentials rejecting Pause. The reviewed browser-only repair uses standard
+same-origin HTML/DOMParser credential refresh, fences in-flight old image decodes,
+labels terminal command history and keeps current diagnostics visible. Explicit
+Pause sends immediately and may retry once only after zero-admission403with a
+changed credential; other operations and network-unknown outcomes never replay.
+Actual service restart/Pause succeeds without reloading the unchanged tab.
+This proves reconnect behavior, not new live-game terminal rendering. Timing v2
+adds raw host/browser anchors alongside monotonic intervals; the paused probe
+checks browser status anchors, leaving actual paired native correlation to fresh
+play. These use the existing viewer and#143/#164, without a new endpoint, transport,
+telemetry service, approval layer or native/mission/library migration.
 
 The second fresh campaign exposed another distinction required by the existing
 [organic loop](../design/organic-discovery.md) and

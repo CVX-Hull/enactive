@@ -81,8 +81,12 @@ their backlog owners. The current foundation separates ordinary physical input
 from strict semantic refresh and permits explicit Observe under healthy custody.
 The [fifth learning attempt](acceptance/2026-10-22-discovery-learning-fifth-attempt.md)
 failed on a native JSON-object lifetime error during the first ordinary pickup
-key. It is closed with no eligible current library; a repaired build and new
-coherent learning run remain necessary before the fresh seven-day campaign.
+key and remains closed. After the repair, the
+[normal sixth run](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
+supports current native6 discovery, scoped procedure branch refinement, actual
+fresh-context application and exact normal lifecycle. Its v2 procedure is eligible
+as advisory library input. A technical creation-recovery clarification is disclosed;
+zero assistance, causal benefit and seven-day survival are not claimed.
 Source/CI support is distinct from real qualification and game-family portability.
 
 The official MCP SDK adapter constructs and retains requests, collects original
@@ -94,10 +98,14 @@ distinguishes setup/preapproval from runtime evidence and procedural roles from
 security isolation.
 
 The observer exposes objective/owner, historical memory/Work, cumulative requests,
-charged admissions and uncertainty. The actual completed/disconnected view retains
-an old unreconciled-frame heading alongside zero unresolved effects and no lease;
-#143/#164 own that terminal-clarity limitation. Historical Work uncertainty is not
-silently relabeled current progress. The [observer report](acceptance/2026-10-20-mission-observer.md)
+charged admissions and uncertainty. The actual006terminal view separates
+STOPPED/HISTORY/DISCONNECTED, no current decision and zero unresolved effects.
+The subsequent viewer repair labels recorded terminal command diagnostics and
+refreshes normal local credentials after a service reconnect. A paused no-game
+restart verifies Pause succeeds without reloading the page; ordinary operations
+are never automatically repeated. Real terminal rendering of the new diagnostic
+label and paired native/browser timing remain future evidence. Historical Work
+uncertainty is not silently relabeled current progress. The [observer report](acceptance/2026-10-20-mission-observer.md)
 and actual mission screenshots distinguish synthetic layout tests from native
 usage. The unchanged real spectator Pause qualification remains scoped user-control
 evidence; no routine user tactical intervention was needed in024.

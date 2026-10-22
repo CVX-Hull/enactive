@@ -102,6 +102,19 @@ round trips and unnecessary captures or repeated retrieval. Keep per-primitive
 outcome/authority checks; batch decisions rather than blindly batching input.
 Do not add a broker, telemetry service or new model tier without an observed gap.
 
+The current local spectator snapshot is `observer-timing/2`; historical v1 captures
+remain evidence, without a compatibility reader. It retains raw browser epoch
+anchors for status start/response and DOM replacement, plus the native capture
+timestamp and existing frame/status identities. Durations still use browser
+`performance.now()`. Native `state.timestamp_ms` describes the retained capture
+when `frame_ok`, not a renewed publication time. Offline subtraction requires the
+same host/wall clock and scrutiny of clock adjustments; negative cross-clock
+differences are retained rather than silently clamped. Failed, superseded, stale
+or disconnected frames do not establish current presentation. The paused no-game
+browser probe verifies v2 status anchors only; actual paired native/browser
+correlation remains to be measured during fresh play. Animation callbacks do not
+establish screen paint, and these records do not isolate model inference.
+
 Campaign length is another profiling axis. Current ingestion scans retained peers,
 capacity accounting walks frame files and archive save serializes the manifest.
 Navigation rechecks accumulated source files/hashes. Profile those stages against

@@ -187,11 +187,17 @@ behavior without user keys. The reuse-first desktop-tool preflight failed before
 admission; this narrow support does not establish general native recovery.
 
 For service restart: stop that service normally, start one controller, observe
-and reconcile, then resume. For a game crash/restart: preserve diagnostics, follow
+and reconcile, then resume. An already-open spectator automatically refreshes its
+normal same-origin page credential after a service disconnect/reconnect. Explicit
+Pause sends immediately; only a403rejection before admission with a changed
+credential permits its one retry. Other commands, including Observe, Resume and
+recovery, are never replayed. Unknown network outcomes remain unknown. Credential
+refresh does not restore game authority; fresh observation/reconciliation is still
+required. A browser-code upgrade needs a normal page reload. For a game crash/restart: preserve diagnostics, follow
 the bundle-based [start procedure](#start-and-observe), use normal CDDA load UI,
 and acquire new session authority.
 Old-session commands must not be reused, including after normal save/reload in the
-same process. Native-v5 rejects older and mixed components; restart a
+same process. Native-v6 rejects older and mixed components; restart a
 matching controller and native build, then observe. No save-file repair/editing is prescribed.
 
 Input admissions are durably retained in `.runtime/bridge/admissions/` before

@@ -15,6 +15,17 @@ GitHub Issues own work scope, acceptance, dependencies, estimates, owners and bl
 The next selected delivery is [discovery, learning and the fresh campaign](changes/057-discovery-learning-campaign.md):
 mixed interaction#176, player-derived procedures#177, nonblocking reflection#178,
 observer/measurement follow-through#143/#164, then actual seven-day assessment#145.
+The latest [normal learning006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
+has an independently accepted bounded functional outcome and eligible native6v2
+advisory library. It retains155primitives/128requests/409images/1,850game seconds,
+all six unknown ACKs with separate effect proofs, normal exact reload/shutdown
+and a disclosed technical creation-recovery clarification. Deciding1947b3a passed
+exact hosted CI39728016010/1,571tests. The new observer candidate fixes an actual
+paused no-game stale-credential/Pause failure, with independent source review and
+real reconnect/Pause verification; native/browser clock correlation and protected
+publication remain separate. Next is a newly frozen genuinely fresh seven-day
+campaign, not resumption of earlier failed authority. Historical checkpoints below
+retain their earlier source-specific findings.
 The [procedure/exchange boundary](design/procedure-learning.md) has passed scoped
 design review. Native5 ordinary input, current host migration, procedure memory/
 library/handoff and observer changes have source implementations; the native build
@@ -107,8 +118,9 @@ object triggered CDDA DEBUG_MSG. Its53requests/87primitives/218frames/1game seco
 and two unknown ACKs remain retained; no current library or normal ending is
 accepted. Both actors and owned processes are closed exceptionally. The actual
 pinned-parser probe reproduces the fault without another character-creation run;
-reviewed native lifetime and known-ACK/custody repairs now require their own
-source/build/graphical qualification. #176/#191 own that follow-through.
+reviewed native lifetime and known-ACK/custody repairs received exact-source CI,
+actual rebuilt/signed native and the separate normal006graphical evidence above.
+#176/#191 retain broader ordinary-input and portability follow-through.
 P-CHANGE/S-CODE and the existing review/maintenance controls now
 explicitly favor objective-oriented reuse and configured platform guarantees;
 the delivery brief records an applied removal of duplicate post-ACK verification.
@@ -118,8 +130,8 @@ maintenance, reuse-assessment and delivery dispositions. This adds no new campai
 gate. Published5f9a225 passed hosted
 run39703745808, separately from this unfinished migration. Broader preflight/
 receiver/delivery separation and real qualification remain #191 work; fresh003
-is preparation only, with no admission or running gameplay actors. A new finite
-current-contract learning run must supply its library; closed learning004 remains
+is preparation only, with no admission or running gameplay actors. Closed006now
+supplies the scoped current-contract library; closed learning004 remains
 historical evidence and is not relabeled as current input.
 Source checks issue no run authority. The accepted024
 baseline and historical attempts below remain evidence, not a new admission.
