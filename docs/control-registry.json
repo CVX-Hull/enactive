@@ -330,29 +330,31 @@
         "docs/changes/058-capture-provenance-action-preconditions.md",
         "docs/acceptance/2026-10-22-independent-seven-day-eighth-attempt.md",
         "tests/test_native_capture.py",
-        "tests/test_native_receiver.py"
+        "tests/test_native_receiver.py",
+        "docs/acceptance/2026-10-22-native-capture-preconditions.md"
       ],
       "failure_response": "Reject or freeze further dispatch; expose error and reconcile by observation before explicit resume.",
-      "limitations": "Source controls and synthetic fixtures do not establish native effects or unattended survival. Learning006 qualifies bounded discovery, procedure refinement/reuse, actual successor application and normal lifecycle; disclosed technical assistance and no causal-learning claim remain. Failed fresh008 qualifies neither a day nor a normal ending: four native rejections and persistent Save pixel drift ended exceptionally. The subsequent capture-provenance repair requires a matching build and new native qualification. Pause cannot undo committed input or cancel an activity; stalls may delay revocation. Visible review-free tool calls do not establish hidden host telemetry, attention, inference latency or causal benefit. Wider mouse/geometry, selected activity/recovery interactions and game-family portability remain specifically scoped gaps; authoritative details are in the protocol and dated reports.",
+      "limitations": "Source controls and synthetic fixtures do not establish native effects or unattended survival. Learning006 qualifies bounded discovery, procedure refinement/reuse, actual successor application and normal lifecycle; disclosed technical assistance and no causal-learning claim remain. Failed fresh008 qualifies neither a day nor a normal ending: four native rejections and persistent Save pixel drift ended exceptionally. Capture001 qualifies ordinary input and normal lifecycle on the subsequent matching build; actual persistentpixel drift and the retainedcapture commit race remain unexercised there. Pause cannot undo committed input or cancel an activity; stalls may delay revocation. Visible review-free tool calls do not establish hidden host telemetry, attention, inference latency or causal benefit. Wider mouse/geometry, selected activity/recovery interactions and game-family portability remain specifically scoped gaps; authoritative details are in the protocol and dated reports.",
       "enforcement": "Implemented at runtime; regression execution is C-PORTABLE. Source references alone establish no behavioral pass.",
       "status": "active",
       "rationale": null,
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-22",
-        "outcome": "Fresh008 independently continued after actual image-presenting handoff and recovered one host prepublication refusal, then failed after four native rejections and four zero-input Save refusals. All actors/processes closed exceptionally; no day, reload or normal ending accepted.",
-        "scope": "Frozen d4fdb9c/nativece810d;247requests/385charged primitives/994verified PNGs/102,214,097bytes/11,174game seconds. One unknown ACK remains separately reconciled. New source repair and native acceptance are separate from this failed run.",
+        "outcome": "Capture001 completed ordinary inventory/cancel, normal Save/owned exit/new-child exact reload/visible identity, postreload movement and final Save/owned exit/NormalFinishStopped on the rebuilt boundary.",
+        "scope": "Frozenf2fdc62/native40acb8;67requests/72charges/194verified PNGs/7,648,384bytes/1game second/782.783947wall. Six unknown ACKs remain with separate effects; both children exit0 and actual actor FINAL. Capture names changed but checked PNGs match; persistentpixel drift/nativecommit race unexercised.",
         "evidence": [
-          "docs/acceptance/2026-10-22-independent-seven-day-eighth-attempt.md"
+          "docs/acceptance/2026-10-22-native-capture-preconditions.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-22",
         "effectiveness": "partially_effective",
-        "findings": "Custody, original accounting, separate unknown/effect proof and actual successor continuity were retained. Pixel-dependent lifecycle preconditions blocked progress under incidental rendering drift; the old repeated Save-redecision approach did not establish liveness. Source repair separates provenance, freshness and action-specific evidence; native acceptance remains outstanding.",
-        "cost": "Fresh008247requests/385primitives/994frames/102,214,097bytes;40advisory submissions charged2400seconds. Exact d4fdb9c hosted1609tests/871.994seconds. Source repair reuses the existing bounded capture deque, normalized serializer, SourceRevalidation, lease lifecycle and test fixtures. Model/token/quota/full workflow costs are unavailable.",
-        "follow_up": "#176/#195 matching source/native qualification;#145 genuinely fresh full seven-day outcome and protected publication;#164 whole-request/tool/display measurements and higher-level skill coverage. Prior accepted evidence remains scoped; January15 control due date is unchanged.",
+        "findings": "Failed008 preserved exact failure/unknown/cost evidence. Reviewed action-specific preconditions now compose through a coherent real normal lifecycle on matching native; actual persistentpixel drift and retainedcapture commit race remain source-tested/unexercised there. Original clocks/custody/identity/unknown effects persist. Normal engine TURN_DURATIONfloat serialization changed raw options bytes without changing configured behavior; original pin discrepancy retained and independently adjudicated.",
+        "cost": "Capture00172charges/67requests/194PNGs;782.783947wall includes setup/interpretation/lifecycle, not isolated inference. Full local1610tests719.226s; exactf2fdc62CI1610tests903.350s. Existing capture deque/serializer/lease/ledger/SDK/build/Pillow facilities reused; no new generic service/framework/global setup. Inference/billing/full-workflow attribution unknown.",
+        "follow_up": "#145 genuinely fresh full seven-day campaign and protected publication;#176/#195 retain unexercised capture/drift branches;#164 whole-goal/tool/display costs and usable higher-level navigation. #181 wider mouse/geometry and #138/#139/#152 selected native branches stay scoped. No artificial hazard/race or extra blanket campaign gate. Periodic due date unchanged.",
         "evidence": [
+          "docs/acceptance/2026-10-22-native-capture-preconditions.md",
           "docs/acceptance/2026-10-22-independent-seven-day-eighth-attempt.md",
           "docs/changes/058-capture-provenance-action-preconditions.md"
         ]
@@ -409,7 +411,8 @@
         "docs/acceptance/2026-10-22-discovery-learning-sixth-attempt.md",
         "docs/acceptance/2026-10-22-independent-seven-day-seventh-attempt.md",
         "docs/acceptance/2026-10-22-independent-seven-day-eighth-attempt.md",
-        "docs/changes/058-capture-provenance-action-preconditions.md"
+        "docs/changes/058-capture-provenance-action-preconditions.md",
+        "docs/acceptance/2026-10-22-native-capture-preconditions.md"
       ],
       "failure_response": "Retain failed/unknown probes, block the affected claim and repair or document the supported limit.",
       "limitations": "Host/scenario-specific manual qualification; this map launches no native regression runner and proves no current live process. Independent024 supplies/rest, actual fresh successor and normal lifecycle are qualified within its bounded development scope. Earlier001-023failures remain failures. Primary/successor actual tool traces show no visible routine review events; hidden host telemetry, mental attention and causal memory benefit remain unmeasured. General survival, future hosts and unexercised native interactions are unqualified. Source tests do not substitute for actual native evidence.",
@@ -419,21 +422,21 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-22",
-        "outcome": "Fresh008 independently continued after actual image-presenting handoff and recovered one host prepublication refusal, then failed after four native rejections and four zero-input Save refusals. All actors/processes closed exceptionally; no day, reload or normal ending accepted.",
-        "scope": "Frozen d4fdb9c/nativece810d;247requests/385charged primitives/994verified PNGs/102,214,097bytes/11,174game seconds. One unknown ACK remains separately reconciled. New source repair and native acceptance are separate from this failed run.",
+        "outcome": "Capture001 completed ordinary inventory/cancel, normal Save/owned exit/new-child exact reload/visible identity, postreload movement and final Save/owned exit/NormalFinishStopped on the rebuilt boundary.",
+        "scope": "Frozenf2fdc62/native40acb8;67requests/72charges/194verified PNGs/7,648,384bytes/1game second/782.783947wall. Six unknown ACKs remain with separate effects; both children exit0 and actual actor FINAL. Capture names changed but checked PNGs match; persistentpixel drift/nativecommit race unexercised.",
         "evidence": [
-          "docs/acceptance/2026-10-22-independent-seven-day-eighth-attempt.md"
+          "docs/acceptance/2026-10-22-native-capture-preconditions.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-22",
         "effectiveness": "partially_effective",
-        "findings": "Real failed008 evidence exposed four composite native refusals with an unrecorded failing predicate and persistent13-pixel Save drift under equal exported native state. The exact native refusal cause remains unproved. Existing accepted learning006 and native001 qualifications retain their bounded scope; source fixtures cannot qualify the new repair.",
-        "cost": "Fresh008247requests/385primitives/994frames/102,214,097bytes;11174game seconds. Native ended with recorded returncode-9, not a normal Save. Failed world archived with49files;191accepted-save files verified unchanged. Existing project-local tooling and evidence stores reused; full inference/billing cost unavailable.",
-        "follow_up": "#176/#195 compile/install/sign the reviewed repair and qualify coherent ordinary input plus normal Save/new-child/reload/final ending;#145 then run a genuinely fresh seven-day campaign. #181 wider mouse/geometry and #138/#139/#152 selected native branches remain separately scoped. #164 owns timing follow-through; periodic due date unchanged.",
+        "findings": "Failed008 preserved exact failure/unknown/cost evidence. Reviewed action-specific preconditions now compose through a coherent real normal lifecycle on matching native; actual persistentpixel drift and retainedcapture commit race remain source-tested/unexercised there. Original clocks/custody/identity/unknown effects persist. Normal engine TURN_DURATIONfloat serialization changed raw options bytes without changing configured behavior; original pin discrepancy retained and independently adjudicated.",
+        "cost": "Capture00172charges/67requests/194PNGs;782.783947wall includes setup/interpretation/lifecycle, not isolated inference. Full local1610tests719.226s; exactf2fdc62CI1610tests903.350s. Existing capture deque/serializer/lease/ledger/SDK/build/Pillow facilities reused; no new generic service/framework/global setup. Inference/billing/full-workflow attribution unknown.",
+        "follow_up": "#145 genuinely fresh full seven-day campaign and protected publication;#176/#195 retain unexercised capture/drift branches;#164 whole-goal/tool/display costs and usable higher-level navigation. #181 wider mouse/geometry and #138/#139/#152 selected native branches stay scoped. No artificial hazard/race or extra blanket campaign gate. Periodic due date unchanged.",
         "evidence": [
+          "docs/acceptance/2026-10-22-native-capture-preconditions.md",
           "docs/acceptance/2026-10-22-independent-seven-day-eighth-attempt.md",
-          "docs/acceptance/2026-10-22-discovery-learning-sixth-attempt.md",
           "docs/changes/058-capture-provenance-action-preconditions.md"
         ]
       },

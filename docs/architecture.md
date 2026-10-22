@@ -34,9 +34,10 @@ The read-only library accepts pinned closed current-contract archives without
 restoring old-world facts or execution handles. Old native5 libraries remain
 immutable historical evidence and cannot be mounted under native6. See
 [the current contract](protocol.md#ordinary-discovery-and-procedure-data).
-The earlier native6 ce810d binary is installed in the isolated project app.
-The current capture-precondition repair still needs a matching rebuild and
-graphical qualification. The
+The rebuilt capture-precondition boundary has bounded ordinary-input and normal
+same-character lifecycle qualification in [capture001](acceptance/2026-10-22-native-capture-preconditions.md).
+Actual PNG drift and the retained-capture commit race remain unexercised there;
+the report owns exact source/native pins and limits. The earlier
 [normal sixth run](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
 qualifies bounded current-contract discovery, procedure branch refinement/reuse,
 actual fresh-context application, same-proposal advisory overlap and exact normal

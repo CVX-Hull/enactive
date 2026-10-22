@@ -32,8 +32,10 @@ clearing stale quantity proof while preserving original scope and costs. Known
 ACK evidence remains immutable and separate from any actual current snapshot.
 The [delivery impact map](../changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
 and #191 identify remaining game-integration and qualification gaps. The matching
-native6 export shape is unchanged; the capture/precondition correction requires
-a matching rebuilt/pinned native and its own actual qualification. Earlier
+native6 export shape is unchanged; [capture001](../acceptance/2026-10-22-native-capture-preconditions.md)
+qualifies ordinary input and normal lifecycle on the rebuilt boundary. Its checked
+PNG pairs match despite changed capture names; persistent pixel drift and the
+retained-capture commit race remain source-tested, unexercised natively. Earlier
 graphical qualification is bounded by the [normally closed learning006 report](../acceptance/2026-10-22-discovery-learning-sixth-attempt.md).
 Its scoped procedure library is eligible; a fresh independent seven-day campaign
 remains unaccepted. Image-conditioned semantic/spatial final-preflight capture churn shares the existing
@@ -221,8 +223,8 @@ format is introduced. Local game overshoot yields partial work without revoking
 healthy ownership; an owned menu closes through explicit Observe, while normal
 return has already ended the root. Global/clock/custody faults and unknown delivery
 retain their stopping paths. Scoped synthetic regressions and independent review
-are source evidence only. The earlier native6 ce810d build is installed; the
-capture-precondition repair requires a matching rebuild and graphical qualification. Normally closed
+are source evidence only. Capture001 above supplies its separate bounded native
+qualification and exact build pins. Normally closed
 [learning006](../acceptance/2026-10-22-discovery-learning-sixth-attempt.md) qualifies
 bounded graphical ordinary discovery/procedure application;
 [Native001](../acceptance/2026-10-22-native-save-refresh.md) qualifies one unit-scale
@@ -455,13 +457,11 @@ campaign-memory/4; those versions describe historical artifacts, not supported
 runtime inputs. Preserve their exact captured data and pins without importing
 authority or relabeling them as current-contract learning evidence.
 [Delivery057](../changes/057-discovery-learning-campaign.md) retains failed runs and
-source/build/install receipts. The earlier native6 ce810d build passed and is installed;
-this does not qualify the later capture-precondition repair, which awaits rebuild
-and graphical qualification. Actual
-host catalogue/preapproval activation and graphical acceptance remain
-separate qualifications. Learning006 and Native001 above provide their scoped
-actual host/graphical evidence; this is no blanket pending claim or proof of
-every subsequent source change.
+source/build/install receipts. Capture001 above owns the later rebuilt boundary's
+ordinary-input and normal-lifecycle qualification, retaining its unexercised drift
+and commit-race branches. Actual host catalogue/preapproval activation and graphical
+acceptance remain separate qualifications. Learning006 and Native001 retain their
+earlier scoped evidence; none qualifies every subsequent source change.
 
 Lead owns coupled Python integration, tests, documentation, shared build/runtime
 and final verification. The isolated native implementation has been integrated;

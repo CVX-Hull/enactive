@@ -11,9 +11,11 @@ Protocol version: 6.
 This is the detailed current contract supporting [architecture](architecture.md).
 Authority rules are [S-PROTOCOL](engineering.md#s-protocol-command-and-observation-authority).
 Current source is native6/mission10/ledger12/archive5, with procedure/2,
-campaign-memory/5 and reflection/2; gameplay/2 is unchanged. The installed native6
-binary is the earlier ce810d build. The [capture-precondition repair](changes/058-capture-provenance-action-preconditions.md)
-requires a matching rebuild and graphical qualification before deployment.
+campaign-memory/5 and reflection/2; gameplay/2 is unchanged. The matching rebuilt
+native is qualified for ordinary input and the coherent normal lifecycle in
+[capture001](acceptance/2026-10-22-native-capture-preconditions.md). That run has
+capture-name churn but no checked PNG drift; persistent pixel drift and the
+retained-capture commit race remain source-tested, not natively exercised.
 [Learning006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
 and [native001](acceptance/2026-10-22-native-save-refresh.md) provide bounded
 graphical qualification; wider input/geometry and the full independent campaign

@@ -110,9 +110,12 @@ No change to upstream CDDA outcomes, saves, renderer behavior or global Mac setu
 
 The integrated source and test migrations have independent review. The real008
 PNG-pair regression keeps drift active through Save, owned exit, new-child load,
-normal readmission/identity and final ending; this is source evidence. A matching
-new native build and graphical qualification remain required before the next full
-campaign. The failed008 report remains unchanged by the repair's later results.
+normal readmission/identity and final ending; this is source evidence.
+[Capture001](../acceptance/2026-10-22-native-capture-preconditions.md) qualifies
+ordinary input and the normal lifecycle on the rebuilt native. Its capture names
+changed but PNG bytes matched, so persistent pixel drift and the retained-capture
+commit race remain unexercised natively. The failed008 report remains unchanged
+by the repair's later results; the next full campaign remains genuinely fresh.
 
 Lead owns design/adjudication, controller/runtime/lifecycle integration, current
 contracts, report and the sole build/runtime. After design review, one bounded

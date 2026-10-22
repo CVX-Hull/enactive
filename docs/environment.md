@@ -8,6 +8,24 @@ status: active
 
 Recorded setup and maintenance history; this is not live environment status.
 
+## Capture-precondition rebuild and qualification, 2026-10-22
+
+Built committed `f2fdc621039f241e4fcd3784095e1999b62dbe79` in the existing
+owned `/private/tmp/cdda-player-build-53c_cr4z` workspace with two compile jobs,
+bundled frameworks/FreeType and no global installation. The existing installer
+updated and locally signed only the project app; installed native SHA-256 is
+`40acb88b75cabf50a1b8a1134336c210d3f20503dcedd910fa2463019bdbcd56`.
+The [capture001 report](acceptance/2026-10-22-native-capture-preconditions.md)
+owns the bounded ordinary-input/normal-lifecycle qualification, unchanged PNG
+pairs, unknown ACKs and options float-serialization discrepancy. Both owned
+children exited0 and are absent; the current controller was retained for the next
+fresh campaign. No global setup or engine outcome was changed.
+
+The finished native worker checkout/branch was removed after verifying its full
+patch unchanged, all six integrated files committed, and the lead's bounded
+refinements preserved. Its build/runtime access remained prohibited. Git owns
+source history; private receipts retain only the bounded integration/cleanup proof.
+
 ## User-directed stale-save cleanup, 2026-10-22
 
 With no native game or controller listener running, retired 36 closed test/failed
@@ -76,6 +94,16 @@ Archived all49files of `EnactiveSevenDayEight` / Sam before active-menu retireme
 Every archive member hash verified; all191accepted-world files remained unchanged.
 The adjacent manifest owns hashes/restoration; the [failed008 report](acceptance/2026-10-22-independent-seven-day-eighth-attempt.md)
 owns original costs, unknowns and limits. No global installation or setting changed.
+
+After capture001's two normal exits, actual operator FINAL and independent
+evidence review, archived `EnactiveCaptureOne` / Morgan's51files at
+`.runtime/save-retirement/2026-10-22-capture001/closed-technical-world.tar.gz`.
+All member hashes verified before removing the active copy. Archive1,948,611bytes,
+SHA-256 `e8732ba299723abcec0ba803712b6c769ca24494127bbb9c1d9641585c583139`.
+All191prior accepted-world files remain unchanged; the adjacent manifest owns
+restoration instructions. Ledgers, original frames, host evidence and the raw
+options-pin discrepancy remain. Restoration would still require a new admission
+and ordinary Load; the archive grants no old-world authority.
 
 ## Structured player SDK, 2026-10-20
 
