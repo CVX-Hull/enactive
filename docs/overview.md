@@ -104,6 +104,10 @@ reached actual adoption but failed ordinary tool use and normal closure. Its
 player/adviser are closed; all191saves are unchanged after exceptional cleanup.
 [Delivery062](changes/062-player-decision-context.md) reduces repeated context and
 improves validation feedback. Source ergonomics is not actual learning or cadence.
+Its subsequent Sol/low008 trial exposed valid visible world evidence rejected by
+a menu-category list, before adoption. [The retained finding and repair](changes/062-player-decision-context.md#closed008-valid-world-evidence-rejected-by-menu-taxonomy)
+apply the existing generality rule; new real learning/cadence acceptance is still
+required. All owned processes are closed and the preserved saves are unchanged.
 
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and

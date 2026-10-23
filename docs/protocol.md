@@ -207,6 +207,11 @@ Every cited source shares its Claim's grounding session. In owned lifecycle
 adoption, the world Claim may retain its original menu session and verified root
 lineage; the character Claim uses its exact inspected normal-session source.
 These are separate grounded Claims, not a cross-session citation union.
+World evidence is qualified by its owned menu boundary, root-phase lineage,
+takeover baseline and order between launch and first normal play, not by an
+allowlist of menu category names. The player still interprets the visible name;
+accepting provenance does not verify that interpretation automatically. The
+character inspection and launch bindings remain CDDA-specific.
 
 Software supplies interpretation kind, schema/type and the request-derived Claim
 ID. Correction supersedes come exactly from the explicit retired IDs. Host assertion

@@ -106,3 +106,47 @@ models when available. Actual adviser preflight already confirms local Sol acces
 No global default, paid API provider or extra tier is introduced. Tool/context
 changes confound a model-only comparison; assess the whole frozen configuration
 and reject it if organic quality and useful apparent cadence still fail.
+
+## Closed008: valid world evidence rejected by menu taxonomy
+
+The frozen04efc7e Sol/low trial loaded Casey and inspected actual character
+identity, then failed before adoption. Its first world Claim correctly cited the
+retained character-selection image: `UILIST` visibly names EnactiveLearningSix.
+The lifecycle projector nevertheless accepted world evidence only from three
+named menu categories. The other owned-root/source-order conditions were retained;
+the category list excluded valid visible evidence. A subsequent older Claim did
+not repair the refusal. The player stopped without ordinary play or normal ending.
+This is a harness generality defect, not evidence that Sol cannot interpret the
+world name or that changing models solved cadence.
+
+The player is permanently quiescent; the adviser was cancelled only after its
+outstanding work had settled. Exact owned native/controller processes and the
+listener are closed. All191save files are unchanged, with no restoration/edit.
+Original streams, ledger/archive, failure, unknown Load ACK, cancellation and
+cleanup evidence remain in private discovery-learning-008/closed-evidence. No
+procedure, reuse/revision, fresh-context application, useful reflection overlap,
+same-character reload or independent seven-day outcome is credited.
+
+The active player lasted114.990s:22completed MCP calls,101,710UTF-8 response-text
+bytes and13image parts. Its ledger has16requests (10completed,3partial,2blocked,
+1unknown) and6charged primitives (5returned,1unknown). No tool-level error flag
+does not mean no semantic refusals: both adoption attempts were blocked. The
+adviser completed4note-only jobs, charging480seconds of original claim windows;
+this is not compute duration. Its508.168s host span includes passive waiting and
+ends in cancellation, with20completed calls,35,700text bytes and3image parts.
+Separate preflight is excluded. Closed actual-host metrics, world-source predicate
+checks, page-local timing export and the evidence-byte manifest retain these
+distinctions. None qualifies a useful-play latency cohort or a model ranking.
+
+The repair removes the world-evidence category list rather than extending it.
+Existing ownership, direct source support, identity/frontier, phase/order and
+unknown-delivery requirements remain. Regression cases cover the observed UILIST,
+an unfamiliar category and rejection of an unowned menu; they are component
+evidence, not retrospective acceptance of008. This applies existing P-GENERALITY,
+S-ARCH and C-PORTABLE/C-REVIEW, without a new policy system, validator or gameplay
+approval. The protocol records the exact provenance rule and remaining CDDA
+bindings. Existing#176/#191 own generic interaction/evidence follow-through;
+#164/#177/#178 retain cadence, learning and reflection obligations. Repeat the
+complete frozen independent mission on repaired source, then the fresh campaign.
+The preceding04efc7e passed [exact CI40037047333](https://github.com/CVX-Hull/enactive/actions/runs/40037047333);
+it does not qualify this subsequent repair.

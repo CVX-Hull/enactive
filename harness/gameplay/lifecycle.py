@@ -326,7 +326,9 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
                          for sid in row["request"].get("sources", []) + (row["result"] or {}).get("source_ids", [])}
         for sid in world["sources"]:
             ref, obs = source(sid)
-            _require(ref.boundary_kind == "menu" and obs["category"] in ("WORLDGEN_CONFIRM_DIALOG", "PICK_WORLD_DIALOG", "MAIN_MENU")
+            # The player interprets the visible name; menu taxonomy is not proof
+            # of identity. Owned phase provenance and source order apply below.
+            _require(ref.boundary_kind == "menu"
                      and obs["takeover_generation"] == proof["before_takeover_generation"]
                      and sid in phase_sources
                      and max(positions[s] for s in launch["source_ids"]) <= positions[sid] < positions[first.observation_id],

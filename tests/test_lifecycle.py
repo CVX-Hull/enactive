@@ -157,7 +157,7 @@ class LifecycleTests(unittest.TestCase):
             observed_time=dict(revision=source.revision, turn=source.turn),
             sources=[source.observation_id], supports=[dict(sources=[source.observation_id], claims=[])])
 
-    def adopt(self, root, before, session, turn, epoch, *, saved=None, omit=False, first_extra=False, unknown=False, pending=False, character_state=None):
+    def adopt(self, root, before, session, turn, epoch, *, saved=None, omit=False, first_extra=False, unknown=False, pending=False, character_state=None, world_source=None):
         self.lifecycle(root, "create" if epoch == 0 else "load", before)
         if epoch == 0:
             self.complete(root, {}, "partial")
@@ -189,7 +189,7 @@ class LifecycleTests(unittest.TestCase):
         self.complete(inspect_id, dict(identity_screen_source_id=screen.observation_id, source_ids=[screen.observation_id]))
         checkpoint = self.ingest(session, turn)
         world_id, character_id = root + "-world", root + "-character"
-        for identity, subject, source in ((world_id, "world", before), (character_id, "character", screen)):
+        for identity, subject, source in ((world_id, "world", world_source or before), (character_id, "character", screen)):
             entry = self.identity(identity, subject, source, epoch)
             if subject == "character" and character_state is not None:
                 entry["value"]["state"] = character_state
@@ -207,10 +207,12 @@ class LifecycleTests(unittest.TestCase):
             self.complete(final, proposed)
         return dict(first=first, checkpoint=checkpoint, screen=screen, adoption=adoption, result=final, proposed=proposed)
 
-    def create(self, **changes):
+    def create(self, *, menu_category="MAIN_MENU", **changes):
         menu = self.ingest("menu-a", category="MAIN_MENU")
         self.lifecycle("launch", "launch")
         self.complete("launch", dict(native_ready=True, source_ids=[menu.observation_id], process=dict(launch_id="owned-launch")))
+        if menu_category != "MAIN_MENU":
+            menu = self.ingest("menu-a", category=menu_category)
         return self.adopt("create", menu, "normal-a", -10, 0, **changes)
 
     def save(self, adopted, *, root="save", turn=20, launch=None):
@@ -267,6 +269,27 @@ class LifecycleTests(unittest.TestCase):
         self.assertIsNone(adopted_timeline(self.ledger, self.store))
         self.ingest("menu", category="MAIN_MENU")
         self.assertIsNone(adopted_timeline(self.ledger, self.store))
+
+    def test_world_identity_from_character_selection_menu(self):
+        # Learning008's actual visible world source was a UILIST, not MAIN_MENU.
+        created = self.create(menu_category="UILIST", pending=True, unknown=True)
+        timeline = candidate_timeline(self.ledger, self.store,
+            request_id=created["result"], result=created["proposed"])
+        self.assertEqual(timeline.segments, ((created["first"], created["checkpoint"]),))
+        self.complete(created["result"], created["proposed"])
+        self.assertEqual(adopted_timeline(self.ledger, self.store), timeline)
+        self.assertEqual(self.ledger.primitive("logical-create-yes")["state"], "unknown")
+
+    def test_world_identity_does_not_depend_on_menu_category_vocabulary(self):
+        self.create(menu_category="UNFAMILIAR_WORLD_SELECTION")
+        self.assertEqual(adopted_timeline(self.ledger, self.store).coordinate_epoch, 0)
+
+    def test_world_identity_cannot_borrow_an_unowned_menu(self):
+        foreign = self.ingest("foreign-menu", category="UILIST")
+        created = self.create(pending=True, world_source=foreign)
+        with self.assertRaisesRegex(EvidenceError, "World identity was not observed in this owned root phase"):
+            candidate_timeline(self.ledger, self.store,
+                request_id=created["result"], result=created["proposed"])
 
     def test_orphan_transition_effect_checks_semantics_and_dispatch_before_any_result(self):
         menu = self.ingest("menu", category="MAIN_MENU")

@@ -55,6 +55,10 @@ retains actual adoption, malformed ordinary requests, exhausted setup reflection
 and exceptional closure. No learning or normal ending is accepted.
 [Delivery062](changes/062-player-decision-context.md) owns focused context/error
 follow-through; existing GitHub issues retain action items and the full outcome.
+Its [closed008 finding](changes/062-player-decision-context.md#closed008-valid-world-evidence-rejected-by-menu-taxonomy)
+identifies a world-evidence menu-category restriction. The generic provenance
+repair needs new actual qualification; neither failed attempt satisfies learning
+or responsiveness. GitHub retains the same integrated outcome and owners.
 
 | Evidence | What it establishes; the linked report owns details and limits |
 | --- | --- |
