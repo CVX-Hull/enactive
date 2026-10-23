@@ -10,8 +10,8 @@ Protocol version: 6.
 
 This is the detailed current contract supporting [architecture](architecture.md).
 Authority rules are [S-PROTOCOL](engineering.md#s-protocol-command-and-observation-authority).
-Current source is native6/mission10/ledger12/archive5, with procedure/2,
-campaign-memory/5 and reflection/2; gameplay/2 is unchanged. The matching rebuilt
+Current source is native6/mission11/ledger12/archive5, with procedure/3,
+campaign-memory/6 and reflection/2; gameplay/2 is unchanged. The matching rebuilt
 native is qualified for ordinary input and the coherent normal lifecycle in
 [capture001](acceptance/2026-10-22-native-capture-preconditions.md). That run has
 capture-name churn but no checked PNG drift; persistent pixel drift and the
@@ -184,7 +184,7 @@ frozen admission; player skill, memory and lifecycle choices remain explicit.
 The current model-facing Claim variant supplies semantic key/value/text/coverage/
 status, grounding and support groups instead of a canonical record envelope. It
 does not accept the former full-record shape. The adapter emits the same canonical
-`campaign-memory/5` Claim and `mission/10` request used by the writer/ledger; other
+`campaign-memory/6` Claim and `mission/11` request used by the writer/ledger; other
 memory entry types retain their distinct current contracts. Identity keys select
 world/character, using the existing shared name-unit/coverage constants. The player
 still supplies the interpreted name; software never copies the expected scenario
@@ -217,7 +217,7 @@ refuse, and uncertain publication permits only collection of the original operat
 Concurrent first creators may safely lose the exclusive-stage race and refuse;
 there is no transparent retry or second request history store.
 
-The current MCP server is3.0.0; its presentation remains `player-view/2`, marked by `presentation_schema`.
+The current MCP server is4.0.0; its presentation remains `player-view/3`, marked by `presentation_schema`.
 Its tool arguments omit `request_id` and `wait_seconds`; old MCP payloads are
 rejected, not translated. The adapter assigns one UUID to each invocation whose
 imperative SDK request needs an ID, then uses existing immutable staging and
@@ -334,7 +334,7 @@ planner and supervisor components below remain source/study tools, not another
 execution ingress. The [mission design](design/player-owned-mission.md) owns the
 chosen records, lifecycle requirements and separate native acceptance.
 
-Authenticated `POST /api/mission` accepts one strict mission/10 record, at most65536
+Authenticated `POST /api/mission` accepts one strict mission/11 record, at most65536
 UTF-8 bytes. It reuses host/origin/token and finite/duplicate-key JSON validation;
 operator command/recovery bodies keep4096-byte limits. Required fields and closed
 variants live in [mission_contracts.py](../harness/gameplay/mission_contracts.py),
@@ -844,8 +844,8 @@ existing admission and establishes no native survival outcome.
 
 `lifecycle(operation=finish)` is the sole normal finish route. Stop carries only
 its Pause reason; former Stop `finish` fields and every prior mission schema
-reject. The current mission/10 contract migrates CLI, viewer, requests, results and fixtures
-without an alias or automatic old-admission import. Campaign-memory/5, procedure/2,
+reject. The current mission/11 contract migrates CLI, viewer, requests, results and fixtures
+without an alias or automatic old-admission import. Campaign-memory/6, procedure/3,
 reflection/2, SQLite ledger12, native wire6 and archive5 migrate together; gameplay/2
 remains unchanged. Prior accepted reports and raw older mission/memory/ledger
 artifacts remain historical evidence, not current request inputs. Closed failed
@@ -1214,6 +1214,42 @@ bounds remain separate checks. Serialization changes no job claim or authority.
 
 ### Ordinary discovery and procedure data
 
+The current executable-artifact boundary is
+[player-authored programs](changes/061-player-program-execution.md). Procedure/3
+requires `program=null` for advice or `{language:javascript/1,source}` for code;
+descriptive steps never become executable implicitly. The program skill requires
+one selected current eligible revision, `phase_id=null`, initial `goal.state`,
+intent/expected/interrupt consent and ordinary `perception=null`. It owns one
+immutable request/game anchor/deadline/input allowance. Current prompt children
+remain ordinary or semantic controls under their original macro; a program does
+not replace their root or renew its allowance.
+
+MiniRacer0.14.1 evaluates `step(view,state)` without host input/I/O callbacks. Source
+is32KiB, view256KiB, state16KiB, result32KiB, heap32MiB; compile is0.25s and each
+evaluation/validation/microtask drain at most0.05s, narrowed to remaining wall
+time. Reachable timers/asynchronous waits are removed, queued microtasks are
+drained inside that bound and the public hard-heap flag is checked before a
+result can propose input. Unsupported/non-JSON/invalid results fault the isolate.
+These are configured component bounds, not a universal hard realtime/security
+guarantee for a compromised native runtime.
+
+Each result has exactly status/state/input/reason. `act` supplies an ordinary
+key/text/click without click geometry; `yield`/`done` require null input. The host
+binds geometry from the exact current observation, expands bounded text through
+the existing scalar path and journals every actual primitive. `done` is not task
+success. Engine fault/yield keeps healthy ordinary fallback; Pause/custody/storage
+failures and unknown delivery keep their existing stopping policy. No input is
+replayed, and a pending result is collected by its original operation ID.
+
+Program-view/1 contains only current category/actions/in_game/ui/scene/geometry
+and boundary kind/input_receiver, with explicit omissions. It has no PNG pixels,
+unseen map/inventory, save access, identifiers or authority fields. Null structured
+data is unavailable. The model retains actual PNG presentation and ordinary
+image-informed exploration for unrepresented conditions. Software records exact
+source/revision/continuation and primitive feedback for the existing asynchronous
+reflection path; the player need not narrate each use. This does not establish
+mental attention, semantic success, organic adoption or learning benefit.
+
 Mission10 keeps `skill_kind=direct` on the existing writer, with a passive ordinary
 policy separate from semantic menu planning. Its closed goal contains `input`,
 `intent`, `expected` and `interrupt_allowed`. Input is one explicit ASCII/named
@@ -1387,7 +1423,7 @@ The current player judges descriptive applicability; memory grants no authority.
 The read-only library uses SQLite over hash-verified bytes, shared archive locks
 and derived project paths. It never reopens a runtime writer, restores a phase or
 imports old-world Claims/Work as current facts. Only current ledger12/archive5
-input with the exact native6/mission10 procedure environment is eligible. Earlier
+input with the exact native6/mission11 procedure environment is eligible. Earlier
 native5/mission9 archives and learning004 remain immutable historical evidence,
 unmountable as current libraries. A fresh current-contract learning005 must close
 normally before its library can support fresh seven-day003; old failures never resume.
@@ -1397,7 +1433,7 @@ bytes or support. Library exports remain historical and `grants_authority:false`
 Disputed sources, malformed/foreign blocked IDs, missing/changed images or invalid
 episode/effect linkage still refuse; no archive is rewritten to gain eligibility.
 
-Campaign-memory/5 uses qualified procedure refs, records, source requirements and
+Campaign-memory/6 uses qualified procedure refs, records, source requirements and
 explicit omissions, rather than placeholder lesson IDs. Decisions retain selected
 procedure support. Complete handoff fit checks include every procedure head and
 its evidence, reserving room for the future post-Pause frame. Claim declarations
@@ -1678,7 +1714,7 @@ and journal evidence, granting no authority, replay or inferred resolution.
 
 The lead designates one general-purpose player for a finite mission. It chooses
 plans, interprets evidence, retrieves/updates memory and requests semantic skills
-and registered normal lifecycle through mission/10. The lead owns source/release
+and registered normal lifecycle through mission/11. The lead owns source/release
 acceptance, finite admission, shared runtime custody, escalation and final
 verification. It supplies no ordinary gameplay rescue in the deciding mission.
 Explorers/reviewers never send inputs. Actor names and instructions are workflow

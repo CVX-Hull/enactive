@@ -24,7 +24,7 @@ reason to read the entire repository during every game.
 - `enactive_snapshot` gives a descriptive snapshot handle and the selected source
   image. Select those exact handles for a new intent. Software supplies mission,
   epoch, source bindings and stable child lineage. A snapshot never Resumes.
-- Default `player-view/2` keeps current decision state and advertises `detail_sections`.
+- Default `player-view/3` keeps current decision state and advertises `detail_sections`.
   Use `enactive_detail(snapshot_id, section)` for exact as-of configuration, metrics,
   receipt, progress, native or source metadata when needed. It never refreshes or
   grants authority. Use `enactive_source` when you need the actual retained image.
@@ -39,6 +39,22 @@ reason to read the entire repository during every game.
   Ordinary `direct` inputs use `perception=null`; visible-control interpretations
   belong to menu/edit/item controls. Inspect the returned image/effect; a delivered
   input is not task success.
+- An eligible Procedure/3 can contain `program={language:javascript/1, source:...}`
+  or null for advice. A `program` skill starts a new root, explicitly selects that
+  revision and supplies initial `goal.state`, intent, expected outcome and interrupt
+  consent with `perception=null`. JavaScript `step(view,state)` returns exactly
+  `{status,state,input,reason}`: act proposes ordinary key/text/click, yield/done
+  require null input. Omit click geometry; software binds it from the current view.
+  The same writer applies original finite limits, records sources/actions/results
+  and stops on unknown delivery. Done is program termination, not verified success.
+  View `program-view/1` contains current category/actions/in_game/ui/scene/geometry
+  and boundary kind/input_receiver. It contains no pixels; null UI/scene means
+  unavailable. Use ordinary image-informed exploration where the routine lacks
+  evidence. Existing prompt children remain ordinary/semantic controls; do not
+  replace their root with a new program. Code/state bounds and engine faults are
+  described in the [execution contract](changes/061-player-program-execution.md).
+  The summary is returned automatically; read exact continuation only when needed
+  through `enactive_detail(next_snapshot.snapshot_id, progress)`.
 - MCP assigns each new request ID and waits up to15 seconds for its original
   result; do not supply `request_id` or `wait_seconds`. A new invocation is a new
   intent, never a retry. Pending/uncertain results require `enactive_result` with

@@ -24,14 +24,15 @@ class OrdinaryInputSkill:
 
     def __init__(self, request: dict | str | bytes, *, deadline_monotonic: float):
         data = validate_request(request)
-        if data["kind"] != "skill" or data["skill_kind"] != "direct":
+        if data["kind"] != "skill" or data["skill_kind"] not in ("direct", "program"):
             raise ContractError("Ordinary input requires a direct skill request")
         if (type(deadline_monotonic) not in (int, float) or not math.isfinite(deadline_monotonic)
                 or deadline_monotonic < 0):
             raise ContractError("Ordinary input requires a finite nonnegative deadline")
-        direct = validate_input(data["goal"]["input"], text_limit=24)
+        direct = (validate_input(data["goal"]["input"], text_limit=24)
+                  if data["skill_kind"] == "direct" else None)
         self._events = (tuple({"type": "text", "text": scalar} for scalar in direct["text"])
-                        if direct["type"] == "text" else (direct,))
+                        if direct is not None and direct["type"] == "text" else (direct,) if direct else ())
         self._request, self._deadline = data, deadline_monotonic
         self._prefix = "ordinary-" + hashlib.sha256(data["request_id"].encode()).hexdigest()
         self._store: EvidenceStore | None = None
@@ -47,6 +48,7 @@ class OrdinaryInputSkill:
         self._terminal: ControlOutcome | None = None
         self._proposals = 0
         self._index = 0
+        self._returned = 0
         self._entry_refusal: str | None = None
 
     def _context(self, store: EvidenceStore, now_monotonic: float, now_timestamp_ms: int) -> None:
@@ -107,8 +109,8 @@ class OrdinaryInputSkill:
                 or before["boundary"]["control_generation"] != actual["boundary"]["control_generation"]
                 or actual["takeover_generation"] != receipt.current.takeover_generation):
             raise EvidenceError("Ordinary entry crossed custody or lacks an owned live receiver")
-        direct = self._request["goal"]["input"]
-        if direct["type"] == "click" and (direct["geometry"] != before["frame_geometry"]
+        direct = self._request["goal"].get("input")
+        if direct is not None and direct["type"] == "click" and (direct["geometry"] != before["frame_geometry"]
                                            or direct["geometry"] != actual["frame_geometry"]):
             self._entry_refusal = "Original click mapping changed; choose a new coordinate from current evidence"
         self._observation = receipt
@@ -119,9 +121,9 @@ class OrdinaryInputSkill:
         self._shape = self._batch_shape(actual)
 
     def _finish(self, reason: str, *, unknown: bool = False, refused: bool = False) -> ControlOutcome:
-        self._terminal = ControlOutcome("unknown" if unknown else "blocked" if refused and not self._index else "partial",
+        self._terminal = ControlOutcome("unknown" if unknown else "blocked" if refused and not self._returned else "partial",
             reason, self._proposals, self._sources, self._pending.logical_id if unknown and self._pending else None,
-            self._index > 0 or unknown, "ordinary_input", input_observation=self._observation)
+            self._returned > 0 or unknown, "ordinary_input", input_observation=self._observation)
         return self._terminal
 
     def _budget(self, current: EvidenceRef, now_monotonic: float) -> None:
@@ -154,11 +156,23 @@ class OrdinaryInputSkill:
             self._budget(current, now_monotonic)
         except _OrdinaryStop as exc:
             return self._finish(str(exc), refused=True)
+        chosen = self._choose(current, now_monotonic)
+        if isinstance(chosen, ControlOutcome):
+            return chosen
         self._proposals += 1
-        self._pending = ControlIntent(f"{self._prefix}-{self._proposals}", "direct", self._events[self._index],
+        self._pending = ControlIntent(f"{self._prefix}-{self._proposals}", "direct", chosen,
             current, store.observation(current)["boundary"]["id"],
             input_observation=self._observation if self._proposals == 1 else None)
         return self._pending
+
+    def _choose(self, current: EvidenceRef, now_monotonic: float) -> dict | ControlOutcome:
+        return self._events[self._index]
+
+    def _sequence_complete(self) -> bool:
+        return self._index == len(self._events)
+
+    def _same_shape_required(self) -> bool:
+        return True
 
     def accept(self, result: PrimitiveResult, store: EvidenceStore, *, now_monotonic: float,
                now_timestamp_ms: int) -> ControlOutcome | None:
@@ -185,13 +199,15 @@ class OrdinaryInputSkill:
         # The writer has authenticated delivery separately from semantic effect.
         # Novel, superseded or old terminal evidence cannot un-deliver this key.
         self._index += 1
+        self._returned += 1
         after = store.observation(result.after)
-        if self._index == len(self._events):
+        if self._sequence_complete():
             return self._finish("Physical input returned; player must interpret the effect")
         current, fresh = store.inspect_current_boundary(now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
         if (not fresh or current != result.after or store.authority_generation() != self._generation + 1
-                or not self._ready(after) or self._batch_shape(after) != self._shape
-                or pending.before.frame_sha256 == result.after.frame_sha256):
+                or not self._ready(after) or self._same_shape_required() and (
+                    self._batch_shape(after) != self._shape
+                    or pending.before.frame_sha256 == result.after.frame_sha256)):
             return self._finish("Known scalar returned; text batch stopped for fresh player interpretation")
         self._checkpoint, self._generation = current, store.authority_generation()
         try:

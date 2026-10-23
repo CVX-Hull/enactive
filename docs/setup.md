@@ -7,7 +7,9 @@ status: active
 # Local setup and checks
 
 The controller's I/O uses Python's standard library. Gameplay records/evidence
-require the pinned `jsonschema` package. The optional project-local structured
+require the pinned `jsonschema` package. Player-authored executable routines use
+hash-pinned MiniRacer0.14.1/V8 in this same environment; no Node process or global
+runtime installation is required to execute them. The optional project-local structured
 player tool process uses the official MCP Python SDK; it does not instantiate a
 controller or game. Runtime requirements are in [requirements.in](../requirements.in)
 and the shared hashed [lock](../requirements-dev.lock).
@@ -92,8 +94,8 @@ startup failure, repaired and verified in [public workflow acceptance](acceptanc
 Required checks must pass before integration. Other interpreter/host combinations
 require their own validation before a support claim.
 
-The current source uses native6/mission10/ledger12/archive5 with procedure/2,
-campaign-memory/5 and reflection/2; gameplay/2 is unchanged. Build and qualify the
+The current source uses native6/mission11/ledger12/archive5 with procedure/3,
+campaign-memory/6 and reflection/2; gameplay/2 is unchanged. Build and qualify the
 matching native6 binary before new native support claims. Historical native5
 learning and lifecycle results do not qualify this candidate. See
 [coordinated migration](runbook.md#coordinated-migration) before using existing
@@ -125,14 +127,14 @@ reflection-job and advice replies have explicit output limits to preserve bounde
 records. Direct input is an intent on `enactive_skill`, not a new input tool;
 Observe macro closure likewise uses `enactive_observe`. These project settings
 do not prove the running host loaded the current schemas/help or grant authority.
-Current MCP server3.0.0 generates request IDs and collection waits; its model
+Current MCP server4.0.0 generates request IDs and collection waits; its model
 arguments reject caller-supplied `request_id`/`wait_seconds`. Focused help exports
 this same current model schema. The imperative Python SDK's explicit-ID surface
 serves engineering and duplicate collection, not a compatibility mode for MCP.
 Both SDK and MCP intents omit navigation `goal.scope` and activity
 `goal.interrupt_request_id`: the existing composer binds them from the selected
 matching snapshot/source. Old supplied copies refuse; target, answer, outer scope,
-source and finite limits remain explicit. Canonical mission/10 records retain the
+source and finite limits remain explicit. Canonical mission/11 records retain the
 generated fields.
 
 For a dedicated CLI player, a frozen run profile may narrow `enabled_tools` to the

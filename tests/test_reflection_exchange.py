@@ -17,22 +17,22 @@ from harness.gameplay.reflection import (
 
 
 def procedure():
-    return {"schema": "procedure/2", "record_type": "Procedure", "id": "revision-1",
+    return {"schema": "procedure/3", "record_type": "Procedure", "id": "revision-1",
             "mission_id": "mission-a", "procedure_id": "inspect", "revision": 1,
-            "parent": None, "goal": "Inspect visible needs", "parameters": [],
+            "parent": None, "program": None, "goal": "Inspect visible needs", "parameters": [],
             "applicability": ["Visible needs available"], "invalidators": [],
             "steps": [{"intent": "Inspect", "expected": "Visible needs",
                        "on_unexpected": "Reassess"}], "progress": ["Needs visible"],
             "stop_conditions": ["Needs interpreted"], "limits": [],
             "environment": {"engine_commit": "a" * 40, "native_protocol": 6,
-                            "mission_schema": "mission/10", "configuration": "ordinary"},
+                            "mission_schema": "mission/11", "configuration": "ordinary"},
             "support": [{"mission_id": "mission-a", "request_ids": ["request-1"],
                          "source_ids": ["source-1"], "interpretation": "One example"}],
             "counterexamples": [], "status": "candidate", "reason": "Scoped data"}
 
 
 def job(**changes):
-    request = {"schema": "mission/10", "kind": "observe", "request_id": "request-1",
+    request = {"schema": "mission/11", "kind": "observe", "request_id": "request-1",
                "mission_id": "mission-a", "epoch": 0}
     return {"schema": "reflection/2", "record_type": "ReflectionJob", "id": "job-1",
             "mission_id": "mission-a", "reflector_id": "reflector-a", "epoch": 0,
@@ -83,8 +83,8 @@ class ReflectionValidationTests(unittest.TestCase):
         self.assertIn("candidates", reflection.proposal_schema()["properties"])
 
     def test_real_current_validators_and_defensive_copy(self):
-        self.assertEqual(validate_request(job()["trajectory"][0]["request"])["schema"], "mission/10")
-        self.assertEqual(validate_procedure(procedure())["schema"], "procedure/2")
+        self.assertEqual(validate_request(job()["trajectory"][0]["request"])["schema"], "mission/11")
+        self.assertEqual(validate_procedure(procedure())["schema"], "procedure/3")
         for validator, original in ((validate_job, job()), (validate_proposal, proposal()),
                                     (validate_command, command(submit=True))):
             for value in (original, json.dumps(original), json.dumps(original).encode()):

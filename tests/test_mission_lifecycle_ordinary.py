@@ -439,7 +439,7 @@ class OrdinaryLifecycleTests(MissionCreationFixture, unittest.TestCase):
         self.expired_setup()
         spent = self.runtime.status()["spent_inputs"]
         self.controller._mission_processing_failure(None, OSError("Synthetic controller failure"))
-        data = dict(schema="mission/10", kind="observe", request_id="observe-fault",
+        data = dict(schema="mission/11", kind="observe", request_id="observe-fault",
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"])
         refused = self.run_request(data)
         self.assertEqual(refused["state"], "blocked", refused)

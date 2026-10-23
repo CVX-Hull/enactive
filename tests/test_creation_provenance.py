@@ -9,7 +9,7 @@ from harness.gameplay.creation_provenance import creation_input_chain, validate_
 
 
 def request_record(identity, *, kind="lifecycle", phase="create-root", epoch=2):
-    data = dict(schema="mission/10", kind=kind, request_id=identity,
+    data = dict(schema="mission/11", kind=kind, request_id=identity,
         mission_id="mission-a", epoch=epoch, work_id=None, phase_id=phase,
         sources=["informing-" + identity], expected_session="setup-session",
         expected_revision=10, expected_boundary_id="menu-boundary",

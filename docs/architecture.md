@@ -6,16 +6,16 @@ status: active
 
 # Current architecture
 
-Current source contracts are native6, mission/10, campaign-memory/5, procedure/2,
+Current source contracts are native6, mission/11, campaign-memory/6, procedure/3,
 reflection/2, gameplay/2, evidence archive5, mission ledger12 and MCP presentation
-`player-view/2`. One MissionRuntime
+`player-view/3`. One MissionRuntime
 owns the live mission API. The MCP adapter progressively reveals technical detail
 from its existing bounded snapshot cache; these passive reads neither refresh the
 selected evidence nor establish input authority. Default normal-play results omit
 repeated configuration, technical receipt bindings and general engine vocabulary.
 One bounded producer-local fingerprint avoids identical implicit image parts in a
 known unchanged player/control context; explicit image reads remain complete.
-MCP server3.0.0 assigns request identities and bounded result waits before invoking
+MCP server4.0.0 assigns request identities and bounded result waits before invoking
 the existing imperative SDK. Its public schemas reject caller-owned IDs/waits;
 snapshot/source, scope, execution limits and semantic decisions remain explicit.
 Errors preserve assigned original collection arguments through the presentation
@@ -78,11 +78,17 @@ The read-only library accepts pinned closed current-contract archives without
 restoring old-world facts or execution handles. Old native5 libraries remain
 immutable historical evidence and cannot be mounted under native6. See
 [the current contract](protocol.md#ordinary-discovery-and-procedure-data).
-The [executable-policy research](research-executable-policies.md) proposes
-player-authored observation-driven programs as a further learning/latency path.
-Current procedure/2 remains advisory; no general learned-program runner exists.
-The proposal retains the writer and separates evolving player artifacts from the
-stable execution substrate rather than permitting arbitrary live source patches.
+The [executable-policy research](research-executable-policies.md) motivates
+player-authored observation-driven programs as a learning/latency path.
+Procedure/3 explicitly distinguishes advisory records (`program=null`) from
+JavaScript artifacts. The [execution boundary](changes/061-player-program-execution.md)
+uses a bounded V8 evaluator and the same ordinary-input writer. Each invocation
+pins a revision and original cumulative limits; source-linked evaluation and
+actual primitive receipts feed the existing trajectory/reflection path. It
+yields to the model for novel or unrepresented conditions. Program-view/1 supplies
+only current visible structured scene/UI data, not PNG perception or unseen game
+state. Source checks are not organic adoption, native reliability or campaign
+qualification; those integrated outcomes remain open.
 The rebuilt capture-precondition boundary has bounded ordinary-input and normal
 same-character lifecycle qualification in [capture001](acceptance/2026-10-22-native-capture-preconditions.md).
 Actual PNG drift and the retained-capture commit race remain unexercised there;
@@ -306,7 +312,7 @@ owns the exact source/byte bounds and later evidence-loss limits.
 | Lead / active Codex chat | Objective → frozen admission, reviewed source and acceptance | Owns shared runtime and integration; no ordinary gameplay rescue in the deciding mission |
 | Designated player / general-purpose agent | Visible evidence and memory → typed mission requests, plans and verification | One bounded actor; fresh-context handoff needs quiescence and one-use accounting; no authority from a summary |
 | Structured player adapter / harness maintainer | Explicit physical/semantic arguments and returned handles → existing ingress, settled result and exact PNG | No capability, source refresh, replay, automatic Resume or new ledger; actual host review-free proof remains separate |
-| Mission runtime / harness maintainer | mission/10 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
+| Mission runtime / harness maintainer | mission/11 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
 | Controller / harness maintainer | State-bound command → native request and correlated receipt | Serialized ordinary/control writers, exact process-local lease, Pause revocation and native fences; never edits saves |
 | Native bridge / integration maintainer | Bounded request → actual input, visible metadata and rendered frame | Engine validates outcomes on its game thread; unsupported boundaries cannot claim success |
 | Spectator / viewer maintainer | Frame and mission snapshot → inspectable progress, uncertainty and Pause | Mission Observe uses typed ingress; raw input/Resume/recovery disabled while nonterminal; malformed state stays locked |

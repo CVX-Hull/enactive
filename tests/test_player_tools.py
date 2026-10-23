@@ -333,7 +333,7 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertNotIn("$defs", schema)
         self.assertIn("$defs", describe("enactive_skill", "menu")["input_schema"])
         self.assertIn("$defs", describe("enactive_skill")["input_schema"])
-        self.assertEqual(len(describe("enactive_skill")["input_schema"]["properties"]["intent"]["anyOf"]), 8)
+        self.assertEqual(len(describe("enactive_skill")["input_schema"]["properties"]["intent"]["anyOf"]), 9)
 
     def test_focused_help_selects_memory_and_rejects_unknown_variants(self):
         schema = describe("enactive_remember", "claim")["input_schema"]
@@ -422,7 +422,7 @@ class SDKTransportTests(unittest.TestCase):
                 self.assertIsNone(result.structured_content)
                 view = json.loads(result.content[0].text)
                 self.assertEqual(view["mission"]["mission_id"], "sdk-fixture")
-                self.assertEqual(view["presentation_schema"], "player-view/2")
+                self.assertEqual(view["presentation_schema"], "player-view/3")
                 self.assertEqual(view["detail_sections"], list(DETAIL_SECTIONS))
                 self.assertEqual(view["mission"]["progress"],
                                  _FixtureClient().status()["mission"]["progress"])
@@ -451,7 +451,7 @@ class SDKTransportTests(unittest.TestCase):
                 self.assertIsNone(detailed.structured_content)
                 detail_view = json.loads(detailed.content[0].text)
                 self.assertEqual(detail_view["detail"], _FixtureClient().status()["mission"]["last_receipt"])
-                self.assertEqual(detail_view["presentation_schema"], "player-view/2")
+                self.assertEqual(detail_view["presentation_schema"], "player-view/3")
                 self.assertFalse(detail_view["grants_authority"])
                 self.assertEqual(len(detailed.content), 1)
                 collected = await client.call_tool("enactive_result", dict(mission_id="sdk-fixture",
@@ -459,7 +459,7 @@ class SDKTransportTests(unittest.TestCase):
                 self.assertFalse(collected.is_error)
                 self.assertIsNone(collected.structured_content)
                 projected = json.loads(collected.content[0].text)
-                self.assertEqual(projected["presentation_schema"], "player-view/2")
+                self.assertEqual(projected["presentation_schema"], "player-view/3")
                 self.assertEqual(projected["transport"], "uncertain")
                 self.assertFalse(projected["settled"])
                 self.assertEqual(projected["operation_id"], "original-operation")

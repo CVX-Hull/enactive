@@ -6,6 +6,7 @@ leases and source bindings are never restored from disk or accepted from JSON.
 from __future__ import annotations
 
 import copy
+from contextlib import ExitStack
 from dataclasses import asdict, dataclass, field, replace
 import hashlib
 import math
@@ -35,6 +36,7 @@ from .gameplay.navigation import NavigationIntent, NavigationOutcome, Navigation
 from .gameplay.input_contracts import ControlIntent, ControlOutcome
 from .gameplay.semantic_controls import SemanticControlSkill
 from .gameplay.ordinary_input import OrdinaryInputSkill
+from .gameplay.program_input import ProgramInputSkill
 from .gameplay.timeline import SessionContinuity, game_timeline
 
 MissionIntent = NavigationIntent | MenuIntent | ControlIntent
@@ -538,10 +540,10 @@ class MissionRuntime:
             raise ControlError("An owned prompt permits only its explicit control children")
         root = self._ledger.request(phase.root_id)["request"]
         if (data["skill_kind"] == "item" and root["skill_kind"] != "item"
-                or data["skill_kind"] == "activity" and root["skill_kind"] not in ("activity", "direct")):
+                or data["skill_kind"] == "activity" and root["skill_kind"] not in ("activity", "direct", "program")):
             raise ControlError("Semantic control cannot borrow another root kind")
         if data["skill_kind"] == "activity":
-            if ((root["skill_kind"] == "direct") != (data["goal"]["operation"] == "direct")):
+            if ((root["skill_kind"] in ("direct", "program")) != (data["goal"]["operation"] == "direct")):
                 raise ControlError("Activity child must preserve its original semantic or ordinary operation")
             if data["goal"]["interrupt_allowed"] and not root["goal"].get("interrupt_allowed", False):
                 raise ControlError("Activity child cannot enlarge its root interruption consent")
@@ -575,7 +577,7 @@ class MissionRuntime:
         root = self._ledger.request(phase.root_id)["request"]
         kind = root["skill_kind"]
         return {"schema": VERSION, "record_type": "PhaseReceipt", "origin_request_id": phase.root_id,
-            "phase_kind": kind, "operation": "direct" if kind == "direct" else "navigate" if kind == "navigate" else root["goal"][
+            "phase_kind": kind, "operation": kind if kind in ("direct", "program", "navigate") else root["goal"][
                 "action" if kind == "interact" else "operation" if kind == "activity" else "purpose"], "stage": stage,
             "epoch": phase.epoch, "actor_id": phase.actor_id, "controller_boot_id": phase.controller_boot_id,
             "operator_pause_generation": phase.operator_generation, "takeover_generation": phase.takeover_generation,
@@ -617,7 +619,7 @@ class MissionRuntime:
         if (mark != self._operator_mark() or boot != mark[0] or ledger["epoch"] != work.request["epoch"]
                 or state["takeover_generation"] != self._store.observation(original)["takeover_generation"]
                 or (original.boundary_kind != "normal_play" and not
-                    (work.request["skill_kind"] == "direct" and original.boundary_kind == "menu"))
+                    (work.request["skill_kind"] in ("direct", "program") and original.boundary_kind == "menu"))
                 or after.session != original.session):
             raise ControlError("Interaction cannot open a prompt across changed authority/session")
         phase = _PromptPhase(work.request.get("phase_id") or work.request["request_id"], after,
@@ -1054,7 +1056,7 @@ class MissionRuntime:
         if phase.checkpoint.boundary_kind != "activity_poll":
             raise ControlError("Activity poll requires its actual owned activity boundary")
         if data["kind"] == "skill":
-            if root["request"].get("skill_kind") not in ("activity", "direct"):
+            if root["request"].get("skill_kind") not in ("activity", "direct", "program"):
                 raise ControlError("Typed activity polling requires its original activity root; use Observe for other owned activities")
             self._prompt_guard(data, phase.checkpoint)
             observed = self._store.observation(phase.checkpoint)
@@ -1895,7 +1897,7 @@ class MissionRuntime:
                              logical_id: str | None = None, *, command_work: int = 0) -> str | None:
         """Positive local expiry proof, never authority from an error message."""
         data, phase = work.request, self._prompt_phase
-        if (data["kind"] != "skill" or phase is None and data["skill_kind"] != "direct"
+        if (data["kind"] != "skill" or phase is None and data["skill_kind"] not in ("direct", "program")
                 or not self._ordinary_refusal_guard(work, before, logical_id, command_work=command_work)):
             return None
         with self._ledger._mutex:
@@ -2552,14 +2554,29 @@ class MissionRuntime:
         return "blocked", result
 
     def _semantic(self, work: _Work) -> tuple[str, dict]:
+        with ExitStack() as stack:
+            return self._semantic_run(work, stack)
+
+    def _semantic_run(self, work: _Work, stack: ExitStack) -> tuple[str, dict]:
         data = work.request
         original, binding = self._informing(data)
         phase = self._prompt_guard(data, original)
         work.game_anchor = original if original.boundary_kind == "normal_play" else self._last_normal()
         deadline = self._deadline(work, original)
-        skill = (OrdinaryInputSkill(data, deadline_monotonic=deadline) if data["skill_kind"] == "direct" else
-                 MenuSkill(data, deadline_monotonic=deadline) if data["skill_kind"] == "menu" and data["perception"] is None
-                 else SemanticControlSkill(data, deadline_monotonic=deadline))
+        if data["skill_kind"] == "program":
+            selected = self._memory.select_procedure(data["procedure"])
+            if selected["program"] is None:
+                return "blocked", {"reason": "Selected procedure has no executable program; choose ordinary input or another revision",
+                    "proposals": 0, "source_ids": list(data["sources"]), "grants_authority": False}
+            skill = ProgramInputSkill(data, deadline_monotonic=deadline,
+                source=selected["program"]["source"],
+                on_step=lambda value: self._record("mission_program_step", {
+                    "request_id": data["request_id"], "procedure": data["procedure"], **value}))
+            stack.callback(skill.close)
+        else:
+            skill = (OrdinaryInputSkill(data, deadline_monotonic=deadline) if data["skill_kind"] in ("direct", "program") else
+                     MenuSkill(data, deadline_monotonic=deadline) if data["skill_kind"] == "menu" and data["perception"] is None
+                     else SemanticControlSkill(data, deadline_monotonic=deadline))
         self._skill = data["skill_kind"]
         mark = self._operator_mark()
         inspected, _ = self._store.inspect_current_boundary(**self._clocks())
@@ -2570,7 +2587,7 @@ class MissionRuntime:
         state, received = self._observe_native(work, deadline_monotonic=self._deadline(work, original))
         current = self._ingest(state, received)
         refreshed = self._binding(current)
-        if data["skill_kind"] == "direct":
+        if data["skill_kind"] in ("direct", "program"):
             relation = InputObservation(binding, refreshed)
             skill.observe(relation, self._store, **self._clocks())
             self._record("mission_input_observation", relation.to_dict())
@@ -2590,34 +2607,49 @@ class MissionRuntime:
         rotated = False
         receipt_phase = phase
         proposed_count = 0
+        last_returned = None
         while True:
             self._check_cancelled(work)
             proposal = skill.propose(self._store, **self._clocks())
             if isinstance(proposal, (MenuOutcome, ControlOutcome)):
                 outcome = proposal
+                # Program termination is a separate evaluation after known
+                # input. Preserve that input's prompt owner and original macro
+                # even when the program yields/errors before another proposal.
+                if (isinstance(skill, ProgramInputSkill) and last_returned is not None
+                        and self._prompt_phase is None and last_returned == self._current
+                        and last_returned.boundary_kind in ("menu", "activity_poll")):
+                    receipt_phase = self._open_prompt(work, original, last_returned, mark)
+                    phase = self._prompt_phase
             else:
                 refusal = self._exhausted_prompt_refusal(work)
                 if refusal is not None:
                     disposition = "partial" if proposed_count else "blocked"
                     outcome = ControlOutcome(disposition, refusal["reason"], proposed_count,
                         tuple(dict.fromkeys((original, self._current))), None, proposed_count > 0,
-                        "ordinary_input" if data["skill_kind"] == "direct" else
+                        "ordinary_input" if data["skill_kind"] in ("direct", "program") else
                         "native_rows" if isinstance(skill, MenuSkill) else "player_interpretation",
                         relation if isinstance(relation, SourceRevalidation) else None,
                         relation if isinstance(relation, InputObservation) else None)
                     self._capture_memory(self._current)
-                    return disposition, {**self._control_result(outcome), **refusal}
+                    return disposition, {**self._control_result(outcome), **refusal,
+                        **({"program": skill.summary()} if isinstance(skill, ProgramInputSkill) else {})}
                 self._progress = {"pending_logical_id": proposal.logical_id, "source_before": proposal.before.observation_id}
                 if not rotated:
                     self._rotate(work, proposal)
                     rotated = True
                 proposed_count += 1
                 feedback = self._dispatch(work, proposal, original)
+                if isinstance(skill, ProgramInputSkill):
+                    skill.record_feedback(feedback)
+                if feedback.transport_disposition == "returned":
+                    last_returned = feedback.after
                 if work.cancelled.is_set() or self._closed.is_set():
                     return ("unknown" if feedback.transport_disposition == "unknown" else "paused"), {
                         "reason": "Authority revoked; actual control receipt retained", "source_ids": [
                             ref.observation_id for ref in (feedback.before, feedback.after) if ref is not None],
-                        "pending_logical_id": proposal.logical_id, "grants_authority": False}
+                        "pending_logical_id": proposal.logical_id, "grants_authority": False,
+                        **({"program": skill.summary()} if isinstance(skill, ProgramInputSkill) else {})}
                 pending_observation = (self._prompt_phase is not None
                     and self._prompt_phase.observation_generation is not None)
                 actual_current, current_fresh = self._store.inspect_current_boundary(**self._clocks())
@@ -2644,7 +2676,7 @@ class MissionRuntime:
                     # another focus/text step against the changed interface.
                     outcome = ControlOutcome("partial", "Known input returned; current capture changed and needs a new player decision",
                         proposed_count, tuple(dict.fromkeys((original, proposal.before, feedback.after, actual_current))),
-                        None, True, "ordinary_input" if data["skill_kind"] == "direct" else
+                        None, True, "ordinary_input" if data["skill_kind"] in ("direct", "program") else
                         "native_rows" if isinstance(skill, MenuSkill) else "player_interpretation",
                         relation if isinstance(relation, SourceRevalidation) else None,
                         relation if isinstance(relation, InputObservation) else None)
@@ -2659,7 +2691,7 @@ class MissionRuntime:
                 if outcome is None:
                     self._publish()
                     continue
-                if (not pending_observation and data["phase_id"] is None and data["skill_kind"] in ("interact", "item", "activity", "inspect", "direct") and outcome.disposition == "partial"
+                if (not pending_observation and data["phase_id"] is None and data["skill_kind"] in ("interact", "item", "activity", "inspect", "direct", "program") and outcome.disposition == "partial"
                         and feedback.transport_disposition == "returned" and feedback.after is not None):
                     receipt_phase = self._open_prompt(work, original, checkpoint, mark)
                 if live_changed and not pending_observation:
@@ -2667,6 +2699,8 @@ class MissionRuntime:
                         "Native view advanced after the retained ACK; Observe before choosing another input")
                     receipt_phase = self._prompt_phase
             result = self._control_result(outcome)
+            if isinstance(skill, ProgramInputSkill):
+                result["program"] = skill.summary()
             if receipt_phase is not None:
                 stage = ("unknown" if outcome.disposition == "unknown" else "awaiting_observation"
                     if receipt_phase.observation_generation is not None else "complete"
@@ -2868,7 +2902,7 @@ class MissionRuntime:
                 return self._navigate(work)
             if work.request["skill_kind"] == "activity" and work.request["goal"]["step"] == "poll":
                 return self._poll_activity(work)
-            if work.request["skill_kind"] in ("menu", "edit", "interact", "item", "activity", "inspect", "direct"):
+            if work.request["skill_kind"] in ("menu", "edit", "interact", "item", "activity", "inspect", "direct", "program"):
                 return self._semantic(work)
         if kind == "reconcile":
             return self._registered_recovery.reconcile(work)

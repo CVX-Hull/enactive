@@ -8,6 +8,21 @@ status: active
 
 Recorded setup and maintenance history; this is not live environment status.
 
+## Player-program runtime, 2026-10-23
+
+Added only MiniRacer0.14.1 to the existing project Python lock and `.venv`, using
+the official hashed Mac ARM wheel and project-local caches. Existing dependency
+pins were retained. A separate local spike environment is owned under
+`.runtime/research/2026-10-23-executable-policies/runtime-spike/venv`.
+The first default-loop probe exposed a shutdown callback failure; the selected
+supported caller-owned async lifetime frees V8 before closing its event loop.
+Further actual tests cover bounded microtasks/heap, numeric precision and JSON
+validation. [Delivery061](changes/061-player-program-execution.md) retains results
+and limitations. No game input, native rebuild, save modification, global package,
+profile, application setting or permission expansion was used for this work.
+One managed engine worktree was used for disjoint implementation; the lead took
+repairs back after two failed worker attempts and integrated the reviewed source.
+
 ## Diagnostic017 closure, 2026-10-23
 
 The [017 report](acceptance/2026-10-23-luna-responsiveness-seventeenth-attempt.md)

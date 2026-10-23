@@ -1,4 +1,4 @@
-"""Strict mission/10 data. Parsing never grants a controller capability.
+"""Strict mission/11 data. Parsing never grants a controller capability.
 
 The existing JSON decoder/schema helpers own duplicate, finite-number and strict
 integer validation. Request dictionaries are decoded copies, not mutable aliases.
@@ -17,8 +17,8 @@ from .contracts import (
 from .native_input import direct_goal_schema, validate_input
 from .procedures import procedure_schema, validate_procedure
 
-VERSION = "mission/10"
-MEMORY_VERSION = "campaign-memory/5"
+VERSION = "mission/11"
+MEMORY_VERSION = "campaign-memory/6"
 IDENTITY_UNIT = "name"
 IDENTITY_COVERAGE = {"world": "visible-world-menu", "character": "visible-character-screen"}
 MAX_REQUEST_BYTES = 65_536
@@ -31,7 +31,7 @@ MAX_RETAINED_BYTES = 2 * 1024 * 1024 * 1024
 # Leave room for the bounded mission wrapper and the future post-Pause source.
 # The packet itself must fit the remaining 96KiB before authority is relinquished.
 HANDOFF_CONTEXT_RESERVE = 32_768
-SKILLS = ("navigate", "menu", "item", "activity", "inspect", "edit", "interact", "direct")
+SKILLS = ("navigate", "menu", "item", "activity", "inspect", "edit", "interact", "direct", "program")
 LIFECYCLE = ("launch", "create", "save", "exit", "load", "finish")
 INTERACTIONS = (
     "UP", "DOWN", "LEFT", "RIGHT", "open", "close", "smash", "examine", "examine_and_pickup",
@@ -87,7 +87,7 @@ _ADMISSION = _object({
     "scenario": _SCENARIO, "limits": _LIMITS, "cleanup_reserve": _RESERVE,
     "allowed_skills": {**_array(_enum(*SKILLS), len(SKILLS), 1), "uniqueItems": True},
     "allowed_lifecycle": {**_array(_enum(*LIFECYCLE), len(LIFECYCLE)), "uniqueItems": True},
-    "update_policy": {"const": "facts-procedures-reflection/2"}, "configuration": _CONFIGURATION,
+    "update_policy": {"const": "facts-procedures-reflection/3"}, "configuration": _CONFIGURATION,
     "learning": _nullable(_LEARNING),
 })
 _SCOPE = _object({"mission_id": _ID, "session": _ID, "coordinate_epoch": _integer()})
@@ -152,6 +152,8 @@ _GOALS = {
     "interact": _object({"action": _enum(*INTERACTIONS), "intent": _text(1024),
         "desired_outcome": _text(1024)}),
     "direct": direct_goal_schema(),
+    "program": _object({"state": {"type": "object"}, "intent": _text(1024),
+                         "expected": _text(1024), "interrupt_allowed": {"type": "boolean"}}),
 }
 _KEY = _object({"subject": _ID, "property": _enum("need", "supply", "place", "work", "identity"),
                 "unit": _text(32), "coverage_id": _ID})
@@ -269,7 +271,7 @@ _PROMPT_RECEIPT = _object({
     "grants_authority": {"const": False},
 })
 _SEMANTIC_PHASE_RECEIPT = _object({
-    **_PROMPT_RECEIPT["properties"], "phase_kind": _enum("item", "activity", "inspect", "direct"),
+    **_PROMPT_RECEIPT["properties"], "phase_kind": _enum("item", "activity", "inspect", "direct", "program"),
     "operation": _text(128),
     "stage": _enum("awaiting_control", "awaiting_observation", "activity_poll", "interrupt_confirmation", "awaiting_readmission", "complete", "unknown"),
 })
@@ -412,7 +414,7 @@ def validate_prompt_result(value: dict, *, request: dict, root: dict, actor_id: 
     data = _decode(value, schema)
     valid_root = (root["kind"] == "lifecycle" and root["operation"] in ("exit", "create", "save", "load") if lifecycle else
                   root["kind"] == "skill" and root["skill_kind"] == data["phase_kind"])
-    operation = root.get("operation") if lifecycle else "direct" if data["phase_kind"] == "direct" else "navigate" if data["phase_kind"] == "navigate" else root.get("goal", {}).get(
+    operation = root.get("operation") if lifecycle else data["phase_kind"] if data["phase_kind"] in ("direct", "program", "navigate") else root.get("goal", {}).get(
         "action" if data["phase_kind"] == "interact" else "operation" if data["phase_kind"] == "activity" else "purpose")
     if (not valid_root or root["phase_id"] is not None
             or data["origin_request_id"] != root["request_id"] or data["operation"] != operation
@@ -421,9 +423,9 @@ def validate_prompt_result(value: dict, *, request: dict, root: dict, actor_id: 
         raise ContractError("Prompt receipt contradicts its immutable root, actor or epoch")
     if request["kind"] == "observe":
         activity_observation = (not lifecycle and (
-            data["phase_kind"] in ("activity", "item", "inspect", "interact", "direct")
+            data["phase_kind"] in ("activity", "item", "inspect", "interact", "direct", "program")
             and data["stage"] in ("activity_poll", "awaiting_control", "complete")
-            or data["phase_kind"] in ("activity", "direct")
+            or data["phase_kind"] in ("activity", "direct", "program")
             and data["stage"] in ("interrupt_confirmation", "awaiting_readmission")))
         if (lifecycle and data["stage"] == "complete"
                 or not lifecycle and not activity_observation and data["stage"] != "complete"):
@@ -895,6 +897,11 @@ def validate_request(value: dict | str | bytes) -> dict:
             raise ContractError("A child inherits its root procedure use; it cannot replace that selection")
         if result["skill_kind"] == "direct":
             validate_input(result["goal"]["input"], text_limit=24)
+        if result["skill_kind"] == "program":
+            if result["phase_id"] is not None or result["procedure"] is None:
+                raise ContractError("A program invocation requires a selected procedure and its own root")
+            if len(canonical(result["goal"]["state"]).encode()) > 16_384:
+                raise ContractError("Program continuation exceeds 16 KiB")
         if (result["skill_kind"] == "activity" and result["goal"]["operation"] == "direct"
                 and result["goal"]["step"] == "start"):
             raise ContractError("Direct activity observation requires its actual existing root")

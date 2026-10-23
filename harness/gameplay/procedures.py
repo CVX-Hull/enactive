@@ -1,4 +1,4 @@
-"""Bounded advisory procedure records and pure, linear-family projection.
+"""Bounded procedure artifacts and pure, linear-family projection.
 
 Shape and ancestry do not establish semantic truth, available episode sources or
 input authority. Callers own source validation and environment-pin matching.
@@ -14,7 +14,7 @@ from .contracts import (
 )
 from .contracts import canonical
 
-VERSION = "procedure/2"
+VERSION = "procedure/3"
 MAX_PROCEDURE_BYTES = 32_768
 MAX_PROCEDURE_RECORDS = 256
 
@@ -34,6 +34,8 @@ _SCHEMA = _object({
     "schema": {"const": VERSION}, "record_type": {"const": "Procedure"},
     "id": _ID, "mission_id": _ID, "procedure_id": _ID,
     "revision": _integer(1024, 1), "parent": _nullable(_PARENT),
+    "program": _nullable(_object({"language": {"const": "javascript/1"},
+                                   "source": _text(32_768)})),
     "goal": _TEXT,
     "parameters": _array(_object({"name": _ID, "description": _TEXT}), 8),
     "applicability": _array(_TEXT, 8, 1), "invalidators": _array(_TEXT, 8),
@@ -45,7 +47,7 @@ _SCHEMA = _object({
         "engine_commit": {"type": "string", "minLength": 40, "maxLength": 40,
                           "pattern": "^[a-f0-9]{40}$"},
         "native_protocol": {"type": "integer", "const": 6},
-        "mission_schema": {"const": "mission/10"}, "configuration": _TEXT,
+        "mission_schema": {"const": "mission/11"}, "configuration": _TEXT,
     }),
     "support": _array(_EPISODE, 8, 1), "counterexamples": _array(_EPISODE, 8),
     "status": _enum("candidate", "active", "disputed", "retired"), "reason": _TEXT,
@@ -53,7 +55,7 @@ _SCHEMA = _object({
 
 
 def procedure_schema() -> dict[str, Any]:
-    """Return a defensive copy of the closed procedure/2 record schema."""
+    """Return a defensive copy of the closed procedure/3 record schema."""
     return json_object(_SCHEMA)
 
 

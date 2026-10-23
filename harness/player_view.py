@@ -7,7 +7,7 @@ from .gameplay.contracts import canonical
 from .player_tools import DETAIL_SECTIONS
 
 
-PRESENTATION_SCHEMA = "player-view/2"
+PRESENTATION_SCHEMA = "player-view/3"
 
 _REFERENCE_FIELDS = ("schema", "record_type", "frame_path", "frame_sha256",
                      "received_monotonic", "visibility_version")
@@ -93,5 +93,13 @@ def decision_view(tool_name: str, value: dict) -> dict:
         response = view.get("response")
         operation = response.get("operation") if response is not None else None
         _project_snapshot(view["next_snapshot"], operation, view.get("operation_id"))
+        result = operation.get("result") if operation is not None else None
+        program = result.get("program") if isinstance(result, dict) else None
+        mission = view["next_snapshot"].get("mission") or {}
+        if (isinstance(program, dict) and "state" in program and view.get("operation_id") is not None
+                and mission.get("progress_operation_id") == view["operation_id"]):
+            program.pop("state")
+            program.pop("trace", None)
+            program["state_detail"] = "Exact continuation is in enactive_detail(next_snapshot.snapshot_id, progress)."
     view["presentation_schema"] = PRESENTATION_SCHEMA
     return view

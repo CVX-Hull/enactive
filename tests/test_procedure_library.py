@@ -66,7 +66,7 @@ class ProcedureLibraryTests(unittest.TestCase):
             db.execute("INSERT INTO metadata VALUES ('admission',?)", (canonical(admission(
                 mission_id=mission, learning=LearningPolicy.from_dict(learning)).to_dict()),))
             db.execute("INSERT INTO metadata VALUES ('state',?)", (canonical({"phase": "stopped"}),))
-            payload = canonical({"schema": "mission/10", "kind": "observe", "request_id": "request-1",
+            payload = canonical({"schema": "mission/11", "kind": "observe", "request_id": "request-1",
                                  "mission_id": mission, "epoch": 0})
             db.execute("INSERT INTO requests VALUES (?,?,?,?,?)", ("request-1", payload, digest(payload.encode()),
                 "completed", canonical({"source_ids": [identity], "grants_authority": False})))
@@ -101,7 +101,7 @@ class ProcedureLibraryTests(unittest.TestCase):
         return library
 
     def skill_request(self, directory, identity):
-        payload = canonical({"schema": "mission/10", "kind": "skill", "request_id": "request-1",
+        payload = canonical({"schema": "mission/11", "kind": "skill", "request_id": "request-1",
             "mission_id": directory.name, "epoch": 0, "skill_kind": "inspect", "procedure": None, "goal": {"purpose": "inventory"},
             "sources": [identity], "expected_session": directory.name, "expected_revision": 1,
             "expected_boundary_id": "boundary-1", "limits": {"primitives": 1, "wall_seconds": 60, "game_seconds": 60},
@@ -138,7 +138,7 @@ class ProcedureLibraryTests(unittest.TestCase):
     def test_truncated_current_admission_refuses_even_with_matching_pin(self):
         directory, _, _, _ = self.archive()
         pin = self.edit_db(directory, "UPDATE metadata SET value=? WHERE key='admission'",
-            (canonical({"schema": "mission/10", "record_type": "MissionAdmission", "mission_id": directory.name,
+            (canonical({"schema": "mission/11", "record_type": "MissionAdmission", "mission_id": directory.name,
                         "learning": None}),))
         with self.assertRaises(ContractError):
             self.library(pin)
@@ -438,20 +438,20 @@ class ProcedureLibraryTests(unittest.TestCase):
         index["entries"].append({"reference": reference, "observation": after, "initial_lag_seconds": 0.0, "retention": "terminal"})
         (directory / "evidence" / "evidence.json").write_text(canonical(index))
         (directory / "evidence" / "frames" / (after_id + ".png")).write_bytes(png())
-        payload = canonical({"schema": "mission/10", "kind": "lifecycle", "request_id": "request-1",
+        payload = canonical({"schema": "mission/11", "kind": "lifecycle", "request_id": "request-1",
             "mission_id": "mission-a", "epoch": 0, "operation": "save", "world": "world", "character": "person",
             "sources": [identity], "expected_session": "native-session", "expected_revision": 30,
             "expected_boundary_id": "boundary-1", "limits": {"primitives": 1, "wall_seconds": 60, "game_seconds": 60},
             "work_id": None, "phase_id": None, "identity_claim_ids": []})
         self.edit_db(directory, "UPDATE requests SET payload=?,digest=?,state='unknown'",
                      (payload, digest(payload.encode())))
-        proof = {"schema": "mission/10", "record_type": "LifecycleTransition", "operation": "save",
+        proof = {"schema": "mission/11", "record_type": "LifecycleTransition", "operation": "save",
             "origin_request_id": "request-1", "terminal_request_id": "request-1", "terminal_logical_id": "logical-1",
             "native_request_id": "native-1", "launch_request_id": "launch-1", "launch_id": "owned-launch",
             "before_source_id": identity, "after_source_id": after_id, "origin_epoch": 0, "reconciled_epoch": 0,
             "actor_id": "player", "controller_boot_id": "boot", "operator_pause_generation": 0,
             "before_takeover_generation": 0, "after_takeover_generation": 0, "grants_authority": False}
-        effect = {"schema": "mission/10", "record_type": "EffectReconciliation", "basis": "LifecycleTransition",
+        effect = {"schema": "mission/11", "record_type": "EffectReconciliation", "basis": "LifecycleTransition",
             "sources": [identity, after_id], "note": "Scoped typed fixture", "proof": proof}
         pin = self.edit_db(directory, "INSERT INTO primitives VALUES (?,?,?,?,?,?,?)", ("logical-1", "request-1",
             canonical(intent(value="save", source_before=identity, preflight_source=identity)), "native-1", "unknown", None,

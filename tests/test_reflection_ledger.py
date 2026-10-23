@@ -26,7 +26,7 @@ class ReflectionLedgerTests(unittest.TestCase):
         self.addCleanup(lambda: self.ledger.close())
 
     def offer(self, number=1, *, now=1000):
-        request = dict(schema="mission/10", kind="observe", request_id=f"request-{number}", mission_id="mission-a", epoch=0)
+        request = dict(schema="mission/11", kind="observe", request_id=f"request-{number}", mission_id="mission-a", epoch=0)
         result = dict(source_ids=[f"source-{number}"], grants_authority=False, flag=1)
         self.ledger.begin_request(request, now=now)
         self.ledger.complete_request(request["request_id"], "completed", result, now=now)

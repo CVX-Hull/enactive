@@ -120,7 +120,7 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         original = next(row["entry"] for row in self.runtime._ledger.memory_records("claim") if row["entry"]["id"] == character_id)
         corrected = deepcopy(original)
         corrected.update(id="corrected-character", value=dict(quantity=None, state=self.a.scenario.character), supersedes=[character_id])
-        fixed = self.run_request(dict(schema="mission/10", kind="correct", request_id="correct-character",
+        fixed = self.run_request(dict(schema="mission/11", kind="correct", request_id="correct-character",
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], entry_type="claim", entry=corrected,
             retired_ids=[character_id], reason="Separate the interpreted name from demographic text in the retained identity screen"))
         self.assertEqual(fixed["state"], "completed", fixed)
@@ -140,7 +140,7 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         return world
 
     def delivery_reconciliation(self):
-        return dict(schema="mission/10", kind="reconcile", request_id="wrong-recovery",
+        return dict(schema="mission/11", kind="reconcile", request_id="wrong-recovery",
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"],
             unresolved_request_id="character", evidence_id=self.runtime._current.observation_id,
             reason="Assess actual observed Load transition without replay")

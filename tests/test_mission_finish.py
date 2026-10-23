@@ -126,13 +126,13 @@ class MissionFinishTests(MissionCreationFixture, unittest.TestCase):
 
     def remember_work(self, identity="objective", *, source=None, status="completed", intent=None):
         source = source or self.runtime._current
-        entry = dict(schema="campaign-memory/5", record_type="Work", id="objective-work", predecessor_work_id=None,
+        entry = dict(schema="campaign-memory/6", record_type="Work", id="objective-work", predecessor_work_id=None,
             intent=intent or self.a.objective, scope=dict(mission_id=self.a.mission_id, session=source.session,
                 coordinate_epoch=0), stage="verified" if status == "completed" else "pending",
             progress=100 if status == "completed" else 25, available=[], committed=[], predicted_output=[],
             observed_output=[], unresolved_effects=[], sources=[source.observation_id],
             next_verification="Independent acceptance assesses the actual objective evidence", status=status)
-        result = self.run_request(dict(schema="mission/10", kind="remember", request_id=identity,
+        result = self.run_request(dict(schema="mission/11", kind="remember", request_id=identity,
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], entry_type="work", entry=entry))
         self.assertEqual(result["state"], "completed", result)
         return entry
@@ -185,7 +185,7 @@ class MissionFinishTests(MissionCreationFixture, unittest.TestCase):
         self.untouched_exit()
         self.assertEqual(self.finish()["state"], "completed")
         self.a = replace(self.a, mission_id="next-mission")
-        operation = self.run_request(dict(schema="mission/10", kind="start", request_id="next-start", admission=self.a.to_dict()))
+        operation = self.run_request(dict(schema="mission/11", kind="start", request_id="next-start", admission=self.a.to_dict()))
         self.assertEqual(operation["state"], "completed", operation)
         self.assertEqual(self.runtime.status()["mission_id"], "next-mission")
         self.assertIsNone(self.runtime._native)

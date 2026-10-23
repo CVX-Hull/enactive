@@ -353,7 +353,7 @@ unresolved identities as verified `incident/1` references in
 `historical-incidents.json`; startup validates referenced bytes without parsing
 old protocol records. These remain visible historical unknowns and grant no
 execution permission. Its evidence format3 accepted native4 observations.
-For the current native6/mission10/ledger12/archive5/memory5 cutover, apply the same
+For the current native6/mission11/ledger12/archive5/memory6 cutover, apply the same
 stopped, hash-inventoried incident archive procedure. Preserve prior mission
 ledgers/archives as historical evidence; do not relabel them as eligible procedure
 libraries or restore their execution authority. Current stores accept native6
@@ -427,7 +427,7 @@ separates implemented components from remaining independent-play acceptance.
 2. Configure and verify the [structured player tools](setup.md#configure-the-structured-player-tools).
    The designated player uses `enactive_snapshot` and explicitly selects the
    returned snapshot/source IDs for `enactive_skill` or `enactive_lifecycle`.
-   Software constructs and retains the current mission/10 request before submission,
+   Software constructs and retains the current mission/11 request before submission,
    collects its bounded result and returns the actual retained PNG in the same call.
    MCP software assigns request IDs and result waits; old caller-owned
    `request_id`/`wait_seconds` arguments are rejected. Execution limits remain

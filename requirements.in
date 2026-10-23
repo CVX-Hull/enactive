@@ -1,3 +1,5 @@
 # Runtime records/evidence and the optional project-local MCP player adapter.
 jsonschema==4.26.0
 mcp==2.3.0
+# Bounded JavaScript evaluation for player-authored policy artifacts.
+mini-racer==0.14.1

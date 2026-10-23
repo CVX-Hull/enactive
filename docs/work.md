@@ -40,8 +40,12 @@ remain joint acceptance, not interchangeable milestones.
 The [executable-policy review](research-executable-policies.md) identifies the next
 architectural gap: let the player develop and revise observation-driven routines
 over primitives, rather than interpret advisory steps through a model each time.
-It is proposed work owned by#177/#176/#178/#164/#191, not an implemented runner
-or a replacement for the combined integrated/fresh-campaign acceptance.
+The [execution slice](changes/061-player-program-execution.md), owned by
+#177/#176/#178/#164/#191, now defines and implements a bounded program evaluator,
+explicit Procedure/3 artifacts and writer integration under coordinated migration.
+Source verification is underway; this does not replace the combined independent
+learning/fresh-campaign acceptance. Current candidate evidence belongs in that
+brief; GitHub retains remaining action ownership and execution status.
 
 | Evidence | What it establishes; the linked report owns details and limits |
 | --- | --- |

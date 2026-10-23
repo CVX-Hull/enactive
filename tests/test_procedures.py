@@ -14,9 +14,9 @@ from harness.gameplay.procedures import (
 
 def procedure(**changes):
     return {
-        "schema": "procedure/2", "record_type": "Procedure", "id": "rev-1",
+        "schema": "procedure/3", "record_type": "Procedure", "id": "rev-1",
         "mission_id": "mission-a", "procedure_id": "collect-water", "revision": 1,
-        "parent": None, "goal": "Collect usable water",
+        "parent": None, "program": None, "goal": "Collect usable water",
         "parameters": [{"name": "container", "description": "A suitable container"}],
         "applicability": ["A source is visibly available"],
         "invalidators": ["The source becomes inaccessible"],
@@ -25,7 +25,7 @@ def procedure(**changes):
         "progress": ["Water is visibly carried"], "stop_conditions": ["Target met"],
         "limits": ["Not assessed with hostile creatures nearby"],
         "environment": {"engine_commit": "a" * 40, "native_protocol": 6,
-                        "mission_schema": "mission/10", "configuration": "Ordinary setup"},
+                        "mission_schema": "mission/11", "configuration": "Ordinary setup"},
         "support": [{"mission_id": "episode-mission", "request_ids": ["request-1"],
                      "source_ids": ["source-1"], "interpretation": "One observed attempt"}],
         "counterexamples": [], "status": "candidate", "reason": "Scoped advisory candidate",
@@ -91,7 +91,7 @@ class ProcedureValidationTests(unittest.TestCase):
 
     def test_strict_versions_status_and_integer_bounds(self):
         for field, values in {
-            "schema": ["procedure/0", "procedure/1", "procedure/3"], "record_type": ["Claim"],
+            "schema": ["procedure/0", "procedure/1", "procedure/2", "procedure/4"], "record_type": ["Claim"],
             "revision": [True, False, 1.0, 0, -1, 1025], "status": ["verified", ""],
         }.items():
             for invalid in values:

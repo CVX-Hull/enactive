@@ -248,7 +248,7 @@ class PlayerClaimTests(unittest.TestCase):
         self.assertEqual(self.client.writes, [])
 
     def test_other_memory_variant_is_unchanged_and_cannot_reuse_claim_identity(self):
-        work = dict(schema='campaign-memory/5', record_type='Work', predecessor_work_id=None, id='work-1',
+        work = dict(schema='campaign-memory/6', record_type='Work', predecessor_work_id=None, id='work-1',
             intent='Inspect water', scope=self.scope, stage='inspection', progress=None,
             available=[], committed=[], predicted_output=[], observed_output=[], unresolved_effects=[],
             sources=[], next_verification='Read the inventory', status='interrupted')

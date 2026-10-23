@@ -67,6 +67,18 @@ offers Apache-2.0 OR BSD-3-Clause. The local adapter installs no telemetry expor
 and disables the SDK's optional telemetry middleware. The existing dependency
 pins were retained; the SDK's transitive packages stay in the project `.venv`.
 
+## Player program runtime
+
+Player-authored routines use [MiniRacer](https://bpcreech.com/PyMiniRacer/)
+0.14.1 (ISC), hash-pinned in the shared Python lock and installed only in the
+project environment. Its wheel embeds V8 and supporting code under their own
+notices. The installed distribution's `licenses/LICENSE` contains MiniRacer's
+ISC grant; `licenses/AUTHORS.md` retains its authors. Metadata and those files
+were reviewed on 2026-10-23; they are not a complete V8 component-license audit.
+This repository does not vendor or relicense the wheel. Review and preserve the
+upstream V8/component notices before distributing a bundled binary. Runtime selection, limits
+and rejected alternatives are in [the execution brief](docs/changes/061-player-program-execution.md).
+
 ## Documentation assets and tools
 
 python-frontmatter and PyYAML are MIT licensed; their exact versions and hashes

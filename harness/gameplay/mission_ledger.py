@@ -128,9 +128,9 @@ def _primitive_parent(intent: dict, request: dict) -> None:
     activity = (request["kind"] == "skill" and request["skill_kind"] == "activity"
                 and request["phase_id"] is not None)
     kind = intent["kind"]
-    if kind == "direct" and (request["kind"] != "skill" or request["skill_kind"] != "direct"):
+    if kind == "direct" and (request["kind"] != "skill" or request["skill_kind"] not in ("direct", "program")):
         raise LedgerError("Direct input requires its exact ordinary skill parent")
-    if request["kind"] == "skill" and request["skill_kind"] == "direct" and kind != "direct":
+    if request["kind"] == "skill" and request["skill_kind"] in ("direct", "program") and kind != "direct":
         raise LedgerError("An ordinary request cannot dispatch a semantic shortcut")
     if kind in ("request_interrupt", "answer_interrupt"):
         step = "interrupt" if kind == "request_interrupt" else "answer_interrupt"
@@ -158,6 +158,11 @@ def _ordinary_sequence(intent: dict, request: dict, position: int, previous: str
         raise LedgerError("Only the first ordinary primitive must record its entry observation")
     if position and previous != "returned":
         raise LedgerError("An ordinary batch cannot continue after refused or uncertain delivery")
+    if request["skill_kind"] == "program":
+        if (intent["expected_session"] != request["expected_session"]
+                or intent["expected_revision"] < request["expected_revision"]):
+            raise LedgerError("Program input crossed its original session/revision")
+        return
     selected = request["goal"]["input"]
     if selected["type"] == "text":
         if position >= len(selected["text"]):
@@ -807,7 +812,7 @@ class MissionLedger:
     @staticmethod
     def _is_phase_root(data: dict) -> bool:
         return data.get("phase_id") is None and (data["kind"] == "lifecycle"
-            or data["kind"] == "skill" and data["skill_kind"] in ("navigate", "item", "activity", "interact", "inspect", "direct"))
+            or data["kind"] == "skill" and data["skill_kind"] in ("navigate", "item", "activity", "interact", "inspect", "direct", "program"))
 
     def _phase_parent(self, data: dict, *, before_rowid: int | None = None) -> dict | None:
         """Validate a direct immutable accounting link, never live input authority."""
@@ -834,11 +839,11 @@ class MissionLedger:
                 raise LedgerError("Navigation root permits only its exact suffix or ordinary menu/editor controls")
             if data["skill_kind"] == "direct":
                 lifecycle = root["kind"] == "lifecycle" and root["operation"] in ("create", "load", "save", "exit")
-                if not lifecycle and (root["kind"] != "skill" or root["skill_kind"] not in ("interact", "item", "inspect", "activity", "direct")):
+                if not lifecycle and (root["kind"] != "skill" or root["skill_kind"] not in ("interact", "item", "inspect", "activity", "direct", "program")):
                     raise LedgerError("Direct child requires its original ordinary or lifecycle scope")
                 if data["goal"]["interrupt_allowed"] and not root.get("goal", {}).get("interrupt_allowed", False):
                     raise LedgerError("Direct child cannot enlarge original interruption consent")
-            if data["skill_kind"] == "activity" and root.get("skill_kind") == "direct":
+            if data["skill_kind"] == "activity" and root.get("skill_kind") in ("direct", "program"):
                 if (data["goal"]["operation"] != "direct" or data["goal"]["target"] != root["goal"]["expected"]
                         or data["goal"]["game_seconds"] > root["limits"]["game_seconds"]
                         or data["goal"]["interrupt_allowed"] and not root["goal"]["interrupt_allowed"]):

@@ -16,7 +16,7 @@ def admission(**changes):
                   limits=MissionLimits(), cleanup_reserve=CleanupReserve(),
                   allowed_skills=("navigate", "item", "activity", "inspect", "menu", "edit", "interact"),
                   allowed_lifecycle=("launch", "create", "save", "exit", "load", "finish"),
-                  update_policy="facts-procedures-reflection/2",
+                  update_policy="facts-procedures-reflection/3",
                   configuration=Configuration("a" * 40, "b" * 64, "skills-1", "none", "unreported", "unreported"))
     fields.update(changes)
     return MissionAdmission(**fields)
@@ -27,7 +27,7 @@ def scope():
 
 
 def claim(**changes):
-    fields = dict(schema="campaign-memory/5", record_type="Claim", id="claim-1", kind="interpretation",
+    fields = dict(schema="campaign-memory/6", record_type="Claim", id="claim-1", kind="interpretation",
                   key={"subject": "water", "property": "supply", "unit": "charges", "coverage_id": "page-1"},
                   value={"quantity": 18, "state": None}, text="Visible clean water count",
                   scope=scope(), observed_time={"revision": 30, "turn": None}, received_time=100_000,
@@ -38,7 +38,7 @@ def claim(**changes):
 
 
 def request(kind="observe", **changes):
-    fields = dict(schema="mission/10", kind=kind, request_id="request-1", mission_id="mission-test", epoch=0)
+    fields = dict(schema="mission/11", kind=kind, request_id="request-1", mission_id="mission-test", epoch=0)
     if kind == "handoff":
         fields.update(unfinished_work_ids=[])
     if kind == "lifecycle":
@@ -144,10 +144,10 @@ class MissionContractTests(unittest.TestCase):
             with self.assertRaises(ContractError): MissionLimits(wall_seconds=value)
 
     def test_closed_requests_and_scope_binding(self):
-        valid = [request(), {"schema": "mission/10", "kind": "start", "request_id": "start-1", "admission": admission().to_dict()},
-                 {"schema": "mission/10", "kind": "status", "mission_id": "mission-test"},
-                 {"schema": "mission/10", "kind": "result", "mission_id": "mission-test", "operation_id": "old-1"},
-                 {"schema": "mission/10", "kind": "context", "handoff": None, "mission_id": "mission-test", "query": "water", "scope": scope(), "max_bytes": 32768},
+        valid = [request(), {"schema": "mission/11", "kind": "start", "request_id": "start-1", "admission": admission().to_dict()},
+                 {"schema": "mission/11", "kind": "status", "mission_id": "mission-test"},
+                 {"schema": "mission/11", "kind": "result", "mission_id": "mission-test", "operation_id": "old-1"},
+                 {"schema": "mission/11", "kind": "context", "handoff": None, "mission_id": "mission-test", "query": "water", "scope": scope(), "max_bytes": 32768},
                  skill(), request("stop", reason="Pause")]
         for value in valid:
             with self.subTest(kind=value["kind"]): self.assertEqual(validate_request(value), value)
@@ -317,7 +317,7 @@ class MissionContractTests(unittest.TestCase):
         with self.assertRaises(ContractError): validate_request({**value, "entry": claim()})
 
     def test_decisions_require_an_explicit_context_packet_reference(self):
-        decision = dict(schema="campaign-memory/5", record_type="Decision", id="decision-1",
+        decision = dict(schema="campaign-memory/6", record_type="Decision", id="decision-1",
                         packet_id="packet-1", scope=scope(), query="water", memory_version=3,
                         claim_ids=["claim-1"], work_ids=[], source_ids=["source-1"],
                         procedure_refs=[], procedure_sources=[], omitted=0, reason="Check the last observed supply")
@@ -336,8 +336,8 @@ class MissionContractTests(unittest.TestCase):
             with self.assertRaises(ContractError): validate_visible_ui(bad)
 
     def test_duplicate_nonfinite_oversized_and_mutable_alias_inputs_reject(self):
-        for value in ['{"schema":"mission/10","kind":"observe","kind":"stop"}',
-                      '{"schema":"mission/10","kind":"observe","epoch":NaN}',
+        for value in ['{"schema":"mission/11","kind":"observe","kind":"stop"}',
+                      '{"schema":"mission/11","kind":"observe","epoch":NaN}',
                       ' ' * MAX_REQUEST_BYTES + json.dumps(request())]:
             with self.assertRaises(ContractError): validate_request(value)
         original = skill(); parsed = validate_request(original)

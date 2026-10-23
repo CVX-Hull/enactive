@@ -67,10 +67,28 @@ def expected_snapshot(value):
 
 
 class DecisionViewTests(unittest.TestCase):
+    def test_program_state_uses_exact_detail_only_when_that_snapshot_preserves_it(self):
+        result = dict(program=dict(status="yield", state={"continuation": "x" * 500}, reason="novel view"))
+        original = dict(operation_id="program-original", response=dict(operation=dict(result=deepcopy(result))),
+                        next_snapshot=snapshot())
+        original["next_snapshot"]["mission"]["progress"] = deepcopy(result)
+        player = PlayerTools(Mock())
+        player.snapshots["chosen-snapshot"] = deepcopy(original["next_snapshot"])
+        projected = decision_view("enactive_skill", original)
+        self.assertNotIn("state", projected["response"]["operation"]["result"]["program"])
+        self.assertIn("state_detail", projected["response"]["operation"]["result"]["program"])
+        self.assertEqual(player.detail("chosen-snapshot", "progress")["detail"], result)
+        self.assertEqual(original["response"]["operation"]["result"], result)
+        # A later collection may have a different current operation. Its
+        # snapshot cannot address the original continuation: retain it inline.
+        original["next_snapshot"]["mission"]["progress"] = {"different": "operation"}
+        projected = decision_view("enactive_result", original)
+        self.assertEqual(projected["response"]["operation"]["result"], result)
+
     def test_snapshot_keeps_decisions_unknowns_and_visible_source_with_detail_addresses(self):
         original = snapshot()
         expected = expected_snapshot(original)
-        expected["presentation_schema"] = "player-view/2"
+        expected["presentation_schema"] = "player-view/3"
         view = decision_view("enactive_snapshot", original)
         self.assertEqual(view, expected)
         self.assertEqual(view["source"]["observation"], original["source"]["observation"])
@@ -108,7 +126,7 @@ class DecisionViewTests(unittest.TestCase):
                         proposal=deepcopy(payload)), next_snapshot=snapshot(), diagnostic="retained")
                 expected = deepcopy(original)
                 expected["next_snapshot"] = expected_snapshot(original["next_snapshot"])
-                expected["presentation_schema"] = "player-view/2"
+                expected["presentation_schema"] = "player-view/3"
                 for tool in ("start", "result", "skill", "lifecycle", "observe", "remember", "correct",
                              "handoff", "stop", "reconcile", "claim", "readmit", "context"):
                     with self.subTest(tool=tool):
@@ -186,7 +204,7 @@ class DecisionViewTests(unittest.TestCase):
         original = snapshot()
         original.update(next_snapshot=snapshot(), progress=["keep"], last_receipt={"keep": True})
         expected = deepcopy(original)
-        expected["presentation_schema"] = "player-view/2"
+        expected["presentation_schema"] = "player-view/3"
         for tool in ("source", "detail", "advice", "reflect_next", "reflect_submit", "reflect_source", "reflect_result"):
             with self.subTest(tool=tool):
                 self.assertEqual(decision_view("enactive_" + tool, original), expected)
@@ -196,14 +214,14 @@ class DecisionViewTests(unittest.TestCase):
                              grants_authority=False, source_error="Original image unavailable"),
                         dict(snapshot_id="s", mission={"phase": "admitted"}, native={}, source=None)):
             with self.subTest(current=current):
-                expected = dict(deepcopy(current), presentation_schema="player-view/2")
+                expected = dict(deepcopy(current), presentation_schema="player-view/3")
                 if current["snapshot_id"] is not None:
                     expected["detail_sections"] = list(DETAIL_SECTIONS)
                 self.assertEqual(decision_view("enactive_snapshot", current), expected)
         error = dict(transport="uncertain", settled=False, operation_id="original",
                      response=None, snapshot_error="Status unavailable")
         self.assertEqual(decision_view("enactive_result", error),
-                         dict(error, presentation_schema="player-view/2"))
+                         dict(error, presentation_schema="player-view/3"))
 
     def test_transport_omissions_are_scoped_and_partial_visible_views_stay_complete(self):
         reference = dict(schema="evidence/5", record_type="observation", frame_path="exact.png",

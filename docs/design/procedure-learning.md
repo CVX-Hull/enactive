@@ -14,9 +14,9 @@ outcomes and accepts/revises procedure data. The lead maintains the substrate.
 Claims and unfinished Work continue to describe the current campaign; a procedure
 is advisory knowledge about how to attempt a goal under stated conditions.
 The delivery brief and current protocol own implemented status and actual
-qualification. Current source uses procedure/2, campaign-memory/5 and reflection/2
-with native6/mission10/ledger12/archive5; gameplay/2 is unchanged. Admission uses
-`facts-procedures-reflection/2`. Remaining research/evaluation proposals below are
+qualification. Current source uses procedure/3, campaign-memory/6 and reflection/2
+with native6/mission11/ledger12/archive5; gameplay/2 is unchanged. Admission uses
+`facts-procedures-reflection/3`. Remaining research/evaluation proposals below are
 not guarantees. The matching native6 build passed and is installed; graphical
 qualification, a current-contract learning library and a fresh campaign remain
 pending. Earlier learning004 evidence keeps its original environment and scope;
@@ -29,11 +29,13 @@ and advisory path revise data from retained attempts, rather than requiring a
 new engineering handler. #191 owns remaining substrate/portability gaps.
 
 The [October23 executable-policy review](../research-executable-policies.md)
-proposes an additional player-authored program path. It identifies a real gap:
-current procedure/2 steps are advisory and are not executed as branches/loops.
-The future boundary must distinguish stable platform code from evolving player
-artifacts under a declared update policy, without per-routine lead approval.
-That proposal does not change current admissions or executable behavior.
+motivates the [player program boundary](../changes/061-player-program-execution.md).
+Procedure/3 keeps descriptive steps advisory and requires an explicit nullable
+`program` artifact. JavaScript `step(view,state)` may branch/loop over the supplied
+visible data and propose ordinary input through the existing writer. Host limits,
+revision pinning, yield and automatic result linkage stay outside the generated
+control flow. No per-routine lead approval is introduced. This source boundary
+does not establish organic adoption, general pixel perception or learning benefit.
 
 ## Representation and storage
 
@@ -44,7 +46,7 @@ ledger and original frame archive; missing or disputed support stays unavailable
 
 | Record | Selected content and meaning |
 | --- | --- |
-| Procedure revision (`procedure/2`) | Stable family ID and immutable revision ID/number; expected parent revision; goal; named parameters/descriptions; applicability and invalidation conditions; closed-loop steps expressed as intent/expected observation/response to surprise; progress/termination and known limits; supporting and contrary episode references; candidate/active/disputed/retired disposition and explanation. Text is advisory data, never evaluated code or a ready-to-replay key macro. |
+| Procedure revision (`procedure/3`) | Stable family/revision/parent, goal, named parameters, applicability/invalidators, advisory intent/expectation/surprise steps, progress/termination/limits, supporting/contrary episodes and disposition. Required `program` is null for advice or an explicit javascript/1 source artifact. Descriptive text is never evaluated as code; a program invocation pins the selected source and remains fallible. |
 | Episode reference | Mission identity, existing request IDs and source IDs, plus the player's scoped interpretation where needed. Resolve actual requests, delivery/effects and original image support; no invented support or automatic success label. |
 | Procedure selection | Explicit family/revision and use-instance ID attached once to a skill root, with the player's applicability judgment. The runtime resolves the exact retrieved version, validates it exists and propagates linkage to children. It does not infer mental influence or reselect a new revision mid-skill. |
 | Context export | Exact packet/library revision and included procedure versions, with source availability, omissions and scope. Record supply by the runtime separately from host delivery/mental attention; no mandatory feedback narration per action. |
@@ -233,7 +235,7 @@ counterexamples and retire superseded assumptions instead of rewriting history.
 
 The October21 reviewed pure-module interface is implemented in
 [procedures.py](../../harness/gameplay/procedures.py). Its current closed
-`procedure/2` schema owns exact fields and bounds; the initial procedure/1 contract
+`procedure/3` schema owns exact fields and bounds; the initial procedure/1 contract
 is historical. The pure module imports strict schema/canonical helpers and has no
 ledger/controller/runtime/network execution role.
 
@@ -253,7 +255,7 @@ changed copies, missing parents, multiple roots or incomparable branches refuse.
 No branch selection or merge is inferred from timestamps or numeric revisions.
 
 The current environment pins `engine_commit`, `native_protocol=6`,
-`mission_schema="mission/10"` and a bounded configuration description. Matching
+`mission_schema="mission/11"` and a bounded configuration description. Matching
 these identifies interface applicability, not equivalent world facts or a guarantee
 that the described conditions hold. Episode references qualify request/source IDs
 by their own mission; the runtime resolves original informing, entry, actual

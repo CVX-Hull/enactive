@@ -89,6 +89,14 @@ links decisive reports; the archive retains intermediate failures.
 Current MCP also assigns request IDs and collection waits through that same SDK;
 explicit as-of evidence, scope and execution budgets remain player choices.
 
+The [executable-routine candidate](changes/061-player-program-execution.md) lets
+the player store an explicit JavaScript artifact with procedure memory and run
+observation-conditioned steps through the same writer. Host limits and automatic
+source/action/result linkage remain outside generated control flow. This is a
+source implementation under verification; organic authorship, useful reuse,
+latency and the fresh campaign are still unqualified. Its first program view
+contains visible structured data; image-only conditions return to the player.
+
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and
 host. Failures and unknown acknowledgments stay recorded even when separate
