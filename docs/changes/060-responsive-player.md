@@ -295,6 +295,31 @@ rebuild and qualify it separately. Do not infer success from accepted editor key
 or add a handler for this menu.005 remains failed, with no routine latency cohort.
 All21tools already load; this source/native repair needs no Codex restart.
 
+[Diagnostic006](../acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md)
+creates the world but expires its chosen420s setup scope before identity. Explicit
+pre-normal menu reads/zero-input aborts must use their own bounded deadline rather
+than that expired execution deadline; preserve exact custody and all input ceilings.
+Show root headroom in the existing summary instead of making the player reconstruct
+technical receipts. A cached rejected ACK is history; judge readiness after the
+fresh read. The first pre-read fence failed three existing rejection-continuation
+regressions and was moved after capture; retain that failure separately.
+
+For #175, use the existing admission's explicit initial-load mode to validate
+skills/memory from an ordinary saved world under new visible identity/adoption and
+zero inherited game-time credit. Do not build a save-proof import service; later
+reloads still require this mission's own Save. Fresh seven-day acceptance stays
+fresh. Existing modes/null fields represent the distinction, with live/ledger/
+timeline readers and tests migrated together; no wire/storage format is added.
+
+A read-only [supported CLI exec](https://learn.chatgpt.com/docs/non-interactive-mode)
+probe reused the existing signed-in account and explicit current project MCP
+configuration, with no new provider, admission or game input. The first invocation
+failed configuration loading before a model session; the corrected invocation
+made direct snapshot/detail calls but supplied null to the detail schema and
+reported nested skill arguments as `unknown`. It demonstrates neither a full
+catalogue nor faster deciding play; Desktop remains selected for006. No global
+configuration, credential copy, hidden app IPC or permission bypass was used.
+
 Retain the existing MCP SDK, ledger, archive, memory store, observer timing and
 test lanes. No new workflow engine, history store, tool-search service, vector DB
 or robot runtime is justified by these findings. A dedicated small player runtime

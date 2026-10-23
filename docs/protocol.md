@@ -352,6 +352,17 @@ operator counter are required for a readiness receipt. It remains passive: no
 Resume, lease, normal facts, identity or game-time anchor. Portable fake-process
 tests are not actual native launch acceptance.
 
+A new admission with `scenario.mode=load` may enter its admitted existing world and
+character through ordinary Load without a previous mission's SavedCheckpoint.
+It requires this mission's owned launch, actual selection/transition, current
+visible identity Claims and separate adoption. Its first normal segment starts
+new game-time accounting at the loaded turn. It imports no prior execution
+handles, map, stock, authority or elapsed-survival credit. A `fresh` admission still
+requires its committed creation route. Later reloads in either mode require the
+current mission's own SavedCheckpoint and cannot roll back newer normal evidence.
+CDDA owns save validity; prospective experiment preparation retains any baseline
+archive/pins. There is no cross-mission save-proof service or compatibility path.
+
 Create/save/load roots require null `work_id` and empty `identity_claim_ids`.
 The shared pure submission validator rejects violations before client submission or
 receiver queue admission, so a malformed draft cannot itself revoke a lease.
@@ -406,11 +417,21 @@ to MAIN_MENU retires that stage. Before a load confirmation is dispatched, the
 rendered UILIST must have one enabled admitted-character row and that exact row
 must be selected. No literal `Load Game` label or alternate label reader arms the
 stage. That row gate applies to the semantic shortcut; ordinary controls still
-require post-transition exact identity and this mission's SavedCheckpoint.
+require post-transition exact identity; later reloads also require this mission's SavedCheckpoint.
 Unknown delivery retains its original UUID/reservation; diagnostic Observe,
 same-root transition reconciliation, separate identity-only Resume and visible
 identity Claims/adoption remain required. The row check establishes selection
 only; world identity still needs its source-backed interpretation.
+A pre-normal create/load menu Observe and zero-input MAIN_MENU abort use their
+explicit read request's original deadline and mission pre-reserve bound, even
+when the old setup execution deadline has expired. Existing phase/store/actor/
+operator guards, exact lease and fresh controller custody/capture checks remain.
+A cached rejected ACK cannot substitute for that fresh readiness assessment.
+The old root deadline and counters remain unchanged; an expired child is still
+refused before admission. Other forms cannot borrow abort cancellation input;
+Save, provisional identity and unknown transitions keep their separate deadlines.
+Lifecycle summary `remaining_limits` reports wall seconds and primitives as of
+publication, for decision context only, without renewing allowance or input consent.
 A source-bound root charges distinct Resume and QUIT primitives, then awaits an
 explicit interpreted Really quit? Yes/No child. Exact-PNG refreshes preserve
 checkpoint provenance; root/child ceilings and original deadlines never renew.

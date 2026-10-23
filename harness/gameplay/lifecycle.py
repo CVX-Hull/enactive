@@ -298,7 +298,8 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
         proof = transition(adoption["transition_result_request_id"])
         root_id = adoption["origin_request_id"]
         expected_scope = dict(mission_id=ledger.admission.mission_id, session=first.session, coordinate_epoch=index)
-        _require(proof["origin_request_id"] == root_id and proof["operation"] == ("create" if index == 0 else "load")
+        initial_operation = "load" if ledger.admission.scenario.mode == "load" else "create"
+        _require(proof["origin_request_id"] == root_id and proof["operation"] == (initial_operation if index == 0 else "load")
                  and phase_member(result_id, root_id)
                  and order[adoption["transition_result_request_id"]] <= order[result_id]
                  and adoption["scope"] == expected_scope
@@ -366,7 +367,7 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
                                "expected_boundary_id", "source_before", "preflight_source")}}.items():
             _require(inspected_receipt.get(key) == value, "Identity inspection receipt contradicts its primitive")
         if index == 0:
-            _require(adoption["saved_checkpoint_request_id"] is None, "Initial creation cannot borrow a saved checkpoint")
+            _require(adoption["saved_checkpoint_request_id"] is None, "Initial entry cannot borrow a saved checkpoint")
         else:
             saved_id = adoption["saved_checkpoint_request_id"]
             _require(saved_id in proofs["saved_checkpoint"], "Reload lacks its exact preceding saved checkpoint")

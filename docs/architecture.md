@@ -19,6 +19,13 @@ registered lifecycle must verify owned launch and admitted world/character befor
 normal-play authority or a game-time anchor can be established. This is not yet an
 accepted autonomous survival service. Earlier [foundation](acceptance/2026-10-17-foundation-implementation.md)
 and [MVP](acceptance/2026-10-17-mvp.md) reports retain their dated contract scopes.
+An explicit initial-load admission can establish a new first normal segment through
+ordinary Load and current visible identity/adoption, with no inherited authority,
+world facts or elapsed game time. Subsequent reloads still require this mission's
+own Save checkpoint and no-rollback chronology. This source-only accelerator uses
+existing modes/null fields and awaits native qualification; fresh #145 acceptance
+still requires actual creation. The [006 report](acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md)
+records its repeated-setup rationale.
 Protocol version: 6.
 
 The [independent024 result](acceptance/2026-10-21-independent-supply-shelter.md)
@@ -455,6 +462,12 @@ and menu-only cleanup audit the same nondelivery. Rejected stage requests leave
 the unchanged form awaiting control. The native Ctrl+named-key translation repair
 requires rebuilding and a new finite qualification; the installed binary is still
 unchanged. Ineffective semantic editor clearing remains an actual unresolved result.
+[Diagnostic006](acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md)
+creates its world with90returned primitives, then expires its selected420s setup
+root before identity. Explicit pre-normal menu reads and zero-input abort now use
+their own original read/global deadlines and existing custody proof. Children keep
+the expired execution ceiling; no cancellation input, Resume or automatic retarget
+is added. The summary exposes as-of root headroom. Real qualification is pending.
 [Native006](acceptance/2026-10-20-native-character-lifecycle.md) established
 ordinary creation/identity, counted dropping, native wait/poll and normal first
 save/exit, then stopped before reload and exceptionally closed its new child.

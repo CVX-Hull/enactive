@@ -1379,6 +1379,12 @@ class MissionLedger:
 
     def _check_normal_adoption(self, request_id: str, data: dict, value: dict) -> None:
         proof = validate_normal_adoption(value)
+        initial_load = data["operation"] == "load" and self._get("admission")["scenario"]["mode"] == "load"
+        for row in self.request_records():
+            if row["request"]["request_id"] == request_id:
+                break
+            if row["result"] is not None and "normal_adoption" in row["result"]:
+                initial_load = False
         transition_row, transition = self._lifecycle_record(request_id, proof["transition_result_request_id"], "lifecycle_transition")
         transition = validate_lifecycle_transition(transition)
         inspect = self._earlier_request(request_id, proof["identity_inspect_request_id"])
@@ -1397,7 +1403,7 @@ class MissionLedger:
                 or inspect_result is None or type(inspect_result.get("identity_screen_source_id")) is not str
                 or proof["checkpoint_source_id"] not in data["sources"]
                 or set(data["identity_claim_ids"]) != {proof["world_claim_id"], proof["character_claim_id"]}
-                or (data["operation"] == "create") != (proof["saved_checkpoint_request_id"] is None)):
+                or (data["operation"] == "create" or initial_load) != (proof["saved_checkpoint_request_id"] is None)):
             raise LedgerError("Normal adoption lost its transition, inspection, scope or identity claims")
         claims = {row["entry"]["id"]: row for row in self.memory_records("claim")}
         inspection_inputs = [p for p in self.primitive_records()

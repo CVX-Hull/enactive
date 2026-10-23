@@ -118,7 +118,12 @@ class RegisteredLifecycle:
         if phase is None:
             return None
         checkpoint = phase.checkpoint if self.candidate is None else self.candidate.latest_after or phase.checkpoint
+        root = self.runtime._ledger.request(phase.root_id)
         return {"origin_request_id": phase.root_id, "operation": phase.operation,
+            "remaining_limits": {
+                "wall_seconds": max(0, root["deadline"] - self.runtime._wall()),
+                "primitives": max(0, root["request"]["limits"]["primitives"]
+                    - self.runtime._ledger._phase_primitive_count(phase.root_id))},
             "checkpoint_id": checkpoint.observation_id, "grants_authority": False}
 
     def normal_after_launch(self) -> bool:
@@ -443,11 +448,13 @@ class RegisteredLifecycle:
             if data["operation"] == "load":
                 checkpoints = [row for row in r._ledger.request_records() if row["state"] == "completed"
                     and row["result"] is not None and "saved_checkpoint" in row["result"]]
-                if not checkpoints or not normals:
+                initial_load = r._admission.scenario.mode == "load" and not normals and not checkpoints
+                if not initial_load and (not checkpoints or not normals):
                     raise ControlError("Reload requires this mission's own saved checkpoint")
-                saved = checkpoints[-1]["request"]["request_id"]
-                if normals[-1].observation_id != checkpoints[-1]["result"]["saved_checkpoint"]["normal_endpoint_source_id"]:
-                    raise ControlError("Reload cannot roll back newer normal observations")
+                if not initial_load:
+                    saved = checkpoints[-1]["request"]["request_id"]
+                    if normals[-1].observation_id != checkpoints[-1]["result"]["saved_checkpoint"]["normal_endpoint_source_id"]:
+                        raise ControlError("Reload cannot roll back newer normal observations")
             r._ledger.activate(epoch=ledger["epoch"], player_id=ledger["player_id"], now=r._wall())
         phase = NormalPhase(data["request_id"], source, launch, ledger["player_id"], ledger["epoch"],
             data["operation"], stage="save_start" if data["operation"] == "save" else "awaiting_control",
@@ -633,10 +640,26 @@ class RegisteredLifecycle:
         previous_phase = phase
         self.guard(work, phase, diagnostic=diagnostic, ordinary=ordinary)
         r._capacity()
-        deadline = r._clock() + min(r._ledger.request(work.request["request_id"])["deadline"],
-            r._ledger.request(phase.root_id)["deadline"],
-            r._mission_deadline - r._admission.cleanup_reserve.wall_seconds) - r._wall()
+        deadlines = [r._ledger.request(work.request["request_id"])["deadline"],
+            r._mission_deadline - r._admission.cleanup_reserve.wall_seconds]
+        menu_read = (diagnostic and phase.operation in ("create", "load")
+            and phase.first_normal is None and phase.checkpoint.boundary_kind == "menu"
+            and self.candidate is None and not self.normal_after_launch())
+        if menu_read:
+            # This explicit read or zero-input abort cannot renew execution.
+            # Its own deadline bounds capture; children still retain the old
+            # root deadline in the ledger. Reuse the controller's custody fence.
+            r._check_lease()
+        else:
+            deadlines.append(r._ledger.request(phase.root_id)["deadline"])
+        deadline = r._clock() + min(deadlines) - r._wall()
         state, received = r._observe_native(work, deadline_monotonic=deadline)
+        r._check_cancelled(work)
+        if menu_read:
+            # A prior known rejected ACK can still be the cached state. Judge
+            # readiness from this fresh read, not from that historical receipt.
+            r._check_lease()
+            r.controller.check_mission_refusal(r._lease, r._lease.pause_generation, command_work=0)
         reference = r._ingest(state, received)
         rule = self.source_rule(phase)
         if not ordinary and not r._store.equivalent(phase.checkpoint, reference, rule=rule):

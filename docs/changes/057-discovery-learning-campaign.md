@@ -200,9 +200,14 @@ repeated use, learning, future cost reduction and new options can justify an
 investment without immediate payback or a precise ROI. Consequential choices state
 expected uses, uncertainty, upkeep and a reassessment trigger. Historical setup
 cost informed [#175](https://github.com/CVX-Hull/enactive/issues/175)'s conditional
-cross-admission checkpoint reuse. Ordinary reload currently proves a save within
-its own mission; it does not import authority or resume a failed run. This is an
-owned investment decision, not a blanket campaign prerequisite.
+cross-admission checkpoint reuse. Repeated setup-only diagnostics now justify
+initial `mode=load` through the existing game Load and visible identity path.
+A new mission imports no old runtime/checkpoint authority; CDDA owns save validity
+and experiment preparation preserves the baseline. Later reloads still prove the
+current mission's own Save and chronology. This avoids a new save-proof service,
+grants no inherited game-time credit, and cannot substitute for genuinely fresh
+#145 acceptance. Source-only support awaits real qualification.
+See [006](../acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md).
 
 ## Ownership and checkpoints
 

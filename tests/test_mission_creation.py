@@ -206,14 +206,15 @@ class MissionCreationFixture:
         return entry["id"]
 
     def finish_identity(self, root, world_source, epoch=0, *, diagnostic_observe=False):
-        operation = self.run_request(self.lifecycle(f"{root}-reconcile", "create" if epoch == 0 else "load", parent=root))
+        kind = "create" if epoch == 0 and self.a.scenario.mode == "fresh" else "load"
+        operation = self.run_request(self.lifecycle(f"{root}-reconcile", kind, parent=root))
         self.assertEqual(operation["state"], "completed", operation)
         self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
         self.assertIsNone(self.runtime._map)
         self.assertEqual(self.runtime._bindings, {})
         if diagnostic_observe:
             self.observe(f"{root}-identity-observe")
-        readmit = self.run_request(self.lifecycle(f"{root}-readmit", "create" if epoch == 0 else "load", parent=root))
+        readmit = self.run_request(self.lifecycle(f"{root}-readmit", kind, parent=root))
         self.assertEqual(readmit["state"], "completed", readmit)
         inspection = self.run_request(self.control(f"{root}-inspect", "Character", kind="inspect", parent=root))
         self.assertEqual(inspection["state"], "completed", inspection)
@@ -222,7 +223,7 @@ class MissionCreationFixture:
         character_id = self.remember_identity(f"{root}-character", "character", screen, epoch)
         returned = self.run_request(self.control(f"{root}-return", "Cancel", parent=root))
         self.assertEqual(returned["state"], "partial", returned)
-        adopted = self.run_request(self.lifecycle(f"{root}-adopt", "create" if epoch == 0 else "load", parent=root,
+        adopted = self.run_request(self.lifecycle(f"{root}-adopt", kind, parent=root,
             claims=[world_id, character_id]))
         self.assertEqual(adopted["state"], "completed", adopted)
         return adopted

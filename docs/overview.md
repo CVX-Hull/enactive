@@ -55,6 +55,13 @@ facts, procedures and proposals retain their sources and limitations.
 | Watchable stopped history | The [local-refusal001 report](acceptance/2026-10-22-native-local-refusal.md) records actual STOPPED/HISTORY/DISCONNECTED presentation, no current mission decision and a timeout diagnostic explicitly labelled historical. |
 | Latency | Current play speed is unacceptable; [normally stopped010](acceptance/2026-10-22-independent-seven-day-tenth-attempt.md) retains the evidence. [Luna diagnostic001](acceptance/2026-10-22-luna-responsiveness-first-attempt.md) verifies compact framing on its host but fails setup before routine play; responsiveness remains unqualified. [Luna diagnostic002](acceptance/2026-10-23-luna-responsiveness-second-attempt.md) verifies the refreshed catalogue/detail path but exposes unusable nested argument declarations before gameplay. [The brief](changes/060-responsive-player.md) owns the next configuration assessment, [evaluation](evaluation.md#latency-budgets-for-interactive-play) the definitions, and [#164](https://github.com/CVX-Hull/enactive/issues/164) delivery. |
 
+The [sixth Luna diagnostic](acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md)
+creates a world but expires its local setup scope before identity; routine pace
+remains unqualified. Initial Load for a new explicitly admitted mission now has
+source support to accelerate skill/memory validation. It imports no old authority
+or elapsed survival and awaits graphical qualification; seven-day acceptance
+still requires a genuinely fresh character/world.
+
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and
 host. Failures and unknown acknowledgments stay recorded even when separate

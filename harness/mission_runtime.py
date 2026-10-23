@@ -1489,7 +1489,7 @@ class MissionRuntime:
             raise ControlError("Setup abort cannot cancel another setup screen or normal gameplay")
         # Even a fresh retained image is compared with a new native capture:
         # this is a zero-input revocation, without dispatch's usual preflight.
-        phase = adapter._refresh(work, phase, ordinary=True)
+        phase = adapter._refresh(work, phase, diagnostic=True, ordinary=True)
         if not self._resume_menu_equivalent(launch, phase.checkpoint, paused=False, exit_root_id=data["request_id"]):
             raise EvidenceError("Setup abort lost its settled same-session menu evidence")
         self._check_cancelled(work)

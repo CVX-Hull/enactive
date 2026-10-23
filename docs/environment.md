@@ -8,6 +8,25 @@ status: active
 
 Recorded setup and maintenance history; this is not live environment status.
 
+## Ctrl/named-key rebuild and failed diagnostic, 2026-10-23
+
+Built committed `bc36b7f4263c9e8a9d6e929b9884dfaa92e07d5c` in the existing
+owned `/private/tmp/cdda-player-build-53c_cr4z` workspace with two jobs and bundled
+dependencies. The project installer updated/signed only its app. Installed native:
+`690fe96e27e5d31046e1600918caad1ccd9f5964ff291ea9b01a33d4f25a86b1`.
+Signature, exact prepared wrapper, project userdir, FULLSCREEN=no and disabled
+physical mouse were verified. No global install/profile/configuration changed.
+The [006 report](acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md)
+records90returned inputs and world creation, then local scope expiry/failed cleanup;
+no identity, routine responsiveness or normal ending is qualified.
+
+After player FINAL, the exact owned paused menu child and controller were
+exceptionally stopped and PID/listener absence verified. Its six empty-world files
+were archived/member-hash verified under the private closed evidence directory
+before active-menu retirement. All191previous save files remained identical.
+Original mission/host/shutdown/cost evidence is retained. Process absence is not
+normal-exit proof, and the last native sample leaves its exit code unknown.
+
 ## Capture-precondition rebuild and qualification, 2026-10-22
 
 Built committed `f2fdc621039f241e4fcd3784095e1999b62dbe79` in the existing

@@ -5,6 +5,7 @@ source regression checks, not native keyboard or cross-game qualification.
 """
 from dataclasses import replace
 from pathlib import Path
+import time
 import unittest
 from unittest.mock import patch
 
@@ -392,6 +393,54 @@ class OrdinaryLifecycleTests(MissionCreationFixture, unittest.TestCase):
 
     def test_rejected_character_stage_can_be_explicitly_reselected(self):
         self.assert_rejected_stage_can_be_explicitly_reselected(character=True)
+
+    def expired_setup(self):
+        self.ready()
+        data = self.lifecycle("create")
+        data["limits"]["wall_seconds"] = 1
+        self.assertEqual(self.run_request(data)["state"], "partial")
+        deadline = self.runtime._ledger.request("create")["deadline"]
+        time.sleep(max(0, deadline - time.time()) + 0.02)
+        return deadline
+
+    def test_expired_setup_observe_and_separate_normal_cleanup_do_not_renew_inputs(self):
+        deadline = self.expired_setup()
+        phase, lease = self.runtime._registered_lifecycle.phase, self.runtime._lease
+        spent = self.runtime.status()["spent_inputs"]
+        refused = self.runtime.command(self.raw("expired-child", "ESC"))
+        self.assertEqual(refused["status"], "rejected", refused)
+        self.assertIn("Original phase deadline expired", refused["reason"])
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertIs(self.runtime._lease, lease)
+        self.observe("expired-observe")
+        self.assertEqual(self.runtime.status()["lifecycle_phase"]["remaining_limits"]["wall_seconds"], 0)
+        self.assertEqual(self.runtime.status()["lifecycle_phase"]["remaining_limits"]["primitives"], 31)
+        self.assertEqual(self.runtime._registered_lifecycle.phase.root_id, "create")
+        self.assertEqual(self.runtime._ledger.request("create")["deadline"], deadline)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        refused = self.runtime.command(self.raw("still-expired", "ESC"))
+        self.assertEqual(refused["status"], "rejected", refused)
+        aborted = self.run_request(self.lifecycle("abort", "exit"))
+        self.assertTrue(aborted["result"]["cleanup_requested"])
+        self.bridge.value["pause_origin"] = "host"
+        self.observe("cleanup-observe")
+        exited = self.exit(root="normal-exit")
+        self.assertTrue(exited["result"]["normal_exit"]["no_save_required"])
+        finished = self.run_request(self.lifecycle("finish", "finish"))
+        self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
+        self.runtime._ledger._verify(self.a)
+
+    def test_expired_setup_observe_cannot_hide_controller_failure(self):
+        self.expired_setup()
+        spent = self.runtime.status()["spent_inputs"]
+        self.controller._mission_processing_failure(None, OSError("Synthetic controller failure"))
+        data = dict(schema="mission/10", kind="observe", request_id="observe-fault",
+            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"])
+        refused = self.run_request(data)
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIsNone(self.runtime._lease)
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
 
     def test_stale_request_cannot_hide_corrupted_current_evidence(self):
         self.ready()
