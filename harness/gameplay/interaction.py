@@ -264,7 +264,7 @@ class MenuSkill:
         if type(result) is not PrimitiveResult:
             raise ContractError("Menu feedback requires typed PrimitiveResult")
         try:
-            result.to_dict()
+            result.__post_init__()
         except ContractError as exc:
             return self._finish(f"Invalid menu feedback: {exc}", unknown=True)
         if (result.action_id, result.before) != (pending.logical_id, pending.before):

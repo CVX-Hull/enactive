@@ -166,7 +166,7 @@ class OrdinaryInputSkill:
             return self._terminal
         if self._pending is None or type(result) is not PrimitiveResult:
             raise ContractError("Ordinary feedback requires a pending typed result")
-        result.to_dict()
+        result.__post_init__()
         pending = self._pending
         if (result.action_id, result.before) != (pending.logical_id, pending.before):
             raise ContractError("Ordinary feedback differs from the pending logical ID/before source")

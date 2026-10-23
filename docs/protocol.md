@@ -1578,9 +1578,12 @@ change adds no persisted or tool format and no compatibility path.
 [Contracts](../harness/gameplay/contracts.py) define eight frozen records:
 TaskSpec, EvidenceRef, EvidencePacket, SkillDescriptor, PlanCandidate,
 PrimitiveResult, StageResult and RunStatus. Serialized records carry
-`schema: "gameplay/2"` and `record_type`; `to_dict`/`from_dict` reject unknown fields,
-wrong types, unsupported enums, nonfinite numbers and contradictory completion
-claims. JSON is bounded to 1 MiB. The injected planner below consumes these records;
+`schema: "gameplay/2"` and `record_type`. Constructors and `from_dict` reject
+unknown fields, wrong types, unsupported enums, nonfinite numbers and contradictory
+completion claims. Nested values are immutable; `to_dict` encodes these already
+validated frozen values into fresh containers without repeating schema validation.
+Raw serialized input and explicit trust-boundary receipt checks retain their
+validation. JSON input is bounded to 1 MiB. The injected planner below consumes these records;
 the runtime above connects the passive planner, supervisor and bounded skill.
 Broader task formation remains outside this [first slice](design/gameplay.md).
 

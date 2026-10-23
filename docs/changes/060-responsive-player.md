@@ -245,6 +245,13 @@ reviewer tests model-facing and machine-facing evidence separately. Changes rema
 isolated until the deciding run closes and every actual player/adviser/successor
 is FINAL. Preserve partial outcomes and costs if a run ends before its objective.
 
+A measured runtime hot path also repeatedly serializes already-validated frozen
+gameplay records into manifests. Trust their constructor immutability for encoding;
+keep raw parsing and explicit incoming-receipt validation at their actual boundaries.
+Move validation-only serializer calls together with that change, without adding a
+second serializer, history cache or format. Component timing and unchanged output
+checks support this optimization; whole-player responsiveness still needs real play.
+
 Retain the existing MCP SDK, ledger, archive, memory store, observer timing and
 test lanes. No new workflow engine, history store, tool-search service, vector DB
 or robot runtime is justified by these findings. A dedicated small player runtime

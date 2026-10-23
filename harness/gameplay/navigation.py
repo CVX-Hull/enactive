@@ -105,7 +105,7 @@ class ObservedMap:
                 verified: dict[EvidenceRef, dict] | None = None) -> dict:
         if type(reference) is not EvidenceRef:
             raise ContractError("Observed map requires typed evidence references")
-        reference.to_dict()
+        reference.__post_init__()
         if reference.session != self._scope[1] or reference.boundary_kind != "normal_play":
             raise EvidenceError("Observed map requires normal evidence in its exact session")
         if verified is not None and reference in verified:
@@ -413,7 +413,7 @@ class NavigationSkill:
                now_timestamp_ms: int) -> NavigationOutcome | None:
         if type(result) is not PrimitiveResult:
             raise ContractError("Navigation feedback requires typed PrimitiveResult")
-        result.to_dict()
+        result.__post_init__()
         pending = self._pending
         if (self._terminal is not None or pending is None or
                 (result.action_id, result.before) != (pending.logical_id, pending.before)):

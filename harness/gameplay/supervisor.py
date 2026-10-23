@@ -490,7 +490,7 @@ class WaypointSupervisor:
         self._clocks(now_monotonic, now_timestamp_ms)
         if type(intent) is not DispatchIntent or type(result) is not PrimitiveResult:
             raise ContractError("Settlement requires typed intent and primitive result")
-        result.to_dict()
+        result.__post_init__()
         previous = self._settlements.get(result.action_id)
         if previous is not None:
             if previous != (intent, result):

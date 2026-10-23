@@ -166,10 +166,9 @@ class Record(_Value):
     schema: ClassVar[str] = VERSION
 
     def to_dict(self) -> dict[str, Any]:
-        result = _encode(self)
-        validate_json(json_object(result), _schema(type(self).__name__))
-        self._invariants()
-        return result
+        # Frozen values and their nested inputs were validated at construction.
+        # Encoding returns fresh containers; raw input still goes through from_dict.
+        return _encode(self)
 
     @classmethod
     def from_dict(cls, value: dict[str, Any] | str | bytes) -> Self:

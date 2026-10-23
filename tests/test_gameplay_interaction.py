@@ -319,6 +319,18 @@ class MenuTests(unittest.TestCase):
                 self.assertEqual(outcome.pending_logical_id, intent.logical_id)
                 self.assertIs(self.propose(skill), outcome)
 
+    def test_unsupported_receipt_disposition_cannot_credit_focus(self):
+        skill = self.skill(label="Two", outcome="focused",
+            limits=dict(primitives=1, wall_seconds=120, game_seconds=100))
+        intent = self.propose(skill)
+        result = PrimitiveResult(intent.logical_id, intent.before, self.frame(1),
+            "returned", None, "Corrupted transport receipt")
+        object.__setattr__(result, "transport_disposition", "invalid")
+        outcome = skill.accept(result, self.store, **self.clocks)
+        self.assertEqual((outcome.disposition, outcome.verified_focus_steps), ("unknown", 0))
+        self.assertEqual(outcome.pending_logical_id, intent.logical_id)
+        self.assertIs(self.propose(skill), outcome)
+
     def test_nondelivery_and_rejection_block_without_replay(self):
         for disposition in ("not_dispatched", "rejected"):
             skill = self.skill()

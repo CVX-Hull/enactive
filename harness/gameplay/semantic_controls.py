@@ -386,7 +386,7 @@ class SemanticControlSkill:
             # miscorrelated receipt; retaining it does not attribute delivery.
             if type(result.after) is EvidenceRef and result.after in store.historical_references:
                 self._sources = tuple(dict.fromkeys((*self._sources, result.after)))
-            result.to_dict()
+            result.__post_init__()
             after = store.observation(result.after) if result.after is not None else None
             if (result.action_id, result.before) != (pending.logical_id, pending.before):
                 raise EvidenceError("Feedback does not match the pending logical ID and before reference")
