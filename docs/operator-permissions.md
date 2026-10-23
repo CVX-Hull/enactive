@@ -270,12 +270,16 @@ qualification remains pending.
 Historical preapproval/gameplay reports below retain their original scopes.
 
 Choose a whole returned snapshot/source consistently after focus changes. For
-memory/context/navigation scope, use the returned mission `coordinate_scope`
+memory/context scope, use the returned mission `coordinate_scope`
 when present. Its coordinate epoch comes from adopted session continuity and is
 different from mission/actor `epoch`; never substitute one for the other. A fresh
 successor uses this passive scope for its bound context request and independently
 reads required sources before claim/readmission. Null scope grants no inferred
-index or authority. A retained `diagnostic` string can describe an earlier refused
+index or authority. Navigation intent instead omits nested scope; the
+current composer derives it from the selected matching published coordinate scope.
+Activity answers similarly omit the mechanically bound interrupt-owner ID. These
+changes neither infer targets/answers nor expand the existing preapproval. A retained
+`diagnostic` string can describe an earlier refused
 request after later success; current operation errors and ownership/provenance
 checks establish actionability, not the historical string alone.
 

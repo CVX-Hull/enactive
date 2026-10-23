@@ -86,6 +86,9 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
     skill_intents = []
     for kind in SKILLS:
         schema = _without(request_schema("skill", skill_kind=kind), *ordinary_headers)
+        if kind in ("navigate", "activity"):
+            schema["properties"]["goal"] = _without(schema["properties"]["goal"],
+                "scope" if kind == "navigate" else "interrupt_request_id")
         if kind in ("menu", "edit", "item"):
             schema["properties"]["perception"] = {"$ref": "#/$defs/perception"}
         schema["properties"]["procedure"]["anyOf"] = [value if value.get("type") == "null" else

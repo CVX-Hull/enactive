@@ -809,3 +809,24 @@ already exist in the selected snapshot. Migrate these model-facing fields throug
 existing binding facilities, keeping target, answer, explicit outer scope/source
 and limits as player choices. Missing/mismatched selected bindings must refuse
 without refresh or submission; no new ledger, scheduler or universal framework.
+
+### Selected-snapshot intent binding
+
+Use the existing pure `compose_request` boundary for both fields, so all current
+SDK/MCP intent callers migrate together. Navigation intent supplies a target;
+the builder copies only the selected source's matching published coordinate
+scope, with no zero/default epoch. An activity answer supplies its choice; the
+builder binds the selected activity phase's exact checkpoint and unanswered
+interrupt owner to the selected native boundary owner. Other activity steps bind
+null ownership. Explicit outer scope, source selection, limits and all semantic
+choices remain unchanged. Missing/mismatched context refuses before submission;
+the runtime still owns actual freshness, custody and delivery checks.
+
+Remove both nested fields from the current SDK/model intent shapes and reject
+caller-supplied copies, rather than translating an old mode. Canonical mission/10
+receiver records retain those generated fields. MCP server3.0.0 identifies the
+new producer; presentation remains player-view/2. No source fetch, inferred
+intent, root renewal or new cache/store is introduced. Source/component checks
+must cover selected historical context, mismatch/absence, immutable input and
+uncertain-original-ID collection; actual organic useful play and responsiveness
+still require their separate combined qualification.

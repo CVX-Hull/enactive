@@ -80,6 +80,58 @@ class InvocationTests(unittest.TestCase):
         result, _ = self.player.call('enactive_remember', self.claim() | dict(request_id='sdk-owned', wait_seconds=0))
         self.assertEqual(result['operation_id'], 'sdk-owned')
 
+    def test_model_navigation_derives_selected_scope_and_rejects_old_nested_copy(self):
+        self.player.snapshots['chosen']['mission']['phase'] = 'active'
+        args = dict(snapshot_id='chosen', scope='new_root', source_id=None, supporting_source_ids=[],
+            limits=dict(primitives=1, wall_seconds=7, game_seconds=10),
+            intent=dict(skill_kind='navigate', goal=dict(target=[1, 0, 0]), work_id=None, perception=None, procedure=None))
+        before = deepcopy(args)
+        async def exercise(client):
+            result = await client.call_tool('enactive_skill', args)
+            self.assertFalse(result.is_error)
+            request = self.backend.writes[-1]
+            self.assertEqual(request['goal'], dict(scope=self.selected['mission']['coordinate_scope'], target=[1, 0, 0]))
+            self.assertEqual(request['expected_revision'], self.source['reference']['revision'])
+            self.assertEqual(request['limits'], args['limits'])
+            old = deepcopy(args)
+            old['intent']['goal']['scope'] = self.selected['mission']['coordinate_scope']
+            self.assertTrue((await client.call_tool('enactive_skill', old)).is_error)
+            self.assertEqual(len(self.backend.writes), 1)
+            self.player.snapshots['chosen']['mission']['coordinate_scope'] = None
+            events = deepcopy(self.backend.events)
+            self.assertTrue((await client.call_tool('enactive_skill', args)).is_error)
+            self.assertEqual(self.backend.events, events)
+            self.assertEqual(len(self.backend.writes), 1)
+        self.run_client(exercise)
+        self.assertEqual(args, before)
+
+    def test_model_activity_derives_selected_owner_and_rejects_old_nested_copy(self):
+        source = bundle(kind='interrupt_confirmation')
+        source['observation']['boundary'].update(interrupt_request_id='owned-interrupt', recovery_operations=['answer_interrupt'])
+        phase = dict(origin_request_id='activity-root', checkpoint_id=source['reference']['observation_id'],
+            stage='interrupt_confirmation', answered=False, interrupt_request_id='owned-interrupt')
+        self.player.snapshots['chosen'] = dict(snapshot_id='chosen',
+            mission=snapshot(phase='paused', activity_phase=phase), source=source, native={})
+        args = dict(snapshot_id='chosen', scope='activity', source_id=None, supporting_source_ids=[],
+            limits=dict(primitives=1, wall_seconds=7, game_seconds=60), intent=dict(skill_kind='activity',
+                goal=dict(operation='rest', target='Rest', game_seconds=60, interrupt_allowed=True,
+                    step='answer_interrupt', answer='NO'), work_id=None, perception=None, procedure=None))
+        async def exercise(client):
+            reply = await client.call_tool('enactive_skill', args)
+            self.assertFalse(reply.is_error, reply)
+            request = self.backend.writes[-1]
+            self.assertEqual(request['goal'], {**args['intent']['goal'], 'interrupt_request_id': 'owned-interrupt'})
+            self.assertEqual(request['phase_id'], 'activity-root')
+            old = deepcopy(args)
+            old['intent']['goal']['interrupt_request_id'] = None
+            self.assertTrue((await client.call_tool('enactive_skill', old)).is_error)
+            self.assertEqual(len(self.backend.writes), 1)
+            self.player.snapshots['chosen']['mission']['activity_phase']['answered'] = True
+            events = deepcopy(self.backend.events)
+            self.assertTrue((await client.call_tool('enactive_skill', args)).is_error)
+            self.assertEqual(self.backend.events, events)
+        self.run_client(exercise)
+
     def test_lost_submission_returns_original_id_and_fresh_adapter_only_collects_it(self):
         original_json = self.backend._json
         def lose_post(path, *, data=None, **options):

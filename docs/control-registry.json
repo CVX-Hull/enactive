@@ -645,9 +645,9 @@
       "maintenance_review": {
         "date": "2026-10-23",
         "effectiveness": "partially_effective",
-        "findings": "013 independently loads/adopts with appropriate identity sources, approaches a locker, picks up a ration and normally Saves/exits/Finishes stopped; ending Work remains planned. Whole useful pace remains unacceptable and unqualified. MCP server2.0.0 now derives one current model schema without request_id/wait_seconds; imperative SDK assigns/stages once and collects original results. Errors retain original collection arguments. Exact as-of source/snapshot, scope, execution budgets, grounding and semantics remain player choices. No replay, silent retarget or new history store. Independent review found and fixed post-stage TypeError identity loss; a subprocess stdio regression now covers generated uncertain/error writes and original-ID collection after empty-cache restart. Final independent review has no remaining findings;9invocation tests pass0.828s.",
-        "cost": "013 wrapper596.008s for2adopted game seconds;70MCPcalls/378662UTF8text bytes/43typed images/zero structured duplicates. Aggregate reported input10203701/cached9965696/output39408 is not unique context or billing.18explicitly matched ordinary inspection/closure/navigation/pickup/Observe calls include failures:0.446s median execution,0.692s max,1.7\u201312.5s next-call gaps; no inference-only attribution. Initial82-test sandbox lane failed8HTTPsetup cases; loopback82focused tests pass6.143s; no new native or speed acceptance.",
-        "follow_up": "#164 qualify current generated-ID/wait contract on an actual fresh producer, measure useful whole-player/model-tool/display cadence and improve scope/context/budget ergonomics from evidence;#176 organic skill/inspection/item continuation;#177 truthful procedures/revision/fresh-context application;#178 useful asynchronous advice;#175 broader normal checkpoint reuse; full integrated learning and genuinely fresh#145 remain required. No extra approval ceremony, no budget renewal and no speed claim from a passing source test.",
+        "findings": "Actual016 independently loads/reconciles but fails identity adoption after a character-name mismatch and incorrect world-session diagnosis; exact causes and failed attempts are retained. Review verifies precise feedback without automatic belief correction or weakened identity/session checks. MCP server3.0.0 now derives navigation coordinate scope and activity interrupt owner in the existing pure composer from the selected matching context; SDK/model intents reject supplied copies. Target, answer, outer scope/source and limits remain explicit; canonical receiver and runtime authority guards unchanged. Independent design and implementation review find no confirmed defects. Neither organic autonomy nor useful apparent responsiveness is qualified.",
+        "cost": "016 activated wrapper147.616s;16ledger requests/6charges(5returned1unknown),21PNGs1458294bytes. Actual22MCPcalls/120698text bytes/11image parts/no structured duplicate; no useful routine cohort or normal ending. Source binding slice:30composition/MCP tests pass0.979s and24synthetic writer/SDK integration tests pass21.693s; fast checks pass. Read-only caller sweep plus independent design/implementation review; no per-action review or new store.",
+        "follow_up": "#164 qualify current3.0.0 producer, software-owned nested bindings, useful higher-level play and measured model/tool/display cadence together with organic correction; #176 retains ordinary input fallback, #177 genuine procedure learning/revision/fresh-context use, #178 useful asynchronous reflection and #175 normal lifecycle. Full integrated learning and genuinely fresh#145 remain required. Scripted speed, automatic belief rewriting or organic-but-slow play does not satisfy the coupled gate. Source tests and metadata cannot substitute for actual outcomes or exact current/protected-main CI.",
         "evidence": [
           "docs/acceptance/2026-10-23-luna-responsiveness-thirteenth-attempt.md",
           "docs/changes/060-responsive-player.md",
@@ -655,7 +655,10 @@
           "harness/player_mcp.py",
           "harness/player_tools.py",
           "tests/test_player_invocations.py",
-          "tests/test_player_tools.py"
+          "tests/test_player_tools.py",
+          "harness/gameplay/mission_requests.py",
+          "tests/test_mission_request_producer.py",
+          "tests/test_mission_request_producer_integration.py"
         ]
       },
       "next_review": "2027-01-15"

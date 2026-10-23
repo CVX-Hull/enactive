@@ -15,13 +15,18 @@ selected evidence nor establish input authority. Default normal-play results omi
 repeated configuration, technical receipt bindings and general engine vocabulary.
 One bounded producer-local fingerprint avoids identical implicit image parts in a
 known unchanged player/control context; explicit image reads remain complete.
-MCP server2.0.0 assigns request identities and bounded result waits before invoking
+MCP server3.0.0 assigns request identities and bounded result waits before invoking
 the existing imperative SDK. Its public schemas reject caller-owned IDs/waits;
 snapshot/source, scope, execution limits and semantic decisions remain explicit.
 Errors preserve assigned original collection arguments through the presentation
 boundary. Durable staging/collection remain in MissionClient and the existing
 ledger; no extra history or executor is introduced. Lost settled identities after
 a producer restart remain a disclosed quiescence case, not permission to replay.
+The existing pure request composer also derives navigation coordinate scope and
+activity interrupt ownership from the explicitly selected matching snapshot/source.
+SDK and MCP intents omit those nested mechanical fields; supplied copies refuse.
+Targets, answers, outer scope, source selection and limits remain player choices.
+Canonical receiver records and live guards are unchanged.
 The prior wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.
 Start is source-free and cannot adopt an unrelated already-running character. The

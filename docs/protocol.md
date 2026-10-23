@@ -217,7 +217,7 @@ refuse, and uncertain publication permits only collection of the original operat
 Concurrent first creators may safely lose the exclusive-stage race and refuse;
 there is no transparent retry or second request history store.
 
-The current MCP server is2.0.0; its presentation remains `player-view/2`, marked by `presentation_schema`.
+The current MCP server is3.0.0; its presentation remains `player-view/2`, marked by `presentation_schema`.
 Its tool arguments omit `request_id` and `wait_seconds`; old MCP payloads are
 rejected, not translated. The adapter assigns one UUID to each invocation whose
 imperative SDK request needs an ID, then uses existing immutable staging and
@@ -724,6 +724,17 @@ mission/epoch and selected phase's direct origin together; opaque headers and
 `perception.source_id` in intent reject locally. The existing validator owns
 wire shape and bounds; `canonical` remains the serializer. It performs no I/O,
 source selection, refresh, clock checks, dispatch or authority grant.
+
+Current SDK/MCP skill intents also omit navigation `goal.scope` and activity
+`goal.interrupt_request_id`; supplied copies reject, even when null or correct.
+Navigation copies only a published coordinate scope matching this snapshot's
+mission and selected normal source session. It never substitutes mission epoch
+or zero for a coordinate epoch. An explicit activity answer binds only an
+unanswered `interrupt_confirmation` phase with the selected primary checkpoint
+and the same nonnull owner in the selected native boundary. Other activity steps
+generate null ownership. The caller still chooses target, answer, outer scope,
+source and finite limits. Missing/inconsistent selected metadata refuses before
+submission; final canonical validation and live runtime guards remain unchanged.
 
 Additional informing source IDs are explicit bounded support: a two-observation
 transition selects its latest binding bundle and cites its first observation as

@@ -77,6 +77,50 @@ class MissionRequestProducerTests(unittest.TestCase):
         result["sources"].append("mutated")
         self.assertEqual((self.status, self.source, self.limits, intent, supports), before)
 
+    def test_navigation_binds_only_selected_published_scope_and_preserves_target(self):
+        published = dict(mission_id=self.status["mission_id"], session=self.source["reference"]["session"], coordinate_epoch=4)
+        self.status["coordinate_scope"] = published
+        self.status["current_source"] = bundle(99)["reference"]
+        intent = skill("navigate", goal=dict(target=[1, 2, 0]))
+        before = deepcopy((self.status, self.source, intent))
+        result = self.compose(intent)
+        self.assertEqual(result["goal"], dict(scope=published, target=[1, 2, 0]))
+        self.assertEqual(result["expected_revision"], self.source["reference"]["revision"])
+        self.assertEqual(result["sources"], [self.source["reference"]["observation_id"]])
+        self.assertEqual((self.status, self.source, intent), before)
+        with self.assertRaisesRegex(ContractError, "scope"):
+            self.compose(skill("navigate", goal=dict(scope=published, target=[1, 2, 0])))
+        for invalid in (None, {**published, "mission_id": "other"}, {**published, "session": "other"},
+                        {**published, "coordinate_epoch": None}, {key: value for key, value in published.items() if key != "coordinate_epoch"}):
+            self.status["coordinate_scope"] = invalid
+            with self.subTest(invalid=invalid), self.assertRaises(ContractError):
+                self.compose(intent)
+
+    def test_activity_answer_binds_exact_selected_unanswered_owner(self):
+        self.source = bundle(kind="interrupt_confirmation")
+        self.source["observation"]["boundary"].update(recovery_operations=["answer_interrupt"], interrupt_request_id="interrupt-1")
+        selected = phase(self.source, stage="interrupt_confirmation", answered=False, interrupt_request_id="interrupt-1")
+        self.status["activity_phase"] = selected
+        goal = dict(operation="rest", target="Rest", game_seconds=60,
+            interrupt_allowed=True, step="answer_interrupt", answer="NO")
+        intent = skill("activity", goal=goal)
+        before = deepcopy((self.status, self.source, intent))
+        result = self.compose(intent, scope="activity")
+        self.assertEqual(result["goal"], {**goal, "interrupt_request_id": "interrupt-1"})
+        self.assertEqual(result["phase_id"], "original-root")
+        self.assertEqual((self.status, self.source, intent), before)
+        with self.assertRaisesRegex(ContractError, "interrupt_request_id"):
+            self.compose(skill("activity", goal={**goal, "interrupt_request_id": "interrupt-1"}), scope="activity")
+        for changes in (dict(answered=True), dict(stage="activity_poll"), dict(interrupt_request_id=None),
+                        dict(interrupt_request_id="other"), dict(checkpoint_id="other")):
+            self.status["activity_phase"] = {**selected, **changes}
+            with self.subTest(changes=changes), self.assertRaises(ContractError):
+                self.compose(intent, scope="activity")
+        self.status["activity_phase"] = selected
+        self.source["observation"]["boundary"]["interrupt_request_id"] = "other-owner"
+        with self.assertRaises(ContractError):
+            self.compose(intent, scope="activity")
+
     def test_opaque_headers_and_perception_source_cannot_be_overridden(self):
         for key in ("schema", "mission_id", "epoch", "request_id", "limits", "phase_id", "sources",
                     "expected_session", "expected_revision", "expected_boundary_id"):
@@ -261,7 +305,7 @@ class MissionRequestProducerTests(unittest.TestCase):
                                                       interrupt_request_id="interrupt-1")
         self.status["activity_phase"] = phase(self.source, stage="awaiting_readmission")
         intent = skill("activity", goal=dict(operation="rest", target="Rest", game_seconds=60,
-            interrupt_allowed=True, step="resume", answer=None, interrupt_request_id=None), work_id="rest-work")
+            interrupt_allowed=True, step="resume", answer=None), work_id="rest-work")
         result = self.compose(intent, scope="activity")
         self.assertEqual(result["phase_id"], "original-root")
         self.assertEqual(result["work_id"], "rest-work")

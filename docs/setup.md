@@ -125,10 +125,15 @@ reflection-job and advice replies have explicit output limits to preserve bounde
 records. Direct input is an intent on `enactive_skill`, not a new input tool;
 Observe macro closure likewise uses `enactive_observe`. These project settings
 do not prove the running host loaded the current schemas/help or grant authority.
-Current MCP server2.0.0 generates request IDs and collection waits; its model
+Current MCP server3.0.0 generates request IDs and collection waits; its model
 arguments reject caller-supplied `request_id`/`wait_seconds`. Focused help exports
 this same current model schema. The imperative Python SDK's explicit-ID surface
 serves engineering and duplicate collection, not a compatibility mode for MCP.
+Both SDK and MCP intents omit navigation `goal.scope` and activity
+`goal.interrupt_request_id`: the existing composer binds them from the selected
+matching snapshot/source. Old supplied copies refuse; target, answer, outer scope,
+source and finite limits remain explicit. Canonical mission/10 records retain the
+generated fields.
 
 For a dedicated CLI player, a frozen run profile may narrow `enabled_tools` to the
 admitted role's needs and mark its essential server `required=true`, using the

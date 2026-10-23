@@ -21,6 +21,10 @@ def compose(case, raw, scope, *, source=None, supports=()):
          "character", "identity_claim_ids") if key in raw}
     if intent.get("perception") is not None:
         intent["perception"].pop("source_id", None)
+    if intent.get("skill_kind") == "navigate":
+        intent["goal"].pop("scope")
+    elif intent.get("skill_kind") == "activity":
+        intent["goal"].pop("interrupt_request_id")
     if source is None and intent.get("operation") != "launch":
         ref = case.runtime._current
         source = dict(reference=ref.to_dict(), observation=case.runtime._store.observation(ref))
@@ -256,13 +260,16 @@ class ProducerActivityIntegrationTests(unittest.TestCase):
         for step in ("interrupt", "answer_interrupt", "resume"):
             goal = {**self.goal, "step": step}
             if step == "answer_interrupt":
-                goal.update(answer="YES", interrupt_request_id=self.runtime._registered_activity.phase.interrupt_id)
+                goal.update(answer="YES")
             raw = self.control("activity", goal, phase_id="rest-root", request_id=step)
             scope = "prompt" if step == "interrupt" else "activity"
             checkpoint = self.runtime.status()[scope + "_phase"]["checkpoint_id"]
             ref = next(ref for ref in self.runtime._store.historical_references if ref.observation_id == checkpoint)
             source = dict(reference=ref.to_dict(), observation=self.runtime._store.observation(ref))
             request = compose(self, raw, scope, source=source)
+            if step == "answer_interrupt":
+                self.assertEqual(request["goal"]["interrupt_request_id"],
+                    self.runtime.status()["activity_phase"]["interrupt_request_id"])
             self.assertEqual(self.runtime.command(request)["status"], "accepted")
             result = self.settled(step)
             self.assertEqual(result["state"], "partial", result)

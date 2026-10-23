@@ -51,7 +51,7 @@ def make_server(player: PlayerTools) -> Server:
                 return types.CallToolResult(is_error=True, content=[types.TextContent(type="text", text=canonical(value))])
             return types.CallToolResult(is_error=True, content=[types.TextContent(type="text", text=str(exc)[:1024])])
 
-    server = Server("enactive-player", version="2.0.0",
+    server = Server("enactive-player", version="3.0.0",
         instructions="Use only your designated role and admitted mission. Choose gameplay intent, exact returned snapshot/source and finite execution limits. Software assigns request IDs and bounded collection waits; do not supply request_id or wait_seconds. Pending/uncertain delivery requires original result collection, never resubmission. User Pause remains independent. An adviser uses only enactive_reflect_next/submit/source/result, computes only after a durable claim and submits candidate data without input or memory adoption. The player reads advice and owns adoption. Roles are procedural, not security isolation.",
         on_list_tools=list_tools, on_call_tool=call_tool,
         get_tool_input_schema=lambda name: player.model_specs[name].schema if name in player.model_specs else None)

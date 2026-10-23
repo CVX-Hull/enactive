@@ -48,8 +48,7 @@ class PlayerHTTPTests(unittest.TestCase):
         return dict(snapshot_id=snapshot["snapshot_id"], request_id=identity, wait_seconds=2,
             scope="new_root", source_id=source["observation_id"], supporting_source_ids=[],
             limits=dict(primitives=1, wall_seconds=30, game_seconds=10),
-            intent=dict(skill_kind="navigate", goal=dict(scope=dict(mission_id=self.a.mission_id,
-                session=source["session"], coordinate_epoch=0), target=[1, 0, 0]),
+            intent=dict(skill_kind="navigate", goal=dict(target=[1, 0, 0]),
                 work_id=None, perception=None, procedure=None))
 
     def test_one_semantic_call_returns_settlement_exact_image_and_duplicate_never_moves_twice(self):

@@ -71,6 +71,40 @@ def _selected_phase(snapshot: dict, scope: str, intent: dict, primary: str | Non
     return summary["origin_request_id"]
 
 
+def _bind_skill_goal(snapshot: dict, data: dict, scope: str, source: dict) -> None:
+    """Fill mechanical fields in this private intent copy, never fetch context."""
+    kind = data.get("skill_kind")
+    if kind not in ("navigate", "activity"):
+        return
+    goal = data.get("goal")
+    if type(goal) is not dict:
+        raise ContractError("Skill goal must be an object")
+    if kind == "navigate":
+        if "scope" in goal:
+            raise ContractError("Navigation intent must omit its derived goal.scope")
+        published = snapshot.get("coordinate_scope")
+        reference = source["reference"]
+        if (type(published) is not dict or published.get("mission_id") != snapshot["mission_id"]
+                or published.get("session") != reference["session"] or reference["boundary_kind"] != "normal_play"):
+            raise ContractError("Selected navigation source has no matching published coordinate_scope")
+        goal["scope"] = json_object(published)
+    else:
+        if "interrupt_request_id" in goal:
+            raise ContractError("Activity intent must omit its derived interrupt_request_id")
+        owner = None
+        if goal.get("step") == "answer_interrupt":
+            phase = snapshot["activity_phase"]
+            boundary = source["observation"]["boundary"]
+            if (scope != "activity" or type(phase) is not dict
+                    or phase.get("stage") != "interrupt_confirmation" or phase.get("answered") is not False
+                    or type(phase.get("interrupt_request_id")) is not str
+                    or boundary["kind"] != "interrupt_confirmation"
+                    or boundary["interrupt_request_id"] != phase["interrupt_request_id"]):
+                raise ContractError("Selected activity phase/source has no matching unanswered interrupt owner")
+            owner = phase["interrupt_request_id"]
+        goal["interrupt_request_id"] = owner
+
+
 def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: dict,
                     scope: str, source: dict | None = None,
                     supporting_source_ids: tuple[str, ...] = ()) -> dict:
@@ -85,7 +119,8 @@ def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: di
 
     Intent contains the existing skill/lifecycle semantic fields, including Work
     and perception choices, with every derived header omitted. Perception's
-    source_id is also derived. Limits and a new request ID are caller choices;
+    source_id, navigation goal.scope and activity interrupt owner are also derived
+    only from this selected context. Limits and a new request ID are caller choices;
     no deadline or budget is inferred or extended. Explicit support IDs supplement
     the chosen primary (for example, first/latest transition observations).
     validate_submission owns the final closed schema and admission constraints;
@@ -119,6 +154,8 @@ def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: di
     else:
         primary, binding = _source_binding(source)
     parent = _selected_phase(snapshot, scope, data, primary)
+    if data["kind"] == "skill":
+        _bind_skill_goal(snapshot, data, scope, source)
     if view is not None:
         view["source_id"] = primary
     return validate_submission({**data, "schema": VERSION, "mission_id": snapshot["mission_id"],

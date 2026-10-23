@@ -137,7 +137,12 @@ menu. Child calls cannot enlarge or renew the original root. If it expires,
 quiesce; a new child or Claim cannot repair expired input authority.
 
 Let software form wire records. Choose the goal, selected evidence, interpretation,
-limits and semantic fields required by the current schema. The lifecycle summary's remaining wall/primitives are software-derived as-of values; use them to choose timely closure, not as a renewed allowance. Do not write request
+target or answer, and finite limits. Do not supply navigation `goal.scope` or an
+activity `interrupt_request_id`; software binds them from the selected matching
+snapshot/source. Missing context requires an explicit read/new decision, never
+guessing IDs, epochs or silently selecting newer evidence. The lifecycle summary's
+remaining wall/primitives are software-derived as-of values; use them to choose
+timely closure, not as a renewed allowance. Do not write request
 JSON files or reconstruct wire headers. The lifecycle tool's operation is reused
 for stage commit/reconciliation/readmission/adoption; consult the returned phase
 receipt, not just the operation name. A tool error that gives no usable next step
