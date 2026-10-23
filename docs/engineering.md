@@ -44,6 +44,14 @@ whole configuration qualifies; filler actions or animation cannot hide waiting.
 Tool duration, cached-token share and engine ACK speed alone do not establish
 responsive play. [Evaluation](evaluation.md#latency-budgets-for-interactive-play)
 owns measurement definitions; C-USABILITY is manual, not an automated latency gate.
+Give deciding players a bounded, maintained interface working set, separate from
+engineering instructions and the evidence archive. Routine play must not require
+source-code archaeology, bulk declaration dumps or recursive runtime searches.
+Treat repeated interface investigation as a tool/context defect; measure actual
+forwarded text and image parts before choosing a remedy. The
+[player guide](player-guide.md) is the current entry point, not a tactical script
+or a claim of new capabilities. C-REVIEW compares it with tool/phase contracts when
+those change; C-USABILITY verifies actual independent continuation and cadence.
 Controls: C-PORTABLE, C-RUNTIME, C-NATIVE, C-USABILITY.
 
 ## S-ARCH Explicit architectural boundaries
@@ -84,6 +92,16 @@ narration for facts already available in receipts or another model turn just to
 discover an empty work queue. Measure context sufficiency by actual continuation,
 and migrate changed caller/persisted contracts under S-MIGRATION. These are design
 and qualification obligations, not claims that present tooling satisfies them.
+Apply progressive revelation: small current decision context first, selected
+tool/phase guidance and focused memory/evidence next, technical detail by exact
+retained reference when needed. A detail read must not silently change the target
+snapshot or grant authority. For each model task, identify the interpretation or
+choice it supplies and when it can change a decision. Automate deterministic
+verification/accounting and known-failure classification; invoke reflection for
+justified novelty, recurrence or consequence. Escalation needs an unresolved
+question and expected decision benefit, not merely any mismatch. C-REVIEW checks
+this responsibility split at consequential changes, without per-action review or
+an automated claim to judge semantic truth.
 
 Ordinary interface actions are the player's base capability; semantic skills are
 optional shortcuts and stronger claims about those actions. Missing semantic

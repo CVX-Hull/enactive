@@ -392,6 +392,11 @@ not standing admissions or a second runtime mode.
 
 ## Typed mission requests and the player
 
+Deciding players start with the [compact working guide](player-guide.md), their
+frozen brief and the selected current tool schema. This runbook is a focused
+reference; reading all engineering documents or recursively searching runtime
+artifacts during play is not required to use the interface.
+
 The current service has one mission runtime and `/api/mission`. The old waypoint
 Start/Continue/Abandon/planner inbox and `gameplay-*` CLI are removed, with no alias.
 The [mission contract](protocol.md#integrated-mission-lifecycle) and strict source

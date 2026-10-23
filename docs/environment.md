@@ -131,6 +131,15 @@ The [bounded report](acceptance/2026-10-22-native-observation-custody.md) retain
 the successful valid path, six unknown ACKs and failed frozen-source full checks.
 No global setup, save contents or old authority changed.
 
+The failed [Luna responsiveness001](acceptance/2026-10-22-luna-responsiveness-first-attempt.md)
+player was permanently quiescent before exceptional native SIGTERM and normal
+controller interrupt. The exact owned PIDs and port were subsequently absent;
+cached process status was not treated as exit proof. Its nine world files were
+tarred and every member hash verified before active-directory retirement; all191
+other preserved-save files still matched the pre-run baseline. No normal Save/exit
+or successful gameplay is credited. Source/native evidence and the archive remain
+project-local, with no global changes.
+
 Normally stopped campaign010 was retired only after all actual actors, native
 PID20540 and controllerPID18430/session74966 ended. Its51 save files are preserved
 in `.runtime/campaigns/independent-seven-day-010/closed-evidence/EnactiveSevenDayTen.tar.gz`,

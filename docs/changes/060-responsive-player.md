@@ -72,13 +72,25 @@ to3,759,209. Four original and32 successor records were unparsed and excluded.
 These include preflight and different tool families. They are reconstructed inner
 result bytes, not actual model token counts, outer host envelopes or measured
 latency. Advisory values are not shortened by this projection; adding the marker
-slightly increases their size. Actual loaded-host framing remains to qualify.
+slightly increases their size. Those offline measurements do not qualify actual
+loaded-host framing.
+
+The subsequent [Luna/low diagnostic001](../acceptance/2026-10-22-luna-responsiveness-first-attempt.md)
+does show23direct `player-view/1` results and19typed images in actual forwarded
+output, without nested MCP envelopes. It failed setup before verified identity or
+routine play, so apparent responsiveness remains unqualified. Its48activated-role
+responses grew from41,509 to165,720input tokens; broad documentation/source reads,
+including one recursive runtime search, entered the hot path. This supports a
+bounded interface working set and better tool/workflow guidance, not the claim
+that old controller-event histories were repeatedly forwarded: the adapter already
+excludes those. The [player guide](../player-guide.md) is the current compact entry
+point. Its actual independent sufficiency and reduced overhead remain to test.
 
 Passive advisory next reads can now wait up to40 seconds on the existing condition
 variable. Other waits remain15 seconds; claim/collection retains the original
 remaining allowance and stable identity. This can reduce idle model round trips
 without a new daemon. It neither eliminates idle turns nor qualifies responsive
-play. The next short trial uses the user's Luna/low selection; bounded context,
+play. The first short trial used the user's Luna/low selection; bounded context,
 automatic plumbing, useful execution coverage and actual performance remain the
 broader tracked work below.
 
@@ -106,6 +118,37 @@ unnecessary new screenshots. Full receipts stay available to machines and audit.
 Do not strip fields needed for an actual decision or silently truncate complete
 handoff obligations. Migrate the presentation and all callers/tests together;
 no legacy result mode is retained as a compatibility path.
+
+Use progressive context revelation within that boundary: a small current decision
+view first, selected tool/phase guidance next, focused memory/map/evidence retrieval
+for a concrete need, and complete technical receipts for diagnosis. Detail reads
+must address the same retained snapshot/source, never silently fetch a newer
+binding or grant authority. Keep opaque handles for exact recall; cryptographic
+verification, wire headers, clocks, serialization and correlation belong to
+software. Full canonical records stay in the existing store. Do not add a second
+archive, vector database or generic context framework merely to reveal sections.
+
+For every proposed model task, ask what interpretation or consequential choice it
+requires and when its result could change a decision. Software owns deterministic
+binding/collection/verification, execution under declared stop conditions, resource
+accounting, exposure/use/effect joins and known-failure classification. The player
+owns goals, novel interface/threat interpretation, applicability and replanning.
+Reflection handles source-linked candidate lessons, conflicting knowledge and
+procedure revision when novelty, recurrence or consequence justifies it; it does
+not poll empty queues or certify every input. A detected mismatch is not itself a
+reason to escalate to a stronger model. Supply a specific unresolved question and
+expected decision benefit; preserve unknown delivery instead of asking a model to
+guess it. These are the existing active/background responsibilities, not mandatory
+extra tiers or an automatic claim that semantic success can be mechanically proved.
+
+The next adapter slice should reveal selected cached detail without new native
+observation or submission, reduce technical-only default fields and machine-bind
+mechanical arguments where the current selected snapshot already determines them.
+Migrate the MCP view/tool callers together under S-MIGRATION, retaining complete
+explicit memory/handoff/advice payloads and uncertainty. Measure actual bytes,
+round trips, context sufficiency and useful progress; removing hashes alone is not
+an adequate performance remedy. A compact guide can reduce avoidable investigation
+but cannot substitute for ergonomic tools or whole-player qualification.
 
 Use existing SDK result types and a thin explicit presentation boundary. The
 official [event-export issue](https://github.com/openai/codex/issues/44126) and

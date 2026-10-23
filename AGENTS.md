@@ -6,7 +6,10 @@ status: active
 
 # Enactive
 
-Start with [the overview](docs/overview.md), then [engineering standards](docs/engineering.md).
+Designated deciding players start with [the compact player guide](docs/player-guide.md),
+their frozen mission brief and the selected current tool schema. They do not need
+the engineering document set or recursive runtime/source searches for routine play.
+For engineering work, start with [the overview](docs/overview.md), then [engineering standards](docs/engineering.md).
 Read [architecture](docs/architecture.md), [protocol](docs/protocol.md) and
 [current work](docs/work.md) before changing relevant boundaries. Follow S-AGENT
 for delegation: the lead owns design/integration/verification; parallel workers use
