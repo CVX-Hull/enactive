@@ -11,6 +11,10 @@ PRESENTATION_SCHEMA = "player-view/2"
 
 _REFERENCE_FIELDS = ("schema", "record_type", "frame_path", "frame_sha256",
                      "received_monotonic", "visibility_version")
+_RECEIPT_DETAIL_FIELDS = ("native_request_json", "native_ack", "dispatch_binding",
+                          "source_before", "preflight_source", "source_after",
+                          "expected_session", "expected_revision", "expected_boundary_id",
+                          "received_monotonic")
 
 
 def _omit(value: dict | None, fields: tuple[str, ...]) -> None:
@@ -33,7 +37,8 @@ def _project_snapshot(snapshot: dict, operation: dict | None = None, operation_i
         snapshot["detail_sections"] = list(DETAIL_SECTIONS)
     mission = snapshot.get("mission")
     if mission is not None:
-        _omit(mission.get("configuration"), ("source_commit", "native_sha256"))
+        # The exact frozen configuration is already addressable by detail.
+        _omit(mission, ("configuration",))
         metrics = mission.get("metrics")
         if isinstance(metrics, dict):
             mission["metrics"] = {key: metrics[key] for key in ("game_seconds", "primitives") if key in metrics}
@@ -49,9 +54,10 @@ def _project_snapshot(snapshot: dict, operation: dict | None = None, operation_i
             mission["progress_operation_id"] = operation_id
         receipt = mission.get("last_receipt")
         if receipt is not None:
-            _omit(receipt, ("native_request_json", "native_ack"))
-            _omit(receipt.get("source_before"), _REFERENCE_FIELDS)
-            _omit(receipt.get("source_after"), _REFERENCE_FIELDS)
+            # Retain delivery, errors, correlation and unique feedback; only
+            # known technical binding/evidence fields move behind exact detail.
+            _omit(receipt, _RECEIPT_DETAIL_FIELDS)
+            _omit(receipt.get("control"), ("request",))
     native = snapshot.get("native")
     state = native.get("state") if native is not None else None
     source = snapshot.get("source")
@@ -69,6 +75,13 @@ def _project_snapshot(snapshot: dict, operation: dict | None = None, operation_i
         # source bytes or a newer native scene must retain their own information.
         for name in ("actions", "scene", "ui"):
             state.pop(name, None)
+    for visible in (state, observed):
+        # DEFAULTMODE can also be a directional menu. Only a normal in-game
+        # boundary without represented UI carries the general engine vocabulary.
+        if (visible is not None and visible.get("category") == "DEFAULTMODE"
+                and visible.get("in_game") is True and visible.get("ui") is None
+                and (visible.get("boundary") or {}).get("kind") == "normal_play"):
+            _omit(visible, ("actions",))
 
 
 def decision_view(tool_name: str, value: dict) -> dict:
