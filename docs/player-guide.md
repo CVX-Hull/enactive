@@ -31,6 +31,9 @@ reason to read the entire repository during every game.
 - Read the description/schema of the **one tool needed**, rather than printing
   every declaration. Keep returned text, typed image parts and `isError`; do not
   print image data as text or opaque tool objects. Keep simple returned IDs.
+  When forwarding through an orchestration tool, forward content blocks once;
+  `text(JSON.stringify(result))` prints the whole transport envelope and can
+  duplicate its text/structured value. This guidance is not an automatic host fix.
 - A pending/unknown result requires `enactive_result` for its original operation.
   Never invent a fresh ID to replay it. Same-actor tool calls serialize. A local
   refusal can permit a new decision only within the returned documented scope.

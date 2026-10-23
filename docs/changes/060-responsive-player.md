@@ -99,14 +99,20 @@ tests in162.415s. Separate clean-context source reviews found no remaining
 material findings after the presentation fixes. These are component and SDK
 results; no loaded-host performance or new graphical acceptance is inferred.
 
-The next source slice is current `player-view/2`: it reuses the32-entry snapshot
+The second source slice is current `player-view/2`: it reuses the32-entry snapshot
 cache for complete returned snapshots and adds exact-as-of, read-only
 `enactive_detail` sections. Default presentation removes declared technical audit
 fields; full requested evidence/obligations and canonical request bindings remain.
 There is no new store, dependency, executor or compatibility mode.58focused tests
 pass in152.292seconds; a clean reviewer independently passes15presentation/detail
 tests and finds no material defect. Project configuration adds only this read-only
-tool to the existing allowlist; actual21-tool host loading remains to preflight.
+tool to the existing allowlist. A subsequent actual Luna/low preflight still lists
+20 tools without `enactive_detail`, although its snapshot returns `player-view/2`
+and the actor reports21. No mission is admitted from that report. The actual
+forwarded output, rather than readiness prose, establishes the loading gap.
+This preflight also forwards a whole MCP envelope, unlike001's direct values.
+These are host/caller findings under#164, not evidence that valid SDK framing is
+wrong or that the new source has passed graphical qualification.
 
 Offline application to24parseable actual forwarded Luna001 results (including its
 preflight) reduces200,566 to169,381canonical UTF-8 bytes. Median9,099 becomes7,572;
@@ -158,9 +164,10 @@ expected decision benefit; preserve unknown delivery instead of asking a model t
 guess it. These are the existing active/background responsibilities, not mandatory
 extra tiers or an automatic claim that semantic success can be mechanically proved.
 
-The next adapter slice should reveal selected cached detail without new native
-observation or submission, reduce technical-only default fields and machine-bind
-mechanical arguments where the current selected snapshot already determines them.
+Exact cached detail and scoped technical-field omissions are implemented in
+`player-view/2`; actual loaded-host qualification remains separate. Remaining
+adapter work should machine-bind mechanical arguments where the selected current
+snapshot already determines them and remove measured caller-side plumbing.
 Migrate the MCP view/tool callers together under S-MIGRATION, retaining complete
 explicit memory/handoff/advice payloads and uncertainty. Measure actual bytes,
 round trips, context sufficiency and useful progress; removing hashes alone is not

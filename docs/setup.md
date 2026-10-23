@@ -129,8 +129,12 @@ do not prove the running host loaded the current schemas/help or grant authority
 The [official MCP setup](https://learn.chatgpt.com/docs/extend/mcp) documents
 project configuration and host loading. Confirm the active chat has loaded the
 server/tool catalogue after the supported reload/restart. A separate CLI diagnostic
-or SDK handshake proves neither active loading nor absence of review. The actual
-designated player must exercise the [permission preflight](operator-permissions.md#preflight-for-every-campaign)
+or SDK handshake proves neither active loading nor absence of review. The
+forwarded tool names and result content must support readiness; an agent's prose
+report is not enough. A new child can still inherit an older catalogue. Compare
+the loaded names with the current generated list before admission rather than
+asking a model to certify a count or changing permissions to fix stale loading.
+The actual designated player must exercise the [permission preflight](operator-permissions.md#preflight-for-every-campaign)
 without human or automatic approval review before a deciding campaign. The SDK
 stdio test proves message/image integration only. No game starts during setup.
 
