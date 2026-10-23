@@ -371,9 +371,10 @@ Process absence or exit code alone cannot prove a normal save/exit.
 Registered `exit` covers the same owned untouched MAIN_MENU, a verified explored
 pre-character menu, or a menu reached by this child's validated SavedCheckpoint.
 Menu-only eligibility requires the original correlated returned create/load Resume
-and settled returned same-root controls, with no unknown input, transition
-candidate or normal-play evidence. Every retained intermediate remains an owned
-menu in that session. The current MAIN_MENU must match the last authenticated
+and settled same-root controls: returned effects or authenticated native-rejected
+nondelivery. Rejected inputs retain charges/correlation but add no game effect.
+Unknown input, transition candidates or normal-play evidence prevent this cleanup.
+Every retained intermediate remains an owned menu in that session. The current MAIN_MENU must match the last authenticated
 input revision and original control/operator/takeover lineage; its pixels and
 selection may differ from launch.
 Read-only Observe can adopt that private cleanup checkpoint; it grants no input.
@@ -457,9 +458,16 @@ Neither path grants normal-play authority before separate truthful identity
 Claims/adoption. Ordinary dispatch checks the actual preflight receiver, so a
 menu becoming normal play cannot carry a provisional physical key into gameplay.
 
-Every actually published lifecycle input also retains private dispatch correlation
-when it was not a registered expected transition. After an uncertain or unexpected
-outcome, explicit Observe can retain the actual same-session or changed-session
+Every actually published lifecycle input with a potentially committed effect also
+retains private dispatch correlation when it was not a registered expected transition.
+An authenticated native rejection means no input committed: retain the original
+charge and receipt, create no uncertain-effect candidate, and preserve only healthy
+existing custody. Explicit Observe and a new selected request may continue under
+the original limits; rejected FINALIZE/NEXT_TAB leaves the form awaiting control.
+Creation-proof readers authenticate this nondelivery without counting it as a
+confirmation or stage reset. Pause, takeover, processing faults and unknowns retain
+their stops; transport publication alone is not a game effect. After an uncertain
+or unexpected outcome, explicit Observe can retain the actual same-session or changed-session
 image under the original owned launch, actor/operator/native custody, dispatch
 reservation and wall/observation limits. This diagnostic-only result exposes source
 IDs and its limitation, without an executable lifecycle phase, transition/effect

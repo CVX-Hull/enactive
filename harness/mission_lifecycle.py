@@ -399,6 +399,10 @@ class RegisteredLifecycle:
             "action", action, phase.checkpoint, state["boundary"]["id"], relation)
         feedback = self.runtime._dispatch(work, proposal, phase.checkpoint, lifecycle=phase)
         self.runtime._check_cancelled(work)
+        if feedback.transport_disposition in ("rejected", "not_dispatched") and self.phase is phase:
+            # The explicit stage request remains in history, but no input was
+            # committed. Do not leave the form labelled as its future question.
+            phase = self._install(work, replace(phase, stage="awaiting_control"), previous=phase)
         if feedback.transport_disposition != "returned" or feedback.after is None:
             return "unknown" if feedback.transport_disposition == "unknown" else "blocked", {
                 "reason": feedback.reason, **({"phase": self.receipt(phase, "unknown")}

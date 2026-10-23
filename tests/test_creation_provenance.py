@@ -145,6 +145,27 @@ class CreationProvenanceTests(unittest.TestCase):
         self.assertEqual(self.chain(), (self.primitives[0], self.primitives[-1]))
         self.assertEqual(p["state"], "not_dispatched")
 
+    def test_authenticated_native_rejection_is_not_a_confirmation_or_stage_reset(self):
+        p = self.primitives[1]
+        p["state"] = "rejected"
+        p["result"].update(transport_disposition="rejected", source_after=None, evidence_loss=None)
+        p["result"]["native_ack"].update(status="rejected", revision=11, error="Unsupported event")
+        self.assertEqual(self.chain(), (self.primitives[0], self.primitives[-1]))
+        self.assertEqual(p["state"], "rejected")
+        for fault in ("ack", "native-id", "custody"):
+            with self.subTest(fault=fault):
+                original = deepcopy(p)
+                if fault == "ack":
+                    p["result"]["native_ack"]["status"] = "ready"
+                elif fault == "native-id":
+                    p["result"]["native_request_id"] = "another-request"
+                else:
+                    p["result"]["dispatch_binding"]["actor_id"] = "another-player"
+                with self.assertRaises(ContractError):
+                    self.chain()
+                p.clear()
+                p.update(original)
+
     def test_unpublished_stage_or_resume_attempt_did_not_reset_creation(self):
         self.requests[2] = request_record("confirm")
         for kind, value in (("action", "NEXT_TAB"), ("action", "FINALIZE"), ("resume", None)):

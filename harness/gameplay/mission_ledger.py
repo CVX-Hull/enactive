@@ -1556,10 +1556,11 @@ class MissionLedger:
             child_data, event, ack = child["request"], item["intent"], item["result"] or {}
             child_root = indexed[child_data.get("phase_id") or child_data["request_id"]]["request"]
             if (child_root["request_id"] != data["request_id"] or child["epoch"] != owner["epoch"]
-                    or item["state"] != "returned" or item["effect"] is not None
+                    or item["state"] not in ("returned", "rejected") or item["effect"] is not None
                     or event["kind"] not in ("action", "key", "direct")
                     or event["expected_session"] != intent["expected_session"]
-                    or ack.get("published") is not True or not ack.get("source_after")
+                    or ack.get("published") is not True
+                    or item["state"] == "returned" and not ack.get("source_after")
                     or any((ack.get("dispatch_binding") or {}).get(key) != binding[key]
                         for key in ("controller_boot_id", "operator_pause_generation", "takeover_generation", "actor_id", "epoch"))):
                 raise LedgerError("Menu cleanup requires settled same-root exploration with unchanged custody")

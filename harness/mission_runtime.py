@@ -2296,10 +2296,14 @@ class MissionRuntime:
                     # repair this row state; no extra recovery if it commits.
                     processing_error = ((processing_error + "; " if processing_error else "")
                         + f"Publication bookkeeping: {type(exc).__name__}: {exc}")[:1024]
-                if isinstance(lifecycle, NormalPhase):
-                    self._registered_lifecycle.published(lifecycle, proposal, raw["request"], reservation)
-                elif lifecycle is not None and proposal.kind == "action" and proposal.action == "YES":
-                    self._exit_candidate = (lifecycle, proposal.logical_id, copy.deepcopy(raw["request"]), reservation)
+                # Publication is transport custody, not evidence that an input
+                # reached the game. An authenticated native rejection committed
+                # no input and cannot create an uncertain transition candidate.
+                if disposition != "rejected":
+                    if isinstance(lifecycle, NormalPhase):
+                        self._registered_lifecycle.published(lifecycle, proposal, raw["request"], reservation)
+                    elif lifecycle is not None and proposal.kind == "action" and proposal.action == "YES":
+                        self._exit_candidate = (lifecycle, proposal.logical_id, copy.deepcopy(raw["request"]), reservation)
             native_after = raw["result"].get("state") if control else raw["result"]
             if disposition == "returned" and (not control or native_after.get("frame_ok") and native_after.get("status") == "ready"):
                 # Delivery has already been authenticated. Archival retention

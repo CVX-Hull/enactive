@@ -299,6 +299,100 @@ class OrdinaryLifecycleTests(MissionCreationFixture, unittest.TestCase):
     def test_stale_stage_commit_preserves_healthy_lifecycle(self):
         self.assert_stale_request_refusal("lifecycle")
 
+    def test_known_native_rejection_keeps_setup_observable_without_transition_candidate(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        original = self.behavior
+
+        def reject_input(bridge, request):
+            if request["kind"] == "direct" and request["input"].get("key") == "?":
+                # The shared bridge fixture normally increments and delivers
+                # before its callback; this case represents native refusal
+                # before commit, with no game effect or revision advancement.
+                bridge.delivered.pop()
+                bridge.value["revision"] -= 1
+                bridge.value.update(status="rejected", error="Unsupported physical event")
+                return True
+            bridge.value.update(status="ready", error="")
+            if request["kind"] == "direct" and request["input"].get("key") == "n" and self.stage == "exit":
+                self.menu("MAIN_MENU", ["CONFIRM", "QUIT"])
+                return True
+            return original(bridge, request)
+
+        self.bridge.behavior = reject_input
+        lease = self.runtime._lease
+        refused = self.run_request(self.raw("native-rejection", "?"))
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIn("phase", refused["result"])
+        self.assertIsNone(self.runtime._registered_lifecycle.candidate)
+        self.assertIsNotNone(self.runtime._registered_lifecycle.phase)
+        self.assertIs(self.runtime._lease, lease)
+        primitive = self.runtime._ledger.primitive_records()[-1]
+        self.assertEqual(primitive["state"], "rejected")
+        self.assertTrue(primitive["result"]["published"])
+        self.assertIsNone(primitive["result"]["source_after"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertEqual(len(self.bridge.delivered), 1)  # Original Resume only.
+        self.observe("after-rejection")
+        continued = self.run_request(self.raw("new-decision", "ESC"))
+        self.assertEqual(continued["state"], "partial", continued)
+        self.run_request(self.raw("cancel-quit", "n"))
+        self.assertEqual(self.current()[1]["category"], "MAIN_MENU")
+        self.run_request(self.lifecycle("abort", "exit"))
+        self.bridge.value["pause_origin"] = "host"
+        self.observe("abort-observe")
+        exited = self.exit(root="exit")
+        self.assertTrue(exited["result"]["normal_exit"]["no_save_required"])
+        finished = self.run_request(self.lifecycle("finish", "finish"))
+        self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
+        self.runtime._ledger._verify(self.a)
+
+    def assert_rejected_stage_can_be_explicitly_reselected(self, *, character):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        if character:
+            self.stage = "character"
+        self.run_request(super().control("form", "Custom Character" if character else "Create World"))
+        action = "NEXT_TAB" if character else "FINALIZE"
+        original = self.behavior
+
+        def reject_stage(bridge, request):
+            if request.get("action") == action:
+                bridge.delivered.pop()
+                bridge.value["revision"] -= 1
+                bridge.value.update(status="rejected", error="Stage input refused before commit")
+                return True
+            bridge.value.update(status="ready", error="")
+            return original(bridge, request)
+
+        self.bridge.behavior = reject_stage
+        before = self.runtime.status()
+        lease = self.runtime._lease
+        refused = self.run_request(self.lifecycle("rejected-stage", parent="create"))
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertEqual(self.runtime._registered_lifecycle.phase.stage, "awaiting_control")
+        self.assertIsNone(self.runtime._registered_lifecycle.candidate)
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"] + 1)
+        self.assertEqual(self.runtime.status()["deadline"], before["deadline"])
+        self.assertEqual(self.runtime.status()["epoch"], before["epoch"])
+        self.observe("after-stage-rejection")
+        self.bridge.behavior = original
+        self.bridge.value.update(status="ready", error="")
+        selected = self.run_request(self.lifecycle("new-stage-decision", parent="create"))
+        self.assertEqual(selected["state"], "partial", selected)
+        self.assertEqual(self.current()[1]["category"], "YESNO")
+        self.assertEqual(self.runtime._registered_lifecycle.phase.stage,
+            "character_confirmation" if character else "world_confirmation")
+        self.assertEqual(self.runtime._ledger.primitive_records()[-2]["state"], "rejected")
+        self.runtime._ledger._verify(self.a)
+
+    def test_rejected_world_stage_can_be_explicitly_reselected(self):
+        self.assert_rejected_stage_can_be_explicitly_reselected(character=False)
+
+    def test_rejected_character_stage_can_be_explicitly_reselected(self):
+        self.assert_rejected_stage_can_be_explicitly_reselected(character=True)
+
     def test_stale_request_cannot_hide_corrupted_current_evidence(self):
         self.ready()
         self.run_request(self.lifecycle("create"))

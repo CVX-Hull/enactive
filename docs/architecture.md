@@ -446,6 +446,15 @@ new explicit selection; actual custody/evidence/Pause faults still stop input.
 The [fourth Luna diagnostic](acceptance/2026-10-23-luna-responsiveness-fourth-attempt.md)
 exercises ordinary setup but fails on the old fatal stale-request handling. Source
 regressions cover the repair; native/player continuation remains unqualified.
+The [fifth diagnostic](acceptance/2026-10-23-luna-responsiveness-fifth-attempt.md)
+then exposes a distinct error: a known native rejection was treated as an uncertain
+game effect solely because transport publication occurred. The source repair
+retains its charge/authenticated receipt and healthy scope, without a candidate;
+explicit Observe/new selection and original limits remain. Creation chronology
+and menu-only cleanup audit the same nondelivery. Rejected stage requests leave
+the unchanged form awaiting control. The native Ctrl+named-key translation repair
+requires rebuilding and a new finite qualification; the installed binary is still
+unchanged. Ineffective semantic editor clearing remains an actual unresolved result.
 [Native006](acceptance/2026-10-20-native-character-lifecycle.md) established
 ordinary creation/identity, counted dropping, native wait/poll and normal first
 save/exit, then stopped before reload and exceptionally closed its new child.

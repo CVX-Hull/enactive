@@ -211,6 +211,7 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         charged, delivered = self.runtime.status()["spent_inputs"], len(self.bridge.delivered)
         stale = self.lifecycle("save-from-old-image", "save", parent="save")
         stale["sources"] = [informing.observation_id]
+        phase, lease = self.runtime._registered_lifecycle.phase, self.runtime._lease
         # Submit the adversarial raw caller through the real writer, since the
         # structured producer may refuse a stale draft before HTTP submission.
         response = self.runtime.command(stale)
@@ -220,8 +221,8 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertIn("exact current informing source", blocked["result"]["reason"])
         self.assertEqual(self.runtime.status()["spent_inputs"], charged)
         self.assertEqual(len(self.bridge.delivered), delivered)
-        self.assertIsNone(self.runtime._lease)
-        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIs(self.runtime._lease, lease)
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
 
     def test_save_image_change_does_not_conceal_fatal_faults(self):
         for fault in ("native_state", "takeover", "process_lost", "published", "retention", "root_budget", "archive", "expiry", "pause"):
@@ -592,7 +593,11 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
                         self.assertEqual(case.runtime.status()["spent_inputs"], before)
                         self.assertEqual(len(case.bridge.delivered), delivered)
                         self.assertIsNone(case.runtime._lease)
-                        self.assertIsNone(case.runtime._registered_lifecycle.phase)
+                        if fault == "wrong_source":
+                            self.assertIn("exact current informing source", blocked["result"]["reason"])
+                            self.assertIs(case.runtime._registered_lifecycle.phase, owner)
+                        else:
+                            self.assertIsNone(case.runtime._registered_lifecycle.phase)
                 finally:
                     case.doCleanups()
 

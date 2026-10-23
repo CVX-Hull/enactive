@@ -48,6 +48,9 @@ reason to read the entire repository during every game.
 - A pending/unknown result requires `enactive_result` for its original operation.
   Never invent a fresh ID to replay it. Same-actor tool calls serialize. A local
   refusal can permit a new decision only within the returned documented scope.
+  A known native rejection is not an uncertain delivery or successful game effect.
+  If healthy owned scope remains, explicitly Observe and choose a new action under
+  the original limits; do not replay the rejected request or assume an editor changed.
 - `enactive_context` retrieves bounded memory; `enactive_source` retrieves an exact
   retained image. `enactive_remember`/`correct` retain fallible supported knowledge
   and Work. Software records procedure/action/result attribution; no per-key

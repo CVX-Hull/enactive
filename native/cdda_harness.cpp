@@ -858,13 +858,16 @@ direct_input direct_event( const TextJsonObject &input, keyboard_mode mode )
         if( mode == keyboard_mode::keychar ) {
             const bool arrow = key == "UP" || key == "DOWN" || key == "LEFT" || key == "RIGHT";
             if( alt || ( arrow && ( ctrl || shift ) ) ||
-                ( ctrl && ( event.widget_key < 'a' || event.widget_key > 'z' ) ) ||
+                ( ctrl && printable && ( event.widget_key < 'a' || event.widget_key > 'z' ) ) ||
                 ( shift && !printable && key != "TAB" ) ) {
                 throw input_refusal( "unsupported keychar modifier combination" );
             }
             event.engine = key_event( key, mode );
             event.engine.text = event.widget_text;
-            if( ctrl ) { event.engine.sequence[0] = event.widget_key - 'a' + 1; }
+            // Match SDL's keychar translation: only Ctrl+letters encode ASCII
+            // control characters. Named keys such as Backspace keep their
+            // normal engine code and their explicit widget modifiers.
+            if( ctrl && printable ) { event.engine.sequence[0] = event.widget_key - 'a' + 1; }
             else if( printable ) { event.engine.sequence[0] = glyph; }
             else if( shift && key == "TAB" ) { event.engine.sequence[0] = KEY_BTAB; }
         } else {

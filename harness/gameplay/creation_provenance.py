@@ -31,8 +31,8 @@ def creation_input_chain(requests: tuple[dict, ...], primitives: tuple[dict, ...
     """Return the raw ordered character-stage commit through named terminal input.
 
     Inputs are the MissionLedger's ordered copied projections. Later reconciliation
-    or identity work is outside this slice. Known unpublished nondelivery is
-    audited but omitted from the returned dispatches; it cannot advance chronology.
+    or identity work is outside this slice. Known nondelivery is audited but
+    omitted from the returned dispatches; it cannot advance effect chronology.
     No records are changed, sources loaded, observations promoted or inputs sent.
     """
     _require(type(requests) is tuple and type(primitives) is tuple,
@@ -128,14 +128,15 @@ def creation_input_chain(requests: tuple[dict, ...], primitives: tuple[dict, ...
                  and receipt.get("transport_disposition") == state,
                  "Creation receipt contradicts its immutable input correlation")
         previous_owner = order[identity]
-        if nondelivery:
+        if nondelivery and receipt.get("published") is not True:
             _require(receipt.get("published") is False and primitive.get("native_id") is None
                      and receipt.get("native_request_json") is None and receipt.get("native_ack") is None,
                      "Only known unpublished nondelivery can remain between creation inputs")
             continue
-        _require(not offset or intent.get("value") not in ("FINALIZE", "NEXT_TAB"),
+        _require(nondelivery or not offset or intent.get("value") not in ("FINALIZE", "NEXT_TAB"),
                  "Another creation stage reset intervened after the character commit")
-        _require(state == "returned" or (offset == len(chain) - 1 and state == "unknown"),
+        _require(state == "returned" or nondelivery and state == "rejected"
+                 or (offset == len(chain) - 1 and state == "unknown"),
                  "Creation chain contains unsettled or uncertain intermediation")
         native_id = primitive.get("native_id")
         validate_json(native_id, _ID)
@@ -163,6 +164,11 @@ def creation_input_chain(requests: tuple[dict, ...], primitives: tuple[dict, ...
         _require(custody is None or current_custody == custody,
                  "Creation chain changed its dispatch actor or native custody")
         custody = current_custody
+        if nondelivery:
+            # The existing mapping validator authenticates the correlated
+            # rejected ACK. Native rejected means no committed input; do not
+            # turn transport publication into a confirmation or stage reset.
+            continue
         previous_revision = (receipt["native_ack"]["revision"] if state == "returned"
                              else intent["expected_revision"])
         published.append(primitive)

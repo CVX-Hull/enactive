@@ -284,6 +284,17 @@ compact guide. New controller startup loads this receiver-only repair; no furthe
 Codex restart or expanded allow rule is needed.004 remains failed and supplies no
 routine latency cohort.
 
+The [fifth frozen attempt](../acceptance/2026-10-23-luna-responsiveness-fifth-attempt.md)
+reaches a real editor but exposes ineffective semantic clearing and a known native
+Ctrl+Backspace rejection. Transport publication was wrongly promoted to an uncertain
+effect candidate. Reuse the authenticated receipt distinction in runtime, creation
+chronology and menu cleanup: nondelivery stays charged, restores the unchanged
+stage and permits only explicit Observe/new choice within healthy original scope.
+Native translation should match the existing SDL Ctrl-letter/named-key contract;
+rebuild and qualify it separately. Do not infer success from accepted editor keys
+or add a handler for this menu.005 remains failed, with no routine latency cohort.
+All21tools already load; this source/native repair needs no Codex restart.
+
 Retain the existing MCP SDK, ledger, archive, memory store, observer timing and
 test lanes. No new workflow engine, history store, tool-search service, vector DB
 or robot runtime is justified by these findings. A dedicated small player runtime
