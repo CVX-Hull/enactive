@@ -396,7 +396,18 @@ class RegisteredLifecycle:
         action = "FINALIZE" if state["category"] == "WORLDGEN_CONFIRM_DIALOG" else (
             "NEXT_TAB" if state["category"] == "NEW_CHAR_DESCRIPTION" else None)
         if phase.operation != "create" or phase.stage != "awaiting_control" or action is None:
-            raise ControlError("Create stage commit requires the owned world form or final character screen")
+            # A wrong stage request is not loss of the already-owned phase.
+            # The no-proposal guard above does not check the writer lease or
+            # execution deadline: establish both before retaining that phase.
+            self.runtime._check_lease()
+            self.runtime._deadline(work, phase.checkpoint)
+            self.runtime._check_cancelled(work)
+            return "blocked", {"reason": "No lifecycle stage commit applies to this request. "
+                "No input was sent; the original phase and limits remain. Use enactive_skill "
+                "with scope=lifecycle under the same root for player-chosen visible controls, "
+                "ordinary key/text/click or identity inspection. Use lifecycle again only for "
+                "an applicable stage commit, readmission, reconciliation or identity adoption.",
+                "source_ids": [phase.checkpoint.observation_id], "grants_authority": False}
         phase, relation = self._action_checkpoint(work, phase)
         state = self.runtime._store.observation(phase.checkpoint)
         phase = replace(phase, stage="world_confirmation" if action == "FINALIZE" else "character_confirmation")

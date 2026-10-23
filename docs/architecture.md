@@ -37,6 +37,12 @@ own Save checkpoint and no-rollback chronology. The
 qualifies initial Load, current identity/adoption and its own normal Save, then
 fails owned exit. Later [013](acceptance/2026-10-23-luna-responsiveness-thirteenth-attempt.md)
 adds a useful ration pickup and normal complete ending on its frozen source.
+Actual [015](changes/060-responsive-player.md#closed015-and-restart-checkpoint)
+exposes a premature Load continuation treated as a fatal Create-stage error.
+Current source instead refuses an inapplicable same-root stage commit without
+input, preserving a positively healthy phase after existing custody, lease and
+deadline checks. Source regression covers correction through identity adoption;
+actual new-player qualification is pending. The failed015 actor remains FINAL.
 Broader skill composition and responsiveness remain unqualified; fresh #145
 acceptance still requires actual creation. The [006 report](acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md)
 records its repeated-setup rationale.

@@ -733,12 +733,15 @@ The activated player stops after24.384s before loading a character. A premature
 same-root Load continuation reaches a Create-specific stage check and is treated
 as a fatal ControlError. No input is sent for that child, but the healthy Load
 phase is revoked. This violates the existing S-ARCH distinction between a
-correctable request and lost authority. The repair is not yet implemented:
-[#176](https://github.com/CVX-Hull/enactive/issues/176) owns an actionable no-input
-applicability refusal that preserves the original healthy phase/deadline, followed
-by ordinary player-chosen control under that root. Expiry, Pause, lost custody and
-uncertain delivery must retain their existing behavior. No menu script, renewed
-authority, tactical rescue or reactivation of015 is justified.
+correctable request and lost authority. At that frozen checkpoint the repair was
+absent. Current source implements [#176](https://github.com/CVX-Hull/enactive/issues/176)'s
+actionable no-input applicability refusal after existing phase/source, lease and
+original-deadline checks. It preserves a healthy phase for explicit player-chosen
+control under the same root. Synthetic regressions cover correction through Load
+identity adoption, immutable duplicate collection, Create correction, frozen
+controller, lost lease and original-root expiry. Actual new-player qualification
+is pending. No menu script, renewed authority, tactical rescue or reactivation
+of015 is justified.
 
 The ledger records five requests and one returned primitive; four PNGs total
 134556bytes. The activated CLI forwards five MCP results,21399text bytes and two
@@ -752,5 +755,5 @@ controller/native cleanup is verified and all191save files remain byte-identical
 The project configuration still preapproves the same21 tools. A desktop restart
 loads their current producer declarations; it neither repairs015 nor approves
 gameplay. No run is admitted at this checkpoint. After restart, verify the loaded
-contract, repair and test the local refusal, then freeze a fresh finite actor.
+contract and qualify the local refusal with a fresh finite actor.
 Independent useful learning and fresh seven-day survival remain incomplete.

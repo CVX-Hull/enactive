@@ -575,6 +575,13 @@ corrected request; its full freshness, exact-PNG, actor, Pause and budget checks
 still apply. Points-stage changes install only after full validation. This narrow
 request rejection does not soften wrong sources, changed pixels, expiry, user
 Pause or unknown delivery, and makes no claim about the current native scene.
+An inapplicable same-root lifecycle stage commit likewise returns a no-input
+blocked result after the existing phase/source guard, writer-lease check and
+original child/root deadline check. The healthy phase remains available for an
+explicit corrected skill or applicable lifecycle request. Software neither picks
+the next control nor converts the request into input. This applies to Load as
+well as Create; missing custody, Pause and expiry remain failures, not local
+applicability refusals.
 For a registered expected transition, a changed-session terminal ACK remains
 unknown. Diagnostic Observe retains the actual after-frame against that dispatch's
 exact capacity reservation; a separate

@@ -14,14 +14,86 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         self.a = replace(self.a, scenario=replace(self.a.scenario, mode="load"))
 
     def picker(self):
-        self.ready()
-        self.stage = "load-world"
-        begun = self.run_request(self.lifecycle("initial-load", "load"))
-        self.assertEqual(begun["state"], "partial", begun)
+        self.begin_initial_load()
         world = self.runtime._current
         selected = self.run_request(self.control("world", f"{self.a.scenario.world} (1)", parent="initial-load"))
         self.assertEqual(selected["state"], "partial", selected)
         return world
+
+    def begin_initial_load(self):
+        self.ready()
+        self.stage = "load-world"
+        self.assertEqual(self.run_request(self.lifecycle("initial-load", "load"))["state"], "partial")
+
+    def test_premature_continuation_preserves_original_load_for_player_correction(self):
+        self.begin_initial_load()
+        phase = self.runtime._registered_lifecycle.phase
+        lease = self.runtime._lease
+        deadline = self.runtime._ledger.request("initial-load")["deadline"]
+        mission_deadline = self.runtime._mission_deadline
+        delivered = len(self.bridge.delivered)
+        spent = self.runtime.status()["spent_inputs"]
+        request = self.lifecycle("premature-load", "load", parent="initial-load")
+        refused = self.run_request(request)
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIn("enactive_skill", refused["result"]["reason"])
+        self.assertIn("No input was sent", refused["result"]["reason"])
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertIs(self.runtime._lease, lease)
+        self.assertIsNone(self.runtime._registered_lifecycle.candidate)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertEqual(self.runtime._ledger.request("initial-load")["deadline"], deadline)
+        self.assertEqual(self.runtime._mission_deadline, mission_deadline)
+        self.assertEqual(self.run_request(request), refused)
+        world = self.runtime._current
+        selected = self.run_request(self.control("world", f"{self.a.scenario.world} (1)", parent="initial-load"))
+        self.assertEqual(selected["state"], "partial", selected)
+        selection = self.control("character", self.a.scenario.character, parent="initial-load")
+        selection["perception"] = None
+        self.assertEqual(self.run_request(selection)["state"], "unknown")
+        self.observe("loaded-observe")
+        adopted = self.finish_identity("initial-load", world)
+        self.assertEqual(adopted["state"], "completed", adopted)
+        self.assertIsNone(adopted["result"]["normal_adoption"]["saved_checkpoint_request_id"])
+        self.runtime._ledger._verify(self.a)
+
+    def assert_premature_continuation_fault(self):
+        delivered = len(self.bridge.delivered)
+        refused = self.run_request(self.lifecycle("premature-load", "load", parent="initial-load"))
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertNotIn("No input was sent", refused["result"]["reason"])
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNone(self.runtime._lease)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+
+    def test_premature_continuation_cannot_hide_frozen_controller(self):
+        self.begin_initial_load()
+        self.controller._mission_processing_failure(None, OSError("Synthetic storage failure"))
+        self.assert_premature_continuation_fault()
+
+    def test_premature_continuation_cannot_hide_lost_lease(self):
+        self.begin_initial_load()
+        with self.controller.data_lock:
+            self.controller._mission_lease = None
+        self.assert_premature_continuation_fault()
+
+    def test_premature_continuation_cannot_hide_original_root_expiry(self):
+        self.begin_initial_load()
+        deadline = self.runtime._ledger.request("initial-load")["deadline"]
+        lifecycle = self.runtime._registered_lifecycle
+        command = lifecycle.command
+
+        def cross_deadline(work):
+            # Admission happened while live; the original root expires before
+            # the writer decides whether this request is merely inapplicable.
+            with patch.object(self.runtime, "_wall", return_value=deadline + 0.01):
+                return command(work)
+
+        with patch.object(lifecycle, "command", side_effect=cross_deadline):
+            self.assert_premature_continuation_fault()
+        self.assertEqual(self.runtime._ledger.request("initial-load")["deadline"], deadline)
 
     def pending_initial_load(self):
         world = self.picker()

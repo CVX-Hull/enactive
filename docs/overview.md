@@ -65,9 +65,9 @@ Saves/exits/Finishes stopped. Useful travel, a complete learning mission, appare
 responsiveness and independent seven-day survival remain unaccepted.
 Subsequent [015](changes/060-responsive-player.md#closed015-and-restart-checkpoint)
 verifies software-owned request identities but fails a premature Load continuation
-before character adoption. Its actor and owned processes are closed; the local
-refusal repair remains outstanding. Restarting the desktop loads current tool
-declarations, not a completed gameplay fix.
+before character adoption. Its actor and owned processes are closed. The local
+refusal repair now has source support; actual player qualification remains open.
+Restarting the desktop loads current tool declarations and does not qualify play.
 
 The [responsive-player brief](changes/060-responsive-player.md) addresses actual
 duplication and manual memory metadata using the existing SDK/cache/staging

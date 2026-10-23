@@ -282,6 +282,24 @@ class MissionCreationFixture:
 
 
 class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
+    def test_premature_stage_commit_preserves_create_for_player_control(self):
+        self.ready()
+        self.assertEqual(self.run_request(self.lifecycle("create"))["state"], "partial")
+        phase, lease = self.runtime._registered_lifecycle.phase, self.runtime._lease
+        deadline = self.runtime._ledger.request("create")["deadline"]
+        delivered = len(self.bridge.delivered)
+        refused = self.run_request(self.lifecycle("premature-create", parent="create"))
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIn("No input was sent", refused["result"]["reason"])
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertEqual(self.runtime._ledger.request("create")["deadline"], deadline)
+        self.assertEqual(self.run_request(self.control("world-form", "Create World"))["state"], "partial")
+        committed = self.run_request(self.lifecycle("world-finalize", parent="create"))
+        self.assertEqual(committed["state"], "partial", committed)
+        self.assertEqual(self.current()[1]["category"], "YESNO")
+
     def unexpected_setup_input(self, *, changed_session=True, returned=False, root_primitives=32):
         self.ready()
         root = self.lifecycle("create")
