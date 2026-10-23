@@ -51,8 +51,7 @@ def snapshot():
 def expected_snapshot(value):
     expected = deepcopy(value)
     expected["detail_sections"] = list(DETAIL_SECTIONS)
-    expected["mission"]["configuration"] = dict(model="chosen-model", effort="low", skills=["direct"],
-                                                lessons=["original-lesson"])
+    del expected["mission"]["configuration"]
     expected["mission"]["metrics"] = dict(game_seconds=None, primitives=10)
     expected["mission"]["current_source"] = {"observation_id": "source"}
     expected["mission"]["native_process"]["last_sample"] = dict(running=False, outcome="unknown",
@@ -60,6 +59,8 @@ def expected_snapshot(value):
     expected["source"]["reference"] = dict(observation_id="source", session="session", revision=8)
     del expected["mission"]["last_receipt"]["native_request_json"]
     del expected["mission"]["last_receipt"]["native_ack"]
+    del expected["mission"]["last_receipt"]["source_before"]
+    del expected["mission"]["last_receipt"]["source_after"]
     for key in ("actions", "scene", "ui"):
         del expected["native"]["state"][key]
     return expected
@@ -227,8 +228,8 @@ class DecisionViewTests(unittest.TestCase):
             boundary_kind="prompt", turn=10, unknown=True)
         self.assertEqual(view["mission"]["current_source"], expected_reference)
         self.assertEqual(view["source"]["reference"], expected_reference)
-        self.assertEqual(view["mission"]["last_receipt"]["source_before"], expected_reference)
-        self.assertIsNone(view["mission"]["last_receipt"]["source_after"])
+        self.assertNotIn("source_before", view["mission"]["last_receipt"])
+        self.assertNotIn("source_after", view["mission"]["last_receipt"])
         self.assertEqual(view["mission"]["memory"], reference)
         self.assertEqual(view["native"]["state"], {key: value for key, value in visible.items()
             if key not in ("protocol", "id", "frame")})

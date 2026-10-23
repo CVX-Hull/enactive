@@ -8,6 +8,24 @@ status: active
 
 Recorded setup and maintenance history; this is not live environment status.
 
+## Saved diagnostic closure and producer checkpoint, 2026-10-23
+
+The [008 report](acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md)
+records initial Load/identity and normal Save on294179f/signed690fe96, then a failed
+owned exit. After actor FINAL, the exact paused native child77444 received SIGTERM,
+then the controller was interrupted and exited0. Exact PID/8766-listener absence
+was verified. Native exit code remains unknown; no normal exit/Finish is credited.
+All191savefiles remain present,13game-managed files changed only in the played
+world. The resulting72-file world is archived/member-hash verified; no edit,
+restore or deletion occurred. Baseline/failure evidence remains private.
+
+Two isolated workers added compact default metadata and safe unchanged implicit
+image presentation, reusing the existing cache/SDK/lock. No dependency, native
+rebuild, global setup or expanded permission is needed. The actual21-tool catalog
+was verified during008; the later Python producer changes require a fresh producer
+and actual output verification. No game or campaign should be resumed by reviving
+008's permanently finished actor.
+
 ## Initial-Load diagnostic closure, 2026-10-23
 
 The [007 report](acceptance/2026-10-23-luna-responsiveness-seventh-attempt.md)

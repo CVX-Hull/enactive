@@ -55,13 +55,14 @@ facts, procedures and proposals retain their sources and limitations.
 | Watchable stopped history | The [local-refusal001 report](acceptance/2026-10-22-native-local-refusal.md) records actual STOPPED/HISTORY/DISCONNECTED presentation, no current mission decision and a timeout diagnostic explicitly labelled historical. |
 | Latency | Current play speed is unacceptable; [normally stopped010](acceptance/2026-10-22-independent-seven-day-tenth-attempt.md) retains the evidence. [Luna diagnostic001](acceptance/2026-10-22-luna-responsiveness-first-attempt.md) verifies compact framing on its host but fails setup before routine play; responsiveness remains unqualified. [Luna diagnostic002](acceptance/2026-10-23-luna-responsiveness-second-attempt.md) verifies the refreshed catalogue/detail path but exposes unusable nested argument declarations before gameplay. [The brief](changes/060-responsive-player.md) owns the next configuration assessment, [evaluation](evaluation.md#latency-budgets-for-interactive-play) the definitions, and [#164](https://github.com/CVX-Hull/enactive/issues/164) delivery. |
 
-The [seventh Luna diagnostic](acceptance/2026-10-23-luna-responsiveness-seventh-attempt.md)
-reaches an in-game image through ordinary initial Load, then fails before identity
-adoption after the player chooses the ordinary recovery tool for a lifecycle
-transition. Correctable request errors must remain distinct from actual custody
-loss. Initial Load remains unqualified for useful play/normal ending; routine pace
-and the genuinely fresh seven-day outcome remain open. The actual21-tool catalog
-is loaded, so no additional Codex restart is needed.
+The [eighth Luna diagnostic](acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md)
+loads and verifies the character, then saves normally. Owned exit refuses an
+ordinary confirmation key and a differently worded visible interpretation, so
+ending fails and the owned processes are exceptionally stopped. Useful higher-level
+supply/travel progress, apparent responsiveness and the independent seven-day
+outcome remain unaccepted. New compact-result/unchanged-image presentation has
+source/SDK evidence only; a restarted player producer must be verified before its
+next run. The existing21-tool catalog alone does not prove new code is loaded.
 
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and

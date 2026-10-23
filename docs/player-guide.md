@@ -25,6 +25,11 @@ reason to read the entire repository during every game.
   receipt, progress, native or source metadata when needed. It never refreshes or
   grants authority. Use `enactive_source` when you need the actual retained image.
   Software verifies hashes and binds requests; do not reconstruct omitted audit data.
+  Routine results omit repeated configuration, technical receipt bindings and the
+  general normal-play action vocabulary. Menus, visible scenes and uncertainty stay.
+  An explicit `image_presentation` note can say that implicit pixels are unchanged
+  in this player context; use snapshot/source for an actual redisplay when needed.
+  This is not a source-read declaration or proof that an action succeeded.
 - `enactive_skill` chooses intent and finite limits. Use a supported semantic goal
   when useful, ordinary `direct` keys/text/clicks for unfamiliar ordinary gameplay.
   Inspect the returned image/effect; a delivered input is not task success.

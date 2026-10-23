@@ -355,3 +355,34 @@ continue through correct reconciliation, visible identity, own Save/new-child
 reload and reopened history, with paired operator Pause, controller failure,
 native takeover and original-root expiry negatives. These synthetic checks do not
 qualify real play;007 stays failed and the next finite actor starts independently.
+
+The [008 diagnostic](../acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md)
+passes initial Load/current identity and normal Save, then fails the separate
+literal owned-exit confirmation restriction. It supplies neither useful higher-level
+supply/travel progress nor a complete routine latency cohort. Preserve ordinary
+keys/text/clicks during owned exit and derive normal terminal effect from exact
+published input/owned-child exit evidence, rather than a magic question/YES value;
+all readers and negative custody tests must migrate together. This remains next
+source work, not implemented behavior or an extra per-action review.
+
+Measured repeated normal action vocabulary, receipt bindings, configuration and
+image parts justify a small further presentation slice. Default normal-play results
+now omit that general vocabulary, repeated configuration and technical receipt
+fields behind existing exact detail. Menus/scenes/uncertainty and unique feedback
+remain. One bounded tuple under the existing producer lock suppresses an identical
+implicit PNG only in a known unchanged player/control context; explicit snapshot
+and historical source reads always forward pixels, and historical reads invalidate
+the comparison. This does not skip capture or establish handoff source reads.
+Synthetic/SDK checks and independent source review establish these boundaries;
+actual-host context/latency improvement remains unqualified. New producer code must
+be loaded and verified; the already loaded21-tool catalog alone is insufficient.
+No new store, dependency, compatibility path, native build or global setup is added.
+
+The integrated presentation/detail/lifecycle adapter lane passes61tests in144.314s;
+independent review passes15new tests and finds no source defect. Existing baseline
+expectations are migrated to the current omissions. The SDK fixture forwards one
+image across six identical implicit results while explicit snapshot/source reads
+remain actual images. Synthetic compact JSON snapshot bytes fall4,603→1,607 and
+operation envelope4,782→1,786; these are fixture sizes, not measured host tokens or
+latency. Fast checks pass. Protected candidate/main CI and actual fresh-producer
+qualification remain separate gates.

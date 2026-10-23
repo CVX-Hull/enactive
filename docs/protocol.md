@@ -192,8 +192,8 @@ renewal. Missing sections return null; unavailable/evicted IDs require an explic
 new snapshot. The original selected snapshot never silently retargets. Actual
 source images still use the existing exact source reader.
 
-Default snapshots advertise `detail_sections`. Configuration omits source/native
-cryptographic digests; metrics show original game seconds and primitive counts,
+Default snapshots advertise `detail_sections`. The frozen configuration is revealed
+only through its exact cached detail section; metrics show original game seconds and primitive counts,
 while all remaining limits, reserves, deadlines and current uncertainty stay.
 Reference slots omit filesystem/hash/retention bookkeeping, preserving opaque
 observation IDs and original session/revision/time/turn. Native transport framing
@@ -205,15 +205,27 @@ an address, not a request for the model to validate bytes.
 Snapshot progress is replaced by `progress_operation_id` only when exactly equal
 to the enclosing non-null result with its stable ID. Standalone/pending/different
 progress remain complete. Raw native request/ACK payloads are omitted from default
-receipts, while delivery, processing/loss diagnostics and correlation remain.
+receipts, along with technical source/dispatch/preflight bindings and control request
+framing. Delivery, processing/loss diagnostics, correlation and unique feedback remain.
 Actions/scene/UI deduplicate only when all match the actually returned source;
-missing sources or differing native views retain their information. Selected image
-parts and complete explicit source/context/handoff/advice/proposal/operation
-payloads are preserved. Projection only touches declared slots, never recursively
+missing sources or differing native views retain their information. The general
+engine action vocabulary is omitted only for DEFAULTMODE, normal in-game play
+without represented UI; contextual menu actions, scenes and rows remain.
+Complete explicit source/context/handoff/advice/proposal/operation payloads are preserved. Projection only touches declared slots, never recursively
 prunes arbitrary memory/proof data. The exact field lists live in
 [player_view.py](../harness/player_view.py). Canonical evidence stays in the
 existing ledger/archive/journal and readers. This is one current presentation;
 there is no legacy mode. Source/SDK tests do not qualify actual-host responsiveness.
+
+The adapter keeps one process-local presentation fingerprint under its existing
+lock. An implicit `next_snapshot` image may be omitted only when its actual PNG
+bytes and known mission/player/epoch/native control context match the last image
+shown. The envelope explicitly reports the omission. Metadata, source reads and
+canonical caches remain complete; this neither skips capture nor establishes a
+source-read declaration. Explicit `enactive_snapshot` and `enactive_source` reads
+always return their actual image. Historical source reads invalidate the comparison;
+changed or unprovable context resends pixels. Restarting the producer clears this
+bounded presentation state. No image hash becomes a model bookkeeping task.
 
 Authenticated `GET /api/mission/source?mission_id=ID&source_id=ID` and
 `GET /api/mission/frame` with the same exact query expose one indexed original
