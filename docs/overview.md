@@ -49,7 +49,7 @@ facts, procedures and proposals retain their sources and limitations.
 | Graphical play and user control | Actual native Tiles frames and browser spectator; Pause/takeover qualifications are scoped in the [architecture](architecture.md#action-and-recovery-views) and dated reports. |
 | Useful skill composition | [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) combines supplies/care, purposeful navigation/replanning, shelter/rest, memory correction, successor continuity and normal lifecycle. This is a bounded mission. |
 | Organic ordinary interaction | [Learning006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md) and [local-refusal001](acceptance/2026-10-22-native-local-refusal.md) exercise ordinary discovery/refusal/cancellation. Recent [Luna013](acceptance/2026-10-23-luna-responsiveness-thirteenth-attempt.md) independently loads/adopts identity, approaches a locker, picks up a ration and ends normally. Wider game-family behavior and full independent continuation remain unqualified. |
-| Procedure memory and background advice | Learning006 demonstrates scoped reuse/refinement, actual fresh-context application and useful play while advice is pending. Technical creation assistance is disclosed. Retrieval/presentation is not attention or causal learning benefit. |
+| Procedure memory and background advice | [Learning009](acceptance/2026-10-23-discovery-learning-ninth-attempt.md) demonstrates independent executable authorship/reuse/revision, actual clean-successor application and useful play during claimed advice. Scope is short shelter movement; combined readiness fails cadence. No causal learning benefit is established. |
 | Save, reload and ending | [Capture001](acceptance/2026-10-22-native-capture-preconditions.md) qualifies ordinary input and normal same-character save/reload/ending on the rebuilt boundary; actual PNG drift remains unexercised there. [Fresh008](acceptance/2026-10-22-independent-seven-day-eighth-attempt.md) retains the motivating failure. [Native001](acceptance/2026-10-22-native-save-refresh.md) also qualifies one unit-geometry click; non-unit/wider mouse remains unqualified. |
 | Seven-day survival | The [first campaign](acceptance/2026-10-19-seven-day-survival.md) completed under supervision. The fresh independent outcome remains unaccepted; [#145](https://github.com/CVX-Hull/enactive/issues/145) owns follow-through. |
 | Watchable stopped history | The [local-refusal001 report](acceptance/2026-10-22-native-local-refusal.md) records actual STOPPED/HISTORY/DISCONNECTED presentation, no current mission decision and a timeout diagnostic explicitly labelled historical. |
@@ -93,8 +93,8 @@ The [executable-routine candidate](changes/061-player-program-execution.md) lets
 the player store an explicit JavaScript artifact with procedure memory and run
 observation-conditioned steps through the same writer. Host limits and automatic
 source/action/result linkage remain outside generated control flow. This is a
-source implementation under verification; organic authorship, useful reuse,
-latency and the fresh campaign are still unqualified. Its first program view
+source implementation with narrow organic authorship/reuse qualification in
+Learning009; latency and the fresh campaign remain unqualified. Its first program view
 contains visible structured data; image-only conditions return to the player.
 Procedure authoring keeps meaning, code, evidence and parent selection with the
 player while software supplies canonical IDs, versions and the frozen environment.
@@ -107,7 +107,14 @@ improves validation feedback. Source ergonomics is not actual learning or cadenc
 Its subsequent Sol/low008 trial exposed valid visible world evidence rejected by
 a menu-category list, before adoption. [The retained finding and repair](changes/062-player-decision-context.md#closed008-valid-world-evidence-rejected-by-menu-taxonomy)
 apply the existing generality rule; new real learning/cadence acceptance is still
-required. All owned processes are closed and the preserved saves are unchanged.
+required. That008 attempt's owned processes are closed and saves unchanged.
+
+[Learning009](acceptance/2026-10-23-discovery-learning-ninth-attempt.md) subsequently
+demonstrates the bounded independent learning and lifecycle sequence, including
+actual UILIST world evidence. It still fails combined readiness:16game seconds
+in about908mission-wall seconds, with long compaction stalls. The next frozen
+profile uses maintained host/model compaction defaults; configuration is not a
+latency pass. All009actors, native children and controller are normally closed.
 
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and

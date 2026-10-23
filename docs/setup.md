@@ -147,6 +147,14 @@ and result tools, existing approval settings and current payload contracts. Veri
 the actual profile before admission; reduced catalogue size is not responsiveness
 qualification. Keep the project-wide engineering table and global settings intact.
 
+Leave model context-window/automatic-compaction settings at maintained host defaults
+unless an evidence-backed run profile needs an override. [Learning009](acceptance/2026-10-23-discovery-learning-ninth-attempt.md#responsiveness-and-context)
+forced compaction at128,000tokens despite a reported475,000-token window, with
+long stalls at both compaction events. The next profile removes that override;
+it does not disable compaction, assert a different model capacity or change global
+settings. Record actual event times, usage scope and useful-progress latency;
+compare whole configurations rather than treating defaults as qualification.
+
 If the host declaration replaces nested goals or memory entries with `unknown`,
 export only the needed current schema with the existing helper:
 

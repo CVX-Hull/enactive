@@ -92,16 +92,22 @@ pins a revision and original cumulative limits; source-linked evaluation and
 actual primitive receipts feed the existing trajectory/reflection path. It
 yields to the model for novel or unrepresented conditions. Program-view/1 supplies
 only current visible structured scene/UI data, not PNG perception or unseen game
-state. Source checks are not organic adoption, native reliability or campaign
-qualification; those integrated outcomes remain open.
+state. [Learning009](acceptance/2026-10-23-discovery-learning-ninth-attempt.md)
+qualifies narrow independent executable authorship/reuse/revision, clean-successor
+application, useful play during claimed advice and normal lifecycle. Useful
+apparent cadence and the full fresh campaign remain unqualified. Host prompt
+context is a fallible working cache: its automatic compaction neither changes
+campaign memory nor proves retrieval/application. Use the maintained host defaults
+unless a frozen measured override is justified; retain observed compaction costs.
 The rebuilt capture-precondition boundary has bounded ordinary-input and normal
 same-character lifecycle qualification in [capture001](acceptance/2026-10-22-native-capture-preconditions.md).
 Actual PNG drift and the retained-capture commit race remain unexercised there;
 the report owns exact source/native pins and limits. The earlier
 [normal sixth run](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
-qualifies bounded current-contract discovery, procedure branch refinement/reuse,
+qualifies bounded historical-contract discovery, procedure branch refinement/reuse,
 actual fresh-context application, same-proposal advisory overlap and exact normal
-lifecycle. Its v2 procedure is eligible scoped advisory library data. The disclosed
+lifecycle. Its Procedure/2 artifact cannot mount in the current Procedure/3 library.
+The disclosed
 technical creation-recovery pointer prevents a zero-assistance claim; no unsafe-rule
 correction, causal learning benefit or seven-day survival is established. Earlier learning failures retain
 their partial evidence. The [fourth run](acceptance/2026-10-21-discovery-learning-fourth-attempt.md)

@@ -43,12 +43,13 @@ over primitives, rather than interpret advisory steps through a model each time.
 The [execution slice](changes/061-player-program-execution.md), owned by
 #177/#176/#178/#164/#191, now defines and implements a bounded program evaluator,
 explicit Procedure/3 artifacts and writer integration under coordinated migration.
-Source verification is underway; this does not replace the combined independent
-learning/fresh-campaign acceptance. Current candidate evidence belongs in that
+Source verification and bounded real organic use are recorded below; this does
+not replace combined learning/cadence and fresh-campaign acceptance. Evidence belongs in that
 brief; GitHub retains remaining action ownership and execution status.
 The program substrate17e7488 passed the full1,818-test portable lane. The following
 MCP5 authoring adapter removes manual canonical metadata with focused/independent
-verification; exact current CI and real organic use remain separate requirements.
+verification; Learning009 subsequently qualifies narrow real organic use on
+exact-CI-passing sourcee174bff. Useful apparent cadence remains unaccepted.
 
 The [closed learning007 report](acceptance/2026-10-23-discovery-learning-seventh-attempt.md)
 retains actual adoption, malformed ordinary requests, exhausted setup reflection
@@ -57,8 +58,12 @@ and exceptional closure. No learning or normal ending is accepted.
 follow-through; existing GitHub issues retain action items and the full outcome.
 Its [closed008 finding](changes/062-player-decision-context.md#closed008-valid-world-evidence-rejected-by-menu-taxonomy)
 identifies a world-evidence menu-category restriction. The generic provenance
-repair needs new actual qualification; neither failed attempt satisfies learning
-or responsiveness. GitHub retains the same integrated outcome and owners.
+repair subsequently receives actual qualification in [Learning009](acceptance/2026-10-23-discovery-learning-ninth-attempt.md).
+That run establishes bounded independent executable learning, useful pending-advice
+overlap, clean-successor application and normal lifecycle; combined readiness
+still fails cadence. Its measured compaction stalls motivate maintained host
+defaults in the next full qualification. GitHub owns that work and the unchanged
+fresh seven-day outcome; the linked report owns costs and limitations.
 
 | Evidence | What it establishes; the linked report owns details and limits |
 | --- | --- |

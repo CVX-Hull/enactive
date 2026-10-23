@@ -150,3 +150,14 @@ bindings. Existing#176/#191 own generic interaction/evidence follow-through;
 complete frozen independent mission on repaired source, then the fresh campaign.
 The preceding04efc7e passed [exact CI40037047333](https://github.com/CVX-Hull/enactive/actions/runs/40037047333);
 it does not qualify this subsequent repair.
+
+## Subsequent009 evidence
+
+[Learning009](../acceptance/2026-10-23-discovery-learning-ninth-attempt.md)
+qualifies actual generic world evidence and bounded independent procedural
+authorship/reuse/revision, fresh-context application, useful pending-advice overlap
+and normal Save/new-child Load/final ending. The same report retains the failed
+combined cadence gate and compaction diagnosis. Exact repaired-source CI passed;
+the next frozen profile removes the arbitrary128000threshold and uses maintained
+host defaults. No model/context configuration alone establishes readiness, and
+the genuinely fresh seven-day outcome remains open.

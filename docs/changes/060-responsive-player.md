@@ -711,6 +711,12 @@ whole-player latency; retained operation/budget/grounding context must survive a
 missing images require explicit presentation. This is an unqualified experiment,
 not a speed remedy established by source or the passive probe.
 
+This prospective128000experiment is now superseded for future profiles by
+[Learning009's actual compaction evidence](../acceptance/2026-10-23-discovery-learning-ninth-attempt.md#responsiveness-and-context).
+Both Sol hosts compacted near that threshold with long stalls despite a reported
+475000-token window. Use maintained model defaults in the next frozen profile;
+the original reasoning and failed outcomes remain historical evidence.
+
 Browser download-event collection has repeatedly stalled despite short download
 button handling. The implemented passive UI slice reuses the existing observer-timing/3
 snapshot in a one-shot visible JSON export, readable through ordinary DOM tools.
@@ -748,7 +754,7 @@ The ledger records five requests and one returned primitive; four PNGs total
 image parts, without structured duplication. The passive browser export retains
 189status samples and40distinct frame replacements with no dropped samples. It
 qualifies collection from this short native-menu run, not useful-play latency.
-Compaction at128000tokens is unexercised. There is no adopted identity, game time,
+Within015, compaction at128000tokens was unexercised. There is no adopted identity, game time,
 memory learning or normal ending. The player is permanently FINAL; owned
 controller/native cleanup is verified and all191save files remain byte-identical.
 

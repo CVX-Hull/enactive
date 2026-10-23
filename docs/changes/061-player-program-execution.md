@@ -11,6 +11,13 @@ campaign. The [research](../research-executable-policies.md) owns sources and th
 prior-design crosswalk. This brief owns the integrated implementation; it is not
 another backlog and does not narrow the full learning/campaign outcome.
 
+[Learning009](../acceptance/2026-10-23-discovery-learning-ninth-attempt.md)
+subsequently qualifies narrow independent real executable authorship, distinct
+shelter reuse, changed-condition revision, fresh-successor application, claimed
+advisory overlap and normal lifecycle on exact-CI-passing sourcee174bff. Combined
+readiness still fails apparent cadence; the genuinely fresh seven days remain
+open. Source checkpoints below retain their original scope and limitations.
+
 ## Selected first boundary
 
 Player-authored JavaScript implements `step(view, state)` and returns JSON:
@@ -216,8 +223,9 @@ model reasoning, native dispatch, display, useful skill execution or learning.
 
 The full portable lane for source17e7488 passed:1818tests in755.166s, viewer,
 diagram rendering, governance and structural checks. It did not run a native game.
-Exact candidate/protected CI, independently
-authored real graphical learning and genuinely fresh seven days remain open.
+At that checkpoint, exact candidate/protected CI, independently authored real
+graphical learning and genuinely fresh seven days remained open. Current scoped
+qualification and remaining gaps are linked above.
 The updated player diagram was rendered and visually inspected. Dependency and
 owned-environment history are in [environment](../environment.md), with terms in
 [NOTICE](../../NOTICE.md). GitHub Issues/Project own remaining work; this brief
