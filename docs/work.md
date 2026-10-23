@@ -31,6 +31,12 @@ The [subsequent016 assessment](changes/060-responsive-player.md#closed016-organi
 retains the identity-value failure and the combined organic-autonomy/responsiveness
 gate; it does not replace the complete discovery-and-learning outcome.
 
+The [closed017 report](acceptance/2026-10-23-luna-responsiveness-seventeenth-attempt.md)
+adds independent equipment handling, selected-snapshot navigation binding and a
+normal ending. Seven game seconds in557wall seconds does not qualify useful
+cadence; no procedures were authored or used. Organic adoption and responsiveness
+remain joint acceptance, not interchangeable milestones.
+
 | Evidence | What it establishes; the linked report owns details and limits |
 | --- | --- |
 | [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) | Bounded supply/shelter play, memory correction, fresh-context continuation and normal lifecycle |

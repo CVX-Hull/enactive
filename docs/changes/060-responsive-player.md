@@ -830,3 +830,23 @@ intent, root renewal or new cache/store is introduced. Source/component checks
 must cover selected historical context, mismatch/absence, immutable input and
 uncertain-original-ID collection; actual organic useful play and responsiveness
 still require their separate combined qualification.
+
+## Closed017: organic adoption remains coupled to cadence
+
+The [actual017 report](../acceptance/2026-10-23-luna-responsiveness-seventeenth-attempt.md)
+retains independent ordinary correction, knife wielding, six one-tile navigation
+completions with software-owned scope, and normal Save/owned exit/Finish. It also
+retains seven game seconds in557wall seconds, failed drafts/unknown ACKs and no
+procedure authoring/use/revision or reflective overlap. A refusal saying unknown
+or blocked is not evidence of a confirmed impassable edge. Current source binding
+works narrowly; activity-answer ownership remains unexercised.
+
+Keep organic discovery/adoption/reuse/counterexample revision/fresh-context
+application and useful whole-player cadence together in #164/#176/#177/#178 and
+the integrated outcome. Neither scripted speed nor organic but slow play passes.
+Use the next integrated mission to exercise existing memory and high-level
+execution, with an evidence-backed change or distinct question before another
+same-configuration diagnostic. Do not make the engineering lead the reflector or
+tactics provider. Exact source35 CI and subsequent publication are separate from
+this completed run. All191saves remain,16changed normally only in the admitted
+world; actor/game/controller are closed and failures retained.

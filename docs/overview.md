@@ -74,6 +74,12 @@ misdiagnosed rejection. Current feedback improvements have source support only;
 organic correction, learning and useful apparent responsiveness remain coupled
 acceptance requirements.
 
+[Closed017](acceptance/2026-10-23-luna-responsiveness-seventeenth-attempt.md)
+independently loads/adopts, wields a knife and ends normally, but advances only
+seven game seconds in557wall seconds. Six one-tile navigation completions qualify
+narrow binding, not high-level batching. No procedure was authored or used;
+organic learning and useful cadence remain unqualified.
+
 The [responsive-player brief](changes/060-responsive-player.md) addresses actual
 duplication and manual memory metadata using the existing SDK/cache/staging
 facilities. Canonical evidence and player judgment remain separate from mechanical

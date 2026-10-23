@@ -8,6 +8,16 @@ status: active
 
 Recorded setup and maintenance history; this is not live environment status.
 
+## Diagnostic017 closure, 2026-10-23
+
+The [017 report](acceptance/2026-10-23-luna-responsiveness-seventeenth-attempt.md)
+retains normal Save/owned exit0/Finish stopped. The permanently FINAL player's
+wrapper exited0; the controller exited0 on SIGINT. Subsequent exact native
+PID34320 and port8766 checks found no process/listener. All191save files remain;
+16hashes changed only in the admitted world through normal Save, without additions,
+removals or restoration. Raw browser timing and original failures/unknowns are
+retained. No global configuration, package or application setup changed.
+
 ## Diagnostic016 closure, 2026-10-23
 
 The [016 assessment](changes/060-responsive-player.md#closed016-organic-correction-and-responsiveness-stay-coupled)
