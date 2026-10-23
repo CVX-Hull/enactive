@@ -222,7 +222,9 @@
         "tests/test_mission_lifecycle_ordinary.py",
         "docs/acceptance/2026-10-23-luna-responsiveness-third-attempt.md",
         "docs/acceptance/2026-10-23-luna-responsiveness-fifth-attempt.md",
-        "docs/acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md"
+        "docs/acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md",
+        "tests/test_player_claims.py",
+        "docs/changes/060-responsive-player.md"
       ],
       "failure_response": "Preserve failure output, fix the cause and rerun before claiming portable acceptance.",
       "limitations": "Fake bridge tests do not execute CDDA. Loopback tests require bind permission; missing Node or dev tools and denied binds fail the lane. Markdown link/image targets are checked, excluding anchors, external availability and raw HTML links. Ruff selects E9/F63/F7/F82, not comprehensive formatting or typing. SDK fixtures do not establish actual Codex host loading, absence of approval review, a fresh model context or native gameplay. Fast mode deliberately omits behavioral tests, viewer regressions and rendered diagrams; focused-test selection and development-versus-acceptance classification require lead judgment. A check started or cancelled is not a passing check. Changing-menu cases cover generated categories afterT=1/3 through ordinary keys/cancellation with the existing writer, not model adaptation, real second-game support or arbitrary adversarial robustness. Broader#191 qualification remains open. New unexpected-lifecycle diagnostic retention is host/component evidence only; actual native qualification and normal cleanup of unadopted/wrong-identity sessions remain separate #176 work.",
@@ -232,23 +234,22 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-23",
-        "outcome": "Exactbc36b7f hosted portable lane passed:1699Python tests in921.582s, rendered diagrams, viewer and common checks.",
-        "scope": "Candidate before the initial-Load/expiry slice; source/SDK checks only, not native gameplay or responsive configuration admission. New slice needs its own exact CI.",
+        "outcome": "Full local9cc5234 lane fails:1768Python tests in718.457s;20inherited Claim-fixture migration errors and one countdown equality failure. Rendered diagrams pass; viewer regressions pass separately.",
+        "scope": "Focused source/SDK review missed an inherited semantic-MCP caller. The repair lane passes25of26cases; its test-only field-name error is corrected and the isolated case passes2.012s. New exact full CI remains required before portable acceptance.",
         "evidence": [
-          "docs/acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md"
+          "docs/changes/060-responsive-player.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-23",
         "effectiveness": "partially_effective",
-        "findings": "Focused tests and review missed broader composition paths; the full lane exposed real controller progression, current-source and passive-validation gaps plus handoff presentation. Reusing existing proofs fixes them without new control infrastructure. Negative fixtures must retain earlier evidence to exercise refusal after revocation or rotation; they must not require stale sources to appear current. Graphical valid-path success did not replace failed source checks. Exactbc36CI passes after preserving14d failure. Current initial-Load/expiry slice reuses ordinary game entry and existing controller/ledger/timeline facilities. Intermediate pre-Observe fence failed3known-rejection continuation cases and was moved after fresh capture; final focused verification remains separately recorded.",
-        "cost": "The complete corrected Python suite takes 737.743 seconds locally, plus diagram/viewer checks. Use fast and focused checks for routine development, then the existing full local/hosted lane for coherent qualification. Record failed runs and avoid duplicate full local checks for documentation-only changes. Native and model/tool/display costs remain separate.",
-        "follow_up": "#176 retains organic interaction and its general observation boundary; #145 retains all original fresh seven-day outcomes. Exercise the corrected runtime in a new frozen finite campaign, keep native race/pixel/geometry gaps explicit, and require exact publication-head CI before formal acceptance/merge. Reconcile later campaign failures through these existing controls; no new review service or per-action gate.",
+        "findings": "The full lane catches the structured lifecycle fixture still authoring the retired canonical Claim envelope through MCP. Migrate that fixture to the current semantic intent/generated IDs while retaining canonical-runtime fixtures. Countdown equality also conflated lawful asynchronous publication with mutation; preserve exact phase/lease/root deadline/ledger/input/source and permit only elapsed wall time. An initial repair field-name typo fails one case and is corrected. No production guard, compatibility path or new control service is introduced.",
+        "cost": "The failed1768-test Python run takes718.457s locally. Affected26-test repair run takes165.241s, with25passes and one field-name error; corrected isolated case passes2.012s. Existing140integrated and61independent tests overlap. Viewer runs separately; avoid repeating the whole local suite for these test-only refinements while hosted full CI verifies the exact new head.",
+        "follow_up": "Select the existing structured lifecycle suite for semantic-MCP contract changes as well as SDK/HTTP tests; inspect inherited fixture callers. Require exact new publication-head full CI before formal acceptance/merge. #164/#176/#177 retain actual current-player continuation and #145 all fresh seven-day outcomes; source tests never replace native/gameplay qualification.",
         "evidence": [
-          "docs/changes/059-observation-custody-and-applicability.md",
-          "docs/acceptance/2026-10-22-native-observation-custody.md",
-          "docs/changes/054-development-first-delivery.md",
-          "docs/acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md"
+          "docs/changes/060-responsive-player.md",
+          "tests/test_player_tools_lifecycle.py",
+          "tests/test_mission_request_producer_integration.py"
         ]
       },
       "next_review": "2027-01-15"

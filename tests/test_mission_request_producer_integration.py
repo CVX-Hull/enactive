@@ -158,11 +158,19 @@ class ProducerLifecycleIntegrationTests(ProducedCreationFixture, unittest.TestCa
             self.run_request(self.lifecycle("create-reconcile", parent=root))
             self.run_request(self.lifecycle("create-readmit", parent=root))
             raw = MissionCreationFixture.control(self, "wrong-root", "Character", kind="inspect", parent=None)
-            before = deepcopy((self.runtime.status()["lifecycle_phase"], self.runtime._lease,
+            phase_before = deepcopy(self.runtime.status()["lifecycle_phase"])
+            wall_before = phase_before["remaining_limits"].pop("wall_seconds")
+            before = deepcopy((phase_before, self.runtime._lease,
                 self.runtime._ledger.request(root), self.runtime.status()["spent_inputs"], self.runtime._current))
             with self.assertRaises(ContractError):
                 compose(self, raw, "new_root")
-            self.assertEqual((self.runtime.status()["lifecycle_phase"], self.runtime._lease,
+            phase_after = deepcopy(self.runtime.status()["lifecycle_phase"])
+            wall_after = phase_after["remaining_limits"].pop("wall_seconds")
+            # An asynchronous status publication may advance the countdown;
+            # original deadlines, phase identity and all authority must agree.
+            self.assertLessEqual(wall_after, wall_before)
+            self.assertGreaterEqual(wall_after, 0)
+            self.assertEqual((phase_after, self.runtime._lease,
                 self.runtime._ledger.request(root), self.runtime.status()["spent_inputs"], self.runtime._current), before)
             # Continue identity inspection/adoption through unmodified guards.
             inspected = self.run_request(compose(self, {**raw, "request_id": "correct-root"}, "lifecycle"))

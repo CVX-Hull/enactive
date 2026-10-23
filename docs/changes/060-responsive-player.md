@@ -584,3 +584,21 @@ had eight fixture socket-bind setup errors; the loopback-enabled rerun passes.
 Review independently reconstructs011's costs/forwarding counts and verifies all30
 frozen hashes and191unchanged save entries. No new native or actual player
 continuation is inferred from this source review.
+
+
+The subsequent full local lane on9cc5234 fails:1,768tests/718.457s,
+20errors from the structured lifecycle fixture's inherited old full-record Claim
+helper and one exact-countdown comparison across asynchronous status publication.
+The focused lanes and independent review missed this caller composition. The
+fixture now authors semantic Claims and uses the returned generated IDs; the
+canonical-runtime fixture remains unchanged. The countdown assertion permits
+only elapsed time while preserving exact original deadlines, phase, lease,
+ledger, inputs and source. No production behavior or guard changes.
+
+The repair's26-test lane passes25cases but exposes a wrong field name in the new
+countdown assertion. Correcting it to `remaining_limits` makes the isolated case
+pass in2.012s; the prior25passing cases are unchanged. Viewer regressions pass
+separately. These results do not relabel the failed full run or qualify the new
+publication head; exact hosted full CI and protected publication remain separate.
+The existing full regression/migration controls caught this gap; no second
+compatibility shape or extra per-action review is added.

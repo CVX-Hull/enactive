@@ -91,6 +91,26 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertTrue(result["settled"], result)
         return result["response"]["operation"]
 
+    def remember_identity(self, identity, subject, ref, epoch, *, value=None):
+        # This subclass exercises the semantic MCP contract; the parent fixture
+        # deliberately exercises the unchanged canonical runtime contract.
+        selected, _ = self.player.call("enactive_snapshot", {})
+        self.player.call("enactive_source", dict(mission_id=self.a.mission_id,
+            source_id=ref.observation_id))
+        entry = dict(key=dict(property="identity", subject=subject),
+            value=dict(quantity=None, state=value or getattr(self.a.scenario, subject)),
+            text=f"Visible {subject} identity", coverage="Visible identity evidence only",
+            status="last_seen", grounding=dict(kind="source", source_id=ref.observation_id,
+                coordinate_epoch=epoch), supports=[dict(primary=True, sources=[], claims=[])])
+        result, _ = self.player.call("enactive_remember", dict(snapshot_id=selected["snapshot_id"],
+            request_id=f"remember-{identity}", wait_seconds=3,
+            intent=dict(entry_type="claim", entry=entry)))
+        self.assertEqual(result["transport"], "delivered", result)
+        self.assertTrue(result["settled"], result)
+        operation = result["response"]["operation"]
+        self.assertEqual(operation["state"], "completed", operation)
+        return operation["result"]["entry"]["id"]
+
     def test_invalid_confirmation_label_is_local_and_correctable_in_same_phase(self):
         self.ready()
         self.run_request(self.lifecycle("create"))
