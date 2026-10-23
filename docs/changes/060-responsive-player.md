@@ -267,8 +267,8 @@ The repair reuses OrdinaryInputSkill/InputObservation, the existing lifecycle
 lease and durable dispatch records. It migrates producer, receiver and retained
 proof validation together, preserves explicit creation-route/identity/Save proofs,
 and extends menu-only cleanup to settled exploration. A physical key is not a
-creation/save certificate. The CDDA character-stage commit and semantic exit
-confirmation remain explicit integration constraints; wrong/unadopted normal
+creation/save certificate. The CDDA character-stage commit remains an explicit integration constraint;
+the later owned-exit follow-through removes its semantic-only confirmation gate; wrong/unadopted normal
 cleanup remains open. Review must challenge actual preflight receiver changes and
 retirement of stale creation intent, not only successful cancellation. No new
 tool, executor, native protocol, dependency or compatibility mode is introduced.
@@ -362,8 +362,8 @@ literal owned-exit confirmation restriction. It supplies neither useful higher-l
 supply/travel progress nor a complete routine latency cohort. Preserve ordinary
 keys/text/clicks during owned exit and derive normal terminal effect from exact
 published input/owned-child exit evidence, rather than a magic question/YES value;
-all readers and negative custody tests must migrate together. This remains next
-source work, not implemented behavior or an extra per-action review.
+all readers and negative custody tests must migrate together. The source follow-through below addresses this boundary; actual requalification
+remains open, without an extra per-action review.
 
 Measured repeated normal action vocabulary, receipt bindings, configuration and
 image parts justify a small further presentation slice. Default normal-play results
@@ -386,3 +386,33 @@ remain actual images. Synthetic compact JSON snapshot bytes fall4,603→1,607 an
 operation envelope4,782→1,786; these are fixture sizes, not measured host tokens or
 latency. Fast checks pass. Protected candidate/main CI and actual fresh-producer
 qualification remain separate gates.
+
+
+## Owned-exit source follow-through after008
+
+The source now admits ordinary key/text/click exit children through existing
+OrdinaryInputSkill/InputObservation, and optional semantic/native-row controls.
+It removes literal question/YES and fixed cancellation-history gates from runtime
+and history readers. The existing registered Resume/QUIT helper can also terminate
+without a confirmation. Known input plus a healthy changed menu or unexplained
+policy result returns control to the player; missing evidence authority or custody
+still revokes. Actual published native input and original root dispatch custody
+remain part of normal exit proof, distinct from unknown ACKs. The native admission
+parser is factored from the existing receipt validator, not duplicated. Current
+wire shapes and closed evidence notes stay unchanged; explanation text is not an
+authority predicate. No native rebuild, new service or compatibility mode is added.
+
+Review found and corrected key-kind orphan proof, healthy newer-current/row-jump
+classification, native admission/binding correlation and a source-invalidation
+case hidden by semantic normalization. Retained local failed lanes also exposed a
+pre-existing Pause test's scheduling assumption: queue admission can either reject
+a stale epoch or accept a current one before the writer refuses lost custody. The
+revised test asserts no dispatched input, no regained scope and preserved user
+Pause across both lawful schedules. The actual008 failure remains unchanged;
+new source/SDK checks do not supply its missing normal ending or qualify speed.
+
+Final combined exit/lifecycle/receipt/ledger source validation passes175tests in84.303s.
+Fast checks and independent review are clean after the recorded corrections; the
+reviewer separately passes4focused health/correlation regressions in3.711s.
+Exact candidate/protected-main CI and a new real normal-ending/useful-play run
+remain separate obligations. The original failed lanes and reasons are retained.

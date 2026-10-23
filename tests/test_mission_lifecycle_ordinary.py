@@ -28,7 +28,8 @@ class OrdinaryLifecycleTests(MissionCreationFixture, unittest.TestCase):
         return data
 
     def control(self, identity, label, **kwargs):
-        if getattr(self, "raw_confirmations", False) and kwargs.get("question") and kwargs.get("parent") != "exit":
+        if (getattr(self, "raw_confirmations", False) and kwargs.get("question")
+                and (kwargs.get("parent") != "exit" or getattr(self, "raw_exit", False))):
             return self.raw(identity, "y" if label == "Yes" else "n", parent=kwargs.get("parent", "create"))
         return super().control(identity, label, **kwargs)
 
@@ -44,7 +45,7 @@ class OrdinaryLifecycleTests(MissionCreationFixture, unittest.TestCase):
         return super().behavior(bridge, request)
 
     def test_raw_creation_intermediate_save_cancel_reload_and_history(self):
-        self.raw_confirmations, self.spare_points = True, True
+        self.raw_confirmations, self.spare_points, self.raw_exit = True, True, True
         self.create()
         self.assertIsNotNone(adopted_timeline(self.runtime._ledger, self.runtime._store))
         self.assertEqual(self.run_request(self.lifecycle("declined-save", "save"))["state"], "partial")
@@ -64,7 +65,8 @@ class OrdinaryLifecycleTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(entered["state"], "unknown", entered)
         self.observe("load-observe")
         self.finish_identity("load", world, 1)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
         self.assertIsNotNone(adopted_timeline(self.runtime._ledger, self.runtime._store))
         self.runtime.close()
         self.runtime = MissionRuntime(self.controller)

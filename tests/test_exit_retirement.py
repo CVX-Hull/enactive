@@ -94,6 +94,16 @@ class ExitRetirementTests(unittest.TestCase):
         self.controller.unknown_outcomes[0]["request"] = copy.deepcopy(self.request)
         self.assertTrue(self.retire()["retired_pending"])
 
+    def test_exact_direct_input_pending_uses_the_same_retirement_contract(self):
+        self.request.pop("key")
+        self.request.update(kind="direct", input=dict(type="key", key="Z", modifiers=[]),
+                            require_exact_frame=False)
+        self.controller.pending = copy.deepcopy(self.request)
+        self.controller.unknown_outcomes[0]["request"] = copy.deepcopy(self.request)
+        self.assertTrue(self.retire()["retired_pending"])
+        self.assertIsNone(self.controller.pending)
+        self.assertEqual(self.controller.unknown_outcomes[0]["request"], self.request)
+
     def test_boot_operator_and_general_generation_are_exact(self):
         for changes in (
             {"expected_controller_boot_id": "other-boot"},
@@ -123,7 +133,7 @@ class ExitRetirementTests(unittest.TestCase):
         self.controller.pending = None
         self.assert_rejected()
 
-    def test_stored_request_validator_and_action_key_only_are_required(self):
+    def test_stored_request_validator_and_ordinary_input_only_are_required(self):
         for changes in ({"protocol": 3}, {"deadline_ms": False}, {"extra": 1},
                         {"session": ""}, {"key": ""}, {"authority": {}},
                         {"kind": "resume"}, {"kind": "observe"}):

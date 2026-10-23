@@ -125,8 +125,15 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         delivered = len(self.bridge.delivered)
         self.runtime.pause("Operator Pause before wrong recovery")
         response = self.runtime.command(self.delivery_reconciliation())
-        self.assertEqual(response["status"], "rejected", response)
-        self.assertEqual(response["mission"]["pause_cause"], "user")
+        # Pause is immediate at the controller and asynchronous at the writer.
+        # A request bound before its epoch update rejects at ingress; one bound
+        # afterward may queue, but can never regain the old transition custody.
+        if response["status"] == "accepted":
+            operation = self.settled("wrong-recovery")
+            self.assertIn(operation["state"], ("blocked", "paused"), operation)
+        else:
+            self.assertEqual(response["status"], "rejected", response)
+        self.assertEqual(self.runtime.status()["pause_cause"], "user")
         self.assertIsNone(self.runtime._registered_lifecycle.phase)
         self.assertIsNone(self.runtime._lease)
         self.assertEqual(len(self.bridge.delivered), delivered)

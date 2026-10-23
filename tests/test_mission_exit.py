@@ -273,15 +273,15 @@ class MissionExitTests(unittest.TestCase):
         self.assertIn("operator mark", operation["result"]["reason"])
         self.assertEqual(self.runtime.status()["spent_inputs"], 0)
 
-    def test_wrong_question_or_identity_never_publishes_confirmation(self):
+    def test_exit_effect_does_not_require_literal_interpreted_question_wording(self):
         self.ready()
         self.begin_exit()
         request = self.confirmation()
-        request["perception"]["question"] = "Delete world?"
+        request["perception"]["question"] = "Really quit? (Case Sensitive)"
         operation = self.run_request(request)
-        self.assertEqual(operation["state"], "blocked", operation)
-        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
-        self.assertFalse(any(r.get("action") == "YES" for r in self.bridge.delivered))
+        self.assertEqual(operation["state"], "completed", operation)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 3)
+        self.assertTrue(any(r.get("action") == "YES" for r in self.bridge.delivered))
 
     def test_nonzero_exit_keeps_unknown_cost_and_unresolved_custody(self):
         self.ready()

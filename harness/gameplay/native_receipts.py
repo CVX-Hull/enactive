@@ -45,28 +45,17 @@ def compact_native_ack(full_native_state: dict) -> dict:
     return _validate_ack({key: full_native_state[key] for key in _ACK_FIELDS})
 
 
-def validate_ordinary_mapping(intent: dict, receipt: dict, *, logical_id: str,
-                              native_id: str | None, disposition: str) -> None:
-    """Audit immutable ordinary intent/request/ACK linkage, without live authority."""
-    if intent["kind"] not in ("action", "key", "direct", "resume"):
-        return
-    if disposition not in ("returned", "rejected"):
-        if receipt.get("native_ack") is not None:
-            raise ContractError("Uncertain or unpublished delivery cannot carry an authenticated ACK")
-        return
+def validate_published_input(intent: dict, receipt: dict, *, logical_id: str, native_id: str | None) -> dict:
+    """Verify exact published admission without fabricating a terminal ACK.
+
+    Unknown delivery alone need not have a valid admission. A separate owned-exit
+    effect may only close custody when this existing native mapping is complete.
+    """
     validate_json(receipt.get("expected_revision"), _INT)
     if (native_id is None or receipt.get("logical_action_id") != logical_id
             or receipt.get("native_request_id") != native_id or receipt.get("published") is not True
-            or receipt.get("transport_disposition") != disposition
             or any(key not in receipt or receipt[key] != intent[key] for key in _CORRELATION)):
         raise ContractError("Ordinary receipt contradicts its immutable logical/native mapping")
-    for key in ("processing_error", "evidence_loss"):
-        if key not in receipt:
-            raise ContractError("Known ordinary delivery requires separate bounded processing/loss diagnostics")
-        validate_json(receipt[key], _DIAGNOSTIC)
-    validate_json(receipt.get("received_monotonic"), {"type": "number", "minimum": 0, "maximum": 10**12})
-    if not math.isfinite(receipt["received_monotonic"]):
-        raise ContractError("Native ACK requires its actual finite receipt clock")
     encoded = receipt.get("native_request_json")
     if type(encoded) is not str or len(encoded.encode()) > 4096:
         raise ContractError("Ordinary receipt requires bounded canonical native admission")
@@ -95,6 +84,28 @@ def validate_ordinary_mapping(intent: dict, receipt: dict, *, logical_id: str,
         validate_input(request["input"])
         if request["require_exact_frame"] is not False:
             raise ContractError("Ordinary input must not require frame equivalence")
+    return request
+
+
+def validate_ordinary_mapping(intent: dict, receipt: dict, *, logical_id: str,
+                              native_id: str | None, disposition: str) -> None:
+    """Audit immutable ordinary intent/request/ACK linkage, without live authority."""
+    if intent["kind"] not in ("action", "key", "direct", "resume"):
+        return
+    if disposition not in ("returned", "rejected"):
+        if receipt.get("native_ack") is not None:
+            raise ContractError("Uncertain or unpublished delivery cannot carry an authenticated ACK")
+        return
+    request = validate_published_input(intent, receipt, logical_id=logical_id, native_id=native_id)
+    if receipt.get("transport_disposition") != disposition:
+        raise ContractError("Ordinary receipt differs from its delivery disposition")
+    for key in ("processing_error", "evidence_loss"):
+        if key not in receipt:
+            raise ContractError("Known ordinary delivery requires separate bounded processing/loss diagnostics")
+        validate_json(receipt[key], _DIAGNOSTIC)
+    validate_json(receipt.get("received_monotonic"), {"type": "number", "minimum": 0, "maximum": 10**12})
+    if not math.isfinite(receipt["received_monotonic"]):
+        raise ContractError("Native ACK requires its actual finite receipt clock")
     ack = _validate_ack(receipt.get("native_ack"))
     if ack["id"] != native_id or ack["status"] != ("ready" if disposition == "returned" else "rejected"):
         raise ContractError("Native ACK differs from its exact request/disposition")

@@ -58,7 +58,9 @@ facts, procedures and proposals retain their sources and limitations.
 The [eighth Luna diagnostic](acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md)
 loads and verifies the character, then saves normally. Owned exit refuses an
 ordinary confirmation key and a differently worded visible interpretation, so
-ending fails and the owned processes are exceptionally stopped. Useful higher-level
+ending fails and the owned processes are exceptionally stopped. The source now
+allows ordinary owned-exit control with correlated terminal evidence; that repair
+needs new real qualification. Useful higher-level
 supply/travel progress, apparent responsiveness and the independent seven-day
 outcome remain unaccepted. New compact-result/unchanged-image presentation has
 source/SDK evidence only; a restarted player producer must be verified before its

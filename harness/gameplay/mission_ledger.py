@@ -18,7 +18,7 @@ from typing import Any
 
 from .contracts import ContractError, json_object
 from .contracts import canonical
-from .native_receipts import validate_ordinary_mapping
+from .native_receipts import validate_ordinary_mapping, validate_published_input
 from .mission_contracts import VERSION, MissionAdmission, InputObservation, SourceRevalidation, validate_handoff_binding, effect_reconciliation, validate_effect_reconciliation, validate_delivery_resolution, validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption, validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission
 
 DB_VERSION = 12
@@ -833,7 +833,7 @@ class MissionLedger:
             elif root.get("skill_kind") == "navigate" and data["skill_kind"] not in ("menu", "edit"):
                 raise LedgerError("Navigation root permits only its exact suffix or ordinary menu/editor controls")
             if data["skill_kind"] == "direct":
-                lifecycle = root["kind"] == "lifecycle" and root["operation"] in ("create", "load", "save")
+                lifecycle = root["kind"] == "lifecycle" and root["operation"] in ("create", "load", "save", "exit")
                 if not lifecycle and (root["kind"] != "skill" or root["skill_kind"] not in ("interact", "item", "inspect", "activity", "direct")):
                     raise LedgerError("Direct child requires its original ordinary or lifecycle scope")
                 if data["goal"]["interrupt_allowed"] and not root.get("goal", {}).get("interrupt_allowed", False):
@@ -1057,7 +1057,9 @@ class MissionLedger:
                     or launch_result.get("native_ready") is not True
                     or type(launch_result.get("process")) is not dict
                     or launch_result["process"].get("launch_id") != proof["launch_id"]
-                    or intent["kind"] not in ("action", "direct") or receipt.get("published") is not True
+                    or intent["kind"] not in (("action", "direct") if effect["basis"] == "LifecycleTransition"
+                                              else ("action", "key", "direct"))
+                    or receipt.get("published") is not True
                     or any(receipt.get(k) != v for k, v in {
                         "logical_action_id": logical_id, "native_request_id": p["native_id"],
                         "transport_disposition": "unknown", **{key: intent[key] for key in
@@ -1079,8 +1081,8 @@ class MissionLedger:
                     creation_input_chain(self.request_records(), self.primitive_records(),
                         root_id=root["request_id"], terminal_request_id=proof["terminal_request_id"],
                         terminal_logical_id=logical_id)
-            elif intent["value"] != "YES" or not self._exit_confirmation(intent, parent["request"]):
-                raise LedgerError("Orphan exit effect lacks its exact normal-exit confirmation")
+            elif not self._exit_input(p, parent["request"]):
+                raise LedgerError("Orphan exit effect lacks its exact source-bound exit input")
             elif proof["no_save_required"]:
                 self._check_menu_cleanup_sources(proof, root["request_id"])
             return
@@ -1472,25 +1474,55 @@ class MissionLedger:
         if not any(saved_action(p) for p in primitives):
             raise LedgerError("Saved checkpoint lacks its exact normal save-action preflight")
 
-    @staticmethod
-    def _exit_confirmation(intent: dict, data: dict) -> bool:
-        view, goal = data.get("perception") or {}, data.get("goal") or {}
-        if (data.get("kind") != "skill" or data.get("skill_kind") != "menu"
-                or view.get("kind") != "confirmation" or view.get("question") != "Really quit?"
-                or goal.get("label") != "Yes" or goal.get("outcome") != "activated"):
+    def _exit_input(self, primitive: dict, data: dict) -> bool:
+        """Audit the selected input, not a question's spelling or a YES value."""
+        intent = primitive["intent"]
+        receipt = primitive["result"] or {}
+        native = validate_published_input(intent, receipt,
+            logical_id=primitive["logical_id"], native_id=primitive["native_id"])
+        binding = receipt.get("dispatch_binding") or {}
+        root_id = data.get("phase_id") or data["request_id"]
+        resume = next((p for p in self.primitive_records()
+            if p["request_id"] == root_id and p["intent"]["kind"] == "resume"), None)
+        original = (resume["result"] or {}).get("dispatch_binding", {}) if resume is not None else {}
+        if (native["authority"]["controller_boot_id"] != binding.get("controller_boot_id")
+                or native["takeover_generation"] != binding.get("takeover_generation")
+                or resume is None or resume["state"] != "returned"
+                or binding.get("epoch") != self.request(root_id)["epoch"]
+                or any(key not in original or binding.get(key) != original[key] for key in
+                    ("controller_boot_id", "operator_pause_generation", "takeover_generation",
+                     "actor_id", "epoch", "game_anchor_source_id"))):
             return False
-        relation = intent["revalidation"]
+        if data["kind"] == "lifecycle":
+            return data["operation"] == "exit" and intent["kind"] == "action" and intent["value"] == "QUIT"
+        if data["kind"] != "skill" or data["skill_kind"] not in ("menu", "direct"):
+            return False
+        entries = [item for item in self.primitive_records() if item["request_id"] == primitive["request_id"]]
+        if not entries or intent["kind"] not in ("action", "key", "direct"):
+            return False
+        entry = entries[0]["intent"]
+        if data["skill_kind"] == "direct":
+            if intent["kind"] != "direct" or entry["input_observation"] is None:
+                return False
+            observed = InputObservation.from_dict(entry["input_observation"])
+            return (observed.original.source_id in data["sources"]
+                and observed.current.source_id == entry["source_before"])
+        if intent["kind"] == "direct":
+            return False
+        relation = entry["revalidation"]
+        source = (data.get("perception") or {}).get("source_id")
+        originals = [source] if source is not None else data["sources"]
         if relation is None:
-            return intent["source_before"] == view.get("source_id")
+            return entry["source_before"] in originals
         refreshed = SourceRevalidation.from_dict(relation)
-        return (refreshed.rule == "exact_png_bytes" and refreshed.original.source_id == view.get("source_id")
-                and refreshed.current.source_id == intent["source_before"])
+        return (refreshed.rule == "exact_png_bytes" and refreshed.original.source_id in originals
+            and refreshed.current.source_id == entry["source_before"])
 
     def menu_cleanup_resume(self, launch_request_id: str, *, exit_root_id: str | None = None) -> dict | None:
         """Audit pre-character input history; bytes/live custody remain runtime checks.
 
         The current exit subtree is outside the cutoff. An earlier exit must have
-        no inputs or a settled deliberate No. A returned Resume is delivery, never
+        no inputs or a settled return to its owned main menu. A returned Resume is delivery, never
         gameplay or a saved checkpoint. Unknown/prepared input cannot qualify.
         """
         rows = self.request_records()
@@ -1580,15 +1612,22 @@ class MissionLedger:
             raise LedgerError("Menu cleanup cannot skip an unsettled prior exit")
         if not inputs:
             return
-        expected = [("resume", None, "returned"), ("action", "QUIT", "returned"), ("action", "NO", "returned")]
-        actual = [(p["intent"]["kind"], p["intent"]["value"], p["state"]) for p in inputs]
+        first = inputs[0]
         final = next(member for member in family if member["request"]["request_id"] == inputs[-1]["request_id"])
         result, data = final["result"] or {}, final["request"]
-        if (actual != expected or final["state"] != "partial" or result.get("normal_exit_verified") is not False
+        if (first["intent"]["kind"] != "resume" or first["state"] != "returned"
+                or any(p["state"] not in ("returned", "rejected") or p["effect"] is not None for p in inputs)
+                or any(p["intent"]["kind"] not in ("action", "key", "direct") for p in inputs[1:])
+                or inputs[-1]["state"] != "returned" or final["state"] != "partial"
+                or data["kind"] != "skill" or data["skill_kind"] not in ("menu", "direct")
+                or result.get("normal_exit_verified") is not False
                 or result.get("phase", {}).get("stage") != "complete"
-                or (data.get("perception") or {}).get("question") != "Really quit?"
-                or data.get("goal", {}).get("label") != "No"):
+                or result["phase"].get("operation") != "exit"
+                or data.get("phase_id") != result["phase"].get("origin_request_id")):
             raise LedgerError("Menu cleanup cannot skip an unverified prior exit")
+        for primitive in inputs:
+            validate_ordinary_mapping(primitive["intent"], primitive["result"] or {},
+                logical_id=primitive["logical_id"], native_id=primitive["native_id"], disposition=primitive["state"])
 
     def _check_menu_cleanup_sources(self, proof: dict, root_id: str) -> None:
         resume = self.menu_cleanup_resume(proof["launch_request_id"], exit_root_id=root_id)
@@ -1602,25 +1641,27 @@ class MissionLedger:
         if type(phase) is not dict:
             raise LedgerError("Normal exit requires a typed phase object")
         root = self.request(proof["origin_request_id"])["request"]
-        if (data["kind"] != "skill" or data["skill_kind"] != "menu" or data["phase_id"] != root["request_id"]
+        if ((data["phase_id"] or request_id) != root["request_id"]
                 or root.get("operation") != "exit" or root["phase_id"] is not None
                 or phase.get("phase_kind") != "lifecycle" or phase.get("stage") != "complete"
                 or phase.get("origin_request_id") != root["request_id"]
-                or any(phase.get(key) != proof[key] for key in ("launch_request_id", "launch_id", "source_ids"))
-                or data["goal"]["label"] != "Yes" or data["goal"]["outcome"] != "activated"
-                or data["perception"] is None or data["perception"]["kind"] != "confirmation"
-                or data["perception"]["question"] != "Really quit?"):
-            raise LedgerError("Normal exit lacks its exact root/confirmation phase")
+                or any(phase.get(key) != proof[key] for key in ("launch_request_id", "launch_id", "source_ids"))):
+            raise LedgerError("Normal exit lacks its exact root/input phase")
         primitive = self.primitive(proof["terminal_logical_id"])
-        if (primitive["request_id"] != request_id or primitive["intent"]["kind"] != "action"
-                or primitive["intent"]["value"] != "YES" or primitive["native_id"] != proof["native_request_id"]
+        binding = (primitive["result"] or {}).get("dispatch_binding") or {}
+        if any(binding.get(key) != phase.get(field) for key, field in (
+                ("controller_boot_id", "controller_boot_id"), ("operator_pause_generation", "operator_pause_generation"),
+                ("takeover_generation", "takeover_generation"), ("actor_id", "actor_id"), ("epoch", "epoch"))):
+            raise LedgerError("Normal exit lost its original dispatch custody")
+        if (primitive["request_id"] != request_id or primitive["native_id"] != proof["native_request_id"]
                 or primitive["state"] not in ("unknown", "returned")
                 or primitive["intent"]["source_before"] not in proof["source_ids"]
-                or not self._exit_confirmation(primitive["intent"], data)
+                or not self._exit_input(primitive, data)
                 or primitive["result"] is None or primitive["result"].get("published") is not True
                 or primitive["result"].get("native_request_id") != proof["native_request_id"]
                 or any(primitive["result"].get(key) != value for key, value in {
-                    "logical_action_id": proof["terminal_logical_id"], "kind": "action", "value": "YES",
+                    "logical_action_id": proof["terminal_logical_id"],
+                    "kind": primitive["intent"]["kind"], "value": primitive["intent"]["value"],
                     "transport_disposition": primitive["state"], "expected_session": primitive["intent"]["expected_session"],
                     "expected_revision": primitive["intent"]["expected_revision"],
                     "expected_boundary_id": primitive["intent"]["expected_boundary_id"],
@@ -1630,7 +1671,7 @@ class MissionLedger:
             raise LedgerError("Normal exit lacks its charged terminal input/effect correlation")
         if primitive["state"] == "unknown" and primitive["effect"] != effect_reconciliation(proof,
                 sources=tuple(proof["source_ids"]),
-                note=f"Owned normal exit {proof['launch_id']} after published YES; ACK remains unknown"):
+                note=primitive["effect"]["note"]):
             raise LedgerError("Normal exit effect evidence differs from the exact owned phase")
         if not proof["no_save_required"]:
             _, saved = self._lifecycle_record(root["request_id"], proof["saved_checkpoint_request_id"], "saved_checkpoint")

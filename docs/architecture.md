@@ -38,7 +38,8 @@ existing expected transition's custody, clocks and original limits. The returned
 decision guidance names same-root lifecycle reconciliation, without input,
 automatic intent conversion or renewed authority. Diagnostic008 passes Load
 reconciliation/adoption but exposes the separate literal owned-exit restriction;
-ordinary input there remains a tracked repair, not implemented generality.
+ordinary owned-exit input now has source support through the existing writer,
+with actual requalification still pending.
 Protocol version: 6.
 
 The [independent024 result](acceptance/2026-10-21-independent-supply-shelter.md)
@@ -415,15 +416,22 @@ and distinguishing cleanup from player-reported objective completion. Source cov
 mission. Registered launch now composes the fixed process adapter
 with original deadlines and fresh paused-menu readiness in portable fixtures.
 Launch sends no Resume/input and establishes no identity or game-time anchor.
-Registered untouched-menu exit composes charged Resume/QUIT with an explicit
-player-interpreted confirmation, original operator mark and shared root/child limits.
-Published Yes plus exact owned normal exit and narrow durable pending retirement
-can resolve process custody while retaining an unknown ACK and all charges. No
-normal save is claimed by that untouched-menu retest. The [bounded native retest](acceptance/2026-10-20-owned-launch.md#native-qualification002-accepted-owned-menu-component)
-qualified the Yes/normal-exit path while retaining its failed first attempt. It
-created, loaded and saved no character and did not exercise native No or user Pause.
-Registered creation, normal save, saved-menu exit and new-child exact reload passed
-the scoped [Native007 qualification](acceptance/2026-10-20-native-lifecycle-qualified.md).
+Registered owned-menu exit composes charged Resume/QUIT with ordinary key/text/click
+or optional menu controls, the original operator mark and shared root/child limits.
+Unknown or changing menu types need no question/YES whitelist. Known delivery with
+healthy current evidence remains available for another player decision even when
+an optional semantic policy is surprised; evidence/custody failure still revokes.
+Exact published input plus the owned child's normal exit and narrow durable pending
+retirement resolve custody while retaining unknown ACKs and all charges. Existing
+native admission validation is reused for terminal effects and history; notes and
+menu wording cannot substitute for that correlation. The source tests include
+changing menus, cancellation, text/clicks, Save/new-child reload and negative source/
+Pause/exit cases; this source repair awaits a new real player/native run.
+The [bounded native retest](acceptance/2026-10-20-owned-launch.md#native-qualification002-accepted-owned-menu-component)
+retains its earlier interpreted Yes/normal-exit qualification and failure, with no
+creation/load/save or native No/Pause evidence there. Registered creation, normal
+save, saved-menu exit and exact reload retain their scoped
+[Native007 qualification](acceptance/2026-10-20-native-lifecycle-qualified.md).
 The later [independent024 mission](acceptance/2026-10-21-independent-supply-shelter.md)
 exercises that lifecycle within the full supplies/shelter outcome; component
 qualification alone did not accept the mission.
@@ -437,13 +445,13 @@ can recover historical cost but no live phase, process or lease.
 Missing continuity makes cost unknown instead of silently resetting it.
 
 Lifecycle Resume, explicit creation-stage commit, normal save, identity inspection
-and owned exit confirmation refresh the selected checkpoint once at entry inside
+and owned exit controls refresh the selected checkpoint once at entry inside
 the operation, using the checkpoint's declared native-state or exact-PNG rule under
 the original actor/Pause and root/child deadlines. Resume journals its actual rule
 and source lineage before
-acquiring a lease; it cannot construct authority from an old binding. Exit's typed
-revalidation links the immutable interpretation to the actual dispatch source at
-write, orphan-proof validation and reopen. Save refresh precedes operation rotation
+acquiring a lease; it cannot construct authority from an old binding. Exit uses
+InputObservation for ordinary input or exact-PNG SourceRevalidation for optional
+menu interpretation, preserving the immutable selection at write and reopen. Save refresh precedes operation rotation
 and preserves the original normal-game time anchor. [Native qualification001](acceptance/2026-10-20-lifecycle-freshness.md)
 retains the timing failures and successful normal stopped cleanup; the source
 repair is not a character-lifecycle or independent-mission pass.

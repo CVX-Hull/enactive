@@ -4,7 +4,7 @@ import unittest
 
 from harness.gameplay.contracts import ContractError, canonical
 from harness.gameplay.mission_ledger import MAX_RECEIPT_BYTES, RESULT_RESERVE
-from harness.gameplay.native_receipts import compact_native_ack, validate_ordinary_mapping
+from harness.gameplay.native_receipts import compact_native_ack, validate_ordinary_mapping, validate_published_input
 from tests.test_gameplay_evidence import observation
 from tests.test_mission_ledger import intent, known_receipt
 
@@ -73,6 +73,21 @@ class NativeReceiptTests(unittest.TestCase):
             self.validate({"native_ack": None}, disposition=disposition)
             with self.assertRaises(ContractError):
                 self.validate(known_receipt(), disposition=disposition)
+
+    def test_published_admission_can_be_checked_without_inventing_unknown_ack(self):
+        import json
+        proposed = intent(kind="direct", value=dict(type="key", key="Z", modifiers=[]))
+        receipt = known_receipt(proposed=proposed)
+        receipt.update(native_ack=None, transport_disposition="unknown", source_after=None)
+        native = validate_published_input(proposed, receipt, logical_id="logical-1", native_id="native-uuid-1")
+        self.assertEqual(native["input"], proposed["value"])
+        self.assertIsNone(receipt["native_ack"])
+        for changes in ({"input": dict(type="key", key="X", modifiers=[])},
+                        {"id": "other"}, {"revision": 1}, {"session": "other"}, {"require_exact_frame": True}):
+            with self.subTest(changes=changes), self.assertRaises(ContractError):
+                changed = deepcopy(receipt)
+                changed["native_request_json"] = canonical(json.loads(receipt["native_request_json"]) | changes)
+                validate_published_input(proposed, changed, logical_id="logical-1", native_id="native-uuid-1")
 
     def test_native_request_rejects_wrong_event_authority_frame_flag_and_noncanonical_bytes(self):
         import json

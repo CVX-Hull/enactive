@@ -268,8 +268,8 @@ class MissionRuntime:
                      or data["skill_kind"] not in ("menu", "edit", "inspect", "item", "activity", "direct"))):
                 rejection = "An owned prompt requires its exact phase and supported control child"
             elif (self._exit_phase is not None and kind in ("skill", "lifecycle") and
-                    (kind != "skill" or data["phase_id"] != self._exit_phase.root_id or data["skill_kind"] != "menu")):
-                rejection = "Owned exit permits only its exact interpreted confirmation child"
+                    (kind != "skill" or data["phase_id"] != self._exit_phase.root_id or data["skill_kind"] not in ("menu", "direct"))):
+                rejection = "Owned exit requires its exact ordinary or menu control child"
             elif (kind == "skill" and data["skill_kind"] == "edit"
                     and data["goal"]["purpose"] in ("character_name", "world_name")
                     and (self._registered_lifecycle.phase is None
@@ -1008,7 +1008,7 @@ class MissionRuntime:
         if self._registered_lifecycle.phase is not None or self._registered_lifecycle.candidate is not None:
             return self._registered_lifecycle.observe(work)
         if self._exit_phase is not None:
-            phase = self._refresh_exit(work, self._exit_phase)
+            phase = self._refresh_exit(work, self._exit_phase, ordinary=True)
             return {"source_ids": [phase.checkpoint.observation_id], "phase": self._exit_receipt(phase, "awaiting_control"),
                 "lifecycle_needed": True, "grants_authority": False}
         phase = self._prompt_phase
@@ -1514,7 +1514,7 @@ class MissionRuntime:
         before = self._store.observation(phase.checkpoint)
         if (before["session"] != launch.checkpoint.session or before["takeover_generation"] != launch.takeover_generation
                 or before["in_game"] or before["boundary"]["kind"] != "menu" or before["error"]
-                or before["category"] not in ("MAIN_MENU", "YESNO")):
+                or before["status"] != "ready" or not before["frame_ok"]):
             raise ControlError("Exit phase cannot adopt a different native session/boundary")
         if proposal is not None:
             if proposal.before != phase.checkpoint:
@@ -1528,9 +1528,8 @@ class MissionRuntime:
                 state, _, _ = self._check_lease()
                 if self._lease.operation != "lifecycle" or state["session"] != before["session"]:
                     raise ControlError("Exit requires its exact lifecycle lease")
-                allowed = ("QUIT",) if before["category"] == "MAIN_MENU" else ("YES", "NO")
-                if proposal.kind != "action" or proposal.action not in allowed:
-                    raise ControlError("Owned exit admits only its registered Quit/confirmation action")
+                if proposal.kind not in ("action", "key", "direct"):
+                    raise ControlError("Owned exit requires an ordinary or menu input proposal")
 
     def _exit_receipt(self, phase: _ExitPhase, stage: str) -> dict:
         saved_sources = () if phase.saved_checkpoint is None else (
@@ -1550,7 +1549,7 @@ class MissionRuntime:
             **({"saved_checkpoint_request_id": phase.saved_checkpoint} if phase.saved_checkpoint is not None else {}),
             "grants_authority": False}
 
-    def _refresh_exit(self, work: _Work, phase: _ExitPhase) -> _ExitPhase:
+    def _refresh_exit(self, work: _Work, phase: _ExitPhase, *, ordinary: bool = False) -> _ExitPhase:
         self._exit_guard(work, phase)
         self._capacity()
         source = phase.checkpoint
@@ -1559,14 +1558,17 @@ class MissionRuntime:
             self._mission_deadline - self._admission.cleanup_reserve.wall_seconds) - self._wall()
         state, received = self._observe_native(work, deadline_monotonic=deadline)
         reference = self._ingest(state, received)
-        if not self._store.equivalent(source, reference, rule="exact_png_bytes"):
-            raise EvidenceError("Owned exit Observe changed the exact menu image/state")
+        if ordinary:
+            self._capture_custody(self._store.observation(source), state)
+        elif not self._store.equivalent(source, reference, rule="exact_png_bytes"):
+            raise EvidenceError("Owned exit refresh changed the exact interpreted menu image/state")
         self._exit_guard(work, phase)
         phase = replace(phase, checkpoint=reference)
         self._exit_phase = phase
+        self._exit_guard(work, phase)
         self._publish_source(reference, authoritative=False)
         self._record("mission_exit_checkpoint", {"before": source.observation_id, "after": reference.observation_id,
-            "rule": "exact_png_bytes", "grants_authority": False})
+            "rule": "ordinary_input" if ordinary else "exact_png_bytes", "grants_authority": False})
         return phase
 
     def _exit(self, work: _Work) -> tuple[str, dict]:
@@ -1605,62 +1607,99 @@ class MissionRuntime:
         proposal = ControlIntent("quit-" + hashlib.sha256(data["request_id"].encode()).hexdigest(),
             "action", "QUIT", phase.checkpoint, state["boundary"]["id"])
         feedback = self._dispatch(work, proposal, phase.launch.checkpoint, lifecycle=phase)
+        if self._exit_candidate is not None and (feedback.transport_disposition == "unknown"
+                or not self._native.status()["running"]):
+            return self._finish_owned_exit(work, phase, proposal)
         if feedback.transport_disposition != "returned" or feedback.after is None:
             return "unknown" if feedback.transport_disposition == "unknown" else "blocked", {
-                "reason": feedback.reason, "phase": self._exit_receipt(phase, "unknown"), "grants_authority": False}
-        state = self._store.observation(feedback.after)
-        if state["category"] != "YESNO" or state["boundary"]["kind"] != "menu":
-            raise ControlError("Owned Quit did not return its supported confirmation")
-        self._exit_phase = phase = replace(phase, checkpoint=feedback.after)
-        return "partial", {"reason": "Owned Quit awaits the player's explicit interpreted confirmation",
+                "reason": feedback.reason, "phase": self._exit_receipt(phase,
+                    "awaiting_control" if self._exit_phase is not None else "unknown"), "grants_authority": False}
+        self._exit_candidate = None
+        self._exit_phase = phase = replace(phase, checkpoint=self._current)
+        self._exit_guard(work, phase)
+        return "partial", {"reason": "Owned Quit returned; inspect the actual menu and choose ordinary or semantic input",
             "phase": self._exit_receipt(phase, "awaiting_control"), "grants_authority": False}
 
     def _exit_control(self, work: _Work) -> tuple[str, dict]:
         phase, data = self._exit_phase, work.request
         if (phase is None or data["phase_id"] != phase.root_id or data["work_id"] is not None
-                or data["skill_kind"] != "menu" or data["perception"] is None
-                or data["perception"]["kind"] != "confirmation" or data["perception"]["question"] != "Really quit?"
-                or data["goal"]["label"] not in ("Yes", "No") or data["goal"]["outcome"] != "activated"
+                or data["skill_kind"] not in ("menu", "direct")
                 or phase.checkpoint.observation_id not in data["sources"]):
-            raise ControlError("Owned exit requires its exact interpreted Really quit? Yes/No child")
+            raise ControlError("Owned exit requires its exact source-bound ordinary or menu child")
         self._exit_guard(work, phase)
-        skill = SemanticControlSkill(data, deadline_monotonic=self._deadline(work, phase.checkpoint))
+        ordinary = data["skill_kind"] == "direct"
+        deadline = self._deadline(work, phase.checkpoint)
+        skill = (OrdinaryInputSkill(data, deadline_monotonic=deadline) if ordinary else
+                 MenuSkill(data, deadline_monotonic=deadline) if data["perception"] is None else
+                 SemanticControlSkill(data, deadline_monotonic=deadline))
         inspected, _ = self._store.inspect_current_boundary(**self._clocks())
         if inspected != phase.checkpoint:
-            raise EvidenceError("Exit confirmation lost its exact retained checkpoint")
+            raise EvidenceError("Exit input lost its exact retained checkpoint")
         binding = self._binding(phase.checkpoint)
-        phase = self._refresh_exit(work, phase)
-        relation = SourceRevalidation(binding, self._binding(phase.checkpoint), "exact_png_bytes")
-        skill.revalidate(relation, self._store, **self._clocks())
-        self._record("mission_exit_revalidation", relation.to_dict())
-        proposal = skill.propose(self._store, **self._clocks())
-        if not isinstance(proposal, ControlIntent):
-            return proposal.disposition, self._control_result(proposal)
-        feedback = self._dispatch(work, proposal, phase.launch.checkpoint, lifecycle=phase)
-        if proposal.action == "YES" and self._exit_candidate is not None:
-            return self._finish_owned_exit(work, phase, proposal)
-        outcome = skill.accept(feedback, self._store, **self._clocks())
-        if (feedback.transport_disposition == "returned" and feedback.after is not None
-                and self._store.observation(feedback.after)["category"] == "MAIN_MENU" and proposal.action == "NO"):
-            self._exit_guard(work, phase)
-            # Pause deliberately after the verified No. Another root still uses
-            # the original operator mark; observing it cannot grant new consent.
-            self.controller.stop_input()
-            self._lease = None
-            self._exit_phase = None
-            state, received = self._observe_native(work, deadline_monotonic=self._deadline(work, proposal.before))
-            reference = self._ingest(state, received)
-            if (state["session"] != phase.launch.checkpoint.session or state["category"] != "MAIN_MENU"
-                    or not state["paused"] or state["takeover_generation"] != phase.launch.takeover_generation):
-                raise ControlError("Declined quit did not return the same owned paused main menu")
-            self._owned_launch = replace(phase.launch, checkpoint=reference)
-            self._publish_source(reference, authoritative=False)
-            phase = replace(phase, checkpoint=reference)
-            return "partial", {"reason": "Quit declined; owned process remains live", "normal_exit_verified": False,
-                "phase": self._exit_receipt(phase, "complete"), "grants_authority": False}
-        return ("unknown" if feedback.transport_disposition == "unknown" else "blocked"), {
-            "reason": feedback.reason if outcome is None else outcome.reason,
-            "phase": self._exit_receipt(phase, "unknown"), "grants_authority": False}
+        original = phase.checkpoint
+        phase = self._refresh_exit(work, phase, ordinary=True)
+        if not ordinary and not self._store.equivalent(original, phase.checkpoint, rule="exact_png_bytes"):
+            return "blocked", {"reason": "Fresh owned menu changed; inspect it and choose a new ordinary or semantic input",
+                "phase": self._exit_receipt(phase, "awaiting_control"), "grants_authority": False}
+        if ordinary:
+            relation = InputObservation(binding, self._binding(phase.checkpoint))
+            skill.observe(relation, self._store, **self._clocks())
+            self._record("mission_input_observation", relation.to_dict())
+        else:
+            relation = SourceRevalidation(binding, self._binding(phase.checkpoint), "exact_png_bytes")
+            skill.revalidate(relation, self._store, **self._clocks())
+            self._record("mission_exit_revalidation", relation.to_dict())
+        while True:
+            proposal = skill.propose(self._store, **self._clocks())
+            if isinstance(proposal, (ControlOutcome, MenuOutcome)):
+                outcome = proposal
+            else:
+                feedback = self._dispatch(work, proposal, phase.launch.checkpoint, lifecycle=phase)
+                if self._exit_candidate is not None and (feedback.transport_disposition == "unknown"
+                        or not self._native.status()["running"]):
+                    return self._finish_owned_exit(work, phase, proposal)
+                self._exit_candidate = None
+                outcome = skill.accept(feedback, self._store, **self._clocks())
+                if feedback.transport_disposition == "returned" and feedback.after is not None:
+                    inspected, _ = self._store.inspect_current_boundary(**self._clocks())
+                    if inspected is None or inspected != self._current:
+                        raise EvidenceError("Known exit input lost its current evidence authority")
+                    live, _, _ = self._check_lease()
+                    self._capture_custody(self._store.observation(inspected), live)
+                    self._exit_phase = phase = replace(phase, checkpoint=self._current)
+                    self._exit_guard(work, phase)
+                    if self._store.observation(phase.checkpoint)["category"] == "MAIN_MENU":
+                        # Returning to the owned main menu closes this attempt,
+                        # regardless of the physical key or optional label used.
+                        self.controller.stop_input()
+                        self._lease = None
+                        self._exit_phase = None
+                        state, received = self._observe_native(work, deadline_monotonic=self._deadline(work, proposal.before))
+                        reference = self._ingest(state, received)
+                        if (state["session"] != phase.launch.checkpoint.session or state["category"] != "MAIN_MENU"
+                                or not state["paused"] or state["error"] or not state["frame_ok"]
+                                or state["takeover_generation"] != phase.launch.takeover_generation
+                                or self._operator_mark() != phase.launch.operator_mark):
+                            raise ControlError("Exit cancellation did not return the same owned paused main menu")
+                        self._owned_launch = replace(phase.launch, checkpoint=reference)
+                        self._publish_source(reference, authoritative=False)
+                        phase = replace(phase, checkpoint=reference)
+                        return "partial", {"reason": "Returned to owned main menu; process remains live",
+                            "normal_exit_verified": False, "phase": self._exit_receipt(phase, "complete"),
+                            "grants_authority": False}
+                    if self._current != feedback.after:
+                        return "partial", {"reason": "Known input returned; changed current menu needs a new decision",
+                            "phase": self._exit_receipt(phase, "awaiting_control"), "grants_authority": False}
+                    if outcome is not None and outcome.disposition == "unknown":
+                        # Optional policy surprise cannot un-deliver this known
+                        # input or revoke the verified healthy ordinary receiver.
+                        outcome = replace(outcome, disposition="partial", pending_logical_id=None)
+                if outcome is None:
+                    continue
+            result = self._control_result(outcome)
+            result["phase"] = self._exit_receipt(phase,
+                "unknown" if outcome.disposition == "unknown" else "awaiting_control")
+            return outcome.disposition, result
 
     def _finish_owned_exit(self, work: _Work, phase: _ExitPhase, proposal: ControlIntent) -> tuple[str, dict]:
         candidate = self._exit_candidate
@@ -1698,7 +1737,7 @@ class MissionRuntime:
             "retirement": retirement, "grants_authority": False}
         if primitive["state"] == "unknown":
             self._ledger.reconcile_effect(proposal.logical_id, proof=proof, sources=tuple(receipt["source_ids"]),
-                note=f"Owned normal exit {phase.launch.launch_id} after published YES; ACK remains unknown", now=self._wall())
+                note=f"Owned normal exit {phase.launch.launch_id} after published exit input; ACK remains unknown", now=self._wall())
         if candidate[3] is not None:
             # This exact child exited normally and its pending input/effect is
             # retired. No after-frame can arrive; keep the unknown ACK/charge.
@@ -1717,7 +1756,7 @@ class MissionRuntime:
         if (self._operator_mark() != phase.launch.operator_mark or state is None
                 or state["session"] != phase.checkpoint.session or state["pause_origin"] == "human"
                 or state["in_game"] or state["scene"] is not None or state["error"]
-                or state["boundary"]["kind"] != "menu" or state["category"] != "YESNO"
+                or state["boundary"]["kind"] != "menu"
                 or phase.saved_checkpoint is None and self._registered_lifecycle.normal_after_launch()
                 or phase.saved_checkpoint is not None and self._registered_lifecycle.saved_exit_checkpoint() != phase.saved_checkpoint
                 or state["takeover_generation"] != phase.launch.takeover_generation
@@ -1967,7 +2006,7 @@ class MissionRuntime:
             self._check_lease()
         elif self._exit_phase is not None:
             phase = self._exit_phase
-            if root_id != phase.root_id or data["skill_kind"] != "menu" or self._lease is None:
+            if root_id != phase.root_id or data["skill_kind"] not in ("menu", "direct") or self._lease is None:
                 return None
             self._exit_guard(work, phase)
             self._check_lease()
@@ -2302,7 +2341,7 @@ class MissionRuntime:
                 if disposition != "rejected":
                     if isinstance(lifecycle, NormalPhase):
                         self._registered_lifecycle.published(lifecycle, proposal, raw["request"], reservation)
-                    elif lifecycle is not None and proposal.kind == "action" and proposal.action == "YES":
+                    elif isinstance(lifecycle, _ExitPhase) and proposal.kind != "resume":
                         self._exit_candidate = (lifecycle, proposal.logical_id, copy.deepcopy(raw["request"]), reservation)
             native_after = raw["result"].get("state") if control else raw["result"]
             if disposition == "returned" and (not control or native_after.get("frame_ok") and native_after.get("status") == "ready"):

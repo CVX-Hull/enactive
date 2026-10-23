@@ -403,7 +403,7 @@ selection may differ from launch.
 Read-only Observe can adopt that private cleanup checkpoint; it grants no input.
 Ledger write/reopen/orphan checks audit the original Resume mapping/source IDs;
 runtime and EvidenceStore own retained source and live-authority checks. An earlier exit must
-have no inputs or its fully settled verified No; pending/unknown exit inputs cannot
+have no inputs or its fully settled verified return to the owned main menu; pending/unknown exit inputs cannot
 be skipped by a new root. This does not handle arbitrary setup rollback or restore
 consent after user Pause.
 
@@ -444,20 +444,34 @@ refused before admission. Other forms cannot borrow abort cancellation input;
 Save, provisional identity and unknown transitions keep their separate deadlines.
 Lifecycle summary `remaining_limits` reports wall seconds and primitives as of
 publication, for decision context only, without renewing allowance or input consent.
-A source-bound root charges distinct Resume and QUIT primitives, then awaits an
-explicit interpreted Really quit? Yes/No child. Exact-PNG refreshes preserve
-checkpoint provenance; root/child ceilings and original deadlines never renew.
-The selected confirmation refreshes once at operation entry before proposal. Its typed
-exact-PNG SourceRevalidation must link the immutable interpreted source to the
-actual dispatched before-source. Normal result and orphan-effect validation enforce
-that relation at write and reopen; native-state equivalence alone is insufficient.
-This branch uses ordinary budgets and preserves the cleanup reserve. A verified
-No returns the owned paused main menu without claiming exit. Only published Yes,
-unchanged controller/native authority, the retained child's normal code0 exit,
-matching terminal input/effect and narrow controller retirement produce a closed
-OwnedNormalExit. The original ACK can remain unknown; its cost/history/admission
-file stay retained. Retirement clears only matching expired in-memory pending
-state after durable recording, stays paused/frozen and sends no input or signals.
+A source-bound owned-exit root charges distinct Resume and registered QUIT
+shortcut inputs. If that input exits the child directly, it can establish the same
+terminal proof; otherwise its actual owned menu awaits player control. Ordinary
+key/text/click children reuse OrdinaryInputSkill and InputObservation, without a
+question/category/YES whitelist. Keys/scalars permit healthy visible change;
+clicks retain their original geometry. Optional interpreted or native-row menu
+skills retain exact-PNG entry revalidation. A changed interpretation is a zero-input
+local refusal with the fresh owned menu for another decision, not a new allowance.
+The original root/child/mission ceilings and deadlines remain in force.
+
+Known returned input with a healthy current store/lease/custody remains partial
+when an optional policy cannot explain a row jump or newer menu capture. The
+player interprets the effect and can choose ordinary input. Missing/disputed
+source authority, Pause, takeover, unhealthy native state and true unknown delivery
+still stop; semantic surprise does not erase those failures. A returned owned
+MAIN_MENU deliberately pauses and closes that exit attempt without an exit claim,
+regardless of the selected key/label. Historical cleanup validates settled input
+and this typed cancellation receipt, not a fixed Resume/QUIT/NO sequence.
+
+Only exact published input, unchanged controller/native authority, retained Save
+lineage where required, the same owned child's normal code0 exit and narrow
+controller retirement produce OwnedNormalExit. Both normal result and orphan-effect
+readers validate the original source transition, actual canonical native admission
+and root Resume's dispatch custody. Text batches retain their first observation
+and each actual scalar. Human explanation text is not proof authority. The original
+ACK can remain unknown; its cost/history/admission file stay retained. Retirement
+clears only matching expired ordinary in-memory pending input after durable
+recording, stays paused/frozen and sends no input or signals.
 Lifecycle PhaseReceipt/exit proof are historical data, never restored permissions.
 Any unexpected normal frame remains diagnostic: registered identity/adoption is
 required before time cost, maps, native memory facts or ordinary dispatch, including
@@ -622,7 +636,7 @@ support. A phase scope requires that exact summary/checkpoint, without falling
 back to another phase or null root. Prompt supports only menu/edit/inspect/item/
 activity children; activity scope supports only activity. Lifecycle children keep
 their direct create/save/load root, including ordinary controls and provisional identity inspection;
-exit confirmation is a lifecycle-scoped menu child. No unrelated Work attaches
+owned-exit controls are lifecycle-scoped ordinary or menu children. No unrelated Work attaches
 to lifecycle skill children. These composition checks do not duplicate live guards.
 
 Source-free launch is an explicit new root with no bundle/support. Explicit new-root

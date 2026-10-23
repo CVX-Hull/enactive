@@ -1297,9 +1297,9 @@ class Controller:
                         raise ControlError("Exit retirement requires the exact pending request")
                     if expected_request is not None:
                         self._validate_stored_request(expected_request)
-                        if (expected_request["kind"] not in {"action", "key"}
+                        if (expected_request["kind"] not in {"action", "key", "direct"}
                                 or expected_request["deadline_ms"] > int(time.time() * 1000)):
-                            raise ControlError("Exit retirement requires an expired action or key")
+                            raise ControlError("Exit retirement requires an expired ordinary input")
                         if not any(item["request"] == expected_request for item in self.unknown_outcomes):
                             raise ControlError("Exit retirement requires the exact existing unknown outcome")
                     receipt = {"launch_id": launch_id, "exit_request_id": exit_request_id,

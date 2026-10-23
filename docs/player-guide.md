@@ -61,6 +61,13 @@ reason to read the entire repository during every game.
   and Work. Software records procedure/action/result attribution; no per-key
   narrative or usage report is required.
 
+Owned exit also accepts ordinary keys/text/clicks as lifecycle-scoped children.
+Inspect the current menu and choose input; no exact quit-question transcription is
+required. A known returned input can need another decision without having an
+unknown delivery. Returning to the owned main menu pauses/cancels this exit attempt;
+a separate exit root is needed to try again within the original mission allowance.
+Normal process exit and final Finish still require the returned registered proofs.
+
 ## Current registered CDDA lifecycle
 
 This adapter has specialized creation/identity/save proofs. Owned create/load/save
