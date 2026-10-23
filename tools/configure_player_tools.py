@@ -1,7 +1,8 @@
-"""Prepare only this trusted checkout's Codex MCP table; never global settings."""
+"""Prepare project MCP configuration or export focused current tool help."""
 from __future__ import annotations
 
 import argparse
+from copy import deepcopy
 import json
 import os
 from pathlib import Path
@@ -12,6 +13,23 @@ from harness.player_tools import tool_specs
 
 ROOT = Path(__file__).resolve().parents[1]
 SERVER = "enactive_player"
+
+
+def describe(name: str, variant: str | None = None) -> dict:
+    """Export one current SDK schema for focused, frozen player context."""
+    spec = next((spec for spec in tool_specs() if spec.name == name), None)
+    if spec is None:
+        raise ValueError("Unknown player tool")
+    schema = deepcopy(spec.schema)
+    if variant is not None:
+        intent = schema.get("properties", {}).get("intent", {})
+        branches = [branch for branch in intent.get("anyOf", [])
+            if any(branch.get("properties", {}).get(key, {}).get("const") == variant
+                for key in ("skill_kind", "entry_type"))]
+        if len(branches) != 1:
+            raise ValueError("Select one current skill_kind or entry_type variant")
+        schema["properties"]["intent"] = branches[0]
+    return dict(name=spec.name, description=spec.description, input_schema=schema)
 
 
 def configuration(root: Path) -> dict:
@@ -73,9 +91,15 @@ def configure(root: Path, *, write=False) -> dict:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--write", action="store_true", help="Add only the reviewed project MCP table")
+    mode = parser.add_mutually_exclusive_group()
+    mode.add_argument("--write", action="store_true", help="Add only the reviewed project MCP table")
+    mode.add_argument("--describe", metavar="TOOL", help="Print one current tool schema; change no configuration")
+    parser.add_argument("--variant", help="Select one skill_kind or entry_type for focused context")
     args = parser.parse_args()
-    print(json.dumps(configure(ROOT, write=args.write), indent=2))
+    if args.variant and not args.describe:
+        parser.error("--variant requires --describe")
+    value = describe(args.describe, args.variant) if args.describe else configure(ROOT, write=args.write)
+    print(json.dumps(value, indent=2))
 
 
 if __name__ == "__main__":

@@ -47,6 +47,11 @@ owns measurement definitions; C-USABILITY is manual, not an automated latency ga
 Give deciding players a bounded, maintained interface working set, separate from
 engineering instructions and the evidence archive. Routine play must not require
 source-code archaeology, bulk declaration dumps or recursive runtime searches.
+Verify needed argument shapes in the actual host, not just tool names. If a host
+reduces nested schemas to `unknown`, supply focused current-schema references
+before admission; never require argument guessing or source archaeology. Export
+from the existing SDK contract rather than maintain a second schema. Recheck the
+actual player at natural first use; this adds no per-action review gate.
 Treat repeated interface investigation as a tool/context defect; measure actual
 forwarded text and image parts before choosing a remedy. The
 [player guide](player-guide.md) is the current entry point, not a tactical script

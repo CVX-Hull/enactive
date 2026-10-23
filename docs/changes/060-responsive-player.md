@@ -252,6 +252,14 @@ Move validation-only serializer calls together with that change, without adding 
 second serializer, history cache or format. Component timing and unchanged output
 checks support this optimization; whole-player responsiveness still needs real play.
 
+The second Luna diagnostic exposed nested skill goals and memory entries as
+`unknown` in the actual host declaration despite complete SDK schemas. Export
+selected current tool/variant help through the existing project setup helper;
+freeze only the needed references and reveal them on demand. This reuses the
+schema producer and changes neither the MCP catalogue nor the gameplay contract.
+Actual independent usability remains to be qualified; generated help alone is not
+a host fix or a speed result. Track native cleanup before identity separately.
+
 Retain the existing MCP SDK, ledger, archive, memory store, observer timing and
 test lanes. No new workflow engine, history store, tool-search service, vector DB
 or robot runtime is justified by these findings. A dedicated small player runtime

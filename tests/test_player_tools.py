@@ -9,7 +9,7 @@ import tempfile
 import unittest
 from unittest.mock import Mock
 
-from harness.gameplay.contracts import ContractError
+from harness.gameplay.contracts import ContractError, validate_json
 from harness.gameplay.mission_requests import compose_request
 from harness.mission_client import MissionClient
 from harness.player_mcp import make_server
@@ -17,7 +17,7 @@ from harness.player_tools import DETAIL_SECTIONS, PlayerTools, tool_specs
 from harness.player_view import decision_view
 from tests import test_mission_http as http_fixture
 from tests.test_mission_contracts import claim
-from tools.configure_player_tools import configure, configuration
+from tools.configure_player_tools import configure, configuration, describe
 
 
 class PlayerHTTPTests(unittest.TestCase):
@@ -235,6 +235,30 @@ class SnapshotDetailTests(unittest.TestCase):
 
 
 class ProjectConfigurationTests(unittest.TestCase):
+    def test_focused_help_keeps_the_actual_direct_input_contract(self):
+        schema = describe("enactive_skill", "direct")["input_schema"]
+        args = dict(snapshot_id="snapshot", request_id="request", wait_seconds=1,
+            scope="new_root", source_id="source", supporting_source_ids=[],
+            limits=dict(primitives=1, wall_seconds=10, game_seconds=10),
+            intent=dict(skill_kind="direct", perception=None, procedure=None, work_id=None,
+                goal=dict(input=dict(type="key", key="ESC", modifiers=[]),
+                    intent="Dismiss current visible dialog", expected="Dialog closes",
+                    interrupt_allowed=False)))
+        validate_json(args, schema)
+        args["intent"]["goal"] = dict(keys=["ESC"])
+        with self.assertRaises(ContractError):
+            validate_json(args, schema)
+        self.assertIn("$defs", schema)
+        self.assertEqual(len(describe("enactive_skill")["input_schema"]["properties"]["intent"]["anyOf"]), 8)
+
+    def test_focused_help_selects_memory_and_rejects_unknown_variants(self):
+        schema = describe("enactive_remember", "claim")["input_schema"]
+        self.assertEqual(schema["properties"]["intent"]["properties"]["entry_type"]["const"], "claim")
+        for name, variant in (("missing", None), ("enactive_skill", "missing"),
+                ("enactive_snapshot", "direct")):
+            with self.assertRaises(ValueError):
+                describe(name, variant)
+
     def test_narrow_project_table_preserves_other_settings_and_is_idempotent(self):
         with tempfile.TemporaryDirectory() as temporary:
             root = Path(temporary)

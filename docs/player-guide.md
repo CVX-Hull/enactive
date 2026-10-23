@@ -29,7 +29,14 @@ reason to read the entire repository during every game.
   when useful, ordinary `direct` keys/text/clicks for unfamiliar ordinary gameplay.
   Inspect the returned image/effect; a delivered input is not task success.
 - Read the description/schema of the **one tool needed**, rather than printing
-  every declaration. Keep returned text, typed image parts and `isError`; do not
+  every declaration. Some hosts reduce nested argument schemas to `unknown`; this
+  is not a usable field contract. If the frozen brief supplies focused interface
+  references, read only the needed tool/skill or memory variant. These are exported
+  from the current SDK schema, not example tactics or request JSON files. Do not
+  guess payload fields, dump all declarations or search implementation code.
+  Prefer the returned `next_snapshot` when it is sufficient; another snapshot is
+  an explicit read, not a mandatory step after every settled operation.
+  Keep returned text, typed image parts and `isError`; do not
   print image data as text or opaque tool objects. Keep simple returned IDs.
   When forwarding through an orchestration tool, forward content blocks once;
   `text(JSON.stringify(result))` prints the whole transport envelope and can

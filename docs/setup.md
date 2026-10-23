@@ -126,6 +126,23 @@ records. Direct input is an intent on `enactive_skill`, not a new input tool;
 Observe macro closure likewise uses `enactive_observe`. These project settings
 do not prove the running host loaded the current schemas/help or grant authority.
 
+If the host declaration replaces nested goals or memory entries with `unknown`,
+export only the needed current schema with the existing helper:
+
+```sh
+.venv/bin/python -m tools.configure_player_tools --describe enactive_skill --variant direct
+.venv/bin/python -m tools.configure_player_tools --describe enactive_remember --variant claim
+```
+
+`--describe` is read-only and mutually exclusive with `--write`. `--variant`
+selects one current `skill_kind` or `entry_type`; unknown selectors refuse.
+The output preserves the actual schema and shared definitions. The lead can freeze
+these focused interface references with a mission, advertise exact paths in its
+brief and let the player read a selected variant when needed. They are help, not
+request files, retained memory, permission or gameplay authority. No host schema
+repair or independent sufficiency is established by exporting them. Do not inject
+the whole catalogue by default or maintain handwritten copies of field contracts.
+
 The [official MCP setup](https://learn.chatgpt.com/docs/extend/mcp) documents
 project configuration and host loading. Confirm the active chat has loaded the
 server/tool catalogue after the supported reload/restart. A separate CLI diagnostic
