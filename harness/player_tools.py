@@ -16,9 +16,9 @@ import uuid
 from .gameplay.contracts import ContractError, _object, canonical, json_object, validate_json
 from .gameplay.evidence import same_native_state
 from .gameplay.mission_contracts import (
-    VERSION, SKILLS, perception_schema, request_schema, validate_request,
+    VERSION, SKILLS, IDENTITY_COVERAGE, IDENTITY_UNIT, perception_schema, request_schema, validate_request,
 )
-from .gameplay.mission_requests import compose_request
+from .gameplay.mission_requests import _source_binding, compose_request
 from .gameplay.reflection import (
     MAX_REFLECTION_READ_WAIT_SECONDS, proposal_schema, validate_command, validate_job, validate_proposal,
 )
@@ -42,6 +42,28 @@ def _without(schema: dict, *names: str) -> dict:
         value["properties"].pop(name, None)
     value["required"] = list(value["properties"])
     return value
+
+
+def _claim_authoring_schema(canonical_schema: dict) -> dict:
+    """Select semantic fields from the canonical Claim, with explicit grounding."""
+    fields = deepcopy(canonical_schema["properties"])
+    ordinary_key = deepcopy(fields["key"])
+    ordinary_key["properties"]["property"]["enum"].remove("identity")
+    scope = fields["scope"]["properties"]
+    support = deepcopy(fields["supports"])
+    support["items"] = _object({"primary": {"type": "boolean"}, **support["items"]["properties"]})
+    return _object({
+        **{name: fields[name] for name in ("value", "text", "coverage", "status")},
+        "key": {"anyOf": [
+            _object({"property": {"const": "identity"}, "subject": {"enum": list(IDENTITY_COVERAGE)}}),
+            ordinary_key]},
+        "grounding": {"anyOf": [
+            _object({"kind": {"const": "source"},
+                "source_id": {"anyOf": [fields["id"], {"type": "null"}]},
+                "coordinate_epoch": {"anyOf": [scope["coordinate_epoch"], {"type": "null"}]}}),
+            _object({"kind": {"const": "unobserved"}, "session": scope["session"],
+                "coordinate_epoch": scope["coordinate_epoch"]})]},
+        "supports": support})
 
 
 def tool_specs() -> tuple[ToolSpec, ...]:
@@ -82,17 +104,25 @@ def tool_specs() -> tuple[ToolSpec, ...]:
             _object(dict(snapshot_id=identity, section={"enum": list(DETAIL_SECTIONS)})), True),
         ToolSpec("enactive_source", "Read one explicitly selected historical source and its actual image; grants no input authority.", _object(dict(mission_id=identity, source_id=identity)), True),
         ToolSpec("enactive_result", "Collect only the original operation ID, including after interrupted submission. Never replays input.", _object(dict(mission_id=identity, operation_id=identity, wait_seconds=wait)), True),
-        ToolSpec("enactive_skill", "Choose ordinary physical input (skill_kind=direct) or a semantic skill with an explicit returned snapshot/source and finite limits. Direct keys/scalars permit visual drift under owned custody; clicks keep original geometry. Semantic preconditions remain strict. Software retains lineage and collects delivery and actual current evidence separately.", skill),
-        ToolSpec("enactive_lifecycle", "Explicit registered launch/create/save/exit/load/finish. With no owned child, first launch using scope=new_root and source_id=null; then choose create/load from its returned menu. Continue a returned lifecycle phase with scope=lifecycle and the same operation, including transition reconciliation, identity readmission and adoption. No implicit Resume, save or restart.", lifecycle),
+        ToolSpec("enactive_skill", "Choose ordinary physical input (skill_kind=direct) or a semantic skill with an explicit returned snapshot/source and finite limits. source_id=null selects that exact cached snapshot source. Direct keys/scalars permit visual drift under owned custody; clicks keep original geometry. Semantic preconditions remain strict. Software retains lineage and collects delivery and actual current evidence separately.", skill),
+        ToolSpec("enactive_lifecycle", "Explicit registered launch/create/save/exit/load/finish. With no owned child, first launch using scope=new_root and source_id=null; then choose create/load from its returned menu. For other operations, source_id=null selects that exact cached snapshot source. Continue a returned lifecycle phase with scope=lifecycle and the same operation, including transition reconciliation, identity readmission and adoption. No implicit Resume, save or restart.", lifecycle),
         ToolSpec("enactive_observe", "Request one typed native observation using the chosen snapshot epoch. A healthy ordinary prompt may advance or record local macro_closure without task success or renewed mission allowance; explicitly choose any next root from fresh evidence. Does not Resume or reconcile unknown delivery. After known direct input with absent/aged current evidence, explicit Observe can refresh its read-only scope across the exact authenticated operation rotation; input requires the fresh binding. It never restores failed custody or renews limits.", _object(common)),
     ]
-    # These operations keep their existing explicit semantic fields. Software
-    # derives only the common envelope; memory provenance remains player-authored.
+    # Only Claim authoring changes; the canonical ledger and other memory
+    # variants retain their existing contracts and explicit semantic fields.
     for kind in ("remember", "correct"):
         variants = [_without(request_schema(kind, entry_type=entry), *headers, "kind")
                     for entry in (("claim",) if kind == "correct" else ("claim", "work", "decision", "procedure"))]
+        variants[0]["properties"]["entry"] = _claim_authoring_schema(variants[0]["properties"]["entry"])
         specs.append(ToolSpec("enactive_" + kind,
-            "Write explicit evidence-linked memory through the existing ledger. No automatic lesson promotion or invented support.",
+            "Write explicit evidence-linked memory through the existing ledger. For Claims choose key, value, text, coverage, status, grounding and support groups. "
+            "Identity keys choose world/character; software supplies the existing name unit/coverage, interpretation kind, schema/record type, Claim ID, scope/native observation order and host receipt time. "
+            "Source grounding source_id=null selects the exact cached snapshot source; explicit IDs require a prior source read. "
+            "coordinate_epoch=null uses only matching published coordinate_scope; before adoption or without a match, explicitly select the epoch from existing provisional_scope or a historical receipt. "
+            "Each support group explicitly chooses primary plus additional source/claim IDs; primary=false never implies image support. "
+            "Unobserved grounding stays source-free: every group requires primary=false and sources=[], with claim premises allowed. "
+            + ("Correction supersedes come only from explicit retired_ids. " if kind == "correct" else "Remember supersedes are empty. ")
+            + "No inferred support, truth, success or automatic lesson promotion.",
             _object({**common, "intent": {"anyOf": variants}})))
     for kind in ("handoff", "stop", "reconcile"):
         specs.append(ToolSpec("enactive_" + kind,
@@ -155,9 +185,6 @@ class PlayerTools:
         if identity not in self.snapshots:
             raise ContractError("Snapshot handle unavailable; explicitly read a new snapshot")
         return deepcopy(self.snapshots[identity])
-
-    def _snapshot(self, identity: str) -> dict:
-        return self._cached_snapshot(identity)["mission"]
 
     def detail(self, identity: str, section: str) -> dict:
         snapshot = self._cached_snapshot(identity)
@@ -382,6 +409,56 @@ class PlayerTools:
             mission_id=mission_id, reflector_id=reflector_id, job_id=job["id"], proposal=proposal))
         return self.client.reflection_command(command, wait_seconds=data["wait_seconds"]), None
 
+    def _claim_entry(self, selected: dict, identity: str, kind: str, intent: dict) -> dict:
+        """Expand explicit interpretation without choosing its truth or support."""
+        entry = intent["entry"]
+        mission = selected["mission"]
+        grounding = entry["grounding"]
+        primary = None
+        sources = []
+        if grounding["kind"] == "source":
+            source = (selected.get("source") if grounding["source_id"] is None else
+                self._source(mission["mission_id"], grounding["source_id"]))
+            primary, _ = _source_binding(source)
+            reference = source["reference"]
+            session = reference["session"]
+            epoch = grounding["coordinate_epoch"]
+            if epoch is None:
+                published = mission.get("coordinate_scope")
+                if (not isinstance(published, dict) or published.get("mission_id") != mission["mission_id"]
+                        or published.get("session") != session):
+                    raise ContractError("Select explicit coordinate_epoch from an existing provisional_scope or historical "
+                        "receipt; the selected source has no matching published coordinate_scope")
+                epoch = published["coordinate_epoch"]
+            observed = dict(revision=reference["revision"], turn=reference["turn"])
+            sources.append(primary)
+        else:
+            session, epoch = grounding["session"], grounding["coordinate_epoch"]
+            observed = dict(revision=None, turn=None)
+        supports = []
+        for group in entry["supports"]:
+            if primary is None and (group["primary"] or group["sources"]):
+                raise ContractError("Unobserved grounding requires primary=false and sources=[] in every support group")
+            for source_id in group["sources"]:
+                self._source(mission["mission_id"], source_id)
+            cited = list(dict.fromkeys(([primary] if group["primary"] else []) + group["sources"]))
+            supports.append(dict(sources=cited, claims=group["claims"]))
+            sources.extend(source_id for source_id in cited if source_id not in sources)
+        key = deepcopy(entry["key"])
+        if key["property"] == "identity":
+            key.update(unit=IDENTITY_UNIT, coverage_id=IDENTITY_COVERAGE[key["subject"]])
+        staged = self.client.staged_request(mission["mission_id"], identity)
+        if staged is not None and (staged["kind"] != kind or staged.get("entry_type") != "claim"):
+            raise ContractError("Request identity already staged for another operation or memory type")
+        received = int(time.time() * 1000) if staged is None else staged["entry"]["received_time"]
+        schema = request_schema(kind, entry_type="claim")["properties"]["entry"]["properties"]
+        return dict(schema=schema["schema"]["const"], record_type=schema["record_type"]["const"],
+            id="claim-" + hashlib.sha256(identity.encode()).hexdigest(), kind="interpretation", key=key,
+            **{field: entry[field] for field in ("value", "text", "coverage", "status")},
+            scope=dict(mission_id=mission["mission_id"], session=session, coordinate_epoch=epoch),
+            observed_time=observed, received_time=received, sources=sources, supports=supports,
+            supersedes=intent["retired_ids"] if kind == "correct" else [])
+
     def _call(self, name: str, data: dict) -> tuple[dict, bytes | None]:
         if name == "enactive_start":
             request = validate_request(dict(schema=VERSION, kind="start", request_id=data["request_id"], admission=data["admission"]))
@@ -394,11 +471,12 @@ class PlayerTools:
             return self.source(data["mission_id"], data["source_id"])
         if name == "enactive_result":
             return self._finish(self.client.collect(**data))
-        snapshot = self._snapshot(data["snapshot_id"])
+        selected = self._cached_snapshot(data["snapshot_id"])
+        snapshot = selected["mission"]
         kind = name.removeprefix("enactive_")
         if (kind == "lifecycle" and data["intent"]["operation"] in ("create", "load")
                 and data["source_id"] is None and snapshot["phase"] == "admitted"
-                and snapshot["current_source"] is None
+                and selected.get("source") is None and snapshot["current_source"] is None
                 and snapshot["native_process"]["last_sample"] is None):
             raise ContractError("Selected admission has no owned game launch or current source. "
                 "First use enactive_lifecycle, scope=new_root, operation=launch, source_id=null; "
@@ -421,11 +499,18 @@ class PlayerTools:
             intent["kind"] = kind
             if intent.get("perception") is not None:
                 intent["perception"]["basis"] = "player_interpretation"
-            source = self._source(snapshot["mission_id"], data["source_id"])
+            if data["source_id"] is not None:
+                source = self._source(snapshot["mission_id"], data["source_id"])
+            elif kind == "lifecycle" and intent["operation"] == "launch":
+                source = None
+            else:
+                source = selected.get("source")
             request = compose_request(snapshot, request_id=identity, intent=intent, limits=data["limits"],
                 scope=data["scope"], source=source, supporting_source_ids=data["supporting_source_ids"])
         else:
-            if kind == "claim":
+            if kind in ("remember", "correct") and intent["entry_type"] == "claim":
+                intent["entry"] = self._claim_entry(selected, identity, kind, intent)
+            elif kind == "claim":
                 for source in intent["read_procedure_sources"]:
                     self._source(source["mission_id"], source["source_id"])
                 issued = self.client.collect(snapshot["mission_id"], intent["handoff_id"], wait_seconds=0)

@@ -19,6 +19,8 @@ from .procedures import procedure_schema, validate_procedure
 
 VERSION = "mission/10"
 MEMORY_VERSION = "campaign-memory/5"
+IDENTITY_UNIT = "name"
+IDENTITY_COVERAGE = {"world": "visible-world-menu", "character": "visible-character-screen"}
 MAX_REQUEST_BYTES = 65_536
 MAX_CONTEXT_BYTES = 32_768
 MAX_HANDOFF_CONTEXT_BYTES = 131_072
@@ -764,9 +766,8 @@ def validate_memory_entry(value: dict | str | bytes, entry_type: str, *, player=
             raise ContractError("An unsupported value must remain unknown/disputed/retired")
         if result["key"]["property"] == "identity":
             key = result["key"]
-            coverage = {"world": "visible-world-menu", "character": "visible-character-screen"}
-            if (result["kind"] != "interpretation" or key["subject"] not in coverage
-                    or key["unit"] != "name" or key["coverage_id"] != coverage[key["subject"]]
+            if (result["kind"] != "interpretation" or key["subject"] not in IDENTITY_COVERAGE
+                    or key["unit"] != IDENTITY_UNIT or key["coverage_id"] != IDENTITY_COVERAGE[key["subject"]]
                     or content["quantity"] is not None):
                 raise ContractError("Identity is a fallible visible world/menu or character/screen name")
         for support in result["supports"]:

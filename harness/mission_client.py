@@ -166,10 +166,42 @@ class MissionClient:
         """Return the service's complete cached status without issuing an action."""
         return self._json("/api/status")
 
+    @staticmethod
+    def _request_filename(mission_id: str, request_id: str) -> str:
+        identity = hashlib.sha256((mission_id + "\0" + request_id).encode()).hexdigest()
+        return f"mc-{identity}.json"
+
+    def staged_request(self, mission_id: str, request_id: str) -> dict | None:
+        """Read one immutable local intent; absence alone permits first staging.
+
+        This is not a submission/result lookup and never contacts the service.
+        Unsafe, partial or mismatched files preserve uncertainty and fail closed.
+        """
+        validate_request(dict(schema=VERSION, kind="result", mission_id=mission_id, operation_id=request_id))
+        try:
+            with self._runtime() as runtime:
+                try:
+                    with _directory("mission-requests", parent=runtime) as directory:
+                        try:
+                            payload = _regular_bytes(directory, self._request_filename(mission_id, request_id),
+                                MAX_REQUEST_BYTES, private=True)
+                        except FileNotFoundError:
+                            return None
+                except FileNotFoundError:
+                    return None
+            data = validate_request(payload)
+            owner = data["admission"]["mission_id"] if data["kind"] == "start" else data["mission_id"]
+            if (owner != mission_id or data.get("request_id") != request_id
+                    or canonical(data).encode() != payload):
+                raise MissionClientError("Staged request identity or canonical payload differs")
+            return data
+        except (OSError, ValueError, TypeError, KeyError):
+            raise MissionClientError("Staged request unavailable or invalid; no submission dispatched") from None
+
     def _stage(self, request: dict, payload: bytes) -> bool:
         mission_id = request["admission"]["mission_id"] if request["kind"] == "start" else request["mission_id"]
-        identity = hashlib.sha256((mission_id + "\0" + request["request_id"]).encode()).hexdigest()
-        return self._stage_payload("mission-requests", f"mc-{identity}.json", payload, MAX_REQUEST_BYTES)
+        return self._stage_payload("mission-requests", self._request_filename(mission_id, request["request_id"]),
+            payload, MAX_REQUEST_BYTES)
 
     def _stage_payload(self, folder: str, name: str, payload: bytes, maximum: int) -> bool:
         # Both callers derive folder/name internally, never from a caller path.
