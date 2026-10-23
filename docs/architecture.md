@@ -78,6 +78,11 @@ The read-only library accepts pinned closed current-contract archives without
 restoring old-world facts or execution handles. Old native5 libraries remain
 immutable historical evidence and cannot be mounted under native6. See
 [the current contract](protocol.md#ordinary-discovery-and-procedure-data).
+The [executable-policy research](research-executable-policies.md) proposes
+player-authored observation-driven programs as a further learning/latency path.
+Current procedure/2 remains advisory; no general learned-program runner exists.
+The proposal retains the writer and separates evolving player artifacts from the
+stable execution substrate rather than permitting arbitrary live source patches.
 The rebuilt capture-precondition boundary has bounded ordinary-input and normal
 same-character lifecycle qualification in [capture001](acceptance/2026-10-22-native-capture-preconditions.md).
 Actual PNG drift and the retained-capture commit race remain unexercised there;

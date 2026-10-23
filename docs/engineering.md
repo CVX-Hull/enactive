@@ -126,6 +126,19 @@ raw-input fallback, rather than only each adapter's successful path. C-REVIEW
 checks this distinction and C-PORTABLE exercises boundary regressions; actual
 keyboard/mouse capabilities still need their separate C-NATIVE evidence.
 
+For executable learning designs, distinguish stable platform implementation from
+player-authored scripts, decision trees, strategies and learned detectors. Specify
+which artifacts may evolve under the prospective adaptation policy, which local
+computation/observation/input capabilities they receive, how executions retain
+revision/outcome lineage, and how ordinary discovery resumes after surprise.
+Review that substrate boundary rather than requiring lead or model approval for
+each routine or action. Existing admissions remain governed by their actual
+contract; a proposal cannot silently expand capabilities. Compilation, invocation
+or agreement with a learned success detector does not establish task success,
+generalization or useful cadence. C-REVIEW checks the distinction; C-PORTABLE and
+C-NATIVE qualify implemented boundaries, with C-USABILITY retaining actual organic
+adoption and responsiveness evidence. See the [research crosswalk](research-executable-policies.md).
+
 For gameplay and learning boundaries, explain which assumptions concern the
 transport and which concern a particular game task or menu. Prefer the smallest
 general observation/input/feedback mechanism over enumerating menu types or

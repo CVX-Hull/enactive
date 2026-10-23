@@ -37,6 +37,12 @@ normal ending. Seven game seconds in557wall seconds does not qualify useful
 cadence; no procedures were authored or used. Organic adoption and responsiveness
 remain joint acceptance, not interchangeable milestones.
 
+The [executable-policy review](research-executable-policies.md) identifies the next
+architectural gap: let the player develop and revise observation-driven routines
+over primitives, rather than interpret advisory steps through a model each time.
+It is proposed work owned by#177/#176/#178/#164/#191, not an implemented runner
+or a replacement for the combined integrated/fresh-campaign acceptance.
+
 | Evidence | What it establishes; the linked report owns details and limits |
 | --- | --- |
 | [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) | Bounded supply/shelter play, memory correction, fresh-context continuation and normal lifecycle |

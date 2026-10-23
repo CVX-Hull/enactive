@@ -41,6 +41,13 @@ maintenance question rather than expanding bibliography for its own sake.
 
 ## Embodied control / VLA
 
+The [October23 executable-policy review](research-executable-policies.md) starts
+with fresh recent searches and cross-checks player-authored scripts, branching
+strategies, online revision and their failure modes against current procedure
+memory. It recommends a bounded executable-artifact path alongside ordinary
+exploration; the current procedure/2 contract remains advisory and no learned
+program runner is implemented by that recommendation.
+
 The [October 22 responsive-gameplay update](research-responsive-gameplay.md)
 cross-checks recent roguelike skills, asynchronous VLA control, context/memory and
 tool ergonomics against prior design and closed host traces. It separates measured

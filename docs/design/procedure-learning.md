@@ -28,6 +28,13 @@ invalidate a procedure while ordinary exploration remains available; the player
 and advisory path revise data from retained attempts, rather than requiring a
 new engineering handler. #191 owns remaining substrate/portability gaps.
 
+The [October23 executable-policy review](../research-executable-policies.md)
+proposes an additional player-authored program path. It identifies a real gap:
+current procedure/2 steps are advisory and are not executed as branches/loops.
+The future boundary must distinguish stable platform code from evolving player
+artifacts under a declared update policy, without per-routine lead approval.
+That proposal does not change current admissions or executable behavior.
+
 ## Representation and storage
 
 Reuse the existing strict JSON Schema helpers, canonical encoding, immutable

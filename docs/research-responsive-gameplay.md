@@ -69,3 +69,12 @@ Research refresh is triggered by redesign or a new performance claim. Keep
 source/version/read scope and contrary evidence with each changed conclusion;
 do not refresh current guidance by advancing a date alone. GitHub owns action
 items; the brief links their owners and acceptance obligations.
+
+## October23 executable-policy follow-through
+
+The [new review](research-executable-policies.md) extends the abstraction question
+from existing hand-authored skills to player-authored executable routines. It
+starts from fresh recent searches, includes October19–20 evidence and explicitly
+cross-checks the prior memory/tiered design. Current procedure/2 is advisory;
+local branches/loops learned by the player require an additional declared runner
+and artifact-update contract. Organic adoption and useful cadence stay coupled.
