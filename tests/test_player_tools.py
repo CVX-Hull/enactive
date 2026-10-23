@@ -165,6 +165,55 @@ class PlayerHTTPTests(unittest.TestCase):
 
 
 class SnapshotDetailTests(unittest.TestCase):
+    def test_old_admission_with_explicit_new_menu_source_still_composes(self):
+        from tests.test_mission_request_producer import bundle, lifecycle, snapshot
+        admission = snapshot(phase="admitted", native_process=dict(last_sample=None))
+        menu = bundle(kind="menu")
+        client = Mock()
+        client.status.return_value = dict(mission=admission)
+        client.source.return_value = (menu, b"selected menu image")
+        client.submit.return_value = dict(transport="delivered", settled=False,
+            operation_id="explicit-menu-source", response=None)
+        player = PlayerTools(client)
+        selected, _ = player.call("enactive_snapshot", {})
+        source_id = menu["reference"]["observation_id"]
+        player.call("enactive_source", dict(mission_id=admission["mission_id"], source_id=source_id))
+        for operation in ("create", "load"):
+            intent = lifecycle(operation)
+            del intent["kind"]
+            arguments = dict(snapshot_id=selected["snapshot_id"], request_id="explicit-menu-source",
+                wait_seconds=1, scope="new_root", source_id=source_id, supporting_source_ids=[],
+                limits=dict(primitives=8, wall_seconds=30, game_seconds=60), intent=intent)
+            expected = compose_request(admission, request_id=arguments["request_id"],
+                intent=dict(kind="lifecycle", **intent), limits=arguments["limits"],
+                scope="new_root", source=menu, supporting_source_ids=[])
+            client.reset_mock()
+            with self.subTest(operation=operation):
+                player.call("enactive_lifecycle", arguments)
+                client.submit.assert_called_once_with(expected, wait_seconds=1)
+                client.source.assert_not_called()
+                self.assertEqual(player.snapshots[selected["snapshot_id"]], selected)
+
+    def test_unlaunched_admission_explains_bootstrap_without_io_or_implicit_launch(self):
+        client = Mock()
+        client.status.return_value = dict(mission=dict(mission_id="unlaunched", epoch=0,
+            phase="admitted", current_source=None, native_process=dict(last_sample=None)))
+        player = PlayerTools(client)
+        selected, _ = player.call("enactive_snapshot", {})
+        before = deepcopy(selected)
+        for operation in ("create", "load"):
+            arguments = dict(snapshot_id=selected["snapshot_id"], request_id="missing-source", wait_seconds=1,
+                scope="new_root", source_id=None, supporting_source_ids=[],
+                limits=dict(primitives=8, wall_seconds=30, game_seconds=60),
+                intent=dict(operation=operation, world="World", character="Survivor", work_id=None,
+                    identity_claim_ids=[]))
+            client.reset_mock()
+            with self.subTest(operation=operation), self.assertRaisesRegex(ContractError,
+                    "operation=launch, source_id=null"):
+                player.call("enactive_lifecycle", arguments)
+            self.assertEqual(client.mock_calls, [], "No native launch, source read, retarget or submission")
+            self.assertEqual(player.snapshots[selected["snapshot_id"]], before)
+
     def test_lifecycle_readmission_misroute_is_actionable_without_io_or_retarget(self):
         from tests.test_player_view import snapshot
         original = snapshot()

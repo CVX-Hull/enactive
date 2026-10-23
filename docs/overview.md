@@ -68,6 +68,10 @@ durable timing download. It reconciles Load, then chooses recovery readmission
 instead of lifecycle continuation and stops before identity adoption. Its source
 follow-through exposes the existing lifecycle stage and a no-submission corrective
 hint; useful play, normal ending and responsiveness still need real qualification.
+The [tenth diagnostic](acceptance/2026-10-23-luna-responsiveness-tenth-attempt.md)
+misapplies startup despite reading the guide and stops before launching a child.
+Its corrective source hint preserves explicit evidence selection; actual
+continuation remains unqualified.
 Catalog names, component checks and display-component timings alone do not prove
 the complete player meets the goal.
 

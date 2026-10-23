@@ -83,7 +83,7 @@ def tool_specs() -> tuple[ToolSpec, ...]:
         ToolSpec("enactive_source", "Read one explicitly selected historical source and its actual image; grants no input authority.", _object(dict(mission_id=identity, source_id=identity)), True),
         ToolSpec("enactive_result", "Collect only the original operation ID, including after interrupted submission. Never replays input.", _object(dict(mission_id=identity, operation_id=identity, wait_seconds=wait)), True),
         ToolSpec("enactive_skill", "Choose ordinary physical input (skill_kind=direct) or a semantic skill with an explicit returned snapshot/source and finite limits. Direct keys/scalars permit visual drift under owned custody; clicks keep original geometry. Semantic preconditions remain strict. Software retains lineage and collects delivery and actual current evidence separately.", skill),
-        ToolSpec("enactive_lifecycle", "Explicit registered launch/create/save/exit/load/finish. Continue a returned lifecycle phase with scope=lifecycle and the same operation, including transition reconciliation, identity readmission and adoption. No implicit Resume, save or restart.", lifecycle),
+        ToolSpec("enactive_lifecycle", "Explicit registered launch/create/save/exit/load/finish. With no owned child, first launch using scope=new_root and source_id=null; then choose create/load from its returned menu. Continue a returned lifecycle phase with scope=lifecycle and the same operation, including transition reconciliation, identity readmission and adoption. No implicit Resume, save or restart.", lifecycle),
         ToolSpec("enactive_observe", "Request one typed native observation using the chosen snapshot epoch. A healthy ordinary prompt may advance or record local macro_closure without task success or renewed mission allowance; explicitly choose any next root from fresh evidence. Does not Resume or reconcile unknown delivery. After known direct input with absent/aged current evidence, explicit Observe can refresh its read-only scope across the exact authenticated operation rotation; input requires the fresh binding. It never restores failed custody or renews limits.", _object(common)),
     ]
     # These operations keep their existing explicit semantic fields. Software
@@ -396,6 +396,14 @@ class PlayerTools:
             return self._finish(self.client.collect(**data))
         snapshot = self._snapshot(data["snapshot_id"])
         kind = name.removeprefix("enactive_")
+        if (kind == "lifecycle" and data["intent"]["operation"] in ("create", "load")
+                and data["source_id"] is None and snapshot["phase"] == "admitted"
+                and snapshot["current_source"] is None
+                and snapshot["native_process"]["last_sample"] is None):
+            raise ContractError("Selected admission has no owned game launch or current source. "
+                "First use enactive_lifecycle, scope=new_root, operation=launch, source_id=null; "
+                "then choose create/load from its returned menu. No request was submitted; "
+                "this as-of guidance grants no authority or renewed limits.")
         if kind == "readmit" and snapshot.get("lifecycle_phase") is not None:
             phase = snapshot["lifecycle_phase"]
             raise ContractError(f"Selected snapshot has a {phase['operation']} lifecycle phase. "

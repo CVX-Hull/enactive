@@ -476,3 +476,35 @@ wrong-tool refusal. Independent clean-context review passes55focused tests and
 reproduces the closed report's counts/archive/browser calculations without finding
 an actionable defect. Fast checks pass. These are source/evidence checks, not a
 new graphical continuation, useful-play or speed result.
+
+## Closed010 and startup correction
+
+[Diagnostic010](../acceptance/2026-10-23-luna-responsiveness-tenth-attempt.md)
+read the complete guide but selected source-free Load before any child launch.
+It stopped on a generic source-selection error: zero game inputs, no native child
+or new frame, all191saves unchanged. A source-free create/load request from an
+unlaunched admission now gets a cache-only corrective Launch hint; the selected
+tool description and guide expose that entry point immediately. Explicit newer
+menu evidence with an older admission snapshot still composes normally. This
+changes error guidance, not routing, authority, source selection or numerical caps.
+The guide also corrects an existing ambiguity: null does not import a cached
+current source; non-Launch skill/lifecycle calls still select returned source IDs.
+Mechanical source binding remains a tracked ergonomic improvement.
+
+The47-test adapter/producer/view lane passes in2.092s; independent review passes
+35focused tests and verifies the frozen guide, costs and save preservation. Review
+caught an overbroad initial hint that rejected explicit newer source selection;
+the narrowed guard and regression preserve it. A reported byte-count scope was
+corrected to23schema-card objects excluding index/newlines. Fast checks pass.
+These checks do not establish actual player continuation or speed.
+
+The source review of009's Load ACK identifies pending-ID removal during native
+menu-to-game session rotation after nonterminal dispatch publication. Timeout or
+serialization tuning alone cannot repair that contract. #164/#195 track whether
+its measured cost justifies a truthful cross-session terminal receipt and rebuilt
+native qualification; it is not an additional blanket gate. Current reconciliation
+must continue to retain unknown ACKs separately from resolved effects.
+
+Remaining mechanical source binding, memory fields and collection/accounting stay
+under#164; no new automation or model-performance benefit is claimed here. The next
+finite actor must use the current producer. Failed010 remains permanently FINAL.

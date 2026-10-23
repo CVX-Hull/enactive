@@ -201,6 +201,12 @@ refuses `enactive_readmit` before submission and identifies the existing
 identity readmission. It performs no fresh read, Resume, retarget or limit renewal;
 actual lifecycle continuation still checks current custody and original bounds.
 Recovery/handoff readmission keeps its existing separate contract.
+If create/load supplies no source and the selected admitted snapshot has neither
+an owned launch sample nor current source, a no-submission refusal names the
+source-free launch entry point. Explicitly selected, previously read newer menu
+evidence still composes with an older admission snapshot. This replaces the
+otherwise generic source-selection error; it never launches a child or chooses
+a new source implicitly.
 
 Default snapshots advertise `detail_sections`. The frozen configuration is revealed
 only through its exact cached detail section; metrics show original game seconds and primitive counts,

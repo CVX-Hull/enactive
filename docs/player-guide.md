@@ -17,6 +17,10 @@ reason to read the entire repository during every game.
 
 ## Calls and returned evidence
 
+- An admitted mission without an owned child starts with source-free
+  `enactive_lifecycle(operation=launch, scope=new_root, source_id=null)`. Select
+  create/load from its returned menu. This startup contract belongs in initial
+  context; progressive reference reads must not omit the interface entry point.
 - `enactive_snapshot` gives a descriptive snapshot handle and the selected source
   image. Select those exact handles for a new intent. Software supplies mission,
   epoch, source bindings and stable child lineage. A snapshot never Resumes.
@@ -41,8 +45,10 @@ reason to read the entire repository during every game.
   guess payload fields, dump all declarations or search implementation code.
   Prefer the returned `next_snapshot` when it is sufficient; another snapshot is
   an explicit read, not a mandatory step after every settled operation. A detail
-  read or `source_id=null` uses the chosen snapshot as-is; it does not refresh an
-  older selection. If a lifecycle call refuses a stale binding with no input,
+  read uses the chosen snapshot as-is; it does not refresh an older selection.
+  Skill/lifecycle calls require an explicitly returned source ID, except source-free
+  Launch. `source_id=null` does not import the snapshot's current source.
+  If a lifecycle call refuses a stale binding with no input,
   use the returned current snapshot for a separate new decision. No automatic
   retarget, replay or allowance renewal occurs.
   Keep returned text, typed image parts and `isError`; do not
