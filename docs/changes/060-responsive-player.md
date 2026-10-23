@@ -343,3 +343,15 @@ presentation and software-owned terminal cost reporting. The actor confused
 remaining frame/byte allowance with usage; actual17PNGs/648248bytes give no evidence
 of excessive capture. Track these under #164/#176/#195 using existing mechanisms,
 not a menu-specific handler, new reporting framework or extra approval gate.
+
+The owned source repair reuses `LifecycleRequestRefusal` and the original expected
+transition guard when ordinary recovery has no candidate. It positively checks
+paused unknown accounting, clock, controller and absent lease, then names the
+original lifecycle operation/root without input or automatic conversion. Existing
+compact-view refusal reason identifies the needed tool. Passive status does not
+duplicate the transition guard or promise continuation from retained diagnostic
+correlation. Initial-Load tests
+continue through correct reconciliation, visible identity, own Save/new-child
+reload and reopened history, with paired operator Pause, controller failure,
+native takeover and original-root expiry negatives. These synthetic checks do not
+qualify real play;007 stays failed and the next finite actor starts independently.

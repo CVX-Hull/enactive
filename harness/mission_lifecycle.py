@@ -766,6 +766,28 @@ class RegisteredLifecycle:
             else:
                 r._store.preflight_retention()
 
+    def reject_delivery_reconciliation(self, work: _Work) -> None:
+        """A healthy expected transition belongs to lifecycle, not delivery recovery."""
+        candidate = self.candidate
+        if candidate is None or candidate.diagnostic_only:
+            return
+        r = self.runtime
+        self._candidate_guard(work, candidate)
+        state = r._ledger.snapshot(now=r._wall())
+        native = r._live()[0]
+        primitive = r._ledger.primitive(candidate.logical_id)
+        if (not state["clock_valid"] or state["phase"] != "paused"
+                or state["pause_cause"] != "unknown" or r._lease is not None
+                or r._pending_pauses or r.controller.frozen or r.controller.closed
+                or native is None or native["status"] != "ready" or native["error"] or not native["frame_ok"]
+                or primitive["state"] != "unknown" or primitive["effect"] is not None):
+            raise ControlError("Expected lifecycle transition is no longer eligible for reconciliation")
+        raise LifecycleRequestRefusal(
+            f"This is an expected {candidate.phase.operation} lifecycle transition, not ordinary delivery recovery. "
+            "No input was sent. After explicit Observe, use enactive_lifecycle with "
+            f"operation={candidate.phase.operation}, scope=lifecycle and phase_id={candidate.phase.root_id}. "
+            "The original limits and unknown acknowledgment remain unchanged.")
+
     def observe(self, work: _Work) -> dict:
         r = self.runtime
         if self.candidate is None:

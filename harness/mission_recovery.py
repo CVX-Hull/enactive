@@ -172,6 +172,8 @@ class RegisteredRecovery:
 
     def reconcile(self, work):
         r, data, candidate = self.runtime, work.request, self.candidate
+        if candidate is None:
+            r._registered_lifecycle.reject_delivery_reconciliation(work)
         self._candidate_guard(work, candidate)
         state = r._ledger.snapshot(now=r._wall())
         ref = r._current

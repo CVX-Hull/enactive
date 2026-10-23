@@ -1039,6 +1039,15 @@ read-only reconciliation request under the same original bounds; authority chang
 or missing proof do not. A proof committed before a crash without its semantic
 receipt cannot authorize readmission. Reopen restores no candidate or consent.
 
+Ordinary delivery `reconcile` is separate from same-root `lifecycle` transition
+reconciliation. If no ordinary recovery candidate exists but a positively healthy
+expected lifecycle unknown remains, the wrong-tool request is a zero-input local
+refusal naming the lifecycle operation/root. Existing child/operator/actor/epoch,
+clock, original transition deadline and native takeover checks must pass, with no
+Pause, frozen controller or restored lease. Its unknown ACK, source, charges and
+limits remain; no request is automatically replayed or retargeted. Missing/invalid
+custody still stops. Diagnostic-only lifecycle candidates get no such continuation.
+
 `readmit` has explicit closed `handoff` and `recovery` modes. Recovery names the
 completed reconciliation, original root and Work, exact sources and live binding.
 It requires fresh equivalent normal play, sends one separately charged deliberate

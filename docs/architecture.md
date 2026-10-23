@@ -26,6 +26,12 @@ own Save checkpoint and no-rollback chronology. This source-only accelerator use
 existing modes/null fields and awaits native qualification; fresh #145 acceptance
 still requires actual creation. The [006 report](acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md)
 records its repeated-setup rationale.
+The [007 failure](acceptance/2026-10-23-luna-responsiveness-seventh-attempt.md)
+separates an ordinary recovery request from an expected lifecycle transition.
+Source now refuses that wrong-tool choice locally only after validating the
+existing expected transition's custody, clocks and original limits. The returned
+decision guidance names same-root lifecycle reconciliation, without input,
+automatic intent conversion or renewed authority. Real qualification remains open.
 Protocol version: 6.
 
 The [independent024 result](acceptance/2026-10-21-independent-supply-shelter.md)

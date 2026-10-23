@@ -1,6 +1,7 @@
 """New admitted Load, separate from continuity reload; synthetic game only."""
 from dataclasses import replace
 import unittest
+from unittest.mock import patch
 
 from harness.gameplay.lifecycle import adopted_timeline
 from harness.mission_runtime import MissionRuntime
@@ -22,17 +23,44 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(selected["state"], "partial", selected)
         return world
 
-    def initial_load(self):
+    def pending_initial_load(self):
         world = self.picker()
         selection = self.control("character", self.a.scenario.character, parent="initial-load")
         selection["perception"] = None
         entered = self.run_request(selection)
         self.assertEqual(entered["state"], "unknown", entered)
         self.observe("loaded-observe")
+        return world
+
+    def delivery_reconciliation(self):
+        return dict(schema="mission/10", kind="reconcile", request_id="wrong-recovery",
+            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"],
+            unresolved_request_id="character", evidence_id=self.runtime._current.observation_id,
+            reason="Assess actual observed Load transition without replay")
+
+    def initial_load(self, *, wrong_reconcile=False):
+        world = self.pending_initial_load()
+        if wrong_reconcile:
+            candidate = self.runtime._registered_lifecycle.candidate
+            before = self.runtime.status()
+            deadline = self.runtime._ledger.request("initial-load")["deadline"]
+            delivered = len(self.bridge.delivered)
+            refused = self.run_request(self.delivery_reconciliation())
+            self.assertEqual(refused["state"], "blocked", refused)
+            self.assertIn("enactive_lifecycle", refused["result"]["reason"])
+            self.assertIn("scope=lifecycle", refused["result"]["reason"])
+            self.assertIs(candidate, self.runtime._registered_lifecycle.candidate)
+            self.assertIsNone(self.runtime._registered_recovery.candidate)
+            self.assertIsNone(self.runtime._lease)
+            self.assertEqual(len(self.bridge.delivered), delivered)
+            self.assertEqual(self.runtime._ledger.request("initial-load")["deadline"], deadline)
+            after = self.runtime.status()
+            for field in ("spent_inputs", "epoch", "unreconciled", "phase", "pause_cause"):
+                self.assertEqual(after[field], before[field], field)
         return self.finish_identity("initial-load", world)
 
     def test_initial_load_then_own_save_reload_and_reopened_history(self):
-        adopted = self.initial_load()
+        adopted = self.initial_load(wrong_reconcile=True)
         self.assertIsNone(adopted["result"]["normal_adoption"]["saved_checkpoint_request_id"])
         self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 0)
         self.assertEqual(len(adopted_timeline(self.runtime._ledger, self.runtime._store).segments), 1)
@@ -55,6 +83,68 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         self.start()
         self.assertIsNone(self.runtime._lease)
         self.assertEqual(len(adopted_timeline(self.runtime._ledger, self.runtime._store).segments), 2)
+
+    def assert_delivery_reconciliation_fault(self):
+        delivered = len(self.bridge.delivered)
+        refused = self.run_request(self.delivery_reconciliation())
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertNotIn("No input was sent", refused["result"]["reason"])
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNone(self.runtime._lease)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertEqual(self.runtime.status()["unreconciled"], 1)
+
+    def test_wrong_recovery_cannot_hide_controller_failure(self):
+        self.pending_initial_load()
+        self.controller._mission_processing_failure(None, OSError("Synthetic storage failure"))
+        self.assertTrue(self.controller.frozen)
+        self.assert_delivery_reconciliation_fault()
+
+    def test_wrong_recovery_requires_actual_native_custody(self):
+        self.pending_initial_load()
+        with self.controller.data_lock:
+            self.controller.state = None
+        self.assert_delivery_reconciliation_fault()
+
+    def test_wrong_recovery_cannot_hide_native_error(self):
+        self.pending_initial_load()
+        observed = self.current()[1]
+        observed["error"] = "Native unavailable"
+        self.controller._accept(observed)
+        self.assert_delivery_reconciliation_fault()
+
+    def test_wrong_recovery_cannot_hide_failed_native_frame(self):
+        self.pending_initial_load()
+        observed = self.current()[1]
+        observed.update(frame_ok=False, frame_geometry=None)
+        self.controller._accept(observed)
+        self.assert_delivery_reconciliation_fault()
+
+    def test_wrong_recovery_cannot_hide_operator_pause(self):
+        self.pending_initial_load()
+        delivered = len(self.bridge.delivered)
+        self.runtime.pause("Operator Pause before wrong recovery")
+        response = self.runtime.command(self.delivery_reconciliation())
+        self.assertEqual(response["status"], "rejected", response)
+        self.assertEqual(response["mission"]["pause_cause"], "user")
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNone(self.runtime._lease)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+
+    def test_wrong_recovery_cannot_extend_original_transition_deadline(self):
+        self.pending_initial_load()
+        deadline = self.runtime._ledger.request("initial-load")["deadline"]
+        with patch.object(self.runtime, "_wall", return_value=deadline + 0.01):
+            self.assert_delivery_reconciliation_fault()
+            self.assertEqual(self.runtime._ledger.request("initial-load")["deadline"], deadline)
+
+    def test_wrong_recovery_cannot_hide_native_takeover(self):
+        self.pending_initial_load()
+        observed = self.current()[1]
+        observed.update(revision=observed["revision"] + 1,
+            takeover_generation=observed["takeover_generation"] + 1, pause_origin="human")
+        self.controller._accept(observed)
+        self.assert_delivery_reconciliation_fault()
 
     def test_initial_load_is_not_permitted_by_fresh_admission(self):
         self.a = replace(self.a, scenario=replace(self.a.scenario, mode="fresh"))
