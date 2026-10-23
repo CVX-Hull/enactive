@@ -35,7 +35,7 @@ def make_server(player: PlayerTools) -> Server:
             content = [types.TextContent(type="text", text=canonical(value))]
             if png is not None:
                 content.append(types.ImageContent(type="image", data=base64.b64encode(png).decode("ascii"), mime_type="image/png"))
-            return types.CallToolResult(content=content, structured_content=value)
+            return types.CallToolResult(content=content)
         except (OSError, ValueError, ContractError) as exc:
             return types.CallToolResult(is_error=True, content=[types.TextContent(type="text", text=str(exc)[:1024])])
 

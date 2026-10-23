@@ -508,3 +508,79 @@ must continue to retain unknown ACKs separately from resolved effects.
 Remaining mechanical source binding, memory fields and collection/accounting stay
 under#164; no new automation or model-performance benefit is claimed here. The next
 finite actor must use the current producer. Failed010 remains permanently FINAL.
+
+## Claim authoring after011
+
+[Closed011](../acceptance/2026-10-23-luna-responsiveness-eleventh-attempt.md)
+reaches the character screen and completes Load reconciliation, then
+fails five Claim writes before adoption. The player authors a forbidden native
+fact and guesses reserved identity coverage fields. Payloads also contain copied
+source-ID errors and empty support groups; those later checks were not reached.
+These are authoring failures, not evidence that the visible name is wrong. The complete
+failed trace and unchanged saves remain private evidence supporting its dated report.
+
+The source replaces the model-facing Claim variant of `enactive_remember`/`enactive_correct`
+with one semantic intent. The canonical memory/wire record and existing
+writer/ledger remain unchanged. There is no old-shape fallback. Other memory entry types
+retain their distinct current contracts. The adapter reuses the selected snapshot/source
+cache, canonical schema validators and existing immutable SDK request staging:
+
+- The player chooses key, value, text, coverage, status, grounding and explicit
+  support groups. Identity keys choose world/character; software supplies the
+  existing name unit/coverage constants. Other keys retain semantic unit/coverage.
+- Source grounding selects an explicit retained source or null for the exact
+  cached snapshot source. Software binds mission/session/native observation order.
+  A nullable coordinate epoch uses an already published matching coordinate scope;
+  otherwise the player selects the epoch from an existing provisional/historical
+  scope. Never guess zero. Source-free grounding explicitly selects its session
+  and epoch and retains unknown observation order. Its support groups must have
+  no primary or additional image citations; claims-only support remains available.
+- Each support group explicitly chooses whether it cites the primary source, plus
+  any additional source/claim IDs. Software expands those selections and the
+  declared source union; it does not infer support, success or semantic truth.
+- Software supplies interpretation kind, schema/record type and a request-derived
+  Claim ID. Correction supersedes come from the explicit retired IDs. Host assertion
+  receipt time is generated once, never borrowed from the native clock. Reuse the
+  existing staged immutable request to recover that time on a duplicate; changed
+  semantics with the same ID still conflict, and uncertainty permits collection
+  only. No second history store, request daemon or new HTTP read per write.
+  Concurrent first calls may race at the existing exclusive stage creation; a
+  losing different-time payload safely refuses. Do not add transparent retry or
+  collect a changed intent. The supported single player/writer normally serializes
+  these calls; subsequent calls reuse the winner's original staged time.
+- Skill/lifecycle null source selection also binds the exact selected cached
+  snapshot source. Launch stays source-free; explicit separately read source
+  selection stays available. Missing/evicted snapshots or unavailable sources
+  refuse without refresh, retarget, Resume, new authority or renewed allowance.
+
+Design review preceded implementation and closed the source-free citation rule;
+the existing exclusive staging race may safely refuse, without transparent retry.
+Qualification covers canonical equivalence, explicit
+support/unknown distinctions, source-free hypotheses, correction/retirement,
+stable duplicate time/identity across adapter instances, stage conflicts/partial
+files, exact cached binding/eviction and all active caller migrations. Native and
+complete player/learning/latency qualifications remain separate. Scope metadata
+that is not actually available must remain explicit rather than be fabricated.
+
+011's actual forwarding also duplicates17decision values in `structuredContent`
+wrappers, adding87,191UTF-8bytes. The MCP producer now returns one standard JSON
+text content block plus any typed image, with no duplicate structured payload.
+Canonical SDK/HTTP records and exact detail remain available; no second MCP output
+mode or compatibility reader is retained. All SDK framing consumers were migrated;
+actual stdio content/error/image checks verify that framing. Observed duplicate bytes are not
+token, inference or whole-player latency qualification.
+
+The worker's139-test Claim/client/contracts/producer/binding/view lane passes
+in50.228s; the integrated140-test source/HTTP/SDK/image/advice lane passes in4.332s.
+These overlapping lanes are not summed. The one-copy26-test framing/image/view
+lane passes in1.296s. A previous command named a nonexistent SDK test class twice;
+the two other selected tests passed, and the corrected four-test command passes.
+Actual new-player continuation, useful learning/normal ending and cadence remain
+unqualified. This source changes no numerical run caps or native build.
+
+Independent clean-context review finds no actionable defect; its61focused
+Claim/adapter/image/reflection tests pass in3.163s. The initial sandbox run
+had eight fixture socket-bind setup errors; the loopback-enabled rerun passes.
+Review independently reconstructs011's costs/forwarding counts and verifies all30
+frozen hashes and191unchanged save entries. No new native or actual player
+continuation is inferred from this source review.

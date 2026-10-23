@@ -252,8 +252,14 @@ The pure client producer combines selected retained context with semantic intent
 into that same contract. It owns no live state or source selection; receiver guards
 remain authoritative. A project-local stdio MCP adapter now exposes structured
 intent, bounded result collection and actual images over this same HTTP ingress.
-The official SDK owns MCP framing; no new executor, schema framework or history
-store is added. Current receiver schemas describe tool arguments. Disposable
+The official SDK owns MCP framing: one JSON text block and any typed image, with
+no duplicate structured payload. No new executor, schema framework or history
+store is added. Tool schemas derive semantic fields from current receiver schemas.
+Claim authoring separates the player's meaning, grounding and support choices from
+canonical metadata supplied by the adapter. Its exact cached source and existing
+immutable staged request bind provenance and original host assertion time; no new
+history store or automatic belief promotion is added. [Protocol](protocol.md#designated-campaign-operator)
+owns current authoring, source-free support and duplicate/conflict behavior. Disposable
 snapshot/source handles retain explicit choices; stable request files fence a
 second submission and the existing ledger owns results. Exact indexed archive
 readers keep historical images available after bridge eviction without observing

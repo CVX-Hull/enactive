@@ -46,8 +46,9 @@ reason to read the entire repository during every game.
   Prefer the returned `next_snapshot` when it is sufficient; another snapshot is
   an explicit read, not a mandatory step after every settled operation. A detail
   read uses the chosen snapshot as-is; it does not refresh an older selection.
-  Skill/lifecycle calls require an explicitly returned source ID, except source-free
-  Launch. `source_id=null` does not import the snapshot's current source.
+  For skills/non-Launch lifecycle, `source_id=null` selects only the exact source
+  already returned in that cached snapshot. An explicit returned source ID selects
+  that retained read instead. Launch stays source-free; no newer source is fetched.
   If a lifecycle call refuses a stale binding with no input,
   use the returned current snapshot for a separate new decision. No automatic
   retarget, replay or allowance renewal occurs.
@@ -55,7 +56,8 @@ reason to read the entire repository during every game.
   print image data as text or opaque tool objects. Keep simple returned IDs.
   When forwarding through an orchestration tool, forward content blocks once;
   `text(JSON.stringify(result))` prints the whole transport envelope and can
-  duplicate its text/structured value. This guidance is not an automatic host fix.
+  bury decision data or print image bytes. The MCP producer returns one JSON text
+  block and any typed image, without a duplicate `structuredContent` value.
 - A pending/unknown result requires `enactive_result` for its original operation.
   Never invent a fresh ID to replay it. Same-actor tool calls serialize. A local
   refusal can permit a new decision only within the returned documented scope.
@@ -66,6 +68,18 @@ reason to read the entire repository during every game.
   retained image. `enactive_remember`/`correct` retain fallible supported knowledge
   and Work. Software records procedure/action/result attribution; no per-key
   narrative or usage report is required.
+- For a Claim, choose its meaning, value, coverage, status, grounding and support
+  groups; use the current focused Claim schema. Software supplies the record/ID,
+  interpretation kind, native order and real host assertion time. Identity keys
+  select world/character; software supplies the reserved unit/coverage fields.
+  Source grounding can select the cached snapshot image with `source_id=null`.
+  A null coordinate epoch uses only a matching published `coordinate_scope`;
+  before adoption use the actual epoch from the returned `provisional_scope`.
+  Never guess zero. Each support group's `primary` explicitly cites that chosen
+  image; additional source/claim premises stay explicit. Unobserved grounding has
+  no native order or image citations. Correction chooses retired IDs/reason;
+  software supplies matching supersedes. Returned Claim IDs identify the records
+  you can select later; do not calculate hashes or timestamps yourself.
 
 Owned exit also accepts ordinary keys/text/clicks as lifecycle-scoped children.
 Inspect the current menu and choose input; no exact quit-question transcription is

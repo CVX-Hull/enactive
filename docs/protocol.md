@@ -176,12 +176,44 @@ The project-local structured player adapter describes current semantic arguments
 from these same schemas and submits to the same authenticated ingress. It supplies
 common headers from an explicitly selected returned snapshot, derives ordinary
 bindings with the pure producer and retains the exact stable request before the
-first POST. Repeating a staged identity collects only its original result; a lost
+first POST. Repeating a staged request identity collects only its original result; a lost
 reply never permits another action POST. Bounded process-local handles grant no
 authority and are not persisted history. `enactive_start` belongs to the lead's
 frozen admission; player skill, memory and lifecycle choices remain explicit.
 
+The current model-facing Claim variant supplies semantic key/value/text/coverage/
+status, grounding and support groups instead of a canonical record envelope. It
+does not accept the former full-record shape. The adapter emits the same canonical
+`campaign-memory/5` Claim and `mission/10` request used by the writer/ledger; other
+memory entry types retain their distinct current contracts. Identity keys select
+world/character, using the existing shared name-unit/coverage constants. The player
+still supplies the interpreted name; software never copies the expected scenario
+name into a belief.
+
+Source grounding chooses an explicitly returned source ID or null for the selected
+cached snapshot's exact source. Mission/session/native order come from that binding.
+A null coordinate epoch uses only an already published matching `coordinate_scope`;
+otherwise select the explicit epoch from the existing `provisional_scope` or
+historical receipt. There is no zero fallback. Unobserved grounding explicitly
+selects session/epoch, has null native order and no source citations. Support groups
+choose `primary` and additional source/claim IDs; `primary=false` does not imply
+image support. Unobserved groups require `primary=false` and `sources=[]`, while
+claim premises remain possible. Software expands those explicit selections into
+canonical groups and the declared source union, preserving semantic support checks.
+
+Software supplies interpretation kind, schema/type and the request-derived Claim
+ID. Correction supersedes come exactly from the explicit retired IDs. Host assertion
+time is generated on first intent, never from a native timestamp. The SDK reads its
+existing immutable staged request to reuse that original time on a duplicate;
+complete canonical equality still rejects changed semantics. Partial/unsafe stages
+refuse, and uncertain publication permits only collection of the original operation.
+Concurrent first creators may safely lose the exclusive-stage race and refuse;
+there is no transparent retry or second request history store.
+
 The current MCP presentation is `player-view/2`, marked by `presentation_schema`.
+StdIO returns one standard JSON text content block plus any typed image. It does
+not repeat that value as `structuredContent`; SDK/HTTP canonical records and
+selected detail remain available. Callers preserve text/image/error content once.
 It copies canonical results without changing ledger records, HTTP contracts or
 request bindings. The existing32-entry adapter cache retains each complete returned
 snapshot (without PNG bytes or the already-excluded historical memory preview).
@@ -191,6 +223,14 @@ snapshot (without PNG bytes or the already-excluded historical memory preview).
 renewal. Missing sections return null; unavailable/evicted IDs require an explicit
 new snapshot. The original selected snapshot never silently retargets. Actual
 source images still use the existing exact source reader.
+
+For skill/non-Launch lifecycle composition, null `source_id` selects only the full
+source already cached inside that explicitly selected snapshot; no source fetch or
+newer status is substituted. Explicit retained-source selection remains available.
+Launch with null stays source-free even if an older snapshot contains an image.
+Source-cache eviction cannot erase the selected snapshot's embedded source, while
+snapshot eviction still requires an explicit new read. Phase checkpoint matching
+and all receiver freshness/custody/budget checks remain authoritative.
 
 Lifecycle summaries expose their existing private `stage`; an expected-transition
 candidate reports `awaiting_transition`, while diagnostic-only candidates expose

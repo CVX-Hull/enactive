@@ -48,32 +48,26 @@ facts, procedures and proposals retain their sources and limitations.
 | --- | --- |
 | Graphical play and user control | Actual native Tiles frames and browser spectator; Pause/takeover qualifications are scoped in the [architecture](architecture.md#action-and-recovery-views) and dated reports. |
 | Useful skill composition | [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) combines supplies/care, purposeful navigation/replanning, shelter/rest, memory correction, successor continuity and normal lifecycle. This is a bounded mission. |
-| Organic ordinary interaction | [Learning006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md) exercises discovery; [local-refusal001](acceptance/2026-10-22-native-local-refusal.md) records actual local refusal, explicit observation and independently chosen menu cancellation. The [third Luna diagnostic](acceptance/2026-10-23-luna-responsiveness-third-attempt.md) exposes a lifecycle fallback restriction. Its source repair covers ordinary owned setup and explored menu cleanup. [Diagnostic004](acceptance/2026-10-23-luna-responsiveness-fourth-attempt.md) exercises ordinary setup/cancellation, then fails on a stale snapshot request; [Diagnostic005](acceptance/2026-10-23-luna-responsiveness-fifth-attempt.md) reaches the editor, then fails when a known native rejection is mistaken for an uncertain effect. The rebuilt native accepts006 modifier inputs, but intended editor effects and full continuation remain unqualified; routine responsiveness and wider game-family behavior remain unqualified. |
+| Organic ordinary interaction | [Learning006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md) and [local-refusal001](acceptance/2026-10-22-native-local-refusal.md) exercise ordinary discovery/refusal/cancellation. Recent [Luna011](acceptance/2026-10-23-luna-responsiveness-eleventh-attempt.md) independently reaches Load reconciliation and identity inspection, then fails Claim authoring. Wider game-family behavior and complete continuation remain unqualified. |
 | Procedure memory and background advice | Learning006 demonstrates scoped reuse/refinement, actual fresh-context application and useful play while advice is pending. Technical creation assistance is disclosed. Retrieval/presentation is not attention or causal learning benefit. |
 | Save, reload and ending | [Capture001](acceptance/2026-10-22-native-capture-preconditions.md) qualifies ordinary input and normal same-character save/reload/ending on the rebuilt boundary; actual PNG drift remains unexercised there. [Fresh008](acceptance/2026-10-22-independent-seven-day-eighth-attempt.md) retains the motivating failure. [Native001](acceptance/2026-10-22-native-save-refresh.md) also qualifies one unit-geometry click; non-unit/wider mouse remains unqualified. |
 | Seven-day survival | The [first campaign](acceptance/2026-10-19-seven-day-survival.md) completed under supervision. The fresh independent outcome remains unaccepted; [#145](https://github.com/CVX-Hull/enactive/issues/145) owns follow-through. |
 | Watchable stopped history | The [local-refusal001 report](acceptance/2026-10-22-native-local-refusal.md) records actual STOPPED/HISTORY/DISCONNECTED presentation, no current mission decision and a timeout diagnostic explicitly labelled historical. |
-| Latency | Current play speed is unacceptable; [normally stopped010](acceptance/2026-10-22-independent-seven-day-tenth-attempt.md) retains the evidence. [Luna diagnostic001](acceptance/2026-10-22-luna-responsiveness-first-attempt.md) verifies compact framing on its host but fails setup before routine play; responsiveness remains unqualified. [Luna diagnostic002](acceptance/2026-10-23-luna-responsiveness-second-attempt.md) verifies the refreshed catalogue/detail path but exposes unusable nested argument declarations before gameplay. [The brief](changes/060-responsive-player.md) owns the next configuration assessment, [evaluation](evaluation.md#latency-budgets-for-interactive-play) the definitions, and [#164](https://github.com/CVX-Hull/enactive/issues/164) delivery. |
+| Latency | Current play speed is unacceptable. [Fresh010](acceptance/2026-10-22-independent-seven-day-tenth-attempt.md) retains the motivating useful-play evidence. [Luna011](acceptance/2026-10-23-luna-responsiveness-eleventh-attempt.md) exposes concrete duplicate-output and memory-authoring costs but supplies no routine cohort. [Evaluation](evaluation.md#latency-budgets-for-interactive-play) owns definitions; [#164](https://github.com/CVX-Hull/enactive/issues/164) owns delivery. |
 
-The [eighth Luna diagnostic](acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md)
-loads and verifies the character, then saves normally. Owned exit refuses an
-ordinary confirmation key and a differently worded visible interpretation, so
-ending fails and the owned processes are exceptionally stopped. The source now
-allows ordinary owned-exit control with correlated terminal evidence; that repair
-needs new real qualification. Useful higher-level
-supply/travel progress, apparent responsiveness and the independent seven-day
-outcome remain unaccepted. The [ninth Luna diagnostic](acceptance/2026-10-23-luna-responsiveness-ninth-attempt.md)
-uses a fresh CLI producer with actual compact results/detail/typed images and a
-durable timing download. It reconciles Load, then chooses recovery readmission
-instead of lifecycle continuation and stops before identity adoption. Its source
-follow-through exposes the existing lifecycle stage and a no-submission corrective
-hint; useful play, normal ending and responsiveness still need real qualification.
-The [tenth diagnostic](acceptance/2026-10-23-luna-responsiveness-tenth-attempt.md)
-misapplies startup despite reading the guide and stops before launching a child.
-Its corrective source hint preserves explicit evidence selection; actual
-continuation remains unqualified.
-Catalog names, component checks and display-component timings alone do not prove
-the complete player meets the goal.
+Recent Luna trials verify an actual fresh CLI producer, compact text/detail/typed
+images and scoped browser timing; [008](acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md)
+loads/adopts/saves but fails ending. The [latest011](acceptance/2026-10-23-luna-responsiveness-eleventh-attempt.md)
+reconciles Load and reaches the identity screen, then fails to express a valid
+memory Claim. No useful supply/travel, complete normal ending, apparent
+responsiveness or independent seven-day outcome is accepted from these diagnostics.
+
+The [responsive-player brief](changes/060-responsive-player.md) addresses actual
+duplication and manual memory metadata using the existing SDK/cache/staging
+facilities. Canonical evidence and player judgment remain separate from mechanical
+binding. Source/SDK checks cannot substitute for a new actual independent
+continuation and useful-play measurement. [Work](work.md#current-integrated-checkpoint)
+links decisive reports; the archive retains intermediate failures.
 
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and

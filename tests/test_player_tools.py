@@ -16,7 +16,6 @@ from harness.player_mcp import make_server
 from harness.player_tools import DETAIL_SECTIONS, PlayerTools, tool_specs
 from harness.player_view import decision_view
 from tests import test_mission_http as http_fixture
-from tests.test_mission_contracts import claim
 from tools.configure_player_tools import configure, configuration, describe
 
 
@@ -105,25 +104,31 @@ class PlayerHTTPTests(unittest.TestCase):
         current, _ = player.call("enactive_snapshot", {})
         ref = current["source"]["reference"]
         scope = dict(mission_id=self.a.mission_id, session=ref["session"], coordinate_epoch=0)
-        entry = claim(id="interpreted-water", scope=scope,
-            observed_time=dict(revision=ref["revision"], turn=ref["turn"]),
-            sources=[ref["observation_id"]], supports=[dict(sources=[ref["observation_id"]], claims=[])])
+        entry = dict(key=dict(subject="water", property="supply", unit="items", coverage_id="visible"),
+            value=dict(quantity=1, state=None), text="Interpreted water supply", coverage="Visible source only",
+            status="current", grounding=dict(kind="source", source_id=None, coordinate_epoch=None),
+            supports=[dict(primary=True, sources=[], claims=[])])
         result, _ = player.call("enactive_remember", dict(snapshot_id=current["snapshot_id"],
             request_id="remember", wait_seconds=2, intent=dict(entry_type="claim", entry=entry)))
         self.assertEqual(result["response"]["operation"]["state"], "completed", result)
+        original = result["response"]["operation"]["result"]["entry"]
+        self.assertEqual(original["scope"], scope)
+        self.assertEqual(original["sources"], [ref["observation_id"]])
+        self.assertEqual(original["observed_time"], dict(revision=ref["revision"], turn=ref["turn"]))
         corrected = deepcopy(entry)
-        corrected.update(id="corrected-water", text="Previously interpreted value is unverified", status="unknown",
-                         supersedes=[entry["id"]])
+        corrected.update(text="Previously interpreted value is unverified", status="unknown")
         corrected["value"] = dict(quantity=None, state=None)
         result, _ = player.call("enactive_correct", dict(snapshot_id=result["next_snapshot"]["snapshot_id"],
             request_id="correct", wait_seconds=2, intent=dict(entry_type="claim", entry=corrected,
-                retired_ids=[entry["id"]], reason="Visible evidence does not establish that quantity")))
+                retired_ids=[original["id"]], reason="Visible evidence does not establish that quantity")))
         self.assertEqual(result["response"]["operation"]["state"], "completed", result)
+        replacement = result["response"]["operation"]["result"]["entry"]
+        self.assertEqual(replacement["supersedes"], [original["id"]])
         result, _ = player.call("enactive_context", dict(snapshot_id=result["next_snapshot"]["snapshot_id"],
             intent=dict(scope=dict(session=ref["session"], coordinate_epoch=0), query="water",
                         max_bytes=32768, handoff=None)))
         packet = result["response"]["context"]["packet"]
-        self.assertIn("corrected-water", json.dumps(packet))
+        self.assertIn(replacement["id"], json.dumps(packet))
         self.assertIn(ref["observation_id"], json.dumps(packet))
         self.assertFalse(packet["grants_authority"])
 
@@ -271,7 +276,7 @@ class SnapshotDetailTests(unittest.TestCase):
             detail["detail"]["mutation"] = True
         self.assertEqual(client.mock_calls, [])
         self.assertEqual(player.snapshots[identity], before)
-        self.assertEqual(player._snapshot(identity), before["mission"])
+        self.assertEqual(player._cached_snapshot(identity)["mission"], before["mission"])
         self.assertEqual(len(player.snapshots), 2)
 
     def test_source_failure_null_sections_and_eviction_are_explicit(self):
@@ -405,33 +410,37 @@ class SDKTransportTests(unittest.TestCase):
                 self.assertEqual(detail_spec.input_schema["properties"]["section"]["enum"], list(DETAIL_SECTIONS))
                 result = await client.call_tool("enactive_snapshot", {})
                 self.assertFalse(result.is_error)
-                self.assertEqual(result.structured_content["mission"]["mission_id"], "sdk-fixture")
-                self.assertEqual(result.structured_content["presentation_schema"], "player-view/2")
-                self.assertEqual(result.structured_content["detail_sections"], list(DETAIL_SECTIONS))
-                self.assertEqual(result.structured_content["mission"]["progress"],
+                self.assertIsNone(result.structured_content)
+                view = json.loads(result.content[0].text)
+                self.assertEqual(view["mission"]["mission_id"], "sdk-fixture")
+                self.assertEqual(view["presentation_schema"], "player-view/2")
+                self.assertEqual(view["detail_sections"], list(DETAIL_SECTIONS))
+                self.assertEqual(view["mission"]["progress"],
                                  _FixtureClient().status()["mission"]["progress"])
-                self.assertEqual(result.structured_content["mission"]["last_receipt"],
+                self.assertEqual(view["mission"]["last_receipt"],
                                  {"id": "original-receipt", "transport_disposition": "unknown"})
-                self.assertEqual(result.structured_content["native"]["state"],
+                self.assertEqual(view["native"]["state"],
                                  {"session": "sdk-session", "health": "healthy"})
-                self.assertEqual(result.structured_content["source"],
+                self.assertEqual(view["source"],
                                  _FixtureClient().source("sdk-fixture", "sdk-source")[0])
                 text, image = result.content
-                self.assertEqual(json.loads(text.text), result.structured_content)
+                self.assertEqual(text.type, "text")
                 self.assertEqual(base64.b64decode(image.data), _FixtureClient.image)
                 self.assertEqual(image.mime_type, "image/png")
                 detailed = await client.call_tool("enactive_detail", dict(
-                    snapshot_id=result.structured_content["snapshot_id"], section="receipt"))
+                    snapshot_id=view["snapshot_id"], section="receipt"))
                 self.assertFalse(detailed.is_error)
-                self.assertEqual(detailed.structured_content["detail"], _FixtureClient().status()["mission"]["last_receipt"])
-                self.assertEqual(detailed.structured_content["presentation_schema"], "player-view/2")
-                self.assertFalse(detailed.structured_content["grants_authority"])
+                self.assertIsNone(detailed.structured_content)
+                detail_view = json.loads(detailed.content[0].text)
+                self.assertEqual(detail_view["detail"], _FixtureClient().status()["mission"]["last_receipt"])
+                self.assertEqual(detail_view["presentation_schema"], "player-view/2")
+                self.assertFalse(detail_view["grants_authority"])
                 self.assertEqual(len(detailed.content), 1)
-                self.assertEqual(json.loads(detailed.content[0].text), detailed.structured_content)
                 collected = await client.call_tool("enactive_result", dict(mission_id="sdk-fixture",
                     operation_id="original-operation", wait_seconds=0))
                 self.assertFalse(collected.is_error)
-                projected = collected.structured_content
+                self.assertIsNone(collected.structured_content)
+                projected = json.loads(collected.content[0].text)
                 self.assertEqual(projected["presentation_schema"], "player-view/2")
                 self.assertEqual(projected["transport"], "uncertain")
                 self.assertFalse(projected["settled"])
@@ -439,17 +448,16 @@ class SDKTransportTests(unittest.TestCase):
                 self.assertEqual(projected["response"], _FixtureClient().collect()["response"])
                 self.assertEqual(projected["next_snapshot"]["mission"]["progress"],
                                  _FixtureClient().status()["mission"]["progress"])
-                self.assertEqual(json.loads(collected.content[0].text), projected)
                 self.assertEqual(base64.b64decode(collected.content[1].data), _FixtureClient.image)
                 duplicate = await client.call_tool("enactive_result", dict(mission_id="sdk-fixture",
                     operation_id="same-progress", wait_seconds=0))
-                compacted = duplicate.structured_content
+                self.assertIsNone(duplicate.structured_content)
+                compacted = json.loads(duplicate.content[0].text)
                 self.assertFalse(duplicate.is_error)
                 self.assertNotIn("progress", compacted["next_snapshot"]["mission"])
                 self.assertEqual(compacted["next_snapshot"]["mission"]["progress_operation_id"], "same-progress")
                 self.assertEqual(compacted["response"]["operation"]["result"],
                                  _FixtureClient().status()["mission"]["progress"])
-                self.assertEqual(json.loads(duplicate.content[0].text), compacted)
                 self.assertEqual(base64.b64decode(duplicate.content[1].data), _FixtureClient.image)
                 unavailable = await client.call_tool("enactive_source", dict(mission_id="sdk-fixture",
                     source_id="unavailable"))

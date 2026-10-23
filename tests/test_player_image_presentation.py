@@ -220,8 +220,8 @@ class ImageSDKTests(unittest.TestCase):
                     result = await client.call_tool("enactive_result", dict(
                         mission_id="mission", operation_id="operation", wait_seconds=0))
                     self.assertFalse(result.is_error)
-                    self.assertEqual(json.loads(result.content[0].text), result.structured_content)
-                    self.assertEqual(result.structured_content["response"], ImageClient().envelope["response"])
+                    self.assertIsNone(result.structured_content)
+                    self.assertEqual(json.loads(result.content[0].text)["response"], ImageClient().envelope["response"])
                     results.append(result)
                 images = [part for result in results for part in result.content if part.type == "image"]
                 self.assertEqual(len(images), 1)  # Six identical retained PNGs previously yielded six image parts.
@@ -229,14 +229,15 @@ class ImageSDKTests(unittest.TestCase):
                 self.assertEqual(images[0].mime_type, "image/png")
                 self.assertEqual([len(result.content) for result in results], [2, 1, 1, 1, 1, 1])
                 for result in results[1:]:
-                    self.assertIn("pixels are unchanged", result.structured_content["image_presentation"])
+                    self.assertIn("pixels are unchanged", json.loads(result.content[0].text)["image_presentation"])
                 for tool, arguments in (("enactive_snapshot", {}),
                         ("enactive_source", dict(mission_id="mission", source_id="source"))):
                     for _ in range(2):
                         result = await client.call_tool(tool, arguments)
                         self.assertFalse(result.is_error)
+                        self.assertIsNone(result.structured_content)
                         self.assertEqual(base64.b64decode(result.content[1].data), png())
-                        self.assertNotIn("image_presentation", result.structured_content)
+                        self.assertNotIn("image_presentation", json.loads(result.content[0].text))
                 # A source image has no actor/epoch context, even in this mission.
                 result = await client.call_tool("enactive_result", dict(
                     mission_id="mission", operation_id="operation", wait_seconds=0))
