@@ -18,7 +18,9 @@ from .gameplay.mission_contracts import (
     VERSION, SKILLS, perception_schema, request_schema, validate_request,
 )
 from .gameplay.mission_requests import compose_request
-from .gameplay.reflection import proposal_schema, validate_command, validate_job, validate_proposal
+from .gameplay.reflection import (
+    MAX_REFLECTION_READ_WAIT_SECONDS, proposal_schema, validate_command, validate_job, validate_proposal,
+)
 from .mission_client import MissionClient
 
 
@@ -108,7 +110,7 @@ def tool_specs() -> tuple[ToolSpec, ...]:
     reflection_scope = dict(mission_id=identity, reflector_id=identity)
     specs.extend((
         ToolSpec("enactive_reflect_next", "Advisory actor only: get and durably claim bounded original work. Compute only when status is claimed. Pending, busy or unknown grants no permission to compute; no gameplay input or automatic model work.",
-            _object({**reflection_scope, "wait_seconds": wait})),
+            _object({**reflection_scope, "wait_seconds": {**wait, "maximum": MAX_REFLECTION_READ_WAIT_SECONDS}})),
         ToolSpec("enactive_reflect_submit", "Advisory actor only: submit explicitly authored candidates/notes/reason for a cached claimed job. Software preserves original headers; request_id is immutable. Corrected output requires a new request_id. No automatic memory adoption or gameplay.",
             _object({**reflection_scope, "job_id": identity, "request_id": identity, "wait_seconds": wait,
                 **{field: proposal[field] for field in ("candidates", "notes", "reason")}})),
@@ -256,7 +258,7 @@ class PlayerTools:
             if (job["mission_id"], job["reflector_id"]) != (mission_id, reflector_id):
                 raise ContractError("Reflection job belongs to another mission/reflector")
             identity = self._claim_id(mission_id, job["id"])
-            wait = max(0., deadline - time.monotonic())
+            wait = min(15., max(0., deadline - time.monotonic()))
             if offered["status"] == "claimed":
                 claim = self.client.reflection_collect(mission_id, reflector_id, identity, wait_seconds=wait)
             else:

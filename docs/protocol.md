@@ -181,6 +181,21 @@ reply never permits another action POST. Bounded process-local handles grant no
 authority and are not persisted history. `enactive_start` belongs to the lead's
 frozen admission; player skill, memory and lifecycle choices remain explicit.
 
+The current MCP presentation is `player-view/1`, marked by `presentation_schema`.
+It copies canonical results without changing cached handles, ledger records or
+HTTP contracts. Snapshot progress is replaced by `progress_operation_id` only
+when exactly equal to the enclosing non-null operation result and its stable ID
+is present. Standalone, pending and different progress remain complete. The
+snapshot's last receipt omits raw native request JSON/ACK payloads but retains
+delivery, uncertainty, processing errors, loss diagnostics and correlation/source
+identities. Native actions/scene/UI are omitted only when all match the actually
+returned selected source observation; missing sources or differing native views
+retain their information. Source metadata/images and operation, context, handoff,
+advice and proposal payloads remain complete. Canonical machine evidence remains
+in the existing ledger/archive/journal and authenticated readers. This is one
+current presentation, not a legacy format mode. Actual loaded-host framing and
+responsiveness require their own qualification.
+
 Authenticated `GET /api/mission/source?mission_id=ID&source_id=ID` and
 `GET /api/mission/frame` with the same exact query expose one indexed original
 archive entry/PNG. Both require the local token, exact query keys and the atomically
@@ -1167,6 +1182,12 @@ coalesces future work; exhausting finite reflection limits leaves it unreviewed.
 The existing loopback server exposes authenticated `/api/reflection/command`,
 `result`, `next`, `source`, `frame` and `proposal` routes. Passive reads/waits use
 cached data and retained source images without the input queue/lock or Observe.
+Only the passive `next` read permits up to40 seconds, using the existing condition
+notification to return promptly on work or closure. Other transport/tool waits
+remain at most15 seconds. The adapter caps claim/collection at15 seconds and the
+remaining original call allowance; no job window or resource limit is renewed.
+The project's60-second MCP timeout is unchanged. This reduces possible idle model
+round trips; it does not eliminate idle turns or promise a hard wall deadline.
 Only the existing writer applies claims/submissions. Claims charge their original
 finite wall window without refund; software receipt time judges submission
 lateness separately from writer queue delay. Rejected advisory commands retain

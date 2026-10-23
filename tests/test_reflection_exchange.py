@@ -343,7 +343,7 @@ class ReflectiveExchangeTests(unittest.TestCase):
 
         with patch.object(exchange._condition, "wait", side_effect=notified_wait):
             reader = threading.Thread(target=lambda: results.append(exchange.next_job(
-                mission_id="mission-a", reflector_id="reflector-a", wait_seconds=15)))
+                mission_id="mission-a", reflector_id="reflector-a", wait_seconds=40)))
             reader.start()
             try:
                 self.assertTrue(waiting.wait(2))
@@ -361,6 +361,34 @@ class ReflectiveExchangeTests(unittest.TestCase):
         self.assertFalse(reader.is_alive())
         self.assertEqual(results, [{"status": "closed", "grants_authority": False}])
 
+    def test_extended_wait_wakes_on_job_without_claiming_or_renewing_it(self):
+        for seconds in (16, 40):
+            with self.subTest(wait_seconds=seconds):
+                exchange = ReflectiveExchange()
+                publish(exchange, jobs=[])
+                waiting = threading.Event()
+                original_wait = exchange._condition.wait
+                results = []
+                def notified_wait(timeout=None):
+                    waiting.set()
+                    return original_wait(timeout)
+                with patch.object(exchange._condition, "wait", side_effect=notified_wait) as wait:
+                    reader = threading.Thread(target=lambda: results.append(exchange.next_job(
+                        mission_id="mission-a", reflector_id="reflector-a", wait_seconds=seconds)))
+                    reader.start()
+                    try:
+                        self.assertTrue(waiting.wait(2))
+                        self.assertGreater(wait.call_args.args[0], seconds - 2)
+                        self.assertLessEqual(wait.call_args.args[0], seconds)
+                        publish(exchange)
+                        reader.join(2)
+                        self.assertFalse(reader.is_alive())
+                    finally:
+                        exchange.seal_ingress(permanent=True)
+                        reader.join(2)
+                self.assertEqual(results, [dict(status="offered", job=wrapper(), grants_authority=False)])
+                self.assertEqual(exchange.summary()["operations"], 0)
+
     def test_terminal_publication_wakes_passive_wait(self):
         exchange = ReflectiveExchange()
         publish(exchange, jobs=[])
@@ -372,7 +400,7 @@ class ReflectiveExchangeTests(unittest.TestCase):
             return original_wait(timeout)
         with patch.object(exchange._condition, "wait", side_effect=notified_wait):
             reader = threading.Thread(target=lambda: results.append(exchange.next_job(
-                mission_id="mission-a", reflector_id="reflector-a", wait_seconds=15)))
+                mission_id="mission-a", reflector_id="reflector-a", wait_seconds=40)))
             reader.start()
             try:
                 self.assertTrue(waiting.wait(2))
@@ -436,7 +464,7 @@ class ReflectiveExchangeTests(unittest.TestCase):
         thread.join(2)
         self.assertEqual(failures, ["refused", "refused"])
         with self.assertRaises(ContractError):
-            exchange.next_job(mission_id="mission-a", reflector_id="reflector-a", wait_seconds=1)
+            exchange.next_job(mission_id="mission-a", reflector_id="reflector-a", wait_seconds=40)
 
     def test_job_order_claimed_priority_unknown_proposal_and_atomic_refusal(self):
         exchange = ReflectiveExchange()
@@ -478,7 +506,7 @@ class ReflectiveExchangeTests(unittest.TestCase):
                 ReflectiveExchange(**kwargs)
         exchange = ReflectiveExchange()
         publish(exchange)
-        for value in (-1, 15.1, True, float("nan"), float("inf")):
+        for value in (-1, 40.1, True, False, float("nan"), float("inf"), -float("inf")):
             with self.assertRaises(ContractError):
                 exchange.next_job(mission_id="mission-a", reflector_id="reflector-a", wait_seconds=value)
         exchange.offer(command())

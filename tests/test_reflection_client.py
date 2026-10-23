@@ -158,7 +158,7 @@ class ReflectionClientTests(unittest.TestCase):
         self.assertEqual([call[0] for call in self.server.calls], ["GET"])
 
     def test_closed_reads_scope_and_bounds_fail_before_network(self):
-        for invalid in (-1, 15.1, True, float("nan")):
+        for invalid in (-1, 40.1, True, False, float("nan"), float("inf"), -float("inf")):
             with self.assertRaises(MissionClientError):
                 self.client.reflection_next("mission-a", "reflector-a", wait_seconds=invalid)
         with self.assertRaises(ContractError):
@@ -174,6 +174,32 @@ class ReflectionClientTests(unittest.TestCase):
                          dict(mission_id=["mission-a"], reflector_id=["reflector-a"], wait_seconds=["0.0"]))
         self.server.callback = lambda handler, body: handler.reply(dict(status="offered", job=wrapper(job(mission_id="other")), grants_authority=False))
         with self.assertRaises(MissionClientError): self.client.reflection_next("mission-a", "reflector-a", wait_seconds=0)
+
+    def test_only_next_allows_extended_wait_with_bounded_transport_and_scope_checks(self):
+        self.server.callback = lambda handler, body: handler.reply(
+            dict(status="offered", job=wrapper(), grants_authority=False))
+        for seconds in (16, 40):
+            with self.subTest(wait_seconds=seconds):
+                with patch.object(self.client._opener, "open", wraps=self.client._opener.open) as opened:
+                    result = self.client.reflection_next("mission-a", "reflector-a", wait_seconds=seconds)
+                self.assertEqual(result["job"]["job"], job())
+                self.assertEqual(opened.call_args.kwargs["timeout"], seconds + 6)
+                self.assertEqual(parse_qs(urlsplit(self.server.calls[-1][1]).query),
+                    dict(mission_id=["mission-a"], reflector_id=["reflector-a"], wait_seconds=[str(float(seconds))]))
+                calls = len(self.server.calls)
+                for action in (
+                    lambda: self.client.reflection_command(command(), wait_seconds=seconds),
+                    lambda: self.client.reflection_collect("mission-a", "reflector-a", "command-1", wait_seconds=seconds),
+                    lambda: self.client.submit(job()["trajectory"][0]["request"], wait_seconds=seconds),
+                    lambda: self.client.collect("mission-a", "operation-1", wait_seconds=seconds),
+                ):
+                    with self.assertRaises(MissionClientError): action()
+                self.assertEqual(len(self.server.calls), calls)
+        for change in (dict(mission_id="other"), dict(reflector_id="other")):
+            self.server.callback = lambda handler, body: handler.reply(
+                dict(status="offered", job=wrapper(job(**change)), grants_authority=False))
+            with self.assertRaises(MissionClientError):
+                self.client.reflection_next("mission-a", "reflector-a", wait_seconds=40)
 
     def test_next_rejects_oversized_job_and_wire_without_increasing_either_bound(self):
         oversized = job()

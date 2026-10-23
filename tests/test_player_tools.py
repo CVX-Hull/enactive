@@ -13,6 +13,7 @@ from harness.gameplay.contracts import ContractError
 from harness.mission_client import MissionClient
 from harness.player_mcp import make_server
 from harness.player_tools import PlayerTools, tool_specs
+from harness.player_view import decision_view
 from tests import test_mission_http as http_fixture
 from tests.test_mission_contracts import claim
 from tools.configure_player_tools import configure, configuration
@@ -55,6 +56,17 @@ class PlayerHTTPTests(unittest.TestCase):
         player = self.player()
         first, image = player.call("enactive_snapshot", {})
         self.assertTrue(image.startswith(b"\x89PNG"))
+        full = deepcopy(first)
+        handles = deepcopy((player.snapshots, player.sources))
+        view = decision_view("enactive_snapshot", first)
+        self.assertIn("progress", first["mission"])
+        self.assertIn("last_receipt", first["mission"])
+        self.assertEqual(view["mission"]["progress"], first["mission"]["progress"])
+        self.assertIsNone(first["mission"]["last_receipt"])
+        self.assertIsNone(view["mission"]["last_receipt"])
+        self.assertEqual(view["source"], first["source"])
+        self.assertEqual(first, full)
+        self.assertEqual((player.snapshots, player.sources), handles)
         arguments = self.navigate(first)
         result, image = player.call("enactive_skill", arguments)
         self.assertTrue(result["settled"], result)
@@ -120,6 +132,13 @@ class PlayerHTTPTests(unittest.TestCase):
         self.assertEqual(result["transport"], "uncertain")
         self.assertEqual(self.bridge.delivered, delivered)
         self.assertEqual(result["operation_id"], "move")
+        view = decision_view("enactive_skill", result)
+        self.assertEqual(view["transport"], "uncertain")
+        self.assertFalse(view["settled"])
+        self.assertIsNone(view["response"])
+        self.assertEqual(view["operation_id"], "move")
+        self.assertEqual(view["reason"], "Original submission response lost")
+        self.assertEqual(view["next_snapshot"]["source"], result["next_snapshot"]["source"])
 
     def test_source_must_have_been_returned_and_handles_expire_without_authority(self):
         player = self.player()
@@ -204,10 +223,48 @@ class SDKTransportTests(unittest.TestCase):
                 result = await client.call_tool("enactive_snapshot", {})
                 self.assertFalse(result.is_error)
                 self.assertEqual(result.structured_content["mission"]["mission_id"], "sdk-fixture")
+                self.assertEqual(result.structured_content["presentation_schema"], "player-view/1")
+                self.assertEqual(result.structured_content["mission"]["progress"],
+                                 _FixtureClient().status()["mission"]["progress"])
+                self.assertEqual(result.structured_content["mission"]["last_receipt"],
+                                 {"id": "original-receipt", "transport_disposition": "unknown"})
+                self.assertEqual(result.structured_content["native"]["state"],
+                                 {"session": "sdk-session", "health": "healthy"})
+                self.assertEqual(result.structured_content["source"],
+                                 _FixtureClient().source("sdk-fixture", "sdk-source")[0])
                 text, image = result.content
                 self.assertEqual(json.loads(text.text), result.structured_content)
                 self.assertEqual(base64.b64decode(image.data), _FixtureClient.image)
                 self.assertEqual(image.mime_type, "image/png")
+                collected = await client.call_tool("enactive_result", dict(mission_id="sdk-fixture",
+                    operation_id="original-operation", wait_seconds=0))
+                self.assertFalse(collected.is_error)
+                projected = collected.structured_content
+                self.assertEqual(projected["presentation_schema"], "player-view/1")
+                self.assertEqual(projected["transport"], "uncertain")
+                self.assertFalse(projected["settled"])
+                self.assertEqual(projected["operation_id"], "original-operation")
+                self.assertEqual(projected["response"], _FixtureClient().collect()["response"])
+                self.assertEqual(projected["next_snapshot"]["mission"]["progress"],
+                                 _FixtureClient().status()["mission"]["progress"])
+                self.assertEqual(json.loads(collected.content[0].text), projected)
+                self.assertEqual(base64.b64decode(collected.content[1].data), _FixtureClient.image)
+                duplicate = await client.call_tool("enactive_result", dict(mission_id="sdk-fixture",
+                    operation_id="same-progress", wait_seconds=0))
+                compacted = duplicate.structured_content
+                self.assertFalse(duplicate.is_error)
+                self.assertNotIn("progress", compacted["next_snapshot"]["mission"])
+                self.assertEqual(compacted["next_snapshot"]["mission"]["progress_operation_id"], "same-progress")
+                self.assertEqual(compacted["response"]["operation"]["result"],
+                                 _FixtureClient().status()["mission"]["progress"])
+                self.assertEqual(json.loads(duplicate.content[0].text), compacted)
+                self.assertEqual(base64.b64decode(duplicate.content[1].data), _FixtureClient.image)
+                unavailable = await client.call_tool("enactive_source", dict(mission_id="sdk-fixture",
+                    source_id="unavailable"))
+                self.assertTrue(unavailable.is_error)
+                self.assertIsNone(unavailable.structured_content)
+                self.assertEqual(len(unavailable.content), 1)
+                self.assertEqual(unavailable.content[0].text, "Selected original source unavailable; choose a retained source")
                 rejected = await client.call_tool("unlisted_shell_tool", {"command": "must not run"})
                 self.assertTrue(rejected.is_error)
                 self.assertIn("Unknown player tool", rejected.content[0].text)
@@ -222,12 +279,33 @@ class _FixtureClient:
     from tests.test_gameplay_evidence import png
     image = png()
     def status(self):
-        return dict(mission=dict(mission_id="sdk-fixture", epoch=1,
+        return dict(state=dict(session="sdk-session", health="healthy", actions=["open"],
+            scene={"position": [1, 2, 0]}, ui={"visible": "menu"}),
+            mission=dict(mission_id="sdk-fixture", epoch=1,
             current_source=dict(observation_id="sdk-source"), prompt_phase=None,
-            lifecycle_phase=None, activity_phase=None))
+            lifecycle_phase=None, activity_phase=None, progress={"history": ["duplicated"]},
+            last_receipt=dict(id="original-receipt", transport_disposition="unknown",
+                native_request_json='{"keys":["open"]}', native_ack={"raw": "ack"})))
     def source(self, mission_id, source_id):
-        return dict(reference=dict(observation_id=source_id), observation={},
+        if source_id == "unavailable":
+            raise OSError("Selected original source unavailable; choose a retained source")
+        return dict(reference=dict(observation_id=source_id), observation=dict(actions=["open"],
+            scene={"position": [1, 2, 0]}, ui={"visible": "menu"}),
                     disposition="retained", grants_authority=False), self.image
+
+    def collect(self, **arguments):
+        if arguments.get("operation_id") == "same-progress":
+            return dict(transport="delivered", settled=True, operation_id="same-progress",
+                response=dict(operation=dict(id="same-progress", state="completed",
+                    result=self.status()["mission"]["progress"])))
+        complete = dict(progress=["required-work"], last_receipt={"delivery": "unknown"},
+                        obligations=["read-original-source"], grants_authority=False)
+        return dict(transport="uncertain", settled=False, operation_id="original-operation",
+            reason="Original submission response lost", response=dict(
+                operation=dict(id="original-operation", request_id="original-request", kind="handoff",
+                    state="unknown", result=deepcopy(complete), receipts=[{"id": "original-receipt"}]),
+                context=deepcopy(complete), handoff=deepcopy(complete), reflection=deepcopy(complete),
+                proposal=deepcopy(complete)))
 
 
 async def _stdio_fixture():

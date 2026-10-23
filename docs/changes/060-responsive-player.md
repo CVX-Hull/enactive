@@ -55,6 +55,38 @@ proof that the model receives both; actual host presentation must be tested.
 The producer already derives common wire bindings and some skills already batch
 primitives. The remaining problem is not solved by claiming no automation exists.
 
+## First source slice and its limits
+
+The current source adds the `player-view/1` MCP projection described in
+[the protocol](../protocol.md#integrated-mission-lifecycle). It preserves complete
+selected evidence, operations, obligations and uncertainty; removes matching
+native visible-state duplicates; and references progress only when identical to
+the included operation result. Independent review caught lost progress when an
+ID was absent and lost native details when source retrieval failed. Both were
+corrected, with regression cases also retaining a genuinely different latest view.
+This is a presentation change; cached canonical results and dispatch stay intact.
+
+An offline paired canonical-JSON measurement on120 parsed original-player results
+reduces1,754,116 to1,308,602 UTF-8 bytes;253 parsed successor results reduce4,623,962
+to3,759,209. Four original and32 successor records were unparsed and excluded.
+These include preflight and different tool families. They are reconstructed inner
+result bytes, not actual model token counts, outer host envelopes or measured
+latency. Advisory values are not shortened by this projection; adding the marker
+slightly increases their size. Actual loaded-host framing remains to qualify.
+
+Passive advisory next reads can now wait up to40 seconds on the existing condition
+variable. Other waits remain15 seconds; claim/collection retains the original
+remaining allowance and stable identity. This can reduce idle model round trips
+without a new daemon. It neither eliminates idle turns nor qualifies responsive
+play. The next short trial uses the user's Luna/low selection; bounded context,
+automatic plumbing, useful execution coverage and actual performance remain the
+broader tracked work below.
+
+The integrated player/presentation/lifecycle/reflection focused lane passes91
+tests in162.415s. Separate clean-context source reviews found no remaining
+material findings after the presentation fixes. These are component and SDK
+results; no loaded-host performance or new graphical acceptance is inferred.
+
 ## Selected implementation direction
 
 | Responsibility | Owner and change |

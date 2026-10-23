@@ -20,6 +20,7 @@ from .gameplay.mission_contracts import MAX_REQUEST_BYTES, VERSION, validate_req
 from .gameplay.mission_requests import _source_binding
 from .gameplay.reflection import (
     MAX_COMMAND_BYTES, MAX_JOB_BYTES, MAX_PROPOSAL_BYTES, MAX_RESULT_BYTES,
+    MAX_REFLECTION_READ_WAIT_SECONDS,
     validate_command, validate_job, validate_proposal,
 )
 
@@ -60,9 +61,9 @@ def _regular_bytes(directory: int, name: str, maximum: int, *, private: bool = F
     return data
 
 
-def _wait(value: float) -> float:
-    if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= 15:
-        raise MissionClientError("wait_seconds must be finite and between 0 and 15")
+def _wait(value: float, *, maximum: float = 15) -> float:
+    if type(value) not in (int, float) or not math.isfinite(value) or not 0 <= value <= maximum:
+        raise MissionClientError(f"wait_seconds must be finite and between 0 and {maximum}")
     return float(value)
 
 
@@ -360,7 +361,7 @@ class MissionClient:
 
     def reflection_next(self, mission_id: str, reflector_id: str, *, wait_seconds: float = 0) -> dict:
         """Read/wait for bounded cached work; this read never claims a job."""
-        wait = _wait(wait_seconds)
+        wait = _wait(wait_seconds, maximum=MAX_REFLECTION_READ_WAIT_SECONDS)
         self._reflection_scope(mission_id, reflector_id)
         query = urlencode(dict(mission_id=mission_id, reflector_id=reflector_id, wait_seconds=wait))
         response = self._json("/api/reflection/next?" + query, timeout=wait + _HTTP_SECONDS,

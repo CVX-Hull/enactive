@@ -7,7 +7,8 @@ status: active
 # Current architecture
 
 Current source contracts are native6, mission/10, campaign-memory/5, procedure/2,
-reflection/2, gameplay/2, evidence archive5 and mission ledger12. One MissionRuntime
+reflection/2, gameplay/2, evidence archive5, mission ledger12 and MCP presentation
+`player-view/1`. One MissionRuntime
 owns the live mission API.
 The prior wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.

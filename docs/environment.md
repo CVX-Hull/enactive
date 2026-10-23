@@ -131,6 +131,13 @@ The [bounded report](acceptance/2026-10-22-native-observation-custody.md) retain
 the successful valid path, six unknown ACKs and failed frozen-source full checks.
 No global setup, save contents or old authority changed.
 
+Normally stopped campaign010 was retired only after all actual actors, native
+PID20540 and controllerPID18430/session74966 ended. Its51 save files are preserved
+in `.runtime/campaigns/independent-seven-day-010/closed-evidence/EnactiveSevenDayTen.tar.gz`,
+with a member-hash-verified adjacent retirement manifest. The191 accepted-save
+files remain unchanged. The [partial-run report](acceptance/2026-10-22-independent-seven-day-tenth-attempt.md)
+owns exact hashes, costs and limits; no day or midpoint reload is accepted.
+
 ## Structured player SDK, 2026-10-20
 
 Added official MCP Python SDK 2.3.0 for the optional local stdio adapter. The shared

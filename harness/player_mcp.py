@@ -13,6 +13,7 @@ from .gameplay.contracts import ContractError
 from .gameplay.contracts import canonical
 from .mission_client import MissionClient
 from .player_tools import PlayerTools
+from .player_view import decision_view
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -30,6 +31,7 @@ def make_server(player: PlayerTools) -> Server:
             # The thread runs to its own finite transport deadline. Cancellation
             # never creates a new request ID or replays an admitted operation.
             value, png = await anyio.to_thread.run_sync(player.call, params.name, params.arguments or {})
+            value = decision_view(params.name, value)
             content = [types.TextContent(type="text", text=canonical(value))]
             if png is not None:
                 content.append(types.ImageContent(type="image", data=base64.b64encode(png).decode("ascii"), mime_type="image/png"))

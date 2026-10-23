@@ -8,6 +8,7 @@ from pathlib import Path
 import sys
 import threading
 import unittest
+from unittest.mock import patch
 from urllib.parse import urlsplit
 
 from harness.gameplay.contracts import ContractError
@@ -79,13 +80,67 @@ class ReflectionToolTests(unittest.TestCase):
         schema = proposal_schema()["properties"]
         for field in ("candidates", "notes", "reason"):
             self.assertEqual(specs["enactive_reflect_submit"].schema["properties"][field], schema[field])
-        for args in (dict(**SCOPE, wait_seconds=16), dict(**SCOPE, wait_seconds=0, command_id="forged"),
+        for args in (dict(**SCOPE, wait_seconds=40.1), dict(**SCOPE, wait_seconds=0, command_id="forged"),
                      dict(**SCOPE, wait_seconds=True)):
             with self.assertRaises(ContractError): self.player.call("enactive_reflect_next", args)
         changed = proposal_schema()
         changed.clear()
         self.assertIn("properties", proposal_schema())
         self.assertEqual(self.client.calls, [])
+
+    def test_only_next_tool_allows_extended_wait_and_claim_keeps_original_remaining_allowance(self):
+        for spec in tool_specs():
+            wait = spec.schema["properties"].get("wait_seconds")
+            if wait is not None:
+                self.assertEqual(wait["maximum"], 40 if spec.name == "enactive_reflect_next" else 15)
+        for name, args in (("enactive_reflect_submit", submit_args() | {"wait_seconds": 16}),
+                           ("enactive_reflect_result", dict(**SCOPE, command_id="command-1", wait_seconds=16))):
+            with self.assertRaises(ContractError): self.player.call(name, args)
+        for state in ("offered", "claimed"):
+            self.client.next_value = dict(status=state, job=wrapper(**(
+                dict(state="claimed", claimed_at=1000., deadline=1180.) if state == "claimed" else {})),
+                grants_authority=False)
+            for elapsed, remaining in ((1, 15), (30, 10), (41, 0)):
+                with self.subTest(state=state, elapsed=elapsed):
+                    with patch("harness.player_tools.time.monotonic", side_effect=(100., 100. + elapsed)):
+                        result, image = self.player.call("enactive_reflect_next", dict(**SCOPE, wait_seconds=40))
+                    self.assertEqual(result["status"], "claimed")
+                    self.assertEqual(result["job"]["deadline"], 1180.)
+                    self.assertEqual(result["claim"]["result"]["charged_seconds"], 180.)
+                    self.assertIsNone(image)
+                    self.assertEqual(self.client.calls[-2][2], dict(wait_seconds=40))
+                    self.assertEqual(self.client.calls[-1][0], "collect" if state == "claimed" else "command")
+                    self.assertEqual(self.client.calls[-1][2], dict(wait_seconds=remaining))
+
+    def test_extended_next_unknown_claim_retains_identity_and_only_collection_restores_job(self):
+        identity = self.player._claim_id("mission-a", "job-1")
+        unknown = receipt(command(identity), status="unknown", admitted=None)
+        self.client.command_value = unknown
+        for _ in range(2):
+            result, _ = self.player.call("enactive_reflect_next", dict(**SCOPE, wait_seconds=40))
+            self.assertEqual(result, unknown)
+            self.assertNotIn("job", result)
+            self.assertEqual(self.client.calls[-1][1]["command_id"], identity)
+            self.assertLessEqual(self.client.calls[-1][2]["wait_seconds"], 15)
+            with self.assertRaisesRegex(ContractError, "claimed job"):
+                self.player.call("enactive_reflect_submit", submit_args())
+        self.client.next_value = dict(status="claimed",
+            job=wrapper(state="claimed", claimed_at=1000., deadline=1180.), grants_authority=False)
+        collect = self.client.reflection_collect
+        def collect_unknown(*args, **kwargs):
+            collect(*args, **kwargs)
+            return deepcopy(unknown)
+        self.client.reflection_collect = collect_unknown
+        result, _ = self.player.call("enactive_reflect_next", dict(**SCOPE, wait_seconds=40))
+        self.assertEqual(result, unknown)
+        self.assertEqual(self.client.calls[-1][1], identity)
+        self.assertLessEqual(self.client.calls[-1][2]["wait_seconds"], 15)
+        self.assertEqual(self.player._reflection_jobs, {})
+        self.client.reflection_collect = collect
+        result, _ = self.player.call("enactive_reflect_next", dict(**SCOPE, wait_seconds=40))
+        self.assertEqual(result["status"], "claimed")
+        self.assertEqual(result["claim"]["command_id"], identity)
+        self.assertEqual([row[0] for row in self.client.calls].count("command"), 2)
 
     def test_claim_is_stable_verified_and_submit_headers_come_only_from_job(self):
         result = self.claim()
@@ -200,7 +255,7 @@ class ReflectionToolTests(unittest.TestCase):
             return dict(status="idle", grants_authority=False)
         self.client.reflection_next = next_wait
         completed = []
-        thread = threading.Thread(target=lambda: completed.append(self.player.call("enactive_reflect_next", dict(**SCOPE, wait_seconds=1))))
+        thread = threading.Thread(target=lambda: completed.append(self.player.call("enactive_reflect_next", dict(**SCOPE, wait_seconds=40))))
         thread.start()
         self.addCleanup(thread.join, 2)
         self.addCleanup(release.set)
@@ -271,7 +326,7 @@ class ReflectionHTTPConcurrencyTests(unittest.TestCase):
         self.server.callback = callback
         player = PlayerTools(self.client)
         results = []
-        thread = threading.Thread(target=lambda: results.append(player.call("enactive_reflect_next", dict(**SCOPE, wait_seconds=1))))
+        thread = threading.Thread(target=lambda: results.append(player.call("enactive_reflect_next", dict(**SCOPE, wait_seconds=40))))
         thread.start()
         self.addCleanup(thread.join, 2)
         self.addCleanup(release.set)
@@ -294,7 +349,7 @@ class ReflectionSDKTests(unittest.TestCase):
             async with Client(params) as client:
                 tools = await client.list_tools()
                 self.assertEqual({value.name for value in tools.tools}, {value.name for value in tool_specs()})
-                claimed = await client.call_tool("enactive_reflect_next", dict(**SCOPE, wait_seconds=0))
+                claimed = await client.call_tool("enactive_reflect_next", dict(**SCOPE, wait_seconds=40))
                 self.assertFalse(claimed.is_error)
                 self.assertEqual(claimed.structured_content["status"], "claimed")
                 self.assertEqual(len(claimed.content), 1)

@@ -28,6 +28,7 @@ MAX_PROPOSAL_BYTES = 32_768
 MAX_COMMAND_BYTES = MAX_PROPOSAL_BYTES + 2048
 MAX_RESULT_BYTES = 65_536
 MAX_RECORDS = 64
+MAX_REFLECTION_READ_WAIT_SECONDS = 40
 _ID = {**_text(128), "pattern": r"^[A-Za-z0-9][A-Za-z0-9_-]*$",
        "not": {"pattern": r"[^A-Za-z0-9_-]"}}
 _SOURCE = _object({"mission_id": _ID, "source_id": _ID})
@@ -446,8 +447,8 @@ class ReflectiveExchange:
         _identity(mission_id)
         _identity(reflector_id)
         if (type(wait_seconds) not in (int, float) or not math.isfinite(wait_seconds)
-                or not 0 <= wait_seconds <= 15):
-            raise ContractError("Reflection wait must be finite and within 0..15 seconds")
+                or not 0 <= wait_seconds <= MAX_REFLECTION_READ_WAIT_SECONDS):
+            raise ContractError(f"Reflection wait must be finite and within 0..{MAX_REFLECTION_READ_WAIT_SECONDS} seconds")
         end = monotonic() + wait_seconds
         with self._condition:
             if wait_seconds and self._writer is current_thread():
