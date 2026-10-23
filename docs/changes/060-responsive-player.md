@@ -416,3 +416,26 @@ Fast checks and independent review are clean after the recorded corrections; the
 reviewer separately passes4focused health/correlation regressions in3.711s.
 Exact candidate/protected-main CI and a new real normal-ending/useful-play run
 remain separate obligations. The original failed lanes and reasons are retained.
+
+The first exact owned-exit candidate CI ran 1,745 tests and failed one assertion
+that still expected the former action/key-only error wording. The assertion now
+uses the current ordinary-input wording; all 130 controller tests pass in 21.612s.
+No production behavior was changed by this test correction, and the failed CI
+remains evidence rather than a passing result.
+
+## Durable spectator timing export
+
+The existing spectator now uses standard browser Blob/download capabilities to
+export its retained timing history. It keeps up to 8,192 samples per stage, reports
+overflow, and still displays only the latest 32. Current `observer-timing/3` replaces
+the active v2 shape; no compatibility reader, service or telemetry submission is
+added. The [evaluation guide](../evaluation.md#latency-budgets-for-interactive-play)
+owns clock, page-lifetime, session filtering and coverage limitations.
+
+Viewer regressions and independent source review pass. An actual browser button
+download was copied and byte-verified in private project evidence: 38 status samples,
+one historical frame sample, zero overflow. The temporary Downloads copy was
+removed after verification. This qualifies transfer from a disconnected spectator,
+not active-game display latency, complete run coverage or player responsiveness.
+The previous 008 partial display evidence remains partial. Export the next run's
+retained history before closing/reloading its page and assess the actual cohort.

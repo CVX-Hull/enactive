@@ -2515,7 +2515,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             # A later backward wall adjustment still cannot be treated as native
             # expiry merely because the host monotonic allowance ran out.
             clock.wall = 1000.0
-            with self.assertRaisesRegex(ControlError, "expired action or key"):
+            with self.assertRaisesRegex(ControlError, "expired ordinary input"):
                 self.controller.retire_mission_exit(**binding)
             self.assertEqual(self.controller.pending, request)
             clock.wall = 1000.801

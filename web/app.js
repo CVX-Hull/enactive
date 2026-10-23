@@ -25,22 +25,39 @@ let frameError = '';
 let eventSignature = '';
 let memoryRendering;
 const observerMeasurements = {status: [], frames: []};
+const observerDropped = {status: 0, frames: 0};
+const OBSERVER_RETENTION_LIMIT = 8192;
 function retainMeasurement(lane, sample) {
   observerMeasurements[lane].push(sample);
-  if (observerMeasurements[lane].length > 32) observerMeasurements[lane].shift();
+  if (observerMeasurements[lane].length > OBSERVER_RETENTION_LIMIT) {
+    observerMeasurements[lane].shift();
+    observerDropped[lane] += 1;
+  }
 }
-function observerMeasurementSnapshot() {
-  return {schema: 'observer-timing/2',
+function observerMeasurementSnapshot(all = false) {
+  return {schema: 'observer-timing/3',
+    selection: all ? 'retained_page_history' : 'latest_32',
+    retention_limit_per_stage: OBSERVER_RETENTION_LIMIT, dropped: {...observerDropped},
     clock: 'browser performance.now() monotonic milliseconds; browser Date.now() and native state.timestamp_ms epoch milliseconds',
     scope: 'Local monotonic status/decode/DOM intervals and next animation callback opportunity, not paint; raw epoch anchors support offline correlation assuming a shared host wall clock. Native capture uses frame_ms/presented_ms via state.timestamp_ms when frame_ok; wall-clock discontinuities and negative cross-clock durations need interpretation. Failed, superseded and stale frames are not successful fresh presentation; native-to-browser and end-to-end player latency unmeasured',
     connection: latest?.connection || 'unavailable', displayed_frame_fresh: !!currentFrame(),
     displayed_frame_identity: frameIdentity(displayed),
-    status: observerMeasurements.status.map(sample => ({...sample})),
-    frames: observerMeasurements.frames.map(sample => ({...sample}))};
+    status: (all ? observerMeasurements.status : observerMeasurements.status.slice(-32)).map(sample => ({...sample})),
+    frames: (all ? observerMeasurements.frames : observerMeasurements.frames.slice(-32)).map(sample => ({...sample}))};
 }
 function renderMeasurements() {
   $('observer-measurements').textContent = JSON.stringify(observerMeasurementSnapshot(), null, 2);
 }
+function downloadObserverMeasurements() {
+  const blob = new Blob([JSON.stringify(observerMeasurementSnapshot(true), null, 2)], {type: 'application/json'});
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `enactive-observer-timing-${Date.now()}.json`;
+  link.click();
+  setTimeout(() => URL.revokeObjectURL(url), 0);
+}
+$('download-observer-measurements').addEventListener('click', downloadObserverMeasurements);
 function validFrameGeometry(state) {
   if (state?.protocol !== 6 || typeof state.frame_ok !== 'boolean') return false;
   const geometry = state.frame_geometry;

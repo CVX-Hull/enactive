@@ -114,7 +114,7 @@ round trips and unnecessary captures or repeated retrieval. Keep per-primitive
 outcome/authority checks; batch decisions rather than blindly batching input.
 Do not add a broker, telemetry service or new model tier without an observed gap.
 
-The current local spectator snapshot is `observer-timing/2`; historical v1 captures
+The current local spectator snapshot/export is `observer-timing/3`; historical v1/v2 captures
 remain evidence, without a compatibility reader. It retains raw browser epoch
 anchors for status start/response and DOM replacement, plus the native capture
 timestamp and existing frame/status identities. Durations still use browser
@@ -198,3 +198,12 @@ Maintain the schema, callers, tests and this guide together. On a format change,
 preserve historical evidence and migrate active consumers as one coordinated
 change; no fallback reader. Revisit missing instrumentation and independent outcome
 labeling before #24/#44 trials and after any false-success or accounting incident.
+
+The spectator timing view keeps the latest 32 samples on screen. Its standard JSON
+download includes up to 8,192 samples per stage retained in that open page and explicit
+overflow counts; earlier sessions on the same page are included. Save the download
+in the run evidence directory before closing/reloading the tab, then filter by the
+frozen mission's actual native sessions and time interval. A successful download
+proves export, not complete coverage: inspect overflow, page lifetime, clock
+continuity and exact useful-effect matching before a latency claim. No telemetry
+is submitted to the controller and no physical-paint measurement is added.

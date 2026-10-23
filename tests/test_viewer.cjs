@@ -241,9 +241,11 @@ class DeferredImage {
   decode() { return new Promise((resolve, reject) => pending.push({resolve, reject})); }
   replaceWith(other) { elements.set('frame', other); }
 }
-const context = vm.createContext({DOMParser: PageParser, Date: class extends Date { static now() { return epoch ?? Date.now(); } }, performance: {now: () => monotonic}, requestAnimationFrame: callback => presentationCallbacks.push(callback), crypto: {randomUUID}, Image: DeferredImage, document: {
+const downloads = [];
+const downloadBlobs = [];
+const context = vm.createContext({Blob, URL: {createObjectURL(blob) { downloadBlobs.push(blob); return "blob:local-timing"; }, revokeObjectURL() {}}, DOMParser: PageParser, Date: class extends Date { static now() { return epoch ?? Date.now(); } }, performance: {now: () => monotonic}, requestAnimationFrame: callback => presentationCallbacks.push(callback), crypto: {randomUUID}, Image: DeferredImage, document: {
   getElementById: element, querySelector: () => ({content: 'test-token'}),
-  querySelectorAll: selector => selector === '.send' ? sendButtons : [], createElement: () => element(Symbol()), activeElement: null
+  querySelectorAll: selector => selector === '.send' ? sendButtons : [], createElement: tag => { const node = element(Symbol()); if (tag === 'a') node.click = () => downloads.push({href: node.href, filename: node.download}); return node; }, activeElement: null
 }, fetch: (url, options) => new Promise((resolve, reject) => requests.push({url, options, resolve, reject})), setTimeout() {}});
 vm.runInContext(fs.readFileSync(path.join(__dirname, '../web/app.js'), 'utf8'), context);
 const run = source => vm.runInContext(source, context);
@@ -1005,7 +1007,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   presentationCallbacks.splice(0).forEach(callback => callback(monotonic));
   const snapshot = JSON.parse(run('JSON.stringify(observerMeasurementSnapshot())'));
   const frameTiming = snapshot.frames.at(-1);
-  assert.equal(snapshot.schema, 'observer-timing/2');
+  assert.equal(snapshot.schema, 'observer-timing/3');
   assert.match(snapshot.clock, /performance.now.*monotonic.*Date.now.*epoch/);
   assert.equal(snapshot.status.at(-1).started_epoch_ms, 2000000000100);
   assert.equal(snapshot.status.at(-1).response_ready_epoch_ms, 2000000000080);
@@ -1120,6 +1122,18 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   }
   assert.equal(run('observerMeasurementSnapshot().frames.length'), 32);
   assert.equal(requests.length, 0, 'local timing cannot submit remote requests');
+  const history = JSON.parse(run('JSON.stringify(observerMeasurementSnapshot(true))'));
+  assert.equal(history.selection, 'retained_page_history');
+  assert.ok(history.frames.length > 32, 'download retains earlier frames beyond the visible window');
+  assert.equal(history.retention_limit_per_stage, 8192);
+  element('download-observer-measurements').listeners.click();
+  const exported = JSON.parse(await downloadBlobs.at(-1).text());
+  assert.deepEqual(exported, history, 'standard download includes the exact retained timing history');
+  assert.equal(downloads.at(-1).href, 'blob:local-timing');
+  assert.match(downloads.at(-1).filename, /^enactive-observer-timing-[0-9]+\.json$/);
+  assert.ok(!JSON.stringify(exported).includes('test-token'), 'download contains no controller credential');
+  assert.equal(requests.length, 0, 'timing download sends no controller request');
+
 
   // A native disconnect with a successful status transport does not rotate credentials.
   context.input.connection = 'disconnected';
@@ -1369,5 +1383,10 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
     assert.ok(html.includes(`<dd id="${id}">`), `${id} must exist in the mission facts`);
   }
   assert.doesNotMatch(html + app, /api\/gameplay|task-form|task-start|task-continue|task-abandon|goal-form|mission_lease|renderGameplay/);
+  run("for (let i = 0; i < 8193; i++) retainMeasurement('status', {bounded_export_sample: i})");
+  const bounded = JSON.parse(run('JSON.stringify(observerMeasurementSnapshot(true))'));
+  assert.equal(bounded.status.length, 8192);
+  assert.ok(bounded.dropped.status > 0, 'overflow remains explicit rather than silently claiming complete coverage');
+  assert.equal(bounded.status.at(-1).bounded_export_sample, 8192);
   console.log('Viewer regressions passed: native6 geometry and decoded authority/freshness; mission10 observation and memory5 history; terminal snapshot versus historical uncertainty; reconnect without replay; bounded native/status/DOM clock correlation with monotonic durations; independent Pause and ordinary recovery; rotated credentials without action replay; one bounded rejected-Pause retry; recorded terminal diagnostics.');
 })().catch(error => { console.error(error); process.exitCode = 1; });
