@@ -8,6 +8,17 @@ status: active
 
 Recorded setup and maintenance history; this is not live environment status.
 
+## Diagnostic015 restart closure, 2026-10-23
+
+The [responsive-player checkpoint](changes/060-responsive-player.md#closed015-and-restart-checkpoint)
+retains the failed pre-identity Load and permanently FINAL player. After player
+exit0, the owned controller exited0 on SIGINT. Subsequent exact native PID5355,
+scoped process and port8766 checks found no remaining process/listener. The saved
+final status predates this shutdown and truthfully retains the then-running menu;
+the later cleanup record owns process absence. This is exceptional cleanup, not
+normal Save/exit/Finish. All191save files remain byte-identical to the pre-run
+manifest; no save was edited, restored, added or removed. No global setup changed.
+
 ## Saved diagnostic closure and producer checkpoint, 2026-10-23
 
 The [008 report](acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md)

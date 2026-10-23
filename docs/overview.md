@@ -63,6 +63,11 @@ retains an unsupported identity Claim and deadline failure. The
 loads/adopts with appropriate identity sources, picks up a ration and normally
 Saves/exits/Finishes stopped. Useful travel, a complete learning mission, apparent
 responsiveness and independent seven-day survival remain unaccepted.
+Subsequent [015](changes/060-responsive-player.md#closed015-and-restart-checkpoint)
+verifies software-owned request identities but fails a premature Load continuation
+before character adoption. Its actor and owned processes are closed; the local
+refusal repair remains outstanding. Restarting the desktop loads current tool
+declarations, not a completed gameplay fix.
 
 The [responsive-player brief](changes/060-responsive-player.md) addresses actual
 duplication and manual memory metadata using the existing SDK/cache/staging

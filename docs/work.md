@@ -24,6 +24,9 @@ The [responsive-player proposal](changes/060-responsive-player.md) translates
 closed-host and recent-research findings into tool/context automation and measured
 configuration admission. GitHub #164/#177/#178 own that work; it changes neither
 the source nor retrospective acceptance of a deciding campaign.
+Its [latest closed diagnostic and restart checkpoint](changes/060-responsive-player.md#closed015-and-restart-checkpoint)
+retains the Load applicability failure and separates current source/tool readiness
+from unfinished independent gameplay. GitHub owns the repair and subsequent work.
 
 | Evidence | What it establishes; the linked report owns details and limits |
 | --- | --- |

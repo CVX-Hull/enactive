@@ -670,7 +670,7 @@ next-custom-call gaps. The host trace cannot isolate inference, and there is no
 bytes/43image parts without structured duplication. The dated report owns exact
 scope, failures, token accounting and normal-ending evidence.
 
-The next current MCP contract removes model-supplied request IDs and transport
+The current MCP contract removes model-supplied request IDs and transport
 waits. `tool_specs()` derives public schemas from the existing imperative SDK
 specifications; the stdio producer advertises only these current shapes and
 rejects removed fields. Focused cards use the same schemas. Before delegation to
@@ -712,10 +712,45 @@ missing images require explicit presentation. This is an unqualified experiment,
 not a speed remedy established by source or the passive probe.
 
 Browser download-event collection has repeatedly stalled despite short download
-button handling. The next passive UI slice reuses the existing observer-timing/3
+button handling. The implemented passive UI slice reuses the existing observer-timing/3
 snapshot in a one-shot visible JSON export, readable through ordinary DOM tools.
 Polling does not rewrite the prepared export. No new telemetry endpoint/store or
 codec is added. Actual passive Cua collection saves26777UTF-8 bytes containing63
 status samples and zero frames in0.471s, including the local artifact write. This
 qualifies that status-only collection route, not native display or whole-player
 latency. The evaluated run still needs its own complete correlated measurements.
+
+## Closed015 and restart checkpoint
+
+Actual015 freezes source`e696bfb384310ad435c00b5032135eba858d6db5`, the unchanged
+signed native and31 input files. Its fresh Luna/low host passively verifies the
+selected current argument declarations and one-copy output in11.423s. The
+intentional deciding-role filter configures15 of the project's21 tools; the
+complete actual loaded inventory remains uncounted. The new producer assigns
+operation IDs during actual Launch/Load/Stop without model-authored IDs or waits.
+
+The activated player stops after24.384s before loading a character. A premature
+same-root Load continuation reaches a Create-specific stage check and is treated
+as a fatal ControlError. No input is sent for that child, but the healthy Load
+phase is revoked. This violates the existing S-ARCH distinction between a
+correctable request and lost authority. The repair is not yet implemented:
+[#176](https://github.com/CVX-Hull/enactive/issues/176) owns an actionable no-input
+applicability refusal that preserves the original healthy phase/deadline, followed
+by ordinary player-chosen control under that root. Expiry, Pause, lost custody and
+uncertain delivery must retain their existing behavior. No menu script, renewed
+authority, tactical rescue or reactivation of015 is justified.
+
+The ledger records five requests and one returned primitive; four PNGs total
+134556bytes. The activated CLI forwards five MCP results,21399text bytes and two
+image parts, without structured duplication. The passive browser export retains
+189status samples and40distinct frame replacements with no dropped samples. It
+qualifies collection from this short native-menu run, not useful-play latency.
+Compaction at128000tokens is unexercised. There is no adopted identity, game time,
+memory learning or normal ending. The player is permanently FINAL; owned
+controller/native cleanup is verified and all191save files remain byte-identical.
+
+The project configuration still preapproves the same21 tools. A desktop restart
+loads their current producer declarations; it neither repairs015 nor approves
+gameplay. No run is admitted at this checkpoint. After restart, verify the loaded
+contract, repair and test the local refusal, then freeze a fresh finite actor.
+Independent useful learning and fresh seven-day survival remain incomplete.
