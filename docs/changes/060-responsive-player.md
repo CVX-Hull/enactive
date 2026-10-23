@@ -698,3 +698,24 @@ current CI and a new useful-play attempt remain separate evidence. This slice
 removes measured bookkeeping responsibilities, not the need for semantic choices,
 useful execution coverage, future context improvement or honest full-campaign
 qualification. It establishes no model admission or latency improvement by itself.
+
+Actual fresh CLI014 passive preflight subsequently verifies the changed argument
+declarations and one-copy snapshot in14.002s, with no admission or game. The
+e49candidate's exact full [CI](https://github.com/CVX-Hull/enactive/actions/runs/40010561087)
+passes. Its observed013 context grows16528→211819input tokens per response with no
+compaction; these differ from aggregate turn usage. A prospective per-run
+`model_auto_compact_token_limit=128000` uses the supported
+[Codex setting](https://learn.chatgpt.com/docs/config-file/config-reference#model_auto_compact_token_limit),
+preserving Luna/low and all mission/role instructions. Compaction delay belongs in
+whole-player latency; retained operation/budget/grounding context must survive and
+missing images require explicit presentation. This is an unqualified experiment,
+not a speed remedy established by source or the passive probe.
+
+Browser download-event collection has repeatedly stalled despite short download
+button handling. The next passive UI slice reuses the existing observer-timing/3
+snapshot in a one-shot visible JSON export, readable through ordinary DOM tools.
+Polling does not rewrite the prepared export. No new telemetry endpoint/store or
+codec is added. Actual passive Cua collection saves26777UTF-8 bytes containing63
+status samples and zero frames in0.471s, including the local artifact write. This
+qualifies that status-only collection route, not native display or whole-player
+latency. The evaluated run still needs its own complete correlated measurements.

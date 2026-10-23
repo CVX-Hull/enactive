@@ -58,6 +58,12 @@ function downloadObserverMeasurements() {
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 $('download-observer-measurements').addEventListener('click', downloadObserverMeasurements);
+$('show-observer-export').addEventListener('click', () => {
+  // Explicit one-shot export: live polling must not keep rewriting a large DOM
+  // value or change the data while a human/automation is collecting it.
+  $('observer-export').textContent = JSON.stringify(observerMeasurementSnapshot(true), null, 2);
+  $('observer-export').hidden = false;
+});
 function validFrameGeometry(state) {
   if (state?.protocol !== 6 || typeof state.frame_ok !== 'boolean') return false;
   const geometry = state.frame_geometry;

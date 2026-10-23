@@ -99,6 +99,11 @@ still return immediately. Record the chosen value in a mission's frozen setup;
 it cannot renew original root deadlines or repair an expired/unknown input.
 [Latency accounting and proposed targets](evaluation.md#latency-budgets-for-interactive-play)
 separate loading, skill execution, observer updates and model/tool overhead.
+The spectator's local timing disclosure can prepare fixed **Show export JSON**
+data for DOM collection, using the same bounded observer-timing/3 history as its
+download. Collect after the measured interval before reload; a later explicit click
+refreshes the export. This avoids a download-event wait without introducing another
+telemetry service. A status-only probe establishes no native/frame latency.
 
 Outside an admitted mission, `open .runtime/Cataclysm.app` launches the prepared
 app **bundle**, which executes that project's wrapper and

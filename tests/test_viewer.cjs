@@ -1133,6 +1133,17 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.match(downloads.at(-1).filename, /^enactive-observer-timing-[0-9]+\.json$/);
   assert.ok(!JSON.stringify(exported).includes('test-token'), 'download contains no controller credential');
   assert.equal(requests.length, 0, 'timing download sends no controller request');
+  element('show-observer-export').listeners.click();
+  assert.equal(element('observer-export').hidden, false);
+  const visibleExport = element('observer-export').textContent;
+  assert.deepEqual(JSON.parse(visibleExport), exported, 'visible export uses the same complete bounded data as download');
+  run('retainMeasurement("frames", {outcome: "failed", error: "later sample"}); renderMeasurements()');
+  assert.equal(element('observer-export').textContent, visibleExport, 'live polling does not rewrite the prepared snapshot');
+  element('show-observer-export').listeners.click();
+  const refreshedExport = JSON.parse(element('observer-export').textContent);
+  assert.deepEqual(refreshedExport, JSON.parse(run('JSON.stringify(observerMeasurementSnapshot(true))')));
+  assert.equal(refreshedExport.frames.at(-1).outcome, 'failed', 'export retains failures as well as successes');
+  assert.equal(requests.length, 0, 'visible export and refresh send no controller request');
 
 
   // A native disconnect with a successful status transport does not rotate credentials.

@@ -127,6 +127,16 @@ browser probe verifies v2 status anchors only; actual paired native/browser
 correlation remains to be measured during fresh play. Animation callbacks do not
 establish screen paint, and these records do not isolate model inference.
 
+The timing disclosure offers standard Download timing and **Show export JSON**
+over the same complete bounded page history, including overflow and failures.
+The latter writes one fixed, visible DOM snapshot for human or browser-automation
+collection. Live polling does not rewrite that export; click again to refresh it.
+This avoids requiring a browser download-event API. It adds no endpoint, store,
+sampling protocol or gameplay action, and neither export surface qualifies speed.
+Collect after the measured interval and before reload/closure; retain actual
+status/frame counts and missingness rather than treating a status-only probe as
+native/gameplay display evidence.
+
 Campaign length is another profiling axis. Current ingestion scans retained peers,
 capacity accounting walks frame files and archive save serializes the manifest.
 Navigation rechecks accumulated source files/hashes. Profile those stages against
