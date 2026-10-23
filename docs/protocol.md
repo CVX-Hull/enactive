@@ -228,6 +228,9 @@ For skill/non-Launch lifecycle composition, null `source_id` selects only the fu
 source already cached inside that explicitly selected snapshot; no source fetch or
 newer status is substituted. Explicit retained-source selection remains available.
 Launch with null stays source-free even if an older snapshot contains an image.
+A snapshot with no source cannot supply an implicit binding. Diagnostic Observe
+may return `result.source_ids` without publishing current source; explicitly read
+and select that retained image. No archive search or cache fallback chooses it.
 Source-cache eviction cannot erase the selected snapshot's embedded source, while
 snapshot eviction still requires an explicit new read. Phase checkpoint matching
 and all receiver freshness/custody/budget checks remain authoritative.

@@ -288,6 +288,22 @@ class PlayerClaimTests(unittest.TestCase):
         self.assertEqual(self.client.reads, [])
         self.assertEqual(self.client.events, ['submit', 'status', 'submit', 'status'])
 
+    def test_missing_snapshot_source_explains_explicit_diagnostic_selection_without_io(self):
+        # Observe can retain diagnostic evidence without publishing current_source.
+        # An unrelated already-read image cannot become an implicit replacement.
+        chosen = self.player.snapshots['chosen']
+        chosen['source'] = None
+        chosen['mission']['current_source'] = None
+        chosen['mission']['phase'] = 'paused'
+        chosen['mission']['lifecycle_phase'] = phase(self.source, operation='load', stage='awaiting_transition')
+        before = deepcopy(chosen)
+        with self.assertRaisesRegex(ContractError, 'enactive_source.*explicitly select'):
+            self.player.call('enactive_lifecycle', self.input_arguments(operation='load', scope='lifecycle'))
+        self.assertEqual(self.player.snapshots['chosen'], before)
+        self.assertEqual(self.client.writes, [])
+        self.assertEqual(self.client.reads, [])
+        self.assertEqual(self.client.events, [])
+
     def test_launch_null_remains_source_free_even_with_old_cached_source(self):
         self.player.call('enactive_lifecycle', self.input_arguments(operation='launch'))
         result = self.client.writes[-1]

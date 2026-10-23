@@ -602,3 +602,58 @@ separately. These results do not relabel the failed full run or qualify the new
 publication head; exact hosted full CI and protected publication remain separate.
 The existing full regression/migration controls caught this gap; no second
 compatibility shape or extra per-action review is added.
+
+
+## Interface follow-through after012
+
+[Closed012](../acceptance/2026-10-23-luna-responsiveness-twelfth-attempt.md)
+exercises the new one-copy producer and semantic Claim API, then expires its chosen
+120-second Load root before adoption. Its stored world Claim cites an image that
+does not establish the world name. Mechanical authoring success is not semantic
+support, accepted memory, procedure learning or responsiveness. The source and
+frozen facts stay separate from prospective improvements.
+
+The existing receiver already rejects visible-control perception for direct,
+navigate, inspect and activity inputs. MCP unnecessarily replaced each branch's
+null perception with the general union. Keep the receiver-derived null for those
+branches; only menu/edit/item use the shared control union. The existing focused
+SDK export omits that unused definition for selected non-control skills. No new
+schema renderer, parser or dependency is needed; full/menu cards retain it.
+
+Null source selection still means the exact selected cached snapshot source.
+Actual012 Observe has neither current source nor snapshot source, but lists a
+diagnostic source in its result. A proposed cache fallback cannot fix that absent
+identity and would risk selecting different evidence. Retain refusal and make its
+message name the existing explicit read/select path. No implicit archive read,
+refresh, source choice, Resume or allowance renewal is added. Tests preserve an
+unrelated cached source and prove no I/O or submission on this path.
+
+The guide clarifies whole-root lifecycle budgets and actual support selection;
+it supplies no game tactics or curated Claim. The runbook removes a stale tool
+count instead of duplicating the configured catalogue. Existing S-UX/S-MIGRATION,
+C-REVIEW and C-PORTABLE own these obligations; no extra per-action control is added.
+An88-test integration/SDK/lifecycle lane passes87cases but finds a missing phase
+field in the newly added synthetic regression. Correcting that fixture to the
+actual paused shape yields25Claim/configuration cases passing in0.277s; the other
+87cases are unchanged. The focused four-card/configuration lane passes0.030s.
+These overlapping runs do not establish a new full portable or native acceptance.
+
+Next context experiment: use the CLI's existing `enabled_tools` filter to expose
+only the admitted role's needed tools (no lead-only Start or adviser-only tools
+in a no-adviser baseline), while retaining the same project-preapproved table,
+server, schemas and writer. Freeze and verify that actual profile before admission;
+a smaller catalogue alone does not establish speed or capability sufficiency.
+Compare whole useful outcomes and reported usage, not cached-token percentage.
+Broader automatic budget/collection/accounting ergonomics remain under#164; do not
+add a new scheduler/store or change root deadlines to conceal slow execution.
+
+
+Official [MCP configuration](https://learn.chatgpt.com/docs/extend/mcp#other-configuration-options)
+supports both `enabled_tools` and `required`. The next dedicated CLI profile can
+therefore narrow role context and require its essential server at startup through
+existing host behavior, without a custom tool registry/bootstrap service or global
+change. Actual profile loading, continuation and latency still need qualification.
+An independent clean-context source/evidence review finds no actionable defect;
+25targeted tests pass in0.271s, frozen hashes/counts/PNG/support and191unchanged
+save entries are independently verified. It executes no native or full current
+suite; source review and the old51CI result cannot qualify the new profile/run.

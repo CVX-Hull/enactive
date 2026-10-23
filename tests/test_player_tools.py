@@ -323,10 +323,17 @@ class ProjectConfigurationTests(unittest.TestCase):
                     intent="Dismiss current visible dialog", expected="Dialog closes",
                     interrupt_allowed=False)))
         validate_json(args, schema)
+        self.assertEqual(schema["properties"]["intent"]["properties"]["perception"], {"type": "null"})
+        args["intent"]["perception"] = dict(kind="dismissal", question="Visible dialog")
+        with self.assertRaises(ContractError):
+            validate_json(args, schema)
+        args["intent"]["perception"] = None
         args["intent"]["goal"] = dict(keys=["ESC"])
         with self.assertRaises(ContractError):
             validate_json(args, schema)
-        self.assertIn("$defs", schema)
+        self.assertNotIn("$defs", schema)
+        self.assertIn("$defs", describe("enactive_skill", "menu")["input_schema"])
+        self.assertIn("$defs", describe("enactive_skill")["input_schema"])
         self.assertEqual(len(describe("enactive_skill")["input_schema"]["properties"]["intent"]["anyOf"]), 8)
 
     def test_focused_help_selects_memory_and_rejects_unknown_variants(self):

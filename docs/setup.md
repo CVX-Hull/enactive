@@ -126,6 +126,16 @@ records. Direct input is an intent on `enactive_skill`, not a new input tool;
 Observe macro closure likewise uses `enactive_observe`. These project settings
 do not prove the running host loaded the current schemas/help or grant authority.
 
+For a dedicated CLI player, a frozen run profile may narrow `enabled_tools` to the
+admitted role's needs and mark its essential server `required=true`, using the
+[official MCP options](https://learn.chatgpt.com/docs/extend/mcp#other-configuration-options).
+This is a per-invocation configuration of the same server, not another schema or
+permission path. A no-adviser player need not receive lead-only Start or adviser
+claim/submit/source/result tools. Preserve needed player recovery, memory, lifecycle
+and result tools, existing approval settings and current payload contracts. Verify
+the actual profile before admission; reduced catalogue size is not responsiveness
+qualification. Keep the project-wide engineering table and global settings intact.
+
 If the host declaration replaces nested goals or memory entries with `unknown`,
 export only the needed current schema with the existing helper:
 
@@ -136,7 +146,8 @@ export only the needed current schema with the existing helper:
 
 `--describe` is read-only and mutually exclusive with `--write`. `--variant`
 selects one current `skill_kind` or `entry_type`; unknown selectors refuse.
-The output preserves the actual schema and shared definitions. The lead can freeze
+The output preserves the actual schema and needed shared definitions; selected
+non-control skills omit the unused control-perception union. The lead can freeze
 these focused interface references with a mission, advertise exact paths in its
 brief and let the player read a selected variant when needed. They are help, not
 request files, retained memory, permission or gameplay authority. No host schema

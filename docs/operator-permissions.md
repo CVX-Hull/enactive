@@ -109,7 +109,12 @@ reachable through the ordinary tool path; first-use failures still stop new play
 
 1. Use the reviewed structured Enactive MCP tools for the designated player.
    Verify the exact project-only server command/cwd and the current generated named
-   tools with `approve` behavior using the supported setup recipe. No arbitrary
+   tools with `approve` behavior using the supported setup recipe. A frozen dedicated
+   CLI profile may expose only its role's needed subset through the existing
+   `enabled_tools` filter; verify that actual subset and needed argument shapes,
+   rather than assuming the full engineering catalogue is the player working set.
+   The filter is context selection, not gameplay authority or a security boundary.
+   Preserve the same server/approval settings and all needed continuation tools. No arbitrary
    shell/Python allowance or per-action approval justification is the play loop.
 2. Verify that this exact checkout's project layer is enabled. Supported
    `config/read` with `cwd` and `includeLayers` can show loading and scope;

@@ -29,6 +29,10 @@ def describe(name: str, variant: str | None = None) -> dict:
         if len(branches) != 1:
             raise ValueError("Select one current skill_kind or entry_type variant")
         schema["properties"]["intent"] = branches[0]
+        # The only shared definition is visible-control perception. A selected
+        # non-control skill requires null, so its focused card needs no union.
+        if name == "enactive_skill" and branches[0]["properties"]["perception"] == {"type": "null"}:
+            schema.pop("$defs")
     return dict(name=spec.name, description=spec.description, input_schema=schema)
 
 

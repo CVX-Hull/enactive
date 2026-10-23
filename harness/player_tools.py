@@ -83,7 +83,8 @@ def tool_specs() -> tuple[ToolSpec, ...]:
     skill_intents = []
     for kind in SKILLS:
         schema = _without(request_schema("skill", skill_kind=kind), *ordinary_headers)
-        schema["properties"]["perception"] = {"$ref": "#/$defs/perception"}
+        if kind in ("menu", "edit", "item"):
+            schema["properties"]["perception"] = {"$ref": "#/$defs/perception"}
         schema["properties"]["procedure"]["anyOf"] = [value if value.get("type") == "null" else
             _without(value, "use_id") for value in schema["properties"]["procedure"]["anyOf"]]
         skill_intents.append(schema)
@@ -104,7 +105,7 @@ def tool_specs() -> tuple[ToolSpec, ...]:
             _object(dict(snapshot_id=identity, section={"enum": list(DETAIL_SECTIONS)})), True),
         ToolSpec("enactive_source", "Read one explicitly selected historical source and its actual image; grants no input authority.", _object(dict(mission_id=identity, source_id=identity)), True),
         ToolSpec("enactive_result", "Collect only the original operation ID, including after interrupted submission. Never replays input.", _object(dict(mission_id=identity, operation_id=identity, wait_seconds=wait)), True),
-        ToolSpec("enactive_skill", "Choose ordinary physical input (skill_kind=direct) or a semantic skill with an explicit returned snapshot/source and finite limits. source_id=null selects that exact cached snapshot source. Direct keys/scalars permit visual drift under owned custody; clicks keep original geometry. Semantic preconditions remain strict. Software retains lineage and collects delivery and actual current evidence separately.", skill),
+        ToolSpec("enactive_skill", "Choose ordinary physical input (skill_kind=direct) or a semantic skill with an explicit returned snapshot/source and finite limits. source_id=null selects that exact cached snapshot source. Direct uses perception=null; its keys/scalars permit visual drift under owned custody; clicks keep original geometry. Semantic preconditions remain strict. Software retains lineage and collects delivery and actual current evidence separately.", skill),
         ToolSpec("enactive_lifecycle", "Explicit registered launch/create/save/exit/load/finish. With no owned child, first launch using scope=new_root and source_id=null; then choose create/load from its returned menu. For other operations, source_id=null selects that exact cached snapshot source. Continue a returned lifecycle phase with scope=lifecycle and the same operation, including transition reconciliation, identity readmission and adoption. No implicit Resume, save or restart.", lifecycle),
         ToolSpec("enactive_observe", "Request one typed native observation using the chosen snapshot epoch. A healthy ordinary prompt may advance or record local macro_closure without task success or renewed mission allowance; explicitly choose any next root from fresh evidence. Does not Resume or reconcile unknown delivery. After known direct input with absent/aged current evidence, explicit Observe can refresh its read-only scope across the exact authenticated operation rotation; input requires the fresh binding. It never restores failed custody or renews limits.", _object(common)),
     ]
@@ -505,6 +506,11 @@ class PlayerTools:
                 source = None
             else:
                 source = selected.get("source")
+                if source is None:
+                    raise ContractError("Selected snapshot has no source to bind. Null source_id selects only "
+                        "that cached snapshot source. If an Observe/lifecycle result returned diagnostic "
+                        "source_ids, read the chosen exact image with enactive_source and explicitly select "
+                        "its source_id. No request was submitted; no refresh, retarget or authority renewal.")
             request = compose_request(snapshot, request_id=identity, intent=intent, limits=data["limits"],
                 scope=data["scope"], source=source, supporting_source_ids=data["supporting_source_ids"])
         else:

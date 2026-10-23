@@ -36,7 +36,9 @@ reason to read the entire repository during every game.
   This is not a source-read declaration or proof that an action succeeded.
 - `enactive_skill` chooses intent and finite limits. Use a supported semantic goal
   when useful, ordinary `direct` keys/text/clicks for unfamiliar ordinary gameplay.
-  Inspect the returned image/effect; a delivered input is not task success.
+  Ordinary `direct` inputs use `perception=null`; visible-control interpretations
+  belong to menu/edit/item controls. Inspect the returned image/effect; a delivered
+  input is not task success.
 - Read the description/schema of the **one tool needed**, rather than printing
   every declaration. Some hosts reduce nested argument schemas to `unknown`; this
   is not a usable field contract. If the frozen brief supplies focused interface
@@ -49,6 +51,10 @@ reason to read the entire repository during every game.
   For skills/non-Launch lifecycle, `source_id=null` selects only the exact source
   already returned in that cached snapshot. An explicit returned source ID selects
   that retained read instead. Launch stays source-free; no newer source is fetched.
+  If the snapshot has no source, null cannot select one. Diagnostic Observe can
+  return `result.source_ids` while current source remains absent; read the chosen
+  exact image with `enactive_source`, then explicitly select its ID. A diagnostic
+  capture is not current input authority or proof that reconciliation succeeded.
   If a lifecycle call refuses a stale binding with no input,
   use the returned current snapshot for a separate new decision. No automatic
   retarget, replay or allowance renewal occurs.
@@ -79,7 +85,9 @@ reason to read the entire repository during every game.
   image; additional source/claim premises stay explicit. Unobserved grounding has
   no native order or image citations. Correction chooses retired IDs/reason;
   software supplies matching supersedes. Returned Claim IDs identify the records
-  you can select later; do not calculate hashes or timestamps yourself.
+  you can select later; do not calculate hashes or timestamps yourself. Cite the
+  image or premises that actually establish the claim, rather than automatically
+  citing the latest image. Accepted storage is not semantic support or truth.
 
 Owned exit also accepts ordinary keys/text/clicks as lifecycle-scoped children.
 Inspect the current menu and choose input; no exact quit-question transcription is
@@ -107,6 +115,12 @@ new lifecycle fallback remains pending.
 | Reconciled transition, paused provisional character | Continue with `enactive_lifecycle`, `scope=lifecycle`, unchanged `operation=create` or `load`; this separate call readmits the provisional session. Do not use `enactive_readmit`, which is for ordinary recovery/handoff. Then inspect `purpose=character_identity`, read the actual character screen, retain truthful world/character Claims, dismiss it and separately adopt through the same lifecycle operation with those Claim IDs. Adoption, not launch or Observe, starts ordinary input authority. |
 | Normal ending | New `save` lifecycle root, interpreted or ordinary confirmation, explicit transition reconciliation/checkpoint, owned `exit`, then `finish` with the appropriate actual outcome. Returning to the same normal session cancels Save without a checkpoint claim. Later reload requires this mission's own saved checkpoint. An explicit initial-load admission instead establishes new visible identity and accounting; old authority/world facts are not imported. |
 | Abandoning menu-only setup | Return organically to the same owned main menu. A new `exit` request can revoke settled setup without input; then explicitly Observe and use a new finite normal-exit root. A fresh Observe and this zero-input MAIN_MENU abort remain available after local setup expiry under healthy custody and global limits; they cannot renew expired inputs or cancel another form. This does not clean up an unadopted normal session. |
+
+Create/load limits cover the complete original lifecycle: opening menus, transition,
+identity inspection, Claims, dismissal and adoption. Choose a prospective finite
+allowance from the coupled forecast for that whole operation, not just the first
+menu. Child calls cannot enlarge or renew the original root. If it expires,
+quiesce; a new child or Claim cannot repair expired input authority.
 
 Let software form wire records. Choose the goal, selected evidence, interpretation,
 limits and semantic fields required by the current schema. The lifecycle summary's remaining wall/primitives are software-derived as-of values; use them to choose timely closure, not as a renewed allowance. Do not write request

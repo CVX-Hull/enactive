@@ -63,7 +63,7 @@ the full bounded supplies/shelter outcome; portable fixtures alone cannot accept
 
 ## Permissions and player ownership
 
-The admitted player uses the twenty project-preapproved
+The admitted player uses the project-preapproved
 [structured tools](setup.md#configure-the-structured-player-tools). Routine
 observation, actions, memory, handoff, lifecycle and result/image handling must have
 zero human or automatic approval-review round trips. Verify the actual designated

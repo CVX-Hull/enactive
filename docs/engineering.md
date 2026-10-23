@@ -45,7 +45,9 @@ Tool duration, cached-token share and engine ACK speed alone do not establish
 responsive play. [Evaluation](evaluation.md#latency-budgets-for-interactive-play)
 owns measurement definitions; C-USABILITY is manual, not an automated latency gate.
 Give deciding players a bounded, maintained interface working set, separate from
-engineering instructions and the evidence archive. Routine play must not require
+engineering instructions and the evidence archive. Use existing role/mission tool
+filters to exclude irrelevant schemas; keep required capabilities and authority
+checks separate, and verify the actual frozen profile's sufficiency before play. Routine play must not require
 source-code archaeology, bulk declaration dumps or recursive runtime searches.
 Verify needed argument shapes in the actual host, not just tool names. If a host
 reduces nested schemas to `unknown`, supply focused current-schema references
