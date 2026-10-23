@@ -8,6 +8,17 @@ status: active
 
 Recorded setup and maintenance history; this is not live environment status.
 
+## Initial-Load diagnostic closure, 2026-10-23
+
+The [007 report](acceptance/2026-10-23-luna-responsiveness-seventh-attempt.md)
+records the failed new-admission Load on b26ae08/current690fe96. Its actor stopped
+permanently; the exact owned paused child87053 and controller were exceptionally
+stopped, with PID/8766-listener absence verified. No normal ending is credited;
+native exit code remains unknown. All191prior save files are unchanged and none
+were added. The accepted72-file baseline archive is retained; no restore or save
+editing occurred. Actual21-tool loading is verified; no additional Codex restart
+or global configuration change is required.
+
 ## Ctrl/named-key rebuild and failed diagnostic, 2026-10-23
 
 Built committed `bc36b7f4263c9e8a9d6e929b9884dfaa92e07d5c` in the existing

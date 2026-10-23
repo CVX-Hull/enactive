@@ -333,3 +333,13 @@ regression. Revisit numerical budgets with prospective evidence, retaining old
 failures and reasons. Do not renew controls merely by changing dates. The
 [research synthesis](../research-responsive-gameplay.md) owns external sources,
 read scope, transfer limits and the prior-document crosswalk.
+
+[Diagnostic007](../acceptance/2026-10-23-luna-responsiveness-seventh-attempt.md)
+exposes wrong-domain reconciliation: a missing ordinary recovery candidate is
+reported as custody loss even during an expected Load transition. Preserve only
+positively verified healthy lifecycle state after a zero-input wrong-tool refusal;
+keep genuine custody/Pause/fault failures fatal. Improve selected-phase tool
+presentation and software-owned terminal cost reporting. The actor confused
+remaining frame/byte allowance with usage; actual17PNGs/648248bytes give no evidence
+of excessive capture. Track these under #164/#176/#195 using existing mechanisms,
+not a menu-specific handler, new reporting framework or extra approval gate.
