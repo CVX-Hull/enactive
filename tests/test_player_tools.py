@@ -252,7 +252,7 @@ class SnapshotDetailTests(unittest.TestCase):
         selected, _ = player.call("enactive_snapshot", {})
         identity = selected["snapshot_id"]
         before = deepcopy(selected)
-        paths = dict(configuration=selected["mission"]["configuration"], metrics=selected["mission"]["metrics"],
+        paths = dict(mission=selected["mission"], configuration=selected["mission"]["configuration"], metrics=selected["mission"]["metrics"],
             receipt=selected["mission"]["last_receipt"], progress=selected["mission"]["progress"],
             native=selected["native"], source=selected["source"])
         paths = deepcopy(paths)
@@ -422,7 +422,7 @@ class SDKTransportTests(unittest.TestCase):
                 self.assertIsNone(result.structured_content)
                 view = json.loads(result.content[0].text)
                 self.assertEqual(view["mission"]["mission_id"], "sdk-fixture")
-                self.assertEqual(view["presentation_schema"], "player-view/3")
+                self.assertEqual(view["presentation_schema"], "player-view/4")
                 self.assertEqual(view["detail_sections"], list(DETAIL_SECTIONS))
                 self.assertEqual(view["mission"]["progress"],
                                  _FixtureClient().status()["mission"]["progress"])
@@ -445,13 +445,25 @@ class SDKTransportTests(unittest.TestCase):
                     rejected = await client.call_tool("enactive_observe", dict(
                         snapshot_id=view["snapshot_id"], **obsolete))
                     self.assertTrue(rejected.is_error)
+                malformed = await client.call_tool("enactive_skill", dict(
+                    snapshot_id=view["snapshot_id"], scope="new_root", source_id=None,
+                    supporting_source_ids=[], limits=dict(primitives=1, wall_seconds=10, game_seconds=10),
+                    intent=dict(skill_kind="direct", goal={"description": "private-player-payload"},
+                                perception=None, procedure=None, work_id=None)))
+                self.assertTrue(malformed.is_error)
+                feedback = malformed.content[0].text
+                self.assertIn("intent.goal", feedback)
+                for field in ("input", "intent", "expected", "interrupt_allowed"):
+                    self.assertIn(field, feedback)
+                self.assertNotIn("private-player-payload", feedback)
+                self.assertNotIn("navigate", feedback)
                 detailed = await client.call_tool("enactive_detail", dict(
                     snapshot_id=view["snapshot_id"], section="receipt"))
                 self.assertFalse(detailed.is_error)
                 self.assertIsNone(detailed.structured_content)
                 detail_view = json.loads(detailed.content[0].text)
                 self.assertEqual(detail_view["detail"], _FixtureClient().status()["mission"]["last_receipt"])
-                self.assertEqual(detail_view["presentation_schema"], "player-view/3")
+                self.assertEqual(detail_view["presentation_schema"], "player-view/4")
                 self.assertFalse(detail_view["grants_authority"])
                 self.assertEqual(len(detailed.content), 1)
                 collected = await client.call_tool("enactive_result", dict(mission_id="sdk-fixture",
@@ -459,7 +471,7 @@ class SDKTransportTests(unittest.TestCase):
                 self.assertFalse(collected.is_error)
                 self.assertIsNone(collected.structured_content)
                 projected = json.loads(collected.content[0].text)
-                self.assertEqual(projected["presentation_schema"], "player-view/3")
+                self.assertEqual(projected["presentation_schema"], "player-view/4")
                 self.assertEqual(projected["transport"], "uncertain")
                 self.assertFalse(projected["settled"])
                 self.assertEqual(projected["operation_id"], "original-operation")

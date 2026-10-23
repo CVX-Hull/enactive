@@ -24,13 +24,18 @@ reason to read the entire repository during every game.
 - `enactive_snapshot` gives a descriptive snapshot handle and the selected source
   image. Select those exact handles for a new intent. Software supplies mission,
   epoch, source bindings and stable child lineage. A snapshot never Resumes.
-- Default `player-view/3` keeps current decision state and advertises `detail_sections`.
-  Use `enactive_detail(snapshot_id, section)` for exact as-of configuration, metrics,
-  receipt, progress, native or source metadata when needed. It never refreshes or
+- Default `player-view/4` keeps current decision state and advertises `detail_sections`.
+  Use `enactive_detail(snapshot_id, section)` for the complete exact as-of mission, configuration,
+  metrics, receipt, progress, native or source metadata when needed. It never refreshes or
   grants authority. Use `enactive_source` when you need the actual retained image.
   Software verifies hashes and binds requests; do not reconstruct omitted audit data.
-  Routine results omit repeated configuration, technical receipt bindings and the
-  general normal-play action vocabulary. Menus, visible scenes and uncertainty stay.
+  Default snapshots are explicitly read-only. A proof receipt's grants_authority=false
+  does not mean adoption failed or ordinary execution is refused: use the actual
+  operation result, next_needed_decision and active phase. The writer checks inputs.
+  Routine results omit repeated objectives/clocks, advisory ID inventories, technical
+  receipt bindings and the general normal-play action vocabulary. Exactly shared
+  native fields live in the returned source view; differences, capture timestamps,
+  menus, scenes and uncertainty stay. Full hidden fields remain in exact detail.
   An explicit `image_presentation` note can say that implicit pixels are unchanged
   in this player context; use snapshot/source for an actual redisplay when needed.
   This is not a source-read declaration or proof that an action succeeded.

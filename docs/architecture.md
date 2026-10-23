@@ -8,14 +8,19 @@ status: active
 
 Current source contracts are native6, mission/11, campaign-memory/6, procedure/3,
 reflection/2, gameplay/2, evidence archive5, mission ledger12 and MCP presentation
-`player-view/3`. One MissionRuntime
+`player-view/4`. One MissionRuntime
 owns the live mission API. The MCP adapter progressively reveals technical detail
 from its existing bounded snapshot cache; these passive reads neither refresh the
 selected evidence nor establish input authority. Default normal-play results omit
-repeated configuration, technical receipt bindings and general engine vocabulary.
+repeated objective/configuration/clocks, advisory ID inventories, technical
+receipt bindings and general engine vocabulary. Complete selected mission detail
+remains available; read-only proof flags are not execution-readiness promises.
+Exactly shared native metadata lives in the returned source, with capture times,
+uncertainty and differing views retained. Discriminated malformed intents get
+bounded branch-specific schema errors before staging, with no repaired/defaulted input.
 One bounded producer-local fingerprint avoids identical implicit image parts in a
 known unchanged player/control context; explicit image reads remain complete.
-MCP server5.0.0 assigns request identities and bounded result waits before invoking
+MCP server5.1.0 assigns request identities and bounded result waits before invoking
 the existing imperative SDK. Its public schemas reject caller-owned IDs/waits;
 snapshot/source, scope, execution limits and semantic decisions remain explicit.
 Errors preserve assigned original collection arguments through the presentation

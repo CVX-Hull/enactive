@@ -51,7 +51,10 @@ def snapshot():
 def expected_snapshot(value):
     expected = deepcopy(value)
     expected["detail_sections"] = list(DETAIL_SECTIONS)
-    del expected["mission"]["configuration"]
+    expected.pop("grants_authority", None)
+    expected["read_only"] = True
+    for name in ("configuration", "objective", "epoch", "deadline"):
+        expected["mission"].pop(name, None)
     expected["mission"]["metrics"] = dict(game_seconds=None, primitives=10)
     expected["mission"]["current_source"] = {"observation_id": "source"}
     expected["mission"]["native_process"]["last_sample"] = dict(running=False, outcome="unknown",
@@ -88,7 +91,7 @@ class DecisionViewTests(unittest.TestCase):
     def test_snapshot_keeps_decisions_unknowns_and_visible_source_with_detail_addresses(self):
         original = snapshot()
         expected = expected_snapshot(original)
-        expected["presentation_schema"] = "player-view/3"
+        expected["presentation_schema"] = "player-view/4"
         view = decision_view("enactive_snapshot", original)
         self.assertEqual(view, expected)
         self.assertEqual(view["source"]["observation"], original["source"]["observation"])
@@ -126,7 +129,7 @@ class DecisionViewTests(unittest.TestCase):
                         proposal=deepcopy(payload)), next_snapshot=snapshot(), diagnostic="retained")
                 expected = deepcopy(original)
                 expected["next_snapshot"] = expected_snapshot(original["next_snapshot"])
-                expected["presentation_schema"] = "player-view/3"
+                expected["presentation_schema"] = "player-view/4"
                 for tool in ("start", "result", "skill", "lifecycle", "observe", "remember", "correct",
                              "handoff", "stop", "reconcile", "claim", "readmit", "context"):
                     with self.subTest(tool=tool):
@@ -204,7 +207,7 @@ class DecisionViewTests(unittest.TestCase):
         original = snapshot()
         original.update(next_snapshot=snapshot(), progress=["keep"], last_receipt={"keep": True})
         expected = deepcopy(original)
-        expected["presentation_schema"] = "player-view/3"
+        expected["presentation_schema"] = "player-view/4"
         for tool in ("source", "detail", "advice", "reflect_next", "reflect_submit", "reflect_source", "reflect_result"):
             with self.subTest(tool=tool):
                 self.assertEqual(decision_view("enactive_" + tool, original), expected)
@@ -214,14 +217,60 @@ class DecisionViewTests(unittest.TestCase):
                              grants_authority=False, source_error="Original image unavailable"),
                         dict(snapshot_id="s", mission={"phase": "admitted"}, native={}, source=None)):
             with self.subTest(current=current):
-                expected = dict(deepcopy(current), presentation_schema="player-view/3")
+                expected = dict(deepcopy(current), presentation_schema="player-view/4", read_only=True)
+                expected.pop("grants_authority", None)
                 if current["snapshot_id"] is not None:
                     expected["detail_sections"] = list(DETAIL_SECTIONS)
                 self.assertEqual(decision_view("enactive_snapshot", current), expected)
         error = dict(transport="uncertain", settled=False, operation_id="original",
                      response=None, snapshot_error="Status unavailable")
         self.assertEqual(decision_view("enactive_result", error),
-                         dict(error, presentation_schema="player-view/3"))
+                         dict(error, presentation_schema="player-view/4"))
+
+    def test_reflection_inventory_and_mechanical_clocks_move_to_exact_mission_detail(self):
+        current = snapshot()
+        current["mission"].update(started_at=100, last_wall=101, remaining_wall_seconds=99,
+            remaining_inputs=2, last_context_id="previous-packet", grants_authority=False,
+            reflection=dict(jobs=[{"id": "old-job", "state": "unknown"}], proposals=["old-proposal"],
+                phase="active", pending=1, job_count=1, proposal_count=1,
+                operation_states={"unknown": 1}, reason="Retained unreviewed work", unreviewed_requests=4),
+            lease_owner=dict(actor_id="successor", operation="interaction", session="session", epoch=4,
+                mission_id="mission", pause_generation=5, takeover_generation=0))
+        client = Mock()
+        player = PlayerTools(client)
+        player.snapshots["chosen-snapshot"] = deepcopy(current)
+        view = decision_view("enactive_snapshot", current)
+        self.assertTrue(view["read_only"])
+        self.assertNotIn("grants_authority", view)
+        for field in ("objective", "started_at", "deadline", "last_wall", "remaining_wall_seconds",
+                      "remaining_inputs", "last_context_id", "epoch", "grants_authority"):
+            self.assertNotIn(field, view["mission"])
+        self.assertEqual(view["mission"]["lease_owner"], {"actor_id": "successor", "operation": "interaction"})
+        self.assertEqual(view["mission"]["reflection"], dict(phase="active", pending=1, job_count=1,
+            proposal_count=1, operation_states={"unknown": 1}, reason="Retained unreviewed work", unreviewed_requests=4))
+        self.assertEqual(view["mission"]["unreconciled"], current["mission"]["unreconciled"])
+        self.assertEqual(view["mission"]["unknown_effects"], current["mission"]["unknown_effects"])
+        self.assertEqual(view["mission"]["remaining_limits"], current["mission"]["remaining_limits"])
+        self.assertEqual(view["mission"]["cleanup_reserve"], current["mission"]["cleanup_reserve"])
+        self.assertEqual(player.detail("chosen-snapshot", "mission")["detail"], current["mission"])
+        self.assertEqual(client.mock_calls, [])
+
+    def test_equal_native_metadata_lives_in_source_but_changed_capture_and_unknown_fields_remain(self):
+        current = snapshot()
+        for visible in (current["native"]["state"], current["source"]["observation"]):
+            visible.update(category="MENU", boundary={"kind": "menu", "id": "same-boundary"},
+                in_game=True, paused=True, revision=8, session="session", frame_ok=True,
+                frame_geometry={"width": 960}, timestamp_ms=100)
+        current["native"]["state"]["timestamp_ms"] = 110
+        before = deepcopy(current)
+        view = decision_view("enactive_snapshot", current)
+        self.assertEqual(view["source"]["observation"], current["source"]["observation"])
+        self.assertEqual(view["native"]["state"], dict(timestamp_ms=110, health={"status": "healthy"},
+            extra_future_field={"keep": True}))
+        self.assertEqual(current, before)
+        # A changed visible view cannot borrow the source's metadata body.
+        current["native"]["state"]["ui"] = {"menu": "changed"}
+        self.assertEqual(decision_view("enactive_snapshot", current)["native"], current["native"])
 
     def test_transport_omissions_are_scoped_and_partial_visible_views_stay_complete(self):
         reference = dict(schema="evidence/5", record_type="observation", frame_path="exact.png",

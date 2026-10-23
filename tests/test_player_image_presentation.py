@@ -87,8 +87,9 @@ class ImagePresentationTests(unittest.TestCase):
         for section in DETAIL_SECTIONS:
             detail, image = self.player.call("enactive_detail", dict(
                 snapshot_id=current["snapshot_id"], section=section))
-            expected = current.get(section) if section in ("native", "source") else current["mission"].get(
-                "last_receipt" if section == "receipt" else section)
+            expected = (current["mission"] if section == "mission" else current.get(section)
+                if section in ("native", "source") else current["mission"].get(
+                    "last_receipt" if section == "receipt" else section))
             self.assertEqual(canonical({"detail": detail["detail"]}), canonical({"detail": expected}))
             self.assertIsNone(image)
         self.assertEqual([call for call in self.client.calls if isinstance(call, tuple) and call[0] == "source"],

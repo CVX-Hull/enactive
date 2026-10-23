@@ -7,7 +7,7 @@ from .gameplay.contracts import canonical
 from .player_tools import DETAIL_SECTIONS
 
 
-PRESENTATION_SCHEMA = "player-view/3"
+PRESENTATION_SCHEMA = "player-view/4"
 
 _REFERENCE_FIELDS = ("schema", "record_type", "frame_path", "frame_sha256",
                      "received_monotonic", "visibility_version")
@@ -15,6 +15,11 @@ _RECEIPT_DETAIL_FIELDS = ("native_request_json", "native_ack", "dispatch_binding
                           "source_before", "preflight_source", "source_after",
                           "expected_session", "expected_revision", "expected_boundary_id",
                           "received_monotonic")
+_MISSION_DETAIL_FIELDS = ("configuration", "objective", "started_at", "deadline", "last_wall",
+                          "remaining_wall_seconds", "remaining_inputs", "last_context_id", "epoch",
+                          "grants_authority")
+_SHARED_VISIBLE_FIELDS = ("category", "boundary", "in_game", "paused", "pause_origin", "revision",
+                          "session", "status", "takeover_generation", "error", "frame_geometry", "frame_ok")
 
 
 def _omit(value: dict | None, fields: tuple[str, ...]) -> None:
@@ -35,10 +40,16 @@ _NEXT_SNAPSHOT_TOOLS = frozenset({
 def _project_snapshot(snapshot: dict, operation: dict | None = None, operation_id: str | None = None) -> None:
     if snapshot.get("snapshot_id") is not None:
         snapshot["detail_sections"] = list(DETAIL_SECTIONS)
+    snapshot.pop("grants_authority", None)
+    snapshot["read_only"] = True
     mission = snapshot.get("mission")
     if mission is not None:
-        # The exact frozen configuration is already addressable by detail.
-        _omit(mission, ("configuration",))
+        # Full as-of mission data stays in the same selected snapshot cache.
+        _omit(mission, _MISSION_DETAIL_FIELDS)
+        reflection = mission.get("reflection")
+        if isinstance(reflection, dict):
+            _omit(reflection, ("jobs", "proposals", "epoch", "mission_id", "grants_authority"))
+        _omit(mission.get("lease_owner"), ("epoch", "mission_id", "session", "pause_generation", "takeover_generation"))
         metrics = mission.get("metrics")
         if isinstance(metrics, dict):
             mission["metrics"] = {key: metrics[key] for key in ("game_seconds", "primitives") if key in metrics}
@@ -75,6 +86,13 @@ def _project_snapshot(snapshot: dict, operation: dict | None = None, operation_i
         # source bytes or a newer native scene must retain their own information.
         for name in ("actions", "scene", "ui"):
             state.pop(name, None)
+        # These exact shared metadata fields also live in the returned source.
+        # Different/partial views retain their complete native information;
+        # capture timestamps and unknown future fields are never inferred equal.
+        for name in _SHARED_VISIBLE_FIELDS:
+            if (name in state and name in observed
+                    and canonical({"value": state[name]}) == canonical({"value": observed[name]})):
+                state.pop(name)
     for visible in (state, observed):
         # DEFAULTMODE can also be a directional menu. Only a normal in-game
         # boundary without represented UI carries the general engine vocabulary.

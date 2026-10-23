@@ -37,7 +37,8 @@ qualifies ordinary input and normal lifecycle on the rebuilt boundary. Its check
 PNG pairs match despite changed capture names; persistent pixel drift and the
 retained-capture commit race remain source-tested, unexercised natively. Earlier
 graphical qualification is bounded by the [normally closed learning006 report](../acceptance/2026-10-22-discovery-learning-sixth-attempt.md).
-Its scoped procedure library is eligible; a fresh independent seven-day campaign
+Its scoped procedure library was eligible under its original contract; it is
+historical and unmountable under mission/11 and procedure/3. A fresh independent seven-day campaign
 remains unaccepted. Image-conditioned semantic/spatial final-preflight capture churn shares the existing
 known-unpublished refusal/explicit-Observe path, with independent custody,
 source/storage, mission-limit and original-preflight checks. This is source

@@ -119,11 +119,16 @@ class PlayerViewCompactionTests(unittest.TestCase):
         view = decision_view("enactive_result", result)
         current = view["next_snapshot"]
         self.assertEqual(view["response"], result["response"])
-        self.assertEqual(current["native"], {**original["native"], "state": {
-            key: value for key, value in original["native"]["state"].items() if key not in ("actions", "scene", "ui")}})
+        self.assertEqual(current["native"], {**original["native"], "state": {}})
+        self.assertEqual(current["source"]["observation"], {
+            key: value for key, value in original["source"]["observation"].items() if key != "actions"})
         for field in ("progress", "phase", "cause", "unknown_effects", "unfinished", "limits", "remaining",
-                      "reserve", "deadline", "next_needed_decision", "current_source"):
+                      "reserve", "next_needed_decision", "current_source"):
             self.assertEqual(current["mission"][field], mission[field])
+        self.assertNotIn("deadline", current["mission"])
+        player = PlayerTools(Mock())
+        player.snapshots[original["snapshot_id"]] = deepcopy(original)
+        self.assertEqual(player.detail(original["snapshot_id"], "mission")["detail"]["deadline"], mission["deadline"])
         self.assertEqual(current["mission"]["metrics"], dict(game_seconds=30, primitives=4))
         summary = current["mission"]["last_receipt"]
         for field in ("transport_disposition", "reason", "processing_error", "evidence_loss", "published",

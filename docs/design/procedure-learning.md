@@ -17,10 +17,11 @@ The delivery brief and current protocol own implemented status and actual
 qualification. Current source uses procedure/3, campaign-memory/6 and reflection/2
 with native6/mission11/ledger12/archive5; gameplay/2 is unchanged. Admission uses
 `facts-procedures-reflection/3`. Remaining research/evaluation proposals below are
-not guarantees. The matching native6 build passed and is installed; graphical
-qualification, a current-contract learning library and a fresh campaign remain
-pending. Earlier learning004 evidence keeps its original environment and scope;
-it is not silently mounted under the current contract.
+not guarantees. The matching native6 build passed and is installed; bounded graphical qualification
+is retained in the current protocol's dated reports. A normally closed current-
+contract learning library and the fresh independent campaign remain pending.
+Earlier learning004/006 evidence keeps its original environment and scope; its
+prior libraries are not silently mounted under the current contract.
 Further design follows P-GENERALITY and the CDDA-class constraint: shared memory,
 learning and advisory machinery must not depend on CDDA menu categories or world
 rules. Game/configuration applicability stays explicit. Changing menus can

@@ -99,7 +99,8 @@ Private scripts, manifests and results are in
 ## Integrated representation and writer binding
 
 The coordinated candidate uses mission/11, campaign-memory/6, procedure/3,
-update policy facts-procedures-reflection/3, MCP 5.0.0 and player-view/3. Native6,
+update policy facts-procedures-reflection/3, now with MCP5.1.0 and player-view/4
+under [delivery062](062-player-decision-context.md). Native6,
 gameplay/2, ledger12, archive5 and reflection/2 retain their own wire/storage
 shapes; their nested mission/procedure validators enforce the new contracts.
 All current producers, fixtures and consumers migrate together. Prior closed

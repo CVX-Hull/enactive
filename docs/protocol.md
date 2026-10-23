@@ -217,7 +217,7 @@ refuse, and uncertain publication permits only collection of the original operat
 Concurrent first creators may safely lose the exclusive-stage race and refuse;
 there is no transparent retry or second request history store.
 
-The current MCP server is5.0.0; its presentation remains `player-view/3`, marked by `presentation_schema`.
+The current MCP server is5.1.0; its presentation remains `player-view/4`, marked by `presentation_schema`.
 Its tool arguments omit `request_id` and `wait_seconds`; old MCP payloads are
 rejected, not translated. The adapter assigns one UUID to each invocation whose
 imperative SDK request needs an ID, then uses existing immutable staging and
@@ -282,7 +282,11 @@ a new source implicitly.
 
 Default snapshots advertise `detail_sections`. The frozen configuration is revealed
 only through its exact cached detail section; metrics show original game seconds and primitive counts,
-while all remaining limits, reserves, deadlines and current uncertainty stay.
+while original remaining limits, reserves and current uncertainty stay. Absolute
+clocks/objective and advisory job/proposal inventories move to complete as-of
+`mission` detail. Default snapshots use read_only=true rather than a constant
+authority flag. Proof flags in canonical results remain descriptive; false does
+not mean adoption failed. The writer, not cached JSON, checks execution.
 Reference slots omit filesystem/hash/retention bookkeeping, preserving opaque
 observation IDs and original session/revision/time/turn. Native transport framing
 and cached process PID/launch IDs are not default decision data. Full values remain
@@ -296,6 +300,9 @@ progress remain complete. Raw native request/ACK payloads are omitted from defau
 receipts, along with technical source/dispatch/preflight bindings and control request
 framing. Delivery, processing/loss diagnostics, correlation and unique feedback remain.
 Actions/scene/UI deduplicate only when all match the actually returned source;
+then exactly equal known native metadata also lives in that source view, while
+capture timestamps and unknown fields remain in native state. This is field
+equality, not a claim that independently rendered pixels match;
 missing sources or differing native views retain their information. The general
 engine action vocabulary is omitted only for DEFAULTMODE, normal in-game play
 without represented UI; contextual menu actions, scenes and rows remain.
@@ -1424,7 +1431,7 @@ usage feedback. Neither an input ACK nor that linkage proves semantic success.
 
 Admission has required nullable`learning`. A policy freezes the exact environment,
 at most4 closed library mission pins (ledger/index SHA256), advisory actor and
-finite reflection limits. Procedure/2 records live in the existing immutable
+finite reflection limits. Procedure/3 records live in the existing immutable
 memory table. Full qualified ancestry resolves heads; branches/missing parents
 refuse. Episodes must join actual settled request/source evidence. Candidates can
 be tested; disputed/retired heads are inspectable and cannot be newly selected.
@@ -1434,9 +1441,11 @@ The read-only library uses SQLite over hash-verified bytes, shared archive locks
 and derived project paths. It never reopens a runtime writer, restores a phase or
 imports old-world Claims/Work as current facts. Only current ledger12/archive5
 input with the exact native6/mission11 procedure environment is eligible. Earlier
-native5/mission9 archives and learning004 remain immutable historical evidence,
-unmountable as current libraries. A fresh current-contract learning005 must close
-normally before its library can support fresh seven-day003; old failures never resume.
+contracts, including learning004/006, remain immutable historical evidence,
+unmountable as current libraries. A normally closed current-contract learning
+mission must supply an eligible library before the subsequent fresh seven-day
+admission; exact mission identifiers and acceptance belong to GitHub/current
+delivery evidence. Old failures never resume.
 Authority-blocked retained sources are historical evidence, as in EvidenceStore:
 a bounded unique list of valid retained blocked IDs does not itself dispute their
 bytes or support. Library exports remain historical and `grants_authority:false`.

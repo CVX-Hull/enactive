@@ -13,6 +13,9 @@ import threading
 import time
 import uuid
 
+from jsonschema import Draft202012Validator
+from jsonschema.exceptions import best_match
+
 from .gameplay.contracts import ContractError, _object, canonical, json_object, validate_json
 from .gameplay.evidence import same_native_state
 from .gameplay.mission_contracts import (
@@ -26,7 +29,7 @@ from .gameplay.reflection import (
 from .mission_client import MissionClient
 
 
-DETAIL_SECTIONS = ("configuration", "metrics", "receipt", "progress", "native", "source")
+DETAIL_SECTIONS = ("mission", "configuration", "metrics", "receipt", "progress", "native", "source")
 
 
 @dataclass(frozen=True)
@@ -192,6 +195,51 @@ def tool_specs() -> tuple[ToolSpec, ...]:
         for spec in request_tool_specs())
 
 
+def _validate_arguments(name: str, data: dict, schema: dict) -> None:
+    """Keep canonical validation; narrow only rejected intent diagnostics."""
+    try:
+        validate_json(data, schema)
+    except ContractError as original:
+        discriminator = {"enactive_skill": "skill_kind", "enactive_remember": "entry_type",
+                         "enactive_correct": "entry_type"}.get(name)
+        if discriminator is None:
+            raise
+        intent = data.get("intent")
+        selected = next((branch for branch in schema["properties"]["intent"]["anyOf"]
+            if isinstance(intent, dict) and
+            branch["properties"][discriminator]["const"] == intent.get(discriminator)), None)
+        if selected is not None:
+            # Keep root definitions for references in the selected current branch.
+            schema = {**schema, "properties": {**schema["properties"], "intent": selected}}
+        messages = []
+        for error in Draft202012Validator(schema).iter_errors(data):
+            if selected is None and list(error.absolute_path) == ["intent"]:
+                message = f"intent.{discriminator}: required supported discriminator; see tool schema"
+            else:
+                if error.context:
+                    error = best_match([error])
+                path = ".".join(map(str, error.absolute_path)) or "arguments"
+                if error.validator == "required":
+                    message = f"{path}: {error.message}"
+                elif error.validator == "type":
+                    message = f"{path}: expected {error.validator_value}"
+                elif error.validator == "additionalProperties":
+                    fields = ", ".join(error.schema.get("properties", {}))
+                    message = f"{path}: unexpected fields; allowed fields: {fields}"
+                elif error.validator in ("const", "enum"):
+                    message = f"{path}: expected {error.validator_value!r}"
+                else:
+                    message = f"{path}: does not satisfy {error.validator} constraint"
+            messages.append(message[:180])
+            if len(messages) == 8:
+                messages.append("Further errors omitted; see selected tool schema")
+                break
+        if not messages:
+            # Preserve canonical strict-number checks beyond JSON Schema.
+            raise original
+        raise ContractError("; ".join(messages)) from None
+
+
 class PlayerTools:
     """One adapter, bounded descriptive handles, no controller capability."""
     def __init__(self, client: MissionClient):
@@ -215,7 +263,7 @@ class PlayerTools:
         if name not in self.model_specs:
             raise ContractError("Unknown player tool")
         data = json_object(arguments)
-        validate_json(data, self.model_specs[name].schema)
+        _validate_arguments(name, data, self.model_specs[name].schema)
         properties = self.specs[name].schema["properties"]
         if "wait_seconds" in properties:
             data["wait_seconds"] = (MAX_REFLECTION_READ_WAIT_SECONDS
@@ -248,7 +296,9 @@ class PlayerTools:
 
     def detail(self, identity: str, section: str) -> dict:
         snapshot = self._cached_snapshot(identity)
-        if section in ("native", "source"):
+        if section == "mission":
+            detail = snapshot["mission"]
+        elif section in ("native", "source"):
             detail = snapshot.get(section)
         else:
             field = "last_receipt" if section == "receipt" else section
@@ -361,7 +411,7 @@ class PlayerTools:
         if name not in self.specs:
             raise ContractError("Unknown player tool")
         data = json_object(arguments)
-        validate_json(data, self.specs[name].schema)
+        _validate_arguments(name, data, self.specs[name].schema)
         if name in ("enactive_reflect_next", "enactive_reflect_submit", "enactive_reflect_source", "enactive_reflect_result", "enactive_advice"):
             return self._reflection_call(name, data)
         if not self._lock.acquire(blocking=False):

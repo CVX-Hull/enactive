@@ -99,6 +99,12 @@ contains visible structured data; image-only conditions return to the player.
 Procedure authoring keeps meaning, code, evidence and parent selection with the
 player while software supplies canonical IDs, versions and the frozen environment.
 
+The subsequent [learning007 attempt](acceptance/2026-10-23-discovery-learning-seventh-attempt.md)
+reached actual adoption but failed ordinary tool use and normal closure. Its
+player/adviser are closed; all191saves are unchanged after exceptional cleanup.
+[Delivery062](changes/062-player-decision-context.md) reduces repeated context and
+improves validation feedback. Source ergonomics is not actual learning or cadence.
+
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and
 host. Failures and unknown acknowledgments stay recorded even when separate

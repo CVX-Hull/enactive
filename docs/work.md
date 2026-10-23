@@ -50,6 +50,12 @@ The program substrate17e7488 passed the full1,818-test portable lane. The follow
 MCP5 authoring adapter removes manual canonical metadata with focused/independent
 verification; exact current CI and real organic use remain separate requirements.
 
+The [closed learning007 report](acceptance/2026-10-23-discovery-learning-seventh-attempt.md)
+retains actual adoption, malformed ordinary requests, exhausted setup reflection
+and exceptional closure. No learning or normal ending is accepted.
+[Delivery062](changes/062-player-decision-context.md) owns focused context/error
+follow-through; existing GitHub issues retain action items and the full outcome.
+
 | Evidence | What it establishes; the linked report owns details and limits |
 | --- | --- |
 | [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) | Bounded supply/shelter play, memory correction, fresh-context continuation and normal lifecycle |

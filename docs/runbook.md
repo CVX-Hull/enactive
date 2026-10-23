@@ -357,8 +357,11 @@ For the current native6/mission11/ledger12/archive5/memory6 cutover, apply the s
 stopped, hash-inventoried incident archive procedure. Preserve prior mission
 ledgers/archives as historical evidence; do not relabel them as eligible procedure
 libraries or restore their execution authority. Current stores accept native6
-only. Procedure/2 and reflection/2 also reject older records. Do not migrate/relabel historical learning004 into a current library;
-first complete fresh current-contract learning005, then admit fresh seven-day003.
+only. Procedure/3 and reflection/2 also reject older records. Historical
+learning004/006 libraries keep their original contracts and are not relabelled or
+mounted as current. Complete and normally close an eligible current-contract
+learning mission before using its library in the subsequent fresh campaign.
+GitHub and the current delivery evidence own exact prospective identifiers.
 
 ## Passive skill acceptance
 
