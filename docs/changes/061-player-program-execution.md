@@ -99,7 +99,7 @@ Private scripts, manifests and results are in
 ## Integrated representation and writer binding
 
 The coordinated candidate uses mission/11, campaign-memory/6, procedure/3,
-update policy facts-procedures-reflection/3, MCP 4.0.0 and player-view/3. Native6,
+update policy facts-procedures-reflection/3, MCP 5.0.0 and player-view/3. Native6,
 gameplay/2, ledger12, archive5 and reflection/2 retain their own wire/storage
 shapes; their nested mission/procedure validators enforce the new contracts.
 All current producers, fixtures and consumers migrate together. Prior closed
@@ -213,14 +213,34 @@ p95 0.350 ms, max 0.720 ms; 10 cold compiles have median 0.778 ms, max 15.633 ms
 only yields/counts observations, with zero game inputs. This does not measure
 model reasoning, native dispatch, display, useful skill execution or learning.
 
-Procedure-authoring metadata still requires automation through the existing
-composer/staging path before the next deciding program-learning run (#177/#164):
-software should derive IDs/schema/mission/environment/revision from explicit
-selected context, while code, meaning, evidence and adoption stay player-owned.
-
-The full portable lane is running; exact candidate/protected CI, independently
+The full portable lane for source17e7488 passed:1818tests in755.166s, viewer,
+diagram rendering, governance and structural checks. It did not run a native game.
+Exact candidate/protected CI, independently
 authored real graphical learning and genuinely fresh seven days remain open.
 The updated player diagram was rendered and visually inspected. Dependency and
 owned-environment history are in [environment](../environment.md), with terms in
 [NOTICE](../../NOTICE.md). GitHub Issues/Project own remaining work; this brief
 owns implementation evidence rather than another backlog.
+
+### Procedure authoring automation
+
+The subsequent MCP5 adapter keeps the21tools and current canonical formats. Its
+Procedure authoring view removes schema/record/id/mission/family/revision number
+and environment, deriving them from the assigned operation, selected cached
+snapshot's frozen admission environment and explicit parent choice. New families
+receive software IDs and revision1. A qualified parent must have been returned
+by explicit `enactive_context`; a bounded descriptive cache retains those copies.
+The existing receiver owns current-head/branch/evidence validation. Composition
+never fetches newer status/source or infers support/adoption. Supplied metadata
+copies reject rather than enabling a second authoring form.
+
+Canonical storage/staging/unknown collection are unchanged. Forty-two focused
+authoring/Claim/presentation tests pass, including actual memory application,
+revision and stale-branch refusal, cached-only binding and same-ID changed-payload
+non-resubmission. Sixty-two existing adapter/lifecycle/program/reflection checks
+also pass, and independent review found no consequential defect in the bounded
+delta. A fresh production stdio handshake reports MCP5.0.0,21tools and the14semantic
+Procedure authoring fields, with all seven mechanical fields absent; no gameplay
+tools were called. This is not desktop restart or native qualification.
+This removes model bookkeeping from player
+procedure creation; advisory candidate metadata remains canonical (#178).

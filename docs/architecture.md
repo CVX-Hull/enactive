@@ -15,7 +15,7 @@ selected evidence nor establish input authority. Default normal-play results omi
 repeated configuration, technical receipt bindings and general engine vocabulary.
 One bounded producer-local fingerprint avoids identical implicit image parts in a
 known unchanged player/control context; explicit image reads remain complete.
-MCP server4.0.0 assigns request identities and bounded result waits before invoking
+MCP server5.0.0 assigns request identities and bounded result waits before invoking
 the existing imperative SDK. Its public schemas reject caller-owned IDs/waits;
 snapshot/source, scope, execution limits and semantic decisions remain explicit.
 Errors preserve assigned original collection arguments through the presentation

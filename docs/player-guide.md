@@ -40,7 +40,14 @@ reason to read the entire repository during every game.
   belong to menu/edit/item controls. Inspect the returned image/effect; a delivered
   input is not task success.
 - An eligible Procedure/3 can contain `program={language:javascript/1, source:...}`
-  or null for advice. A `program` skill starts a new root, explicitly selects that
+  or null for advice. In `enactive_remember` choose the content, evidence,
+  counterexamples/status and `parent=null` for a new family or an explicit
+  qualified parent already returned by `enactive_context`. Omit schema/record/IDs,
+  mission/family/revision number and environment: software derives these from the
+  assigned operation and selected cached snapshot. An unavailable parent needs
+  explicit memory retrieval. Canonical records are returned with their new IDs;
+  no manual hashes or full record reconstruction are required. A `program` skill
+  starts a new root, explicitly selects that
   revision and supplies initial `goal.state`, intent, expected outcome and interrupt
   consent with `perception=null`. JavaScript `step(view,state)` returns exactly
   `{status,state,input,reason}`: act proposes ordinary key/text/click, yield/done

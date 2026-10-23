@@ -425,7 +425,9 @@ class MissionRuntime:
                 "Mission ended; historical evidence only" if state["phase"] in TERMINAL else
                 "Registered lifecycle/readmission needed" if state["phase"] == "admitted" else
                 "Explicit supported transition required", "grants_authority": False,
-            "configuration": asdict(self._admission.configuration),
+            "configuration": {**asdict(self._admission.configuration),
+                "procedure_environment": (None if self._admission.learning is None else
+                                          dict(self._admission.learning.environment))},
             "metrics": {**measured, "model_requests": None, "tool_calls": None, "interventions": None,
                 "harness_api_spend": 0, "external_tokens": None, "api_quota": None,
                 "model_time_seconds": None, "game_seconds": self._game_cost, "archive": usage},

@@ -19,6 +19,7 @@ from .gameplay.mission_contracts import (
     VERSION, SKILLS, IDENTITY_COVERAGE, IDENTITY_UNIT, perception_schema, request_schema, validate_request,
 )
 from .gameplay.mission_requests import _source_binding, compose_request
+from .gameplay.procedures import validate_procedure
 from .gameplay.reflection import (
     MAX_REFLECTION_READ_WAIT_SECONDS, proposal_schema, validate_command, validate_job, validate_proposal,
 )
@@ -69,6 +70,12 @@ def _claim_authoring_schema(canonical_schema: dict) -> dict:
         "supports": support})
 
 
+def _procedure_authoring_schema(canonical_schema: dict) -> dict:
+    """Keep learned content/parent/evidence explicit; bind mechanical metadata."""
+    return _without(canonical_schema, "schema", "record_type", "id", "mission_id",
+                    "procedure_id", "revision", "environment")
+
+
 def request_tool_specs() -> tuple[ToolSpec, ...]:
     """Derive semantic shapes from the receiver, never a parallel wire schema."""
     base = request_schema("observe")["properties"]
@@ -115,12 +122,14 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
         ToolSpec("enactive_lifecycle", "Explicit registered launch/create/save/exit/load/finish. With no owned child, first launch using scope=new_root and source_id=null; then choose create/load from its returned menu. For other operations, source_id=null selects that exact cached snapshot source. Continue a returned lifecycle phase with scope=lifecycle and the same operation, including transition reconciliation, identity readmission and adoption. No implicit Resume, save or restart.", lifecycle),
         ToolSpec("enactive_observe", "Request one typed native observation using the chosen snapshot epoch. A healthy ordinary prompt may advance or record local macro_closure without task success or renewed mission allowance; explicitly choose any next root from fresh evidence. Does not Resume or reconcile unknown delivery. After known direct input with absent/aged current evidence, explicit Observe can refresh its read-only scope across the exact authenticated operation rotation; input requires the fresh binding. It never restores failed custody or renews limits.", _object(common)),
     ]
-    # Only Claim authoring changes; the canonical ledger and other memory
-    # variants retain their existing contracts and explicit semantic fields.
+    # Authoring projections bind metadata; canonical ledger contracts and
+    # explicit semantic/evidence choices remain unchanged.
     for kind in ("remember", "correct"):
         variants = [_without(request_schema(kind, entry_type=entry), *headers, "kind")
                     for entry in (("claim",) if kind == "correct" else ("claim", "work", "decision", "procedure"))]
         variants[0]["properties"]["entry"] = _claim_authoring_schema(variants[0]["properties"]["entry"])
+        if kind == "remember":
+            variants[-1]["properties"]["entry"] = _procedure_authoring_schema(variants[-1]["properties"]["entry"])
         specs.append(ToolSpec("enactive_" + kind,
             "Write explicit evidence-linked memory through the existing ledger. For Claims choose key, value, text, coverage, status, grounding and support groups. "
             "Identity keys choose world/character; software supplies the existing name unit/coverage, interpretation kind, schema/record type, Claim ID, scope/native observation order and host receipt time. "
@@ -129,6 +138,9 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
             "Each support group explicitly chooses primary plus additional source/claim IDs; primary=false never implies image support. "
             "Unobserved grounding stays source-free: every group requires primary=false and sources=[], with claim premises allowed. "
             + ("Correction supersedes come only from explicit retired_ids. " if kind == "correct" else "Remember supersedes are empty. ")
+            + ("For Procedures choose content/program, support/counterexamples and parent=null for a new family or an explicit qualified revision already revealed by enactive_context. "
+               "Software derives schema, record/mission/family/revision IDs, revision number and frozen admission environment from that selected cached context; do not supply them. "
+               if kind == "remember" else "")
             + "No inferred support, truth, success or automatic lesson promotion.",
             _object({**common, "intent": {"anyOf": variants}})))
     for kind in ("handoff", "stop", "reconcile"):
@@ -186,6 +198,7 @@ class PlayerTools:
         self.client = client
         self.snapshots: OrderedDict[str, dict] = OrderedDict()
         self.sources: OrderedDict[tuple[str, str], dict] = OrderedDict()
+        self.procedures: OrderedDict[tuple[str, str], dict] = OrderedDict()
         self.specs = {spec.name: spec for spec in request_tool_specs()}
         self.model_specs = {spec.name: spec for spec in tool_specs()}
         self._lock = threading.Lock()
@@ -506,6 +519,25 @@ class PlayerTools:
             observed_time=observed, received_time=received, sources=sources, supports=supports,
             supersedes=intent["retired_ids"] if kind == "correct" else [])
 
+    def _procedure_entry(self, selected: dict, identity: str, entry: dict) -> dict:
+        mission = selected["mission"]
+        environment = (mission.get("configuration") or {}).get("procedure_environment")
+        if not isinstance(environment, dict):
+            raise ContractError("Selected snapshot has no admitted procedure environment; obtain explicit current context")
+        parent = entry["parent"]
+        digest = hashlib.sha256((mission["mission_id"] + "\0" + identity).encode()).hexdigest()
+        family, revision = "procedure-" + digest, 1
+        if parent is not None:
+            record = self.procedures.get((parent["mission_id"], parent["revision_id"]))
+            if record is None:
+                raise ContractError("Parent revision unavailable; explicitly retrieve its procedure through enactive_context")
+            family, revision = record["procedure_id"], record["revision"] + 1
+        schema = request_schema("remember", entry_type="procedure")["properties"]["entry"]["properties"]
+        return validate_procedure({**entry, "schema": schema["schema"]["const"],
+            "record_type": schema["record_type"]["const"], "id": "revision-" + digest,
+            "mission_id": mission["mission_id"], "procedure_id": family, "revision": revision,
+            "environment": environment})
+
     def _call(self, name: str, data: dict) -> tuple[dict, bytes | None]:
         if name == "enactive_start":
             request = validate_request(dict(schema=VERSION, kind="start", request_id=data["request_id"], admission=data["admission"]))
@@ -539,7 +571,16 @@ class PlayerTools:
             intent = data["intent"]
             intent["scope"]["mission_id"] = snapshot["mission_id"]
             request = dict(schema=VERSION, kind=kind, mission_id=snapshot["mission_id"], **intent)
-            return self._finish(self.client.submit(validate_request(request), wait_seconds=0))
+            envelope = self.client.submit(validate_request(request), wait_seconds=0)
+            response = envelope.get("response") or {}
+            context = response.get("context")
+            if response.get("status") == "accepted" and isinstance(context, dict):
+                if context.get("mission_id") != snapshot["mission_id"]:
+                    raise ContractError("Returned procedure context belongs to another mission")
+                for value in (context.get("packet") or {}).get("procedures", ()):
+                    record = validate_procedure(value)
+                    self._remember(self.procedures, (record["mission_id"], record["id"]), record)
+            return self._finish(envelope)
         identity = data["request_id"]
         intent = deepcopy(data.get("intent", {}))
         if kind in ("skill", "lifecycle"):
@@ -562,6 +603,8 @@ class PlayerTools:
         else:
             if kind in ("remember", "correct") and intent["entry_type"] == "claim":
                 intent["entry"] = self._claim_entry(selected, identity, kind, intent)
+            elif kind == "remember" and intent["entry_type"] == "procedure":
+                intent["entry"] = self._procedure_entry(selected, identity, intent["entry"])
             elif kind == "claim":
                 for source in intent["read_procedure_sources"]:
                     self._source(source["mission_id"], source["source_id"])

@@ -217,7 +217,7 @@ refuse, and uncertain publication permits only collection of the original operat
 Concurrent first creators may safely lose the exclusive-stage race and refuse;
 there is no transparent retry or second request history store.
 
-The current MCP server is4.0.0; its presentation remains `player-view/3`, marked by `presentation_schema`.
+The current MCP server is5.0.0; its presentation remains `player-view/3`, marked by `presentation_schema`.
 Its tool arguments omit `request_id` and `wait_seconds`; old MCP payloads are
 rejected, not translated. The adapter assigns one UUID to each invocation whose
 imperative SDK request needs an ID, then uses existing immutable staging and
@@ -1223,6 +1223,16 @@ intent/expected/interrupt consent and ordinary `perception=null`. It owns one
 immutable request/game anchor/deadline/input allowance. Current prompt children
 remain ordinary or semantic controls under their original macro; a program does
 not replace their root or renew its allowance.
+
+The MCP5 `remember` procedure authoring view keeps content, program, parent choice,
+evidence/counterexamples and disposition explicit. It rejects supplied copies of
+schema/record/mission/family/revision metadata. Software derives them from the
+assigned operation, frozen environment in the selected cached snapshot and an
+explicit parent previously revealed by `enactive_context`. This bounded cache
+is descriptive, not authority or a second lineage store; the existing receiver
+still refuses stale/incomparable branches and unrelated support. Composition
+fetches no newer status/source or engine/save data. Canonical Procedure/3 storage
+and existing durable request staging/uncertain collection remain unchanged.
 
 MiniRacer0.14.1 evaluates `step(view,state)` without host input/I/O callbacks. Source
 is32KiB, view256KiB, state16KiB, result32KiB, heap32MiB; compile is0.25s and each

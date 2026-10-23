@@ -46,6 +46,9 @@ explicit Procedure/3 artifacts and writer integration under coordinated migratio
 Source verification is underway; this does not replace the combined independent
 learning/fresh-campaign acceptance. Current candidate evidence belongs in that
 brief; GitHub retains remaining action ownership and execution status.
+The program substrate17e7488 passed the full1,818-test portable lane. The following
+MCP5 authoring adapter removes manual canonical metadata with focused/independent
+verification; exact current CI and real organic use remain separate requirements.
 
 | Evidence | What it establishes; the linked report owns details and limits |
 | --- | --- |

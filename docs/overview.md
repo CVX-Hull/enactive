@@ -96,6 +96,8 @@ source/action/result linkage remain outside generated control flow. This is a
 source implementation under verification; organic authorship, useful reuse,
 latency and the fresh campaign are still unqualified. Its first program view
 contains visible structured data; image-only conditions return to the player.
+Procedure authoring keeps meaning, code, evidence and parent selection with the
+player while software supplies canonical IDs, versions and the frozen environment.
 
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and
