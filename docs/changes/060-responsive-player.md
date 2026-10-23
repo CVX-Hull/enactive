@@ -274,6 +274,16 @@ retirement of stale creation intent, not only successful cancellation. No new
 tool, executor, native protocol, dependency or compatibility mode is introduced.
 The next actual player/native run must qualify this source change;003 stays failed.
 
+The [fourth frozen attempt](../acceptance/2026-10-23-luna-responsiveness-fourth-attempt.md)
+confirms the refreshed host and ordinary setup/cancellation, then fails when an
+old selected snapshot becomes a fatal lifecycle evidence error. Reuse the existing
+receiver exception/result boundary for a correctable zero-input refusal, preserving
+healthy custody and original limits. The model still selects intent/evidence; no
+silent retarget or retry is justified. Current snapshot guidance belongs in the
+compact guide. New controller startup loads this receiver-only repair; no further
+Codex restart or expanded allow rule is needed.004 remains failed and supplies no
+routine latency cohort.
+
 Retain the existing MCP SDK, ledger, archive, memory store, observer timing and
 test lanes. No new workflow engine, history store, tool-search service, vector DB
 or robot runtime is justified by these findings. A dedicated small player runtime

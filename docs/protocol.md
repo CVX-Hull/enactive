@@ -557,6 +557,14 @@ or carry an earlier boundary across a focus change. A source reference alone doe
 not expose every native field: read its declared observation metadata and verify
 the pair. A draft, cached status or historical source grants no input authority.
 
+An existing lifecycle phase whose selected source/native tuple no longer names
+its exact current checkpoint refuses with zero proposals and the current source. This
+request error preserves a healthy owned phase, lease, epoch and original limits;
+the player must select current evidence for a new request. It never retargets or
+replays the old request. Archive verification, live custody, Pause and delivery
+faults retain their existing failure paths. Roots without an existing phase retain
+their prior rejection behavior; this is not a new setup recovery path.
+
 The canonical pure producer is `harness.gameplay.mission_requests.compose_request`.
 Supply a mission status snapshot (all three phase summaries, including nulls),
 one explicitly selected retained archive entry (`reference` and `observation`),

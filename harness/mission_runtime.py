@@ -18,7 +18,7 @@ from uuid import UUID
 
 from .controller import Controller, ControlError, MissionInputRefusal, MissionLease, validate_state
 from .native_process import NativeProcess
-from .mission_lifecycle import NormalPhase, RegisteredLifecycle
+from .mission_lifecycle import LifecycleRequestRefusal, NormalPhase, RegisteredLifecycle
 from .mission_handoff import HandoffEvidenceError, HandoffPhase, RegisteredHandoff
 from .mission_activity import ActivityFeedback, ActivityIntent, ActivityPhase, RegisteredActivity
 from .mission_recovery import RecoveryEvidenceError, RecoveryPhase, RegisteredRecovery
@@ -2900,6 +2900,13 @@ class MissionRuntime:
         except _Cancelled as exc:
             self._apply_pauses()
             disposition, result = "paused", {"reason": str(exc), "grants_authority": False}
+        except LifecycleRequestRefusal as exc:
+            # The receiver rejected only the caller's old selected binding.
+            # Existing custody, Pause, evidence and dispatch checks still own
+            # authority; do not turn this zero-input request error into recovery.
+            disposition, result = "blocked", {"reason": str(exc), "proposals": 0,
+                "source_ids": [] if self._current is None else [self._current.observation_id],
+                "grants_authority": False}
         except LocalBudgetRefusal as exc:
             try:
                 refusal = self._exhausted_prompt_refusal(work) if data["kind"] == "skill" else None

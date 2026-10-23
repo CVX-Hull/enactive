@@ -35,7 +35,11 @@ reason to read the entire repository during every game.
   from the current SDK schema, not example tactics or request JSON files. Do not
   guess payload fields, dump all declarations or search implementation code.
   Prefer the returned `next_snapshot` when it is sufficient; another snapshot is
-  an explicit read, not a mandatory step after every settled operation.
+  an explicit read, not a mandatory step after every settled operation. A detail
+  read or `source_id=null` uses the chosen snapshot as-is; it does not refresh an
+  older selection. If a lifecycle call refuses a stale binding with no input,
+  use the returned current snapshot for a separate new decision. No automatic
+  retarget, replay or allowance renewal occurs.
   Keep returned text, typed image parts and `isError`; do not
   print image data as text or opaque tool objects. Keep simple returned IDs.
   When forwarding through an orchestration tool, forward content blocks once;

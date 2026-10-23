@@ -4,6 +4,7 @@ The fixture game assigns keys independently of semantic menu labels. These are
 source regression checks, not native keyboard or cross-game qualification.
 """
 from dataclasses import replace
+from pathlib import Path
 import unittest
 from unittest.mock import patch
 
@@ -243,6 +244,148 @@ class OrdinaryLifecycleTests(MissionCreationFixture, unittest.TestCase):
         self.finish_identity("create", world)
         self.runtime._ledger._verify(self.a)
         self.assertIsNotNone(adopted_timeline(self.runtime._ledger, self.runtime._store))
+
+    def assert_stale_request_refusal(self, kind):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        self.run_request(super().control("world-form", "Create World"))
+        if kind == "direct":
+            stale = self.raw("stale", "ENTER")
+        elif kind == "lifecycle":
+            stale = self.lifecycle("stale", parent="create")
+        else:
+            stale = super().control("stale", "Edit Name")
+            if kind == "edit":
+                stale.update(skill_kind="edit",
+                    perception=dict(kind="editor", source_id=self.runtime._current.observation_id,
+                        basis="player_interpretation", purpose="world_name", label="World name",
+                        visible_text="Old", whole_value=True, focused=True),
+                    goal=dict(purpose="world_name", text=self.a.scenario.world, commit=True))
+        # Reproduce004's delivered text prefix, independently of the later
+        # request's intended key. An unchanged receiver stops the text batch
+        # after its first scalar and returns a new informing checkpoint.
+        text = self.raw("text-prefix", "ignored")
+        text["goal"]["input"] = dict(type="text", text=self.a.scenario.world)
+        returned = self.run_request(text)
+        self.assertEqual(returned["state"], "partial", returned)
+        self.assertEqual(len([p for p in self.runtime._ledger.primitive_records()
+            if p["request_id"] == text["request_id"]]), 1)
+        phase, lease = self.runtime._registered_lifecycle.phase, self.runtime._lease
+        state = self.runtime.status()
+        refused = self.run_request(stale)
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIn("No input was sent", refused["result"]["reason"])
+        self.assertEqual(refused["result"]["source_ids"], [phase.checkpoint.observation_id])
+        self.assertEqual(refused["result"]["proposals"], 0)
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(self.runtime.status()["epoch"], state["epoch"])
+        self.assertEqual(self.runtime.status()["deadline"], state["deadline"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], state["spent_inputs"])
+        corrected = self.run_request(self.raw("fresh-focus", "ENTER"))
+        self.assertEqual(corrected["state"], "partial", corrected)
+        self.assertEqual(self.current()[1]["category"], "STRING_INPUT")
+        self.runtime._ledger._verify(self.a)
+
+    def test_stale_direct_request_preserves_healthy_lifecycle(self):
+        self.assert_stale_request_refusal("direct")
+
+    def test_stale_menu_request_preserves_healthy_lifecycle(self):
+        self.assert_stale_request_refusal("menu")
+
+    def test_stale_editor_request_preserves_healthy_lifecycle(self):
+        self.assert_stale_request_refusal("edit")
+
+    def test_stale_stage_commit_preserves_healthy_lifecycle(self):
+        self.assert_stale_request_refusal("lifecycle")
+
+    def test_stale_request_cannot_hide_corrupted_current_evidence(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        stale = self.raw("stale", "ENTER")
+        self.run_request(self.raw("changed-source", "ESC"))
+        retained = Path(self.runtime._current.frame_path)
+        retained.chmod(0o600)
+        retained.write_bytes(b"corrupted archive")
+        spent = self.runtime.status()["spent_inputs"]
+        refused = self.run_request(stale)
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNone(self.runtime._lease)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertNotIn("No input was sent", refused["result"]["reason"])
+
+    def test_stale_request_cannot_hide_controller_custody_loss(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        stale = self.raw("stale", "ENTER")
+        self.run_request(self.raw("changed-source", "ESC"))
+        spent = self.runtime.status()["spent_inputs"]
+        self.controller._mission_processing_failure(None, OSError("Synthetic controller storage failure"))
+        self.assertTrue(self.controller.frozen)
+        self.assertIsNone(self.controller._mission_lease)
+        refused = self.run_request(stale)
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNone(self.runtime._lease)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertNotIn("No input was sent", refused["result"]["reason"])
+
+    def test_stale_reconciliation_preserves_unknown_until_fresh_explicit_request(self):
+        with patch.object(self, "finish_identity", return_value=None):
+            self.create()
+        candidate = self.runtime._registered_lifecycle.candidate
+        stale = self.lifecycle("stale-reconcile", parent="create")
+        stale["expected_revision"] -= 1
+        before = self.runtime.status()
+        refused = self.run_request(stale)
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIs(self.runtime._registered_lifecycle.candidate, candidate)
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNone(self.runtime._lease)
+        for key in ("spent_inputs", "epoch", "deadline", "unreconciled"):
+            self.assertEqual(self.runtime.status()[key], before[key])
+        fresh = self.run_request(self.lifecycle("fresh-reconcile", parent="create"))
+        self.assertEqual(fresh["state"], "completed", fresh)
+        self.assertIn("lifecycle_transition", fresh["result"])
+
+    def test_stale_readmission_preserves_paused_identity_until_fresh_explicit_request(self):
+        with patch.object(self, "finish_identity", side_effect=lambda *_:
+                self.run_request(self.lifecycle("create-reconcile", parent="create"))):
+            self.create()
+        phase = self.runtime._registered_lifecycle.phase
+        stale = self.lifecycle("stale-readmit", parent="create")
+        stale["expected_revision"] -= 1
+        before = self.runtime.status()
+        refused = self.run_request(stale)
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertIsNone(self.runtime._lease)
+        for key in ("spent_inputs", "epoch", "deadline", "unreconciled", "phase"):
+            self.assertEqual(self.runtime.status()[key], before[key])
+        fresh = self.run_request(self.lifecycle("fresh-readmit", parent="create"))
+        self.assertEqual(fresh["state"], "completed", fresh)
+        self.assertIsNotNone(self.runtime._lease)
+
+    def test_stale_readmission_cannot_hide_native_takeover(self):
+        # Stop the fixture's successful creation at its real committed,
+        # paused transition, before identity readmission/adoption.
+        with patch.object(self, "finish_identity", side_effect=lambda *_:
+                self.run_request(self.lifecycle("create-reconcile", parent="create"))):
+            self.create()
+        stale = self.lifecycle("stale-readmit", parent="create")
+        stale["expected_revision"] -= 1
+        observed = dict(self.current()[1])
+        observed.update(revision=observed["revision"] + 1,
+            takeover_generation=observed["takeover_generation"] + 1, pause_origin="human")
+        self.controller._accept(observed)
+        spent = self.runtime.status()["spent_inputs"]
+        refused = self.run_request(stale)
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNone(self.runtime._lease)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertNotIn("No input was sent", refused["result"]["reason"])
 
 
 if __name__ == "__main__":

@@ -440,8 +440,12 @@ Ledger audits every delivery; runtime/store verify the same session, current
 authenticated revision, retained menu-only history and live custody. Launch pixel
 equality is not required. Ordinary setup uses the existing physical executor and
 InputObservation under lifecycle custody; creation route, identity and Save remain
-independent effect proofs. Source regressions cover this extension; the next
-frozen native/player run must qualify it.
+independent effect proofs. A stale selected lifecycle source/native tuple is a
+zero-input request refusal, preserving a healthy phase and original limits for a
+new explicit selection; actual custody/evidence/Pause faults still stop input.
+The [fourth Luna diagnostic](acceptance/2026-10-23-luna-responsiveness-fourth-attempt.md)
+exercises ordinary setup but fails on the old fatal stale-request handling. Source
+regressions cover the repair; native/player continuation remains unqualified.
 [Native006](acceptance/2026-10-20-native-character-lifecycle.md) established
 ordinary creation/identity, counted dropping, native wait/poll and normal first
 save/exit, then stopped before reload and exceptionally closed its new child.

@@ -30,6 +30,10 @@ _SETUP = _CHARACTER | {"MAIN_MENU", "PICK_WORLD_DIALOG", "WORLDGEN_CONFIRM_DIALO
 _POINTS_QUESTION = "Remaining points will be discarded, are you sure you want to proceed?"
 
 
+class LifecycleRequestRefusal(EvidenceError):
+    """The chosen request is stale; no input or authority change occurred."""
+
+
 @dataclass(frozen=True)
 class NormalPhase:
     root_id: str
@@ -321,7 +325,22 @@ class RegisteredLifecycle:
         if (checkpoint.observation_id not in data["sources"]
                 or (data["expected_session"], data["expected_revision"], data["expected_boundary_id"]) !=
                    (state["session"], state["revision"], state["boundary"]["id"])):
-            raise EvidenceError("Lifecycle request does not name its exact current informing source")
+            # Preserve only a positively healthy existing phase. In particular,
+            # the no-proposal guard alone does not check an active writer lease;
+            # a stale request must not hide its revocation or a frozen controller.
+            if self.candidate is not None:
+                self._candidate_guard(work, self.candidate)
+            elif self.phase is not None:
+                paused = r._ledger.snapshot(now=r._wall())["phase"] == "paused"
+                self.guard(work, self.phase, diagnostic=paused,
+                    ordinary=data["kind"] == "skill" and data["skill_kind"] == "direct")
+                if not paused:
+                    r._check_lease()
+            else:
+                raise EvidenceError("Lifecycle root does not name its exact current informing source")
+            raise LifecycleRequestRefusal("Lifecycle request does not name its exact current informing source. "
+                "No input was sent. Select the returned current snapshot and submit a new request; "
+                "the old request was not retargeted or replayed.")
 
     def _resume(self, work: _Work, phase: NormalPhase) -> NormalPhase:
         r = self.runtime
