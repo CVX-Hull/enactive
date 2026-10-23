@@ -8,8 +8,10 @@ status: active
 
 The passive recorder measures explicitly supplied observations; it does not run
 the game, call a model or judge success. Future planner/skill adapters must record
-their actual calls and outcomes. External Codex/operator planning is currently
-uninstrumented. An empty call list does not establish zero total cost.
+their actual calls and outcomes. Closed Codex host traces now supply scoped
+response-token and tool-call/gap evidence; isolated inference, hidden approval
+telemetry and full event-to-useful-effect latency remain unavailable where not
+explicitly instrumented. An empty call list does not establish zero total cost.
 
 The [passive supervisor](protocol.md#passive-waypoint-supervision) exposes bounded
 action/decision events and the original planner port's accounting snapshot. Merge
@@ -25,6 +27,14 @@ by this tooling. Change that protocol before collecting affected outcomes, with 
 recorded reason; do not tune thresholds after seeing results.
 
 ## Latency budgets for interactive play
+
+The [responsive-player brief](changes/060-responsive-player.md) records the latest
+closed-host diagnosis, proposed initial numerical targets and configuration
+admission experiment. [S-UX](engineering.md#s-ux-understandable-and-controllable-experience)
+requires prospective cadence/quality criteria for new responsiveness claims;
+the slow current arrangement is not qualified. New requirements do not rewrite
+a frozen deciding run's acceptance. A functional run can remain useful evidence
+while failing to qualify responsiveness.
 
 Native input, skill execution, observer presentation and player reasoning have
 separate clocks. A timeout is a ceiling, not a fixed delay: return immediately
@@ -81,10 +91,12 @@ qualification does not measure normal-play throughput, model or browser latency.
 | Player makes goal/outcome decisions, rather than decisions per key | Compare actual decision boundaries and skill requests; requests are not automatically model-call counts |
 | Loading and long activities have separate finite budgets | Record visible readiness/progress and actual stop/unknowns; do not apply the 250 ms input target or treat a 15-second wait as a universal load guarantee |
 
-These are proposed operational targets, not passing badges or new blanket gates
-for optional model tiers, telemetry frameworks or paid providers. The existing
-native journals/ledger/archive and viewer provide the starting evidence; external
-model time, approval delay and total tool cost remain unmeasured. #143 owns
+These remain proposed component targets, not passing badges or requirements for
+optional model tiers, telemetry frameworks or paid providers. Configuration
+admission also needs useful-progress/stall and quality criteria frozen before its
+experiment. The existing native journals/ledger/archive, closed host traces and
+viewer provide the starting evidence; isolated model time, hidden approval delay
+and complete tool-to-visible-effect cost remain unmeasured where not correlated. #143 owns
 observer latency, #154 integrated timing evidence and #156 prospective setup;
 #145 uses actual mission results before a full campaign. Existing S-UX/S-VERIFY
 and native acceptance enforce honest evidence; common tests do not enforce wall

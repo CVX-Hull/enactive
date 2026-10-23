@@ -41,6 +41,13 @@ maintenance question rather than expanding bibliography for its own sake.
 
 ## Embodied control / VLA
 
+The [October 22 responsive-gameplay update](research-responsive-gameplay.md)
+cross-checks recent roguelike skills, asynchronous VLA control, context/memory and
+tool ergonomics against prior design and closed host traces. It separates measured
+result/context waste from unknown inference latency, and supports configuration
+admission on useful progress rather than model capability alone. Its linked
+proposal is not implemented behavior or a passing responsiveness qualification.
+
 ### Generality and the Bitter Lesson
 
 Targeted cross-check on 2026-10-21: Richard Sutton's 2019

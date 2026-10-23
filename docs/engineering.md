@@ -34,6 +34,16 @@ The operator must see control ownership, pause state, observation freshness and
 uncertain outcomes. Pause's limit on an already-started native activity must be
 visible in user guidance. Do not authorize an action from an old image decode.
 Verify ordinary and stale/paused/error paths, not just a successful screenshot.
+Qualify apparent responsiveness for the complete player configuration, including
+host context, model work, tools, execution and display. Freeze numerical useful-
+progress, stall and quality criteria before the measured attempt; retain loading,
+long activities, failures and exceptions in separate declared cohorts and the
+whole-run accounting. Reject configurations that miss the criteria. A slow model
+may remain where genuinely useful authorized execution covers its delay and the
+whole configuration qualifies; filler actions or animation cannot hide waiting.
+Tool duration, cached-token share and engine ACK speed alone do not establish
+responsive play. [Evaluation](evaluation.md#latency-budgets-for-interactive-play)
+owns measurement definitions; C-USABILITY is manual, not an automated latency gate.
 Controls: C-PORTABLE, C-RUNTIME, C-NATIVE, C-USABILITY.
 
 ## S-ARCH Explicit architectural boundaries
@@ -61,6 +71,19 @@ lead must not become the slow path or a per-procedure approver. Advisory learnin
 may remain provisional and revisable; current authority and delivery accounting
 must not depend on eventual correctness. C-REVIEW checks these distinctions;
 functional behavior and claims of improvement need their separate evidence.
+
+Design model-facing working context separately from machine-facing canonical
+records. Return the smallest sufficient decision view, retain exact evidence by
+reference, and expose detail on demand. Preserve required IDs, current ownership,
+obligations, unknown effects and relevant applicability limits. Keep images as
+image parts; avoid nested transport envelopes and repeated history. Verify the
+actual loaded host's presentation as well as SDK return values. Software owns
+deterministic request binding, bounded collection, cursors, joins and idle waiting;
+models own intent, interpretation and learning judgments. Do not require model
+narration for facts already available in receipts or another model turn just to
+discover an empty work queue. Measure context sufficiency by actual continuation,
+and migrate changed caller/persisted contracts under S-MIGRATION. These are design
+and qualification obligations, not claims that present tooling satisfies them.
 
 Ordinary interface actions are the player's base capability; semantic skills are
 optional shortcuts and stronger claims about those actions. Missing semantic

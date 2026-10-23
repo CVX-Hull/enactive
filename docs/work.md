@@ -20,6 +20,10 @@ The [discovery-and-learning brief](changes/057-discovery-learning-campaign.md)
 explains the integrated design. Its owned work is linked from
 [parent #136](https://github.com/CVX-Hull/enactive/issues/136) and
 [campaign #145](https://github.com/CVX-Hull/enactive/issues/145).
+The [responsive-player proposal](changes/060-responsive-player.md) translates
+closed-host and recent-research findings into tool/context automation and measured
+configuration admission. GitHub #164/#177/#178 own that work; it changes neither
+the source nor retrospective acceptance of a deciding campaign.
 
 | Evidence | What it establishes; the linked report owns details and limits |
 | --- | --- |

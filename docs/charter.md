@@ -35,6 +35,13 @@ any narrower assumption explicitly. Broader game genres are a future extension,
 not a reason to build speculative infrastructure now. Only the user may relax
 this constraint; record a later relaxation as a versioned decision.
 
+Gameplay must be apparently responsive to the observer. Admit the whole
+host/model/context/execution configuration on measured useful progress and
+quality. A slower model is acceptable only where useful execution covers its
+delay and the complete configuration still meets the declared cadence. Capability
+alone does not justify stalls. Numerical budgets belong in the prospective
+evaluation, with loading and long activities separately visible and bounded.
+
 Current assumptions: one game/controller and one designated deciding player;
 the active player owns planning and ordinary interpretation, with a separately
 assigned advisory actor for reflection. The engineering lead owns the project,
@@ -128,6 +135,10 @@ learning or permission to remove provenance, user control or finite limits.
 Facts have one authoritative home. Current guidance, proposals, historical
 choices and observations have explicit status. Keep evidence sufficient to
 assess claims, and improve or retire controls based on what they detect.
+Separate durable evidence from the context needed for the next decision.
+Retaining a complete record does not require repeatedly showing it to a model.
+Preserve exact recall, unfinished obligations and uncertainty while keeping the
+active working context sufficient and proportionate.
 
 ## P-REVIEW Make the project understandable and governable
 
