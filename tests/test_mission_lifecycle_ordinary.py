@@ -243,7 +243,10 @@ class OrdinaryLifecycleTests(MissionCreationFixture, unittest.TestCase):
         self.assertIsNone(primitives[1]["intent"]["input_observation"])
         self.observe("creation-observe")
         self.finish_identity("create", world)
-        self.runtime._ledger._verify(self.a)
+        # Result availability does not mean the live writer has stopped reading
+        # its connection. Private constructor verification assumes this lock.
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
         self.assertIsNotNone(adopted_timeline(self.runtime._ledger, self.runtime._store))
 
     def assert_stale_request_refusal(self, kind):
