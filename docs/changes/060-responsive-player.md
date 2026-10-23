@@ -757,3 +757,55 @@ loads their current producer declarations; it neither repairs015 nor approves
 gameplay. No run is admitted at this checkpoint. After restart, verify the loaded
 contract and qualify the local refusal with a fresh finite actor.
 Independent useful learning and fresh seven-day survival remain incomplete.
+
+## Closed016: organic correction and responsiveness stay coupled
+
+The fresh CLI016 freezes`af4e8d0beea7acf6d7aa1882834984d8564c7434` and unchanged
+signed native690fe96. Its11.475s passive preflight verifies one null-mission,
+one-copy snapshot and selected current declarations; configured role15 is not a
+complete loaded-inventory count. After separate Start it independently launches,
+loads, observes/reconciles the unknown Load input, reads the identity screen and
+retains two Claims. It does not exercise015's premature-stage refusal.
+
+Adoption rejects the character Claim's state`Casey (Male)` instead of admitted
+name`Casey`. The generic error hides that exact failing predicate. The player's
+diagnosis that the pre-load world Claim session was invalid is incorrect: the
+owned lifecycle explicitly permits that menu lineage. Its attempted world-Claim
+retry then introduces a separate cross-session support error. The player stops
+without lead/user rescue. These causes are verified against the actual calls,
+ledger validator and successful013 Claim/adoption trace, not accepted from the
+player's final narrative.
+
+![Actual016 identity screen separates Casey from Male; the stored name Claim combined them.](../assets/responsiveness016-identity.png)
+
+Current source names the mismatched identity subject/value and explains the
+same-session citation rule. The selected schema and guide document existing
+constraints. Software neither rewrites a belief nor generates input or adoption
+on the player's behalf. A whole-runtime regression demonstrates explicit Claim
+correction/retirement and successful adoption under the same original phase,
+lease and deadline. This is synthetic source evidence, not actual player success.
+
+The activated player lasts147.616s; sixteen ledger requests charge six primitives
+(five returned, one unknown). Twenty-one PNGs total1458294bytes. Actual22MCPcalls
+include two failed calls,120698text bytes and11image parts, with no structured
+duplicates. CLI turn aggregates are1934643input/1849728cached-input/11219output
+tokens, including5368reasoning tokens; these are not unique context or billing.
+The browser retains571status samples and74distinct frame replacements, no drops.
+There is no adopted game-time anchor, useful routine cohort, procedure learning,
+Work completion or normal ending. The FINAL actor, owned native and controller
+are closed; all191save hashes remain unchanged.
+
+Configuration admission requires organic closed-loop autonomy **and** useful
+apparent responsiveness. A deterministic/scripted demonstration, automatic belief
+rewrite or lead-curated tactic cannot substitute for the player's own discovery,
+interpretation, error correction, procedure adoption/revision and fresh-context
+reuse through ordinary-input fallback. Nor does organic exploration excuse poor
+cadence.016 satisfies neither gate. Existing #164/#176/#177/#178 and parent#136
+retain these combined requirements before the genuinely fresh#145 campaign.
+
+The read-only ergonomics sweep also finds two still-manual bindings for #164:
+navigation's nested coordinate scope and an activity answer's interrupt-owner ID
+already exist in the selected snapshot. Migrate these model-facing fields through
+existing binding facilities, keeping target, answer, explicit outer scope/source
+and limits as player choices. Missing/mismatched selected bindings must refuse
+without refresh or submission; no new ledger, scheduler or universal framework.

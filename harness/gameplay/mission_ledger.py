@@ -1433,10 +1433,15 @@ class MissionLedger:
             memory_request = self._earlier_request(request_id, selected["event_id"])["request"]
             if (memory_request["kind"] not in ("remember", "correct") or memory_request["entry_type"] != "claim"
                     or memory_request["entry"] != entry or entry["key"]["property"] != "identity"
-                    or entry["key"]["subject"] != subject or entry["value"] != {"quantity": None, "state": name}
+                    or entry["key"]["subject"] != subject
                     or entry["status"] not in ("current", "last_seen")
                     or any(group["claims"] for group in entry["supports"])):
                 raise LedgerError("Normal adoption requires directly supported admitted identity Claims")
+            if entry["value"] != {"quantity": None, "state": name}:
+                state_preview = repr(entry["value"]["state"])[:160]
+                raise LedgerError(f"Normal adoption {subject} identity value must equal the admitted name {name!r}; "
+                    f"selected Claim state preview: {state_preview}. "
+                    "Interpret the retained evidence and explicitly correct the Claim before adopting.")
             if subject == "character" and (entry["scope"] != proof["scope"]
                     or entry["sources"] != [inspect_result["identity_screen_source_id"]]):
                 raise LedgerError("Character identity lost its exact inspected source/scope")

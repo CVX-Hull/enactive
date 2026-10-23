@@ -189,6 +189,9 @@ memory entry types retain their distinct current contracts. Identity keys select
 world/character, using the existing shared name-unit/coverage constants. The player
 still supplies the interpreted name; software never copies the expected scenario
 name into a belief.
+The identity state must equal that admitted name exactly; descriptive details
+belong in Claim text. A deterministic mismatch refusal identifies the subject,
+expected name and selected value, without changing a belief or adopting it.
 
 Source grounding chooses an explicitly returned source ID or null for the selected
 cached snapshot's exact source. Mission/session/native order come from that binding.
@@ -200,6 +203,10 @@ choose `primary` and additional source/claim IDs; `primary=false` does not imply
 image support. Unobserved groups require `primary=false` and `sources=[]`, while
 claim premises remain possible. Software expands those explicit selections into
 canonical groups and the declared source union, preserving semantic support checks.
+Every cited source shares its Claim's grounding session. In owned lifecycle
+adoption, the world Claim may retain its original menu session and verified root
+lineage; the character Claim uses its exact inspected normal-session source.
+These are separate grounded Claims, not a cross-session citation union.
 
 Software supplies interpretation kind, schema/type and the request-derived Claim
 ID. Correction supersedes come exactly from the explicit retired IDs. Host assertion

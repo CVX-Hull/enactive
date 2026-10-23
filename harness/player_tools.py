@@ -52,6 +52,9 @@ def _claim_authoring_schema(canonical_schema: dict) -> dict:
     scope = fields["scope"]["properties"]
     support = deepcopy(fields["supports"])
     support["items"] = _object({"primary": {"type": "boolean"}, **support["items"]["properties"]})
+    fields["value"]["description"] = ("For identity Claims, state is the exact interpreted admitted name; "
+        "demographic or other descriptive details belong in text, not the name value.")
+    support["description"] = "All cited sources share the Claim grounding session; keep other-session evidence in separately grounded Claims."
     return _object({
         **{name: fields[name] for name in ("value", "text", "coverage", "status")},
         "key": {"anyOf": [

@@ -167,8 +167,11 @@ class CampaignMemory:
         result = []
         for identity in entry["sources"]:
             ref = refs.get(identity)
-            if ref is None or ref.session != entry["scope"]["session"]:
+            if ref is None:
                 raise ContractError("Source identity/session differs from memory scope")
+            if ref.session != entry["scope"]["session"]:
+                raise ContractError("Source identity/session differs from memory scope: every cited source "
+                    "must share the entry's grounding session. Cross-session sources need separately grounded entries.")
             if self.store.source_status(ref) != "retained":
                 raise ContractError("Disputed source cannot establish memory")
             result.append(ref)

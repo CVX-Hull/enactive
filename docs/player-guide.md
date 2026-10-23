@@ -89,6 +89,7 @@ reason to read the entire repository during every game.
   groups; use the current focused Claim schema. Software supplies the record/ID,
   interpretation kind, native order and real host assertion time. Identity keys
   select world/character; software supplies the reserved unit/coverage fields.
+  Identity state is the interpreted exact name; other details belong in text.
   Source grounding can select the cached snapshot image with `source_id=null`.
   A null coordinate epoch uses only a matching published `coordinate_scope`;
   before adoption use the actual epoch from the returned `provisional_scope`.
@@ -99,6 +100,8 @@ reason to read the entire repository during every game.
   you can select later; do not calculate hashes or timestamps yourself. Cite the
   image or premises that actually establish the claim, rather than automatically
   citing the latest image. Accepted storage is not semantic support or truth.
+  All cited sources share the Claim's grounding session. An owned pre-load world
+  Claim keeps its menu session; character identity uses its inspected session.
 
 Owned exit also accepts ordinary keys/text/clicks as lifecycle-scoped children.
 Inspect the current menu and choose input; no exact quit-question transcription is

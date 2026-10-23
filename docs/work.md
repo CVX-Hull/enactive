@@ -27,6 +27,9 @@ the source nor retrospective acceptance of a deciding campaign.
 Its [latest closed diagnostic and restart checkpoint](changes/060-responsive-player.md#closed015-and-restart-checkpoint)
 retains the Load applicability failure and separates current source/tool readiness
 from unfinished independent gameplay. GitHub owns the repair and subsequent work.
+The [subsequent016 assessment](changes/060-responsive-player.md#closed016-organic-correction-and-responsiveness-stay-coupled)
+retains the identity-value failure and the combined organic-autonomy/responsiveness
+gate; it does not replace the complete discovery-and-learning outcome.
 
 | Evidence | What it establishes; the linked report owns details and limits |
 | --- | --- |

@@ -1,5 +1,6 @@
 """New admitted Load, separate from continuity reload; synthetic game only."""
 from dataclasses import replace
+from copy import deepcopy
 import unittest
 from unittest.mock import patch
 
@@ -94,6 +95,39 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         with patch.object(lifecycle, "command", side_effect=cross_deadline):
             self.assert_premature_continuation_fault()
         self.assertEqual(self.runtime._ledger.request("initial-load")["deadline"], deadline)
+
+    def test_identity_value_refusal_names_character_and_allows_explicit_correction(self):
+        world = self.pending_initial_load()
+        self.assertEqual(self.run_request(self.lifecycle("reconciled", "load", parent="initial-load"))["state"], "completed")
+        self.assertEqual(self.run_request(self.lifecycle("readmitted", "load", parent="initial-load"))["state"], "completed")
+        self.assertEqual(self.run_request(self.control("inspected", "Character", kind="inspect", parent="initial-load"))["state"], "completed")
+        screen = self.runtime._current
+        world_id = self.remember_identity("selected-world", "world", world, 0)
+        wrong_name = self.a.scenario.character + " (Male)"
+        character_id = self.remember_identity("selected-character", "character", screen, 0, value=wrong_name)
+        self.assertEqual(self.run_request(self.control("dismissed", "Cancel", parent="initial-load"))["state"], "partial")
+        phase, lease = self.runtime._registered_lifecycle.phase, self.runtime._lease
+        deadline = self.runtime._ledger.request("initial-load")["deadline"]
+        delivered = len(self.bridge.delivered)
+        rejected = self.run_request(self.lifecycle("wrong-adoption", "load", parent="initial-load", claims=[world_id, character_id]))
+        self.assertEqual(rejected["state"], "blocked", rejected)
+        self.assertIn("character identity value", rejected["result"]["reason"])
+        self.assertIn(repr(wrong_name), rejected["result"]["reason"])
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertEqual(self.runtime._ledger.request("initial-load")["deadline"], deadline)
+        original = next(row["entry"] for row in self.runtime._ledger.memory_records("claim") if row["entry"]["id"] == character_id)
+        corrected = deepcopy(original)
+        corrected.update(id="corrected-character", value=dict(quantity=None, state=self.a.scenario.character), supersedes=[character_id])
+        fixed = self.run_request(dict(schema="mission/10", kind="correct", request_id="correct-character",
+            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], entry_type="claim", entry=corrected,
+            retired_ids=[character_id], reason="Separate the interpreted name from demographic text in the retained identity screen"))
+        self.assertEqual(fixed["state"], "completed", fixed)
+        adopted = self.run_request(self.lifecycle("corrected-adoption", "load", parent="initial-load", claims=[world_id, corrected["id"]]))
+        self.assertEqual(adopted["state"], "completed", adopted)
+        self.assertEqual(original["value"]["state"], wrong_name)
+        self.runtime._ledger._verify(self.a)
 
     def pending_initial_load(self):
         world = self.picker()

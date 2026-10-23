@@ -68,6 +68,11 @@ verifies software-owned request identities but fails a premature Load continuati
 before character adoption. Its actor and owned processes are closed. The local
 refusal repair now has source support; actual player qualification remains open.
 Restarting the desktop loads current tool declarations and does not qualify play.
+Later [016](changes/060-responsive-player.md#closed016-organic-correction-and-responsiveness-stay-coupled)
+loads and reconciles but fails identity adoption after an imprecise Claim and
+misdiagnosed rejection. Current feedback improvements have source support only;
+organic correction, learning and useful apparent responsiveness remain coupled
+acceptance requirements.
 
 The [responsive-player brief](changes/060-responsive-player.md) addresses actual
 duplication and manual memory metadata using the existing SDK/cache/staging
