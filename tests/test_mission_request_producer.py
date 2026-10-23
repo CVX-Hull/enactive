@@ -134,14 +134,34 @@ class MissionRequestProducerTests(unittest.TestCase):
         with self.assertRaises(ContractError):
             self.compose()
 
-    def test_lifecycle_identity_uses_direct_root_and_rejects_unrelated_children(self):
+    def test_lifecycle_binds_headers_and_leaves_skill_eligibility_to_receiver(self):
         self.status["lifecycle_phase"] = phase(self.source, operation="create")
         result = self.compose(skill(goal=dict(purpose="character_identity")), scope="lifecycle")
         self.assertEqual(result["phase_id"], "original-root")
         for intent in (skill(), skill(goal=dict(purpose="character_identity"), work_id="unrelated"),
                        skill("interact", goal=dict(action="inventory", intent="Open", desired_outcome="View"))):
-            with self.subTest(intent=intent), self.assertRaises(ContractError):
-                self.compose(intent, scope="lifecycle")
+            with self.subTest(intent=intent):
+                request = self.compose(intent, scope="lifecycle")
+                self.assertEqual(request["phase_id"], "original-root")
+                self.assertEqual(request["work_id"], intent["work_id"])
+                validate_request(request)
+
+    def test_lifecycle_direct_uses_the_selected_root_without_a_menu_taxonomy(self):
+        self.source = bundle(kind="menu")
+        intent = skill("direct", goal=dict(input=dict(type="key", key="n", modifiers=[]),
+            intent="Cancel the visible incidental dialog", expected="Dialog closes",
+            interrupt_allowed=False))
+        for operation in ("create", "load", "save", "exit"):
+            self.status["lifecycle_phase"] = phase(self.source, operation=operation)
+            with self.subTest(operation=operation):
+                request = self.compose(intent, scope="lifecycle")
+                self.assertEqual(request["phase_id"], "original-root")
+                self.assertEqual(request["goal"], intent["goal"])
+                self.assertEqual(request["sources"], [self.source["reference"]["observation_id"]])
+                validate_request(request)
+        self.status["lifecycle_phase"]["checkpoint_id"] = "different-checkpoint"
+        with self.assertRaises(ContractError):
+            self.compose(intent, scope="lifecycle")
 
     def test_existing_scope_rejects_unsupported_skill_without_dispatch(self):
         self.status["prompt_phase"] = phase(self.source)
@@ -164,8 +184,8 @@ class MissionRequestProducerTests(unittest.TestCase):
                 result = self.compose(intent, scope="lifecycle")
                 self.assertEqual(result["goal"], intent["goal"])
                 self.assertEqual(result["phase_id"], "original-root")
-                with self.assertRaises(ContractError):
-                    self.compose({**intent, "work_id": "unrelated-work"}, scope="lifecycle")
+                composed = self.compose({**intent, "work_id": "unrelated-work"}, scope="lifecycle")
+                self.assertEqual(composed["work_id"], "unrelated-work")
 
     def test_source_free_launch_is_explicit_new_root_only(self):
         result = self.compose(lifecycle("launch"), source=None)
@@ -215,8 +235,8 @@ class MissionRequestProducerTests(unittest.TestCase):
         intent = skill("menu", goal=dict(purpose="Quit", label="Yes", outcome="activated"),
             perception=dict(kind="confirmation", basis="player_interpretation", question="Really quit?"))
         self.assertEqual(self.compose(intent, scope="lifecycle")["phase_id"], "original-root")
-        with self.assertRaises(ContractError):
-            self.compose(skill(goal=dict(purpose="character_identity")), scope="lifecycle")
+        request = self.compose(skill(goal=dict(purpose="character_identity")), scope="lifecycle")
+        self.assertEqual(request["phase_id"], "original-root")
         self.status["lifecycle_phase"] = None
         self.status["current_source"] = bundle(99)["reference"]
         result = self.compose(lifecycle("finish"))

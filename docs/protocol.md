@@ -270,7 +270,13 @@ lease-bound SourceBinding before a lease exists. It sends no input or grants
 readmission by itself. Explicit creation-stage commit, normal save and identity
 inspection use the same guarded refresh with typed SourceRevalidation under that
 policy; only normal Save start and provisional normal identity entry use native-state
-equivalence, while setup and the actual identity screen retain exact-PNG checks.
+equivalence, while interpreted setup and identity-screen controls retain exact-PNG checks.
+Owned create/load/save menu phases also accept `direct` keys/text/clicks through
+the same ordinary executor and lifecycle lease. Their typed InputObservation
+records entry without claiming semantic equivalence; single physical events need
+current custody and a live receiver, not equal pixels or a registered category.
+Click geometry and text-batch structural stops remain. Normal provisional play
+still permits only registered identity inspection before adoption.
 Ordinary semantic controls and navigation likewise capture/revalidate once at entry,
 even if the selected source is still fresh. Interpreted controls require exact PNG
 equivalence; native-row/navigation decisions retain native-state equivalence.
@@ -327,9 +333,10 @@ historical receipts never restore a revoked phase or input consent.
 The harness-enabled SDL ImGui context disables only input-text cursor blinking
 through its existing library option; exact encoded PNG equivalence is unchanged.
 There is no image masking or tolerance for changed content. Other animations can
-still invalidate an old interpreted decision. General setup cancellation after
-other setup inputs remains unsupported; only the proven Resume-only main-menu
-case below has a narrow normal cleanup path.
+still invalidate an old interpreted decision. Ordinary setup controls may cancel
+unfamiliar dialogs and return to the owned main menu. That menu-only path can use
+the separate normal cleanup below; unadopted/wrong normal-session cleanup remains
+unsupported.
 Interpreted tab focus excludes WORLDGEN_CONFIRM_DIALOG. NEW_CHAR_DESCRIPTION may
 return through PREV_TAB, but NEXT_TAB starts character completion and requires an
 explicit lifecycle stage commit; a focused menu outcome cannot authorize it.
@@ -361,31 +368,33 @@ validated committed OwnedNormalExit resolves that launch's historical custody.
 Otherwise attempted/uncertain launches remain unavailable, with no PID adoption.
 Process absence or exit code alone cannot prove a normal save/exit.
 
-Registered `exit` covers the same owned untouched MAIN_MENU, a verified Resume-only
+Registered `exit` covers the same owned untouched MAIN_MENU, a verified explored
 pre-character menu, or a menu reached by this child's validated SavedCheckpoint.
-Resume-only eligibility requires exactly one correlated returned create/load Resume,
-no other setup input, unknown, transition candidate or normal-play evidence. The
-fresh internally paused menu must retain the immutable launch pixels and expected
-Resume revision/control transition under the original operator/takeover mark.
+Menu-only eligibility requires the original correlated returned create/load Resume
+and settled returned same-root controls, with no unknown input, transition
+candidate or normal-play evidence. Every retained intermediate remains an owned
+menu in that session. The current MAIN_MENU must match the last authenticated
+input revision and original control/operator/takeover lineage; its pixels and
+selection may differ from launch.
 Read-only Observe can adopt that private cleanup checkpoint; it grants no input.
 Ledger write/reopen/orphan checks audit the original Resume mapping/source IDs;
-runtime and EvidenceStore own PNG and live-authority checks. An earlier exit must
+runtime and EvidenceStore own retained source and live-authority checks. An earlier exit must
 have no inputs or its fully settled verified No; pending/unknown exit inputs cannot
 be skipped by a new root. This does not handle arbitrary setup rollback or restore
 consent after user Pause.
 
-While that Resume-only create/load phase is still live at MAIN_MENU, a new
+While that menu-only create/load phase is still live at MAIN_MENU, a new
 source-bound `exit` root may explicitly request its abort. It audits the original
-single Resume, actor/operator/custody, no normal segment/other input/candidate or
-pending slot, then compares a new native capture with the exact original pixels
-and expected resumed state. It revokes setup through internal recovery without
+Resume and settled exploration, actor/operator/custody, no normal segment/candidate
+or pending slot, then verifies a new native capture of that current owned menu.
+It revokes setup through internal recovery without
 sending input or changing the launch checkpoint. The plain partial result reports
 `cleanup_requested`, not an exit proof or a phase receipt. The original request
 epoch remains historical; the ledger's pause advances its current epoch. Separate
-Observe must establish the fresh internally paused Resume-only menu, followed by
+Observe must establish the fresh internally paused menu, followed by
 a new finite normal-exit root. Neither step restores the old setup phase, renews
 mission ceilings nor overrides a concurrent user Pause/takeover. Other setup
-screens/inputs, unknown Resume and historical reopened evidence cannot use this
+screens, unknown inputs and historical reopened evidence cannot use this
 abort path. The saved branch requires the exact final
 normal endpoint and its original first menu source, even after later observations.
 It retains the launch's original operator mark.
@@ -395,7 +404,9 @@ confirmation entering UILIST arms the private character-selection stage; return
 to MAIN_MENU retires that stage. Before a load confirmation is dispatched, the
 rendered UILIST must have one enabled admitted-character row and that exact row
 must be selected. No literal `Load Game` label or alternate label reader arms the
-stage. Unknown delivery retains its original UUID/reservation; diagnostic Observe,
+stage. That row gate applies to the semantic shortcut; ordinary controls still
+require post-transition exact identity and this mission's SavedCheckpoint.
+Unknown delivery retains its original UUID/reservation; diagnostic Observe,
 same-root transition reconciliation, separate identity-only Resume and visible
 identity Claims/adoption remain required. The row check establishes selection
 only; world identity still needs its source-backed interpretation.
@@ -440,8 +451,11 @@ unknown. Diagnostic Observe retains the actual after-frame against that dispatch
 exact capacity reservation; a separate
 same-root current-epoch request records LifecycleTransition and reconciles effect
 without relabeling the ACK. Only then may explicit provisional readmission inspect
-PLAYER_INFO; only QUIT may return from that screen. Inventory or movement cannot
-use provisional normal evidence.
+PLAYER_INFO. Its semantic helper permits only QUIT to return; ordinary menu input
+can interact with that visible screen and the player must interpret any change.
+Neither path grants normal-play authority before separate truthful identity
+Claims/adoption. Ordinary dispatch checks the actual preflight receiver, so a
+menu becoming normal play cannot carry a provisional physical key into gameplay.
 
 Every actually published lifecycle input also retains private dispatch correlation
 when it was not a registered expected transition. After an uncertain or unexpected
@@ -491,6 +505,18 @@ Lifecycle source policy distinguishes the registered action from incidental pixe
 | Owned normal Save at `save_start` | `native_state`; preserve the original root, first-normal identity, budgets/deadlines and interaction lease through refresh, then perform the existing single checked lifecycle rotation before Save dispatch. |
 | Creation/load `awaiting_identity` at normal play | `native_state` for provisional refresh, its separately charged registered Resume and entry to identity inspection. Original committed transition/effect proof, owned child, actor/epoch/Pause lineage and subsequent identity Claims/adoption remain mandatory. |
 | Setup forms/rows, identity screen, explicit confirmations and other lifecycle checkpoints | Existing exact-PNG policy; a normal-context rule cannot authorize a different stage or operation. |
+| Ordinary create/load/save menu controls | InputObservation at entry and ordinary dispatch at actual preflight; no pixel or menu-label equivalence. Original custody, root limits, click geometry and text structural stops remain. |
+
+Creation effect proof authenticates the existing explicit character-stage commit:
+a returned same-root lifecycle NEXT_TAB from NEW_CHAR_DESCRIPTION into YESNO,
+followed only by owned confirmation receivers through the correlated terminal
+input. Returning to a form/list/main menu retires that commitment. The terminal
+may be semantic or physical; no final key or question spelling proves freshness.
+The explicit stage operation remains a CDDA integration constraint, not a general
+game-family capability. Save proof retains the original registered Save action
+and uninterrupted owned menu interval. Returning to the same adopted normal
+session cancels Save without a saved-checkpoint claim, regardless of the key.
+Raw source/proof checks on reopen establish history and never reconstruct a lease.
 
 The same selected rule is recorded in SourceRevalidation and Resume lineage and
 used through runtime/controller/native preflight. A normal image change under
@@ -546,7 +572,7 @@ transition selects its latest binding bundle and cites its first observation as
 support. A phase scope requires that exact summary/checkpoint, without falling
 back to another phase or null root. Prompt supports only menu/edit/inspect/item/
 activity children; activity scope supports only activity. Lifecycle children keep
-their direct create/save/load root, including provisional identity inspection;
+their direct create/save/load root, including ordinary controls and provisional identity inspection;
 exit confirmation is a lifecycle-scoped menu child. No unrelated Work attaches
 to lifecycle skill children. These composition checks do not duplicate live guards.
 

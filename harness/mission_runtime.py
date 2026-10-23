@@ -1418,7 +1418,7 @@ class MissionRuntime:
 
     def _resume_menu_equivalent(self, launch: _OwnedLaunch, reference: EvidenceRef, *, paused: bool,
                                 exit_root_id: str | None) -> bool:
-        """Compare one audited setup Resume with its exact current menu state.
+        """Compare settled setup exploration with its current owned main menu.
 
         The caller owns live-phase/lease/custody checks. This shared proof grants
         neither setup continuation nor cleanup authority by itself.
@@ -1432,13 +1432,21 @@ class MissionRuntime:
         before, preflight, after = (refs[identity] for identity in (
             intent["source_before"], intent["preflight_source"], receipt["source_after"]))
         binding = receipt["dispatch_binding"]
+        setup_requests = {row["request"]["request_id"] for row in self._ledger.request_records()
+            if row["request"]["request_id"] == primitive["request_id"]
+                or row["request"].get("phase_id") == primitive["request_id"]}
+        settled = [item for item in self._ledger.primitive_records() if item["request_id"] in setup_requests]
+        last_ack = settled[-1]["result"]["native_ack"]
         original, resumed, current = (self._store.observation(ref) for ref in (baseline, after, reference))
         expected = copy.deepcopy(original)
         expected.update(revision=before.revision + 1, paused=False, pause_origin="none")
         expected["boundary"]["control_generation"] += 1
-        current_expected = copy.deepcopy(expected)
-        if paused:
-            current_expected.update(paused=True, pause_origin="host")
+        positions = {ref.observation_id: index for index, ref in enumerate(self._store.historical_references)}
+        interval = self._store.historical_references[positions[after.observation_id]:positions[reference.observation_id] + 1]
+        explored = all(ref.session == baseline.session and ref.boundary_kind == "menu"
+            and not self._store.observation(ref)["in_game"]
+            and self._store.observation(ref)["takeover_generation"] == launch.takeover_generation
+            and self._store.observation(ref)["pause_origin"] != "human" for ref in interval)
         ledger = self._ledger.snapshot(now=self._wall())
         return (launch.operator_mark == self._operator_mark() and ledger["clock_valid"] and not ledger["unreconciled"]
             and binding["controller_boot_id"] == launch.operator_mark[0]
@@ -1448,13 +1456,17 @@ class MissionRuntime:
             and original["category"] == "MAIN_MENU" and not original["in_game"] and original["paused"]
             and self._store.equivalent(baseline, before, rule="exact_png_bytes")
             and self._store.equivalent(before, preflight, rule="exact_png_bytes")
-            and same_native_state(expected, resumed) and same_native_state(current_expected, current)
+            and same_native_state(expected, resumed) and explored
+            and current["session"] == resumed["session"] and current["category"] == "MAIN_MENU"
+            and current["revision"] == last_ack["revision"]
+            and not current["in_game"] and current["boundary"]["kind"] == "menu"
+            and current["boundary"]["control_generation"] == resumed["boundary"]["control_generation"]
+            and current["paused"] == paused and current["pause_origin"] == ("host" if paused else "none")
             and resumed["id"] == primitive["native_id"]
-            and baseline.frame_sha256 == after.frame_sha256 == reference.frame_sha256
             and self._store.current_boundary(**self._clocks()) == reference)
 
     def _abort_untouched_setup(self, work: _Work) -> tuple[str, dict]:
-        """An explicit exit may first revoke a proven Resume-only menu phase.
+        """An explicit exit may first revoke settled menu-only exploration.
 
         No input is sent and the launch checkpoint is not rebased. Separate
         Observe and a new finite exit root are required after the epoch change.
@@ -1469,7 +1481,7 @@ class MissionRuntime:
                 or adapter.normal_after_launch() or self._live()[5]
                 or any((self.controller.bridge / name).exists() for name in
                        ("request.json", "claimed.json", "control.json", "control-claimed.json"))):
-            raise ControlError("Setup abort requires only its returned Resume and untouched owned main menu")
+            raise ControlError("Setup abort requires settled exploration and its owned main menu")
         adapter.guard(work, phase)
         adapter._binding_request(work, phase.checkpoint)
         observed = self._store.observation(phase.checkpoint)
@@ -1477,12 +1489,12 @@ class MissionRuntime:
             raise ControlError("Setup abort cannot cancel another setup screen or normal gameplay")
         # Even a fresh retained image is compared with a new native capture:
         # this is a zero-input revocation, without dispatch's usual preflight.
-        phase = adapter._refresh(work, phase)
+        phase = adapter._refresh(work, phase, ordinary=True)
         if not self._resume_menu_equivalent(launch, phase.checkpoint, paused=False, exit_root_id=data["request_id"]):
-            raise EvidenceError("Setup abort changed its exact Resume-only menu evidence")
+            raise EvidenceError("Setup abort lost its settled same-session menu evidence")
         self._check_cancelled(work)
         source = phase.checkpoint.observation_id
-        self._stop_after_failure("Explicit Resume-only setup abort; fresh Observe and new normal exit required")
+        self._stop_after_failure("Explicit menu-only setup abort; fresh Observe and new normal exit required")
         self._check_cancelled(work)
         result = {"cleanup_requested": True, "source_ids": [source], "grants_authority": False,
             "reason": "Setup authority revoked without input; separately Observe then request normal exit"}
@@ -2301,7 +2313,8 @@ class MissionRuntime:
                 if candidate is not None and candidate.logical_id == proposal.logical_id:
                     self._registered_lifecycle.candidate = replace(candidate, reservation=None)
         except Exception as exc:
-            if isinstance(exc, LocalBudgetRefusal) and raw is None and not prepared:
+            if (isinstance(exc, LocalBudgetRefusal) and raw is None and not prepared
+                    and lifecycle is None and activity is None):
                 # No controller input call/prepared intent exists at this point.
                 # Any failed health proof still propagates to the fatal path.
                 local_nonpublication = self._local_input_refusal(work, proposal.before, proposal.logical_id) is not None
@@ -2424,7 +2437,8 @@ class MissionRuntime:
                 # Rotation is already committed even when this first input was
                 # not published. Preserve only authenticated read-only lineage
                 # until Observe, never an old binding for another input.
-                self._await_current_observation(work, proposal.before, original, operator_mark, reason)
+                if lifecycle is None:
+                    self._await_current_observation(work, proposal.before, original, operator_mark, reason)
         live = self._live()
         if game_budget_exhausted:
             # Keep revocation outside controller preflight and after any

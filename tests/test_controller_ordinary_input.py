@@ -66,6 +66,18 @@ class OrdinaryControllerTests(unittest.TestCase):
             self.assertIs(self.controller._mission_lease, lease)
             self.assertFalse(self.controller.pause_requested)
 
+    def test_lifecycle_lease_uses_the_same_ordinary_receiver_contract(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            lease = self.acquire(operation="lifecycle")
+            fake.value.update(category="UNRECOGNIZED_SETUP", scene=None)
+            fake.value["boundary"].update(kind="menu", id="visible-setup")
+            receipt = self.mission_dispatch(lease, kind="direct",
+                value=dict(type="key", key="ESC", modifiers=[]))
+            self.assertEqual(receipt["result"]["status"], "ready")
+            self.assertFalse(receipt["request"]["require_exact_frame"])
+            self.assertIs(self.controller._mission_lease, lease)
+
     def test_known_ack_survives_postprocessing_failures(self):
         for fault in ('journal', 'snapshot', 'unlink', 'receipt'):
             with self.subTest(fault=fault), FakeBridge(self.controller) as fake:

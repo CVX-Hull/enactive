@@ -1,4 +1,4 @@
-"""Historical creation input provenance, without source reads or live authority.
+"""Historical creation provenance, without live input authority.
 
 The caller must inspect retained observations to establish the creation form,
 confirmation flow and its retirement. A correlated input chain alone establishes
@@ -10,6 +10,8 @@ from .contracts import ContractError, _ID, _INT, _object, _text, canonical, json
 from .mission_contracts import validate_request
 from .native_input import validate_input
 from .native_receipts import validate_ordinary_mapping
+from .evidence import EvidenceStore
+from .contracts import EvidenceRef
 
 _CORRELATION = ("kind", "value", "expected_session", "expected_revision",
                 "expected_boundary_id", "source_before", "preflight_source")
@@ -165,3 +167,53 @@ def creation_input_chain(requests: tuple[dict, ...], primitives: tuple[dict, ...
                              else intent["expected_revision"])
         published.append(primitive)
     return tuple(published)
+
+
+def validate_creation_sources(chain: tuple[dict, ...], store: EvidenceStore, *,
+                              terminal_before: EvidenceRef) -> None:
+    """Authenticate retained receiver chronology before reconciling creation.
+
+    Source reads verify archive integrity; they never refresh a sample or lease.
+    The runtime and historical reader use this same effect precondition.
+    """
+    _require(bool(chain), "Creation route has no committed input")
+    references = store.historical_references
+    refs = {ref.observation_id: ref for ref in references}
+    positions = {ref.observation_id: index for index, ref in enumerate(references)}
+
+    def source(identity: str) -> tuple[EvidenceRef, dict]:
+        _require(identity in refs, "Creation route source is absent from the archive")
+        ref = refs[identity]
+        return ref, store.observation(ref)
+
+    _, terminal_obs = source(terminal_before.observation_id)
+    previous = None
+    for index, item in enumerate(chain):
+        intent, receipt = item["intent"], item["result"] or {}
+        before, observed = source(intent["source_before"])
+        preflight, preflight_obs = source(intent["preflight_source"])
+        _require(before.session == terminal_before.session == preflight.session
+            and (intent["expected_session"], intent["expected_revision"], intent["expected_boundary_id"]) ==
+                (preflight.session, preflight.revision, preflight_obs["boundary"]["id"])
+            and observed["takeover_generation"] == terminal_obs["takeover_generation"]
+            and preflight_obs["takeover_generation"] == terminal_obs["takeover_generation"]
+            and observed["boundary"]["control_generation"] == preflight_obs["boundary"]["control_generation"]
+                == terminal_obs["boundary"]["control_generation"]
+            and positions[before.observation_id] <= positions[preflight.observation_id]
+            and (previous is None or positions[previous.observation_id] <= positions[before.observation_id]),
+            "Creation route lost its ordered owned source chain")
+        _require(observed["category"] == ("NEW_CHAR_DESCRIPTION" if index == 0 else "YESNO")
+            and preflight_obs["category"] == observed["category"],
+            "Creation commitment crossed another input receiver")
+        if item["state"] == "returned":
+            after, after_obs = source(receipt["source_after"])
+            _require(positions[preflight.observation_id] < positions[after.observation_id],
+                "Creation route after-source precedes dispatch")
+            if index < len(chain) - 1:
+                _require(after.session == terminal_before.session and after_obs["category"] == "YESNO",
+                    "Creation commitment was cancelled before the terminal input")
+            previous = after
+    committed_after = chain[0]["result"]["source_after"]
+    _require(all(ref.session == terminal_before.session and source(ref.observation_id)[1]["category"] == "YESNO"
+        for ref in references[positions[committed_after]:positions[terminal_before.observation_id] + 1]),
+        "Creation commitment was retired by an intervening receiver")

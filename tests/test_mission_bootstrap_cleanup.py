@@ -74,11 +74,11 @@ class BootstrapCleanupTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(self.runtime.status()["spent_inputs"], spent)
         self.assertFalse(any(row.get("action") == "QUIT" for row in self.bridge.delivered))
 
-    def test_explicit_abort_rejects_changed_menu_pixels(self):
+    def test_explicit_abort_accepts_incidental_menu_pixel_changes(self):
         self.untouched_setup("create")
         self.bridge.editor_text = "Changed visible menu"
         result = self.run_request(self.lifecycle("abort", "exit"))
-        self.assertEqual(result["state"], "blocked", result)
+        self.assertEqual(result["state"], "partial", result)
         self.assertEqual(self.runtime.status()["spent_inputs"], 1)
         self.assertIsNone(self.runtime._registered_lifecycle.phase)
 
@@ -140,15 +140,14 @@ class BootstrapCleanupTests(MissionCreationFixture, unittest.TestCase):
         self.assertIsNone(self.runtime._owned_launch)
         self.assertIsNone(self.controller._mission_lease)
 
-    def test_changed_pixels_cannot_adopt_the_resume_menu(self):
+    def test_changed_menu_pixels_do_not_prevent_verified_menu_cleanup(self):
         self.failed_after_resume()
-        initial = self.runtime._owned_launch.checkpoint
         self.bridge.editor_text = "A changed menu"
         self.observe("cleanup-observe")
-        self.assertEqual(self.runtime._owned_launch.checkpoint, initial)
+        self.assertEqual(self.runtime._owned_launch.checkpoint, self.runtime._current)
         exit_result = self.run_request(self.lifecycle("exit", "exit"))
-        self.assertEqual(exit_result["state"], "blocked", exit_result)
-        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+        self.assertEqual(exit_result["state"], "partial", exit_result)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 3)
 
     def test_user_pause_cannot_adopt_old_launch_consent(self):
         self.failed_after_resume()
@@ -178,12 +177,13 @@ class BootstrapCleanupTests(MissionCreationFixture, unittest.TestCase):
             self.runtime._ledger.menu_cleanup_resume("launch")
         self.assertEqual(self.runtime.status()["spent_inputs"], 1)
 
-    def test_world_action_disqualifies_resume_only_cleanup(self):
+    def test_exploration_is_audited_without_claiming_current_main_menu(self):
         self.ready()
         self.run_request(self.lifecycle("create"))
         self.run_request(self.control("world-form", "Create World"))
-        with self.assertRaisesRegex(LedgerError, "only one"):
-            self.runtime._ledger.menu_cleanup_resume("launch")
+        resume = self.runtime._ledger.menu_cleanup_resume("launch")
+        self.assertEqual(resume["intent"]["kind"], "resume")
+        self.assertEqual(self.current()[1]["category"], "WORLDGEN_CONFIRM_DIALOG")
 
     def test_future_exit_cannot_skip_the_current_unfinished_exit_inputs(self):
         resume = self.failed_after_resume()

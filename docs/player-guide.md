@@ -51,10 +51,11 @@ reason to read the entire repository during every game.
 
 ## Current registered CDDA lifecycle
 
-This adapter has specialized setup/identity/save proofs. Ordinary gameplay's raw
-fallback does **not** currently make every creation shortcut or setup receiver
-supported. A different game binding or changed screen needs its own capability
-assessment; these stages are not a universal menu taxonomy.
+This adapter has specialized creation/identity/save proofs. Owned create/load/save
+menus accept ordinary keys/text/clicks, including unfamiliar receivers. A shortcut
+that bypasses the committed creation route cannot prove fresh character creation.
+These CDDA stages are not a universal menu taxonomy; native qualification of the
+new lifecycle fallback remains pending.
 
 | Current situation | Interface operation and verification |
 | --- | --- |
@@ -62,10 +63,11 @@ assessment; these stages are not a universal menu taxonomy.
 | Owned paused main menu | A new lifecycle root with `operation=create` starts fresh setup. Use that root's `scope=lifecycle` for children. Entire setup, edits and confirmations share its original limits. |
 | Creating a world/character | Menu/editor skills interpret the current visible screen. World/character editors must match the admission. A quick start that generates another identity does not satisfy the named scenario. |
 | Ready to commit the supported world form or final character description | A separate same-root `enactive_lifecycle` create call commits the stage. Inspect the resulting question; a menu key is not a substitute for this registered transition. |
-| Confirmation | A same-root menu skill supplies the exact visible interpreted question and answer. Setup confirmations require the previously committed stage. Never assume a new dialog is the old one. |
+| Confirmation or unfamiliar setup dialog | Use a same-root interpreted menu skill when applicable, or `direct` input to try/cancel through the visible interface. Inspect the actual response. Successful creation still needs the committed character route; a delivered key or familiar question alone proves no transition. |
 | Published lifecycle input has an uncertain/unexpected outcome | Explicit Observe can retain actual diagnostic evidence under its original private dispatch custody. A registered expected transition still needs separate same-root reconciliation; the ACK stays unknown. Diagnostic-only evidence has no executable phase or adoption/reconciliation authority. Normal cleanup of an unadopted/wrong-identity session remains unsupported; do not fabricate proof or replay input. |
 | Reconciled transition, paused provisional character | A separate same-root lifecycle call Readmits. Then inspect `purpose=character_identity`, read the actual character screen, retain truthful world/character Claims, dismiss it and separately adopt through the same lifecycle operation with those Claim IDs. Adoption, not launch or Observe, starts ordinary input authority. |
-| Normal ending | New `save` lifecycle root, interpreted save confirmation, explicit transition reconciliation/checkpoint, owned `exit`, then `finish` with the appropriate actual outcome. New-child reload currently requires this mission's own saved checkpoint; cross-mission checkpoint loading is not implemented. |
+| Normal ending | New `save` lifecycle root, interpreted or ordinary confirmation, explicit transition reconciliation/checkpoint, owned `exit`, then `finish` with the appropriate actual outcome. Returning to the same normal session cancels Save without a checkpoint claim. New-child reload currently requires this mission's own saved checkpoint; cross-mission checkpoint loading is not implemented. |
+| Abandoning menu-only setup | Return organically to the same owned main menu. A new `exit` request can revoke settled setup without input; then explicitly Observe and use a new finite normal-exit root. This does not save or clean up an unadopted normal session. |
 
 Let software form wire records. Choose the goal, selected evidence, interpretation,
 limits and semantic fields required by the current schema. Do not write request

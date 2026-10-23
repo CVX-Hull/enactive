@@ -434,15 +434,21 @@ availability describes that retained as-of sample, not equality with an instanta
 native frame. Semantic dispatch equivalence still compares complete native state
 (excluding capture/transport identity), with exact pixels when image-conditioned;
 the archive's clock/revision/immutable-source integrity checks remain mandatory.
-A proven returned-Resume-only startup can adopt a fresh internally
-paused copy of the original menu for a separate normal cleanup root. Ledger audits
-its immutable input lineage; runtime/store verify pixels and live custody.
+A proven returned Resume plus settled same-root menu exploration can establish a
+fresh internally paused owned main menu for a separate normal cleanup root.
+Ledger audits every delivery; runtime/store verify the same session, current
+authenticated revision, retained menu-only history and live custody. Launch pixel
+equality is not required. Ordinary setup uses the existing physical executor and
+InputObservation under lifecycle custody; creation route, identity and Save remain
+independent effect proofs. Source regressions cover this extension; the next
+frozen native/player run must qualify it.
 [Native006](acceptance/2026-10-20-native-character-lifecycle.md) established
 ordinary creation/identity, counted dropping, native wait/poll and normal first
 save/exit, then stopped before reload and exceptionally closed its new child.
 Its actual blockers drive one repair batch: known non-HOSTILE movement,
 engine-scoped actionable inventory rows, actual MAIN_MENU→UILIST reload staging
-and narrow Resume-only create/load abort. The abort revokes authority without
+and the original narrow Resume-only create/load abort. That abort is now extended
+to settled menu-only exploration and still revokes authority without
 input or rebasing the launch; separate Observe/new exit verifies the paused menu.
 Unique enabled selected admitted-character evidence is checked before reload
 dispatch. No fictitious label, prior-child save or historical proof grants input.

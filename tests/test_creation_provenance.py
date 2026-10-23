@@ -2,9 +2,10 @@
 from copy import deepcopy
 import json
 import unittest
+from types import SimpleNamespace
 
 from harness.gameplay.contracts import ContractError
-from harness.gameplay.creation_provenance import creation_input_chain
+from harness.gameplay.creation_provenance import creation_input_chain, validate_creation_sources
 
 
 def request_record(identity, *, kind="lifecycle", phase="create-root", epoch=2):
@@ -199,6 +200,49 @@ class CreationProvenanceTests(unittest.TestCase):
                 with self.assertRaises(ContractError):
                     self.chain()
                 self.requests, self.primitives = original
+
+
+class CreationSourceTests(unittest.TestCase):
+    """Receiver chronology only; archive integrity has separate real-store tests."""
+
+    def setUp(self):
+        stage = primitive_record("stage", "commit", revision=10)
+        stage["result"]["source_after"] = "after-stage"
+        terminal = primitive_record("last", "terminal", revision=12, action="YES", state="unknown")
+        self.chain = (stage, terminal)
+        ids = ("before-stage", "preflight-stage", "after-stage", "before-last", "preflight-last")
+        self.refs = tuple(SimpleNamespace(observation_id=identity, session="setup-session", revision=revision)
+            for identity, revision in zip(ids, (10, 10, 11, 12, 12)))
+        self.observations = {identity: dict(category="NEW_CHAR_DESCRIPTION" if index < 2 else "YESNO",
+            takeover_generation=0, boundary=dict(id="menu-boundary", control_generation=1))
+            for index, identity in enumerate(ids)}
+        self.store = SimpleNamespace(historical_references=self.refs,
+            observation=lambda ref: self.observations[ref.observation_id])
+
+    def validate(self):
+        validate_creation_sources(self.chain, self.store, terminal_before=self.refs[3])
+
+    def test_committed_form_through_unknown_terminal_has_valid_source_chain(self):
+        self.validate()
+
+    def test_older_same_category_form_cannot_authenticate_actual_commit(self):
+        self.refs[0].revision = self.refs[1].revision = 9
+        with self.assertRaisesRegex(ContractError, "source chain"):
+            self.validate()
+
+    def test_changed_control_generation_or_preflight_receiver_retires_commitment(self):
+        for field in ("control_generation", "id"):
+            with self.subTest(field=field):
+                original = deepcopy(self.observations)
+                self.observations["preflight-stage"]["boundary"][field] = 2 if field == "control_generation" else "another-boundary"
+                with self.assertRaises(ContractError):
+                    self.validate()
+                self.observations = original
+
+    def test_observed_intermediate_main_menu_retires_commitment(self):
+        self.observations["after-stage"]["category"] = "MAIN_MENU"
+        with self.assertRaises(ContractError):
+            self.validate()
 
 
 if __name__ == "__main__":

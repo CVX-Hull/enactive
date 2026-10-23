@@ -66,15 +66,8 @@ def _selected_phase(snapshot: dict, scope: str, intent: dict, primary: str | Non
         if intent["kind"] == "lifecycle":
             if operation not in ("create", "save", "load") or intent.get("operation") != operation:
                 raise ContractError("Lifecycle child requires the same create/save/load operation")
-        else:
-            skill = intent.get("skill_kind")
-            identity = (skill == "inspect" and type(intent.get("goal")) is dict
-                        and intent["goal"].get("purpose") == "character_identity")
-            if (intent.get("work_id") is not None
-                    or operation not in ("create", "save", "load", "exit")
-                    or (operation == "exit" and skill != "menu")
-                    or (skill not in ("menu", "edit") and not identity)):
-                raise ContractError("Lifecycle skill child requires its menu/editor/identity operation and no Work")
+        # Skill eligibility belongs to the receiver/ledger. Composition binds
+        # the explicitly selected root and source, without a second UI taxonomy.
     return summary["origin_request_id"]
 
 
@@ -87,7 +80,7 @@ def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: di
     Existing scopes bind their exact origin and selected primary checkpoint; no
     other summary or current_source is substituted. A new-root exit alongside
     create/load merely represents an explicit abort request; only the receiver
-    decides whether its narrow Resume-only path is eligible. Historical Finish
+    decides whether settled menu-only cleanup is eligible. Historical Finish
     and frameless activity checkpoints do not require current_source.
 
     Intent contains the existing skill/lifecycle semantic fields, including Work

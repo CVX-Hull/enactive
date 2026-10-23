@@ -1646,8 +1646,8 @@ class Controller:
             if set(payload) - {"key", "action", "direction", "steps", "text", "input", "expected_session", "expected_revision", "expected_boundary_id"}:
                 raise ControlError("Unknown command fields")
             if kind == "direct":
-                if lease is None or lease.operation != "interaction":
-                    raise ControlError("Direct input requires a mission interaction lease")
+                if lease is None or lease.operation not in ("interaction", "lifecycle"):
+                    raise ControlError("Direct input requires a mission interaction or lifecycle lease")
                 if expected_image_sha256 is not None:
                     raise ControlError("Direct input requires expected_image_sha256=None")
                 try:

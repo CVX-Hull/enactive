@@ -161,7 +161,12 @@ class LifecycleTests(unittest.TestCase):
         self.lifecycle(root, "create" if epoch == 0 else "load", before)
         if epoch == 0:
             self.complete(root, {}, "partial")
-            transition_before = self.ingest(before.session, category="WORLDGEN_CONFIRM_DIALOG")
+            character_form = self.ingest(before.session, category="NEW_CHAR_DESCRIPTION")
+            self.lifecycle(root + "-commit", "create", character_form, phase=root)
+            character_preflight = self.preflight(character_form)
+            transition_before = self.ingest(before.session, category="YESNO")
+            self.primitive(root + "-commit", character_form, transition_before, value="NEXT_TAB", preflight=character_preflight)
+            self.complete(root + "-commit", {}, "partial")
             terminal = self.confirmation(root + "-yes", root, transition_before, "Are you SURE you're finished?")
         else:
             transition_before, terminal = before, root

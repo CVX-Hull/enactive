@@ -260,6 +260,20 @@ schema producer and changes neither the MCP catalogue nor the gameplay contract.
 Actual independent usability remains to be qualified; generated help alone is not
 a host fix or a speed result. Track native cleanup before identity separately.
 
+The [third frozen Luna attempt](../acceptance/2026-10-23-luna-responsiveness-third-attempt.md)
+loads all21tools and makes valid calls using focused help, but cannot cancel an
+incidental setup confirmation because ordinary lifecycle children are forbidden.
+The repair reuses OrdinaryInputSkill/InputObservation, the existing lifecycle
+lease and durable dispatch records. It migrates producer, receiver and retained
+proof validation together, preserves explicit creation-route/identity/Save proofs,
+and extends menu-only cleanup to settled exploration. A physical key is not a
+creation/save certificate. The CDDA character-stage commit and semantic exit
+confirmation remain explicit integration constraints; wrong/unadopted normal
+cleanup remains open. Review must challenge actual preflight receiver changes and
+retirement of stale creation intent, not only successful cancellation. No new
+tool, executor, native protocol, dependency or compatibility mode is introduced.
+The next actual player/native run must qualify this source change;003 stays failed.
+
 Retain the existing MCP SDK, ledger, archive, memory store, observer timing and
 test lanes. No new workflow engine, history store, tool-search service, vector DB
 or robot runtime is justified by these findings. A dedicated small player runtime

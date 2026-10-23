@@ -14,10 +14,11 @@ from .controller import ControlError
 from .gameplay.contracts import ContractError, EvidenceRef, canonical
 from .gameplay.evidence import MAX_FRAME_BYTES, CapacityReservation, EvidenceError, same_native_state
 from .gameplay.interaction import MenuOutcome, MenuSkill
-from .gameplay.mission_contracts import VERSION, SourceRevalidation
+from .gameplay.mission_contracts import VERSION, InputObservation, SourceRevalidation
 from .gameplay.mission_ledger import BudgetError, LedgerError
 from .gameplay.input_contracts import ControlIntent, ControlOutcome
 from .gameplay.semantic_controls import SemanticControlSkill
+from .gameplay.ordinary_input import OrdinaryInputSkill
 
 if TYPE_CHECKING:
     from .mission_runtime import MissionRuntime, _OwnedLaunch, _ResumeIntent, _Work
@@ -226,7 +227,7 @@ class RegisteredLifecycle:
             raise ControlError("Paused lifecycle observation lost its exact committed transition lineage")
 
     def guard(self, work: _Work, phase: NormalPhase, proposal: ControlIntent | _ResumeIntent | None = None,
-              *, diagnostic: bool = False) -> None:
+              *, diagnostic: bool = False, ordinary: bool = False) -> None:
         r = self.runtime
         r._check_cancelled(work)
         launch = self._owned()
@@ -238,6 +239,11 @@ class RegisteredLifecycle:
         # encoded pixels and complete native state are compared by _dispatch's
         # retained-equivalence callback, not by whole-dictionary clock equality.
         same_boundary = same_native_state(actual, state)
+        if ordinary or proposal is not None and proposal.kind == "direct":
+            same_boundary = (actual is not None and actual["session"] == state["session"]
+                and actual["takeover_generation"] == state["takeover_generation"]
+                and actual["boundary"]["control_generation"] == state["boundary"]["control_generation"]
+                and actual["pause_origin"] == state["pause_origin"] and actual["paused"] == state["paused"])
         paused_diagnostic = diagnostic and ledger["phase"] == "paused"
         if diagnostic and proposal is not None:
             raise ControlError("Diagnostic lifecycle observation cannot authorize an input")
@@ -262,11 +268,18 @@ class RegisteredLifecycle:
         r._check_lease()
         if r._lease.operation != "lifecycle":
             raise ControlError("Lifecycle input requires its exact lifecycle lease")
+        if proposal.kind == "direct" and actual["boundary"]["kind"] != "menu":
+            raise ControlError("Lifecycle ordinary input cannot enter unadopted normal play at preflight")
         if state["boundary"]["kind"] == "normal_play":
             allowed = ("save",) if phase.operation == "save" and phase.stage == "save_start" else (
                 ("player_data",) if phase.stage == "awaiting_identity" else ())
             if proposal.kind != "action" or proposal.action not in allowed:
                 raise ControlError("Provisional normal lifecycle permits only its registered save/identity action")
+        elif proposal.kind == "direct":
+            # Ordinary controls need an owned receiver, not a known menu or
+            # task interpretation. Identity/adoption remains a separate proof.
+            if not state["boundary"]["input_receiver"]:
+                raise ControlError("Lifecycle ordinary input requires a visible live receiver")
         elif state["category"] == "PLAYER_INFO":
             if proposal.kind != "action" or proposal.action != "QUIT" or phase.identity_screen is None:
                 raise ControlError("Identity inspection permits only its owned return; Confirm can upgrade a stat")
@@ -287,10 +300,9 @@ class RegisteredLifecycle:
 
     def published(self, phase: NormalPhase, proposal: ControlIntent, native_request: dict,
                   reservation: CapacityReservation) -> None:
-        expected = proposal.kind == "action" and (
-            proposal.action == "YES" and phase.stage in ("character_confirmation", "save_confirmation")
-            or phase.operation == "load" and proposal.action in ("CONFIRM", "UILIST.CONFIRM")
-               and phase.stage == "load_selection")
+        expected = (proposal.kind in ("action", "direct") and (
+            phase.stage in ("character_confirmation", "points_confirmation", "save_confirmation")
+            or phase.operation == "load" and phase.checkpoint.boundary_kind == "menu"))
         self.candidate = _TransitionCandidate(phase, proposal.logical_id, native_request.copy(), reservation,
             diagnostic_only=not expected)
 
@@ -300,8 +312,7 @@ class RegisteredLifecycle:
             return
         phase = candidate.phase
         if (reference.session == phase.checkpoint.session
-                and (reference.boundary_kind != "normal_play" or phase.first_normal is not None)
-                and (candidate.diagnostic_only or phase.operation == "load")):
+                and (reference.boundary_kind != "normal_play" or phase.first_normal is not None)):
             self.candidate = None
 
     def _binding_request(self, work: _Work, checkpoint: EvidenceRef) -> None:
@@ -484,18 +495,18 @@ class RegisteredLifecycle:
                 "and no identity Claims or Work. That separate call charges Resume. No input was sent; "
                 "the original paused phase and limits remain. Submit a NEW explicit request.",
                 "source_ids": [phase.checkpoint.observation_id], "grants_authority": False}
-        self.guard(work, phase)
+        self.guard(work, phase, ordinary=data["skill_kind"] == "direct")
         self._binding_request(work, phase.checkpoint)
         if data["skill_kind"] == "inspect":
             return self._inspect(work, phase)
-        if data["skill_kind"] not in ("menu", "edit"):
-            raise ControlError("Lifecycle setup permits only its menu, editor or identity inspection")
+        if data["skill_kind"] not in ("menu", "edit", "direct"):
+            raise ControlError("Lifecycle setup requires a control or identity inspection")
         if data["skill_kind"] == "edit" and data["goal"]["purpose"] in ("world_name", "character_name"):
             field = "world" if data["goal"]["purpose"] == "world_name" else "character"
             if phase.operation != "create" or data["goal"]["text"] != getattr(r._admission.scenario, field):
                 raise ControlError("Creation name editor must use its exact admitted identity")
         state = r._store.observation(phase.checkpoint)
-        if state["category"] == "YESNO":
+        if state["category"] == "YESNO" and data["skill_kind"] != "direct":
             view = data["perception"]
             next_stage = phase.stage
             question = "Save and quit?" if phase.stage == "save_confirmation" else "Are you SURE you're finished?"
@@ -515,12 +526,14 @@ class RegisteredLifecycle:
                     "source_ids": [phase.checkpoint.observation_id], "grants_authority": False}
             if next_stage != phase.stage:
                 phase = self._install(work, replace(phase, stage=next_stage), previous=phase)
-        if state["category"] == "PLAYER_INFO" and (data["perception"] is None or data["perception"]["kind"] != "dismissal"):
+        if (state["category"] == "PLAYER_INFO" and data["skill_kind"] != "direct"
+                and (data["perception"] is None or data["perception"]["kind"] != "dismissal")):
             raise ControlError("Identity screen supports only an explicit owned dismissal")
         if state["boundary"]["kind"] == "normal_play":
             raise ControlError("Normal provisional source requires character_identity inspection or adoption")
         deadline = r._deadline(work, phase.checkpoint)
-        skill = (MenuSkill(data, deadline_monotonic=deadline) if data["skill_kind"] == "menu" and data["perception"] is None
+        skill = (OrdinaryInputSkill(data, deadline_monotonic=deadline) if data["skill_kind"] == "direct" else
+                 MenuSkill(data, deadline_monotonic=deadline) if data["skill_kind"] == "menu" and data["perception"] is None
                  else SemanticControlSkill(data, deadline_monotonic=deadline))
         inspected, _ = r._store.inspect_current_boundary(**r._clocks())
         if inspected != phase.checkpoint:
@@ -529,11 +542,16 @@ class RegisteredLifecycle:
         # and attest this operation's checkpoint even when it is currently fresh.
         # Original phase budgets and the independent final freshness checks stay.
         original, binding = phase.checkpoint, r._binding(phase.checkpoint)
-        phase = self._refresh(work, phase)
-        relation = SourceRevalidation(binding, r._binding(phase.checkpoint),
-            "exact_png_bytes" if data["perception"] is not None else "native_state")
-        skill.revalidate(relation, r._store, **r._clocks())
-        r._record("mission_lifecycle_revalidation", relation.to_dict())
+        phase = self._refresh(work, phase, ordinary=data["skill_kind"] == "direct")
+        if data["skill_kind"] == "direct":
+            relation = InputObservation(binding, r._binding(phase.checkpoint))
+            skill.observe(relation, r._store, **r._clocks())
+            r._record("mission_input_observation", relation.to_dict())
+        else:
+            relation = SourceRevalidation(binding, r._binding(phase.checkpoint),
+                "exact_png_bytes" if data["perception"] is not None else "native_state")
+            skill.revalidate(relation, r._store, **r._clocks())
+            r._record("mission_lifecycle_revalidation", relation.to_dict())
         r._store.observation(original)
         while True:
             proposal = skill.propose(r._store, **r._clocks())
@@ -556,16 +574,16 @@ class RegisteredLifecycle:
                     if after["category"] != "YESNO" and stage in ("world_confirmation", "character_confirmation"):
                         stage = "awaiting_control"
                     if after["boundary"]["kind"] == "normal_play":
-                        if phase.operation == "save" and proposal.action == "NO":
+                        if (phase.operation == "save" and phase.first_normal is not None
+                                and feedback.after.session == phase.first_normal.session):
                             self.phase = None
                             r._publish_source(feedback.after, authoritative=True)
                             result = r._control_result(outcome)
                             result["phase"] = self.receipt(replace(phase, checkpoint=feedback.after), "complete")
-                            result["reason"] = "Save declined; normal play restored without a saved-checkpoint claim"
+                            result["reason"] = "Save returned to the adopted normal session; no saved-checkpoint claim"
                             return "partial", result
-                        if phase.identity_screen is None:
-                            raise ControlError("Unexpected normal return cannot establish creation identity")
-                        stage = "awaiting_adoption"
+                        if phase.identity_screen is not None:
+                            stage = "awaiting_adoption"
                     phase = self._install(work, replace(phase, checkpoint=feedback.after, stage=stage), previous=phase)
                 if outcome is None:
                     continue
@@ -586,9 +604,11 @@ class RegisteredLifecycle:
             or phase.operation in {"create", "load"} and phase.stage == "awaiting_identity")
         return "native_state" if normal_context else "exact_png_bytes"
 
-    def _refresh(self, work: _Work, phase: NormalPhase, *, diagnostic: bool = False) -> NormalPhase:
+    def _refresh(self, work: _Work, phase: NormalPhase, *, diagnostic: bool = False,
+                 ordinary: bool = False) -> NormalPhase:
         r = self.runtime
-        self.guard(work, phase, diagnostic=diagnostic)
+        previous_phase = phase
+        self.guard(work, phase, diagnostic=diagnostic, ordinary=ordinary)
         r._capacity()
         deadline = r._clock() + min(r._ledger.request(work.request["request_id"])["deadline"],
             r._ledger.request(phase.root_id)["deadline"],
@@ -596,8 +616,11 @@ class RegisteredLifecycle:
         state, received = r._observe_native(work, deadline_monotonic=deadline)
         reference = r._ingest(state, received)
         rule = self.source_rule(phase)
-        if not r._store.equivalent(phase.checkpoint, reference, rule=rule):
+        if not ordinary and not r._store.equivalent(phase.checkpoint, reference, rule=rule):
             raise EvidenceError("Lifecycle refresh changed the owned action precondition")
+        if (ordinary and phase.stage in ("world_confirmation", "points_confirmation", "character_confirmation")
+                and r._store.observation(phase.checkpoint)["category"] == "YESNO" and state["category"] != "YESNO"):
+            phase = replace(phase, stage="awaiting_control")
         if phase.operation == "save" and phase.stage == "save_start":
             # Preserve the interaction lease through refresh. _save performs the
             # existing checked lifecycle rotation only when dispatching Save.
@@ -615,8 +638,8 @@ class RegisteredLifecycle:
             if r._ledger._phase_primitive_count(phase.root_id) >= root["request"]["limits"]["primitives"]:
                 raise BudgetError("Original Save primitive ceiling exhausted")
         self.retain_after(reference)
-        phase = self._install(work, replace(phase, checkpoint=reference), previous=phase)
-        self.guard(work, phase, diagnostic=diagnostic)
+        phase = self._install(work, replace(phase, checkpoint=reference), previous=previous_phase)
+        self.guard(work, phase, diagnostic=diagnostic, ordinary=ordinary)
         return phase
 
     def _action_checkpoint(self, work: _Work, phase: NormalPhase) -> tuple[NormalPhase, SourceRevalidation]:
@@ -702,7 +725,7 @@ class RegisteredLifecycle:
         if self.candidate is None:
             if self.phase is None:
                 raise ControlError("No owned lifecycle evidence to observe")
-            phase = self._refresh(work, self.phase, diagnostic=True)
+            phase = self._refresh(work, self.phase, diagnostic=True, ordinary=True)
             stage = phase.stage if phase.stage in ("awaiting_identity", "awaiting_adoption") else "awaiting_control"
             return {"source_ids": [phase.checkpoint.observation_id], "phase": self.receipt(phase, stage),
                 "lifecycle_needed": True, "grants_authority": False}
@@ -762,6 +785,12 @@ class RegisteredLifecycle:
             "before_takeover_generation": phase.launch.takeover_generation,
             "after_takeover_generation": phase.launch.takeover_generation, "grants_authority": False}
         primitive = r._ledger.primitive(candidate.logical_id)
+        if phase.operation == "create":
+            from .gameplay.creation_provenance import creation_input_chain, validate_creation_sources
+            chain = creation_input_chain(r._ledger.request_records(), r._ledger.primitive_records(),
+                root_id=phase.root_id, terminal_request_id=primitive["request_id"],
+                terminal_logical_id=candidate.logical_id)
+            validate_creation_sources(chain, r._store, terminal_before=phase.checkpoint)
         if primitive["state"] == "unknown":
             r._ledger.reconcile_effect(candidate.logical_id,
                 proof=proof,

@@ -833,9 +833,10 @@ class MissionLedger:
             elif root.get("skill_kind") == "navigate" and data["skill_kind"] not in ("menu", "edit"):
                 raise LedgerError("Navigation root permits only its exact suffix or ordinary menu/editor controls")
             if data["skill_kind"] == "direct":
-                if root["kind"] != "skill" or root["skill_kind"] not in ("interact", "item", "inspect", "activity", "direct"):
-                    raise LedgerError("Direct child cannot borrow lifecycle or navigation authority")
-                if data["goal"]["interrupt_allowed"] and not root["goal"].get("interrupt_allowed", False):
+                lifecycle = root["kind"] == "lifecycle" and root["operation"] in ("create", "load", "save")
+                if not lifecycle and (root["kind"] != "skill" or root["skill_kind"] not in ("interact", "item", "inspect", "activity", "direct")):
+                    raise LedgerError("Direct child requires its original ordinary or lifecycle scope")
+                if data["goal"]["interrupt_allowed"] and not root.get("goal", {}).get("interrupt_allowed", False):
                     raise LedgerError("Direct child cannot enlarge original interruption consent")
             if data["skill_kind"] == "activity" and root.get("skill_kind") == "direct":
                 if (data["goal"]["operation"] != "direct" or data["goal"]["target"] != root["goal"]["expected"]
@@ -1056,7 +1057,7 @@ class MissionLedger:
                     or launch_result.get("native_ready") is not True
                     or type(launch_result.get("process")) is not dict
                     or launch_result["process"].get("launch_id") != proof["launch_id"]
-                    or intent["kind"] != "action" or receipt.get("published") is not True
+                    or intent["kind"] not in ("action", "direct") or receipt.get("published") is not True
                     or any(receipt.get(k) != v for k, v in {
                         "logical_action_id": logical_id, "native_request_id": p["native_id"],
                         "transport_disposition": "unknown", **{key: intent[key] for key in
@@ -1073,14 +1074,11 @@ class MissionLedger:
                         "controller_boot_id": proof["controller_boot_id"], "operator_pause_generation": proof["operator_pause_generation"],
                         "takeover_generation": proof["before_takeover_generation"], "actor_id": actor_id, "epoch": parent["epoch"]}.items()):
                     raise LedgerError("Orphan lifecycle effect changed its independently captured dispatch custody")
-                if proof["operation"] in ("create", "save"):
-                    question = "Are you SURE you're finished?" if proof["operation"] == "create" else "Save and quit?"
-                    perception = parent["request"].get("perception") or {}
-                    if (intent["value"] != "YES" or perception.get("kind") != "confirmation"
-                            or perception.get("question") != question or parent["request"].get("goal", {}).get("label") != "Yes"):
-                        raise LedgerError("Orphan lifecycle effect lacks its actual exact confirmation")
-                elif intent["value"] not in ("CONFIRM", "UILIST.CONFIRM"):
-                    raise LedgerError("Orphan load effect lacks its registered selection confirmation")
+                if proof["operation"] == "create":
+                    from .creation_provenance import creation_input_chain
+                    creation_input_chain(self.request_records(), self.primitive_records(),
+                        root_id=root["request_id"], terminal_request_id=proof["terminal_request_id"],
+                        terminal_logical_id=logical_id)
             elif intent["value"] != "YES" or not self._exit_confirmation(intent, parent["request"]):
                 raise LedgerError("Orphan exit effect lacks its exact normal-exit confirmation")
             elif proof["no_save_required"]:
@@ -1319,10 +1317,18 @@ class MissionLedger:
         root_data, terminal_data = root["request"], terminal["request"]
         launch_result = launched["result"]
         primitive = self.primitive(proof["terminal_logical_id"])
-        refreshed = primitive["intent"]["revalidation"]
+        refreshed = primitive["intent"]["revalidation"] or primitive["intent"]["input_observation"]
         informing = proof["before_source_id"] in terminal_data.get("sources", []) or (
             refreshed is not None and refreshed["current"]["source_id"] == proof["before_source_id"]
             and refreshed["original"]["source_id"] in terminal_data.get("sources", []))
+        if not informing and primitive["intent"]["kind"] == "direct":
+            sequence = [p for p in self.primitive_records() if p["request_id"] == proof["terminal_request_id"]]
+            position = next(i for i, item in enumerate(sequence) if item["logical_id"] == proof["terminal_logical_id"])
+            entry = sequence[0]["intent"]["input_observation"]
+            informing = (position > 0 and entry is not None
+                and entry["original"]["source_id"] in terminal_data.get("sources", [])
+                and all(item["state"] == "returned" and item["result"]["source_after"] ==
+                    sequence[index + 1]["intent"]["source_before"] for index, item in enumerate(sequence[:position])))
         if (root_data["kind"] != "lifecycle" or root_data["phase_id"] is not None
                 or data["phase_id"] != root_data["request_id"]
                 or any(row.get("operation") != proof["operation"] for row in (data, root_data))
@@ -1342,11 +1348,11 @@ class MissionLedger:
                 or primitive["native_id"] != proof["native_request_id"]
                 or primitive["state"] not in ("returned", "unknown")
                 or primitive["intent"]["source_before"] != proof["before_source_id"]
-                or primitive["intent"]["kind"] != "action" or receipt is None
+                or primitive["intent"]["kind"] not in ("action", "direct") or receipt is None
                 or receipt.get("published") is not True
                 or any(receipt.get(key) != value for key, value in {
                     "logical_action_id": proof["terminal_logical_id"], "native_request_id": proof["native_request_id"],
-                    "kind": "action", "value": primitive["intent"]["value"],
+                    "kind": primitive["intent"]["kind"], "value": primitive["intent"]["value"],
                     "expected_session": primitive["intent"]["expected_session"],
                     "expected_revision": primitive["intent"]["expected_revision"],
                     "expected_boundary_id": primitive["intent"]["expected_boundary_id"],
@@ -1354,15 +1360,16 @@ class MissionLedger:
                     "transport_disposition": primitive["state"],
                 }.items())):
             raise LedgerError("Lifecycle transition lacks its exact charged published terminal input")
-        if proof["operation"] in ("create", "save"):
-            question = "Are you SURE you're finished?" if proof["operation"] == "create" else "Save and quit?"
-            perception = terminal_data.get("perception")
-            if (primitive["intent"]["value"] != "YES" or terminal_data.get("skill_kind") != "menu"
-                    or perception is None or perception.get("kind") != "confirmation"
-                    or perception.get("question") != question or terminal_data["goal"]["label"] != "Yes"):
-                raise LedgerError("Creation/save transition requires its explicit exact confirmation")
-        elif primitive["intent"]["value"] not in ("CONFIRM", "UILIST.CONFIRM"):
-            raise LedgerError("Load transition requires its registered selection confirmation")
+        # The actual transition proves effect; no particular final key or
+        # interpreted question is required. Creation still needs its committed
+        # character route, independently of the matching displayed identity.
+        if proof["operation"] == "create":
+            from .creation_provenance import creation_input_chain
+            creation_input_chain(self.request_records(), self.primitive_records(),
+                root_id=proof["origin_request_id"], terminal_request_id=proof["terminal_request_id"],
+                terminal_logical_id=proof["terminal_logical_id"])
+        validate_ordinary_mapping(primitive["intent"], receipt, logical_id=primitive["logical_id"],
+            native_id=primitive["native_id"], disposition=primitive["state"])
         if primitive["state"] == "unknown" and primitive["effect"] != effect_reconciliation(proof,
                 sources=(proof["before_source_id"], proof["after_source_id"]),
                 note=f"Observed lifecycle {proof['operation']} transition after {proof['native_request_id']}; original ACK remains unknown"):
@@ -1514,8 +1521,6 @@ class MissionLedger:
             setup.append(primitive)
         if not setup:
             return None
-        if len(setup) != 1:
-            raise LedgerError("No-save cleanup permits only one returned setup Resume")
         primitive = setup[0]
         owner = indexed[primitive["request_id"]]
         data, intent, receipt = owner["request"], primitive["intent"], primitive["result"] or {}
@@ -1546,6 +1551,20 @@ class MissionLedger:
                 or any(type(binding.get(key)) is not int or binding[key] < 0
                        for key in ("operator_pause_generation", "takeover_generation", "epoch"))):
             raise LedgerError("Menu cleanup lost its exact returned Resume/native correlation")
+        for item in setup[1:]:
+            child = indexed[item["request_id"]]
+            child_data, event, ack = child["request"], item["intent"], item["result"] or {}
+            child_root = indexed[child_data.get("phase_id") or child_data["request_id"]]["request"]
+            if (child_root["request_id"] != data["request_id"] or child["epoch"] != owner["epoch"]
+                    or item["state"] != "returned" or item["effect"] is not None
+                    or event["kind"] not in ("action", "key", "direct")
+                    or event["expected_session"] != intent["expected_session"]
+                    or ack.get("published") is not True or not ack.get("source_after")
+                    or any((ack.get("dispatch_binding") or {}).get(key) != binding[key]
+                        for key in ("controller_boot_id", "operator_pause_generation", "takeover_generation", "actor_id", "epoch"))):
+                raise LedgerError("Menu cleanup requires settled same-root exploration with unchanged custody")
+            validate_ordinary_mapping(event, ack, logical_id=item["logical_id"],
+                native_id=item["native_id"], disposition=item["state"])
         return primitive
 
     @staticmethod
