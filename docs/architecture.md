@@ -488,7 +488,10 @@ creates its world with90returned primitives, then expires its selected420s setup
 root before identity. Explicit pre-normal menu reads and zero-input abort now use
 their own original read/global deadlines and existing custody proof. Children keep
 the expired execution ceiling; no cancellation input, Resume or automatic retarget
-is added. The summary exposes as-of root headroom. Real qualification is pending.
+is added. The summary exposes as-of root headroom and the existing lifecycle stage.
+The player adapter distinguishes lifecycle continuation from recovery/handoff
+readmission in its descriptions and a no-submission wrong-tool refusal; it never
+routes the refused request into another operation. Real qualification is pending.
 [Native006](acceptance/2026-10-20-native-character-lifecycle.md) established
 ordinary creation/identity, counted dropping, native wait/poll and normal first
 save/exit, then stopped before reload and exceptionally closed its new child.

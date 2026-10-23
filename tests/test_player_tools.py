@@ -165,6 +165,30 @@ class PlayerHTTPTests(unittest.TestCase):
 
 
 class SnapshotDetailTests(unittest.TestCase):
+    def test_lifecycle_readmission_misroute_is_actionable_without_io_or_retarget(self):
+        from tests.test_player_view import snapshot
+        original = snapshot()
+        client = Mock()
+        client.status.return_value = dict(mission=original["mission"], **original["native"])
+        client.source.return_value = (original["source"], b"original PNG")
+        player = PlayerTools(client)
+        selected, _ = player.call("enactive_snapshot", {})
+        identity = selected["snapshot_id"]
+        arguments = dict(snapshot_id=identity, request_id="wrong-readmission", wait_seconds=1,
+            source_id="selected-source", intent=dict(mode="recovery", phase_id="load-root",
+                reconciliation_request_id="load-reconcile", work_id=None,
+                limits=dict(primitives=1, wall_seconds=30, game_seconds=60)))
+        for operation in ("create", "load", "save", "exit"):
+            player.snapshots[identity]["mission"]["lifecycle_phase"] = dict(operation=operation,
+                origin_request_id="lifecycle-root", stage="awaiting_identity", grants_authority=False)
+            retained = deepcopy(player.snapshots[identity])
+            client.reset_mock()
+            with self.subTest(operation=operation), self.assertRaisesRegex(ContractError,
+                    f"enactive_lifecycle, scope=lifecycle, operation={operation}"):
+                player.call("enactive_readmit", arguments)
+            self.assertEqual(client.mock_calls, [], "No submit, fresh read, source substitution or Resume")
+            self.assertEqual(player.snapshots[identity], retained, "Selected as-of context is unchanged")
+
     def test_detail_is_exact_as_of_selected_snapshot_without_io_or_mutation_aliases(self):
         from tests.test_player_view import snapshot
         original = snapshot()

@@ -209,6 +209,7 @@ class MissionCreationFixture:
         kind = "create" if epoch == 0 and self.a.scenario.mode == "fresh" else "load"
         operation = self.run_request(self.lifecycle(f"{root}-reconcile", kind, parent=root))
         self.assertEqual(operation["state"], "completed", operation)
+        self.assertEqual(self.runtime.status()["lifecycle_phase"]["stage"], "awaiting_identity")
         self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
         self.assertIsNone(self.runtime._map)
         self.assertEqual(self.runtime._bindings, {})

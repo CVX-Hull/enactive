@@ -192,6 +192,16 @@ renewal. Missing sections return null; unavailable/evicted IDs require an explic
 new snapshot. The original selected snapshot never silently retargets. Actual
 source images still use the existing exact source reader.
 
+Lifecycle summaries expose their existing private `stage`; an expected-transition
+candidate reports `awaiting_transition`, while diagnostic-only candidates expose
+no executable lifecycle summary. This is as-of descriptive context, not a receipt
+or authority. When a selected snapshot contains a lifecycle phase, the adapter
+refuses `enactive_readmit` before submission and identifies the existing
+`enactive_lifecycle`, same-operation, `scope=lifecycle` route, including provisional
+identity readmission. It performs no fresh read, Resume, retarget or limit renewal;
+actual lifecycle continuation still checks current custody and original bounds.
+Recovery/handoff readmission keeps its existing separate contract.
+
 Default snapshots advertise `detail_sections`. The frozen configuration is revealed
 only through its exact cached detail section; metrics show original game seconds and primitive counts,
 while all remaining limits, reserves, deadlines and current uncertainty stay.

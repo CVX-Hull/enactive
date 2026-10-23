@@ -62,9 +62,14 @@ ending fails and the owned processes are exceptionally stopped. The source now
 allows ordinary owned-exit control with correlated terminal evidence; that repair
 needs new real qualification. Useful higher-level
 supply/travel progress, apparent responsiveness and the independent seven-day
-outcome remain unaccepted. New compact-result/unchanged-image presentation has
-source/SDK evidence only; a restarted player producer must be verified before its
-next run. The existing21-tool catalog alone does not prove new code is loaded.
+outcome remain unaccepted. The [ninth Luna diagnostic](acceptance/2026-10-23-luna-responsiveness-ninth-attempt.md)
+uses a fresh CLI producer with actual compact results/detail/typed images and a
+durable timing download. It reconciles Load, then chooses recovery readmission
+instead of lifecycle continuation and stops before identity adoption. Its source
+follow-through exposes the existing lifecycle stage and a no-submission corrective
+hint; useful play, normal ending and responsiveness still need real qualification.
+Catalog names, component checks and display-component timings alone do not prove
+the complete player meets the goal.
 
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and

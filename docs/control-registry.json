@@ -502,28 +502,25 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-22",
-        "outcome": "Actual local-refusal001 stopped spectator shows STOPPED/HISTORY/DISCONNECTED, no current mission decision and controller snapshot timeout explicitly labelled mission ended/not gameplay instruction. Original screenshots/AX independently reviewed. Existing paused no-game reconnect/Pause evidence remains separate.",
-        "scope": "Frozen409b8ac/nativece810d, normal closed technical run only. Dated report owns full evidence and limits; source/native/gameplay/CI lanes remain distinct. No real-user usability study or full campaign latency claim.",
+        "date": "2026-10-23",
+        "outcome": "Responsiveness009 verifies fresh CLI compact output/detail/images and durable display export, then wrong recovery readmission stops before identity adoption; no useful play, normal ending or responsiveness/campaign acceptance.",
+        "scope": "Frozen250fe52/signed690fe96, Luna/low CLI0.162.1;3charges(2returned/1unknown with effect resolved),10ledger requests/11PNGs445076bytes, no memory or adopted progress. All191save files unchanged,72-file world archived/member-verified; actorFINAL, paused ledger and exceptional owned cleanup.",
         "evidence": [
-          "docs/acceptance/2026-10-22-native-local-refusal.md",
-          "docs/acceptance/2026-10-22-discovery-learning-sixth-attempt.md"
+          "docs/acceptance/2026-10-23-luna-responsiveness-ninth-attempt.md",
+          "docs/acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-23",
         "effectiveness": "partially_effective",
-        "findings": "Actual local-refusal001 now qualifies the formerly unexercised terminal controller-snapshot wording. Existing same-origin reconnect repair and Pause regressions retain their scoped evidence. Overview/work summaries were consolidated around linked authoritative sources and the architecture diagram no longer embeds stale project-status claims. Reader comprehension and long-term reduction in upkeep cost remain unmeasured. October22 closed-original010 trace review additionally identifies long inter-call gaps and repeated status in direct results; subsequent forwarded-output audit retracts the inference that nested persisted-event envelopes were model-visible duplication. Required compact model presentation, automatic plumbing and configuration admission are specified in brief060; compact projection/longer event-wait now have source/component evidence, while actual-host performance qualification and broader context/plumbing work remain open. Luna/low diagnostic001 now verifies23direct player-view/1 results and19typed image parts on its actual host, but fails setup before verified identity/routine play. Broad engineering/source reads, including a recursive runtime search, confirm hot-path context/ergonomics debt. A compact current player guide is added; its actual sufficiency remains unqualified. Native transition provenance and normal-ending pre-reserve constraints remain explicit. Progressive player-view2 now adds read-only exact cached detail with no I/O/retarget/authority and scoped technical-only default omissions.58focused source tests/152.292s and independent15presentation/detail tests pass; actual21-tool host loading is subsequently verified in003–008; whole responsiveness remains unqualified. Offline24-result Luna pairs reduce canonical text15.5%, not measured token/latency savings.",
-        "cost": "Reuse of existing closed mission artifacts, one independent evidence review and ordinary diagram/document tooling; the dated technical report owns runtime counts/timing. No new documentation tracker, semantic parser or routine gameplay review. Model/inference/token/full workflow cost unavailable.",
-        "follow_up": "#145 full fresh seven-day outcome and protected publication; #143 wider observer behavior; #164 representative whole-skill/tool/display timing; #75 bounded documentation authority/maintenance review; other native and efficacy gaps retain their owning Issues. Periodic due dates unchanged. #164 owns actual-host result normalization, bounded working context and responsive-configuration qualification; #178 owns event-driven advisory scheduling and #177 memory continuity. These are prospective obligations, not completed controls. #164 owns the compact-guide/context trial; #176 owns the unregistered lifecycle-transition diagnostic gap; #175 now has008 bounded actual Load/current identity/normal-Save evidence; useful play and complete normal ending remain open, and #145 must still be fresh.",
+        "findings": "Existing action-specific source/custody and ordinary-input paths remain qualified only in their dated scenarios. Recent007-009 failures distinguish wrong recovery-tool selection, literal owned-exit coupling and actual source/custody failure.009 forwards fresh CLI compact results/detail/typed images and retains actual raw browser timing, but supplies no adopted or routine useful-play cohort. The next source exposes the existing lifecycle stage and refuses wrong-domain recovery readmission before submission with an explicit lifecycle route. Selected snapshot guidance is as-of, not fresh health/authority; no implicit routing, Resume, input or renewal is added. Source tests/review and earlier successful campaigns cannot substitute for new normal-ending/useful-play and genuinely fresh seven-day qualification.",
+        "cost": "009:3charges,10ledger requests,11retained PNGs445076bytes;189.329s admission-to-actorFINAL includes setup/tool/model work, not isolated inference. Post-actor browser-export automation call274.5904s is retained separately. Existing SDK/cache/phase/browser download/SQLite/Git facilities reused; no new service/native build/global setup. Account billing and full workflow attribution unknown.",
+        "follow_up": "#145 genuinely fresh seven-day outcome/protected publication;#176/#195 actual organic continuation/ending and unexercised source/custody branches;#164 focused selected schemas, automatic memory/collection/accounting, complete useful-effect/player/display cadence and observer-export tooling overhead;#175 useful initial-Load continuation plus complete own ending. #181 wider mouse/geometry and selected #138/#139/#152 native branches retain their own scope. No extra blanket campaign gate. Periodic due date unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-22-discovery-learning-sixth-attempt.md",
-          "docs/acceptance/2026-10-21-independent-seven-day-readiness.md",
-          "docs/acceptance/2026-10-22-native-local-refusal.md",
-          "docs/acceptance/2026-10-22-luna-responsiveness-first-attempt.md",
-          "docs/player-guide.md",
-          "docs/acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md",
-          "docs/acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md"
+          "docs/acceptance/2026-10-23-luna-responsiveness-ninth-attempt.md",
+          "docs/acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md",
+          "docs/changes/060-responsive-player.md",
+          "docs/acceptance/2026-10-22-native-capture-preconditions.md"
         ]
       },
       "next_review": "2027-01-15"

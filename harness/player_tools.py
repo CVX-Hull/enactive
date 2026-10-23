@@ -83,7 +83,7 @@ def tool_specs() -> tuple[ToolSpec, ...]:
         ToolSpec("enactive_source", "Read one explicitly selected historical source and its actual image; grants no input authority.", _object(dict(mission_id=identity, source_id=identity)), True),
         ToolSpec("enactive_result", "Collect only the original operation ID, including after interrupted submission. Never replays input.", _object(dict(mission_id=identity, operation_id=identity, wait_seconds=wait)), True),
         ToolSpec("enactive_skill", "Choose ordinary physical input (skill_kind=direct) or a semantic skill with an explicit returned snapshot/source and finite limits. Direct keys/scalars permit visual drift under owned custody; clicks keep original geometry. Semantic preconditions remain strict. Software retains lineage and collects delivery and actual current evidence separately.", skill),
-        ToolSpec("enactive_lifecycle", "Explicit registered launch/create/save/exit/load/finish. No implicit Resume, save or restart.", lifecycle),
+        ToolSpec("enactive_lifecycle", "Explicit registered launch/create/save/exit/load/finish. Continue a returned lifecycle phase with scope=lifecycle and the same operation, including transition reconciliation, identity readmission and adoption. No implicit Resume, save or restart.", lifecycle),
         ToolSpec("enactive_observe", "Request one typed native observation using the chosen snapshot epoch. A healthy ordinary prompt may advance or record local macro_closure without task success or renewed mission allowance; explicitly choose any next root from fresh evidence. Does not Resume or reconcile unknown delivery. After known direct input with absent/aged current evidence, explicit Observe can refresh its read-only scope across the exact authenticated operation rotation; input requires the fresh binding. It never restores failed custody or renews limits.", _object(common)),
     ]
     # These operations keep their existing explicit semantic fields. Software
@@ -96,6 +96,8 @@ def tool_specs() -> tuple[ToolSpec, ...]:
             _object({**common, "intent": {"anyOf": variants}})))
     for kind in ("handoff", "stop", "reconcile"):
         specs.append(ToolSpec("enactive_" + kind,
+            "Pause the current mission/control; does not terminate the owned game or prove normal Finish. Original costs and uncertainty remain."
+            if kind == "stop" else
             "Explicit " + kind + " through the existing mission state machine; original costs and uncertainty remain.",
             _object({**common, "intent": _without(request_schema(kind), *headers, "kind")})))
     claim = _without(request_schema("claim"), *headers, "kind", "pause_generation", "takeover_generation",
@@ -106,7 +108,7 @@ def tool_specs() -> tuple[ToolSpec, ...]:
     for mode in ("handoff", "recovery"):
         readmit.append(_without(request_schema("readmit", mode=mode), *headers, "kind", "sources",
             "expected_session", "expected_revision", "expected_boundary_id"))
-    specs.append(ToolSpec("enactive_readmit", "Deliberate separately charged readmission from one selected returned source. Never implicit recovery or Resume.",
+    specs.append(ToolSpec("enactive_readmit", "Explicit recovery/handoff readmission from one selected returned source, not lifecycle continuation. A create/load/save lifecycle uses enactive_lifecycle with scope=lifecycle and the same operation, including identity readmission. Never implicit recovery or Resume.",
         _object({**common, "source_id": identity, "intent": {"anyOf": readmit}})))
     context = _without(request_schema("context", handoff=True), "schema", "kind", "mission_id")
     context["properties"]["scope"] = _without(context["properties"]["scope"], "mission_id")
@@ -394,6 +396,12 @@ class PlayerTools:
             return self._finish(self.client.collect(**data))
         snapshot = self._snapshot(data["snapshot_id"])
         kind = name.removeprefix("enactive_")
+        if kind == "readmit" and snapshot.get("lifecycle_phase") is not None:
+            phase = snapshot["lifecycle_phase"]
+            raise ContractError(f"Selected snapshot has a {phase['operation']} lifecycle phase. "
+                f"Continue with enactive_lifecycle, scope=lifecycle, operation={phase['operation']}; "
+                "not recovery/handoff readmission. No request was submitted; "
+                "this as-of guidance grants no authority or renewed limits.")
         if kind == "context":
             intent = data["intent"]
             intent["scope"]["mission_id"] = snapshot["mission_id"]

@@ -439,3 +439,40 @@ removed after verification. This qualifies transfer from a disconnected spectato
 not active-game display latency, complete run coverage or player responsiveness.
 The previous 008 partial display evidence remains partial. Export the next run's
 retained history before closing/reloading its page and assess the actual cohort.
+
+## Closed009 and actionable lifecycle context
+
+[Diagnostic009](../acceptance/2026-10-23-luna-responsiveness-ninth-attempt.md)
+actually loads the fresh CLI producer and forwards compact results, exact detail
+and typed images. It reconciles initial Load but selects recovery readmission for
+the existing lifecycle's provisional identity step. The local refusal preserves
+the phase, yet supplies no corrective route; the player stops before adoption.
+The compact summary omits the stage, the guide says “Readmits”, and the separately
+named tool does not distinguish this lifecycle case. Stop only pauses, and normal
+Finish remains unavailable without the owned child's normal exit. Preserve the
+failed actor, unchanged saves, unknown ACK/effect resolution and exceptional close.
+
+The smallest follow-through exposes the existing lifecycle stage, distinguishes
+the two tools in current descriptions/guide, and rejects that wrong-domain
+readmission at the adapter before submission with an explicit same-operation
+lifecycle route. This reuses the selected as-of snapshot and existing phase; it
+does not check hidden game state, add a menu handler, route a request implicitly,
+Resume, refresh sources or renew limits. Actual continuation still validates all
+current custody/proof/budget requirements. The Stop description states its Pause
+semantics. No new tool, service, protocol variant or native build is introduced.
+
+The durable display export now has an actual local raw dataset, unlike008's
+partial retained display summary. Its full download includes later paused samples;
+filtering to the original admission-to-actor-FINAL interval gives22setup samples,
+not a routine useful-effect cohort. Export automation itself took274.5904s after
+actor FINAL; retain this tool overhead separately. Selected-schema truncation and
+redundant collection/context work remain under#164, with no inference/performance
+benefit established by this repair or one small failed trace.
+
+The first80-test source lane had six loopback socket-bind PermissionErrors under
+the default sandbox; its other tests passed. The appropriate loopback-enabled
+19-test rerun passes in16.240s, including lifecycle stages and the cache-only
+wrong-tool refusal. Independent clean-context review passes55focused tests and
+reproduces the closed report's counts/archive/browser calculations without finding
+an actionable defect. Fast checks pass. These are source/evidence checks, not a
+new graphical continuation, useful-play or speed result.

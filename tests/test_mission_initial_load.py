@@ -29,6 +29,7 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         selection["perception"] = None
         entered = self.run_request(selection)
         self.assertEqual(entered["state"], "unknown", entered)
+        self.assertEqual(self.runtime.status()["lifecycle_phase"]["stage"], "awaiting_transition")
         self.observe("loaded-observe")
         return world
 
