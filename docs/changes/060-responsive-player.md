@@ -34,9 +34,12 @@ Its 128 activated-role responses accumulated 30,937,286 input tokens, of which
 30,230,272 were cached. Counts include repeated context and reporting through
 FINAL; they are neither unique context nor billing measurements. The closed host
 also contains 91 nested result envelopes: 5,472,271 serialized text characters
-versus 1,453,376 in their inner result text. Some model-visible forwarding exposes
-this nesting. This is evidence of waste, not proof of the initiating wrapper layer
-or a measured speedup from removing it. Raw MCP and model-forwarded records are
+versus 1,453,376 in their inner result text. These are persisted event envelopes,
+not measured model-facing duplication. A subsequent audit of 137 forwarded exec
+outputs parsed 260 JSON text blocks and found no nested MCP result envelopes.
+For example, event line164 wraps a result whose adjacent forwarded output at
+line165 is the direct 12,294-character value. The earlier inference that nesting
+was model-visible is retracted. Raw events and model-forwarded records are
 different observation layers; typed images must not be counted as textual base64.
 
 The private original trace is pinned by SHA-256
@@ -72,9 +75,12 @@ Do not strip fields needed for an actual decision or silently truncate complete
 handoff obligations. Migrate the presentation and all callers/tests together;
 no legacy result mode is retained as a compatibility path.
 
-Use existing SDK result types and a thin explicit presentation boundary. Locate
-the nesting at the real host before choosing a fix; do not add a recursive generic
-JSON unwrapping framework. Test errors, partial/unknown settlement, image blocks
+Use existing SDK result types and a thin explicit presentation boundary. The
+official [event-export issue](https://github.com/openai/codex/issues/44126) and
+[current source](https://github.com/openai/codex/blob/main/codex-rs/core/src/mcp_tool_call.rs)
+separate event truncation from the returned model/tool result. They corroborate
+the distinction, not exact parity with this host version. No production unwrap
+fix is justified by the event wrappers. Test errors, partial/unknown settlement, image blocks
 and actual loaded-host forwarding. Reduce bookkeeping fields by software binding,
 without allowing a newer snapshot to silently retarget an existing operation.
 
