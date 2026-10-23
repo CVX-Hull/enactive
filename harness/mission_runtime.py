@@ -2322,6 +2322,10 @@ class MissionRuntime:
         if reservation is not None and disposition != "unknown":
             try:
                 self._store.release(reservation)
+                candidate = self._registered_lifecycle.candidate
+                if candidate is not None and candidate.logical_id == proposal.logical_id:
+                    self._registered_lifecycle.candidate = replace(candidate, reservation=None)
+                reservation = None
             except Exception as exc:
                 processing_error = f"Reservation release: {type(exc).__name__}: {exc}"[:1024]
                 processing_fatal = True
@@ -2391,7 +2395,13 @@ class MissionRuntime:
                     authoritative = (live[3] is self._lease and self._lease is not None and not live[4]
                         and not work.cancelled.is_set() and current.boundary_kind in ("normal_play", "menu"))
                     if isinstance(lifecycle, NormalPhase):
-                        self._registered_lifecycle.retain_after(current)
+                        candidate = self._registered_lifecycle.candidate
+                        if (candidate is not None and candidate.diagnostic_only
+                                and current.boundary_kind == "normal_play" and candidate.phase.first_normal is None):
+                            self._registered_lifecycle.retain_diagnostic(current)
+                        else:
+                            self._registered_lifecycle.retain_after(current)
+                        self._registered_lifecycle.returned(proposal.logical_id, current)
                     else:
                         self._publish_source(current, authoritative=authoritative)
                     if current != after:

@@ -435,12 +435,26 @@ corrected request; its full freshness, exact-PNG, actor, Pause and budget checks
 still apply. Points-stage changes install only after full validation. This narrow
 request rejection does not soften wrong sources, changed pixels, expiry, user
 Pause or unknown delivery, and makes no claim about the current native scene.
-A changed-session terminal ACK remains unknown. Diagnostic Observe retains the
-actual after-frame against that dispatch's exact capacity reservation; a separate
+For a registered expected transition, a changed-session terminal ACK remains
+unknown. Diagnostic Observe retains the actual after-frame against that dispatch's
+exact capacity reservation; a separate
 same-root current-epoch request records LifecycleTransition and reconciles effect
 without relabeling the ACK. Only then may explicit provisional readmission inspect
 PLAYER_INFO; only QUIT may return from that screen. Inventory or movement cannot
 use provisional normal evidence.
+
+Every actually published lifecycle input also retains private dispatch correlation
+when it was not a registered expected transition. After an uncertain or unexpected
+outcome, explicit Observe can retain the actual same-session or changed-session
+image under the original owned launch, actor/operator/native custody, dispatch
+reservation and wall/observation limits. This diagnostic-only result exposes source
+IDs and its limitation, without an executable lifecycle phase, transition/effect
+proof, adoption, Resume, lease, map, memory or game-time credit. Input allowance
+exhaustion alone does not prevent this zero-input observation. Known supported same-session
+feedback clears provisional correlation; registered expected transitions retain
+their separate handling. Reopen cannot reconstruct the private candidate. Normal
+cleanup of an unadopted or wrong-identity session remains unsupported; a diagnostic
+image is not a recovery or normal-ending guarantee.
 
 While that reconciled create/load phase remains paused awaiting identity, Observe
 may refresh its diagnostic checkpoint without activating the ledger or acquiring

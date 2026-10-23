@@ -11,7 +11,7 @@ import hashlib
 from typing import TYPE_CHECKING
 
 from .controller import ControlError
-from .gameplay.contracts import ContractError, EvidenceRef
+from .gameplay.contracts import ContractError, EvidenceRef, canonical
 from .gameplay.evidence import MAX_FRAME_BYTES, CapacityReservation, EvidenceError, same_native_state
 from .gameplay.interaction import MenuOutcome, MenuSkill
 from .gameplay.mission_contracts import VERSION, SourceRevalidation
@@ -53,6 +53,7 @@ class _TransitionCandidate:
     reservation: CapacityReservation | None = None
     first_after: EvidenceRef | None = None
     latest_after: EvidenceRef | None = None
+    diagnostic_only: bool = False
 
 
 class RegisteredLifecycle:
@@ -106,6 +107,8 @@ class RegisteredLifecycle:
         return launch
 
     def summary(self) -> dict | None:
+        if self.candidate is not None and self.candidate.diagnostic_only:
+            return None
         phase = self.phase if self.phase is not None else None if self.candidate is None else self.candidate.phase
         if phase is None:
             return None
@@ -171,6 +174,16 @@ class RegisteredLifecycle:
         except EvidenceError:
             r._game_cost = None
         r._record("mission_lifecycle_source", {"source": reference.to_dict(), "grants_authority": False})
+
+    def retain_diagnostic(self, reference: EvidenceRef) -> None:
+        r, candidate = self.runtime, self.candidate
+        r._current = reference
+        r._bindings.clear()
+        r._map = None
+        r._record("mission_lifecycle_diagnostic", {"source": reference.to_dict(),
+            "origin_request_id": candidate.phase.root_id, "logical_action_id": candidate.logical_id,
+            "native_request_id": candidate.native_request["id"],
+            "source_before": candidate.phase.checkpoint.observation_id, "grants_authority": False})
 
     def _budget(self, phase: NormalPhase) -> None:
         if phase.first_normal is None:
@@ -278,8 +291,18 @@ class RegisteredLifecycle:
             proposal.action == "YES" and phase.stage in ("character_confirmation", "save_confirmation")
             or phase.operation == "load" and proposal.action in ("CONFIRM", "UILIST.CONFIRM")
                and phase.stage == "load_selection")
-        if expected:
-            self.candidate = _TransitionCandidate(phase, proposal.logical_id, native_request.copy(), reservation)
+        self.candidate = _TransitionCandidate(phase, proposal.logical_id, native_request.copy(), reservation,
+            diagnostic_only=not expected)
+
+    def returned(self, logical_id: str, reference: EvidenceRef) -> None:
+        candidate = self.candidate
+        if candidate is None or candidate.logical_id != logical_id:
+            return
+        phase = candidate.phase
+        if (reference.session == phase.checkpoint.session
+                and (reference.boundary_kind != "normal_play" or phase.first_normal is not None)
+                and (candidate.diagnostic_only or phase.operation == "load")):
+            self.candidate = None
 
     def _binding_request(self, work: _Work, checkpoint: EvidenceRef) -> None:
         r, data = self.runtime, work.request
@@ -308,7 +331,7 @@ class RegisteredLifecycle:
         if feedback.transport_disposition != "returned" or feedback.after is None:
             raise ControlError("Lifecycle Resume was not verified; original receipt retained: " + feedback.reason)
         state = r._store.observation(feedback.after)
-        if state["paused"] or state["session"] != phase.checkpoint.session:
+        if state["paused"] or state["session"] != phase.checkpoint.session or self.candidate is not None:
             raise ControlError("Lifecycle Resume did not return its same supported session")
         r._lease = r.controller.acquire_mission(r._admission.mission_id, phase.epoch, phase.actor_id,
             operation="lifecycle", expected_session=state["session"], expected_revision=state["revision"],
@@ -348,7 +371,8 @@ class RegisteredLifecycle:
         self.runtime._check_cancelled(work)
         if feedback.transport_disposition != "returned" or feedback.after is None:
             return "unknown" if feedback.transport_disposition == "unknown" else "blocked", {
-                "reason": feedback.reason, "phase": self.receipt(phase, "unknown"), "grants_authority": False}
+                "reason": feedback.reason, **({"phase": self.receipt(phase, "unknown")}
+                    if self.candidate is None or not self.candidate.diagnostic_only else {}), "grants_authority": False}
         after = self.runtime._store.observation(feedback.after)
         if after["category"] != "YESNO":
             raise ControlError("Stage commit did not produce its supported visible confirmation")
@@ -414,7 +438,8 @@ class RegisteredLifecycle:
         r._check_cancelled(work)
         if feedback.transport_disposition != "returned" or feedback.after is None:
             return "unknown" if feedback.transport_disposition == "unknown" else "blocked", {
-                "reason": feedback.reason, "phase": self.receipt(phase, "unknown"), "grants_authority": False}
+                "reason": feedback.reason, **({"phase": self.receipt(phase, "unknown")}
+                    if self.candidate is None or not self.candidate.diagnostic_only else {}), "grants_authority": False}
         after = r._store.observation(feedback.after)
         if after["category"] != "YESNO":
             raise ControlError("Normal Save did not produce its supported confirmation")
@@ -521,8 +546,6 @@ class RegisteredLifecycle:
                 if feedback.transport_disposition == "returned" and feedback.after is not None:
                     after = r._store.observation(feedback.after)
                     stage = phase.stage
-                    if phase.operation == "load" and proposal.action in ("CONFIRM", "UILIST.CONFIRM"):
-                        self.candidate = None
                     if (phase.operation == "load" and state["category"] == "MAIN_MENU"
                             and after["category"] == "UILIST" and proposal.action in ("CONFIRM", "UILIST.CONFIRM")):
                         stage = "load_selection"
@@ -549,7 +572,8 @@ class RegisteredLifecycle:
             result = r._control_result(outcome)
             receipt_stage = "unknown" if outcome.disposition == "unknown" else (
                 "awaiting_adoption" if phase.stage == "awaiting_adoption" else "awaiting_control")
-            result["phase"] = self.receipt(phase, receipt_stage)
+            if self.candidate is None or not self.candidate.diagnostic_only:
+                result["phase"] = self.receipt(phase, receipt_stage)
             return outcome.disposition, result
 
     @staticmethod
@@ -642,6 +666,36 @@ class RegisteredLifecycle:
         if r._wall() >= min(r._ledger.request(phase.root_id)["deadline"],
                 r._mission_deadline - r._admission.cleanup_reserve.wall_seconds):
             raise BudgetError("Original lifecycle transition deadline expired")
+        if candidate.diagnostic_only:
+            primitive = r._ledger.primitive(candidate.logical_id)
+            intent, receipt = primitive["intent"], primitive["result"] or {}
+            owner = r._ledger.request(primitive["request_id"])["request"]
+            binding = receipt.get("dispatch_binding") or {}
+            if (not ledger["clock_valid"] or ledger["phase"] != "paused"
+                    or ledger["pause_cause"] not in ("unknown", "internal_recovery")
+                    or ledger["epoch"] != phase.epoch + 1 or r._lease is not None
+                    or primitive["state"] not in ("unknown", "returned", "rejected")
+                    or primitive["effect"] is not None or receipt.get("published") is not True
+                    or owner["epoch"] != phase.epoch
+                    or (owner.get("phase_id") or owner["request_id"]) != phase.root_id
+                    or primitive["native_id"] != candidate.native_request["id"]
+                    or receipt.get("native_request_json") != canonical(candidate.native_request)
+                    or receipt.get("logical_action_id") != candidate.logical_id
+                    or intent["source_before"] != phase.checkpoint.observation_id
+                    or binding.get("epoch") != phase.epoch or binding.get("actor_id") != phase.actor_id
+                    or binding.get("controller_boot_id") != phase.launch.operator_mark[0]
+                    or binding.get("operator_pause_generation") != phase.launch.operator_mark[1]
+                    or binding.get("takeover_generation") != phase.launch.takeover_generation):
+                raise ControlError("Diagnostic lifecycle evidence lost its original published dispatch custody")
+            if candidate.reservation is not None:
+                reservation = candidate.reservation
+                if (reservation.token != intent["reservation_id"]
+                        or reservation.before_observation_id != intent["source_before"]
+                        or reservation.preflight_observation_id != intent["preflight_source"]):
+                    raise EvidenceError("Diagnostic lifecycle reservation differs from its published dispatch")
+                r._store._check_reservation(reservation)
+            else:
+                r._store.preflight_retention()
 
     def observe(self, work: _Work) -> dict:
         r = self.runtime
@@ -656,13 +710,15 @@ class RegisteredLifecycle:
         self._candidate_guard(work, candidate)
         r._capacity()
         deadline = r._clock() + min(r._ledger.request(candidate.phase.root_id)["deadline"],
+            r._ledger.request(work.request["request_id"])["deadline"],
             r._mission_deadline - r._admission.cleanup_reserve.wall_seconds) - r._wall()
         state, received = r._observe_native(work, deadline_monotonic=deadline)
         self._candidate_guard(work, candidate)
         phase = candidate.phase
         expected = (state["category"] == "MAIN_MENU" and not state["in_game"] and state["boundary"]["kind"] == "menu"
             if phase.operation == "save" else state["boundary"]["kind"] == "normal_play" and state["in_game"] and state["scene"] is not None)
-        if (not expected or state["session"] == phase.checkpoint.session or state["error"] or not state["frame_ok"]
+        if ((not candidate.diagnostic_only and (not expected or state["session"] == phase.checkpoint.session))
+                or state["error"] or not state["frame_ok"]
                 or not state["paused"] or state["pause_origin"] not in ("world_change", "host")):
             raise ControlError("Observed evidence does not establish the exact outstanding lifecycle transition")
         # Retain the actual after-frame against the exact published dispatch's
@@ -671,6 +727,12 @@ class RegisteredLifecycle:
         candidate = replace(candidate, first_after=candidate.first_after or reference,
             latest_after=reference, reservation=None)
         self.candidate = candidate
+        if candidate.diagnostic_only:
+            self.retain_diagnostic(reference)
+            return {"source_ids": list(dict.fromkeys((candidate.first_after.observation_id, reference.observation_id))),
+                "reason": "Diagnostic-only evidence of an unexpected published lifecycle input; "
+                    "no transition reconciliation, identity adoption or supported normal cleanup",
+                "lifecycle_needed": True, "grants_authority": False}
         self.retain_after(reference)
         return {"source_ids": list(dict.fromkeys((candidate.first_after.observation_id, reference.observation_id))),
             "phase": self.receipt(phase, "awaiting_transition", extra=(candidate.first_after, reference), epoch=work.request["epoch"]),
@@ -679,6 +741,8 @@ class RegisteredLifecycle:
 
     def _reconcile(self, work: _Work) -> tuple[str, dict]:
         r, data, candidate = self.runtime, work.request, self.candidate
+        if candidate.diagnostic_only:
+            raise ControlError("Diagnostic-only lifecycle evidence cannot reconcile a registered transition or adopt identity")
         self._candidate_guard(work, candidate)
         phase = candidate.phase
         if (data["phase_id"] != phase.root_id or data["operation"] != phase.operation

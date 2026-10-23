@@ -343,6 +343,16 @@ checkpoint advances during Observe, while first-normal
 provenance, original budgets and the separately charged explicit Resume remain.
 No phase is reconstructed from historical records on reopen.
 
+The same private publication record distinguishes registered expected transitions
+from diagnostic-only lifecycle inputs. Explicit Observe can retain an uncertain
+or unexpected same/changed-session image against its original dispatch reservation
+and owned custody. Diagnostic candidates supply no executable phase, reconciliation,
+adoption or input authority, and their images do not update the map, memory or
+game-time projection. Read-only observation keeps its wall/frame/request bounds
+without requiring unused gameplay inputs. Known supported same-session feedback clears the
+provisional record; no candidate is restored on reopen. This is host-side evidence
+retention, with normal cleanup of an unadopted/wrong-identity session still unsupported.
+
 Registered Save start and creation/load provisional normal readmission use
 `native_state` equivalence across refresh and dispatch. Incidental pixel drift
 does not invalidate those normal-context intents. Save keeps its interaction
