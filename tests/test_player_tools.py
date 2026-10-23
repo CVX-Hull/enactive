@@ -315,7 +315,7 @@ class SnapshotDetailTests(unittest.TestCase):
 class ProjectConfigurationTests(unittest.TestCase):
     def test_focused_help_keeps_the_actual_direct_input_contract(self):
         schema = describe("enactive_skill", "direct")["input_schema"]
-        args = dict(snapshot_id="snapshot", request_id="request", wait_seconds=1,
+        args = dict(snapshot_id="snapshot",
             scope="new_root", source_id="source", supporting_source_ids=[],
             limits=dict(primitives=1, wall_seconds=10, game_seconds=10),
             intent=dict(skill_kind="direct", perception=None, procedure=None, work_id=None,
@@ -411,6 +411,9 @@ class SDKTransportTests(unittest.TestCase):
                 tools = await client.list_tools()
                 self.assertEqual({t.name for t in tools.tools}, {s.name for s in tool_specs()})
                 self.assertEqual(len(tools.tools), 21)
+                for spec in tools.tools:
+                    self.assertNotIn("request_id", spec.input_schema["properties"])
+                    self.assertNotIn("wait_seconds", spec.input_schema["properties"])
                 detail_spec = next(tool for tool in tools.tools if tool.name == "enactive_detail")
                 self.assertTrue(detail_spec.annotations.read_only_hint)
                 self.assertTrue(detail_spec.annotations.idempotent_hint)
@@ -434,6 +437,15 @@ class SDKTransportTests(unittest.TestCase):
                 self.assertEqual(text.type, "text")
                 self.assertEqual(base64.b64decode(image.data), _FixtureClient.image)
                 self.assertEqual(image.mime_type, "image/png")
+                observed = await client.call_tool("enactive_observe", dict(snapshot_id=view["snapshot_id"]))
+                self.assertFalse(observed.is_error)
+                written = json.loads(observed.content[0].text)
+                self.assertTrue(written["operation_id"].startswith("op-"))
+                self.assertEqual(written["response"]["operation"]["request_id"], written["operation_id"])
+                for obsolete in (dict(request_id="old"), dict(wait_seconds=0)):
+                    rejected = await client.call_tool("enactive_observe", dict(
+                        snapshot_id=view["snapshot_id"], **obsolete))
+                    self.assertTrue(rejected.is_error)
                 detailed = await client.call_tool("enactive_detail", dict(
                     snapshot_id=view["snapshot_id"], section="receipt"))
                 self.assertFalse(detailed.is_error)
@@ -444,7 +456,7 @@ class SDKTransportTests(unittest.TestCase):
                 self.assertFalse(detail_view["grants_authority"])
                 self.assertEqual(len(detailed.content), 1)
                 collected = await client.call_tool("enactive_result", dict(mission_id="sdk-fixture",
-                    operation_id="original-operation", wait_seconds=0))
+                    operation_id="original-operation"))
                 self.assertFalse(collected.is_error)
                 self.assertIsNone(collected.structured_content)
                 projected = json.loads(collected.content[0].text)
@@ -457,7 +469,7 @@ class SDKTransportTests(unittest.TestCase):
                                  _FixtureClient().status()["mission"]["progress"])
                 self.assertEqual(base64.b64decode(collected.content[1].data), _FixtureClient.image)
                 duplicate = await client.call_tool("enactive_result", dict(mission_id="sdk-fixture",
-                    operation_id="same-progress", wait_seconds=0))
+                    operation_id="same-progress"))
                 self.assertIsNone(duplicate.structured_content)
                 compacted = json.loads(duplicate.content[0].text)
                 self.assertFalse(duplicate.is_error)
@@ -513,6 +525,11 @@ class _FixtureClient:
                     state="unknown", result=deepcopy(complete), receipts=[{"id": "original-receipt"}]),
                 context=deepcopy(complete), handoff=deepcopy(complete), reflection=deepcopy(complete),
                 proposal=deepcopy(complete)))
+
+    def submit(self, request, **options):
+        return dict(transport="delivered", settled=True, operation_id=request["request_id"],
+            response=dict(status="accepted", operation=dict(request=deepcopy(request), state="completed",
+                result=dict(observed=True))))
 
 
 async def _stdio_fixture():

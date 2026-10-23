@@ -218,7 +218,7 @@ class ImageSDKTests(unittest.TestCase):
                 results = []
                 for _ in range(6):
                     result = await client.call_tool("enactive_result", dict(
-                        mission_id="mission", operation_id="operation", wait_seconds=0))
+                        mission_id="mission", operation_id="operation"))
                     self.assertFalse(result.is_error)
                     self.assertIsNone(result.structured_content)
                     self.assertEqual(json.loads(result.content[0].text)["response"], ImageClient().envelope["response"])
@@ -240,7 +240,7 @@ class ImageSDKTests(unittest.TestCase):
                         self.assertNotIn("image_presentation", json.loads(result.content[0].text))
                 # A source image has no actor/epoch context, even in this mission.
                 result = await client.call_tool("enactive_result", dict(
-                    mission_id="mission", operation_id="operation", wait_seconds=0))
+                    mission_id="mission", operation_id="operation"))
                 self.assertEqual(base64.b64decode(result.content[1].data), png())
         asyncio.run(exercise())
 

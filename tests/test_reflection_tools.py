@@ -14,7 +14,7 @@ from urllib.parse import urlsplit
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.reflection import proposal_schema, validate_command, validate_proposal
 from harness.player_mcp import make_server
-from harness.player_tools import PlayerTools, tool_specs
+from harness.player_tools import PlayerTools, request_tool_specs, tool_specs
 from tests.test_gameplay_evidence import png
 from tests import test_reflection_client as reflection_fixture
 from tests.test_reflection_client import receipt
@@ -89,7 +89,7 @@ class ReflectionToolTests(unittest.TestCase):
         self.assertEqual(self.client.calls, [])
 
     def test_only_next_tool_allows_extended_wait_and_claim_keeps_original_remaining_allowance(self):
-        for spec in tool_specs():
+        for spec in request_tool_specs():
             wait = spec.schema["properties"].get("wait_seconds")
             if wait is not None:
                 self.assertEqual(wait["maximum"], 40 if spec.name == "enactive_reflect_next" else 15)
@@ -349,7 +349,7 @@ class ReflectionSDKTests(unittest.TestCase):
             async with Client(params) as client:
                 tools = await client.list_tools()
                 self.assertEqual({value.name for value in tools.tools}, {value.name for value in tool_specs()})
-                claimed = await client.call_tool("enactive_reflect_next", dict(**SCOPE, wait_seconds=40))
+                claimed = await client.call_tool("enactive_reflect_next", SCOPE)
                 self.assertFalse(claimed.is_error)
                 self.assertIsNone(claimed.structured_content)
                 self.assertEqual(json.loads(claimed.content[0].text)["status"], "claimed")

@@ -657,3 +657,44 @@ An independent clean-context source/evidence review finds no actionable defect;
 25targeted tests pass in0.271s, frozen hashes/counts/PNG/support and191unchanged
 save entries are independently verified. It executes no native or full current
 suite; source review and the old51CI result cannot qualify the new profile/run.
+
+## Software-owned invocation and closed013
+
+[013](../acceptance/2026-10-23-luna-responsiveness-thirteenth-attempt.md) independently
+loads/adopts, picks up a ration and normally Saves/exits/Finishes stopped. Its
+596wall seconds for two game seconds confirms that the whole player is still too
+slow. Eighteen matched inspection/closure/look/navigation/pickup/Observe calls,
+including failed attempts, have0.446s median execution but1.7–12.5s completion-to-
+next-custom-call gaps. The host trace cannot isolate inference, and there is no
+20-useful-decision or correlated display cohort. Actual70MCPcalls carry378662text
+bytes/43image parts without structured duplication. The dated report owns exact
+scope, failures, token accounting and normal-ending evidence.
+
+The next current MCP contract removes model-supplied request IDs and transport
+waits. `tool_specs()` derives public schemas from the existing imperative SDK
+specifications; the stdio producer advertises only these current shapes and
+rejects removed fields. Focused cards use the same schemas. Before delegation to
+the SDK, software assigns one UUID to tools already requiring a request ID and
+retains original mission/reflector collection arguments across dispatch and
+presentation errors. Existing immutable staging and bounded submit/collect do the
+work. No new ledger, scheduler, journal or dependency is added. Internal per-job
+reflection claims keep their deterministic IDs. JSON-RPC correlation is not a
+durable operation identity.
+
+Collection waits become15seconds, with40seconds for advisory next; they neither
+extend execution nor force a settled operation to wait. Exact selected snapshot,
+source, scope, finite execution limits and semantics remain explicit. Removing
+those selections too would require an explicit as-of-context/budget policy; it is
+not justified by a transport ID change. A lost settled identity after producer
+restart still requires quiescence, not inferred replay. The imperative SDK's
+explicit IDs remain an engineering interface, not a compatibility mode accepted
+by the MCP producer. Canonical requests/storage, frozen historical runs and
+`player-view/2` remain unchanged.
+
+Focused checks exercise real SDK staging, uncertain POST/collection, original-ID
+collection after adapter restart, cancellation, assigned-ID errors, exact binding
+and actual stdio rejection of old arguments. Independent source review, exact
+current CI and a new useful-play attempt remain separate evidence. This slice
+removes measured bookkeeping responsibilities, not the need for semantic choices,
+useful execution coverage, future context improvement or honest full-campaign
+qualification. It establishes no model admission or latency improvement by itself.

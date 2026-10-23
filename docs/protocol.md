@@ -210,7 +210,29 @@ refuse, and uncertain publication permits only collection of the original operat
 Concurrent first creators may safely lose the exclusive-stage race and refuse;
 there is no transparent retry or second request history store.
 
-The current MCP presentation is `player-view/2`, marked by `presentation_schema`.
+The current MCP server is2.0.0; its presentation remains `player-view/2`, marked by `presentation_schema`.
+Its tool arguments omit `request_id` and `wait_seconds`; old MCP payloads are
+rejected, not translated. The adapter assigns one UUID to each invocation whose
+imperative SDK request needs an ID, then uses existing immutable staging and
+bounded submit/collection. Result waits are15 seconds; advisory next waits40,
+retaining the existing per-job deterministic claim and original remaining window.
+These waits are transport collection, not execution budgets or renewed authority.
+Exact selected snapshot/source, phase scope, finite execution limits and semantic
+intent remain explicit. Neither a JSON-RPC correlation ID nor a new status read
+replaces the selected evidence or original mission operation.
+
+Assigned IDs and selected mission/reflector scope survive dispatch and presentation
+errors as `original_collection` arguments, separate from the bounded error text.
+An error alone establishes neither delivery nor nondelivery; a pre-staging failure
+can leave no collectable operation. Pending/unknown work permits collection only,
+not resubmission under a new UUID. Across producer restart, explicit original IDs
+use existing durable SDK/ledger collection without snapshot/job caches. Status's
+active-operation ID helps only while active; settled lost identities cannot be
+recovered from it. Quiesce if the original identity is unavailable. No second
+history/index, directory scan, automatic replay or blanket crash-recovery claim is
+introduced. The imperative Python SDK retains explicit-ID requests for engineering
+and exact duplicate collection; it is not another accepted MCP input mode.
+
 StdIO returns one standard JSON text content block plus any typed image. It does
 not repeat that value as `structuredContent`; SDK/HTTP canonical records and
 selected detail remain available. Callers preserve text/image/error content once.

@@ -66,7 +66,7 @@ def _claim_authoring_schema(canonical_schema: dict) -> dict:
         "supports": support})
 
 
-def tool_specs() -> tuple[ToolSpec, ...]:
+def request_tool_specs() -> tuple[ToolSpec, ...]:
     """Derive semantic shapes from the receiver, never a parallel wire schema."""
     base = request_schema("observe")["properties"]
     identity = base["request_id"]
@@ -150,7 +150,7 @@ def tool_specs() -> tuple[ToolSpec, ...]:
     specs.extend((
         ToolSpec("enactive_reflect_next", "Advisory actor only: get and durably claim bounded original work. Compute only when status is claimed. Pending, busy or unknown grants no permission to compute; no gameplay input or automatic model work.",
             _object({**reflection_scope, "wait_seconds": {**wait, "maximum": MAX_REFLECTION_READ_WAIT_SECONDS}})),
-        ToolSpec("enactive_reflect_submit", "Advisory actor only: submit explicitly authored candidates/notes/reason for a cached claimed job. Software preserves original headers; request_id is immutable. Corrected output requires a new request_id. No automatic memory adoption or gameplay.",
+        ToolSpec("enactive_reflect_submit", "Advisory actor only: submit explicitly authored candidates/notes/reason for a cached claimed job. Software preserves original headers; the original submission is immutable. Corrected output is a separate new intent; collect an uncertain original instead of resubmitting. No automatic memory adoption or gameplay.",
             _object({**reflection_scope, "job_id": identity, "request_id": identity, "wait_seconds": wait,
                 **{field: proposal[field] for field in ("candidates", "notes", "reason")}})),
         ToolSpec("enactive_reflect_source", "Advisory actor only: read an allowlisted original image from a cached claimed job. Never Observe; this presentation cannot serve as a deciding player's source-read declaration.",
@@ -163,17 +163,57 @@ def tool_specs() -> tuple[ToolSpec, ...]:
     return tuple(specs)
 
 
+def tool_specs() -> tuple[ToolSpec, ...]:
+    """Current model contract; the imperative SDK owns transport mechanics.
+
+    Keep a single schema source. The SDK's explicit-ID calls remain useful for
+    engineering and exact duplicate collection, not an alternate MCP contract.
+    """
+    return tuple(ToolSpec(spec.name, spec.description,
+        _without(spec.schema, "request_id", "wait_seconds"), spec.read_only)
+        for spec in request_tool_specs())
+
+
 class PlayerTools:
     """One adapter, bounded descriptive handles, no controller capability."""
     def __init__(self, client: MissionClient):
         self.client = client
         self.snapshots: OrderedDict[str, dict] = OrderedDict()
         self.sources: OrderedDict[tuple[str, str], dict] = OrderedDict()
-        self.specs = {spec.name: spec for spec in tool_specs()}
+        self.specs = {spec.name: spec for spec in request_tool_specs()}
+        self.model_specs = {spec.name: spec for spec in tool_specs()}
         self._lock = threading.Lock()
         self._last_image: tuple[str, str, int, str, str] | None = None
         self._reflection_lock = threading.Lock()
         self._reflection_jobs: OrderedDict[tuple[str, str, str], dict] = OrderedDict()
+
+    def model_arguments(self, name: str, arguments: dict) -> tuple[dict, dict | None]:
+        """Assign once before ordinary SDK staging and bounded collection.
+
+        Request IDs are new semantic invocation IDs, never JSON-RPC IDs. This
+        method does not refresh evidence, infer scope/limits, or replay a call.
+        """
+        if name not in self.model_specs:
+            raise ContractError("Unknown player tool")
+        data = json_object(arguments)
+        validate_json(data, self.model_specs[name].schema)
+        properties = self.specs[name].schema["properties"]
+        if "wait_seconds" in properties:
+            data["wait_seconds"] = (MAX_REFLECTION_READ_WAIT_SECONDS
+                if name == "enactive_reflect_next" else 15)
+        collection = None
+        if "request_id" in properties:
+            identity = "op-" + uuid.uuid4().hex
+            data["request_id"] = identity
+            if name == "enactive_reflect_submit":
+                collection = dict(tool="enactive_reflect_result", arguments=dict(
+                    mission_id=data["mission_id"], reflector_id=data["reflector_id"], command_id=identity))
+            else:
+                mission_id = (data["admission"]["mission_id"] if name == "enactive_start" else
+                    self._cached_snapshot(data["snapshot_id"])["mission"]["mission_id"])
+                collection = dict(tool="enactive_result", arguments=dict(
+                    mission_id=mission_id, operation_id=identity))
+        return data, collection
 
     @staticmethod
     def _remember(cache: OrderedDict, key, value):

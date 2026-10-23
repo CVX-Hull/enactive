@@ -331,7 +331,12 @@ lead takes work back. Reports never substitute for inspecting a diff or result.
 For gameplay requests, use the structured player tools over the current typed
 ingress. The adapter derives opaque source/session/revision/boundary fields from
 one explicitly chosen returned snapshot/source using the pure canonical producer.
-Choose intent, finite limits, scope and support IDs explicitly. Specialized memory,
+Choose intent, finite limits, scope and support IDs explicitly. MCP request IDs
+and transport collection waits belong to software, using the existing staged
+request and original-result path. A new invocation is not a retry; retain and
+collect the original identity through uncertainty, including producer errors.
+Do not substitute JSON-RPC correlation for durable operation identity or infer a
+new source/budget from this automation. Specialized memory,
 handoff and recovery use their same current receiver schemas. Request retention,
 serialization, bounded result collection and actual-image presentation belong to
 software; routine player-authored files/private scripts are not the operating path.

@@ -39,6 +39,17 @@ reason to read the entire repository during every game.
   Ordinary `direct` inputs use `perception=null`; visible-control interpretations
   belong to menu/edit/item controls. Inspect the returned image/effect; a delivered
   input is not task success.
+- MCP assigns each new request ID and waits up to15 seconds for its original
+  result; do not supply `request_id` or `wait_seconds`. A new invocation is a new
+  intent, never a retry. Pending/uncertain results require `enactive_result` with
+  the returned original ID. If an error includes `original_collection`, use those
+  exact collection arguments when dispatch is uncertain. Validation can fail
+  before staging, so collection may be unavailable; the error itself proves
+  neither delivery nor nondelivery. After producer restart, collect a retained
+  original ID; an actual active-operation ID can help, but settled operations
+  disappear from that status field. If the identity is lost, quiesce rather than
+  recreate or replay the action. Advisory next waits up to40 seconds without model
+  polling; it preserves the original deterministic job claim and deadline.
 - Read the description/schema of the **one tool needed**, rather than printing
   every declaration. Some hosts reduce nested argument schemas to `unknown`; this
   is not a usable field contract. If the frozen brief supplies focused interface
@@ -113,7 +124,7 @@ new lifecycle fallback remains pending.
 | Confirmation or unfamiliar setup dialog | Use a same-root interpreted menu skill when applicable, or `direct` input to try/cancel through the visible interface. Inspect the actual response. Successful creation still needs the committed character route; a delivered key or familiar question alone proves no transition. |
 | Published lifecycle input has an uncertain/unexpected outcome | Explicit Observe can retain actual diagnostic evidence under its original private dispatch custody. For an expected create/load/save transition, use `enactive_lifecycle` again with the same operation, `scope=lifecycle` and original root `phase_id`; do not use ordinary `enactive_reconcile`. The ACK stays unknown. A wrong-tool refusal preserves only a positively healthy expected transition and its original limits. Diagnostic-only evidence has no executable phase or adoption/reconciliation authority. Normal cleanup of an unadopted/wrong-identity session remains unsupported; do not fabricate proof or replay input. |
 | Reconciled transition, paused provisional character | Continue with `enactive_lifecycle`, `scope=lifecycle`, unchanged `operation=create` or `load`; this separate call readmits the provisional session. Do not use `enactive_readmit`, which is for ordinary recovery/handoff. Then inspect `purpose=character_identity`, read the actual character screen, retain truthful world/character Claims, dismiss it and separately adopt through the same lifecycle operation with those Claim IDs. Adoption, not launch or Observe, starts ordinary input authority. |
-| Normal ending | New `save` lifecycle root, interpreted or ordinary confirmation, explicit transition reconciliation/checkpoint, owned `exit`, then `finish` with the appropriate actual outcome. Returning to the same normal session cancels Save without a checkpoint claim. Later reload requires this mission's own saved checkpoint. An explicit initial-load admission instead establishes new visible identity and accounting; old authority/world facts are not imported. |
+| Normal ending | New `save` lifecycle root with null Work and empty identity IDs; confirm ordinarily and reconcile/checkpoint through the same Save phase. After completion choose a new owned `exit` root. After recorded normal exit choose `finish` as a separate `new_root`, never a child of exit; report the actual outcome. Returning to the same normal session cancels Save without a checkpoint claim. Later reload requires this mission's own saved checkpoint. Initial Load instead establishes new identity/accounting; old authority/world facts are not imported. |
 | Abandoning menu-only setup | Return organically to the same owned main menu. A new `exit` request can revoke settled setup without input; then explicitly Observe and use a new finite normal-exit root. A fresh Observe and this zero-input MAIN_MENU abort remain available after local setup expiry under healthy custody and global limits; they cannot renew expired inputs or cancel another form. This does not clean up an unadopted normal session. |
 
 Create/load limits cover the complete original lifecycle: opening menus, transition,

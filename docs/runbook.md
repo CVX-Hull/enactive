@@ -424,6 +424,10 @@ separates implemented components from remaining independent-play acceptance.
    returned snapshot/source IDs for `enactive_skill` or `enactive_lifecycle`.
    Software constructs and retains the current mission/10 request before submission,
    collects its bounded result and returns the actual retained PNG in the same call.
+   MCP software assigns request IDs and result waits; old caller-owned
+   `request_id`/`wait_seconds` arguments are rejected. Execution limits remain
+   explicit. An assigned-ID error carries `original_collection` so uncertain
+   dispatch can collect its actual operation; a new invocation is never a retry.
    The lead uses `enactive_start` for the explicit frozen source-free admission;
    it does not launch or adopt a character. Raw engineering contract diagnostics
    retain the validated `mission-request` CLI. They are not a second player or a

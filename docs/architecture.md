@@ -15,6 +15,13 @@ selected evidence nor establish input authority. Default normal-play results omi
 repeated configuration, technical receipt bindings and general engine vocabulary.
 One bounded producer-local fingerprint avoids identical implicit image parts in a
 known unchanged player/control context; explicit image reads remain complete.
+MCP server2.0.0 assigns request identities and bounded result waits before invoking
+the existing imperative SDK. Its public schemas reject caller-owned IDs/waits;
+snapshot/source, scope, execution limits and semantic decisions remain explicit.
+Errors preserve assigned original collection arguments through the presentation
+boundary. Durable staging/collection remain in MissionClient and the existing
+ledger; no extra history or executor is introduced. Lost settled identities after
+a producer restart remain a disclosed quiescence case, not permission to replay.
 The prior wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.
 Start is source-free and cannot adopt an unrelated already-running character. The
@@ -28,8 +35,10 @@ world facts or elapsed game time. Subsequent reloads still require this mission'
 own Save checkpoint and no-rollback chronology. The
 [008 diagnostic](acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md)
 qualifies initial Load, current identity/adoption and its own normal Save, then
-fails owned exit. Useful higher-level play, responsiveness and a normal complete
-ending remain unqualified; fresh #145 acceptance still requires actual creation. The [006 report](acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md)
+fails owned exit. Later [013](acceptance/2026-10-23-luna-responsiveness-thirteenth-attempt.md)
+adds a useful ration pickup and normal complete ending on its frozen source.
+Broader skill composition and responsiveness remain unqualified; fresh #145
+acceptance still requires actual creation. The [006 report](acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md)
 records its repeated-setup rationale.
 The [007 failure](acceptance/2026-10-23-luna-responsiveness-seventh-attempt.md)
 separates an ordinary recovery request from an expected lifecycle transition.
@@ -39,7 +48,7 @@ decision guidance names same-root lifecycle reconciliation, without input,
 automatic intent conversion or renewed authority. Diagnostic008 passes Load
 reconciliation/adoption but exposes the separate literal owned-exit restriction;
 ordinary owned-exit input now has source support through the existing writer,
-with actual requalification still pending.
+with scoped actual normal-ending evidence now in013, retaining all unknown ACKs.
 Protocol version: 6.
 
 The [independent024 result](acceptance/2026-10-21-independent-supply-shelter.md)

@@ -237,7 +237,8 @@ loading checks; no activation claim follows from a policy-file edit.
 
 Use `enactive_snapshot` or an explicitly returned next snapshot, choose a source
 and physical or semantic intent, then call the named skill/lifecycle/memory tool with finite
-limits and a stable request ID. The adapter uses the
+limits. MCP software assigns the stable request ID and bounded collection wait;
+the model does not supply `request_id` or `wait_seconds`. The adapter uses the
 [pure canonical producer](protocol.md#skill-request-binding-errors) internally;
 software owns serialization, durable staging, submission, bounded collection and
 actual-image presentation. The player does not write routine JSON files, private
