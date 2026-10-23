@@ -13,7 +13,8 @@ import threading
 import time
 import uuid
 
-from .gameplay.contracts import ContractError, _object, json_object, validate_json
+from .gameplay.contracts import ContractError, _object, canonical, json_object, validate_json
+from .gameplay.evidence import same_native_state
 from .gameplay.mission_contracts import (
     VERSION, SKILLS, perception_schema, request_schema, validate_request,
 )
@@ -137,6 +138,7 @@ class PlayerTools:
         self.sources: OrderedDict[tuple[str, str], dict] = OrderedDict()
         self.specs = {spec.name: spec for spec in tool_specs()}
         self._lock = threading.Lock()
+        self._last_image: tuple[str, str, int, str, str] | None = None
         self._reflection_lock = threading.Lock()
         self._reflection_jobs: OrderedDict[tuple[str, str, str], dict] = OrderedDict()
 
@@ -219,6 +221,53 @@ class PlayerTools:
             output["snapshot_error"] = str(exc)[:1024]
         return output, image
 
+    @staticmethod
+    def _image_context(snapshot: dict | None, image: bytes | None) -> tuple[str, str, int, str, str] | None:
+        """One presentation fingerprint, never a source-read or authority proof."""
+        if snapshot is None or image is None:
+            return None
+        mission, native, source = (snapshot.get(key) for key in ("mission", "native", "source"))
+        if not all(isinstance(value, dict) for value in (mission, native, source)):
+            return None
+        state, observed = native.get("state"), source.get("observation")
+        reference, selected = source.get("reference"), mission.get("current_source")
+        if not all(isinstance(value, dict) for value in (state, observed, reference, selected)):
+            return None
+        if (not all(isinstance(mission.get(key), str) and mission[key] for key in ("mission_id", "player_id", "phase"))
+                or mission.get("actor_id") != mission["player_id"]
+                or type(mission.get("epoch")) is not int or mission["epoch"] < 0
+                or mission.get("clock_valid") is not True or snapshot.get("source_error")
+                or source.get("disposition") != "retained" or source.get("grants_authority") is not False
+                or not reference.get("observation_id") or selected.get("observation_id") != reference["observation_id"]
+                or native.get("connection") != "fresh" or native.get("error")
+                or state.get("status") != "ready" or state.get("error") or state.get("frame_ok") is not True
+                or not same_native_state(state, observed)
+                or not observed.get("session") or type(observed.get("revision")) is not int
+                or reference.get("session") != observed["session"] or reference.get("revision") != observed["revision"]):
+            return None
+        # Reuse the native equivalence policy: every semantic/control field is
+        # relevant, while transport/capture identities do not change the scene.
+        context = {**native, "state": {key: value for key, value in state.items()
+            if key not in ("id", "timestamp_ms", "frame")},
+            "mission_phase": mission["phase"], "pause_cause": mission.get("pause_cause")}
+        return (mission["mission_id"], mission["player_id"], mission["epoch"],
+            hashlib.sha256(canonical(context).encode()).hexdigest(), hashlib.sha256(image).hexdigest())
+
+    def _present_image(self, output: dict, image: bytes | None, *, explicit: bool) -> tuple[dict, bytes | None]:
+        snapshot = output if explicit else output.get("next_snapshot")
+        context = self._image_context(snapshot, image)
+        duplicate = context is not None and context == self._last_image
+        self._last_image = context
+        if duplicate and not explicit:
+            # This note belongs only to the returned envelope, never its exact
+            # cached snapshot/source or any handoff source-read declaration.
+            output["image_presentation"] = (
+                "Actual image pixels are unchanged from the last image shown in this player context. "
+                "Use enactive_snapshot or enactive_source to redisplay the actual image. "
+                "This omission is presentation only, not a source-read declaration.")
+            return output, None
+        return output, image
+
     def call(self, name: str, arguments: dict) -> tuple[dict, bytes | None]:
         if name not in self.specs:
             raise ContractError("Unknown player tool")
@@ -229,7 +278,18 @@ class PlayerTools:
         if not self._lock.acquire(blocking=False):
             raise ContractError("Another player tool is active; collect its original operation before continuing")
         try:
-            return self._call(name, data)
+            if name == "enactive_source":
+                # Historical sources carry no current player/epoch context.
+                self._last_image = None
+            output, image = self._call(name, data)
+            if name == "enactive_snapshot":
+                return self._present_image(output, image, explicit=True)
+            if name != "enactive_source" and name != "enactive_detail":
+                return self._present_image(output, image, explicit=False)
+            return output, image
+        except (OSError, ValueError):
+            self._last_image = None
+            raise
         finally:
             self._lock.release()
 
