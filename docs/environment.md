@@ -28,6 +28,12 @@ source history; private receipts retain only the bounded integration/cleanup pro
 
 ## User-directed stale-save cleanup, 2026-10-22
 
+The progressive player-view2 increment adds only read-only `enactive_detail` to
+the existing project `.codex/config.toml` allowlist. The complete table matches
+the current configuration generator; every other field, existing approval policy
+and unrelated setting is preserved. No global configuration, package or profile
+changed. Actual host loading is separately preflighted; file presence is not proof.
+
 With no native game or controller listener running, retired 36 closed test/failed
 worlds containing 20 saved characters from the project userdir's active save
 directory. All 1,363 files (33,647,175 bytes) were verified against the ordinary

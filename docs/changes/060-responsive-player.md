@@ -57,7 +57,7 @@ primitives. The remaining problem is not solved by claiming no automation exists
 
 ## First source slice and its limits
 
-The current source adds the `player-view/1` MCP projection described in
+The first source slice added the `player-view/1` MCP projection described in
 [the protocol](../protocol.md#integrated-mission-lifecycle). It preserves complete
 selected evidence, operations, obligations and uncertainty; removes matching
 native visible-state duplicates; and references progress only when identical to
@@ -98,6 +98,23 @@ The integrated player/presentation/lifecycle/reflection focused lane passes91
 tests in162.415s. Separate clean-context source reviews found no remaining
 material findings after the presentation fixes. These are component and SDK
 results; no loaded-host performance or new graphical acceptance is inferred.
+
+The next source slice is current `player-view/2`: it reuses the32-entry snapshot
+cache for complete returned snapshots and adds exact-as-of, read-only
+`enactive_detail` sections. Default presentation removes declared technical audit
+fields; full requested evidence/obligations and canonical request bindings remain.
+There is no new store, dependency, executor or compatibility mode.58focused tests
+pass in152.292seconds; a clean reviewer independently passes15presentation/detail
+tests and finds no material defect. Project configuration adds only this read-only
+tool to the existing allowlist; actual21-tool host loading remains to preflight.
+
+Offline application to24parseable actual forwarded Luna001 results (including its
+preflight) reduces200,566 to169,381canonical UTF-8 bytes. Median9,099 becomes7,572;
+nearest-rank p9510,457 becomes9,322bytes. This is a modest15.5% reduction in that
+text subset, with image parts unchanged, not new host/token/latency qualification.
+It enables progressive access but does not solve broad source reads, manual
+semantic drafting, unnecessary captures or long decision gaps by itself. Those
+remaining changes must follow measured useful progress and the whole objective.
 
 ## Selected implementation direction
 

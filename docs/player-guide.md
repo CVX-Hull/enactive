@@ -20,6 +20,11 @@ reason to read the entire repository during every game.
 - `enactive_snapshot` gives a descriptive snapshot handle and the selected source
   image. Select those exact handles for a new intent. Software supplies mission,
   epoch, source bindings and stable child lineage. A snapshot never Resumes.
+- Default `player-view/2` keeps current decision state and advertises `detail_sections`.
+  Use `enactive_detail(snapshot_id, section)` for exact as-of configuration, metrics,
+  receipt, progress, native or source metadata when needed. It never refreshes or
+  grants authority. Use `enactive_source` when you need the actual retained image.
+  Software verifies hashes and binds requests; do not reconstruct omitted audit data.
 - `enactive_skill` chooses intent and finite limits. Use a supported semantic goal
   when useful, ordinary `direct` keys/text/clicks for unfamiliar ordinary gameplay.
   Inspect the returned image/effect; a delivered input is not task success.

@@ -4,9 +4,19 @@ from __future__ import annotations
 from copy import deepcopy
 
 from .gameplay.contracts import canonical
+from .player_tools import DETAIL_SECTIONS
 
 
-PRESENTATION_SCHEMA = "player-view/1"
+PRESENTATION_SCHEMA = "player-view/2"
+
+_REFERENCE_FIELDS = ("schema", "record_type", "frame_path", "frame_sha256",
+                     "received_monotonic", "visibility_version")
+
+
+def _omit(value: dict | None, fields: tuple[str, ...]) -> None:
+    if isinstance(value, dict):
+        for field in fields:
+            value.pop(field, None)
 
 # These PlayerTools paths return _finish's operation envelope. Sources and
 # advisory payloads are opaque evidence, even if they contain similar names.
@@ -19,8 +29,18 @@ _NEXT_SNAPSHOT_TOOLS = frozenset({
 
 
 def _project_snapshot(snapshot: dict, operation: dict | None = None, operation_id: str | None = None) -> None:
+    if snapshot.get("snapshot_id") is not None:
+        snapshot["detail_sections"] = list(DETAIL_SECTIONS)
     mission = snapshot.get("mission")
     if mission is not None:
+        _omit(mission.get("configuration"), ("source_commit", "native_sha256"))
+        metrics = mission.get("metrics")
+        if isinstance(metrics, dict):
+            mission["metrics"] = {key: metrics[key] for key in ("game_seconds", "primitives") if key in metrics}
+        _omit(mission.get("current_source"), _REFERENCE_FIELDS)
+        process = mission.get("native_process")
+        if isinstance(process, dict):
+            _omit(process.get("last_sample"), ("pid", "launch_id"))
         result = operation.get("result") if operation is not None else None
         # Standalone status and a different/pending operation can carry unique
         # progress. Canonical JSON equality also distinguishes true from 1.
@@ -29,12 +49,17 @@ def _project_snapshot(snapshot: dict, operation: dict | None = None, operation_i
             mission["progress_operation_id"] = operation_id
         receipt = mission.get("last_receipt")
         if receipt is not None:
-            receipt.pop("native_request_json", None)
-            receipt.pop("native_ack", None)
+            _omit(receipt, ("native_request_json", "native_ack"))
+            _omit(receipt.get("source_before"), _REFERENCE_FIELDS)
+            _omit(receipt.get("source_after"), _REFERENCE_FIELDS)
     native = snapshot.get("native")
     state = native.get("state") if native is not None else None
     source = snapshot.get("source")
     observed = source.get("observation") if source is not None else None
+    if source is not None:
+        _omit(source.get("reference"), _REFERENCE_FIELDS)
+    _omit(state, ("protocol", "id", "frame"))
+    _omit(observed, ("protocol", "id", "frame"))
     if state is not None and observed is not None and all(
         name in state and name in observed
         and canonical({"value": state[name]}) == canonical({"value": observed[name]})

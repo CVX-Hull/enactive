@@ -10,9 +10,10 @@ import unittest
 from unittest.mock import Mock
 
 from harness.gameplay.contracts import ContractError
+from harness.gameplay.mission_requests import compose_request
 from harness.mission_client import MissionClient
 from harness.player_mcp import make_server
-from harness.player_tools import PlayerTools, tool_specs
+from harness.player_tools import DETAIL_SECTIONS, PlayerTools, tool_specs
 from harness.player_view import decision_view
 from tests import test_mission_http as http_fixture
 from tests.test_mission_contracts import claim
@@ -64,11 +65,20 @@ class PlayerHTTPTests(unittest.TestCase):
         self.assertEqual(view["mission"]["progress"], first["mission"]["progress"])
         self.assertIsNone(first["mission"]["last_receipt"])
         self.assertIsNone(view["mission"]["last_receipt"])
-        self.assertEqual(view["source"], first["source"])
+        detail, _ = player.call("enactive_detail", dict(snapshot_id=first["snapshot_id"], section="source"))
+        self.assertEqual(detail["detail"], first["source"])
         self.assertEqual(first, full)
         self.assertEqual((player.snapshots, player.sources), handles)
         arguments = self.navigate(first)
+        expected = compose_request(first["mission"], request_id=arguments["request_id"],
+            intent=dict(kind="skill", **arguments["intent"]), limits=arguments["limits"],
+            scope=arguments["scope"], source=first["source"], supporting_source_ids=[])
+        # Presentation and detail reads must not replace the original binding.
+        detail["detail"]["reference"]["revision"] = -1
+        view["mission"]["epoch"] = -1
+        player.client.submit = Mock(wraps=player.client.submit)
         result, image = player.call("enactive_skill", arguments)
+        self.assertEqual(player.client.submit.call_args.args[0], expected)
         self.assertTrue(result["settled"], result)
         self.assertEqual(result["response"]["operation"]["state"], "completed")
         self.assertEqual(result["next_snapshot"]["source"]["observation"]["scene"]["position"], [1, 0, 0])
@@ -138,7 +148,8 @@ class PlayerHTTPTests(unittest.TestCase):
         self.assertIsNone(view["response"])
         self.assertEqual(view["operation_id"], "move")
         self.assertEqual(view["reason"], "Original submission response lost")
-        self.assertEqual(view["next_snapshot"]["source"], result["next_snapshot"]["source"])
+        self.assertEqual(view["next_snapshot"]["source"],
+            decision_view("enactive_snapshot", result["next_snapshot"])["source"])
 
     def test_source_must_have_been_returned_and_handles_expire_without_authority(self):
         player = self.player()
@@ -151,6 +162,76 @@ class PlayerHTTPTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "Snapshot handle unavailable"):
             player.call("enactive_skill", arguments)
         self.assertEqual(self.server.mission.status()["spent_inputs"], 0)
+
+
+class SnapshotDetailTests(unittest.TestCase):
+    def test_detail_is_exact_as_of_selected_snapshot_without_io_or_mutation_aliases(self):
+        from tests.test_player_view import snapshot
+        original = snapshot()
+        client = Mock()
+        client.status.return_value = dict(mission=original["mission"], **original["native"])
+        client.source.return_value = (original["source"], b"original PNG")
+        player = PlayerTools(client)
+        selected, _ = player.call("enactive_snapshot", {})
+        identity = selected["snapshot_id"]
+        before = deepcopy(selected)
+        paths = dict(configuration=selected["mission"]["configuration"], metrics=selected["mission"]["metrics"],
+            receipt=selected["mission"]["last_receipt"], progress=selected["mission"]["progress"],
+            native=selected["native"], source=selected["source"])
+        paths = deepcopy(paths)
+        for section in DETAIL_SECTIONS:
+            detail, image = player.call("enactive_detail", dict(snapshot_id=identity, section=section))
+            self.assertEqual(detail, dict(snapshot_id=identity, section=section, detail=paths[section],
+                                         grants_authority=False))
+            self.assertIsNone(image)
+        # A later snapshot and changes to the client-owned results cannot retarget
+        # the selected handle. Detail must never read status/source/submit.
+        client.status.return_value["state"]["revision"] = 99
+        client.status.return_value["mission"]["metrics"]["game_seconds"] = 100
+        client.source.return_value[0]["observation"]["scene"] = {"newer": True}
+        newer, _ = player.call("enactive_snapshot", {})
+        self.assertNotEqual(newer["snapshot_id"], identity)
+        client.reset_mock()
+        for section in DETAIL_SECTIONS:
+            detail, _ = player.call("enactive_detail", dict(snapshot_id=identity, section=section))
+            self.assertEqual(detail["detail"], paths[section])
+            detail["detail"]["mutation"] = True
+        self.assertEqual(client.mock_calls, [])
+        self.assertEqual(player.snapshots[identity], before)
+        self.assertEqual(player._snapshot(identity), before["mission"])
+        self.assertEqual(len(player.snapshots), 2)
+
+    def test_source_failure_null_sections_and_eviction_are_explicit(self):
+        client = Mock()
+        client.status.return_value = dict(mission=dict(mission_id="mission", epoch=1,
+            current_source={"observation_id": "unavailable"}, last_receipt=None), state={"frame_ok": False})
+        client.source.side_effect = OSError("Original source unavailable")
+        player = PlayerTools(client)
+        selected, image = player.call("enactive_snapshot", {})
+        self.assertIsNone(image)
+        self.assertEqual(player.snapshots[selected["snapshot_id"]], selected)
+        self.assertEqual(selected["source_error"], "Original source unavailable")
+        client.reset_mock()
+        for section in ("configuration", "metrics", "receipt", "progress", "source"):
+            detail, image = player.call("enactive_detail", dict(snapshot_id=selected["snapshot_id"], section=section))
+            self.assertIsNone(detail["detail"])
+            self.assertFalse(detail["grants_authority"])
+            self.assertIsNone(image)
+        self.assertEqual(client.mock_calls, [])
+        for _ in range(32):
+            player.call("enactive_snapshot", {})
+        self.assertEqual(len(player.snapshots), 32)
+        for identity in (selected["snapshot_id"], "missing"):
+            with self.assertRaisesRegex(ContractError, "explicitly read a new snapshot"):
+                player.call("enactive_detail", dict(snapshot_id=identity, section="native"))
+        with self.assertRaises(ContractError):
+            player.call("enactive_detail", dict(snapshot_id=None, section="native"))
+        with self.assertRaises(ContractError):
+            player.call("enactive_detail", dict(snapshot_id=next(reversed(player.snapshots)), section="unlisted"))
+        client.status.return_value = dict(mission=None, state={"error": "No mission"})
+        passive, _ = player.call("enactive_snapshot", {})
+        self.assertIsNone(passive["snapshot_id"])
+        self.assertEqual(len(player.snapshots), 32)
 
 
 class ProjectConfigurationTests(unittest.TestCase):
@@ -198,7 +279,7 @@ class SDKTransportTests(unittest.TestCase):
         client = _FixtureClient()
         client.collect = Mock(return_value={"transport": "uncertain", "response": None})
         player = PlayerTools(client)
-        player.snapshots["chosen-snapshot"] = {"mission_id": "current-mission", "epoch": 1}
+        player.snapshots["chosen-snapshot"] = {"mission": {"mission_id": "current-mission", "epoch": 1}}
         arguments = dict(snapshot_id="chosen-snapshot", request_id="claim-with-procedure", wait_seconds=0,
             intent=dict(handoff_id="issued-handoff", player_id="fresh-player", actor_role="campaign-player",
                 packet_ids=["issued-packet"], read_source_ids=["post-pause"],
@@ -220,10 +301,16 @@ class SDKTransportTests(unittest.TestCase):
             async with Client(parameters) as client:
                 tools = await client.list_tools()
                 self.assertEqual({t.name for t in tools.tools}, {s.name for s in tool_specs()})
+                self.assertEqual(len(tools.tools), 21)
+                detail_spec = next(tool for tool in tools.tools if tool.name == "enactive_detail")
+                self.assertTrue(detail_spec.annotations.read_only_hint)
+                self.assertTrue(detail_spec.annotations.idempotent_hint)
+                self.assertEqual(detail_spec.input_schema["properties"]["section"]["enum"], list(DETAIL_SECTIONS))
                 result = await client.call_tool("enactive_snapshot", {})
                 self.assertFalse(result.is_error)
                 self.assertEqual(result.structured_content["mission"]["mission_id"], "sdk-fixture")
-                self.assertEqual(result.structured_content["presentation_schema"], "player-view/1")
+                self.assertEqual(result.structured_content["presentation_schema"], "player-view/2")
+                self.assertEqual(result.structured_content["detail_sections"], list(DETAIL_SECTIONS))
                 self.assertEqual(result.structured_content["mission"]["progress"],
                                  _FixtureClient().status()["mission"]["progress"])
                 self.assertEqual(result.structured_content["mission"]["last_receipt"],
@@ -236,11 +323,19 @@ class SDKTransportTests(unittest.TestCase):
                 self.assertEqual(json.loads(text.text), result.structured_content)
                 self.assertEqual(base64.b64decode(image.data), _FixtureClient.image)
                 self.assertEqual(image.mime_type, "image/png")
+                detailed = await client.call_tool("enactive_detail", dict(
+                    snapshot_id=result.structured_content["snapshot_id"], section="receipt"))
+                self.assertFalse(detailed.is_error)
+                self.assertEqual(detailed.structured_content["detail"], _FixtureClient().status()["mission"]["last_receipt"])
+                self.assertEqual(detailed.structured_content["presentation_schema"], "player-view/2")
+                self.assertFalse(detailed.structured_content["grants_authority"])
+                self.assertEqual(len(detailed.content), 1)
+                self.assertEqual(json.loads(detailed.content[0].text), detailed.structured_content)
                 collected = await client.call_tool("enactive_result", dict(mission_id="sdk-fixture",
                     operation_id="original-operation", wait_seconds=0))
                 self.assertFalse(collected.is_error)
                 projected = collected.structured_content
-                self.assertEqual(projected["presentation_schema"], "player-view/1")
+                self.assertEqual(projected["presentation_schema"], "player-view/2")
                 self.assertEqual(projected["transport"], "uncertain")
                 self.assertFalse(projected["settled"])
                 self.assertEqual(projected["operation_id"], "original-operation")

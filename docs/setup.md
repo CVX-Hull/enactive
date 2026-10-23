@@ -119,7 +119,7 @@ default, network policy or managed requirements. Re-run read-only after a move o
 tool change and deliberately review a conflicting old table rather than retaining
 two configurations.
 
-The current generated catalogue has20 named tools, including advisory
+The current generated catalogue has21 named tools, including exact cached-snapshot detail and advisory
 claim/source/submit/original-result collection and passive advice. Complete context,
 reflection-job and advice replies have explicit output limits to preserve bounded
 records. Direct input is an intent on `enactive_skill`, not a new input tool;

@@ -8,8 +8,10 @@ status: active
 
 Current source contracts are native6, mission/10, campaign-memory/5, procedure/2,
 reflection/2, gameplay/2, evidence archive5, mission ledger12 and MCP presentation
-`player-view/1`. One MissionRuntime
-owns the live mission API.
+`player-view/2`. One MissionRuntime
+owns the live mission API. The MCP adapter progressively reveals technical detail
+from its existing bounded snapshot cache; these passive reads neither refresh the
+selected evidence nor establish input authority.
 The prior wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.
 Start is source-free and cannot adopt an unrelated already-running character. The

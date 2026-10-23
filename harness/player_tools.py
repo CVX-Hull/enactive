@@ -24,6 +24,9 @@ from .gameplay.reflection import (
 from .mission_client import MissionClient
 
 
+DETAIL_SECTIONS = ("configuration", "metrics", "receipt", "progress", "native", "source")
+
+
 @dataclass(frozen=True)
 class ToolSpec:
     name: str
@@ -74,6 +77,8 @@ def tool_specs() -> tuple[ToolSpec, ...]:
         ToolSpec("enactive_start", "Lead-only explicit frozen mission admission. Supply the reviewed complete admission; no implicit launch, adoption or allowance extension.",
             _object({**_without(request_schema("start"), "schema", "kind")["properties"], "wait_seconds": wait})),
         ToolSpec("enactive_snapshot", "Read current status and its exact retained image. Returns a new snapshot handle; never Observe or Resume.", _object({}), True),
+        ToolSpec("enactive_detail", "Read one exact cached snapshot section as of its original read. Never refreshes status, reads a source image, retargets a snapshot or grants authority; explicitly obtain a new snapshot if its handle is unavailable.",
+            _object(dict(snapshot_id=identity, section={"enum": list(DETAIL_SECTIONS)})), True),
         ToolSpec("enactive_source", "Read one explicitly selected historical source and its actual image; grants no input authority.", _object(dict(mission_id=identity, source_id=identity)), True),
         ToolSpec("enactive_result", "Collect only the original operation ID, including after interrupted submission. Never replays input.", _object(dict(mission_id=identity, operation_id=identity, wait_seconds=wait)), True),
         ToolSpec("enactive_skill", "Choose ordinary physical input (skill_kind=direct) or a semantic skill with an explicit returned snapshot/source and finite limits. Direct keys/scalars permit visual drift under owned custody; clicks keep original geometry. Semantic preconditions remain strict. Software retains lineage and collects delivery and actual current evidence separately.", skill),
@@ -142,10 +147,22 @@ class PlayerTools:
         while len(cache) > 32:
             cache.popitem(last=False)
 
-    def _snapshot(self, identity: str) -> dict:
+    def _cached_snapshot(self, identity: str) -> dict:
         if identity not in self.snapshots:
             raise ContractError("Snapshot handle unavailable; explicitly read a new snapshot")
         return deepcopy(self.snapshots[identity])
+
+    def _snapshot(self, identity: str) -> dict:
+        return self._cached_snapshot(identity)["mission"]
+
+    def detail(self, identity: str, section: str) -> dict:
+        snapshot = self._cached_snapshot(identity)
+        if section in ("native", "source"):
+            detail = snapshot.get(section)
+        else:
+            field = "last_receipt" if section == "receipt" else section
+            detail = snapshot["mission"].get(field)
+        return dict(snapshot_id=identity, section=section, detail=detail, grants_authority=False)
 
     def _source(self, mission_id: str, identity: str | None) -> dict | None:
         if identity is None:
@@ -169,7 +186,6 @@ class PlayerTools:
         if mission is not None:
             snapshot = {key: value for key, value in mission.items() if key != "memory_context"}
             identity = "s-" + uuid.uuid4().hex
-            self._remember(self.snapshots, identity, snapshot)
             output.update(snapshot_id=identity, mission=snapshot)
             selected = snapshot.get("current_source")
             if selected is not None:
@@ -177,6 +193,7 @@ class PlayerTools:
                     output["source"], image = self.source(snapshot["mission_id"], selected["observation_id"])
                 except (OSError, ValueError) as exc:
                     output["source_error"] = str(exc)[:1024]
+            self._remember(self.snapshots, identity, output)
         return output, image
 
     @staticmethod
@@ -309,6 +326,8 @@ class PlayerTools:
             return self._finish(self.client.submit(request, wait_seconds=data["wait_seconds"]))
         if name == "enactive_snapshot":
             return self.snapshot()
+        if name == "enactive_detail":
+            return self.detail(data["snapshot_id"], data["section"]), None
         if name == "enactive_source":
             return self.source(data["mission_id"], data["source_id"])
         if name == "enactive_result":

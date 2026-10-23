@@ -181,20 +181,39 @@ reply never permits another action POST. Bounded process-local handles grant no
 authority and are not persisted history. `enactive_start` belongs to the lead's
 frozen admission; player skill, memory and lifecycle choices remain explicit.
 
-The current MCP presentation is `player-view/1`, marked by `presentation_schema`.
-It copies canonical results without changing cached handles, ledger records or
-HTTP contracts. Snapshot progress is replaced by `progress_operation_id` only
-when exactly equal to the enclosing non-null operation result and its stable ID
-is present. Standalone, pending and different progress remain complete. The
-snapshot's last receipt omits raw native request JSON/ACK payloads but retains
-delivery, uncertainty, processing errors, loss diagnostics and correlation/source
-identities. Native actions/scene/UI are omitted only when all match the actually
-returned selected source observation; missing sources or differing native views
-retain their information. Source metadata/images and operation, context, handoff,
-advice and proposal payloads remain complete. Canonical machine evidence remains
-in the existing ledger/archive/journal and authenticated readers. This is one
-current presentation, not a legacy format mode. Actual loaded-host framing and
-responsiveness require their own qualification.
+The current MCP presentation is `player-view/2`, marked by `presentation_schema`.
+It copies canonical results without changing ledger records, HTTP contracts or
+request bindings. The existing32-entry adapter cache retains each complete returned
+snapshot (without PNG bytes or the already-excluded historical memory preview).
+`enactive_detail(snapshot_id, section)` reveals its exact cached `configuration`,
+`metrics`, `receipt`, `progress`, `native` or `source` subtree, with
+`grants_authority:false`. It does no I/O, Observe, submission, refresh or cache
+renewal. Missing sections return null; unavailable/evicted IDs require an explicit
+new snapshot. The original selected snapshot never silently retargets. Actual
+source images still use the existing exact source reader.
+
+Default snapshots advertise `detail_sections`. Configuration omits source/native
+cryptographic digests; metrics show original game seconds and primitive counts,
+while all remaining limits, reserves, deadlines and current uncertainty stay.
+Reference slots omit filesystem/hash/retention bookkeeping, preserving opaque
+observation IDs and original session/revision/time/turn. Native transport framing
+and cached process PID/launch IDs are not default decision data. Full values remain
+retrievable in the named detail section. Software still uses the unprojected
+mission/source for composition and verification; a hash-shaped opaque handle is
+an address, not a request for the model to validate bytes.
+
+Snapshot progress is replaced by `progress_operation_id` only when exactly equal
+to the enclosing non-null result with its stable ID. Standalone/pending/different
+progress remain complete. Raw native request/ACK payloads are omitted from default
+receipts, while delivery, processing/loss diagnostics and correlation remain.
+Actions/scene/UI deduplicate only when all match the actually returned source;
+missing sources or differing native views retain their information. Selected image
+parts and complete explicit source/context/handoff/advice/proposal/operation
+payloads are preserved. Projection only touches declared slots, never recursively
+prunes arbitrary memory/proof data. The exact field lists live in
+[player_view.py](../harness/player_view.py). Canonical evidence stays in the
+existing ledger/archive/journal and readers. This is one current presentation;
+there is no legacy mode. Source/SDK tests do not qualify actual-host responsiveness.
 
 Authenticated `GET /api/mission/source?mission_id=ID&source_id=ID` and
 `GET /api/mission/frame` with the same exact query expose one indexed original

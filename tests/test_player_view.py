@@ -3,7 +3,7 @@ from copy import deepcopy
 import unittest
 from unittest.mock import Mock
 
-from harness.player_tools import PlayerTools
+from harness.player_tools import DETAIL_SECTIONS, PlayerTools
 from harness.player_view import decision_view
 
 
@@ -21,13 +21,21 @@ def snapshot():
                 published=True, reason="Original response lost", custody={"generation": 5},
                 future_receipt_field={"progress": "keep", "native_ack": "keep nested value"}),
             prompt_phase=None, lifecycle_phase={"id": "lifecycle"}, activity_phase={"id": "activity"},
-            current_source={"observation_id": "source"}, active_operation="operation-original",
+            current_source={"observation_id": "source", "frame_sha256": "retained-pin"}, active_operation="operation-original",
             active_skill={"kind": "direct"}, limits={"inputs": 12}, remaining={"inputs": 2},
             deadline=1234, reserve={"inputs": 1}, unfinished=["required-work"],
             unknown_effects=[{"operation_id": "operation-original", "delivery": "unknown"}],
             diagnostic="Original response lost", ownership={"lease": None, "player": "successor"},
             reflection={"pending": ["job"]}, memory_version=9, memory=deepcopy(coincident),
-            metrics={"spent_inputs": 10}, extra_future_field={"complete": True}),
+            configuration=dict(source_commit="source-pin", native_sha256="native-pin", model="chosen-model",
+                effort="low", skills=["direct"], lessons=["original-lesson"]),
+            native_process=dict(owner_mission_id="mission", restored_from_disk=True,
+                unresolved_custody_requests=["unresolved-request"], last_sample=dict(pid=123, launch_id="launch",
+                    running=False, outcome="unknown", returncode=None, error="Original exit unavailable")),
+            spent_inputs=10, remaining_limits={"inputs": 2}, cleanup_reserve={"inputs": 1},
+            unreconciled=["unknown-operation"], next_needed_decision="Explicit supported transition required",
+            metrics={"game_seconds": None, "primitives": 10, "model_time_seconds": None, "archive": {"bytes": 20}},
+            extra_future_field={"complete": True}),
         native=dict(state=dict(actions=["open"], scene={"position": [1, 2, 0]},
             ui={"menu": "visible"}, session="session", revision=8, boundary={"id": "boundary"},
             health={"status": "healthy"}, extra_future_field={"keep": True}),
@@ -42,6 +50,14 @@ def snapshot():
 
 def expected_snapshot(value):
     expected = deepcopy(value)
+    expected["detail_sections"] = list(DETAIL_SECTIONS)
+    expected["mission"]["configuration"] = dict(model="chosen-model", effort="low", skills=["direct"],
+                                                lessons=["original-lesson"])
+    expected["mission"]["metrics"] = dict(game_seconds=None, primitives=10)
+    expected["mission"]["current_source"] = {"observation_id": "source"}
+    expected["mission"]["native_process"]["last_sample"] = dict(running=False, outcome="unknown",
+        returncode=None, error="Original exit unavailable")
+    expected["source"]["reference"] = dict(observation_id="source", session="session", revision=8)
     del expected["mission"]["last_receipt"]["native_request_json"]
     del expected["mission"]["last_receipt"]["native_ack"]
     for key in ("actions", "scene", "ui"):
@@ -50,13 +66,13 @@ def expected_snapshot(value):
 
 
 class DecisionViewTests(unittest.TestCase):
-    def test_snapshot_removes_only_declared_duplicates_and_keeps_exact_source(self):
+    def test_snapshot_keeps_decisions_unknowns_and_visible_source_with_detail_addresses(self):
         original = snapshot()
         expected = expected_snapshot(original)
-        expected["presentation_schema"] = "player-view/1"
+        expected["presentation_schema"] = "player-view/2"
         view = decision_view("enactive_snapshot", original)
         self.assertEqual(view, expected)
-        self.assertEqual(view["source"], original["source"])
+        self.assertEqual(view["source"]["observation"], original["source"]["observation"])
         self.assertNotIn("presentation_schema", view["source"])
         self.assertEqual(view["mission"]["progress"], original["mission"]["progress"])
 
@@ -76,7 +92,7 @@ class DecisionViewTests(unittest.TestCase):
         view["mission"]["last_receipt"]["custody"]["generation"] = 99
         self.assertEqual((full, player.snapshots, player.sources, client.status.return_value), before)
         self.assertEqual(png, b"exact original PNG bytes")
-        self.assertIn("last_receipt", player.snapshots[full["snapshot_id"]])
+        self.assertEqual(player.snapshots[full["snapshot_id"]], full)
 
     def test_operation_results_keep_unknown_delivery_and_all_complete_payloads(self):
         payload = dict(progress=["required"], last_receipt={"delivery": "unknown"},
@@ -91,7 +107,7 @@ class DecisionViewTests(unittest.TestCase):
                         proposal=deepcopy(payload)), next_snapshot=snapshot(), diagnostic="retained")
                 expected = deepcopy(original)
                 expected["next_snapshot"] = expected_snapshot(original["next_snapshot"])
-                expected["presentation_schema"] = "player-view/1"
+                expected["presentation_schema"] = "player-view/2"
                 for tool in ("start", "result", "skill", "lifecycle", "observe", "remember", "correct",
                              "handoff", "stop", "reconcile", "claim", "readmit", "context"):
                     with self.subTest(tool=tool):
@@ -163,14 +179,14 @@ class DecisionViewTests(unittest.TestCase):
                 current["native"]["state"][field] = changed
                 view = decision_view("enactive_snapshot", current)
                 self.assertEqual(view["native"], current["native"])
-                self.assertEqual(view["source"], current["source"])
+                self.assertEqual(view["source"]["observation"], current["source"]["observation"])
 
     def test_source_advice_and_reflection_roots_are_complete_even_with_coincident_names(self):
         original = snapshot()
         original.update(next_snapshot=snapshot(), progress=["keep"], last_receipt={"keep": True})
         expected = deepcopy(original)
-        expected["presentation_schema"] = "player-view/1"
-        for tool in ("source", "advice", "reflect_next", "reflect_submit", "reflect_source", "reflect_result"):
+        expected["presentation_schema"] = "player-view/2"
+        for tool in ("source", "detail", "advice", "reflect_next", "reflect_submit", "reflect_source", "reflect_result"):
             with self.subTest(tool=tool):
                 self.assertEqual(decision_view("enactive_" + tool, original), expected)
 
@@ -179,12 +195,56 @@ class DecisionViewTests(unittest.TestCase):
                              grants_authority=False, source_error="Original image unavailable"),
                         dict(snapshot_id="s", mission={"phase": "admitted"}, native={}, source=None)):
             with self.subTest(current=current):
-                expected = dict(deepcopy(current), presentation_schema="player-view/1")
+                expected = dict(deepcopy(current), presentation_schema="player-view/2")
+                if current["snapshot_id"] is not None:
+                    expected["detail_sections"] = list(DETAIL_SECTIONS)
                 self.assertEqual(decision_view("enactive_snapshot", current), expected)
         error = dict(transport="uncertain", settled=False, operation_id="original",
                      response=None, snapshot_error="Status unavailable")
         self.assertEqual(decision_view("enactive_result", error),
-                         dict(error, presentation_schema="player-view/1"))
+                         dict(error, presentation_schema="player-view/2"))
+
+    def test_transport_omissions_are_scoped_and_partial_visible_views_stay_complete(self):
+        reference = dict(schema="evidence/5", record_type="observation", frame_path="exact.png",
+            frame_sha256="pin", received_monotonic=12, visibility_version=1,
+            observation_id="a" * 64, session="session", revision=8, timestamp_ms=123, boundary_kind="prompt",
+            turn=10, unknown=True)
+        visible = dict(protocol="wire/5", id=18, frame={"raw": "transport"}, frame_ok=False,
+            timestamp_ms=123, session="session", revision=8, geometry={"columns": 80},
+            actions=["open"], scene={"partial": True}, ui={"error": "Unknown display"})
+        current = snapshot()
+        current["mission"]["current_source"] = deepcopy(reference)
+        current["mission"]["last_receipt"]["source_before"] = deepcopy(reference)
+        current["mission"]["last_receipt"]["source_after"] = None
+        current["mission"]["memory"] = deepcopy(reference)
+        current["native"]["state"] = deepcopy(visible)
+        current["source"]["reference"] = deepcopy(reference)
+        current["source"]["observation"] = deepcopy(visible)
+        # A partial source cannot prove all three native body fields duplicate.
+        del current["source"]["observation"]["ui"]
+        view = decision_view("enactive_snapshot", current)
+        expected_reference = dict(observation_id="a" * 64, session="session", revision=8, timestamp_ms=123,
+            boundary_kind="prompt", turn=10, unknown=True)
+        self.assertEqual(view["mission"]["current_source"], expected_reference)
+        self.assertEqual(view["source"]["reference"], expected_reference)
+        self.assertEqual(view["mission"]["last_receipt"]["source_before"], expected_reference)
+        self.assertIsNone(view["mission"]["last_receipt"]["source_after"])
+        self.assertEqual(view["mission"]["memory"], reference)
+        self.assertEqual(view["native"]["state"], {key: value for key, value in visible.items()
+            if key not in ("protocol", "id", "frame")})
+        self.assertNotIn("frame", view["source"]["observation"])
+        self.assertFalse(view["source"]["observation"]["frame_ok"])
+
+    def test_metrics_do_not_invent_available_counters_and_no_mission_keeps_diagnostics(self):
+        current = dict(snapshot_id=None, mission=None, source=None, grants_authority=False,
+            native=dict(state=dict(protocol="wire/5", id=1, frame=None, frame_ok=False,
+                scene={"partial": True}, error="No frame"), error="Disconnected"))
+        view = decision_view("enactive_snapshot", current)
+        self.assertEqual(view["native"], dict(state=dict(frame_ok=False, scene={"partial": True},
+            error="No frame"), error="Disconnected"))
+        self.assertNotIn("detail_sections", view)
+        current.update(snapshot_id="s", mission={"metrics": {"primitives": None, "model_time_seconds": 9}})
+        self.assertEqual(decision_view("enactive_snapshot", current)["mission"]["metrics"], {"primitives": None})
 
 
 if __name__ == "__main__":
