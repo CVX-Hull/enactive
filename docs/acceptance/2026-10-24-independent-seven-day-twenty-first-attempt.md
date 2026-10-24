@@ -106,3 +106,10 @@ whole-player cadence. #177/#178 retain actual memory/advice usefulness; #136/#14
 retain the complete independent learning and fresh seven-day outcome. Failed021
 is never resumed or relabeled. GitHub/Project own those actions; this report owns
 historical evidence.
+
+
+The later [native editing diagnostic](2026-10-24-native-text-overflow.md) qualifies
+scoped ASCII overflow/correction/cancellation and normal menu-only exit on the
+rebuilt96e58binary, after a retained zero-input bootstrap failure. Exact7cf7444CI
+passes1926tests/1035.535s plus viewer. That qualification does not change021's
+failed outcome or establish Unicode, full-campaign or useful-cadence acceptance.

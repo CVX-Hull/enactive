@@ -52,7 +52,10 @@ engineering instructions and the evidence archive. Use existing role/mission too
 filters to exclude irrelevant schemas; keep required capabilities and authority
 checks separate, and verify the actual frozen profile's sufficiency before play. Routine play must not require
 source-code archaeology, bulk declaration dumps or recursive runtime searches.
-Verify needed argument shapes in the actual host, not just tool names. If a host
+Verify needed argument shapes and critical frozen task identity/context in the
+actual host, not just tool names. Required setup values must be available before
+the first choice, preferably derived from existing validated admission rather than
+manually duplicated or guessed. If a host
 reduces nested schemas to `unknown`, supply focused current-schema references
 before admission; never require argument guessing or source archaeology. Export
 from the existing SDK contract rather than maintain a second schema. Recheck the

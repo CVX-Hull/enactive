@@ -245,27 +245,29 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-24",
-        "outcome": "Exact40ab05bCI40075663329passes1926tests/1136.079s plus viewer. Later native popup patch passes29setup tests1.311s; fast/exact-new/native qualification separate.",
-        "scope": "Pinned callback replacement uses existing ImGui DeleteChars; official source-file digest, restore/reapply and missing/changed/duplicate anchors tested. These are patch mechanics, not real overlength widget or Unicode qualification.",
+        "outcome": "Exact 7cf7444 CI40077338879 passes 1,926 tests in 1,035.535s plus viewer. Popup patch mechanics separately pass 29 setup tests in 1.311s; source checks do not qualify native behavior.",
+        "scope": "Current source includes candidate-memory/selection versus durable-fault negatives, pure advisory preflight versus actual submission uncertainty, and pinned popup restore/reapplication/anchor checks. Separate actual ASCII qualification is recorded under C-NATIVE.",
         "evidence": [
-          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md",
+          "docs/acceptance/2026-10-24-native-text-overflow.md",
           "tests/test_setup.py",
-          "tools/patch_game.py"
+          "tests/test_mission_memory_refusal.py",
+          "tests/test_advisory_preflight.py"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-24",
         "effectiveness": "partially_effective",
-        "findings": "Exact bca8ef4 CI40060905838 fails1error/1891tests in an unlocked live-fixture private verifier. Independent review confirms the synchronization-contract violation; exact SQLite interleaving unproved. One-time inventory repairs33calls across36total with existing mutex and unchanged assertions. New test draft failures are retained/corrected fixture expectations, not production evidence. No sleeps, custom scanner, production DB recovery or weakened integrity checks. Prospective019review catches automatic three-Claim fan-out omitted from coupled forecast:612/116554game seconds projects~3176Claims, beyond the old2048ceiling. Current repair derives shared Claim cap from original admitted frames; no new format/store, separate authored reservation or live renewal. Closed019reveals a passing fixture that expected the wrong lease loss: activity-local game exhaustion was caught through the fatal BudgetError base. Correct the fixture against the existing protocol and test local/global failure scope across input and observation entry points. Closed020 exposes fatal missing caller request and reciprocal blanket memory/selection catches masking retained evidence failure. Use explicit candidate refusal, strict trusted reads and narrow pre-SDK advisory classification; preserve SQLite transaction semantics. Linear dependency validation avoids unnecessary full frontier computation at append. Closed021native overflow shows source/anchor coverage cannot replace actual boundary execution. Preserve library-owned mutation invariants through ImGui DeleteChars, with current hash/count-pinned workflow and actual native below/at/above-limit qualification; no per-key max guard.",
-        "cost": "Use affected and integration suites at the closed checkpoint; do not sum overlapping cases or repeat full local CI for each fixture refinement. Exact new hosted full CI remains required.",
-        "follow_up": "Pass exact candidate/protected-main CI before formal acceptance/merge. Native/graphical organic continuation, combined learning/cadence and fresh seven days remain #136/#145/#164/#176/#177/#178/#191 obligations.",
+        "findings": "Passing source fixtures previously encoded a wrong local-limit stop and missed real widget overflow. Derive assertions from the authoritative contract, pair correctable caller errors with genuine retained-state faults, use existing SQLite/OS/library contracts and exercise native boundaries separately. Claim/context fan-out and known-before-SDK versus post-staging errors remain distinct. Historical diagnoses live in the linked reports and Git, rather than this current maintenance summary.",
+        "cost": "Use focused suites at a coherent closed checkpoint and exact hosted full CI before formal acceptance. Reuse the existing test/patch/governance tools; no sleeps, custom semantic scanner or per-action review.",
+        "follow_up": "Keep exact candidate/protected-main CI and actual organic seven-day/learning/cadence/lifecycle qualification separate. #164 retains critical bootstrap context and proven receiver-rejection presentation; #176/#177/#178/#191 own interaction, memory, advice and portability limits.",
         "evidence": [
           "docs/acceptance/2026-10-24-independent-seven-day-eighteenth-attempt.md",
           "docs/engineering.md",
           "docs/protocol.md",
           "docs/acceptance/2026-10-24-independent-seven-day-nineteenth-attempt.md",
           "docs/acceptance/2026-10-24-independent-seven-day-twentieth-attempt.md",
-          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md"
+          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md",
+          "docs/acceptance/2026-10-24-native-text-overflow.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -370,26 +372,26 @@
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-22",
-        "outcome": "Observation001 completed organic inventory/filter/Observe/semantic cancellation and coherent normal same-character reload/ending on frozen de97c8b. Full local1619tests/737.839s and exactCI39861570099 failed; valid graphical path is not formal source acceptance.",
-        "scope": "68requests/86charges/224verified PNGs/8793506bytes/1game second/644.679732wall;6unknown ACKs retain separateeffects. ActorFINAL and2normal exits; no uncertain input replay. Source triage requires controller entry/late progression, qualified current-binding availability and passive malformed-state containment, plus truthful clock/revision fixtures. Exact corrected-source checks and harder native race/refusal branches remain separate.",
+        "date": "2026-10-24",
+        "outcome": "Diagnostic002 on source 7cf7444/signed96e58 qualifies scoped ASCII overflow response, visible correction/cancellation and normal menu-only exit/Finish stopped. Failed001 bootstrap and failed021 native crash remain retained.",
+        "scope": "48 charged primitives (47 returned/one unknown ACK separately effect-resolved), 23 requests, 116 verified PNGs/2,129,035 bytes. Same-session MENU return, zero-input setup revocation, explicit Observe/new exit root, OwnedNormalExit0/Finish stopped, all owned processes closed and 191 saves unchanged. Whole32byte value inferred from sequence/visible suffix; Unicode and full campaign unqualified.",
         "evidence": [
-          "docs/acceptance/2026-10-22-native-observation-custody.md",
-          "docs/acceptance/2026-10-22-independent-seven-day-ninth-attempt.md",
-          "docs/changes/059-observation-custody-and-applicability.md"
+          "docs/acceptance/2026-10-24-native-text-overflow.md",
+          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-24",
         "effectiveness": "partially_effective",
-        "findings": "Failed008 preserved exact failure/unknown/cost evidence. Reviewed action-specific preconditions now compose through a coherent real normal lifecycle on matching native; actual persistentpixel drift and retainedcapture commit race remain source-tested/unexercised there. Original clocks/custody/identity/unknown effects persist. Normal engine TURN_DURATIONfloat serialization changed raw options bytes without changing configured behavior; original pin discrepancy retained and independently adjudicated. Closed020 loses healthy ownership on caller memory support lookup; reciprocal retained-byte masking is synthetic source evidence. Candidate-only refusal repair and narrowed selection catch require distinct source/native/graphical qualification, not failed-run authority restoration.",
-        "cost": "Capture00172charges/67requests/194PNGs;782.783947wall includes setup/interpretation/lifecycle, not isolated inference. Full local1610tests719.226s; exactf2fdc62CI1610tests903.350s. Existing capture deque/serializer/lease/ledger/SDK/build/Pillow facilities reused; no new generic service/framework/global setup. Inference/billing/full-workflow attribution unknown.",
-        "follow_up": "#145 genuinely fresh full seven-day campaign and protected publication;#176/#195 retain unexercised capture/drift branches;#164 whole-goal/tool/display costs and usable higher-level navigation. #181 wider mouse/geometry and #138/#139/#152 selected native branches stay scoped. No artificial hazard/race or extra blanket campaign gate. Periodic due date unchanged.",
+        "findings": "Actual021 stack diagnosis establishes an upstream callback buffer invariant violation inside a crash modal, not a capture attempt or healthy process merely waiting. Rebuilt ImGui DeleteChars correction preserves byte limits and ordinary input, with an independent real ASCII boundary/normal-ending assessment. Unknown ACK remains separate from actual exit proof. Byte cutoff can split UTF-8; previous capture/mouse/activity qualifications remain scoped in their reports.",
+        "cost": "Pinned two-job build27.831s/install0, 29setup tests1.311s and one182.010s diagnostic host; earlier63.718s zero-input bootstrap failure retained. No global setup, hidden-state read, disabled assertion or engineered menu guard.",
+        "follow_up": "New finite fresh seven-day campaign with actual organic learning, retained-memory successor, midpoint normal Save/new-child Load/final ending and useful cadence. #176/#191 retain wider receiver/Unicode/cross-game limits and #164 context/collection usability. A narrow native diagnostic is no full-outcome pass.",
         "evidence": [
           "docs/acceptance/2026-10-22-native-capture-preconditions.md",
           "docs/acceptance/2026-10-22-independent-seven-day-eighth-attempt.md",
           "docs/changes/058-capture-provenance-action-preconditions.md",
-          "docs/acceptance/2026-10-24-independent-seven-day-twentieth-attempt.md"
+          "docs/acceptance/2026-10-24-independent-seven-day-twentieth-attempt.md",
+          "docs/acceptance/2026-10-24-native-text-overflow.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -459,18 +461,19 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-24",
-        "outcome": "Fresh021fails before creation/adoption on native text callback buffer-length assertion; process alive in crash modal, no fresh Observe claim. No native repair/normal-ending/full-outcome pass.",
-        "scope": "Frozen40ab05b/signed690fe96;40charges(39returned/1unknown)/14requests/90PNGs1551438bytes. Stack+game assertion verified; original0/driver1/adviser interrupted1/native-9 exceptional/controller0.191saves unchanged, no new world.",
+        "outcome": "Diagnostic002 on source 7cf7444/signed96e58 qualifies scoped ASCII overflow response, visible correction/cancellation and normal menu-only exit/Finish stopped. Failed001 bootstrap and failed021 native crash remain retained.",
+        "scope": "48 charged primitives (47 returned/one unknown ACK separately effect-resolved), 23 requests, 116 verified PNGs/2,129,035 bytes. Same-session MENU return, zero-input setup revocation, explicit Observe/new exit root, OwnedNormalExit0/Finish stopped, all owned processes closed and 191 saves unchanged. Whole32byte value inferred from sequence/visible suffix; Unicode and full campaign unqualified.",
         "evidence": [
+          "docs/acceptance/2026-10-24-native-text-overflow.md",
           "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-24",
         "effectiveness": "partially_effective",
-        "findings": "Failed008 preserved exact failure/unknown/cost evidence. Reviewed action-specific preconditions now compose through a coherent real normal lifecycle on matching native; actual persistentpixel drift and retainedcapture commit race remain source-tested/unexercised there. Original clocks/custody/identity/unknown effects persist. Normal engine TURN_DURATIONfloat serialization changed raw options bytes without changing configured behavior; original pin discrepancy retained and independently adjudicated. Rebuilt690fe96 accepts006 ordinary modifier/text input and creates its named empty world; local420s execution expiry then incorrectly bounded read/cleanup remains a retained failure. Source repair separates read/zero-input abort from execution caps. Repeated setup now justifies initial Load under new visible identity/accounting rather than a custom save-proof import service; 008 later establishes bounded Load/adoption/Save, with useful play and complete normal ending still open.007 exposes wrong-domain recovery and mistaken remaining-versus-used reporting; preserve the failed actor/unknown and verify positive lifecycle health before a future local request-refusal repair. Diagnostic008 independently reaches adopted play and normal Save; ordinary Y is refused before admission, then literal question matching revokes exit. Treat this as harness coupling, not native rejection; next repair uses ordinary input and correlated owned-process terminal proof. Subsequent source reuses ordinary input for owned exit, removes question/YES/cancellation-sequence gates, and validates exact native admission/original Resume custody. Review corrections distinguish healthy semantic surprise from lost evidence/lease; tests retain unknown ACKs and real failures. New real qualification remains required. Closed021shows a real native callback invariant violation at ordinary overlength input; captured stack disproves healthy PID inference. ImGui library edit API correction is source-reviewed, not yet rebuilt/graphically qualified. Inherited byte cutoff may split UTF-8; no Unicode-safe-limit claim.",
-        "cost": "Capture00172charges/67requests/194PNGs;782.783947wall includes setup/interpretation/lifecycle, not isolated inference. Full local1610tests719.226s; exactf2fdc62CI1610tests903.350s. Existing capture deque/serializer/lease/ledger/SDK/build/Pillow facilities reused; no new generic service/framework/global setup. Inference/billing/full-workflow attribution unknown.",
-        "follow_up": "Rebuild/install the exact pinned popup patch and qualify real below/at/above-limit ordinary editing, cancellation and continuation/normal ending; preserve021unknown effect and failed source/native. Then new finite full independent campaign. Existing #176/#191/#145/#164 own repair/scope/outcome/cadence; no timeoutgrowth/menucatalogue or authorityrevival.",
+        "findings": "Actual021 stack diagnosis establishes an upstream callback buffer invariant violation inside a crash modal, not a capture attempt or healthy process merely waiting. Rebuilt ImGui DeleteChars correction preserves byte limits and ordinary input, with an independent real ASCII boundary/normal-ending assessment. Unknown ACK remains separate from actual exit proof. Byte cutoff can split UTF-8; previous capture/mouse/activity qualifications remain scoped in their reports.",
+        "cost": "Pinned two-job build27.831s/install0, 29setup tests1.311s and one182.010s diagnostic host; earlier63.718s zero-input bootstrap failure retained. No global setup, hidden-state read, disabled assertion or engineered menu guard.",
+        "follow_up": "New finite fresh seven-day campaign with actual organic learning, retained-memory successor, midpoint normal Save/new-child Load/final ending and useful cadence. #176/#191 retain wider receiver/Unicode/cross-game limits and #164 context/collection usability. A narrow native diagnostic is no full-outcome pass.",
         "evidence": [
           "docs/acceptance/2026-10-22-native-capture-preconditions.md",
           "docs/acceptance/2026-10-22-independent-seven-day-eighth-attempt.md",
@@ -478,7 +481,8 @@
           "docs/acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md",
           "docs/acceptance/2026-10-23-luna-responsiveness-seventh-attempt.md",
           "docs/acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md",
-          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md"
+          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md",
+          "docs/acceptance/2026-10-24-native-text-overflow.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -530,18 +534,18 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-24",
-        "outcome": "Fresh021creation aborts on actual native editor assertion; no adopted character/game-time, learning/succession/reload/normal ending or useful-cadence acceptance.",
-        "scope": "Original128.847s then permanentquiescence0; driver1, adviser threecompletedjobs then interrupted1. Nativecrashmodal/SIGTERMnontermination/SIGKILL-9/controller0. Actual terminal screenshot labels PAUSED/DISCONNECTED/host0/incomplete/oneunresolvedeffect; not normal Finish.",
+        "outcome": "Independent diagnostic002 completes actual ASCII overflow/correction/cancellation/normal menu-only ending. No survival, learning, 20-useful-decision cohort or apparent-real-time acceptance.",
+        "scope": "182.010s original host/27 completed MCP calls; raw aggregate token counters retained with cache/output distinctions, not inferred billing or isolated compute. Actual terminal spectator shows STOPPED/HISTORY/DISCONNECTED, host/driver terminal and zero unresolved mission effects.",
         "evidence": [
-          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md"
+          "docs/acceptance/2026-10-24-native-text-overflow.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-24",
         "effectiveness": "partially_effective",
-        "findings": "Frozen015 stopped useful development on an uninstrumented cadence assessment before20useful decisions. Future briefs separate qualification rejection from bounded development continuation; numerical targets and hard authority/delivery/resource ending gates remain. Genuine structured-visible-state gaps and timing proxies need focused investigation, not causal claims. Closed016: a pending text prefix must direct original collection, not a new semantic decision; a busy refusal must identify the actual writer owner. Mismatched/uncertain response bodies cannot redirect collection. Actual seven-day, learning and useful-cadence acceptance remain open. 017 shows optional whole-field edit applicability must permit ordinary correction rather than remove healthy custody. Source regression does not qualify actual fresh player continuation. Closed019 timing joins distinguish eight root-decision gaps from42within-program pairs and58V8evaluations; no useful cohort, inference, physical paint or causal speedup is established. Closed020 stores four candidate procedures but does not qualify independent learning continuity or normal ending. Retain the whole-goal gates rather than substituting fast keys or local evaluation.",
-        "cost": "Existing ledger/frames/host traces and independent read-only outcome review reused; no new control service or per-action approval.",
-        "follow_up": "#164 existing-stage profiling and whole-player cohort;#176/#177 generic visible-state and learning follow-through;#145 full fresh campaign with actual succession/reload;#143 driver-observed host outcomes.",
+        "findings": "Compact schemas/results are insufficient if critical task identity is unavailable. Diagnostic001 lead brief omitted the admission scenario and detail did not reveal it;002 derives its brief line from validated admission. This repairs preparation, not production context. Retain selected-source/viewport limits, full setup/repair/ending costs and distinction between qualification failure and useful finite development.",
+        "cost": "Existing host events, frames, SDK/ledger/native receipts and independent read-only assessment reused. No new telemetry service, extra provider or per-action approval.",
+        "follow_up": "#164 automatic critical bootstrap context, truthful known-rejection collection and whole-player cadence; #143 understandable current/history ownership; #145 full fresh campaign; #177/#178 meaningful memory/advice application. No scripted-fast or slow-but-organic substitute.",
         "evidence": [
           "docs/acceptance/2026-10-23-independent-seven-day-fifteenth-attempt.md",
           "docs/project-management.md",
@@ -549,7 +553,8 @@
           "docs/changes/062-player-decision-context.md",
           "docs/acceptance/2026-10-24-independent-seven-day-twentieth-attempt.md",
           "docs/acceptance/2026-10-24-independent-seven-day-nineteenth-attempt.md",
-          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md"
+          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md",
+          "docs/acceptance/2026-10-24-native-text-overflow.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -669,27 +674,27 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-24",
-        "outcome": "Independent021native stack/receipt diagnosis and three-file popup patch review find no outstanding source defect. Lead29setup tests1.311s; exact predecessor1926pass.",
-        "scope": "Official archive/popup member pin, exact-once patch/restore/negatives, real ImGui DeleteChars terminator/length/dirty contract, preserved end cursor/selection. Actual binary/boundary tests still required; inherited byte/UTF8 limit explicit.",
+        "outcome": "Independent source, document and actual graphical reviews find no blocking defect in the scoped popup repair/diagnostic. Exact 7cf7444 CI passes1,926tests/1,035.535s plus viewer.",
+        "scope": "Official source/member pins and real ImGui mutation contract; actual rev10/34/42/43/44/45/49/51 PNGs,116hashes, frozen manifest, SQLite, same-session cancellation and distinct unknown-ACK/normal-exit proof. Native32byte whole string inferred from input sequence, not wholly visible.",
         "evidence": [
-          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md",
+          "docs/acceptance/2026-10-24-native-text-overflow.md",
           "tools/patch_game.py",
-          "native/upstream.json",
-          "tests/test_setup.py"
+          "native/upstream.json"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-24",
         "effectiveness": "partially_effective",
-        "findings": "018 confirms semantic helper failure can wrongly prevent organic fallback. Preserve known unpublication separately from unknown delivery. Review rejects filtering graph inputs or caching identity forever; use existing ledger guarantees and retain later corrections/conflicts/source integrity. Isolated93msvalidation/42msfrontier versus~5msselected comparison does not prove whole-loop improvement or failure cause. No model per primitive or new storage/approval framework. Launch review detects the omitted Claim lane beforeStart; lead verifies612*604800/116554=3175.675 and26624derived maximum directly instead of adopting erroneous agent arithmetic or confusing default64MiB archive with current2GiBmaximum. Packet bounds do not bound full-frontier computation; retain a realistic~3200Claim component profile before freezing. Closed019local/global scope diagnosis was independently verified against exact ledger/native receipts; a passing historical test had encoded the documented-contract violation. Review expectations against authoritative behavior, not predecessor assertions. Closed020 independent diagnosis checks new caller data against actual durable faults and pure preflight against staging/transport uncertainty. Review finds the same broad masking in procedure selection and removes it in this coherent repair. Do not add expensive full frontier reduction or archive/custody rescans merely to classify zero-input typos; existing boundaries retain those responsibilities. Native021dispatched frame_ok=false is intentional no-capture publication; unclaimed Observe did not attempt capture. Actual stack/lastassertion, not a timeout guess or older append-log lines, establishes callback defect. Reuse mature mutation API, not a key-length/menu handler.",
-        "cost": "One clean-context reviewer handles design/diff evidence; focused source tests and graphical assessment remain distinct. No gameplay approval round trip.",
-        "follow_up": "Review and qualify coherent candidate-memory/advisory repair, pass exact candidate/protected-main CI, then new finite independent graphical continuation with original full learning/seven-day/normal-lifecycle/cadence gates. Preserve all failed runs; current library exclusion remains until an explicit failure-transfer design. Existing #136/#145/#164/#176/#177/#178/#191 own follow-through.",
+        "findings": "Review the whole correction/ending loop against contracts and actual evidence, rather than trust predecessor passing assertions, agent summaries or process presence. Use maintained mutation APIs and linear dependency checks where sufficient. Distinguish new caller candidates, trusted durable faults, preflight nondelivery and uncertain published effects. Frozen context must actually provide required task values; schema availability alone is not sufficiency.",
+        "cost": "Bounded independent reviews at consequential checkpoints; lead verifies primary files/receipts. No committee or synchronous reviewer on gameplay actions.",
+        "follow_up": "Review the next finite full-campaign forecast, valid critical mission context and exact source/native/catalog/actor freeze. Preserve adverse frame/storage sensitivities and all failures. Require actual full learning/seven-day/cadence/normal lifecycle plus protected publication; owned #164 context/collection work stays visible.",
         "evidence": [
           "docs/acceptance/2026-10-24-independent-seven-day-eighteenth-attempt.md",
           "docs/engineering.md",
           "docs/protocol.md",
           "docs/acceptance/2026-10-24-independent-seven-day-twentieth-attempt.md",
-          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md"
+          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md",
+          "docs/acceptance/2026-10-24-native-text-overflow.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -931,24 +936,25 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-24",
-        "outcome": "Closed021all90copied PNGs hashverified with immutable original metadata; all owned actors/native/controller/listener terminal/absent. Original191savefiles unchanged, no new world to archive.",
-        "scope": "Permanentplayer0/driver1/adviserinterrupted1, actual crashsample, SIGTERM failure after68.418s and exact-owned SIGKILL-9 before controller0; normal_exit_verified=false, one effect unresolved. ClosedSQLite quick_checkok and110file byte manifest retained.",
+        "outcome": "Diagnostic002 normally ends; all116closed-copy PNGs verified with immutable original paths, source SQLite quick_checkok and original191savefiles unchanged. All owned native/host/controller/listener absent. Diagnostic001 zero-input failure and021 exceptional crash remain retained.",
+        "scope": "002native0/original0/driver0/controller0, one unknown final ACK with separate resolved exit effect; no world created.021retains SIGTERM nontermination and exact-owned SIGKILL-9/controller0, never normal-ending credit.",
         "evidence": [
-          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md",
+          "docs/acceptance/2026-10-24-native-text-overflow.md",
           "docs/runbook.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-24",
         "effectiveness": "partially_effective",
-        "findings": "Use existing S-CODE synchronization and reuse contracts, C-PORTABLE/C-REVIEW and ordered runbook cleanup.018 provides six procedure revisions and real contrary evidence but its paused ledger stays ineligible under current library reader. Source/profile/claimed-advice counts cannot manufacture independent seven-day, successor, normal ending or causal-learning acceptance. No extra tracker, menu catalogue, automatic kill service or approval layer. Subsequent019resource review happens before admission/game launch. Empty controller is closed0 before source integration. Existing#136/#145/#177track the Claim-capacity repair/forecast and profile; no failed campaign is silently extended. S-WORK clarifies fan-out/hidden storage limits in the existing process. A live crash modal can survive SIGTERM: retain stack/status/save hashes, reverify exact PID/parent/mapped executable/userdir before finite exceptional escalation, preserve actual -9 and unknown effect, then close controller. No user key intervention, unrelated process kill or normal-ending credit.",
-        "cost": "Original3131.151host seconds/290MCPcalls/2029554text bytes; adviser1092.803s/53calls/500972bytes;1101PNGs111266131bytes. Bytes are not tokens; inference/review/paint remain unknown. Retain cumulative failures and distinguish active roles from passive preflights.",
-        "follow_up": "Synchronize report/062/overview/work/contracts/control map with eight owned Issues/Project/PR at meaningful checkpoints. #164/#178 own context/cadence;#176/#191 organic correction;#177 scoped failed-episode transfer;#143 terminal presentation;#136/#145 complete outcome. Exact/protected CI and fresh graphical qualification remain separate; due dates unchanged.",
+        "findings": "Maintain current summaries and owned follow-through while dated reports/Git retain history. Copy verification must read copied frames without rewriting original metadata. A live crash modal can survive SIGTERM; preserve diagnostics/status/saves, reverify exact ownership for finite exceptional escalation, then close controller. Normal002ending uses actual lifecycle proof, not absence or signals.",
+        "cost": "Project-local archives, hashes, OS stack sampling, existing driver/SQLite/SDK/build tools reused. No global profiles/install, new kill service, duplicate backlog or authority restoration.",
+        "follow_up": "Keep overview/work/contracts/control map/dated evidence and eight owned issues/Project/PR synchronized at meaningful checkpoints. Track diagnostic001context/rejection presentation in#164; begin a new finite full campaign after qualified native repair. Preserve failures, unknowns, immutable saves/evidence and exact/protected publication requirements.",
         "evidence": [
           "docs/acceptance/2026-10-24-independent-seven-day-eighteenth-attempt.md",
           "docs/engineering.md",
           "docs/protocol.md",
-          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md"
+          "docs/acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md",
+          "docs/acceptance/2026-10-24-native-text-overflow.md"
         ]
       },
       "next_review": "2027-01-15"

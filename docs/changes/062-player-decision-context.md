@@ -759,3 +759,21 @@ cover this lesson; no model/menu-specific limit guard, timeout increase, new
 service, compatibility path or per-action approval follows. #176/#191own repair
 and limits, while the same complete learning/seven-day/cadence/lifecycle goal and
 other memory/advice/observer actions remain open. No failed authority is revived.
+
+
+[Native text diagnostic002](../acceptance/2026-10-24-native-text-overflow.md) now
+verifies actual ASCII overflow response, correction/cancellation and normal
+menu-only ending on signed96e58, builtca613from7cf7444. Independent review inspects
+actual PNGs/receipts; the whole32byte value is inferred from inputs and visible
+suffix, not a hidden buffer. Final ACK stays unknown with separate normal-exit
+proof.48charges/116verified PNGs/182.010host seconds are not useful cadence or
+full learning/campaign acceptance. Exact7cf7444CI passes1926tests/1035.535s plus viewer.
+
+Failed diagnostic001also exposes missing critical mission context in the lead
+brief and absent scenario in progressive detail.002derives that identity line
+from validated admission; this is preparation, not a production bootstrap fix.
+#164retains automatic critical context and truthful known receiver-rejection
+collection; S-UX/C-REVIEW check actual information availability without another
+framework. All owned runtime is closed,191original saves unchanged. The complete
+independent seven-day/memoryhandoff/advice/reload/normal-ending/cadence path stays
+open for a new finite admission, never a failed-scope revival.

@@ -17,11 +17,12 @@ for the authority split and workflow.
 ## Current integrated checkpoint
 
 [Fresh021](acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md)
-failed during creation on a native text callback assertion. Unknown input was
-retained; all owned runtime is closed, with original saves unchanged. The dated
-report owns diagnostics/costs/exceptional closure. The source correction still
-requires rebuild and actual native editing qualification; the full independent
-learning/seven-day/normal-lifecycle/useful-cadence outcome remains open.
+retains the creation-time native callback failure. The subsequent
+[ASCII editing diagnostic](acceptance/2026-10-24-native-text-overflow.md) verifies
+the rebuilt editor's overflow response, correction/cancellation and normal
+menu-only exit. All owned runtime is closed; original saves are unchanged. The
+complete independent learning/seven-day/normal-lifecycle/useful-cadence outcome
+remains open; the diagnostic is no substitute for it.
 
 The [integrated discovery-and-learning design](changes/057-discovery-learning-campaign.md)
 connects ordinary input, revisable procedural memory and asynchronous advice to
@@ -43,6 +44,7 @@ the selected implementation and lessons. Current contracts live in
 | [Fresh019](acceptance/2026-10-24-independent-seven-day-nineteenth-attempt.md) | Movement revision and11h54m29 partial; healthy activity-local overshoot wrongly revoked the mission, preventing normal Save |
 | [Fresh020](acceptance/2026-10-24-independent-seven-day-twentieth-attempt.md) | Supplies and four candidate procedures; invalid caller support wrongly stopped healthy play, while advisory preflight supplied a phantom collection handle |
 | [Fresh021](acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md) | Creation-time text overflow violates native widget invariants; actual stack/crash-modal diagnosis, unknown effect and exceptional closure retained |
+| [Native ASCII overflow diagnostic](acceptance/2026-10-24-native-text-overflow.md) | Rebuilt widget responds beyond its byte limit, visibly corrects/cancels and exits normally; whole32byte value inferred from sequence/viewport, Unicode and campaign remain unqualified |
 | [Native capture boundary](acceptance/2026-10-22-native-capture-preconditions.md) and [local refusal](acceptance/2026-10-22-native-local-refusal.md) | Scoped native ordinary input, explicit Observe/correction and normal save/reload/ending; wider mouse/capture cases remain unqualified |
 | [Luna responsiveness017](acceptance/2026-10-23-luna-responsiveness-seventeenth-attempt.md) | Independent equipment handling and normal ending; seven game seconds in557wall seconds is not useful cadence |
 
