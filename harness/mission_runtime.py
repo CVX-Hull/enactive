@@ -1083,10 +1083,22 @@ class MissionRuntime:
             self._check_cancelled(work)
             ledger = self._ledger.snapshot(now=self._wall())
             state, _, boot = self._check_lease()
-            if (self._prompt_phase is not phase or ledger["phase"] != "active" or ledger["unreconciled"]
+            if (self._prompt_phase is not phase or ledger["phase"] != "active" or not ledger["clock_valid"]
+                    or ledger["unreconciled"]
                     or (boot, self._operator_mark()[1], state["takeover_generation"], ledger["epoch"], ledger["player_id"]) !=
                        (phase.controller_boot_id, phase.operator_generation, phase.takeover_generation, phase.epoch, phase.actor_id)):
                 raise ControlError("Activity poll crossed actor/epoch/controller/operator/native authority")
+            with self._ledger._mutex:
+                pending = self._ledger._db.execute(
+                    "SELECT 1 FROM primitives WHERE state IN ('prepared','published') LIMIT 1").fetchone()
+            if pending is not None:
+                raise LedgerError("Unsettled input cannot advance an activity observation")
+            if (self._wall() >= self._mission_deadline - self._admission.cleanup_reserve.wall_seconds
+                    or ledger["remaining_inputs"] <= self._admission.cleanup_reserve.inputs
+                    or ledger["spent_inputs"] >= self._admission.limits.primitive_mappings):
+                raise BudgetError("Mission allowance or ending reserve exhausted")
+            if self._game_cost is None or self._game_cost >= self._admission.limits.game_seconds:
+                raise BudgetError("Observed mission game time unavailable or exceeded")
         guard()
         self._store.verify(phase.checkpoint)
         deadline_wall = min(root["deadline"], self._ledger.request(data["request_id"])["deadline"],
@@ -1105,6 +1117,9 @@ class MissionRuntime:
             raise ControlError("Activity observation changed session/Pause/control or unsupported boundary")
         reference = self._ingest(observed, received)
         self._publish_source(reference, authoritative=reference.boundary_kind in ("menu", "normal_play"))
+        # Check the newly measured global cost before classifying local overshoot.
+        guard()
+        self._capacity(frames=0, byte_count=0)
         advanced = replace(phase, checkpoint=reference)
         with self._metadata:
             self._check_cancelled(work)
@@ -1123,8 +1138,11 @@ class MissionRuntime:
             self._game_guard(phase.game_anchor, root["request"]["limits"]["game_seconds"], after=True)
             if data["kind"] == "skill":
                 self._game_guard(phase.game_anchor, data["limits"]["game_seconds"], after=True)
-            if self._game_cost is None or self._game_cost >= self._admission.limits.game_seconds:
-                raise BudgetError("Observed mission game time unavailable or exceeded")
+        except _LocalGameLimit as exc:
+            # The observed effect is real and remains charged. Normal return
+            # closes this root; a menu retains it for explicit Observe closure.
+            # Neither observation nor exhaustion replays input or renews scope.
+            result.update(macro_exhausted="game_seconds", reason=str(exc))
         except BudgetError as exc:
             result["budget_stop"] = str(exc)
             self._stop_after_failure(str(exc))

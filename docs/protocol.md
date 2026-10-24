@@ -993,6 +993,15 @@ Normal
 return closes the phase but proves neither sleep duration nor completed Work.
 Retain observed root/child/mission budget overshoot and actual effects. No polling
 call renews original deadlines or claims unseen elapsed game time.
+Healthy local game-time overshoot has the same partial `macro_exhausted` meaning
+through typed polling and plain Observe as through ordinary control. Check
+global game/input/mapping/wall/reserve limits, clock, custody, retained evidence
+and unsettled delivery before this classification. Normal return closes the
+root; an actual menu retains its original scope for explicit Observe closure.
+No key, activity interruption, replay, refund or authority reacquisition follows
+automatically. Activity-only sources do not manufacture a new normal game-clock
+endpoint. Wall-time expiry while an activity remains running retains its current
+stop behavior; this game-time repair does not qualify a broader local-expiry policy.
 These existing PhaseReceipt stages now settle and reopen coherently for the
 supported owned roots; no field, enum, persisted shape or native/tool version
 changes. Navigation activity support remains outside this contract. Historical

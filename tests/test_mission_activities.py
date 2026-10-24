@@ -1,5 +1,7 @@
 """Real mission accounting over synthetic activity observations, not CDDA proof."""
 import copy
+from dataclasses import replace
+from pathlib import Path
 import time
 import unittest
 from unittest.mock import patch
@@ -170,15 +172,178 @@ class MissionActivityTests(unittest.TestCase):
         # without turning the selected wait duration into credited rest.
         self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 0)
 
-    def test_game_budget_overshoot_retains_observed_effect_and_original_input_count(self):
+    def test_local_game_overshoot_keeps_authority_costs_and_allows_new_intent(self):
+        for typed in (False, True):
+            with self.subTest(typed=typed):
+                case = type(self)()
+                case.setUp()
+                try:
+                    case.begin(limits=dict(primitives=8, wall_seconds=120, game_seconds=300))
+                    root = case.runtime._ledger.request("rest-root")
+                    lease = case.runtime._lease
+                    delivered = len(case.bridge.delivered)
+                    case.finish = 301
+                    if typed:
+                        result = case.poll()
+                    else:
+                        case.runtime.command(case.request("observe", request_id="observe-overshoot"))
+                        result = case.settled("observe-overshoot")
+                    self.assertEqual(result["result"]["macro_exhausted"], "game_seconds", result)
+                    self.assertNotIn("budget_stop", result["result"])
+                    self.assertEqual(result["result"]["phase"]["stage"], "complete")
+                    self.assertEqual(case.runtime.status()["phase"], "active")
+                    self.assertIs(case.runtime._lease, lease)
+                    self.assertIsNone(case.runtime._prompt_phase)
+                    self.assertEqual(case.runtime._ledger.request("rest-root"), root)
+                    self.assertEqual(case.runtime.status()["metrics"]["game_seconds"], 301)
+                    self.assertEqual(case.runtime.status()["spent_inputs"], 1)
+                    self.assertEqual(len(case.bridge.delivered), delivered)
+                    self.assertEqual(case.runtime._ledger.primitive_records()[-1]["state"], "returned")
+                    # A genuinely new intent, not a replay or extension of the old root.
+                    case.runtime.command(case.control("activity", case.goal, request_id="new-root"))
+                    self.assertEqual(case.settled("new-root")["state"], "partial")
+                    self.assertEqual(case.runtime._lease.epoch, lease.epoch)
+                    self.assertEqual(case.runtime._lease.actor_id, lease.actor_id)
+                    self.assertEqual(case.runtime.status()["spent_inputs"], 2)
+                finally:
+                    case.doCleanups()
+
+    def test_exact_local_game_limit_is_not_an_overshoot(self):
+        self.begin(limits=dict(primitives=8, wall_seconds=120, game_seconds=300))
+        self.finish = 300
+        result = self.poll()
+        self.assertNotIn("macro_exhausted", result["result"])
+        self.assertIsNotNone(self.runtime._lease)
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 300)
+
+    def test_smaller_poll_child_limit_does_not_revoke_healthy_root(self):
+        self.begin(limits=dict(primitives=8, wall_seconds=120, game_seconds=1200))
+        root = self.runtime._ledger.request("rest-root")
+        self.finish = 301
+        result = self.poll(limits=dict(primitives=8, wall_seconds=120, game_seconds=300))
+        self.assertEqual(result["result"]["macro_exhausted"], "game_seconds", result)
+        self.assertEqual(self.runtime._ledger.request("rest-root"), root)
+        self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 301)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+        self.assertIsNotNone(self.runtime._lease)
+
+    def test_global_game_cap_wins_simultaneous_local_overshoot(self):
+        self.a = replace(self.a, limits=replace(self.a.limits, game_seconds=301))
         self.begin(limits=dict(primitives=8, wall_seconds=120, game_seconds=300))
         self.finish = 301
         result = self.poll()
-        self.assertEqual(result["state"], "partial", result)
-        self.assertIn("budget_stop", result["result"])
-        self.assertEqual(self.runtime._current.turn, self.normal["turn"] + 301)
-        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertNotIn("macro_exhausted", result["result"])
         self.assertIsNone(self.runtime._lease)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+        self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 301)
+
+    def test_local_overshoot_cannot_mask_input_reserve(self):
+        self.a = replace(self.a, limits=replace(self.a.limits, inputs=2, primitive_mappings=2),
+                         cleanup_reserve=replace(self.a.cleanup_reserve, inputs=1))
+        self.begin(limits=dict(primitives=8, wall_seconds=120, game_seconds=300))
+        self.finish = 301
+        delivered = len(self.bridge.delivered)
+        result = self.poll()
+        self.assertEqual(result["state"], "blocked", result)
+        self.assertNotIn("macro_exhausted", result["result"])
+        self.assertIsNone(self.runtime._lease)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 1)
+
+    def test_local_overshoot_cannot_mask_corrupt_anchor_or_checkpoint(self):
+        for which in ("game_anchor", "checkpoint"):
+            with self.subTest(which=which):
+                case = type(self)()
+                case.setUp()
+                try:
+                    case.begin(limits=dict(primitives=8, wall_seconds=120, game_seconds=300))
+                    case.finish = 301
+                    req = case.control("activity", {**case.goal, "step": "poll"},
+                        phase_id="rest-root", request_id="corrupt-evidence-poll")
+                    retained = Path(getattr(case.runtime._prompt_phase, which).frame_path)
+                    retained.chmod(0o600)
+                    retained.write_bytes(b"corrupt retained evidence")
+                    self.assertEqual(case.runtime.command(req)["status"], "accepted")
+                    result = case.settled(req["request_id"])
+                    self.assertEqual(result["state"], "blocked", result)
+                    self.assertNotIn("macro_exhausted", result["result"])
+                    self.assertIsNone(case.runtime._lease)
+                    self.assertEqual(case.runtime.status()["spent_inputs"], 1)
+                finally:
+                    case.doCleanups()
+
+    def test_local_overshoot_cannot_mask_changed_session_takeover_or_clock(self):
+        for fault in ("session", "takeover", "clock"):
+            with self.subTest(fault=fault):
+                case = type(self)()
+                case.setUp()
+                try:
+                    case.begin(limits=dict(primitives=8, wall_seconds=120, game_seconds=300))
+                    case.finish = -1 if fault == "clock" else 301
+                    behavior = case.bridge.behavior
+                    def changed(bridge, request):
+                        result = behavior(bridge, request)
+                        if request["kind"] == "observe":
+                            if fault == "session":
+                                bridge.value["session"] = "unexplained-session"
+                            elif fault == "takeover":
+                                bridge.value["takeover_generation"] += 1
+                        return result
+                    case.bridge.behavior = changed
+                    result = case.poll()
+                    self.assertEqual(result["state"], "blocked", result)
+                    self.assertNotIn("macro_exhausted", result["result"])
+                    self.assertIsNone(case.runtime._lease)
+                    self.assertEqual(case.runtime.status()["spent_inputs"], 1)
+                finally:
+                    case.doCleanups()
+
+    def test_after_capture_local_overshoot_cannot_hide_wall_reserve_or_prepared_input(self):
+        for fault in ("wall_reserve", "prepared_input"):
+            with self.subTest(fault=fault):
+                case = type(self)()
+                case.setUp()
+                try:
+                    case.begin(limits=dict(primitives=8, wall_seconds=120, game_seconds=300))
+                    case.finish = 301
+                    pending = case.control("activity", {**case.goal, "step": "poll"},
+                        phase_id="rest-root", request_id="synthetic-competing-request")
+                    deliveries = len(case.bridge.delivered)
+                    observe = case.runtime._observe_native
+                    wall = case.runtime._wall
+                    offset = 0
+                    def concurrent_fault(work, **kwargs):
+                        nonlocal offset
+                        value = observe(work, **kwargs)
+                        if fault == "wall_reserve":
+                            offset = (case.runtime._mission_deadline
+                                - case.a.cleanup_reserve.wall_seconds - wall() + .01)
+                        else:
+                            # A real charged ledger preparation, with no native
+                            # publication; it must not be hidden by local expiry.
+                            ledger = case.runtime._ledger
+                            ledger.begin_request(pending, now=wall())
+                            intent = copy.deepcopy(ledger.primitive_records()[0]["intent"])
+                            intent.update(source_before=pending["sources"][0], preflight_source=pending["sources"][0],
+                                revalidation=None, input_observation=None)
+                            ledger.prepare_primitive(pending["request_id"], "synthetic-unsettled-input",
+                                intent, now=wall())
+                        return value
+                    with patch.object(case.runtime, "_wall", side_effect=lambda: wall() + offset), \
+                            patch.object(case.runtime, "_observe_native", side_effect=concurrent_fault):
+                        result = case.poll()
+                        self.assertEqual(result["state"], "blocked", result)
+                        self.assertNotIn("macro_exhausted", result["result"])
+                        self.assertIn("ending reserve" if fault == "wall_reserve" else "Unsettled input",
+                            result["result"]["reason"])
+                        self.assertIsNone(case.runtime._lease)
+                        self.assertEqual(case.runtime.status()["spent_inputs"],
+                            1 if fault == "wall_reserve" else 2)
+                        self.assertEqual(len(case.bridge.delivered), deliveries)
+                finally:
+                    case.doCleanups()
 
     def test_user_pause_during_poll_cannot_publish_a_phase_or_lease(self):
         self.begin()

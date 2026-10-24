@@ -680,3 +680,23 @@ frontier reduction. Setup is excluded, some engineering load overlaps, samples
 are local wall proxies and no native/model/display/whole-loop qualification or
 populated handoff success is claimed. Retain this scalability action in#177/#164;
 no cache, schema or broader memory redesign is a blanket next-campaign gate.
+
+## Closed019: preserve the scope of activity observation failures
+
+The [dated019 assessment](../acceptance/2026-10-24-independent-seven-day-nineteenth-attempt.md)
+owns the11h54m29 failed campaign, two movement revisions, costs and exceptional
+closure. A player-misread wait label started a longer activity; batching correctly
+sent one scalar and stopped. On a healthy normal return, the activity observer
+caught a local game-limit exception as a global budget failure, revoking otherwise
+healthy ownership and blocking normal Save. Source tests had encoded that defect.
+
+The shared observer must check fatal/global conditions before returning local
+exhaustion as partial work, retaining measured effects, original costs and limits.
+Normal return closes the root; an actual menu keeps its scope for explicit Observe
+closure. Existing writer, ledger, typed exception and PhaseReceipt contracts
+suffice. S-PROTOCOL and C-PORTABLE/C-REVIEW now make entry-path failure-scope
+equivalence explicit, with paired negative tests. No menu catalogue, automatic
+input, extra authority, compatibility format or per-action review is introduced.
+Other local allowances, failed-episode transfer, useful memory/advice benefit and
+whole-player cadence remain owned work in the existing Issues/Project; no new
+control framework or separate backlog is warranted.

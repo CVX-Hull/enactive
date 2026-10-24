@@ -176,6 +176,13 @@ state change. Verify this boundary with real changed images, negative custody/
 clock cases and a coherent lifecycle, not a screen mask or repeated retry loop.
 Controls: C-PROTOCOL, C-RUNTIME, C-PORTABLE, C-NATIVE.
 
+Preserve the scope of a failure across input and observation entry points.
+Healthy local game-time exhaustion returns partial work with original effects
+and costs; it must not become a mission-wide ownership failure through a shared
+exception base. Global budget, custody, clock and integrity failures still win.
+C-PORTABLE pairs local exhaustion with simultaneous global/fatal cases;
+C-REVIEW checks that test expectations enforce the authoritative contract.
+
 Distinguish transport collection ceilings, original execution/resource deadlines
 and useful-response targets. Freeze supported transport configuration against the
 actual operation envelope, including legitimate loading, before a new run; return

@@ -1,5 +1,6 @@
 """Real JS + mission writer + synthetic transport; not organic/native evidence."""
 from dataclasses import replace
+import copy
 import unittest
 from unittest.mock import patch
 
@@ -236,6 +237,37 @@ class ProgramExecutionTests(unittest.TestCase):
         with self.assertRaises(ContractError): validate_request(request)
         for old in ('mission/10', 'mission/9'):
             with self.assertRaises(ContractError): validate_request({**request, 'schema':old})
+
+    def test_program_activity_local_overshoot_keeps_original_cost_and_authority(self):
+        normal = copy.deepcopy(self.f.bridge.value['scene'])
+        finish = False
+        def activity(bridge, request):
+            if request['kind'] == 'direct':
+                bridge.value.update(scene=None, ui=None, actions=[])
+                bridge.value['boundary'].update(kind='activity_poll', input_receiver=False,
+                    id='fixture-activity', recovery_operations=['request_interrupt'])
+            elif request['kind'] == 'observe' and finish:
+                bridge.value['revision'] += 1
+                scene = copy.deepcopy(normal)
+                scene['turn'] += 301
+                bridge.value.update(scene=scene, actions=['sleep'])
+                bridge.value['boundary'].update(kind='normal_play', input_receiver=True,
+                    id='fixture-return', recovery_operations=[])
+            return True
+        self.f.bridge.behavior = activity
+        opened = self.invoke(10, limits=dict(primitives=8, wall_seconds=120, game_seconds=300))
+        self.assertEqual(opened['result']['phase']['stage'], 'activity_poll')
+        root = self.f.runtime._ledger.request('program-1')
+        lease = self.f.runtime._lease
+        finish = True
+        self.f.runtime.command(self.f.request('observe', request_id='program-activity-return'))
+        returned = self.f.settled('program-activity-return')
+        self.assertEqual(returned['result']['macro_exhausted'], 'game_seconds', returned)
+        self.assertIs(self.f.runtime._lease, lease)
+        self.assertEqual(self.f.runtime.status()['metrics']['game_seconds'], 301)
+        self.assertEqual(self.f.runtime.status()['spent_inputs'], 1)
+        self.assertEqual(self.f.runtime._ledger.request('program-1'), root)
+        self.assertIsNone(self.f.runtime._prompt_phase)
 
 
 if __name__ == '__main__':
