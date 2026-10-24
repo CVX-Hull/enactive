@@ -45,11 +45,14 @@ tests (name those commands/results in the issue or PR):
 
 Use [development-first delivery](docs/project-management.md#development-first-delivery)
 for finite real development runs before comprehensive qualification. The commit
-hook runs fast checks. At a coherent integration/acceptance checkpoint, run the
-full `.venv/bin/python tools/check.py` or use its successful exact-candidate hosted
-CI result, resolve independent review and verify the relevant native outcome. The
-full command and hosted CI cover the portable lane; they do not establish native
-build or graphical gameplay acceptance. Native bridge, input, renderer, compiler, source-pin or protocol changes
+hook runs fast checks. At a coherent integration/acceptance checkpoint, resolve
+independent review and require the appropriate successful exact-candidate protected
+CI profile under [the delivery policy](docs/project-management.md#protected-ci-profiles).
+Broad source changes require full regression before merge; an existing valid hosted
+full result satisfies that lane without a duplicate local run. The default local
+`.venv/bin/python tools/check.py` remains full. Report editorial and main-smoke
+results with their narrower scope. Portable checks do not establish native build
+or graphical gameplay acceptance. Native bridge, input, renderer, compiler, source-pin or protocol changes
 need the relevant [native acceptance](docs/runbook.md#native-acceptance-lane).
 The current native scope is one tested macOS host; other hosts remain unverified.
 

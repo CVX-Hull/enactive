@@ -23,7 +23,12 @@ reference only after acceptance is verified. A duplicate/cancelled issue is not 
 <!-- Record candidate/environment, exact commands actually run and results, including failures.
 Separate portable checks, native builds and observed gameplay. State checks not run and why.
 Fast checkpoint: .venv/bin/python tools/check.py --fast plus applicable focused tests.
-Full portable acceptance/CI: .venv/bin/python tools/check.py
+Full portable command: .venv/bin/python tools/check.py (or --profile full).
+Record the actual protected CI profile and linked run under
+docs/project-management.md#protected-ci-profiles. Broad source changes need full
+regression before merge. Editorial omits runtime/viewer tests; main-smoke runs selected
+regressions and viewer tests and links qualifying PR coverage, never a full-main claim.
+Reuse existing valid exact-candidate evidence without a duplicate local full run.
 Label development evidence versus formal acceptance; link consolidated run findings.
 Do not require another full suite/reviewer for every development attempt.
 Native bridge/input/renderer/compiler/source-pin/protocol changes need relevant native acceptance.

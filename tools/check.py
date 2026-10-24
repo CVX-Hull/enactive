@@ -7,6 +7,7 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import time
 from urllib.parse import unquote, urlsplit
 
 try:
@@ -19,6 +20,15 @@ REQUIRED_DOCS = ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECU
                  "docs/engineering.md", "docs/architecture.md", "docs/protocol.md",
                  "docs/controls.md", "docs/runbook.md", "docs/work.md",
                  "docs/environment.md", "docs/research.md", "docs/setup.md")
+MAIN_SMOKE_TESTS = (
+    "tests.test_gameplay_contracts",
+    "tests.test_gameplay_evidence",
+    "tests.test_mission_request_producer",
+    "tests.test_mission_ledger.LedgerTests.test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen",
+    "tests.test_mission_ledger.LedgerTests.test_read_only_or_unadmitted_request_cannot_become_input",
+    "tests.test_mission_ledger.LedgerTests.test_terminal_mission_cannot_restart_or_overwrite_result",
+    "tests.test_mission_http.MissionHTTPTests.test_semantic_navigation_context_memory_and_single_ingress",
+)
 
 
 def check_documents(root: Path) -> list[str]:
@@ -46,13 +56,28 @@ def check_documents(root: Path) -> list[str]:
 
 def run(command: list[str], **kwargs) -> None:
     print("+ " + " ".join(command), flush=True)
-    subprocess.run(command, cwd=ROOT, check=True, **kwargs)
+    started = time.perf_counter()
+    try:
+        subprocess.run(command, cwd=ROOT, check=True, **kwargs)
+    finally:
+        print(f"Command elapsed: {time.perf_counter() - started:.2f}s", flush=True)
 
 
 def main(argv: list[str] | None = None) -> int:
+    started = time.perf_counter()
+    try:
+        return _check(argv)
+    finally:
+        print(f"Checker elapsed: {time.perf_counter() - started:.2f}s", flush=True)
+
+
+def _check(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--fast", action="store_true",
-                        help="Checkpoint structure/lint checks only; no behavioral tests or diagram rendering")
+    scope = parser.add_mutually_exclusive_group()
+    scope.add_argument("--fast", action="store_true",
+                       help="Checkpoint structure/lint checks only; no behavioral tests or diagram rendering")
+    scope.add_argument("--profile", choices=("full", "editorial", "main-smoke"), default="full",
+                       help="Strict validation profile (default: full)")
     args = parser.parse_args(argv)
     import_linter = Path(sys.executable).parent / "lint-imports"
     if not import_linter.is_file():
@@ -77,12 +102,20 @@ def main(argv: list[str] | None = None) -> int:
     run([sys.executable, "tools/governance.py"] + (["--development"] if args.fast else []))
     if not args.fast:
         run([sys.executable, "tools/diagrams.py"])
-        run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"])
+    if not args.fast and args.profile == "full":
+        run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v", "--durations", "20"])
+    elif not args.fast and args.profile == "main-smoke":
+        run([sys.executable, "-m", "unittest", "-v", "--durations", "20", *MAIN_SMOKE_TESTS])
+    if not args.fast and args.profile in {"full", "main-smoke"}:
         run([node, "tests/test_viewer.cjs"])
     run(["git", "diff", "--check"])
     run(["git", "diff", "--cached", "--check"])
     if args.fast:
         print("Fast checkpoint checks passed. Behavioral tests, rendered diagrams, native build and real gameplay were not run.")
+    elif args.profile == "editorial":
+        print("Editorial checks passed. Runtime tests, viewer tests, full regression, native build and real gameplay were not run.")
+    elif args.profile == "main-smoke":
+        print("Selected smoke and viewer tests passed. Full regression, native build and real gameplay were not run.")
     else:
         print("Portable checks passed. Native build and real gameplay were not tested.")
     return 0

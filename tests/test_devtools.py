@@ -1,6 +1,6 @@
 """Exercise our tool configuration against isolated source and document fixtures."""
 import os
-from contextlib import redirect_stdout
+from contextlib import redirect_stderr, redirect_stdout
 import io
 from pathlib import Path
 import shutil
@@ -128,33 +128,129 @@ class DevToolTests(unittest.TestCase):
         self.assertTrue(any("docs/missing.md" in error for error in errors))
         self.assertTrue(any("../outside.png" in error for error in errors))
 
-    def test_fast_and_full_commands_keep_distinct_acceptance_scope(self):
-        for arguments, full in ((["--fast"], False), ([], True)):
+    def checker_commands(self, arguments, fail_command=None, output=None):
+        (self.root / "web").mkdir(exist_ok=True)
+        (self.root / "web/viewer.js").write_text("export const ready = true;\n")
+        executed = []
+        output = output if output is not None else io.StringIO()
+
+        def record(command, **kwargs):
+            executed.append(command.copy())
+            if fail_command is not None and fail_command(command):
+                raise subprocess.CalledProcessError(1, command)
+
+        with patch.object(check, "ROOT", self.root), \
+                patch.object(check, "check_documents", return_value=[]), \
+                patch.object(check.shutil, "which", return_value="/fixture/node"), \
+                patch.object(check, "run", side_effect=record), redirect_stdout(output):
+            result = check.main(arguments)
+        return result, executed, output.getvalue()
+
+    def test_profiles_keep_exact_test_scope_and_strict_common_checks(self):
+        smoke_cases = [
+            "tests.test_gameplay_contracts",
+            "tests.test_gameplay_evidence",
+            "tests.test_mission_request_producer",
+            "tests.test_mission_ledger.LedgerTests.test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen",
+            "tests.test_mission_ledger.LedgerTests.test_read_only_or_unadmitted_request_cannot_become_input",
+            "tests.test_mission_ledger.LedgerTests.test_terminal_mission_cannot_restart_or_overwrite_result",
+            "tests.test_mission_http.MissionHTTPTests.test_semantic_navigation_context_memory_and_single_ingress",
+        ]
+        for arguments, profile in ((["--fast"], "fast"), ([], "full"),
+                                   (["--profile", "full"], "full"),
+                                   (["--profile", "editorial"], "editorial"),
+                                   (["--profile", "main-smoke"], "main-smoke")):
             with self.subTest(arguments=arguments):
-                output = io.StringIO()
-                with patch.object(check, "ROOT", self.root), \
-                        patch.object(check, "check_documents", return_value=[]), \
-                        patch.object(check, "run") as commands, redirect_stdout(output):
-                    self.assertEqual(check.main(arguments), 0)
-                executed = [call.args[0] for call in commands.call_args_list]
-                self.assertEqual(any("unittest" in command for command in executed), full)
-                self.assertEqual(any("tools/diagrams.py" in command for command in executed), full)
-                self.assertEqual(any("tests/test_viewer.cjs" in command for command in executed), full)
+                result, executed, output = self.checker_commands(arguments)
+                self.assertEqual(result, 0)
+                unittest_commands = [command for command in executed if "unittest" in command]
+                if profile == "full":
+                    self.assertEqual(unittest_commands, [[sys.executable, "-m", "unittest",
+                                                          "discover", "-s", "tests", "-v", "--durations", "20"]])
+                elif profile == "main-smoke":
+                    self.assertEqual(unittest_commands, [[sys.executable, "-m", "unittest",
+                                                          "-v", "--durations", "20", *smoke_cases]])
+                else:
+                    self.assertEqual(unittest_commands, [])
+                self.assertEqual(any("tools/diagrams.py" in command for command in executed), profile != "fast")
+                self.assertEqual(any("tests/test_viewer.cjs" in command for command in executed),
+                                 profile in {"full", "main-smoke"})
                 governance_commands = [command for command in executed if "tools/governance.py" in command]
                 self.assertEqual(governance_commands, [[sys.executable, "tools/governance.py"] +
-                                                       ([] if full else ["--development"])])
-                self.assertTrue(any("ruff" in command for command in executed))
-                self.assertEqual("Portable checks passed." in output.getvalue(), full)
-                if not full:
+                                                       (["--development"] if profile == "fast" else [])])
+                self.assertIn([sys.executable, "-m", "ruff", "check", "--config", "pyproject.toml",
+                               "harness", "tools", "tests"], executed)
+                self.assertIn([str(Path(sys.executable).parent / "lint-imports"), "--config",
+                               "pyproject.toml", "--no-cache", "--no-logo"], executed)
+                self.assertIn(["/fixture/node", "--check", "--input-type=module"], executed)
+                self.assertIn([sys.executable, "-m", "tools.documents"], executed)
+                self.assertEqual(executed[-2:], [["git", "diff", "--check"],
+                                                ["git", "diff", "--cached", "--check"]])
+                self.assertEqual("Portable checks passed." in output, profile == "full")
+                if profile == "fast":
                     self.assertIn("Behavioral tests, rendered diagrams, native build and real gameplay were not run.",
-                                  output.getvalue())
+                                  output)
+                elif profile == "editorial":
+                    self.assertIn("Editorial checks passed.", output)
+                    self.assertIn("Runtime tests, viewer tests, full regression, native build and real gameplay were not run.", output)
+                elif profile == "main-smoke":
+                    self.assertIn("Selected smoke and viewer tests passed.", output)
+                    self.assertIn("Full regression, native build and real gameplay were not run.", output)
 
-    def test_fast_checkpoint_rejects_invalid_python_before_reporting_success(self):
-        self.write("controller.py", "def broken(:\n")
+    def test_profiles_reject_fast_combination_and_unknown_names_before_execution(self):
+        for arguments in (["--fast", "--profile", "full"], ["--profile", "unknown"]):
+            with self.subTest(arguments=arguments), patch.object(check, "run") as commands, \
+                    redirect_stderr(io.StringIO()), redirect_stdout(io.StringIO()), \
+                    self.assertRaises(SystemExit) as error:
+                check.main(arguments)
+            self.assertEqual(error.exception.code, 2)
+            commands.assert_not_called()
+
+    def test_selected_command_failures_propagate_without_success_report(self):
+        for profile in ("full", "editorial", "main-smoke"):
+            _, expected, _ = self.checker_commands(["--profile", profile])
+            for command in expected:
+                with self.subTest(profile=profile, command=command):
+                    output = io.StringIO()
+                    with self.assertRaises(subprocess.CalledProcessError) as error:
+                        self.checker_commands(["--profile", profile],
+                                              lambda actual: actual == command, output=output)
+                    self.assertEqual(error.exception.cmd, command)
+                    self.assertNotIn("checks passed", output.getvalue())
+                    self.assertNotIn("tests passed", output.getvalue())
+
+    def test_command_elapsed_is_logged_even_when_subprocess_fails(self):
         output = io.StringIO()
-        with patch.object(check, "ROOT", self.root), redirect_stdout(output), self.assertRaises(SyntaxError):
-            check.main(["--fast"])
-        self.assertNotIn("checks passed", output.getvalue())
+        failure = subprocess.CalledProcessError(2, ["fixture"])
+        with patch.object(check.subprocess, "run", side_effect=failure) as process, \
+                patch.object(check.time, "perf_counter", side_effect=[10.0, 12.5]), \
+                redirect_stdout(output), self.assertRaises(subprocess.CalledProcessError) as error:
+            check.run(["fixture"], input=b"source")
+        self.assertIs(error.exception, failure)
+        process.assert_called_once_with(["fixture"], cwd=check.ROOT, check=True, input=b"source")
+        self.assertIn("Command elapsed: 2.50s", output.getvalue())
+
+    def test_all_profiles_reject_invalid_python_before_reporting_success(self):
+        self.write("controller.py", "def broken(:\n")
+        for arguments in (["--fast"], [], ["--profile", "editorial"], ["--profile", "main-smoke"]):
+            output = io.StringIO()
+            with self.subTest(arguments=arguments), patch.object(check, "ROOT", self.root), \
+                    patch.object(check, "run") as commands, redirect_stdout(output), self.assertRaises(SyntaxError):
+                check.main(arguments)
+            commands.assert_not_called()
+            self.assertNotIn("checks passed", output.getvalue())
+
+    def test_all_profiles_reject_broken_document_links_before_reporting_success(self):
+        for arguments in (["--fast"], [], ["--profile", "editorial"], ["--profile", "main-smoke"]):
+            output = io.StringIO()
+            with self.subTest(arguments=arguments), patch.object(check, "ROOT", self.root), \
+                    patch.object(check, "check_documents", return_value=["Broken local link"]), \
+                    patch.object(check.shutil, "which", return_value="/fixture/node"), \
+                    patch.object(check, "run") as commands, redirect_stdout(output), \
+                    self.assertRaisesRegex(ValueError, "Broken local link"):
+                check.main(arguments)
+            self.assertFalse(any("tools/governance.py" in call.args[0] for call in commands.call_args_list))
+            self.assertNotIn("checks passed", output.getvalue())
 
 
 if __name__ == "__main__":

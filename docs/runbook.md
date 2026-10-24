@@ -456,7 +456,9 @@ separates implemented components from remaining independent-play acceptance.
 1. Declare development or formal-acceptance purpose under
    [development-first delivery](project-management.md#development-first-delivery).
    Development uses fast/focused checks; formal acceptance of its result needs
-   review and successful exact full CI, which may follow the unchanged run.
+   review and successful exact-candidate CI under the
+   [profile policy](project-management.md#protected-ci-profiles), including full
+   regression for broad source changes; this may follow the unchanged run.
    Freeze the exact source commit,
    finite objective/scenario/limits/reserve,
    actor, native build and permission preflight before gameplay. The initial

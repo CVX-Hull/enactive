@@ -1,6 +1,7 @@
 name: Portable controller checks
 on:
   pull_request:
+    branches: [main]
   push:
     branches: [main]
 concurrency:
@@ -8,17 +9,26 @@ concurrency:
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 permissions:
   contents: read
+  actions: read
+  pull-requests: read
 jobs:
   controller:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
           python-version: '3.14'
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
         with:
           node-version: '22'
+      - name: Select strict validation profile
+        id: validation
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python tools/ci.py
       - run: python -m venv .venv
       - run: .venv/bin/python -m pip install --cache-dir .cache/pip --require-hashes -r requirements-dev.lock
       - run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" ci --ignore-scripts --no-audit --no-fund
@@ -36,4 +46,7 @@ jobs:
           }
           EOF
           sudo apparmor_parser -r /etc/apparmor.d/cdda-project-chrome
-      - run: .venv/bin/python tools/check.py
+      - name: Run strict ${{ steps.validation.outputs.profile }} validation
+        env:
+          VALIDATION_PROFILE: ${{ steps.validation.outputs.profile }}
+        run: .venv/bin/python tools/check.py --profile "$VALIDATION_PROFILE"
