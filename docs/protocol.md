@@ -1002,8 +1002,18 @@ and unsettled delivery before this classification. Normal return closes the
 root; an actual menu retains its original scope for explicit Observe closure.
 No key, activity interruption, replay, refund or authority reacquisition follows
 automatically. Activity-only sources do not manufacture a new normal game-clock
-endpoint. Wall-time expiry while an activity remains running retains its current
-stop behavior; this game-time repair does not qualify a broader local-expiry policy.
+endpoint. For an ordinary owned activity, plain Observe uses its own immutable
+observation deadline capped by the original mission/ending reserve, including
+when the root expired before admission or during capture/lock wait. After a
+validated capture and fatal checks, expired root wall time reports local
+`macro_exhausted: "wall_seconds"`. The original root, deadline, anchor and charges
+remain unchanged. An ongoing activity retains observation-only lineage; inputs,
+typed polls and paused registered activity/recovery retain their original root
+ceilings. Normal return closes the root; a returned menu retains exhausted scope
+for another explicit Observe's durable `macro_closure` before a genuinely new
+root. Actual observation timeout, global exhaustion, clock regression, custody/
+Pause change, unsettled delivery and integrity/storage failure remain fatal.
+No observation renews execution or manufactures an unseen game-clock endpoint.
 These existing PhaseReceipt stages now settle and reopen coherently for the
 supported owned roots; no field, enum, persisted shape or native/tool version
 changes. Navigation activity support remains outside this contract. Historical

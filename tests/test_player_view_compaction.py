@@ -27,6 +27,7 @@ def representative_snapshot():
         native_ack=dict(status="ready", error="", revision=8))
     return dict(snapshot_id="selected", grants_authority=False,
         mission=dict(mission_id="mission", epoch=4, phase="active", current_source={"observation_id": "after"},
+            scenario=dict(mode="fresh", world="PreparedWorld", character="PreparedCharacter"),
             configuration=dict(source_commit="pin", native_sha256="digest", model="chosen-model",
                 effort="low", skills=["direct", "navigate"], lessons=["retained configuration lesson"]),
             last_receipt=receipt, progress=dict(outcome="partial", next="Find shelter"),
@@ -54,11 +55,12 @@ class PlayerViewCompactionTests(unittest.TestCase):
         full, image = player.call("enactive_snapshot", {})
         before = deepcopy((full, player.snapshots, player.sources, client.status.return_value))
         view = decision_view("enactive_snapshot", full)
+        self.assertEqual(view["mission"]["scenario"], original["mission"]["scenario"])
         self.assertNotIn("configuration", view["mission"])
         self.assertNotIn("actions", view["native"]["state"])
         self.assertNotIn("actions", view["source"]["observation"])
         self.assertEqual(view["detail_sections"], list(DETAIL_SECTIONS))
-        for section, exact in dict(configuration=full["mission"]["configuration"],
+        for section, exact in dict(mission=full["mission"], configuration=full["mission"]["configuration"],
                 receipt=full["mission"]["last_receipt"], native=full["native"], source=full["source"]).items():
             detail, _ = player.call("enactive_detail", dict(snapshot_id=full["snapshot_id"], section=section))
             self.assertEqual(decision_view("enactive_detail", detail)["detail"], exact)

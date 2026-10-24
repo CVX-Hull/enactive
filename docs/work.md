@@ -16,13 +16,14 @@ for the authority split and workflow.
 
 ## Current integrated checkpoint
 
-[Fresh021](acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md)
-retains the creation-time native callback failure. The subsequent
-[ASCII editing diagnostic](acceptance/2026-10-24-native-text-overflow.md) verifies
-the rebuilt editor's overflow response, correction/cancellation and normal
-menu-only exit. All owned runtime is closed; original saves are unchanged. The
-complete independent learning/seven-day/normal-lifecycle/useful-cadence outcome
-remains open; the diagnostic is no substitute for it.
+[Fresh022](acceptance/2026-10-24-independent-seven-day-twenty-second-attempt.md)
+retains useful supplies/travel and procedure revision/use, then an expired
+activity-observation deadline that revoked the mission and blocked normal Save.
+The source repair separates plain Observe's finite allowance from the spent root
+and supplies frozen scenario context; 93 focused tests and independent code review
+pass. Actual new qualification remains open. All owned runtime is closed and
+original saves are unchanged. The complete independent learning/seven-day/
+normal-lifecycle/useful-cadence goal remains open.
 
 The [integrated discovery-and-learning design](changes/057-discovery-learning-campaign.md)
 connects ordinary input, revisable procedural memory and asynchronous advice to
@@ -45,6 +46,7 @@ the selected implementation and lessons. Current contracts live in
 | [Fresh020](acceptance/2026-10-24-independent-seven-day-twentieth-attempt.md) | Supplies and four candidate procedures; invalid caller support wrongly stopped healthy play, while advisory preflight supplied a phantom collection handle |
 | [Fresh021](acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md) | Creation-time text overflow violates native widget invariants; actual stack/crash-modal diagnosis, unknown effect and exceptional closure retained |
 | [Native ASCII overflow diagnostic](acceptance/2026-10-24-native-text-overflow.md) | Rebuilt widget responds beyond its byte limit, visibly corrects/cancels and exits normally; whole32byte value inferred from sequence/viewport, Unicode and campaign remain unqualified |
+| [Fresh022](acceptance/2026-10-24-independent-seven-day-twenty-second-attempt.md) | Supplies, movement revision/use and useful claimed-advice overlap; expired activity root prevents observation and normal Save, with final game-time accounting and learning/advice limits retained |
 | [Native capture boundary](acceptance/2026-10-22-native-capture-preconditions.md) and [local refusal](acceptance/2026-10-22-native-local-refusal.md) | Scoped native ordinary input, explicit Observe/correction and normal save/reload/ending; wider mouse/capture cases remain unqualified |
 | [Luna responsiveness017](acceptance/2026-10-23-luna-responsiveness-seventeenth-attempt.md) | Independent equipment handling and normal ending; seven game seconds in557wall seconds is not useful cadence |
 

@@ -1,6 +1,7 @@
 """Real JS + mission writer + synthetic transport; not organic/native evidence."""
 from dataclasses import replace
 import copy
+import threading
 import unittest
 from unittest.mock import patch
 
@@ -239,6 +240,12 @@ class ProgramExecutionTests(unittest.TestCase):
             with self.assertRaises(ContractError): validate_request({**request, 'schema':old})
 
     def test_program_activity_local_overshoot_keeps_original_cost_and_authority(self):
+        self.program_activity_return("game_seconds")
+
+    def test_program_activity_late_observe_keeps_original_cost_and_authority(self):
+        self.program_activity_return("wall_seconds")
+
+    def program_activity_return(self, limit):
         normal = copy.deepcopy(self.f.bridge.value['scene'])
         finish = False
         def activity(bridge, request):
@@ -249,25 +256,31 @@ class ProgramExecutionTests(unittest.TestCase):
             elif request['kind'] == 'observe' and finish:
                 bridge.value['revision'] += 1
                 scene = copy.deepcopy(normal)
-                scene['turn'] += 301
+                scene['turn'] += 301 if limit == 'game_seconds' else 20
                 bridge.value.update(scene=scene, actions=['sleep'])
                 bridge.value['boundary'].update(kind='normal_play', input_receiver=True,
                     id='fixture-return', recovery_operations=[])
             return True
         self.f.bridge.behavior = activity
-        opened = self.invoke(10, limits=dict(primitives=8, wall_seconds=120, game_seconds=300))
+        opened = self.invoke(10, limits=dict(primitives=8,
+            wall_seconds=1 if limit == 'wall_seconds' else 120, game_seconds=300))
         self.assertEqual(opened['result']['phase']['stage'], 'activity_poll')
         root = self.f.runtime._ledger.request('program-1')
         lease = self.f.runtime._lease
+        deliveries = copy.deepcopy(self.f.bridge.delivered)
+        if limit == 'wall_seconds':
+            threading.Event().wait(max(0, root['deadline'] - self.f.runtime._wall() + .03))
         finish = True
         self.f.runtime.command(self.f.request('observe', request_id='program-activity-return'))
         returned = self.f.settled('program-activity-return')
-        self.assertEqual(returned['result']['macro_exhausted'], 'game_seconds', returned)
+        self.assertEqual(returned['state'], 'completed', returned)
+        self.assertEqual(returned['result']['macro_exhausted'], limit, returned)
         self.assertIs(self.f.runtime._lease, lease)
-        self.assertEqual(self.f.runtime.status()['metrics']['game_seconds'], 301)
+        self.assertEqual(self.f.runtime.status()['metrics']['game_seconds'], 301 if limit == 'game_seconds' else 20)
         self.assertEqual(self.f.runtime.status()['spent_inputs'], 1)
         self.assertEqual(self.f.runtime._ledger.request('program-1'), root)
         self.assertIsNone(self.f.runtime._prompt_phase)
+        self.assertEqual(self.f.bridge.delivered, deliveries)
 
 
 if __name__ == '__main__':

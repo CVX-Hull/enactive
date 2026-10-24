@@ -402,7 +402,8 @@ class MissionRuntime:
             # Do not repeat lifecycle/source checks during passive publication.
             mission_id, session, coordinate_epoch = self._map.scope
             coordinate_scope = dict(mission_id=mission_id, session=session, coordinate_epoch=coordinate_epoch)
-        value = {**state, "lease_owner": lease_owner, "objective": self._admission.objective, "actor_id": state["player_id"],
+        value = {**state, "lease_owner": lease_owner, "objective": self._admission.objective,
+            "scenario": asdict(self._admission.scenario), "actor_id": state["player_id"],
             "coordinate_scope": coordinate_scope,
             "prompt_phase": None if self._prompt_phase is None else {
                 "origin_request_id": self._prompt_phase.root_id,
@@ -1079,6 +1080,13 @@ class MissionRuntime:
                     or (data["expected_session"], data["expected_revision"], data["expected_boundary_id"]) !=
                        (phase.checkpoint.session, phase.checkpoint.revision, observed["boundary"]["id"])):
                 raise EvidenceError("Activity poll lost its exact informing checkpoint")
+        deadline_wall = min(self._ledger.request(data["request_id"])["deadline"],
+                            self._mission_deadline - self._admission.cleanup_reserve.wall_seconds)
+        # Plain Observe pays its own immutable capture allowance. The old root
+        # still bounds all input and typed polling, even while native work runs.
+        if data["kind"] != "observe":
+            deadline_wall = min(deadline_wall, root["deadline"])
+        deadline = self._clock() + deadline_wall - self._wall()
         def guard() -> None:
             self._check_cancelled(work)
             ledger = self._ledger.snapshot(now=self._wall())
@@ -1099,13 +1107,10 @@ class MissionRuntime:
                 raise BudgetError("Mission allowance or ending reserve exhausted")
             if self._game_cost is None or self._game_cost >= self._admission.limits.game_seconds:
                 raise BudgetError("Observed mission game time unavailable or exceeded")
+            if self._wall() >= deadline_wall or self._clock() >= deadline:
+                raise BudgetError("Original activity/root observation deadline exhausted")
         guard()
         self._store.verify(phase.checkpoint)
-        deadline_wall = min(root["deadline"], self._ledger.request(data["request_id"])["deadline"],
-                            self._mission_deadline - self._admission.cleanup_reserve.wall_seconds)
-        deadline = self._clock() + deadline_wall - self._wall()
-        if deadline <= self._clock():
-            raise BudgetError("Original activity/root observation deadline exhausted")
         self._capacity()
         observed, received = self._observe_native(work, deadline_monotonic=deadline)
         guard()
@@ -1146,6 +1151,9 @@ class MissionRuntime:
         except BudgetError as exc:
             result["budget_stop"] = str(exc)
             self._stop_after_failure(str(exc))
+        if (data["kind"] == "observe" and "budget_stop" not in result
+                and self._wall() >= root["deadline"]):
+            result.update(macro_exhausted="wall_seconds", reason="Original local macro wall-time allowance exhausted")
         self._capture_memory(reference)
         return "partial", result
 

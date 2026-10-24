@@ -190,6 +190,10 @@ Preserve the scope of a failure across input and observation entry points.
 Healthy local game-time exhaustion returns partial work with original effects
 and costs; it must not become a mission-wide ownership failure through a shared
 exception base. Global budget, custody, clock and integrity failures still win.
+Plain observation of an ordinary owned activity uses its own finite capture
+allowance within the original mission/ending budget. An expired execution root
+stays exhausted; it cannot grant input, renew itself or prevent healthy bounded
+observation and explicit closure. Typed polls and inputs retain their root limits.
 C-PORTABLE pairs local exhaustion with simultaneous global/fatal cases;
 C-REVIEW checks that test expectations enforce the authoritative contract.
 

@@ -89,6 +89,7 @@ class MissionLaunchTests(unittest.TestCase):
 
     def test_registered_launch_verifies_only_owned_process_and_paused_menu(self):
         self.start()
+        self.assertEqual(self.runtime.status()["scenario"], self.a.to_dict()["scenario"])
         operation = self.launch()
         self.assertEqual(operation["state"], "completed", operation)
         self.assertTrue(operation["result"]["native_ready"])

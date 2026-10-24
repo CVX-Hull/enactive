@@ -18,7 +18,9 @@ reason to read the entire repository during every game.
 ## Calls and returned evidence
 
 - After admission, first call `enactive_snapshot` in this player context and use
-  its nonempty returned `snapshot_id`. A passive pre-admission check supplies no
+  its nonempty returned `snapshot_id`. Its `mission.scenario` supplies the exact
+  admitted mode, world and character for lifecycle calls; do not guess them or
+  search source files if a brief omits them. A passive pre-admission check supplies no
   launch handle. Without an owned child, then use source-free
   `enactive_lifecycle(operation=launch, scope=new_root, source_id=null)` with that
   handle and valid finite limits. Select create/load from its returned menu.

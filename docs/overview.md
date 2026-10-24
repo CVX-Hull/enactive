@@ -19,11 +19,13 @@ The engineering lead maintains the project and verifies outcomes; routine play
 must not depend on lead tactics, keys or memory curation. This is not yet an
 accepted unattended seven-day survival service.
 
-Latest full [Fresh021](acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md)
-fails during creation on a native text-widget assertion. The subsequent
-[ASCII editing diagnostic](acceptance/2026-10-24-native-text-overflow.md) verifies
-overflow response, correction/cancellation and normal menu-only exit on the rebuilt
-native. All owned runtime is closed. Independent learning, seven days,
+Latest [Fresh022](acceptance/2026-10-24-independent-seven-day-twenty-second-attempt.md)
+creates and adopts the character, obtains supplies and uses a revised movement
+routine, then fails when observation inherits an expired activity root's deadline.
+Normal Save is blocked after lease loss. The subsequent source repair separates
+bounded observation from spent execution scope and exposes frozen scenario context;
+93 focused tests and independent code review pass, with real qualification still
+required. All owned runtime is closed. Complete learning, seven days,
 successor/reload/normal ending and useful cadence remain open.
 
 The browser spectator shows actual Tiles frames, ownership, progress and

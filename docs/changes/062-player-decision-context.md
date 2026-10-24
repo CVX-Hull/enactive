@@ -777,3 +777,18 @@ collection; S-UX/C-REVIEW check actual information availability without another
 framework. All owned runtime is closed,191original saves unchanged. The complete
 independent seven-day/memoryhandoff/advice/reload/normal-ending/cadence path stays
 open for a new finite admission, never a failed-scope revival.
+
+## Closed022: observation is separate from spent execution
+
+[Fresh022](../acceptance/2026-10-24-independent-seven-day-twenty-second-attempt.md)
+retains the actual failure, useful partial play, costs and learning/advice limits.
+The narrow repair gives plain Observe on an ordinary owned activity its own
+finite capture allowance within unchanged mission/ending limits. A spent root
+remains observation-only; typed polls/inputs remain root-bound, and an exhausted
+menu needs explicit durable closure before a new root. Fatal controls still win.
+Existing admission/status/snapshot/detail projection now supplies frozen scenario
+identity.93focused tests and independent code review pass; native/fresh-context
+qualification and the full outcome remain open. Known receiver-rejection
+collection remains separately owned in#164, without a compatibility path or new
+store. S-PROTOCOL/C-PORTABLE/C-REVIEW cover the boundary; dated evidence and Git,
+not this design note, own the detailed run history.

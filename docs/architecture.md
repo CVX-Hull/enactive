@@ -399,6 +399,11 @@ Real authority loss or uncertain delivery still stops; neither the lead nor a
 reflective actor supplies a rescue action. See the [draft contract](protocol.md#skill-request-binding-errors).
 An owned activity poll advances through one bounded observation, including native
 output menus or normal return; no poll sends input or certifies sleep/output.
+Plain Observe uses its own capture deadline within the mission/ending allowance,
+even after the ordinary root expires. It retains the spent root and costs as
+observation-only lineage; inputs and typed polls keep their original ceilings.
+Normal return closes the phase; an exhausted menu needs explicit durable closure
+before a new root. Global/custody/clock/delivery/integrity failures still stop.
 Activity control transport preserves terminal ACKs before persistence and sends no
 Resume. A registered private activity phase now composes internal stop, exact
 interruption/answer and separately charged Resume in source. Unknown delivery stops;
