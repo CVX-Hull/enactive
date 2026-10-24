@@ -111,3 +111,30 @@ One integration slice, two initial implementation workers, field values and the
 three views are proportional project policies, not universal optima. Compare
 accepted outcomes, elapsed time, queues, defects and review cost after milestones;
 change the process from observed results rather than agent-count or token targets.
+
+## Recursive architecture and assurance — 2026-10-24
+
+This targeted primary-source refresh addresses reviewability, artifact ownership
+and assurance cost. It cross-checks the October17 basis above, rather than claiming
+a new general literature survey or an optimal process for agent teams. The lead
+opened the relevant source sections on October24; pages without a publication
+date are recorded by access date. These are author/product guidance and DORA's
+organizational research synthesis, not experiments on Enactive.
+
+| Source and sections read | Supported guidance | Adoption and transfer limit |
+| --- | --- | --- |
+| [C4 diagrams](https://c4model.com/diagrams), static structure/supporting views | Different zoom levels serve different audiences; only draw levels adding value | Project map → selected component internals → contract/code. No four-level diagram quota or prescribed delivery sequence |
+| [arc42 building-block view](https://docs.arc42.org/section-5/), content/motivation, overall and deeper black/white boxes | Hierarchical decomposition describes responsibilities, interfaces and important dependencies at appropriate depth | Component views name parent, state, collaborators, failure behavior and source. Adopt useful ideas, not the whole template or a page per class |
+| [Diataxis primer](https://diataxis.fr/start-here/), four reader needs | Explanation, reference, how-to and tutorial serve distinct needs | Keep current architecture, exact contracts, operations and walkthrough distinct; no empty taxonomy or enforced universal reading order |
+| [DORA small batches](https://dora.dev/capabilities/working-in-small-batches/), rationale and how-to | Independent valuable testable increments shorten feedback; large AI-produced changes remain difficult to review | Larger coherent outcomes composed of small inspectable steps, with early focused checks. Avoid bundling unrelated changes or delaying meaningful feedback until broad acceptance |
+| [DORA change approval](https://dora.dev/capabilities/streamlining-change-approval/), research and implementation guidance | In-process peer review and automation are preferred over heavyweight external approval; additional scrutiny should focus on higher risk | Select design/code/evidence review by changed boundary and claim; no review committee per edit or gameplay action. Organization-level associations do not establish our optimal tiers or causality |
+| [GitHub Projects best practices](https://docs.github.com/en/issues/planning-and-tracking-with-projects/learning-about-projects/best-practices-for-projects), linked issues, source of truth and decomposition | Native project/issue relationships support a single changing work record | Project fields own stage/estimates, Issues own outcome/acceptance, PRs own implementation evidence. Static README/docs link rather than mirror live checkpoints; configuration still needs actual verification |
+
+The [documentation system](documentation.md), S-ARCH/S-DOCS/S-WORK and
+[risk-based assurance](project-management.md#risk-based-assurance) are local design
+choices. They align with these sources without claiming standards conformance,
+measured productivity gains or automatic semantic completeness. Diagram/source
+checks cannot prove comprehension. The October24 audit tests navigation and
+authority consistency; longitudinal effectiveness and review effort remain only
+partly observed. No new documentation platform, tracker or metrics service is
+justified by these sources.

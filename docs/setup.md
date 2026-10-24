@@ -7,7 +7,9 @@ status: active
 # Local setup and checks
 
 The controller's I/O uses Python's standard library. Gameplay records/evidence
-require the pinned `jsonschema` package. The optional project-local structured
+require the pinned `jsonschema` package. Player-authored executable routines use
+hash-pinned MiniRacer0.14.1/V8 in this same environment; no Node process or global
+runtime installation is required to execute them. The optional project-local structured
 player tool process uses the official MCP Python SDK; it does not instantiate a
 controller or game. Runtime requirements are in [requirements.in](../requirements.in)
 and the shared hashed [lock](../requirements-dev.lock).
@@ -92,6 +94,13 @@ startup failure, repaired and verified in [public workflow acceptance](acceptanc
 Required checks must pass before integration. Other interpreter/host combinations
 require their own validation before a support claim.
 
+The current source uses native6/mission11/ledger12/archive5 with procedure/3,
+campaign-memory/6 and reflection/2; gameplay/2 is unchanged. Build and qualify the
+matching native6 binary before new native support claims. Historical native5
+learning and lifecycle results do not qualify this candidate. See
+[coordinated migration](runbook.md#coordinated-migration) before using existing
+runtime state; old libraries are not current-contract inputs.
+
 ## Configure the structured player tools
 
 After installing the lock, inspect then write only this trusted checkout's MCP table:
@@ -112,11 +121,72 @@ default, network policy or managed requirements. Re-run read-only after a move o
 tool change and deliberately review a conflicting old table rather than retaining
 two configurations.
 
+The current generated catalogue has21 named tools, including exact cached-snapshot detail and advisory
+claim/source/submit/original-result collection and passive advice. Complete context,
+reflection-job and advice replies have explicit output limits to preserve bounded
+records. Direct input is an intent on `enactive_skill`, not a new input tool;
+Observe macro closure likewise uses `enactive_observe`. These project settings
+do not prove the running host loaded the current schemas/help or grant authority.
+Current MCP server5.2.2 generates request IDs and collection waits; its model
+arguments reject caller-supplied `request_id`/`wait_seconds`. Focused help exports
+this same current model schema. The imperative Python SDK's explicit-ID surface
+serves engineering and duplicate collection, not a compatibility mode for MCP.
+Both SDK and MCP intents omit navigation `goal.scope` and activity
+`goal.interrupt_request_id`: the existing composer binds them from the selected
+matching snapshot/source. Old supplied copies refuse; target, answer, outer scope,
+source and finite limits remain explicit. Canonical mission/11 records retain the
+generated fields.
+
+Handoff authoring uses `checkpoint_sources`: null selects the exact cached
+snapshot source, and explicit IDs require a prior source read. Software supplies
+canonical checkpoint IDs; old authoring fields refuse. Re-export focused help and
+load a fresh producer after this schema change.
+
+For a dedicated CLI player, a frozen run profile may narrow `enabled_tools` to the
+admitted role's needs and mark its essential server `required=true`, using the
+[official MCP options](https://learn.chatgpt.com/docs/extend/mcp#other-configuration-options).
+This is a per-invocation configuration of the same server, not another schema or
+permission path. A no-adviser player need not receive lead-only Start or adviser
+claim/submit/source/result tools. Preserve needed player recovery, memory, lifecycle
+and result tools, existing approval settings and current payload contracts. Verify
+the actual profile before admission; reduced catalogue size is not responsiveness
+qualification. Keep the project-wide engineering table and global settings intact.
+
+Leave model context-window/automatic-compaction settings at maintained host defaults
+unless an evidence-backed run profile needs an override. [Learning009](acceptance/2026-10-23-discovery-learning-ninth-attempt.md#responsiveness-and-context)
+forced compaction at128,000tokens despite a reported475,000-token window, with
+long stalls at both compaction events. The next profile removes that override;
+it does not disable compaction, assert a different model capacity or change global
+settings. Record actual event times, usage scope and useful-progress latency;
+compare whole configurations rather than treating defaults as qualification.
+
+If the host declaration replaces nested goals or memory entries with `unknown`,
+export only the needed current schema with the existing helper:
+
+```sh
+.venv/bin/python -m tools.configure_player_tools --describe enactive_skill --variant direct
+.venv/bin/python -m tools.configure_player_tools --describe enactive_remember --variant claim
+```
+
+`--describe` is read-only and mutually exclusive with `--write`. `--variant`
+selects one current `skill_kind` or `entry_type`; unknown selectors refuse.
+The output preserves the actual schema and needed shared definitions; selected
+non-control skills omit the unused control-perception union. The lead can freeze
+these focused interface references with a mission, advertise exact paths in its
+brief and let the player read a selected variant when needed. They are help, not
+request files, retained memory, permission or gameplay authority. No host schema
+repair or independent sufficiency is established by exporting them. Do not inject
+the whole catalogue by default or maintain handwritten copies of field contracts.
+
 The [official MCP setup](https://learn.chatgpt.com/docs/extend/mcp) documents
 project configuration and host loading. Confirm the active chat has loaded the
 server/tool catalogue after the supported reload/restart. A separate CLI diagnostic
-or SDK handshake proves neither active loading nor absence of review. The actual
-designated player must exercise the [permission preflight](operator-permissions.md#preflight-for-every-campaign)
+or SDK handshake proves neither active loading nor absence of review. The
+forwarded tool names and result content must support readiness; an agent's prose
+report is not enough. A new child can still inherit an older catalogue. Compare
+the loaded names with the current generated list before admission rather than
+asking a model to certify a count or changing permissions to fix stale loading.
+The actual designated player must exercise the [permission preflight](operator-permissions.md#preflight-for-every-campaign)
 without human or automatic approval review before a deciding campaign. The SDK
 stdio test proves message/image integration only. No game starts during setup.
 
@@ -267,8 +337,11 @@ not permission to skip those tests.
 The prepared keyboard-driven game uses CDDA's `ENABLE_MOUSE=false` in its
 project userdir, alongside `FULLSCREEN=no`. Owned launch rejects missing, duplicate
 or enabled mouse options. This prevents native menu hover from silently changing
-selection between exact captures. Keyboard takeover and browser Pause remain;
-no global input preference or image-validation rule changes.
+selection between captures. Harness-local synthetic pointer handling permits
+ordinary engine/widget clicks while suppressing physical hover/polling; deliberate
+physical button-down/wheel still triggers takeover before filtering. Keyboard
+takeover and browser Pause remain. Game options stay project-local; semantic
+exact-image checks and the separate direct-input drift policy still apply.
 The fixed wrapper also exports `SDL_MAC_BACKGROUND_APP=1` and
 `SDL_WINDOW_NO_ACTIVATION_WHEN_SHOWN=1` only to its child. These existing SDL2
 hints prevent startup from activating the application/window; the game remains

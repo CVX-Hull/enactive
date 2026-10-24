@@ -13,7 +13,8 @@ import threading
 import time
 import unittest
 
-from harness.controller import Controller, read_json
+from harness.controller import Controller, read_json, validate_state
+from harness.gameplay.contracts import MAX_JSON_BYTES
 from tests.test_mission_contracts import admission, claim, request as mission_record
 from harness.server import Server
 from tests.test_controller import ControlBridge, FakeBridge, recovery_state
@@ -83,6 +84,24 @@ class ServerTests(unittest.TestCase):
         defaults.update(headers)
         return self.request("POST", "/api/command", json.dumps(value), **defaults)
 
+    def test_compact_utf8_codec_does_not_add_a_single_record_cap_to_status_history(self):
+        state = FakeBridge(self.controller).value
+        state.update(category="UILIST", in_game=False, scene=None,
+            actions=["UILIST.UP", "UILIST.DOWN", "CONFIRM", "UILIST.QUIT"],
+            ui=dict(purpose="uilist", title="", rows=[dict(id=f"row-{i}", text="x" * 1024,
+                enabled=True, hotkey=None) for i in range(32)], selected="row-0", filter=None,
+                count=None, coverage="rendered_rows_only"))
+        state["boundary"].update(kind="menu", id="large-menu")
+        validate_state(state)  # Synthetic data within native row/text bounds.
+        for _ in range(32):
+            self.controller._record(dict(kind="observe"), dict(status="ready", observation=state))
+        status, body, headers = self.request()
+        self.assertEqual(status, 200)
+        self.assertGreater(len(body), MAX_JSON_BYTES)
+        self.assertEqual(int(headers["Content-Length"]), len(body))
+        decoded = json.loads(body)
+        self.assertEqual(decoded["events"][-1]["outcome"]["observation"]["ui"]["rows"][0]["text"], "x" * 1024)
+
     def recovery(self, value, **headers):
         defaults = {"Content-Type": "application/json", "X-CDDA-Token": self.controller.token}
         defaults.update(headers)
@@ -120,9 +139,9 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(runtime.calls, [])
         self.assertIsNone(json.loads(self.request()[1])["mission"])
         runtime.snapshot = dict(mission_id="mission-test", phase="active", epoch=0, memory_context=None)
-        payloads = [dict(schema="mission/8", kind="start", request_id="start-1", admission=admission().to_dict()),
-                    mission_record(), dict(schema="mission/8",kind="status",mission_id="mission-test"),
-                    dict(schema="mission/8",kind="result",mission_id="mission-test",operation_id="observe-1")]
+        payloads = [dict(schema="mission/11", kind="start", request_id="start-1", admission=admission().to_dict()),
+                    mission_record(), dict(schema="mission/11",kind="status",mission_id="mission-test"),
+                    dict(schema="mission/11",kind="result",mission_id="mission-test",operation_id="observe-1")]
         for payload in payloads:
             code, body, _ = self.mission(payload)
             self.assertEqual(code, 200, body)
@@ -133,6 +152,38 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(self.post({"kind":"pause"})[0], 200)
         self.assertEqual(runtime.calls[-1][0], "pause")
         self.assertTrue(self.controller.pause_requested)
+
+    def test_status_projects_host_receipts_without_mutating_mission_or_exposing_process_details(self):
+        runtime = self.server.mission
+        runtime.snapshot = dict(mission_id="mission-test", actor_id="player-test", phase="active", epoch=0,
+            lease_owner=None)
+        preparation = self.root / ".runtime/campaigns/mission-test/preparation"
+        preparation.mkdir(parents=True)
+        def write(name, value):
+            (preparation / f"driver-{name}.json").write_text(json.dumps(value))
+        write("initial-status", dict(mission=runtime.snapshot, token="private-token"))
+        write("original-process", dict(start=100, pid=123, argv=["private-command", "/private/path"]))
+        code, body, _ = self.request()
+        self.assertEqual(code, 200)
+        decoded = json.loads(body)
+        self.assertEqual(decoded["mission"], runtime.snapshot)
+        self.assertEqual(decoded["deciding_host"]["current"]["state"], "launch_reported")
+        write("original-receipt", dict(start=100, end=120, returncode=7, timed_out=False, interrupted=False))
+        decoded = json.loads(self.request()[1])
+        self.assertEqual(decoded["deciding_host"]["current"]["state"], "exited")
+        self.assertFalse(decoded["deciding_host"]["driver"]["no_continuing_host_reported"])
+        self.assertEqual(decoded["mission"], runtime.snapshot)
+        self.assertNotRegex(json.dumps(decoded["deciding_host"]), "private-|/private|pid|argv|token")
+        write("successor-assignment", dict(mission_id="mission-test", actor_id="successor-test"))
+        write("successor-process", dict(start=121, pid=456, argv=["private-command", "/private/path"]))
+        decoded = json.loads(self.request()[1])
+        self.assertEqual(decoded["mission"], runtime.snapshot)
+        self.assertEqual(decoded["deciding_host"]["current"]["actor_id"], "player-test")
+        self.assertEqual(decoded["deciding_host"]["successor"]["state"], "launch_reported")
+        self.assertFalse(decoded["deciding_host"]["successor"]["mission_adoption_observed"])
+        self.assertFalse(decoded["deciding_host"]["driver"]["no_continuing_host_reported"])
+        self.assertNotRegex(json.dumps(decoded["deciding_host"]), "private-|/private|pid|argv|token")
+        self.assertEqual(runtime.calls, [], "passive evidence cannot command, pause or readmit")
 
     def test_mission_validates_exact_fields_types_and_current_version(self):
         observe = mission_record()
@@ -228,7 +279,7 @@ class ServerTests(unittest.TestCase):
                 waiting = pool.submit(self.post, {"kind":"resume"})
                 try:
                     self.assertTrue(entered.wait(1))
-                    start = dict(schema="mission/8", kind="start", request_id="start-1", admission=admission().to_dict())
+                    start = dict(schema="mission/11", kind="start", request_id="start-1", admission=admission().to_dict())
                     self.assertEqual(self.mission(start)[0], 409, "Start cannot pass raw ownership using a stale snapshot")
                     self.assertEqual(self.server.mission.calls, [])
                     self.assertEqual(self.post({"kind":"pause"})[0], 200)
@@ -245,7 +296,7 @@ class ServerTests(unittest.TestCase):
             entered.set()
             self.assertTrue(release.wait(3))
             return {"status":"accepted", "mission":None}
-        start = dict(schema="mission/8", kind="start", request_id="start-1", admission=admission().to_dict())
+        start = dict(schema="mission/11", kind="start", request_id="start-1", admission=admission().to_dict())
         with patch.object(self.server.mission, "command", side_effect=delayed_start), ThreadPoolExecutor() as pool:
             waiting = pool.submit(self.mission, start)
             try:
@@ -507,7 +558,7 @@ class ServerTests(unittest.TestCase):
         path = self.controller.bridge / "controller.json"
         self.assertEqual(path.stat().st_mode & 0o777, 0o600)
         self.assertEqual(json.loads(path.read_text())["token"], self.controller.token)
-        self.assertEqual(json.loads(path.read_text())["protocol"], 4)
+        self.assertEqual(json.loads(path.read_text())["protocol"], 6)
 
     def test_token_required_and_not_in_url(self):
         self.assertEqual(self.post({"kind": "pause"}, **{"X-CDDA-Token": "wrong"})[0], 403)

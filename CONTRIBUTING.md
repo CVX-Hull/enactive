@@ -15,8 +15,15 @@ Start with the [overview](docs/overview.md), then the authoritative
 
 Search existing issues before opening a bug report or work proposal. Describe the
 user-visible problem, intended outcome, scope, exclusions and acceptance evidence.
+Start at the highest changed responsibility, then name affected components,
+contracts/state/callers, implementation, tests and operating docs. The
+[documentation map](docs/documentation.md) links the hierarchy; an unchanged parent
+needs a link and impact statement, not another approval.
 Discuss consequential boundary, dependency or guarantee changes before implementing
-them. Routine fixes need a cohesive diff and relevant checks.
+them. Routine fixes need a cohesive diff and relevant checks. Select the
+[assurance tier](docs/project-management.md#risk-based-assurance) by consequence and
+uncertainty; use cheap feedback throughout and consolidate expensive qualification
+around one coherent outcome.
 
 Use a normal Git branch in your checkout, or fork the repository and branch there.
 Keep each PR small enough to review and link its issue with `Refs #123`. Split

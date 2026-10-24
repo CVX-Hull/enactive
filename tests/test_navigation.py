@@ -50,7 +50,7 @@ class NavigationTests(unittest.TestCase):
                          "coordinate_epoch": 0}, "target": list(target)}, sources=[before.observation_id],
                      expected_session="world", expected_revision=before.revision,
                      expected_boundary_id=self.store.observation(before)["boundary"]["id"],
-                     limits={"primitives": 32, "wall_seconds": 120, "game_seconds": 100})
+                     limits={"primitives": 32, "wall_seconds": 120, "game_seconds": 100}, procedure=None)
         value.update(changes)
         return value
 
@@ -78,7 +78,7 @@ class NavigationTests(unittest.TestCase):
         if change:
             change(value)
         (self.bridge / value["frame"]).write_bytes(png() if data is None else data)
-        method = self.store.ingest if promote else self.store.retain_equivalent
+        method = self.store.ingest if promote else self.store.retain_preflight
         extra = {} if promote else {"rule": "native_state"}
         return method(value, received_monotonic=self.clocks["now_monotonic"], **self.clocks, **extra)
 
@@ -479,9 +479,9 @@ class NavigationTests(unittest.TestCase):
             (lambda v: None, "unknown"),
             (lambda v: v.update(paused=True, pause_origin="human", takeover_generation=1), "returned"),
             (lambda v: v.update(in_game=False), "returned"),
-            (lambda v: v["boundary"].update(kind="unsupported"), "returned"),
-            (lambda v: v["boundary"].update(kind="activity_poll"), "returned"),
-            (lambda v: v["boundary"].update(kind="debug_prompt"), "returned"),
+            (lambda v: v["boundary"].update(kind="unsupported", input_receiver=False), "returned"),
+            (lambda v: v["boundary"].update(kind="activity_poll", input_receiver=False), "returned"),
+            (lambda v: v["boundary"].update(kind="debug_prompt", input_receiver=False), "returned"),
             (lambda v: v.update(session="other", frame=f"frame-other-{self.number + 1}.png"), "unknown"),
         ):
             with self.subTest(change=change, disposition=disposition):
@@ -723,18 +723,88 @@ class NavigationTests(unittest.TestCase):
         self.assertEqual(path.sources, (start,))
         self.assertEqual(hashes, Counter({start: 1}))
 
-    def test_node_cap_is_atomic_after_existing_projection_and_turn_regression_rejects(self):
+    def test_node_cap_preserves_new_footprint_and_regression_is_atomic(self):
         observed = ObservedMap("mission", "world", 0, max_nodes=5)
         before = self.frame()
         observed.add(before, self.store)
         self.assertEqual(observed.node_count, 5)
-        later = self.frame((1, 0, 0), turn=11)
-        with self.assertRaises(CapacityError): observed.add(later, self.store)
+        regressed = self.frame((2, 0, 0), turn=9)
+        with self.assertRaises(EvidenceError): observed.add(regressed, self.store)
         self.assertEqual(observed.node_count, 5)
         self.assertEqual(observed.shortest_path((0, 0, 0), (1, 0, 0), self.store).disposition, "candidate")
-        self.assertEqual(observed.shortest_path((0, 0, 0), (2, 0, 0), self.store).disposition, "blocked")
-        regressed = self.frame(turn=9)
+        self.assertEqual(observed.shortest_path((2, 0, 0), (3, 0, 0), self.store).disposition, "blocked")
+        later = self.frame((1, 0, 0), turn=11)
+        observed.add(later, self.store)
+        self.assertEqual(observed.node_count, 5)
+        self.assertEqual(observed.shortest_path((0, 0, 0), (-1, 0, 0), self.store).disposition, "blocked")
+        self.assertEqual(observed.shortest_path((0, 0, 0), (2, 0, 0), self.store).disposition, "candidate")
+        for target in ((0, 0, 0), (2, 0, 0), (1, -1, 0), (1, 1, 0)):
+            self.assertEqual(observed.shortest_path((1, 0, 0), target, self.store).disposition, "candidate")
+        self.assertEqual(self.store.observation(before)["scene"]["position"], [0, 0, 0])
+
+    def test_anchor_regression_leaves_projection_intact(self):
+        observed = ObservedMap("mission", "world", 0)
+        before = self.frame(turn=12)
+        observed.add(before, self.store)
+        regressed = self.frame(turn=11)
+        # Newer surrounding sources make the anchor the remaining regression.
+        for position in ((2, 0, 0), (-2, 0, 0), (0, 2, 0), (0, -2, 0)):
+            observed.add(self.frame(position, turn=12), self.store)
+        cells, anchors = observed._cells.copy(), observed._anchors.copy()
         with self.assertRaises(EvidenceError): observed.add(regressed, self.store)
+        self.assertEqual(observed._cells, cells)
+        self.assertEqual(observed._anchors, anchors)
+
+    def test_eviction_uses_newest_cell_or_anchor_source_and_removes_both(self):
+        for cap in (9, 10):
+            with self.subTest(cap=cap):
+                observed = ObservedMap("mission", "world", 0, max_nodes=cap)
+                observed.add(self.frame(), self.store)
+                observed.add(self.frame((1, 0, 0)), self.store)
+                observed.add(self.frame((10, 0, 0)), self.store)
+                self.assertEqual(observed.node_count, cap)
+                expected = "candidate" if cap == 10 else "blocked"
+                # Origin has an older anchor/newer cell; its neighbor has the reverse.
+                self.assertEqual(observed.shortest_path((0, 0, 0), (1, 0, 0), self.store).disposition, expected)
+                self.assertEqual(observed.shortest_path((1, 0, 0), (0, 0, 0), self.store).disposition, expected)
+                self.assertEqual(observed.shortest_path((10, 0, 0), (11, 0, 0), self.store).disposition, "candidate")
+
+    def test_exploration_beyond_512_coordinates_retains_evidence_and_current_routes(self):
+        retained = {}
+        projected = set()
+        original_map = self.map
+        for x in range(180):
+            position = (x, 0, 0)
+            current = self.frame(position, turn=10 + x)
+            retained[current] = Path(current.frame_path).read_bytes()
+            projected.update((position, (x - 1, 0, 0), (x + 1, 0, 0), (x, -1, 0), (x, 1, 0)))
+            self.map.add(current, self.store)
+            self.assertLessEqual(self.map.node_count, 512)
+        self.assertGreater(len(projected), 512)
+        self.assertEqual(self.map.node_count, 512)
+        self.assertIs(self.map, original_map)
+        self.assertEqual(self.map.scope, ("mission", "world", 0))
+        self.assertEqual(self.map.shortest_path((0, 0, 0), (1, 0, 0), self.store).disposition, "blocked")
+        self.assertEqual(self.map.shortest_path((179, 0, 0), (0, 0, 0), self.store).disposition, "blocked")
+        self.assertEqual(self.map.shortest_path((179, 0, 0), (180, 0, 0), self.store).disposition, "candidate")
+        self.assertEqual(self.store.current(**self.clocks), current)
+        self.assertEqual(self.store.historical_references, tuple(retained))
+        for reference, data in retained.items():
+            self.assertEqual(Path(reference.frame_path).read_bytes(), data)
+            self.assertEqual(self.store.observation(reference)["scene"]["turn"], reference.turn)
+
+        skill = self.skill(current, (180, 0, 0))
+        intent = self.propose(skill)
+        self.assertIsInstance(intent, NavigationIntent)
+        outcome = self.accept(skill, intent, self.frame((180, 0, 0), turn=190))
+        self.assertEqual((outcome.disposition, outcome.verified_steps), ("completed", 1))
+        reobserved = self.frame(turn=191)
+        self.map.add(reobserved, self.store)
+        restored = self.map.shortest_path((0, 0, 0), (1, 0, 0), self.store)
+        self.assertEqual(restored.disposition, "candidate")
+        self.assertEqual(restored.sources, (reobserved,))
+        self.assertLessEqual(self.map.node_count, 512)
+        self.assertEqual(self.store.current(**self.clocks), reobserved)
 
     def test_shared_helper_has_no_current_authority_and_guard_retains_before_position(self):
         before = self.frame()

@@ -8,8 +8,10 @@ status: active
 
 The passive recorder measures explicitly supplied observations; it does not run
 the game, call a model or judge success. Future planner/skill adapters must record
-their actual calls and outcomes. External Codex/operator planning is currently
-uninstrumented. An empty call list does not establish zero total cost.
+their actual calls and outcomes. Closed Codex host traces now supply scoped
+response-token and tool-call/gap evidence; isolated inference, hidden approval
+telemetry and full event-to-useful-effect latency remain unavailable where not
+explicitly instrumented. An empty call list does not establish zero total cost.
 
 The [passive supervisor](protocol.md#passive-waypoint-supervision) exposes bounded
 action/decision events and the original planner port's accounting snapshot. Merge
@@ -25,6 +27,24 @@ by this tooling. Change that protocol before collecting affected outcomes, with 
 recorded reason; do not tune thresholds after seeing results.
 
 ## Latency budgets for interactive play
+
+The [responsive-player brief](changes/060-responsive-player.md) records the latest
+closed-host diagnosis, proposed initial numerical targets and configuration
+admission experiment. [S-UX](engineering.md#s-ux-understandable-and-controllable-experience)
+requires prospective cadence/quality criteria for new responsiveness claims;
+the slow current arrangement is not qualified. New requirements do not rewrite
+a frozen deciding run's acceptance. A functional run can remain useful evidence
+while failing to qualify responsiveness.
+
+Freeze both the qualification decision and development stopping policy. An
+uninstrumented interval or fewer than the required useful decisions establishes
+no percentile pass; a measured miss rejects the configuration. Neither alone
+requires an otherwise eligible, finite development run to end. Continue only
+within the original coupled forecast, ending deadline and authority/delivery
+constraints under the [development workflow](project-management.md#minimum-checks-and-escalation).
+Retain acquisition, repair, slow intervals and failures in total costs. Do not
+relax the numerical targets, retrospectively alter a frozen brief or call a
+seven-day functional result a responsive service without the required evidence.
 
 Native input, skill execution, observer presentation and player reasoning have
 separate clocks. A timeout is a ceiling, not a fixed delay: return immediately
@@ -81,16 +101,26 @@ qualification does not measure normal-play throughput, model or browser latency.
 | Player makes goal/outcome decisions, rather than decisions per key | Compare actual decision boundaries and skill requests; requests are not automatically model-call counts |
 | Loading and long activities have separate finite budgets | Record visible readiness/progress and actual stop/unknowns; do not apply the 250 ms input target or treat a 15-second wait as a universal load guarantee |
 
-These are proposed operational targets, not passing badges or new blanket gates
-for optional model tiers, telemetry frameworks or paid providers. The existing
-native journals/ledger/archive and viewer provide the starting evidence; external
-model time, approval delay and total tool cost remain unmeasured. #143 owns
+These remain proposed component targets, not passing badges or requirements for
+optional model tiers, telemetry frameworks or paid providers. Configuration
+admission also needs useful-progress/stall and quality criteria frozen before its
+experiment. The existing native journals/ledger/archive, closed host traces and
+viewer provide the starting evidence; isolated model time, hidden approval delay
+and complete tool-to-visible-effect cost remain unmeasured where not correlated. #143 owns
 observer latency, #154 integrated timing evidence and #156 prospective setup;
-#145 uses actual mission results before a full campaign. Existing S-UX/S-VERIFY
+#145 uses actual mission results before a full campaign. Existing S-UX/S-EVIDENCE
 and native acceptance enforce honest evidence; common tests do not enforce wall
 percentiles. Revisit targets after representative navigation/items/activities and
 fresh-context player measurements, retaining both tails and failures. Reuse CDDA
 travel/activities where qualified before adding an execution framework.
+
+[Fresh019's closed program trace](acceptance/2026-10-24-independent-seven-day-nineteenth-attempt.md#cost-and-responsiveness-evidence)
+separates selected-capture-to-root admission (median7.742s, eight roots) from
+within-program returned-normal capture intervals (median520.5ms,42pairs) and V8
+execution (median0.880ms,58evaluations). These are selected same-host proxies,
+not isolated inference, useful-task/display latency or a causal comparison.
+Measure whether player-authored routines amortize decision gaps across useful
+outcomes while retaining organic surprise/correction, not merely fast evaluation.
 
 The next bounded measurement should correlate existing request/dispatch IDs across
 admission, bridge publication, terminal receipt, semantic settlement, status
@@ -101,6 +131,29 @@ to profile, not explanations for all delay. Prioritize removing per-key player/t
 round trips and unnecessary captures or repeated retrieval. Keep per-primitive
 outcome/authority checks; batch decisions rather than blindly batching input.
 Do not add a broker, telemetry service or new model tier without an observed gap.
+
+The current local spectator snapshot/export is `observer-timing/3`; historical v1/v2 captures
+remain evidence, without a compatibility reader. It retains raw browser epoch
+anchors for status start/response and DOM replacement, plus the native capture
+timestamp and existing frame/status identities. Durations still use browser
+`performance.now()`. Native `state.timestamp_ms` describes the retained capture
+when `frame_ok`, not a renewed publication time. Offline subtraction requires the
+same host/wall clock and scrutiny of clock adjustments; negative cross-clock
+differences are retained rather than silently clamped. Failed, superseded, stale
+or disconnected frames do not establish current presentation. The paused no-game
+browser probe verifies v2 status anchors only; actual paired native/browser
+correlation remains to be measured during fresh play. Animation callbacks do not
+establish screen paint, and these records do not isolate model inference.
+
+The timing disclosure offers standard Download timing and **Show export JSON**
+over the same complete bounded page history, including overflow and failures.
+The latter writes one fixed, visible DOM snapshot for human or browser-automation
+collection. Live polling does not rewrite that export; click again to refresh it.
+This avoids requiring a browser download-event API. It adds no endpoint, store,
+sampling protocol or gameplay action, and neither export surface qualifies speed.
+Collect after the measured interval and before reload/closure; retain actual
+status/frame counts and missingness rather than treating a status-only probe as
+native/gameplay display evidence.
 
 Campaign length is another profiling axis. Current ingestion scans retained peers,
 capacity accounting walks frame files and archive save serializes the manifest.
@@ -173,3 +226,12 @@ Maintain the schema, callers, tests and this guide together. On a format change,
 preserve historical evidence and migrate active consumers as one coordinated
 change; no fallback reader. Revisit missing instrumentation and independent outcome
 labeling before #24/#44 trials and after any false-success or accounting incident.
+
+The spectator timing view keeps the latest 32 samples on screen. Its standard JSON
+download includes up to 8,192 samples per stage retained in that open page and explicit
+overflow counts; earlier sessions on the same page are included. Save the download
+in the run evidence directory before closing/reloading the tab, then filter by the
+frozen mission's actual native sessions and time interval. A successful download
+proves export, not complete coverage: inspect overflow, page lifetime, clock
+continuity and exact useful-effect matching before a latency claim. No telemetry
+is submitted to the controller and no physical-paint measurement is added.

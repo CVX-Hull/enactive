@@ -104,6 +104,12 @@ def validate_json(value: dict[str, Any], schema: dict[str, Any]) -> None:
         raise ContractError(f"{path}: {exc.message}") from exc
 
 
+
+def canonical(value: dict[str, Any]) -> str:
+    """Canonical finite JSON for hashing, never shell quoting or authority."""
+    return json.dumps(json_object(value), sort_keys=True, separators=(",", ":"),
+                      ensure_ascii=False, allow_nan=False)
+
 def _strict_numbers(value: Any, node: dict[str, Any], root: dict[str, Any]) -> None:
     if "$ref" in node:
         node = root["$defs"][node["$ref"].rsplit("/", 1)[1]]
@@ -160,10 +166,9 @@ class Record(_Value):
     schema: ClassVar[str] = VERSION
 
     def to_dict(self) -> dict[str, Any]:
-        result = _encode(self)
-        validate_json(json_object(result), _schema(type(self).__name__))
-        self._invariants()
-        return result
+        # Frozen values and their nested inputs were validated at construction.
+        # Encoding returns fresh containers; raw input still goes through from_dict.
+        return _encode(self)
 
     @classmethod
     def from_dict(cls, value: dict[str, Any] | str | bytes) -> Self:

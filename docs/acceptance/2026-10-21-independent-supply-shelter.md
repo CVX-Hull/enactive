@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: Independent mission, memory continuity, native lifecycle or readiness claims change
-status: active
+status: historical
+date: '2026-10-21'
+scope: Dated candidate observations and qualification limits; not current instructions
+  or live work status
 ---
 
 # Independent supply-and-shelter mission024

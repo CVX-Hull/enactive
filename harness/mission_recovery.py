@@ -11,7 +11,8 @@ from dataclasses import dataclass, replace
 from .controller import ControlError
 from .gameplay.contracts import EvidenceRef
 from .gameplay.evidence import CapacityReservation, EvidenceError
-from .gameplay.mission_contracts import VERSION, canonical, validate_delivery_resolution
+from .gameplay.contracts import canonical
+from .gameplay.mission_contracts import VERSION, validate_delivery_resolution
 from .gameplay.mission_ledger import BudgetError
 
 
@@ -171,6 +172,10 @@ class RegisteredRecovery:
 
     def reconcile(self, work):
         r, data, candidate = self.runtime, work.request, self.candidate
+        if candidate is None:
+            r._registered_lifecycle.reject_delivery_reconciliation(work)
+            raise RecoveryEvidenceError("No captured unresolved published delivery is available for reconciliation; "
+                                        "an unpublished preflight failure has no delivery candidate")
         self._candidate_guard(work, candidate)
         state = r._ledger.snapshot(now=r._wall())
         ref = r._current

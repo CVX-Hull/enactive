@@ -17,6 +17,6 @@ aside{min-width:0}.mission-panel{font-size:13px}.mission-facts{font-size:12px;gr
 .memory-list{list-style:none;margin:0;padding:0;max-height:350px;overflow:auto;overscroll-behavior:contain}
 .memory-list li{border-left:2px solid #475548;padding:8px 10px;margin:0 0 10px;background:#101719;overflow-wrap:anywhere}
 .memory-list strong{font-size:12px;font-weight:550;color:var(--text)}.memory-list p{font-size:12px;line-height:1.6;margin:7px 0 0!important;color:#b3c0bd;white-space:pre-wrap}
-#mission-summary{font-size:16px;line-height:1.5}#mission-control-note{border-left:2px solid var(--amber);padding-left:10px;color:var(--text)}
+#mission-summary{font-size:16px;line-height:1.5;max-height:6em;overflow:auto;overflow-wrap:anywhere}#mission-summary:focus-visible{outline:2px solid var(--accent);outline-offset:3px}#mission-control-note{border-left:2px solid var(--amber);padding-left:10px;color:var(--text)}
 @media(max-width:1100px) and (min-width:801px){main{grid-template-columns:minmax(0,1fr) 360px;padding:24px;gap:20px}.panel{padding:16px}.stage-heading{flex-wrap:wrap}}
 @media(max-width:800px){main{display:block}.mission-panel{grid-column:1/-1}.memory-list{max-height:300px}}

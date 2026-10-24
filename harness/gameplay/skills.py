@@ -77,7 +77,7 @@ def _clock(value: float) -> bool:
 def _reference(value: EvidenceRef) -> None:
     if type(value) is not EvidenceRef:
         raise ContractError("Skill evidence requires typed EvidenceRef values")
-    value.to_dict()
+    value.__post_init__()
 
 
 @dataclass(frozen=True)
@@ -116,7 +116,7 @@ def summarize_route(task: TaskSpec, store: EvidenceStore, task_start: EvidenceRe
     """
     if type(task) is not TaskSpec or not isinstance(store, EvidenceStore):
         raise ContractError("Route requires typed task and evidence store")
-    task.to_dict()
+    task.__post_init__()
     if type(history) is not tuple or len(history) > 8:
         raise ContractError("Route history must be an immutable tuple of at most eight attempts")
     _reference(task_start)
@@ -132,7 +132,7 @@ def summarize_route(task: TaskSpec, store: EvidenceStore, task_start: EvidenceRe
         result, leg = attempt.result, attempt.stage
         if type(result) is not PrimitiveResult:
             raise ContractError("History requires typed results")
-        result.to_dict()
+        result.__post_init__()
         if result.action_id in identities:
             raise ContractError("History logical action IDs must be unique")
         identities.add(result.action_id)
@@ -191,7 +191,7 @@ class MovementStage:
                  checkpoint: EvidenceRef, admission_monotonic: float, history: RouteHistory):
         if type(task) is not TaskSpec or type(task.budgets) is not Budgets:
             raise ContractError("Movement requires a typed immutable TaskSpec and Budgets")
-        task.to_dict()
+        task.__post_init__()
         StageResult(stage_id, stage_version, "blocked", Progress(0, (0, 0, 0)), (), None)
         if stage not in ("outbound", "return") or type(stage) is not str:
             raise ContractError("Movement stage must be outbound or return")
@@ -323,7 +323,7 @@ class MovementStage:
         _reference(result.before)
         if result.after is not None:
             _reference(result.after)
-        result.to_dict()
+        result.__post_init__()
         if result.transport_disposition == "returned" and result.observed_displacement is None:
             raise ContractError("Returned movement requires independently checkable displacement")
         previous = self._evaluations.get(result.action_id)

@@ -13,7 +13,7 @@ from harness import __main__ as cli
 
 class DiscoveryTests(unittest.TestCase):
     def test_mixed_or_missing_protocol_never_contacts_service(self):
-        for version in (None, 1, 2, 3, 5, True, 4.0, "4"):
+        for version in (None, 1, 2, 3, 4, 5, 7, True, 6.0, "6"):
             with self.subTest(version=version):
                 config = {"port": 8766, "token": "local", "protocol": version}
                 output = StringIO()
@@ -25,7 +25,7 @@ class DiscoveryTests(unittest.TestCase):
                 self.assertIn("Unsupported service protocol", output.getvalue())
 
     def test_matching_service_uses_discovered_port(self):
-        config = {"port": 8766, "token": "local", "protocol": 4}
+        config = {"port": 8766, "token": "local", "protocol": 6}
         opener = Mock()
         opener.open.return_value = BytesIO(b'{"paused":true}')
         with patch.object(cli, "read_json", return_value=config), \
@@ -44,7 +44,7 @@ class RecoveryCliTests(unittest.TestCase):
             opener.open.side_effect = HTTPError("http://local", 409, "Conflict", {}, BytesIO(result))
         else:
             opener.open.return_value = BytesIO(result)
-        with patch.object(cli, "read_json", return_value={"protocol": 4, "port": 8766, "token": "local"}), \
+        with patch.object(cli, "read_json", return_value={"protocol": 6, "port": 8766, "token": "local"}), \
                 patch.object(cli, "build_opener", return_value=opener), \
                 patch("sys.argv", ["harness", *arguments]), redirect_stdout(output), redirect_stderr(StringIO()):
             code = cli.main()
@@ -99,7 +99,7 @@ class MissionCliTests(unittest.TestCase):
         self.directory = self.root / ".runtime" / "mission-requests"
         self.directory.mkdir(parents=True)
         self.path = self.directory / "request.json"
-        self.record = dict(schema="mission/8", kind="observe", request_id="observe-1", mission_id="mission-1", epoch=0)
+        self.record = dict(schema="mission/11", kind="observe", request_id="observe-1", mission_id="mission-1", epoch=0)
         self.path.write_text(json.dumps(self.record))
         root_patch = patch.object(cli, "ROOT", self.root)
         root_patch.start()
@@ -119,7 +119,7 @@ class MissionCliTests(unittest.TestCase):
 
     def test_malformed_old_contract_script_and_oversized_records_never_contact_service(self):
         for value in (json.dumps({**self.record, "schema":"mission/1"}), json.dumps({**self.record, "extra":1}),
-                '{"schema":"mission/8","schema":"mission/8"}', '[]', 'NaN', 'x'*65537,
+                '{"schema":"mission/11","schema":"mission/11"}', '[]', 'NaN', 'x'*65537,
                 'import os; os.system("false")'):
             self.path.write_text(value)
             code, _, opener = self.submit()

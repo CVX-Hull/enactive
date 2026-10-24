@@ -1,19 +1,24 @@
 """Synthetic ledger/source adoption proofs; no native acceptance or input authority."""
 from copy import deepcopy
+from dataclasses import replace
 import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from harness.gameplay.campaign_memory import CampaignMemory
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import EvidenceError, EvidenceStore
 from harness.gameplay.lifecycle import adopted_timeline, candidate_timeline
-from harness.gameplay.mission_contracts import canonical
+from harness.gameplay.contracts import canonical
 from harness.gameplay.mission_ledger import LedgerError, MissionLedger
+from harness.gameplay.mission_contracts import LearningPolicy, LibrarySource
+from harness.gameplay.procedure_library import ProcedureLibrary
+from tests import test_procedure_library as library_fixtures
 from tests.test_gameplay_evidence import observation, png
 from tests.test_mission_contracts import admission, claim, request, skill
-from tests.test_mission_ledger import intent, published_receipt
+from tests.test_mission_ledger import intent, known_receipt, published_receipt
 
 
 class LifecycleTests(unittest.TestCase):
@@ -28,6 +33,7 @@ class LifecycleTests(unittest.TestCase):
         self.store = EvidenceStore(self.bridge, self.root / "evidence", max_frames=128)
         self.addCleanup(self.store.close)
         self.a = admission()
+        self.library = None
         self.ledger = MissionLedger(self.root / "ledger", admission=self.a, now=1000)
         self.addCleanup(self.ledger.close)
         self.ledger.activate(epoch=0, player_id=self.a.player_id, now=1000)
@@ -49,6 +55,17 @@ class LifecycleTests(unittest.TestCase):
         self.ledger.begin_request(data, now=1000)
         return data["request_id"]
 
+    def preflight(self, before):
+        """Retain the distinct final capture without promoting current evidence."""
+        self.number += 1
+        value = self.store.observation(before)
+        value["frame"] = f"frame-{before.session}-{self.number}.png"
+        (self.bridge / value["frame"]).write_bytes(png())
+        retained = self.store.retain_preflight(value, rule="exact_png_bytes",
+            received_monotonic=100, now_monotonic=100, now_timestamp_ms=1_000_000)
+        self.assertNotEqual(retained.observation_id, before.observation_id)
+        return retained
+
     def lifecycle(self, identity, operation, before=None, phase=None, identities=None):
         return self.begin(request("lifecycle", request_id=identity, operation=operation,
             world=self.a.scenario.world, character=self.a.scenario.character,
@@ -64,7 +81,7 @@ class LifecycleTests(unittest.TestCase):
     def phase(self, root, operation, stage, *sources):
         root_sources = self.ledger.request(root)["request"]["sources"]
         launch_sources = self.ledger.request("launch")["result"]["source_ids"]
-        return dict(schema="mission/8", record_type="PhaseReceipt", origin_request_id=root,
+        return dict(schema="mission/11", record_type="PhaseReceipt", origin_request_id=root,
             phase_kind="lifecycle", operation=operation, stage=stage, epoch=self.ledger.snapshot(now=1000)["epoch"],
             actor_id=self.a.player_id, controller_boot_id="boot-test", operator_pause_generation=0,
             takeover_generation=0, source_ids=list(dict.fromkeys(launch_sources + root_sources + list(sources))),
@@ -80,20 +97,19 @@ class LifecycleTests(unittest.TestCase):
     def remember(self, entry):
         data = request("remember", request_id="remember-" + entry["id"], entry_type="claim", entry=entry)
         self.begin(data)
-        result = CampaignMemory(self.ledger, self.store).apply(data, now=1000)
+        result = CampaignMemory(self.ledger, self.store, self.library).apply(data, now=1000)
         self.complete(data["request_id"], result)
 
     def correct(self, entry):
         data = request("correct", request_id="correct-" + entry["id"], entry_type="claim", entry=entry,
             retired_ids=entry["supersedes"], reason="Correct visible character identity transcription")
         self.begin(data)
-        result = CampaignMemory(self.ledger, self.store).apply(data, now=1000)
+        result = CampaignMemory(self.ledger, self.store, self.library).apply(data, now=1000)
         self.complete(data["request_id"], result)
 
-    def primitive(self, request_id, before, after, *, value="CONFIRM", preflight=None, unknown_operation=None):
+    def primitive(self, request_id, before, after, *, value="CONFIRM", preflight, unknown_operation=None):
         logical = "logical-" + request_id
         native = "native-" + request_id
-        preflight = before if preflight is None else preflight
         proposed = intent(value=value, expected_session=before.session, expected_revision=before.revision,
             expected_boundary_id=self.store.observation(before)["boundary"]["id"],
             source_before=before.observation_id, preflight_source=preflight.observation_id)
@@ -103,17 +119,25 @@ class LifecycleTests(unittest.TestCase):
         receipt = dict(logical_action_id=logical, native_request_id=native, transport_disposition=disposition,
             published=True, source_after=None if unknown_operation is not None else after.observation_id,
             **{k: proposed[k] for k in ("kind", "value", "expected_session", "expected_revision", "expected_boundary_id", "source_before", "preflight_source")})
+        if unknown_operation is None:
+            receipt.update(known_receipt(native_id=native, logical_id=logical, proposed=proposed,
+                after=self.store.observation(after), frame=self.store.observation(preflight)["frame"]))
         receipt.update(published_receipt(native_id=native, logical_id=logical, proposed=proposed, controller_boot_id="boot-test",
-            dispatch_epoch=self.ledger.request(request_id)["epoch"], actor_id=self.a.player_id))
+            dispatch_epoch=self.ledger.request(request_id)["epoch"], actor_id=self.a.player_id,
+            frame=self.store.observation(preflight)["frame"]))
         self.ledger.settle_primitive(logical, disposition, receipt, now=1000)
         return logical, native
 
-    def transition(self, root, before, after, *, terminal=None, preflight=None, unknown=False):
+    def transition(self, root, before, after, *, terminal=None, preflight, unknown=False):
         terminal = root if terminal is None else terminal
         operation = self.ledger.request(root)["request"]["operation"]
+        # The actual native playing(bool) changes session, Pauses and clears
+        # pending input. No cross-world ready ACK can be returned. Retain its
+        # original unknown delivery and prove the observed lifecycle separately.
+        unknown = unknown or before.session != after.session
         logical, native = self.primitive(terminal, before, after, value="CONFIRM" if terminal == root else "YES",
             preflight=preflight, unknown_operation=operation if unknown else None)
-        proof = dict(schema="mission/8", record_type="LifecycleTransition", operation=operation,
+        proof = dict(schema="mission/11", record_type="LifecycleTransition", operation=operation,
             origin_request_id=root, terminal_request_id=terminal, terminal_logical_id=logical, native_request_id=native,
             launch_request_id="launch", launch_id="owned-launch", before_source_id=before.observation_id,
             after_source_id=after.observation_id, origin_epoch=self.ledger.request(root)["epoch"],
@@ -134,17 +158,24 @@ class LifecycleTests(unittest.TestCase):
             observed_time=dict(revision=source.revision, turn=source.turn),
             sources=[source.observation_id], supports=[dict(sources=[source.observation_id], claims=[])])
 
-    def adopt(self, root, before, session, turn, epoch, *, saved=None, omit=False, first_extra=False, unknown=False, pending=False, character_state=None):
+    def adopt(self, root, before, session, turn, epoch, *, saved=None, omit=False, first_extra=False, unknown=False, pending=False, character_state=None, world_source=None):
         self.lifecycle(root, "create" if epoch == 0 else "load", before)
         if epoch == 0:
             self.complete(root, {}, "partial")
-            transition_before = self.ingest(before.session, category="WORLDGEN_CONFIRM_DIALOG")
+            character_form = self.ingest(before.session, category="NEW_CHAR_DESCRIPTION")
+            self.lifecycle(root + "-commit", "create", character_form, phase=root)
+            character_preflight = self.preflight(character_form)
+            transition_before = self.ingest(before.session, category="YESNO")
+            self.primitive(root + "-commit", character_form, transition_before, value="NEXT_TAB", preflight=character_preflight)
+            self.complete(root + "-commit", {}, "partial")
             terminal = self.confirmation(root + "-yes", root, transition_before, "Are you SURE you're finished?")
         else:
             transition_before, terminal = before, root
+        transition_preflight = self.preflight(transition_before)
         first = self.ingest(session, turn)
         newer = self.ingest(session, turn) if first_extra else first
-        transition = self.transition(root, transition_before, newer, terminal=terminal, unknown=unknown)
+        transition = self.transition(root, transition_before, newer, terminal=terminal,
+            preflight=transition_preflight, unknown=unknown)
         self.complete(terminal, {})
         transition_id = root + "-transition"
         self.lifecycle(transition_id, "create" if epoch == 0 else "load", newer, phase=root)
@@ -152,20 +183,21 @@ class LifecycleTests(unittest.TestCase):
             phase=self.phase(root, transition["operation"], "awaiting_identity", transition_before.observation_id, newer.observation_id)))
         inspect_id = root + "-inspect"
         self.begin(skill(request_id=inspect_id, skill_kind="inspect", goal=dict(purpose="character_identity"),
-            phase_id=root, sources=[first.observation_id], expected_session=session, expected_revision=first.revision))
+            phase_id=root, sources=[newer.observation_id], expected_session=session, expected_revision=newer.revision))
+        inspect_preflight = self.preflight(newer)
         screen = self.ingest(session, category="PLAYER_INFO", in_game=True)
-        self.primitive(inspect_id, first, screen, value="player_data")
+        self.primitive(inspect_id, newer, screen, value="player_data", preflight=inspect_preflight)
         self.complete(inspect_id, dict(identity_screen_source_id=screen.observation_id, source_ids=[screen.observation_id]))
         checkpoint = self.ingest(session, turn)
         world_id, character_id = root + "-world", root + "-character"
-        for identity, subject, source in ((world_id, "world", before), (character_id, "character", screen)):
+        for identity, subject, source in ((world_id, "world", world_source or before), (character_id, "character", screen)):
             entry = self.identity(identity, subject, source, epoch)
             if subject == "character" and character_state is not None:
                 entry["value"]["state"] = character_state
             self.remember(entry)
         final = root + "-adopt"
         self.lifecycle(final, "create" if epoch == 0 else "load", checkpoint, phase=root, identities=[world_id, character_id])
-        adoption = dict(schema="mission/8", record_type="NormalSessionAdoption", origin_request_id=root,
+        adoption = dict(schema="mission/11", record_type="NormalSessionAdoption", origin_request_id=root,
             transition_result_request_id=transition_id, first_normal_source_id=newer.observation_id,
             world_claim_id=world_id, character_claim_id=character_id, identity_inspect_request_id=inspect_id,
             checkpoint_source_id=checkpoint.observation_id, saved_checkpoint_request_id=saved,
@@ -176,26 +208,29 @@ class LifecycleTests(unittest.TestCase):
             self.complete(final, proposed)
         return dict(first=first, checkpoint=checkpoint, screen=screen, adoption=adoption, result=final, proposed=proposed)
 
-    def create(self, **changes):
+    def create(self, *, menu_category="MAIN_MENU", **changes):
         menu = self.ingest("menu-a", category="MAIN_MENU")
         self.lifecycle("launch", "launch")
         self.complete("launch", dict(native_ready=True, source_ids=[menu.observation_id], process=dict(launch_id="owned-launch")))
+        if menu_category != "MAIN_MENU":
+            menu = self.ingest("menu-a", category=menu_category)
         return self.adopt("create", menu, "normal-a", -10, 0, **changes)
 
     def save(self, adopted, *, root="save", turn=20, launch=None):
         before = self.ingest(adopted["first"].session, turn)
         self.lifecycle(root, "save", before)
-        endpoint = self.ingest(before.session, turn)
+        endpoint = self.preflight(before)
         confirmation = self.ingest(before.session, category="QUERY_YN", in_game=True)
         self.primitive(root, before, confirmation, value="save", preflight=endpoint)
         self.complete(root, {}, "partial")
         terminal = self.confirmation(root + "-yes", root, confirmation, "Save and quit?")
+        transition_preflight = self.preflight(confirmation)
         menu = self.ingest("menu-" + root, category="MAIN_MENU")
-        proof = self.transition(root, confirmation, menu, terminal=terminal)
+        proof = self.transition(root, confirmation, menu, terminal=terminal, preflight=transition_preflight)
         self.complete(terminal, {})
         result_id = root + "-checkpoint"
         self.lifecycle(result_id, "save", menu, phase=root)
-        saved = dict(schema="mission/8", record_type="SavedCheckpoint", origin_request_id=root,
+        saved = dict(schema="mission/11", record_type="SavedCheckpoint", origin_request_id=root,
             transition_result_request_id=result_id, adoption_result_request_id=adopted["result"],
             normal_endpoint_source_id=endpoint.observation_id, menu_source_id=menu.observation_id, grants_authority=False)
         phase = self.phase(root, "save", "complete", confirmation.observation_id, menu.observation_id)
@@ -236,14 +271,36 @@ class LifecycleTests(unittest.TestCase):
         self.ingest("menu", category="MAIN_MENU")
         self.assertIsNone(adopted_timeline(self.ledger, self.store))
 
+    def test_world_identity_from_character_selection_menu(self):
+        # Learning008's actual visible world source was a UILIST, not MAIN_MENU.
+        created = self.create(menu_category="UILIST", pending=True, unknown=True)
+        timeline = candidate_timeline(self.ledger, self.store,
+            request_id=created["result"], result=created["proposed"])
+        self.assertEqual(timeline.segments, ((created["first"], created["checkpoint"]),))
+        self.complete(created["result"], created["proposed"])
+        self.assertEqual(adopted_timeline(self.ledger, self.store), timeline)
+        self.assertEqual(self.ledger.primitive("logical-create-yes")["state"], "unknown")
+
+    def test_world_identity_does_not_depend_on_menu_category_vocabulary(self):
+        self.create(menu_category="UNFAMILIAR_WORLD_SELECTION")
+        self.assertEqual(adopted_timeline(self.ledger, self.store).coordinate_epoch, 0)
+
+    def test_world_identity_cannot_borrow_an_unowned_menu(self):
+        foreign = self.ingest("foreign-menu", category="UILIST")
+        created = self.create(pending=True, world_source=foreign)
+        with self.assertRaisesRegex(EvidenceError, "World identity was not observed in this owned root phase"):
+            candidate_timeline(self.ledger, self.store,
+                request_id=created["result"], result=created["proposed"])
+
     def test_orphan_transition_effect_checks_semantics_and_dispatch_before_any_result(self):
         menu = self.ingest("menu", category="MAIN_MENU")
         self.lifecycle("launch", "launch")
         self.complete("launch", dict(native_ready=True, source_ids=[menu.observation_id], process=dict(launch_id="owned-launch")))
         self.lifecycle("load", "load", menu)
+        preflight = self.preflight(menu)
         after = self.ingest("normal", turn=10)
-        logical, native = self.primitive("load", menu, after, unknown_operation="load")
-        proof = dict(schema="mission/8", record_type="LifecycleTransition", operation="load", origin_request_id="load",
+        logical, native = self.primitive("load", menu, after, preflight=preflight, unknown_operation="load")
+        proof = dict(schema="mission/11", record_type="LifecycleTransition", operation="load", origin_request_id="load",
             terminal_request_id="load", terminal_logical_id=logical, native_request_id=native,
             launch_request_id="launch", launch_id="owned-launch", before_source_id=menu.observation_id,
             after_source_id=after.observation_id, origin_epoch=0, reconciled_epoch=1, actor_id=self.a.player_id,
@@ -398,6 +455,50 @@ class LifecycleTests(unittest.TestCase):
         self.ledger.append_memory("correction", "claim", corrected, now=1000)
         with self.assertRaises(EvidenceError): adopted_timeline(self.ledger, self.store)
 
+    def test_unrelated_identity_keeps_its_nonidentity_support_parent(self):
+        created = self.create()
+        expected = adopted_timeline(self.ledger, self.store)
+        parent = self.identity("other-scope-parent", "character", created["screen"], 1)
+        parent["key"].update(property="place", unit="display")
+        self.remember(parent)
+        derived = self.identity("other-scope-identity", "character", created["screen"], 1)
+        derived["supports"][0]["claims"] = [parent["id"]]
+        self.remember(derived)
+        with patch("harness.gameplay.lifecycle.CampaignMemory._frontier", wraps=CampaignMemory._frontier) as frontier:
+            self.assertEqual(adopted_timeline(self.ledger, self.store), expected)
+        self.assertEqual(frontier.call_args.kwargs["selected_ids"],
+            {"create-world", "create-character", "other-scope-identity"})
+
+    def test_nonidentity_correction_still_retires_adopted_identity(self):
+        created = self.create()
+        replacement = self.identity("nonidentity", "character", created["screen"], 0)
+        replacement["key"].update(property="place", unit="display")
+        replacement["supersedes"] = ["create-character"]
+        self.correct(replacement)
+        with self.assertRaisesRegex(EvidenceError, "wrong value, scope, kind or status"):
+            adopted_timeline(self.ledger, self.store)
+
+    def test_unrelated_nonidentity_dependency_cycle_still_rejects_adoption(self):
+        created = self.create()
+        for identity, parent in (("unrelated-a", "unrelated-b"), ("unrelated-b", "unrelated-a")):
+            entry = self.identity(identity, "character", created["screen"], 0)
+            entry["key"].update(property="place", unit="display")
+            entry["supports"][0]["claims"] = [parent]
+            self.ledger.append_memory(identity, "claim", entry, now=1000)
+        with self.assertRaisesRegex(EvidenceError, "missing/forward/cyclic"):
+            adopted_timeline(self.ledger, self.store)
+
+    def test_conflicting_identity_in_another_coverage_still_rejects(self):
+        created = self.create()
+        conflict = self.identity("other-coverage", "character", created["screen"], 0)
+        self.remember(conflict)
+        # Preserve the cross-coverage semantic guard even after durable corruption.
+        conflict["key"]["coverage_id"] = "another-visible-screen"
+        conflict["value"]["state"] = "Other"
+        self.ledger._db.execute("UPDATE memory SET body=? WHERE record_id='other-coverage'", (canonical(conflict),))
+        with self.assertRaisesRegex(EvidenceError, "conflicting durable assertions"):
+            adopted_timeline(self.ledger, self.store)
+
     def test_conflicting_identity_assertion_rejects(self):
         created = self.create()
         conflict = self.identity("conflict", "character", created["screen"], 0)
@@ -478,6 +579,54 @@ class LifecycleTests(unittest.TestCase):
         self.complete(created["result"], proposed)
         self.assertEqual(adopted_timeline(self.ledger, self.store), timeline)
 
+    def admit_library(self):
+        archive = library_fixtures.ProcedureLibraryTests()
+        archive.root = self.root
+        archive.environment = library_fixtures.procedure()["environment"]
+        _, _, record, pin = archive.archive()
+        self.library = self.enterContext(ProcedureLibrary(self.root, [pin], current_mission_id=self.a.mission_id))
+        self.ledger.close()
+        self.a = replace(self.a, learning=LearningPolicy(archive.environment, (LibrarySource(**pin),)))
+        self.ledger = MissionLedger(self.root / "learning-ledger", admission=self.a, now=1000)
+        self.addCleanup(self.ledger.close)
+        self.ledger.activate(epoch=0, player_id=self.a.player_id, now=1000)
+        return record
+
+    def test_learning_library_supports_candidate_and_committed_timeline(self):
+        record = self.admit_library()
+        created = self.create(pending=True, unknown=True)
+        before = self.ledger.request(created["result"])
+        generation = self.store.authority_generation()
+        timeline = candidate_timeline(self.ledger, self.store,
+            request_id=created["result"], result=created["proposed"])
+        self.assertEqual((timeline.elapsed_seconds, timeline.coordinate_epoch), (0, 0))
+        self.assertEqual(self.ledger.request(created["result"]), before)
+        self.assertEqual(self.store.authority_generation(), generation)
+        invalid = deepcopy(created["proposed"])
+        invalid["normal_adoption"]["checkpoint_source_id"] = "missing-source"
+        with self.assertRaises(EvidenceError):
+            candidate_timeline(self.ledger, self.store, request_id=created["result"], result=invalid)
+        self.complete(created["result"], created["proposed"])
+        self.assertEqual(adopted_timeline(self.ledger, self.store), timeline)
+        packet = CampaignMemory(self.ledger, self.store, self.library).context(
+            created["adoption"]["scope"], "water", max_bytes=32768,
+            now_monotonic=100, now_timestamp_ms=1_000_000)
+        self.assertEqual(packet["procedures"], [record])
+        self.assertEqual(self.ledger.primitive("logical-create-yes")["state"], "unknown")
+        self.ledger._db.execute("UPDATE primitives SET effect=NULL WHERE id='logical-create-yes'")
+        with self.assertRaises(EvidenceError):
+            adopted_timeline(self.ledger, self.store)
+
+    def test_learning_memory_still_requires_library_and_matching_environment(self):
+        self.admit_library()
+        with self.assertRaisesRegex(ContractError, "requires its admitted library and environment"):
+            CampaignMemory(self.ledger, self.store)
+        policy = replace(self.a.learning, environment=dict(self.a.learning.environment, configuration="Other setup"))
+        ledger = self.enterContext(MissionLedger(self.root / "other-environment",
+            admission=replace(self.a, learning=policy), now=1000))
+        with self.assertRaisesRegex(ContractError, "crosses its admitted environment"):
+            CampaignMemory(ledger, self.store, self.library)
+
     def test_candidate_invalid_source_rejects_before_immutable_commit(self):
         created = self.create(pending=True)
         before = self.ledger.request(created["result"])
@@ -513,11 +662,11 @@ class LifecycleTests(unittest.TestCase):
         with self.assertRaises(EvidenceError):
             candidate_timeline(self.ledger, self.store, request_id=created["result"], result=created["proposed"])
 
-    def test_returned_transition_after_source_rejects_on_reopen(self):
+    def test_returned_identity_inspection_after_source_rejects_on_reopen(self):
         self.create()
-        receipt = self.ledger.primitive("logical-create-yes")["result"]
+        receipt = self.ledger.primitive("logical-create-inspect")["result"]
         receipt["source_after"] = "unrelated-source"
-        self.ledger._db.execute("UPDATE primitives SET result=? WHERE id='logical-create-yes'", (canonical(receipt),))
+        self.ledger._db.execute("UPDATE primitives SET result=? WHERE id='logical-create-inspect'", (canonical(receipt),))
         with self.assertRaises(LedgerError): self.ledger._verify(self.a)
 
     def test_candidate_rejects_actor_forged_in_both_transition_and_phase(self):
@@ -528,6 +677,20 @@ class LifecycleTests(unittest.TestCase):
         proposed["phase"]["actor_id"] = "other-actor"
         with self.assertRaises(EvidenceError):
             candidate_timeline(self.ledger, self.store, request_id=created["result"], result=proposed)
+
+    def test_cross_world_ready_ack_is_rejected_instead_of_manufacturing_delivery(self):
+        menu = self.ingest("menu-a", category="MAIN_MENU")
+        self.lifecycle("launch", "launch")
+        self.complete("launch", dict(native_ready=True, source_ids=[menu.observation_id],
+            process=dict(launch_id="owned-launch")))
+        self.lifecycle("load", "load", menu)
+        preflight = self.preflight(menu)
+        after = self.ingest("normal-a", turn=10)
+        with self.assertRaisesRegex(LedgerError, "preflight session/revision"):
+            self.primitive("load", menu, after, preflight=preflight)
+        primitive, = self.ledger.primitive_records()
+        self.assertEqual(primitive["state"], "published")
+        self.assertIsNone(primitive["result"])
 
     def test_candidate_cannot_replace_settled_request(self):
         created = self.create()

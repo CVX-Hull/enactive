@@ -8,7 +8,8 @@ import unittest
 from unittest.mock import patch
 
 from harness.gameplay.contracts import ContractError
-from harness.gameplay.mission_contracts import canonical, validate_effect_reconciliation
+from harness.gameplay.contracts import canonical
+from harness.gameplay.mission_contracts import validate_effect_reconciliation
 from harness.gameplay.mission_ledger import MissionLedger
 from tests import test_mission_ledger as fixtures
 from tests.test_mission_ledger import delivery_resolution, published_receipt, reconcile_fixture

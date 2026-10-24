@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: Recovery ingress, evaluation records, monitor design or round ownership changes
-status: active
+status: historical
+date: '2026-10-24'
+scope: Design and development record preserved on this date; current architecture/protocol
+  and GitHub own behavior and remaining work
 ---
 
 # Public recovery, evaluation foundations and monitoring design

@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: Player tool, mission contract, MCP SDK, Codex permissions or evidence presentation changes
-status: active
+status: historical
+date: '2026-10-24'
+scope: Design and development record preserved on this date; current architecture/protocol
+  and GitHub own behavior and remaining work
 ---
 
 # Structured player tools and review-free operation

@@ -17,10 +17,14 @@ from tests import test_mission_activity_recovery as activity
 def compose(case, raw, scope, *, source=None, supports=()):
     """Reuse fixture semantic choices, discard all handwritten wire bindings."""
     intent = {key: deepcopy(raw[key]) for key in
-        ("kind", "skill_kind", "goal", "perception", "work_id", "operation", "world",
+        ("kind", "skill_kind", "goal", "perception", "procedure", "work_id", "operation", "world",
          "character", "identity_claim_ids") if key in raw}
     if intent.get("perception") is not None:
         intent["perception"].pop("source_id", None)
+    if intent.get("skill_kind") == "navigate":
+        intent["goal"].pop("scope")
+    elif intent.get("skill_kind") == "activity":
+        intent["goal"].pop("interrupt_request_id")
     if source is None and intent.get("operation") != "launch":
         ref = case.runtime._current
         source = dict(reference=ref.to_dict(), observation=case.runtime._store.observation(ref))
@@ -78,7 +82,7 @@ class ProducerLifecycleIntegrationTests(ProducedCreationFixture, unittest.TestCa
 
         self.bridge.behavior = item_menu
         intent = dict(kind="skill", skill_kind="inspect", goal=dict(purpose="inventory"),
-                      work_id=None, perception=None)
+                      work_id=None, perception=None, procedure=None)
         limits = dict(primitives=8, wall_seconds=120, game_seconds=60)
 
         def request(identity, intent, scope):
@@ -92,12 +96,12 @@ class ProducerLifecycleIntegrationTests(ProducedCreationFixture, unittest.TestCa
         menu = dict(kind="skill", skill_kind="menu", work_id=None,
             goal=dict(purpose="Inspect actual represented item", label="pocket knife", outcome="activated"),
             perception=dict(kind="menu", basis="player_interpretation", control="vertical",
-                rows=[dict(label="pocket knife", enabled=True)], selected=0, question=""))
+                rows=[dict(label="pocket knife", enabled=True)], selected=0, question=""), procedure=None)
         self.assertEqual(self.run_request(request("item", menu, "prompt"))["state"], "partial")
         for identity in ("item-dismiss", "inventory-dismiss"):
             intent = dict(kind="skill", skill_kind="menu", work_id=None,
                 goal=dict(purpose="Return from current menu", label="Cancel", outcome="dismissed"),
-                perception=dict(kind="dismissal", basis="player_interpretation", question="Current item menu"))
+                perception=dict(kind="dismissal", basis="player_interpretation", question="Current item menu"), procedure=None)
             result = self.run_request(request(identity, intent, "prompt"))
             self.assertEqual(result["state"], "partial", result)
         values = [r["intent"]["value"] for r in self.runtime._ledger.primitive_records()
@@ -108,7 +112,8 @@ class ProducerLifecycleIntegrationTests(ProducedCreationFixture, unittest.TestCa
         self.exit()
         result = self.run_request(self.lifecycle("finish", "finish"))
         self.assertEqual(result["result"]["normal_finish"]["disposition"], "stopped")
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_create_save_new_child_exact_reload_and_retained_finish(self):
         self.create()
@@ -138,7 +143,8 @@ class ProducerLifecycleIntegrationTests(ProducedCreationFixture, unittest.TestCa
         self.assertEqual(self.runtime.status()["phase"], "stopped")
         self.assertEqual(self.runtime.status()["spent_inputs"], before)
         self.assertEqual(self.runtime._ledger.request("character-yes"), original_ack)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def save_final(self):
         self.run_request(self.lifecycle("final-save", "save"))
@@ -158,11 +164,19 @@ class ProducerLifecycleIntegrationTests(ProducedCreationFixture, unittest.TestCa
             self.run_request(self.lifecycle("create-reconcile", parent=root))
             self.run_request(self.lifecycle("create-readmit", parent=root))
             raw = MissionCreationFixture.control(self, "wrong-root", "Character", kind="inspect", parent=None)
-            before = deepcopy((self.runtime.status()["lifecycle_phase"], self.runtime._lease,
+            phase_before = deepcopy(self.runtime.status()["lifecycle_phase"])
+            wall_before = phase_before["remaining_limits"].pop("wall_seconds")
+            before = deepcopy((phase_before, self.runtime._lease,
                 self.runtime._ledger.request(root), self.runtime.status()["spent_inputs"], self.runtime._current))
             with self.assertRaises(ContractError):
                 compose(self, raw, "new_root")
-            self.assertEqual((self.runtime.status()["lifecycle_phase"], self.runtime._lease,
+            phase_after = deepcopy(self.runtime.status()["lifecycle_phase"])
+            wall_after = phase_after["remaining_limits"].pop("wall_seconds")
+            # An asynchronous status publication may advance the countdown;
+            # original deadlines, phase identity and all authority must agree.
+            self.assertLessEqual(wall_after, wall_before)
+            self.assertGreaterEqual(wall_after, 0)
+            self.assertEqual((phase_after, self.runtime._lease,
                 self.runtime._ledger.request(root), self.runtime.status()["spent_inputs"], self.runtime._current), before)
             # Continue identity inspection/adoption through unmodified guards.
             inspected = self.run_request(compose(self, {**raw, "request_id": "correct-root"}, "lifecycle"))
@@ -210,7 +224,8 @@ class ProducerLifecycleIntegrationTests(ProducedCreationFixture, unittest.TestCa
         finished = self.run_request(self.lifecycle("finish", "finish"))
         self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
         self.assertEqual(self.runtime._ledger.primitive(original["logical_id"]), original)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_changed_pixels_after_composition_block_before_finalize(self):
         self.ready()
@@ -248,13 +263,16 @@ class ProducerActivityIntegrationTests(unittest.TestCase):
         for step in ("interrupt", "answer_interrupt", "resume"):
             goal = {**self.goal, "step": step}
             if step == "answer_interrupt":
-                goal.update(answer="YES", interrupt_request_id=self.runtime._registered_activity.phase.interrupt_id)
+                goal.update(answer="YES")
             raw = self.control("activity", goal, phase_id="rest-root", request_id=step)
             scope = "prompt" if step == "interrupt" else "activity"
             checkpoint = self.runtime.status()[scope + "_phase"]["checkpoint_id"]
             ref = next(ref for ref in self.runtime._store.historical_references if ref.observation_id == checkpoint)
             source = dict(reference=ref.to_dict(), observation=self.runtime._store.observation(ref))
             request = compose(self, raw, scope, source=source)
+            if step == "answer_interrupt":
+                self.assertEqual(request["goal"]["interrupt_request_id"],
+                    self.runtime.status()["activity_phase"]["interrupt_request_id"])
             self.assertEqual(self.runtime.command(request)["status"], "accepted")
             result = self.settled(step)
             self.assertEqual(result["state"], "partial", result)
@@ -267,4 +285,5 @@ class ProducerActivityIntegrationTests(unittest.TestCase):
         self.assertEqual(self.runtime._ledger.primitive_records()[-2], receipt)
         self.assertEqual(self.runtime._ledger.request("rest-root"), original)
         self.assertEqual(len([x for x in self.bridge.delivered if x["kind"] == "resume"]), self.resumes_at_start + 1)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)

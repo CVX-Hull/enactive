@@ -1,7 +1,9 @@
 ---
 owner: lead
-status: active
-review_trigger: Native-v2 or gameplay evidence interfaces, implementation scope or acceptance changes
+status: historical
+date: '2026-10-24'
+scope: Design and development record preserved on this date; current architecture/protocol
+  and GitHub own behavior and remaining work
 ---
 
 # Input authority and gameplay evidence — implementation brief

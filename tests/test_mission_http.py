@@ -58,7 +58,7 @@ class MissionHTTPTests(unittest.TestCase):
         return self.request("/api/status")["mission"]
 
     def record(self, kind, **changes):
-        result = dict(schema="mission/8", kind=kind, request_id=kind + "-1",
+        result = dict(schema="mission/11", kind=kind, request_id=kind + "-1",
             mission_id=self.a.mission_id, epoch=self.status()["epoch"])
         return result | changes
 
@@ -70,7 +70,7 @@ class MissionHTTPTests(unittest.TestCase):
     def settled(self, identity):
         deadline = time.monotonic() + 5
         while time.monotonic() < deadline:
-            result = self.submit(dict(schema="mission/8", kind="result", mission_id=self.a.mission_id,
+            result = self.submit(dict(schema="mission/11", kind="result", mission_id=self.a.mission_id,
                                      operation_id=identity))["operation"]
             if result["result"] is not None: return result
             threading.Event().wait(.01)
@@ -80,7 +80,7 @@ class MissionHTTPTests(unittest.TestCase):
         self.assertIsNone(self.status())
         runtime = self.server.mission
         with patch.object(runtime, "_bootstrap", side_effect=lambda work: bootstrap_core_fixture(runtime, work)):
-            self.submit(dict(schema="mission/8", kind="start", request_id="start-1", admission=self.a.to_dict()))
+            self.submit(dict(schema="mission/11", kind="start", request_id="start-1", admission=self.a.to_dict()))
             self.assertEqual(self.settled("start-1")["state"], "completed")
 
     def test_indexed_source_is_exact_after_bridge_eviction_and_never_refreshes(self):
@@ -146,7 +146,8 @@ class MissionHTTPTests(unittest.TestCase):
                 next_store = Mock()
                 # Model _start's single-writer transition: storage has switched
                 # while the published observer still names the previous mission.
-                with patch.object(runtime, "_store", next_store):
+                next_memory = Mock()
+                with patch.object(runtime, "_store", next_store), patch.object(runtime, "_memory", next_memory):
                     metadata, _ = runtime.source(self.a.mission_id, ref.observation_id)
                     self.assertEqual(metadata["reference"], ref.to_dict())
                     with self.assertRaisesRegex(ValueError, "No matching"):
@@ -154,6 +155,7 @@ class MissionHTTPTests(unittest.TestCase):
                     with self.assertRaisesRegex(ValueError, "Unknown retained"):
                         runtime.source(self.a.mission_id, "next-source")
                     next_store.export_source.assert_not_called()
+                    next_memory.procedure_source.assert_not_called()
             finally:
                 release.set()
                 self.assertTrue(resumed.wait(5), "Source-binding fixture writer did not resume")
@@ -161,7 +163,7 @@ class MissionHTTPTests(unittest.TestCase):
 
     def test_production_start_cannot_adopt_unowned_normal_play_or_dispatch(self):
         delivered = deepcopy(self.bridge.delivered)
-        self.submit(dict(schema="mission/8", kind="start", request_id="start-1", admission=self.a.to_dict()))
+        self.submit(dict(schema="mission/11", kind="start", request_id="start-1", admission=self.a.to_dict()))
         operation = self.settled("start-1")
         self.assertTrue(operation["result"]["lifecycle_needed"])
         self.assertEqual(self.status()["phase"], "admitted")
@@ -171,7 +173,7 @@ class MissionHTTPTests(unittest.TestCase):
         self.settled("observe-1")
         self.assertIsNone(self.status()["current_source"])
         self.assertEqual(self.bridge.delivered, delivered)
-        record = self.record("skill", skill_kind="navigate", work_id=None, phase_id=None, perception=None,
+        record = self.record("skill", skill_kind="navigate", work_id=None, phase_id=None, perception=None, procedure=None,
             goal=dict(scope=dict(mission_id=self.a.mission_id, session="game-test", coordinate_epoch=0), target=[1,0,0]),
             sources=["unowned-frame"], expected_session="game-test", expected_revision=self.bridge.value["revision"],
             expected_boundary_id=self.bridge.value["boundary"]["id"], limits=dict(primitives=1,wall_seconds=10,game_seconds=10))
@@ -183,7 +185,7 @@ class MissionHTTPTests(unittest.TestCase):
     def skill(self, kind="navigate", **changes):
         ref = self.status()["current_source"]
         boundary = self.request("/api/status")["state"]["boundary"]["id"]
-        return self.record("skill", skill_kind=kind, work_id=None, phase_id=None, perception=None,
+        return self.record("skill", skill_kind=kind, work_id=None, phase_id=None, perception=None, procedure=None,
             goal=dict(scope=dict(mission_id=self.a.mission_id, session=ref["session"], coordinate_epoch=0), target=[1, 0, 0]),
             sources=[ref["observation_id"]], expected_session=ref["session"], expected_revision=ref["revision"],
             expected_boundary_id=boundary, limits=dict(primitives=8, wall_seconds=120, game_seconds=1200)) | changes
@@ -197,7 +199,7 @@ class MissionHTTPTests(unittest.TestCase):
             observed_time=dict(revision=before["revision"], turn=before["turn"]))
         self.submit(self.record("remember", entry_type="claim", entry=entry))
         self.assertEqual(self.settled("remember-1")["state"], "completed")
-        context = self.submit(dict(schema="mission/8", kind="context", handoff=None, mission_id=self.a.mission_id,
+        context = self.submit(dict(schema="mission/11", kind="context", handoff=None, mission_id=self.a.mission_id,
             scope=scope, query="water", max_bytes=32768))["context"]
         self.assertEqual(context["packet"]["claims"][0]["id"], entry["id"])
         self.assertEqual(self.status()["memory_context"], context["packet"])
@@ -247,12 +249,12 @@ class MissionHTTPTests(unittest.TestCase):
         self.start()
         entered, release = threading.Event(), threading.Event()
         store = self.server.mission._store
-        retain = store.retain_equivalent
+        retain = store.retain_preflight
         def blocked(*args, **kwargs):
             entered.set()
             if not release.wait(3): raise AssertionError("Test storage gate timed out")
             return retain(*args, **kwargs)
-        with patch.object(store, "retain_equivalent", side_effect=blocked):
+        with patch.object(store, "retain_preflight", side_effect=blocked):
             self.submit(self.skill())
             try:
                 self.assertTrue(entered.wait(1))

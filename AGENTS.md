@@ -6,7 +6,13 @@ status: active
 
 # Enactive
 
-Start with [the overview](docs/overview.md), then [engineering standards](docs/engineering.md).
+Designated deciding players start with [the compact player guide](docs/player-guide.md),
+their frozen mission brief and the selected current tool schema. They do not need
+the engineering document set or recursive runtime/source searches for routine play.
+For engineering work, start with [the overview](docs/overview.md), then [engineering standards](docs/engineering.md).
+Use the [documentation map](docs/documentation.md) to scope a change from the
+highest affected responsibility through component design/contracts to code and
+select proportionate review. Current architecture is not an attempt log.
 Read [architecture](docs/architecture.md), [protocol](docs/protocol.md) and
 [current work](docs/work.md) before changing relevant boundaries. Follow S-AGENT
 for delegation: the lead owns design/integration/verification; parallel workers use
@@ -18,6 +24,10 @@ planner remains candidate-only; explorers/reviewers never send game inputs.
 
 - User instructions take precedence. Global skills are optional references;
   do not import ceremony without a concrete project need.
+- Apply the charter's CDDA-class portability constraint and P-GENERALITY.
+  Ordinary visible input is the foundation; semantic skills are optional aids.
+  Keep shared player/memory/learning/orchestration separate from game bindings;
+  document existing coupling rather than claiming unqualified portability.
 - Follow S-MIGRATION: one current contract; migrate every caller and persisted format
   together, remove old paths, and reject unsupported versions. No compatibility shims.
 - New dependencies, saves, caches and outputs stay project-local or in explicitly
@@ -34,6 +44,8 @@ planner remains candidate-only; explorers/reviewers never send game inputs.
   reports, proposals and superseded ADRs are evidence, not current instructions.
 - Apply S-CODE's reuse review to tools, documentation and controls. Git owns tracked
   source history; custom infrastructure needs a concrete gap and maintenance owner.
+  Rely on configured DB/OS/library contracts; justify residual checks and recovery
+  against actual deployment, failure evidence, latency and maintenance cost.
 - Use the [development-first workflow](docs/project-management.md#development-first-delivery):
   fast checkpoint checks and relevant focused tests before development play;
   independent review, full checks and protected CI before formal acceptance/merge.

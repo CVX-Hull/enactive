@@ -10,8 +10,9 @@ The user owns product direction and constraints.
 
 ## Purpose and success
 
-Let the user watch and direct understandable, authentic graphical CDDA gameplay
-performed by an agent. Success includes trustworthy control, a maintainable
+Let the user watch and direct understandable, authentic gameplay performed by an
+agent across CDDA-class games, starting with Cataclysm: Dark Days Ahead.
+Success includes trustworthy control, a maintainable
 harness, reproducible setup, and a project the user can understand and steer.
 The user reviews purpose, outcomes and tradeoffs; maintainers need clear contracts
 and evidence; contributors need reproducible entry points; upstream compatibility
@@ -25,10 +26,29 @@ version control; authentic engine behavior; no hidden state or save editing to
 win a demonstration. Historical environment exceptions remain in the
 [environment ledger](environment.md); they are not precedent for new changes.
 
-Current assumptions: one local operator, game and controller; active Codex chat
-provides high-level planning; this Mac is the validated host. Recheck these before
-concurrency, unattended operation, distribution or platform expansion.
+Current product constraint: designs must apply across CDDA-class games, not depend
+on this specific Cataclysm implementation. The working scope is turn-based
+survival/roguelike games with graphical or textual interfaces and persistent,
+long-horizon state. Game observations, actions and optional shortcuts may differ;
+the class is not defined by CDDA menu names, data formats or engine hooks. Record
+any narrower assumption explicitly. Broader game genres are a future extension,
+not a reason to build speculative infrastructure now. Only the user may relax
+this constraint; record a later relaxation as a versioned decision.
 
+Gameplay must be apparently responsive to the observer. Admit the whole
+host/model/context/execution configuration on measured useful progress and
+quality. A slower model is acceptable only where useful execution covers its
+delay and the complete configuration still meets the declared cadence. Capability
+alone does not justify stalls. Numerical budgets belong in the prospective
+evaluation, with loading and long activities separately visible and bounded.
+
+Current assumptions: one game/controller and one designated deciding player;
+the active player owns planning and ordinary interpretation, with a separately
+assigned advisory actor for reflection. The engineering lead owns the project,
+admission and verification. This Mac is the validated host. Recheck these before
+additional concurrent games, unattended operation, distribution or platform expansion.
+
+Current validation uses CDDA on this Mac; family-wide support is not yet qualified.
 Current technical decisions are [native Tiles](decisions/001-native-platform.md)
 and [a local serialized bridge](decisions/002-local-contract.md). They may change
 when evidence or requirements change. They are not permanent principles.
@@ -61,11 +81,29 @@ are product capabilities with maintenance obligations.
 
 ## P-CHANGE Design for controlled change
 
+Choose architecture, tools and process by the value they add to the overall
+objective: reliable independent play, useful learning and a reviewable experience.
+Consider capabilities we can adopt or acquire across the existing ecosystem,
+including the game engine, platforms, libraries, tools, frameworks and services.
+Prefer the smallest effective integration and total delivery/operating cost over
+custom ownership or completeness for its own sake. Remove work that no longer
+contributes; adopting a framework is not itself progress.
+Value includes long-term capability and learning, not only immediate feature
+delivery. Invest in accelerators and enablers when their expected repeated use,
+future cost reduction, research value or new options justify the initial effort
+and upkeep. Keep assumptions and a useful reassessment point explicit; lack of an
+immediate payoff alone is not a reason to reject an investment.
+
 Separate responsibilities around likely changes, explicit authority and testable
 contracts. Select tools by capability and total maintenance cost. Keep alternatives
 and reversal conditions for consequential decisions. Evaluate mature tools and
 existing libraries before implementing generic infrastructure; record why custom
 code is needed when reuse cannot satisfy the requirement. Avoid speculative frameworks.
+Rely on documented, configured database, operating-system and library guarantees.
+Add project logic for the requirements those contracts do not cover, with assurance
+proportionate to this local game's actual deployment and consequences. Repeated
+checks, recovery layers and abstraction frameworks need a concrete benefit; more
+defensive code is not inherently more reliable or maintainable.
 Maintain one current contract per boundary. Migrate the whole system together;
 do not carry backward-compatibility paths or mixed-version operation.
 
@@ -73,11 +111,34 @@ Reduce uncertainty through meaningful working slices and real development play
 before paying for comprehensive qualification. Match assurance to the claim and
 consequence; preserve failures and strengthen acceptance once the behavior composes.
 
+## P-GENERALITY Build the capacity to discover
+
+Prefer interaction, search, learning and feedback mechanisms that remain useful
+as tasks and interfaces change. Following the [Bitter Lesson cross-check](research.md#generality-and-the-bitter-lesson),
+engineer the substrate for discovery; do not make our catalogue of game knowledge
+the boundary of what the player can try. Domain shortcuts are replaceable aids
+with explicit scope and demonstrated value. The player must be able to reconsider
+them using current observations and ordinary interface actions.
+
+Keep shared player, memory, learning, orchestration and evidence responsibilities
+separate from game-specific observation/input bindings and knowledge. Preserve
+identity, provenance and uncertainty across that boundary. A CDDA-specific
+integration may be necessary; requiring it throughout the shared design is not.
+
+Changing labels, layouts, menu implementations or behavior over time should call
+for player adaptation, not an engineer-authored handler for every variation.
+This is a design preference and evaluation obligation, not a claim of universal
+learning or permission to remove provenance, user control or finite limits.
+
 ## P-KNOWLEDGE Maintain trustworthy knowledge and evidence
 
 Facts have one authoritative home. Current guidance, proposals, historical
 choices and observations have explicit status. Keep evidence sufficient to
 assess claims, and improve or retire controls based on what they detect.
+Separate durable evidence from the context needed for the next decision.
+Retaining a complete record does not require repeatedly showing it to a model.
+Preserve exact recall, unfinished obligations and uncertainty while keeping the
+active working context sufficient and proportionate.
 
 ## P-REVIEW Make the project understandable and governable
 

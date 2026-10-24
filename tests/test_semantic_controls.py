@@ -8,11 +8,15 @@ import unittest
 from harness.gameplay.contracts import ContractError, PrimitiveResult
 from harness.gameplay.evidence import EvidenceError, EvidenceStore
 from harness.gameplay.mission_contracts import SourceBinding, SourceRevalidation, VERSION
-from harness.gameplay.semantic_controls import ControlIntent, ControlOutcome, SemanticControlSkill
+from harness.gameplay.input_contracts import ControlIntent, ControlOutcome
+from harness.gameplay.semantic_controls import SemanticControlSkill
 from tests.test_gameplay_evidence import observation, png
 
 
 class SemanticControlTests(unittest.TestCase):
+
+
+
     def test_any_key_popup_acknowledgement_is_one_key_with_unverified_effect(self):
         for language_action in ([], ["toggle_language_to_en"]):
             for after_kind in ("same_popup", "question", "normal"):
@@ -143,6 +147,8 @@ class SemanticControlTests(unittest.TestCase):
             value["boundary"]["kind"] = "menu"
         if change:
             change(value)
+        if value["boundary"]["kind"] not in ("normal_play", "menu"):
+            value["boundary"]["input_receiver"] = False
         data = Path(same.frame_path).read_bytes() if same is not None else png(str(self.number).encode())
         (self.bridge / value["frame"]).write_bytes(data)
         return self.store.ingest(value, received_monotonic=self.clocks["now_monotonic"], **self.clocks)
@@ -164,7 +170,7 @@ class SemanticControlTests(unittest.TestCase):
                     goal=goal or dict(purpose="Choose", label="3", outcome="activated"),
                     sources=[before.observation_id], expected_session=before.session, expected_revision=before.revision,
                     expected_boundary_id=self.store.observation(before)["boundary"]["id"],
-                    limits=dict(primitives=32, wall_seconds=120, game_seconds=100)) | changes
+                    limits=dict(primitives=32, wall_seconds=120, game_seconds=100), procedure=None) | changes
 
     def propose(self, skill):
         return skill.propose(self.store, **self.clocks)
@@ -174,7 +180,10 @@ class SemanticControlTests(unittest.TestCase):
         return skill.accept(replace(result, **changes), self.store, **self.clocks)
 
     def skill(self, before=None, **changes):
-        return SemanticControlSkill(self.request(self.frame() if before is None else before, **changes))
+        request = self.request(self.frame() if before is None else before, **changes)
+        return SemanticControlSkill(
+            request,
+            deadline_monotonic=self.clocks["now_monotonic"] + request["limits"]["wall_seconds"])
 
     def test_focus_batch_is_bounded_unverified_and_never_confirms(self):
         skill = self.skill(goal=dict(purpose="Choose", label="10", outcome="activated"))
@@ -526,7 +535,9 @@ class SemanticControlTests(unittest.TestCase):
     def test_interact_uses_closed_registered_action_and_does_not_claim_effect(self):
         before = self.frame(normal=True, change=lambda v: v["actions"].append("examine"))
         request = self.request(before, skill_kind="interact", goal=dict(action="examine", intent="Look", desired_outcome="Know"))
-        skill = SemanticControlSkill(request)
+        skill = SemanticControlSkill(
+            request,
+            deadline_monotonic=self.clocks["now_monotonic"] + request["limits"]["wall_seconds"])
         intent = self.propose(skill)
         self.assertEqual((intent.action, intent.kind), ("examine", "action"))
         result = self.accept(skill, intent, self.frame(category="POPUP_WAIT"))
@@ -538,7 +549,10 @@ class SemanticControlTests(unittest.TestCase):
             blocked = self.skill(unsupported, skill_kind="interact", goal=dict(action="examine", intent="Look", desired_outcome="Know"))
             self.assertEqual(self.propose(blocked).disposition, "blocked")
         request["goal"]["action"] = "EXAMINE"
-        with self.assertRaises(ContractError): SemanticControlSkill(request)
+        with self.assertRaises(ContractError):
+            SemanticControlSkill(
+                request,
+                deadline_monotonic=self.clocks["now_monotonic"] + request["limits"]["wall_seconds"])
 
     def test_uncertain_or_bad_receipts_keep_pending_diagnostics_and_never_replay(self):
         for mode in ("unknown", "dispatched", "wrong_id", "wrong_before", "missing_after", "malformed", "extra", "lost"):
@@ -639,10 +653,85 @@ class SemanticControlTests(unittest.TestCase):
         before = SourceBinding(original.observation_id, "mission", 0, "actor", "boot", 0, 0, generation - 1)
         return SourceRevalidation(before, replace(before, source_id=current.observation_id, store_generation=generation), rule)
 
+    def test_old_informing_source_uses_new_operation_deadline_only_after_exact_refresh(self):
+        for mode in ("stale", "implicit", "explicit"):
+            with self.subTest(mode=mode):
+                original = self.frame()
+                self.clocks = dict(now_monotonic=self.clocks["now_monotonic"] + 4,
+                                   now_timestamp_ms=self.clocks["now_timestamp_ms"] + 4000)
+                request = self.request(original, limits=dict(primitives=32, wall_seconds=1, game_seconds=100))
+                deadline = self.clocks["now_monotonic"] + request["limits"]["wall_seconds"]
+                skill = SemanticControlSkill(request, deadline_monotonic=deadline)
+                if mode != "stale":
+                    current = self.refresh(original)
+                    relation = self.relation(original, current)
+                    if mode == "explicit": skill.revalidate(relation, self.store, **self.clocks)
+                result = self.propose(skill)
+                if mode == "explicit":
+                    self.assertIsInstance(result, ControlIntent)
+                    self.assertEqual(result.before, current)
+                    self.assertIs(result.revalidation, relation)
+                    self.assertEqual(skill._start, original)
+                    self.assertEqual(skill._deadline_monotonic, deadline)
+                else:
+                    self.assertEqual((result.disposition, result.proposed_count), ("blocked", 0))
+
+    def test_pending_proposals_share_the_original_operation_deadline(self):
+        request = self.request(self.frame())
+        deadline = self.clocks["now_monotonic"] + 1
+        self.assertLess(deadline, self.clocks["now_monotonic"] + request["limits"]["wall_seconds"])
+        skill = SemanticControlSkill(request, deadline_monotonic=deadline)
+        intent = self.propose(skill)
+        self.assertIsInstance(intent, ControlIntent)
+        for elapsed in (0.5, 1.0):
+            self.clocks = dict(now_monotonic=100 + elapsed, now_timestamp_ms=1_000_000 + int(elapsed * 1000))
+            self.assertIs(self.propose(skill), intent)
+        self.clocks = dict(now_monotonic=101.1, now_timestamp_ms=1_001_100)
+        outcome = self.propose(skill)
+        self.assertEqual((outcome.disposition, outcome.proposed_count), ("unknown", 1))
+        self.assertEqual(outcome.pending_logical_id, intent.logical_id)
+        self.assertIn("budget exceeded", outcome.reason)
+        self.assertIs(self.propose(skill), outcome)
+        self.assertEqual(skill._deadline_monotonic, 101)
+
+    def test_constructor_requires_a_finite_nonnegative_operation_deadline(self):
+        request = self.request(self.frame())
+        with self.assertRaises(TypeError): SemanticControlSkill(request)
+        with self.assertRaises(TypeError): SemanticControlSkill(request, 101)
+        for invalid in (None, True, False, "101", -1, float("nan"), float("inf"), float("-inf")):
+            with self.subTest(deadline=invalid):
+                with self.assertRaises(ContractError): SemanticControlSkill(request, deadline_monotonic=invalid)
+        for valid in (0, 101, 101.5):
+            with self.subTest(deadline=valid):
+                skill = SemanticControlSkill(request, deadline_monotonic=valid)
+                self.assertEqual(skill._deadline_monotonic, valid)
+
+    def test_invalid_or_regressing_clocks_cannot_extend_the_deadline(self):
+        invalid_clocks = [dict(now_monotonic=value) for value in
+                          (None, True, "100", -1, float("nan"), float("inf"), float("-inf"))]
+        invalid_clocks += [dict(now_timestamp_ms=value) for value in (None, True, 1.0, -1)]
+        for changed in invalid_clocks:
+            with self.subTest(clocks=changed):
+                skill = self.skill()
+                outcome = skill.propose(self.store, **(self.clocks | changed))
+                self.assertEqual((outcome.disposition, outcome.proposed_count), ("blocked", 0))
+                self.assertIn("clock", outcome.reason)
+        for changed in (dict(now_monotonic=99), dict(now_timestamp_ms=999_999)):
+            with self.subTest(regression=changed):
+                skill = self.skill()
+                intent = self.propose(skill)
+                outcome = skill.propose(self.store, **(self.clocks | changed))
+                self.assertEqual((outcome.disposition, outcome.proposed_count), ("unknown", 1))
+                self.assertEqual(outcome.pending_logical_id, intent.logical_id)
+                self.assertIn("regressing", outcome.reason)
+                self.assertIs(self.propose(skill), outcome)
+
     def test_one_explicit_refresh_retains_original_budget_and_view_binding(self):
         original = self.frame()
         request = self.request(original)
-        skill = SemanticControlSkill(request)
+        skill = SemanticControlSkill(
+            request,
+            deadline_monotonic=self.clocks["now_monotonic"] + request["limits"]["wall_seconds"])
         self.clocks = dict(now_monotonic=104.0, now_timestamp_ms=1_004_000)
         current = self.refresh(original)
         relation = self.relation(original, current)
@@ -690,7 +779,9 @@ class SemanticControlTests(unittest.TestCase):
                 request["perception"]["source_id"] = earlier.observation_id
             if mode == "revision": request["expected_revision"] += 1
             if mode == "boundary": request["expected_boundary_id"] = "wrong"
-            skill = SemanticControlSkill(request)
+            skill = SemanticControlSkill(
+                request,
+                deadline_monotonic=self.clocks["now_monotonic"] + request["limits"]["wall_seconds"])
             pending = None
             if mode == "pending_promotion": pending = self.propose(skill); self.frame()
             if mode == "lost": Path(before.frame_path).unlink()

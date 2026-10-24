@@ -6,7 +6,247 @@ status: active
 
 # Environment ledger
 
-Installation history through 2026-10-17; this is not live environment status.
+Recorded setup and maintenance history; this is not live environment status.
+
+## Player-program runtime, 2026-10-23
+
+Added only MiniRacer0.14.1 to the existing project Python lock and `.venv`, using
+the official hashed Mac ARM wheel and project-local caches. Existing dependency
+pins were retained. A separate local spike environment is owned under
+`.runtime/research/2026-10-23-executable-policies/runtime-spike/venv`.
+The first default-loop probe exposed a shutdown callback failure; the selected
+supported caller-owned async lifetime frees V8 before closing its event loop.
+Further actual tests cover bounded microtasks/heap, numeric precision and JSON
+validation. [Delivery061](changes/061-player-program-execution.md) retains results
+and limitations. No game input, native rebuild, save modification, global package,
+profile, application setting or permission expansion was used for this work.
+One managed engine worktree was used for disjoint implementation; the lead took
+repairs back after two failed worker attempts and integrated the reviewed source.
+
+## Diagnostic017 closure, 2026-10-23
+
+The [017 report](acceptance/2026-10-23-luna-responsiveness-seventeenth-attempt.md)
+retains normal Save/owned exit0/Finish stopped. The permanently FINAL player's
+wrapper exited0; the controller exited0 on SIGINT. Subsequent exact native
+PID34320 and port8766 checks found no process/listener. All191save files remain;
+16hashes changed only in the admitted world through normal Save, without additions,
+removals or restoration. Raw browser timing and original failures/unknowns are
+retained. No global configuration, package or application setup changed.
+
+## Diagnostic016 closure, 2026-10-23
+
+The [016 assessment](changes/060-responsive-player.md#closed016-organic-correction-and-responsiveness-stay-coupled)
+retains failed identity adoption and the player's incorrect diagnosis. The
+permanently FINAL actor exited0; the owned controller exited0 on SIGINT. Exact
+native PID73296, scoped process and port8766 checks then found no remaining
+process/listener. Native exit code is unobserved; this exceptional cleanup is not
+normal Save/exit/Finish. All191save files remain byte-identical, with no additions,
+deletions, restore or edits. Full host trace, unknown ACK/effect evidence, Claims,
+raw browser timing and cleanup are retained. No global setup changed.
+
+## Diagnostic015 restart closure, 2026-10-23
+
+The [responsive-player checkpoint](changes/060-responsive-player.md#closed015-and-restart-checkpoint)
+retains the failed pre-identity Load and permanently FINAL player. After player
+exit0, the owned controller exited0 on SIGINT. Subsequent exact native PID5355,
+scoped process and port8766 checks found no remaining process/listener. The saved
+final status predates this shutdown and truthfully retains the then-running menu;
+the later cleanup record owns process absence. This is exceptional cleanup, not
+normal Save/exit/Finish. All191save files remain byte-identical to the pre-run
+manifest; no save was edited, restored, added or removed. No global setup changed.
+
+## Saved diagnostic closure and producer checkpoint, 2026-10-23
+
+The [008 report](acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md)
+records initial Load/identity and normal Save on294179f/signed690fe96, then a failed
+owned exit. After actor FINAL, the exact paused native child77444 received SIGTERM,
+then the controller was interrupted and exited0. Exact PID/8766-listener absence
+was verified. Native exit code remains unknown; no normal exit/Finish is credited.
+All191savefiles remain present,13game-managed files changed only in the played
+world. The resulting72-file world is archived/member-hash verified; no edit,
+restore or deletion occurred. Baseline/failure evidence remains private.
+
+Two isolated workers added compact default metadata and safe unchanged implicit
+image presentation, reusing the existing cache/SDK/lock. No dependency, native
+rebuild, global setup or expanded permission is needed. The actual21-tool catalog
+was verified during008; the later Python producer changes require a fresh producer
+and actual output verification. No game or campaign should be resumed by reviving
+008's permanently finished actor.
+
+## Initial-Load diagnostic closure, 2026-10-23
+
+The [007 report](acceptance/2026-10-23-luna-responsiveness-seventh-attempt.md)
+records the failed new-admission Load on b26ae08/current690fe96. Its actor stopped
+permanently; the exact owned paused child87053 and controller were exceptionally
+stopped, with PID/8766-listener absence verified. No normal ending is credited;
+native exit code remains unknown. All191prior save files are unchanged and none
+were added. The accepted72-file baseline archive is retained; no restore or save
+editing occurred. Actual21-tool loading is verified; no additional Codex restart
+or global configuration change is required.
+
+## Ctrl/named-key rebuild and failed diagnostic, 2026-10-23
+
+Built committed `bc36b7f4263c9e8a9d6e929b9884dfaa92e07d5c` in the existing
+owned `/private/tmp/cdda-player-build-53c_cr4z` workspace with two jobs and bundled
+dependencies. The project installer updated/signed only its app. Installed native:
+`690fe96e27e5d31046e1600918caad1ccd9f5964ff291ea9b01a33d4f25a86b1`.
+Signature, exact prepared wrapper, project userdir, FULLSCREEN=no and disabled
+physical mouse were verified. No global install/profile/configuration changed.
+The [006 report](acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md)
+records90returned inputs and world creation, then local scope expiry/failed cleanup;
+no identity, routine responsiveness or normal ending is qualified.
+
+After player FINAL, the exact owned paused menu child and controller were
+exceptionally stopped and PID/listener absence verified. Its six empty-world files
+were archived/member-hash verified under the private closed evidence directory
+before active-menu retirement. All191previous save files remained identical.
+Original mission/host/shutdown/cost evidence is retained. Process absence is not
+normal-exit proof, and the last native sample leaves its exit code unknown.
+
+## Capture-precondition rebuild and qualification, 2026-10-22
+
+Built committed `f2fdc621039f241e4fcd3784095e1999b62dbe79` in the existing
+owned `/private/tmp/cdda-player-build-53c_cr4z` workspace with two compile jobs,
+bundled frameworks/FreeType and no global installation. The existing installer
+updated and locally signed only the project app; installed native SHA-256 is
+`40acb88b75cabf50a1b8a1134336c210d3f20503dcedd910fa2463019bdbcd56`.
+The [capture001 report](acceptance/2026-10-22-native-capture-preconditions.md)
+owns the bounded ordinary-input/normal-lifecycle qualification, unchanged PNG
+pairs, unknown ACKs and options float-serialization discrepancy. Both owned
+children exited0 and are absent; the current controller was retained for the next
+fresh campaign. No global setup or engine outcome was changed.
+
+The finished native worker checkout/branch was removed after verifying its full
+patch unchanged, all six integrated files committed, and the lead's bounded
+refinements preserved. Its build/runtime access remained prohibited. Git owns
+source history; private receipts retain only the bounded integration/cleanup proof.
+
+## User-directed stale-save cleanup, 2026-10-22
+
+The progressive player-view2 increment adds only read-only `enactive_detail` to
+the existing project `.codex/config.toml` allowlist. The complete table matches
+the current configuration generator; every other field, existing approval policy
+and unrelated setting is preserved. No global configuration, package or profile
+changed. Actual host loading is separately preflighted; file presence is not proof.
+
+With no native game or controller listener running, retired 36 closed test/failed
+worlds containing 20 saved characters from the project userdir's active save
+directory. All 1,363 files (33,647,175 bytes) were verified against the ordinary
+local archive `.runtime/save-retirement/2026-10-22/stale-worlds.tar.gz` before
+removing their active copies. Archive: 22,149,842 bytes, SHA-256
+`09bb362a5f57a9ac7ca76e5b1bee4a2ff39c394bd904c4b2d164bfaf659086f0`.
+The adjacent private `manifest.json` records each file hash, retired world,
+retained file and restoration instructions; no new backup service was installed.
+
+The remaining active worlds are `Belgium` (Ned Meyers, first seven-day campaign),
+`Enactive Twenty Four` (Alex Enactive, accepted supply/shelter checkpoint) and
+`EnactiveLearningSix` (Casey, current normally closed learning checkpoint). Every
+retained file was verified unchanged. Mission ledgers, journals, frames, host
+traces and acceptance artifacts were untouched; archived failed campaigns remain
+failed and closed. Saves and the archive remain local and excluded from Git.
+
+After native001's two normal exits and controller shutdown, separately retired its
+closed `EnactiveSaveRefreshOne` / Robin technical world. The ordinary archive
+`.runtime/save-retirement/2026-10-22-native001/closed-technical-world.tar.gz`
+is 459,025 bytes, SHA-256
+`a063c4d701e2ab846962a716cf110ce165f2e51857f7f292e98acca5dc553294`;
+its adjacent manifest verifies every archived file. All 191 files in the three
+accepted worlds above remained byte-identical. Native001's mission evidence and
+original host traces remain intact; the active menu again contains those three
+accepted worlds only.
+
+After failed independent campaign006's actors and owned processes stopped,
+separately archived its closed `EnactiveSevenDaySix` world at
+`.runtime/save-retirement/2026-10-22-campaign006/closed-failed-world.tar.gz`.
+Archive: 2,269,996 bytes, SHA-256
+`7f9e955a289df2c95858f720c37bcade55063aa648dc8c285b23e5da49d2ea0b`.
+All 88 archived files were verified before removing the active world; all 191
+accepted-world files remained unchanged. The adjacent manifest records restoration
+instructions. Its mission evidence remains intact, and exceptional cleanup does
+not establish a normal ending or reusable failed-campaign authority.
+
+After local-refusal001's normal final exit, actual operator quiescence and
+controller shutdown, archived `EnactiveLocalRefusalOne` / Taylor at
+`.runtime/save-retirement/2026-10-22-local-refusal001/closed-technical-world.tar.gz`.
+All 45 files were hash-verified in the archive before removing their active copy.
+Archive: 1,161,802 bytes, SHA-256
+`c141338e426971fc1b6ba69e7433c11f0be5825978620710e05f8fefb763fa7e`.
+Its adjacent manifest owns file hashes and restoration instructions. All 191
+accepted-world files and all mission evidence remain unchanged.
+
+After failed independent campaign007's three actor hosts and owned processes
+closed, archived `EnactiveSevenDaySeven` / Avery at
+`.runtime/save-retirement/2026-10-22-seven-day007/failed-world.tar.gz`.
+All 43 files were verified before removing the active copy. Archive: 459,550 bytes,
+SHA-256 `7a85470e4cced63e46cbca9b06e1b6c1cd26cb8b821be05431e311f8a58595ca`.
+The adjacent manifest retains file hashes and restoration instructions; all 191
+accepted-world files remained unchanged. Its mission evidence is intact. The
+owned native SIGTERM and controller Ctrl-C were exceptional cleanup, never a
+normal save/ending or authority to reuse the failed campaign.
+
+After failed independent campaign008's three actual actor hosts became FINAL,
+preserved evidence and exceptionally closed native5303/controller95020. The
+controller records native returncode−9 after the lead's initial SIGTERM request;
+controller exit0 and absent exact PIDs/port8766 do not establish normal Save/exit.
+Archived all49files of `EnactiveSevenDayEight` / Sam before active-menu retirement:
+`.runtime/save-retirement/2026-10-22-seven-day008/failed-world.tar.gz`,
+892,024bytes, SHA-256
+`4379e070199731f709b4ce93f9e6986133555c1b3d72947a6a9bd8d62463481b`.
+Every archive member hash verified; all191accepted-world files remained unchanged.
+The adjacent manifest owns hashes/restoration; the [failed008 report](acceptance/2026-10-22-independent-seven-day-eighth-attempt.md)
+owns original costs, unknowns and limits. No global installation or setting changed.
+
+After capture001's two normal exits, actual operator FINAL and independent
+evidence review, archived `EnactiveCaptureOne` / Morgan's51files at
+`.runtime/save-retirement/2026-10-22-capture001/closed-technical-world.tar.gz`.
+All member hashes verified before removing the active copy. Archive1,948,611bytes,
+SHA-256 `e8732ba299723abcec0ba803712b6c769ca24494127bbb9c1d9641585c583139`.
+All191prior accepted-world files remain unchanged; the adjacent manifest owns
+restoration instructions. Ledgers, original frames, host evidence and the raw
+options-pin discrepancy remain. Restoration would still require a new admission
+and ordinary Load; the archive grants no old-world authority.
+
+After failed campaign009's actual player/adviser FINAL records, retained closed
+evidence and exceptionally stopped only its owned native13901 (SIGTERM) and
+controller95258 (ordinary interrupt). Both returned0; the native shutdown receipt
+explicitly records `normal_exit_verified:false`. Exact PIDs and port8766 were
+absent. These are cleanup facts, not normal gameplay ending.
+Archived78 failed-world files before active-menu retirement:
+`.runtime/save-retirement/2026-10-22-campaign009/failed-world.tar.gz`,
+1,566,725bytes, SHA-256
+`49c84bf02debbc1d17ac1896ce5841787e91838a2d24170613cac74eaa23102a`.
+All archive members were hash-verified and all191 accepted-world files remained
+unchanged. The adjacent manifest owns restoration instructions; the
+[failed009 report](acceptance/2026-10-22-independent-seven-day-ninth-attempt.md)
+owns costs, delivery uncertainty and evidence limits. No global change was made.
+
+Observation001's operator became actually FINAL after both normal owned exits and
+FinishStopped. The controller then exited0 on ordinary interrupt; project native
+and port8766 listener were absent, without exceptional signals. Archived43 closed
+technical-world files with member-hash verification:
+`.runtime/save-retirement/2026-10-22-observation001/closed-technical-world.tar.gz`,
+756,778bytes, SHA-256
+`abee20e0d798405590704e5984310667ede348e67ed8bfb474841e3f87889484`.
+All191 accepted-save files remained unchanged; adjacent manifest owns restoration.
+The [bounded report](acceptance/2026-10-22-native-observation-custody.md) retains
+the successful valid path, six unknown ACKs and failed frozen-source full checks.
+No global setup, save contents or old authority changed.
+
+The failed [Luna responsiveness001](acceptance/2026-10-22-luna-responsiveness-first-attempt.md)
+player was permanently quiescent before exceptional native SIGTERM and normal
+controller interrupt. The exact owned PIDs and port were subsequently absent;
+cached process status was not treated as exit proof. Its nine world files were
+tarred and every member hash verified before active-directory retirement; all191
+other preserved-save files still matched the pre-run baseline. No normal Save/exit
+or successful gameplay is credited. Source/native evidence and the archive remain
+project-local, with no global changes.
+
+Normally stopped campaign010 was retired only after all actual actors, native
+PID20540 and controllerPID18430/session74966 ended. Its51 save files are preserved
+in `.runtime/campaigns/independent-seven-day-010/closed-evidence/EnactiveSevenDayTen.tar.gz`,
+with a member-hash-verified adjacent retirement manifest. The191 accepted-save
+files remain unchanged. The [partial-run report](acceptance/2026-10-22-independent-seven-day-tenth-attempt.md)
+owns exact hashes, costs and limits; no day or midpoint reload is accepted.
 
 ## Structured player SDK, 2026-10-20
 

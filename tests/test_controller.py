@@ -21,19 +21,26 @@ from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import CapacityError, EvidenceError
 
 
+def frame_geometry():
+    return {"window_width": 1, "window_height": 1, "output_width": 1,
+            "output_height": 1, "viewport": [0, 0, 1, 1]}
+
+
 def state(request_id="", *, revision=1, **changes):
-    value = {"protocol": 4, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": request_id, "session": "game-test", "revision": revision,
+    value = {"protocol": 6, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": request_id, "session": "game-test", "revision": revision,
              "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT", "INVENTORY"],
              "status": "ready", "error": "", "paused": False,
              "timestamp_ms": int(time.time() * 1000), "frame_ok": True, "in_game": True,
-             "frame": "frame-game-test-1.png",
+             "frame": "frame-game-test-1.png", "frame_geometry": frame_geometry(),
              "boundary": {"kind": "normal_play", "id": "game-test-b1", "control_generation": 0,
-                          "recovery_operations": [], "interrupt_request_id": None},
+                          "recovery_operations": [], "interrupt_request_id": None, "input_receiver": True},
              "scene": {"position": [0, 0, 0], "turn": 1, "visible_creatures": [],
                        "neighbors": [{"dx": dx, "dy": dy, "visible": True,
                                       "terrain": "t_floor", "furniture": "f_null"}
                                      for dx, dy in [(0, -1), (0, 1), (-1, 0), (1, 0)]]}}
     value.update(changes)
+    if not value["frame_ok"] and "frame_geometry" not in changes:
+        value["frame_geometry"] = None
     return value
 
 
@@ -81,27 +88,29 @@ class FakeBridge:
                 kind = request["kind"]
                 if self.before_gate is not None:
                     self.before_gate(self, request)
-                if kind in {"key", "action", "resume"} and (
+                if kind in {"key", "action", "direct", "resume"} and (
                         request.get("authority") != read_json(self.bridge / "authority.json")
                         or self.value["boundary"]["kind"] not in {"normal_play", "menu"}):
                     self.value.update(status="rejected", error="authority revoked or unsupported boundary")
                     (self.bridge / "claimed.json").unlink(missing_ok=True)
                     self.publish(self.value.copy())
                     continue
-                if kind in {"key", "action", "resume"}:
+                if kind in {"key", "action", "direct", "resume"}:
                     self.delivered.append(request)
                 if kind == "resume":
                     (self.bridge / "pause").unlink(missing_ok=True)
                     self.value["paused"] = False
                     self.value["boundary"]["control_generation"] += 1
                     self.value["revision"] += 1
-                if kind in {"key", "action"}:
+                if kind in {"key", "action", "direct"}:
                     self.value["revision"] += 1
                     self.value["status"] = "dispatched"
                     self.value["frame_ok"] = False
+                    self.value["frame_geometry"] = None
                     self.publish(self.value.copy())
                     self.value["status"] = "ready"
                     self.value["frame_ok"] = True
+                    self.value["frame_geometry"] = frame_geometry()
                     movement = {"UP": (0, -1), "DOWN": (0, 1), "LEFT": (-1, 0), "RIGHT": (1, 0)}
                     if request.get("action") in movement:
                         dx, dy = movement[request["action"]]
@@ -120,7 +129,7 @@ def recovery_state(kind="activity_poll", *, owner=None, generation=0, revision=3
                  "debug_prompt": "continue_debug_once"}.get(kind)
     return state(revision=revision, paused=True, scene=None, category="YESNO" if owner else "DEFAULTMODE",
                  boundary={"kind": kind, "id": f"prompt-{revision}", "control_generation": generation,
-                           "recovery_operations": [operation] if operation else [], "interrupt_request_id": owner})
+                           "recovery_operations": [operation] if operation else [], "interrupt_request_id": owner, "input_receiver": False})
 
 
 class ControlBridge:
@@ -181,12 +190,12 @@ class ControlBridge:
                                                generation=generation, revision=value["revision"] + 1)
                         result = "prompt_opened"
                     else:
-                        value.update(paused=True, revision=value["revision"] + 1, frame_ok=False, frame="")
+                        value.update(paused=True, revision=value["revision"] + 1, frame_ok=False, frame="", frame_geometry=None)
                         value["boundary"]["control_generation"] = generation
                         result = "answer_delivered" if request["kind"] == "answer_interrupt" else "dismissal_delivered"
                     if self.after_commit:
                         self.after_commit(self, request)
-                response = {"protocol": 4, "id": request["id"], "status": result,
+                response = {"protocol": 6, "id": request["id"], "status": result,
                             "error": "revoked" if result == "rejected" else "", "state": value}
                 (self.bridge / "control-claimed.json").unlink(missing_ok=True)
                 if self.publish_result:
@@ -226,7 +235,7 @@ class ControllerTests(unittest.TestCase):
     def test_control_envelopes_are_exact_v4_and_prompt_owner_is_mandatory(self):
         value = recovery_state("interrupt_confirmation", owner=str(uuid.uuid4()))
         validate_state(value)
-        response = {"protocol": 4, "id": value["boundary"]["interrupt_request_id"],
+        response = {"protocol": 6, "id": value["boundary"]["interrupt_request_id"],
                     "status": "prompt_opened", "error": "", "state": value}
         validate_control_response(response)
         for mutate in (lambda v: v.update(protocol=2), lambda v: v.update(extra=1),
@@ -236,7 +245,7 @@ class ControllerTests(unittest.TestCase):
             mutate(broken)
             with self.assertRaises(ControlError):
                 validate_control_response(broken)
-        request = {"protocol": 4, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
+        request = {"protocol": 6, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
                    "control_generation": 1, "authority": {"controller_boot_id": "boot", "counter": 1},
                    "created_ms": 1000, "deadline_ms": 3000}
         validate_control_request(request)
@@ -399,8 +408,8 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
             self.assertEqual(read_json(admission), request)
             (self.controller.bridge / "control.json").rename(self.controller.bridge / "control-claimed.json")
             value = recovery_state("debug_prompt", generation=1, revision=4)
-            value.update(frame_ok=False, frame="")
-            response = {"protocol": 4, "id": request["id"], "status": "dispatched", "error": "", "state": value}
+            value.update(frame_ok=False, frame="", frame_geometry=None)
+            response = {"protocol": 6, "id": request["id"], "status": "dispatched", "error": "", "state": value}
             atomic_json(self.controller.bridge / "control-response.json", response)
             (self.controller.bridge / "control-claimed.json").unlink()
             process.kill()
@@ -437,7 +446,7 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
     def test_orphan_control_claim_and_malformed_passive_state_fail_closed(self):
         self.controller.close()
         created = int(time.time() * 1000)
-        request = {"protocol": 4, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
+        request = {"protocol": 6, "id": str(uuid.uuid4()), "kind": "request_interrupt", "session": "world",
                    "control_generation": 0, "authority": {"controller_boot_id": "boot", "counter": 1},
                    "created_ms": created, "deadline_ms": created + 2000}
         path = self.controller.bridge / "control-claimed.json"
@@ -465,7 +474,7 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
             result = self.controller.recover("continue_debug_once", timeout=0.04, **self.recovery_expect())
             self.assertEqual(result["status"], "unknown")
             request = fake.requests[0]
-        original = {"protocol": 4, "id": "ordinary-unknown", "kind": "action", "action": "UP",
+        original = {"protocol": 6, "id": "ordinary-unknown", "kind": "action", "action": "UP",
                     "session": "game-test", "revision": 1, "deadline_ms": 1,
                     "boundary_id": "game-test-b1", "takeover_generation": 0,
                     "frame": "frame-game-test-1.png", "require_exact_frame": False,
@@ -473,8 +482,8 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
         self.controller.pending = original.copy()
         atomic_json(self.controller.admissions / "ordinary-unknown.json", original)
         value = recovery_state("debug_prompt", generation=request["control_generation"] + 1)
-        value.update(frame_ok=False, frame="")
-        atomic_json(self.controller.bridge / "control-response.json", {"protocol": 4, "id": request["id"],
+        value.update(frame_ok=False, frame="", frame_geometry=None)
+        atomic_json(self.controller.bridge / "control-response.json", {"protocol": 6, "id": request["id"],
                     "status": "dismissal_delivered", "error": "", "state": value})
         self.controller.status()
         self.assertEqual(self.controller.control_pending["id"], request["id"])
@@ -528,14 +537,14 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
 
     def test_startup_rejects_unsupported_stored_versions_and_preserves_evidence(self):
         self.controller.close()
-        request = {"protocol": 4, "id": "uncertain", "kind": "action", "action": "UP",
+        request = {"protocol": 6, "id": "uncertain", "kind": "action", "action": "UP",
                    "session": "world", "revision": 1, "boundary_id": "world-b1", "takeover_generation": 0, "deadline_ms": 1,
                    "frame": "frame-world-1.png", "require_exact_frame": False,
                    "authority": {"controller_boot_id": "old-boot", "counter": 1}}
         bridge = self.controller.bridge
         for relative in ("admissions/uncertain.json", "claimed.json", "response.json"):
             path = bridge / relative
-            for version in (None, 1, 2, 3, 5, True, 4.0):
+            for version in (None, 1, 2, 3, 4, 5, True, 6.0):
                 with self.subTest(path=relative, version=version):
                     value = state() if relative == "response.json" else request.copy()
                     if version is None:
@@ -570,7 +579,7 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
         for index in range(61):
             request_id = f"retained-{index:03d}"
             atomic_json(self.controller.admissions / f"{request_id}.json",
-                        {"protocol": 4, "id": request_id, "kind": "action", "action": "UP",
+                        {"protocol": 6, "id": request_id, "kind": "action", "action": "UP",
                          "session": "world", "revision": 1, "boundary_id": "world-b1", "takeover_generation": 0, "deadline_ms": 1,
                          "frame": "frame-world-1.png", "require_exact_frame": False,
                          "authority": {"controller_boot_id": "old-boot", "counter": 1}})
@@ -710,6 +719,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.ready()
             for boundary in ("activity_poll", "debug_prompt", "interrupt_confirmation", "unsupported"):
                 fake.value["boundary"] = {**fake.value["boundary"], "kind": boundary,
+                    "input_receiver": False,
                     "recovery_operations": ["answer_interrupt"] if boundary == "interrupt_confirmation" else [],
                     "interrupt_request_id": "owned" if boundary == "interrupt_confirmation" else None}
                 fake.value["scene"] = None
@@ -718,7 +728,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     result = self.controller.execute(kind, **payload, **self.expect())
                     self.assertEqual(result["status"], "controller_error")
                     self.assertEqual(len(fake.delivered), before)
-            fake.value["boundary"].update(kind="menu", recovery_operations=[], interrupt_request_id=None)
+            fake.value["boundary"].update(kind="menu", input_receiver=True, recovery_operations=[], interrupt_request_id=None)
             self.assertEqual(self.controller.execute("key", key="x", **self.expect())["status"], "ready")
             fake.value["frame_ok"] = False
             self.assertEqual(self.controller.execute("resume")["status"], "controller_error")
@@ -772,7 +782,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
     def test_startup_pauses_retires_and_never_replays(self):
         self.controller.close()
         bridge = self.root / ".runtime" / "bridge"
-        atomic_json(bridge / "request.json", {"protocol": 4, "kind": "key", "key": "x", "id": "old",
+        atomic_json(bridge / "request.json", {"protocol": 6, "kind": "key", "key": "x", "id": "old",
             "session": "world", "revision": 1, "boundary_id": "world-b1", "takeover_generation": 0, "deadline_ms": 1,
             "frame": "frame-world-1.png", "require_exact_frame": False,
             "authority": {"controller_boot_id": "old-boot", "counter": 1}})
@@ -1107,7 +1117,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
     def test_walk_retains_ready_response_without_available_frame(self):
         with FakeBridge(self.controller) as fake:
             self.ready()
-            fake.value.update(frame_ok=False, frame="")
+            fake.value.update(frame_ok=False, frame="", frame_geometry=None)
             result = self.controller.execute("walk", direction="east", steps=1, **self.expect())
             self.assertEqual((result["status"], result["steps"]), ("stopped", 0))
             self.assertEqual(result["observation"], fake.value)
@@ -1310,13 +1320,56 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             expected_boundary_id=self.controller.state["boundary"]["id"], logical_action_id="test-logical-action",
             deadline_monotonic=time.monotonic() + payload.get("timeout", 2), **payload)
         self.assertEqual(envelope["logical_action_id"], "test-logical-action")
-        self.assertEqual(set(envelope), {"logical_action_id", "request", "result", "published", "received_monotonic", "preflight"})
+        self.assertEqual(set(envelope), {"logical_action_id", "request", "result", "published", "received_monotonic", "preflight", "processing_error"})
         return envelope["result"]
 
     def acquire(self, **changes):
         values = {"mission_id": "task-test", "epoch": 0, "actor_id": "supervisor", "operation": "navigate",
                   "expected_boundary_id": self.controller.state["boundary"]["id"], **self.expect(), **changes}
         return self.controller.acquire_mission(**values)
+
+    def test_direct_mission_uses_physical_preflight_and_closed_input_payload(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            image = b"synthetic exact informing image"
+            (fake.bridge / fake.value["frame"]).write_bytes(image)
+            lease = self.acquire(operation="interaction")
+            direct = dict(type="click", button="left", x=0, y=0, geometry=frame_geometry())
+            receipt = self.mission_dispatch(lease, kind="direct", value=direct)
+            self.assertEqual(receipt["result"]["status"], "ready")
+            self.assertEqual(receipt["request"]["input"], direct)
+            self.assertNotIn("direct", receipt["request"])
+            self.assertFalse(receipt["request"]["require_exact_frame"])
+            self.assertEqual(sum(request["kind"] == "direct" for request in fake.delivered), 1)
+            self.controller._validate_stored_request(receipt["request"])
+            for changes in (dict(protocol=5), dict(require_exact_frame=True), dict(input={"type": "text", "text": "ab"})):
+                with self.subTest(changes=changes), self.assertRaises(ControlError):
+                    self.controller._validate_stored_request(receipt["request"] | changes)
+
+    def test_direct_cannot_use_external_or_navigation_authority_or_changed_geometry(self):
+        with FakeBridge(self.controller) as fake:
+            self.ready()
+            image = b"synthetic informing image"
+            (fake.bridge / fake.value["frame"]).write_bytes(image)
+            direct = dict(type="click", button="left", x=0, y=0, geometry=frame_geometry())
+            self.assertEqual(self.controller.execute("direct", input=direct)["status"], "controller_error")
+            navigation = self.acquire()
+            receipt = self.mission_dispatch(navigation, kind="direct", value=direct)
+            self.assertFalse(receipt["published"])
+            self.assertIn("interaction or lifecycle lease", receipt["result"]["error"])
+            lease = self.acquire(replace=navigation, operation="interaction")
+            no_image = self.mission_dispatch(lease, kind="direct", value=direct)
+            self.assertTrue(no_image["published"])
+            self.assertEqual(no_image["result"]["status"], "ready")
+            legacy_hash = self.mission_dispatch(lease, kind="direct", value=direct,
+                expected_image_sha256=hashlib.sha256(image).hexdigest())
+            self.assertFalse(legacy_hash["published"])
+            self.assertIs(self.controller._mission_lease, lease)
+            changed = direct | dict(geometry=frame_geometry() | dict(window_width=2))
+            receipt = self.mission_dispatch(lease, kind="direct", value=changed)
+            self.assertFalse(receipt["published"])
+            self.assertIn("geometry", receipt["result"]["error"])
+            self.assertEqual(sum(request["kind"] == "direct" for request in fake.requests), 1)
 
     def mission_resume_binding(self):
         snapshot = self.controller.status(); state = snapshot["state"]
@@ -1389,6 +1442,25 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(result["result"]["status"], "ready")
             self.assertIsNone(self.controller.status()["mission_lease"])
             self.assertEqual([r["kind"] for r in fake.delivered], ["resume"])
+
+    def test_nonimage_mission_resume_preserves_original_capture_across_render_churn(self):
+        with FakeBridge(self.controller) as fake:
+            self.controller.execute("observe")
+            captured = []
+
+            def preflight(observation, received):
+                captured.append(copy.deepcopy(observation))
+                changed = copy.deepcopy(observation)
+                changed["frame"] = "frame-game-test-2.png"
+                self.controller._accept(changed)
+
+            result = self.mission_resume(preflight=preflight)
+            self.assertTrue(result["published"], result)
+            self.assertEqual(result["result"]["status"], "ready")
+            self.assertEqual(result["request"]["frame"], captured[0]["frame"])
+            self.assertFalse(result["request"]["require_exact_frame"])
+            self.assertEqual([r["kind"] for r in fake.delivered], ["resume"])
+            self.assertIsNone(self.controller.status()["mission_lease"])
 
     def mission_resume(self, **changes):
         return self.controller.resume_mission(**{**self.mission_resume_binding(), **changes})
@@ -1492,7 +1564,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 fake.before_gate = before_gate
                 envelope = self.mission_resume(expected_image_sha256=digest, preflight=preflight)
                 self.assertEqual(set(envelope), {"logical_action_id", "request", "result", "published",
-                                               "received_monotonic", "preflight"})
+                                               "received_monotonic", "preflight", "processing_error"})
                 self.assertEqual(envelope["logical_action_id"], "mission-resume")
                 self.assertEqual(envelope["result"]["status"], "ready")
                 self.assertTrue(envelope["published"])
@@ -1549,6 +1621,8 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
         for fault in faults:
             with self.subTest(fault=fault), FakeBridge(self.controller) as fake:
                 self.controller.execute("observe")
+                image = b"image-conditioned Resume source"
+                (fake.bridge / fake.value["frame"]).write_bytes(image)
                 sentinel = fake.bridge / "pause"
                 if fault == "sentinel_create": sentinel.unlink()
                 clock = SimpleNamespace(value=time.monotonic(), wall=time.time())
@@ -1601,6 +1675,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 try:
                     with patch("harness.controller.time", proxy), patch.object(self.controller, "_exchange", side_effect=exchange):
                         envelope = self.mission_resume(preflight=preflight,
+                            expected_image_sha256=hashlib.sha256(image).hexdigest(),
                             deadline_monotonic=clock.value + (2 if fault == "deadline" else 10))
                     self.assertIsNotNone(envelope["preflight"])
                     self.assertFalse(envelope["published"])
@@ -1688,7 +1763,9 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 self.assertFalse(envelope["published"])
                 self.assertIsNone(envelope["request"])
                 self.assertEqual(calls, [])
-                self.assertTrue(self.controller.frozen)
+                self.assertEqual(self.controller.frozen, fault != "changed")
+                self.assertEqual(envelope["result"]["status"], "rejected" if fault == "changed" else "controller_error")
+                self.assertTrue(self.controller.pause_requested)
                 self.assertFalse(any(r["kind"] == "resume" for r in fake.requests))
 
     def test_mission_resume_callback_crash_does_not_fabricate_determinate_receipt(self):
@@ -1954,7 +2031,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                         return True
                     fake.behavior = future
                 result = self.run_action(lease, action="UP", **expected)
-                self.assertEqual(result["status"], "controller_error")
+                self.assertEqual(result["status"], "rejected" if change == "revision" else "controller_error")
                 self.assertFalse(any(r["kind"] == "action" for r in fake.delivered))
                 self.controller.pause()
                 # Restore a known world before the next subcase's Observe/Resume.
@@ -2248,6 +2325,110 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertEqual(entries[-1]["request"]["kind"], "mission_receipt")
             self.assertEqual(entries[-1]["outcome"], envelope)
 
+    def test_terminal_ack_stays_known_when_current_capture_revokes_custody(self):
+        for status in ("ready", "rejected"):
+            for change in ("takeover", "session"):
+                with self.subTest(status=status, change=change), tempfile.TemporaryDirectory() as root:
+                    controller = Controller(Path(root), timeout=2)
+                    try:
+                        captures = {}
+                        def supersede_ack(fake, request):
+                            if request["kind"] != "action":
+                                return True
+                            ack = copy.deepcopy(fake.value)
+                            ack.update(status=status, error="native rejection" if status == "rejected" else "",
+                                       revision=request["revision"] + (status == "ready"))
+                            current = copy.deepcopy(ack)
+                            current.update(id="", status="ready", error="", paused=True,
+                                           pause_origin="human", revision=ack["revision"] + 1,
+                                           timestamp_ms=ack["timestamp_ms"] + 1,
+                                           frame="frame-game-test-99.png", takeover_generation=1)
+                            current["boundary"]["control_generation"] += 1
+                            current["boundary"]["id"] = "takeover-boundary"
+                            if change == "session":
+                                current.update(session="new-world", frame="frame-new-world-1.png")
+                            captures.update(ack=ack, current=current)
+                            # Publish the independent current source first so a
+                            # correlated terminal cannot race ahead of this test.
+                            atomic_json(fake.bridge / "state.json", current)
+                            atomic_json(fake.bridge / "response.json", ack)
+                            return False
+
+                        with FakeBridge(controller, supersede_ack) as fake:
+                            self.assertEqual(controller.execute("observe")["status"], "ready")
+                            self.assertEqual(controller.execute("resume")["status"], "ready")
+                            source = copy.deepcopy(controller.state)
+                            lease = controller.acquire_mission("task-test", 0, "supervisor", operation="navigate",
+                                expected_boundary_id=source["boundary"]["id"], expected_session=source["session"],
+                                expected_revision=source["revision"])
+                            receipt = controller.execute_mission(lease, kind="action", value="UP",
+                                expected_boundary_id=source["boundary"]["id"], logical_action_id="ack-custody",
+                                expected_session=source["session"], expected_revision=source["revision"],
+                                deadline_monotonic=time.monotonic() + 2)
+                            request = receipt["request"]
+                            self.assertTrue(receipt["published"])
+                            self.assertIsNone(receipt["processing_error"])
+                            self.assertEqual(receipt["result"], captures["ack"])
+                            self.assertEqual(receipt["result"]["id"], request["id"])
+                            self.assertIsInstance(receipt["received_monotonic"], float)
+                            self.assertLessEqual(receipt["received_monotonic"], time.monotonic())
+                            self.assertEqual(read_json(fake.bridge / "response.json"), captures["ack"])
+                            snapshot, received = controller.observation_snapshot()
+                            self.assertEqual(snapshot, captures["current"])
+                            self.assertIsInstance(received, float)
+                            self.assertIsNone(controller._mission_lease)
+                            self.assertTrue(controller.frozen)
+                            self.assertTrue(controller.pause_requested)
+                            self.assertTrue((fake.bridge / "pause").exists())
+                            self.assertGreater(controller.pause_generation, lease.pause_generation)
+                            self.assertIsNone(controller.pending)
+                            self.assertFalse((controller.admissions / f'{request["id"]}.json').exists())
+                            self.assertEqual(sum(r["kind"] == "action" for r in fake.requests), 1)
+                            self.assertEqual(controller.unknown_outcomes, [])
+                            entries = [json.loads(line) for line in controller.journal.read_text().splitlines()]
+                            self.assertFalse(any(row["outcome"].get("status") == "unknown"
+                                and row["outcome"].get("request", {}).get("id") == request["id"] for row in entries))
+                            self.assertTrue(any(row["request"] == request and row["outcome"] == captures["ack"]
+                                                for row in entries))
+                            self.assertEqual(entries[-1]["outcome"], receipt)
+                    finally:
+                        controller.close()
+
+    def test_takeover_capture_preserves_unknown_without_matching_terminal(self):
+        for unrelated_terminal in (False, True):
+            with self.subTest(unrelated_terminal=unrelated_terminal), FakeBridge(self.controller) as fake:
+                self.ready()
+                lease = self.acquire()
+                # An admitted action still awaiting its terminal ACK. This
+                # isolates the capture classification from exchange timeout.
+                pending = {**copy.deepcopy(fake.requests[-1]), "id": str(uuid.uuid4()),
+                           "kind": "action", "action": "UP"}
+                self.controller.pending = pending
+                atomic_json(self.controller.admissions / f'{pending["id"]}.json', pending)
+                current = copy.deepcopy(fake.value)
+                current.update(paused=True, pause_origin="human", takeover_generation=1,
+                               revision=current["revision"] + 1, frame="frame-game-test-99.png")
+                current["boundary"]["control_generation"] += 1
+                atomic_json(fake.bridge / "state.json", current)
+                if unrelated_terminal:
+                    self.controller._accept(current, known_request_id=str(uuid.uuid4()), historical=True)
+                else:
+                    self.controller.status()  # An ordinary capture authenticates no ACK.
+                self.assertEqual(self.controller.pending, pending)
+                self.assertTrue((self.controller.admissions / f'{pending["id"]}.json').exists())
+                self.assertEqual(self.controller.unknown_outcomes[-1]["request"], pending)
+                entries = [json.loads(line) for line in self.controller.journal.read_text().splitlines()]
+                self.assertTrue(any(row["outcome"].get("status") == "unknown"
+                    and row["outcome"].get("request", {}).get("id") == pending["id"] for row in entries))
+                self.assertEqual(self.controller.observation_snapshot()[0], current)
+                self.assertIsNone(self.controller._mission_lease)
+                self.assertTrue(self.controller.frozen)
+                self.assertTrue(self.controller.pause_requested)
+                self.assertTrue((fake.bridge / "pause").exists())
+                self.assertGreater(self.controller.pause_generation, lease.pause_generation)
+            self.controller.pending = None
+            self.controller.state = None
+
     def test_run_preflight_rejection_is_never_an_action_receipt(self):
         with FakeBridge(self.controller) as fake:
             self.ready()
@@ -2296,6 +2477,73 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 self.assertIsNone(received)
             self.assertEqual(len(fake.requests), 1)
             self.assertEqual(fake.delivered, [])
+
+    def test_exchange_native_deadline_does_not_restart_after_scheduling_delay(self):
+        # Only the controller clock is synthetic. Real atomic request/admission
+        # files model one consumed input with no ACK, never a native exit proof.
+        clock = SimpleNamespace(mono=100.0, wall=1000.0, sampled=False)
+        publications = []
+        def wall():
+            if not clock.sampled:
+                clock.sampled = True
+                clock.mono += 0.25
+                clock.wall += 0.25
+            return clock.wall
+        def consume_and_expire(_):
+            request = read_json(self.controller.bridge / "request.json")
+            self.assertIsNotNone(request)
+            publications.append(request)
+            (self.controller.bridge / "request.json").unlink()
+            clock.mono, clock.wall = 100.801, 1000.801
+        proxy = SimpleNamespace(monotonic=lambda: clock.mono, time=wall, sleep=consume_and_expire)
+        self.controller.state = state()
+        self.controller.pause_requested = False
+        with patch("harness.controller.time", proxy):
+            result = self.controller._exchange("action", 0.8,
+                generation=self.controller.pause_generation, action="YES")
+            self.assertEqual(result["status"], "timeout", result)
+            self.assertEqual(len(publications), 1)
+            request = publications[0]
+            self.assertLessEqual(request["deadline_ms"], 1000800)
+            self.assertGreater(request["deadline_ms"], 1000700)
+            self.assertEqual(self.controller.pending, request)
+            self.assertEqual([row["request"] for row in self.controller.unknown_outcomes], [request])
+            binding = dict(expected_controller_boot_id=self.controller.authority["controller_boot_id"],
+                expected_operator_generation=self.controller.operator_pause_generation,
+                expected_generation=self.controller.pause_generation, expected_request=request,
+                launch_id="owned-exit", exit_request_id="exit", returncode=0)
+            # A later backward wall adjustment still cannot be treated as native
+            # expiry merely because the host monotonic allowance ran out.
+            clock.wall = 1000.0
+            with self.assertRaisesRegex(ControlError, "expired ordinary input"):
+                self.controller.retire_mission_exit(**binding)
+            self.assertEqual(self.controller.pending, request)
+            clock.wall = 1000.801
+            receipt = self.controller.retire_mission_exit(**binding)
+            self.assertTrue(receipt["retired_pending"])
+            self.assertIsNone(self.controller.pending)
+            self.assertEqual(len(self.controller.unknown_outcomes), 1)
+            self.assertTrue((self.controller.admissions / f'{request["id"]}.json').is_file())
+            self.assertEqual(len(publications), 1)
+
+    def test_exchange_construction_exhaustion_never_publishes_a_renewed_budget(self):
+        clock = SimpleNamespace(mono=100.0, wall=1000.0)
+        def wall():
+            clock.mono, clock.wall = 101.0, 1001.0
+            return clock.wall
+        proxy = SimpleNamespace(monotonic=lambda: clock.mono, time=wall,
+            sleep=lambda _: self.fail("An exhausted prepublication request must not wait"))
+        self.controller.state = state()
+        self.controller.pause_requested = False
+        with patch("harness.controller.time", proxy):
+            result = self.controller._exchange("action", 0.8,
+                generation=self.controller.pause_generation, action="YES")
+        self.assertEqual(result["status"], "controller_error", result)
+        self.assertIn("expired before publication", result["error"])
+        self.assertIsNone(self.controller.pending)
+        self.assertEqual(self.controller.unknown_outcomes, [])
+        self.assertEqual(list(self.controller.admissions.glob("*.json")), [])
+        self.assertFalse((self.controller.bridge / "request.json").exists())
 
     def test_original_absolute_deadline_expires_in_queue_and_after_preflight(self):
         for queued in (True, False):
@@ -2552,6 +2800,157 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertNotEqual(envelope["request"]["id"], captured[0][0]["id"])
             self.assertEqual(envelope["result"]["scene"]["position"], [0, -1, 0])
 
+    def test_different_equal_image_identity_after_retention_never_retargets_input(self):
+        # Transport regression only: these bytes do not emulate a renderer.
+        for operation in ("ordinary", "resume"):
+            with self.subTest(operation=operation), FakeBridge(self.controller) as fake:
+                if operation == "ordinary":
+                    self.ready()
+                    lease = self.acquire()
+                else:
+                    self.controller.execute("observe")
+                image = b"synthetic unchanged image"
+                (fake.bridge / fake.value["frame"]).write_bytes(image)
+                captured = []
+                prior_requests = len(fake.requests)
+
+                def preflight(observation, received):
+                    captured.append((copy.deepcopy(observation), received))
+                    replacement = copy.deepcopy(observation)
+                    replacement.update(id="", frame="frame-game-test-2.png",
+                                       timestamp_ms=observation["timestamp_ms"] + 1)
+                    (fake.bridge / replacement["frame"]).write_bytes(image)
+                    self.controller._accept(replacement)
+
+                options = dict(preflight=preflight, expected_image_sha256=hashlib.sha256(image).hexdigest())
+                envelope = (self.mission_dispatch(lease, **options) if operation == "ordinary"
+                            else self.mission_resume(**options))
+                self.assertFalse(envelope["published"])
+                self.assertIsNone(envelope["request"])
+                self.assertEqual(envelope["preflight"]["observation"], captured[0][0])
+                self.assertEqual(envelope["preflight"]["received_monotonic"], captured[0][1])
+                self.assertIn("frame identity changed", envelope["result"]["error"])
+                self.assertFalse(any(r["kind"] in {"action", "resume"}
+                                     for r in fake.requests[prior_requests:]))
+                self.assertEqual(list(self.controller.admissions.glob("*.json")), [])
+                self.controller.pause()
+
+    def test_direct_capture_churn_keeps_nonspatial_source_and_refuses_spatial_source(self):
+        inputs = (dict(type="key", key="ESC", modifiers=[]), dict(type="text", text="a"),
+                  dict(type="click", button="left", x=0, y=0, geometry=frame_geometry()))
+        for direct in inputs:
+            for stage in ("callback", "final_fence"):
+                with self.subTest(input=direct["type"], stage=stage), FakeBridge(self.controller) as fake:
+                    self.ready()
+                    lease = self.acquire(operation="interaction")
+                    original_owner_check = self.controller._check_owner
+                    captured = []
+                    changed = []
+
+                    def refresh():
+                        replacement = copy.deepcopy(self.controller.state)
+                        replacement.update(id="", frame="frame-game-test-2.png")
+                        self.controller._accept(replacement)
+                        changed.append(replacement)
+
+                    def preflight(observation, received):
+                        captured.append((copy.deepcopy(observation), received))
+                        if stage == "callback":
+                            refresh()
+
+                    def owner_check(*args):
+                        original_owner_check(*args)
+                        if stage == "final_fence" and captured and not changed:
+                            refresh()
+
+                    with patch.object(self.controller, "_check_owner", owner_check):
+                        envelope = self.mission_dispatch(lease, kind="direct", value=direct,
+                                                        preflight=preflight)
+                    spatial = direct["type"] == "click"
+                    if spatial:
+                        self.assertEqual(envelope["result"]["status"], "rejected", envelope)
+                        self.assertIn("frame identity changed", envelope["result"]["error"])
+                        self.assertFalse(envelope["published"])
+                        self.assertIsNone(envelope["request"])
+                        self.assertIsNone(envelope["received_monotonic"])
+                    else:
+                        self.assertEqual(envelope["result"]["status"], "ready", envelope)
+                        self.assertTrue(envelope["published"])
+                        self.assertEqual(envelope["request"]["frame"], captured[0][0]["frame"])
+                    self.assertEqual(envelope["preflight"]["observation"], captured[0][0])
+                    self.assertEqual(envelope["preflight"]["received_monotonic"], captured[0][1])
+                    self.assertIs(self.controller._mission_lease, lease)
+                    self.assertFalse(self.controller.frozen)
+                    self.assertFalse(self.controller.pause_requested)
+                    self.assertEqual(self.controller.unknown_outcomes, [])
+                    self.assertEqual(len([r for r in fake.requests if r["kind"] == "direct"]),
+                                     0 if spatial else 1)
+                    self.assertEqual(list(self.controller.admissions.glob("*.json")), [])
+                    self.controller.release_mission(lease)
+
+    def test_direct_capture_refresh_cannot_mask_a_fatal_preflight_guard(self):
+        faults = ("deadline", "monotonic_age", "wall_age", "recovery_pending", "pending", "pause",
+                  "session", "revision", "scene", "geometry", "receiver", "control_generation")
+        for stage in ("callback", "final_fence"):
+            for fault in faults:
+                with self.subTest(stage=stage, fault=fault), FakeBridge(self.controller) as fake:
+                    self.ready()
+                    lease = self.acquire(operation="interaction")
+                    clock = SimpleNamespace(mono=time.monotonic(), wall=time.time())
+                    proxy = SimpleNamespace(monotonic=lambda: clock.mono, time=lambda: clock.wall,
+                                            sleep=time.sleep)
+                    armed, changed = [], []
+                    original_owner_check = self.controller._check_owner
+
+                    def refresh_and_fault():
+                        replacement = copy.deepcopy(self.controller.state)
+                        replacement["frame"] = "frame-game-test-2.png"
+                        if fault == "deadline": clock.mono += 2
+                        elif fault == "monotonic_age": clock.mono += 3.01
+                        elif fault == "wall_age": clock.wall = replacement["timestamp_ms"] / 1000 + 3.01
+                        elif fault == "recovery_pending": self.controller.control_pending = {"id": "pending"}
+                        elif fault == "pending": self.controller.pending = {"id": "pending"}
+                        elif fault == "pause": (fake.bridge / "pause").touch()
+                        elif fault == "session": replacement["session"] = "different-game"
+                        elif fault == "revision": replacement["revision"] += 1
+                        elif fault == "scene": replacement["scene"]["position"][0] += 1
+                        elif fault == "geometry": replacement["frame_geometry"]["window_width"] += 1
+                        elif fault == "receiver": replacement["boundary"]["input_receiver"] = False
+                        elif fault == "control_generation": replacement["boundary"]["control_generation"] += 1
+                        self.controller._accept(replacement)
+                        changed.append(True)
+
+                    def preflight(*args):
+                        armed.append(True)
+                        if stage == "callback": refresh_and_fault()
+
+                    def owner_check(*args):
+                        original_owner_check(*args)
+                        if stage == "final_fence" and armed and not changed: refresh_and_fault()
+
+                    try:
+                        with patch("harness.controller.time", proxy), \
+                                patch.object(self.controller, "_check_owner", owner_check):
+                            envelope = self.mission_dispatch(lease, kind="direct",
+                                value=dict(type="key", key="ESC", modifiers=[]), preflight=preflight,
+                                deadline_monotonic=clock.mono + (2 if fault == "deadline" else 10))
+                        self.assertEqual(envelope["result"]["status"],
+                                         "rejected" if fault == "revision" else "controller_error", envelope)
+                        self.assertFalse(envelope["published"])
+                        self.assertIsNone(envelope["request"])
+                        if fault == "revision":
+                            self.assertIs(self.controller._mission_lease, lease)
+                            self.assertFalse(self.controller.pause_requested)
+                            self.controller.release_mission(lease)
+                        else:
+                            self.assertIsNone(self.controller._mission_lease)
+                            self.assertTrue(self.controller.pause_requested)
+                        self.assertEqual(self.controller.unknown_outcomes, [])
+                        self.assertFalse(any(r["kind"] == "direct" for r in fake.requests))
+                    finally:
+                        self.controller.pending = self.controller.control_pending = None
+                        self.controller.state = None
+
     def test_final_preflight_image_failure_never_calls_callback_or_admits_input(self):
         for fault in ("changed", "missing", "empty", "oversized", "symlink", "directory", "foreign", "traversal"):
             with self.subTest(fault=fault), FakeBridge(self.controller) as fake:
@@ -2577,11 +2976,15 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     preflight=lambda *args: calls.append(args))
                 self.assertFalse(envelope["published"])
                 self.assertIsNone(envelope["request"])
-                self.assertEqual(envelope["result"]["status"], "controller_error")
+                self.assertEqual(envelope["result"]["status"], "rejected" if fault == "changed" else "controller_error")
                 self.assertEqual(calls, [])
                 self.assertFalse(any(request["kind"] == "action" for request in fake.requests))
-                self.assertTrue(self.controller.pause_requested)
-                self.assertIsNone(self.controller._mission_lease)
+                self.assertEqual(self.controller.pause_requested, fault != "changed")
+                if fault == "changed":
+                    self.assertIs(self.controller._mission_lease, lease)
+                    self.controller.release_mission(lease)
+                else:
+                    self.assertIsNone(self.controller._mission_lease)
                 self.assertEqual(self.controller.unknown_outcomes, [])
                 if path.is_dir(): path.rmdir()
                 else: path.unlink(missing_ok=True)
@@ -2635,10 +3038,11 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 lease = self.acquire()
                 callback_failed = threading.Event()
                 original_fsync = os.fsync
+                controller_thread = threading.get_ident()
                 original_pause = self.controller._pause_file
                 attempts = []
                 def fsync(fd):
-                    if callback_failed.is_set():
+                    if callback_failed.is_set() and threading.get_ident() == controller_thread:
                         attempts.append("fsync")
                         raise OSError(errno.ENOSPC, "persistent synthetic disk full")
                     return original_fsync(fd)
@@ -2652,6 +3056,10 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     original_pause()
                 def preflight(*args):
                     callback_failed.set()
+                    # Native publication is a different writer from the injected
+                    # controller failure, including while the callback is failing.
+                    with ThreadPoolExecutor(1) as pool:
+                        pool.submit(fake.publish, fake.value.copy()).result(1)
                     raise OSError(errno.ENOSPC, "callback archive unavailable")
                 with patch("harness.controller.os.fsync", side_effect=fsync), patch.object(
                         self.controller, "_pause_file", side_effect=pause_file):
@@ -2713,6 +3121,8 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             with self.subTest(fault=fault), FakeBridge(self.controller) as fake:
                 self.ready()
                 lease = self.acquire()
+                image = b"image-conditioned action source"
+                (fake.bridge / fake.value["frame"]).write_bytes(image)
                 clock = SimpleNamespace(value=time.monotonic(), wall=time.time())
                 proxy = SimpleNamespace(monotonic=lambda: clock.value, time=lambda: clock.wall, sleep=time.sleep)
                 calls = []
@@ -2738,15 +3148,22 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 try:
                     with patch("harness.controller.time", proxy):
                         envelope = self.mission_dispatch(lease, preflight=preflight,
+                            expected_image_sha256=hashlib.sha256(image).hexdigest(),
                             deadline_monotonic=clock.value + (2 if fault == "deadline" else 10))
                     self.assertEqual(len(calls), 1)
                     self.assertFalse(envelope["published"])
                     self.assertIsNone(envelope["request"])
-                    self.assertEqual(envelope["result"]["status"], "controller_error")
+                    self.assertEqual(envelope["result"]["status"], "rejected" if fault == "frame" else "controller_error")
                     if fault == "wall_age":
                         self.assertIn("fresh successful", envelope["result"]["error"])
-                    self.assertTrue(self.controller.pause_requested)
-                    self.assertIsNone(self.controller._mission_lease)
+                    if fault == "frame":
+                        self.assertFalse(self.controller.pause_requested)
+                        self.assertFalse(self.controller.frozen)
+                        self.assertIs(self.controller._mission_lease, lease)
+                        self.controller.release_mission(lease)
+                    else:
+                        self.assertTrue(self.controller.pause_requested)
+                        self.assertIsNone(self.controller._mission_lease)
                     self.assertEqual(self.controller.unknown_outcomes, [])
                     self.assertFalse(any(request["kind"] == "action" for request in fake.requests))
                 finally:
@@ -2790,8 +3207,9 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                 self.assertEqual(clock.value - received, 0.5)
                 captured.append(received)
             with patch("harness.controller.time", proxy), patch.object(self.controller, "_exchange", side_effect=exchange):
-                envelope = self.mission_dispatch(lease, preflight=preflight)
-            self.assertEqual(envelope["result"]["status"], "ready")
+                envelope = self.mission_dispatch(lease, preflight=preflight,
+                    deadline_monotonic=clock.value + 2)
+            self.assertEqual(envelope["result"]["status"], "ready", envelope)
             self.assertEqual(captured, actual)
             self.assertEqual(envelope["preflight"]["received_monotonic"], actual[0])
 
@@ -2817,7 +3235,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
                     self.assertEqual(set(request), {"protocol", "id", "kind", "deadline_ms"})
 
     def test_current_stored_input_requires_frame_and_strict_boolean_without_old_reader(self):
-        request = {"protocol": 4, "id": "restore", "kind": "action", "action": "UP", "deadline_ms": 1,
+        request = {"protocol": 6, "id": "restore", "kind": "action", "action": "UP", "deadline_ms": 1,
             "session": "world", "revision": 1, "boundary_id": "world-b1", "takeover_generation": 0,
             "authority": {"controller_boot_id": "boot", "counter": 1},
             "frame": "frame-world-1.png", "require_exact_frame": False}

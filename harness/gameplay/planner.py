@@ -119,15 +119,15 @@ class PlanningRequest:
     def __post_init__(self) -> None:
         if type(self.task) is not TaskSpec or type(self.packet) is not EvidencePacket:
             raise ContractError("Request requires typed task and packet")
-        self.task.to_dict()
-        self.packet.to_dict()
+        self.task.__post_init__()
+        self.packet.__post_init__()
         _number(self.admission_monotonic, "admission_monotonic", 1e12)
         if (type(self.skills) is not tuple or not 1 <= len(self.skills) <= 32
                 or any(type(skill) is not SkillDescriptor for skill in self.skills)):
             raise ContractError("Supply a nonempty bounded tuple of accepted skills")
         identities = set()
         for skill in self.skills:
-            skill.to_dict()
+            skill.__post_init__()
             if (skill.skill_id, skill.skill_version) in identities:
                 raise ContractError("Duplicate skill identity")
             identities.add((skill.skill_id, skill.skill_version))
@@ -268,7 +268,7 @@ class PlannerPort:
                  admission_monotonic: float, clock: Callable[[], float] = time.monotonic):
         if type(task) is not TaskSpec or type(config) is not PlannerConfig or not callable(provider):
             raise ContractError("Port requires typed task, configuration and callable provider")
-        task.to_dict()
+        task.__post_init__()
         _number(admission_monotonic, "admission_monotonic", 1e12)
         self._task, self._config, self._provider = task, config, provider
         self._admission, self._clock = admission_monotonic, clock

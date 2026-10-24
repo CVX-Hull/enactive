@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: Popup producer, dismissal policy or ordinary phase ownership changes
-status: active
+status: historical
+date: '2026-10-24'
+scope: Design and development record preserved on this date; current architecture/protocol
+  and GitHub own behavior and remaining work
 ---
 
 # Acknowledge a visible no-choice popup

@@ -1,7 +1,9 @@
 ---
 owner: lead
-status: active
-review_trigger: Round010 implementation, acceptance or publication claims change
+status: historical
+date: '2026-10-17'
+scope: Dated candidate observations and qualification limits; not current instructions
+  or live work status
 ---
 
 # Passive waypoint supervision — round 010
