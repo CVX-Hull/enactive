@@ -531,7 +531,7 @@
       "maintenance_review": {
         "date": "2026-10-23",
         "effectiveness": "partially_effective",
-        "findings": "Frozen015 stopped useful development on an uninstrumented cadence assessment before20useful decisions. Future briefs separate qualification rejection from bounded development continuation; numerical targets and hard authority/delivery/resource ending gates remain. Genuine structured-visible-state gaps and timing proxies need focused investigation, not causal claims. Closed016: a pending text prefix must direct original collection, not a new semantic decision; a busy refusal must identify the actual writer owner. Mismatched/uncertain response bodies cannot redirect collection. Actual seven-day, learning and useful-cadence acceptance remain open.",
+        "findings": "Frozen015 stopped useful development on an uninstrumented cadence assessment before20useful decisions. Future briefs separate qualification rejection from bounded development continuation; numerical targets and hard authority/delivery/resource ending gates remain. Genuine structured-visible-state gaps and timing proxies need focused investigation, not causal claims. Closed016: a pending text prefix must direct original collection, not a new semantic decision; a busy refusal must identify the actual writer owner. Mismatched/uncertain response bodies cannot redirect collection. Actual seven-day, learning and useful-cadence acceptance remain open. 017 shows optional whole-field edit applicability must permit ordinary correction rather than remove healthy custody. Source regression does not qualify actual fresh player continuation.",
         "cost": "Existing ledger/frames/host traces and independent read-only outcome review reused; no new control service or per-action approval.",
         "follow_up": "#164 existing-stage profiling and whole-player cohort;#176/#177 generic visible-state and learning follow-through;#145 full fresh campaign with actual succession/reload;#143 driver-observed host outcomes.",
         "evidence": [
@@ -656,13 +656,12 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-23",
-        "outcome": "Independent closed016 implemented-diff and evidence review found collection identity and lifecycle routing regressions; both corrected and reread clean.",
-        "scope": "Pending/busy original collection, uncertain mismatched bodies, healthy stale refusal versus actual faults, paused lifecycle candidate preservation, accurate cleanup/cost claims. Shared tests and remote CI remain lead verification.",
+        "outcome": "Independent017 actual-source/PNG/ledger diagnosis and guarded identity-draft diff review find no remaining scoped defect.",
+        "scope": "25-character admitted identity versus optional24-character semantic target, zero dispatch, unchanged healthy lifecycle then explicit synthetic ordinary chunks; strict identity and genuine-fault checks retained. Broader tests and actual continuation are lead lanes.",
         "evidence": [
           "docs/changes/062-player-decision-context.md",
-          "tests/test_mission_pending_observation.py",
-          "tests/test_mission_prompt_observation.py",
-          "tests/test_player_tools.py"
+          "tests/test_mission_lifecycle_ordinary.py",
+          "tests/test_mission_request_bindings.py"
         ]
       },
       "maintenance_review": {
@@ -914,8 +913,8 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-23",
-        "outcome": "Closed016 source/ledger/frame/save/host reconciliation;920indexed native frames retained, owned actors/processes/listener closed. Native exit code/cause unknown; no normal ending credited.",
-        "scope": "74failed-world files reversibly archived,191original saves unchanged.16program roots/35primitives do not qualify useful cadence or seven-day survival.",
+        "outcome": "Closed017 source/ledger/17indexed frame hashes/host/save reconciliation; exact native child terminated before controller closure, retained handle records exit0/normal_exit_verified=false. Owned PIDs/listener absent.",
+        "scope": "Before adoption:5returned primitives, no memory/adviser work or accepted day.191saves unchanged; no added world save.016unknown native outcome stays unknown.",
         "evidence": [
           "docs/changes/062-player-decision-context.md",
           "docs/runbook.md"
@@ -924,7 +923,7 @@
       "maintenance_review": {
         "date": "2026-10-23",
         "effectiveness": "partially_effective",
-        "findings": "016 exposes pending-input guidance and healthy stale-selection custody loss. Existing lifecycle refusal must retain paused candidate semantics. Cleanup also exposes a lead assumption: parent closure does not terminate the native child; retain unknown outcome and require verified exceptional child termination before parent closure. No new menu handler, queue, tracker or automatic kill service.",
+        "findings": "016 exposes pending-input guidance and healthy stale-selection custody loss. Existing lifecycle refusal must retain paused candidate semantics. Cleanup also exposes a lead assumption: parent closure does not terminate the native child; retain unknown outcome and require verified exceptional child termination before parent closure. No new menu handler, queue, tracker or automatic kill service. 017 confirms another request-composition error destructively routed as lifecycle fault; reuse existing guarded draft refusal for whole-field identity targets, preserving ordinary correction. Retain lead standby-only adviser launch mistake; actual frozen active stdin must explicitly activate and match source/mission/actor. Ordered exceptional cleanup now records real exit0, never normal ending.",
         "cost": "Original host1839.828s/165MCP calls, adviser870.486s/44calls;16jobs consume1920charged claim-window seconds. These are not isolated inference or causal improvement measurements. Retain failures and bounded observer samples.",
         "follow_up": "#136/#145 full fresh outcome;#164 pending/original collection and useful cadence;#176 ordinary refusal;#177/#191 source-linked organic revision;#178 advisory prioritization/coalescing;#143 passive terminal display. Exact new source CI, native qualification and protected publication remain separate. Existing due dates unchanged.",
         "evidence": [

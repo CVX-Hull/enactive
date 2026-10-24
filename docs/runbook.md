@@ -581,6 +581,15 @@ activate an actor, change ownership or authorize another run.
 Source/fake-host checks qualify this implementation; actual fresh-host graphical
 activation remains separately required under#136/#164/#145.
 
+For a separate optional adviser, freeze the actual active stdin prompt with its
+current source, mission, actor and finite limits. State activation explicitly
+after external admission; do not send a standby-only brief and infer activation
+from process launch. Check that the launched argv and stdin match the frozen
+inputs. A passive capability check needs the current schema's required arguments;
+an argument error proves availability at most, not claimed computation. An exited
+standby actor with zero calls supplies no advice or overlap evidence, as in017.
+Use the existing host receipts/claimed jobs; no second approval gate is added.
+
 The [stopped functional continuation](acceptance/2026-10-18-seven-day-continuation-stop.md)
 and [ordinary menu repair](acceptance/2026-10-18-ordinary-menus.md) retain historical
 coverage and failures. Their old CLI/recorders and expired admissions cannot authorize

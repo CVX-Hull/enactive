@@ -44,6 +44,55 @@ class OrdinaryLifecycleTests(MissionCreationFixture, unittest.TestCase):
             return super().behavior(bridge, {**request, "action": action})
         return super().behavior(bridge, request)
 
+    def test_partial_semantic_name_refuses_locally_then_player_chooses_bounded_ordinary_chunks(self):
+        from tests.test_mission_request_bindings import RequestBindingTests
+        self.a = replace(self.a, scenario=replace(self.a.scenario, world="EnactiveSurvivalSeventeen"))
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        self.run_request(super().control("world-form", "Create World"))
+        self.run_request(super().control("name-field", "World name"))
+        phase = self.runtime._registered_lifecycle.phase
+        root = self.runtime._ledger.request("create")["request"]
+        deadline = self.runtime._ledger.request("create")["deadline"]
+        partial = super().control("partial-name", "World name")
+        partial.update(skill_kind="edit", goal=dict(purpose="world_name", text="EnactiveSurvival", commit=False),
+            perception=dict(kind="editor", source_id=self.runtime._current.observation_id,
+                basis="player_interpretation", purpose="world_name", label="World name",
+                visible_text="Old", whole_value=True, focused=True))
+        refused = RequestBindingTests.assert_local_rejection(self, partial, root)
+        self.assertIn("whole field", refused["result"]["reason"])
+        self.assertIn("ordinary bounded input", refused["result"]["reason"])
+        self.assertEqual(refused["result"]["proposals"], 0)
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertEqual(self.runtime.command(partial)["operation"], self.settled(partial["request_id"]))
+
+        original = self.behavior
+        def visible_editor(bridge, request):
+            if request["kind"] == "direct" and bridge.value["category"] == "STRING_INPUT":
+                physical = request["input"]
+                if physical["type"] == "text":
+                    bridge.editor_text += physical["text"]
+                elif physical.get("key") == "BACKSPACE":
+                    bridge.editor_text = bridge.editor_text[:-1]
+                return True
+            return original(bridge, request)
+        self.bridge.behavior = visible_editor
+        # These are explicit synthetic player choices after each returned view,
+        # not software-generated chunks or a claim about CDDA's clearing keys.
+        for index in range(3):
+            self.assertEqual(self.run_request(self.raw(f"erase-{index}", "BACKSPACE"))["state"], "partial")
+        self.assertEqual(self.bridge.editor_text, "")
+        for index, chunk in enumerate((self.a.scenario.world[:24], self.a.scenario.world[24:])):
+            chosen = self.raw(f"chosen-chunk-{index}", "ignored")
+            chosen["goal"]["input"] = dict(type="text", text=chunk)
+            chosen["limits"]["primitives"] = len(chunk)
+            result = self.run_request(chosen)
+            self.assertEqual(result["state"], "partial", result)
+        self.assertEqual(self.bridge.editor_text, self.a.scenario.world)
+        self.assertEqual(self.runtime._registered_lifecycle.phase.root_id, phase.root_id)
+        self.assertEqual(self.runtime._ledger.request("create")["deadline"],
+            deadline)
+
     def test_lifecycle_consent_refusal_keeps_same_root_for_explicit_corrected_child(self):
         self.ready()
         self.run_request(self.lifecycle("create"))

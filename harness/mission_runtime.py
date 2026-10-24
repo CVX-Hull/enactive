@@ -1997,8 +1997,9 @@ class MissionRuntime:
         item_control_reason = None if phase is None else self._item_control_reason(data,
             self._ledger.request(phase.root_id)["request"],
             self._store.observation(phase.checkpoint)["category"], phase.quantity_editor)
+        lifecycle_control_reason = self._registered_lifecycle.draft_rejection_reason(data)
         if (not obsolete_selection and not metadata_mismatch and not incompatible_support
-                and not missing_native_rows and item_control_reason is None):
+                and not missing_native_rows and item_control_reason is None and lifecycle_control_reason is None):
             return None
 
         # A bad extra source must not conceal loss of another retained source,
@@ -2079,6 +2080,8 @@ class MissionRuntime:
                            "Supply an explicit source-bound visible-control interpretation for the observed UI.")
         if item_control_reason is not None:
             reasons.append(item_control_reason + ".")
+        if lifecycle_control_reason is not None:
+            reasons.append(lifecycle_control_reason + ".")
         reason = " ".join(reasons) + " "
         return {"reason": reason +
                     "No input or refresh was attempted; read the source and submit a new corrected request ID.",

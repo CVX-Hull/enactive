@@ -501,6 +501,18 @@ class RegisteredLifecycle:
         return "partial", {"reason": "Normal Save awaits explicit Save and quit? confirmation",
             "phase": self.receipt(phase, "awaiting_control"), "grants_authority": False}
 
+    def draft_rejection_reason(self, data: dict) -> str | None:
+        """An optional whole-field edit cannot substitute a partial identity."""
+        if (self.phase is None or data["skill_kind"] != "edit"
+                or data["goal"]["purpose"] not in ("world_name", "character_name")):
+            return None
+        field = "world" if data["goal"]["purpose"] == "world_name" else "character"
+        if self.phase.operation == "create" and data["goal"]["text"] == getattr(self.runtime._admission.scenario, field):
+            return None
+        return ("Semantic name editing replaces the whole field and requires the complete admitted identity. "
+                "A partial target is not a text chunk. If the complete target does not fit this optional "
+                "skill, inspect current evidence and choose ordinary bounded input explicitly")
+
     def control(self, work: _Work) -> tuple[str, dict]:
         r, data, phase = self.runtime, work.request, self.phase
         if phase is None or data["phase_id"] != phase.root_id or data["work_id"] is not None:

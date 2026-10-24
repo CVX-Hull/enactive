@@ -475,6 +475,12 @@ class LifecycleBindingTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(self.current()[1]['category'], 'WORLDGEN_CONFIRM_DIALOG')
 
     def test_missing_native_rows_cannot_mask_authority_evidence_or_budget_faults(self):
+        self.lifecycle_draft_cannot_mask_faults(name_target=False)
+
+    def test_partial_identity_target_cannot_mask_authority_evidence_or_budget_faults(self):
+        self.lifecycle_draft_cannot_mask_faults(name_target=True)
+
+    def lifecycle_draft_cannot_mask_faults(self, *, name_target):
         for fault in ('takeover', 'native_drift', 'changed_pixels', 'source_loss', 'wrong_actor',
                       'root_input', 'input_reserve', 'game_cap'):
             with self.subTest(fault=fault):
@@ -491,7 +497,14 @@ class LifecycleBindingTests(MissionCreationFixture, unittest.TestCase):
                         root['limits']['primitives'] = 1
                     self.assertEqual(case.run_request(root)['state'], 'partial')
                     bad = case.control('bad-native-with-real-fault', 'Create World')
-                    bad['perception'] = None
+                    if name_target:
+                        bad.update(skill_kind='edit', goal=dict(purpose='world_name', text='Wrong', commit=False))
+                        bad['perception'].update(kind='editor', purpose='world_name', label='World name',
+                            visible_text='Old', whole_value=True, focused=True)
+                        for key in ('control', 'rows', 'selected', 'question'):
+                            bad['perception'].pop(key)
+                    else:
+                        bad['perception'] = None
                     if fault in ('takeover', 'native_drift'):
                         with case.controller.data_lock:
                             case.controller.state['takeover_generation' if fault == 'takeover' else 'revision'] += 1

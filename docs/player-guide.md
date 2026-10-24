@@ -47,6 +47,9 @@ reason to read the entire repository during every game.
   Ordinary `direct` inputs use `perception=null`; visible-control interpretations
   belong to menu/edit/item controls. Inspect the returned image/effect; a delivered
   input is not task success.
+  Semantic name editing replaces the whole field with the complete admitted
+  identity; it is not partial text entry. If an optional skill cannot represent
+  the target, choose ordinary bounded input from current visible evidence.
 - When input is unfinished, use the returned `next_call` to collect the original
   operation. A busy refusal's collection target is the actual writer owner, not
   the new rejected invocation. An in-progress image can show a text prefix; it

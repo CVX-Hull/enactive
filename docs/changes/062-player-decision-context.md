@@ -544,3 +544,56 @@ trailing blank line; full exact candidate CI and fresh real qualification remain
 open. An earlier broader command also named a nonexistent recovery test module;
 that invocation error is retained, then the actual recovery modules pass. No native
 build or game behavior is inferred from these source checks.
+
+## Closed fresh017: optional semantic failure must allow ordinary correction
+
+Fresh017 freezes c4fdc05/native690fe96 with a fresh Sol/low player and unchanged
+finite limits. It fails before character adoption after a correct pre-submission
+refusal: its admitted25-character world name exceeds the24-character text batch
+and semantic-edit bounds. The player chooses a partial semantic replacement.
+That optional aid requires the complete admitted identity, so its refusal is
+correct. The error is destructive routing: `ControlError` removes the healthy
+phase/lease before the player can choose ordinary bounded input. Actual PNG still
+shows the generated name selected; the earlier returned clearing key did not
+visibly clear it. The rejected edit publishes no primitive. Observe cannot
+restore lost authority; original0/driver1 and permanent quiescence follow.
+No adoption, survival, procedural learning or normal ending is credited.
+
+The repair places the world/character whole-field target predicate in the existing
+lifecycle component and reuses the full guarded draft-refusal path. It retains
+strict identity requirements, current-source/custody/accounting/budget/retention
+checks and the original lifecycle guard. The response explains whole-field versus
+partial text and availability of ordinary bounded input. Software chooses no
+replacement, clearing key, chunk or fallback. A regression uses a25-character
+admission, proves zero publication/refresh/rotation with unchanged scope and costs,
+then independently chosen ordinary chunks; the synthetic editor is explicitly
+not native keyboard qualification. Genuine-fault negatives retain their stops.
+This extends the existing S-UX/S-ARCH/C-PORTABLE enforcement, not a menu catalogue
+or exception-text classifier.
+
+A separate lead preparation mistake copied an unactivated standby adviser brief:
+the adviser correctly exits0 after5.251host seconds with zero tools/jobs. No
+advice or claimed overlap is credited. Future prepared active briefs must state
+activation explicitly and be frozen with current source/role/mission, rather than
+rely on an unstated host step. #178/#164 own that orchestration follow-through.
+Its passive preflight also retains a required-mission argument error; availability
+is weaker than a valid claimed-work result. Production MCP5.2.2/21schemas match.
+
+Retained costs:9requests (3completed/5partial/1blocked),5returned primitives,
+17native PNGs/418,288bytes, no memory rows; original10MCP calls/42,978response-text
+bytes/6images/61.124host-wall seconds. Passive player/adviser preflights cost
+11.979/9.915host-wall seconds separately. These are not inference or billing.
+Ordered exceptional cleanup verifies the exact owned native child/userdir/parent,
+sends SIGTERM while its controller is alive, then closes that parent. Its retained
+handle records native exit0 and `normal_exit_verified=false`; controller exits0,
+owned PIDs/listener are absent and all191saves unchanged, with no added world saves.
+The failed frozen brief, source, receipts and raw streams remain retained.
+The full independent campaign/learning/cadence goal is unchanged; no017revival or
+source-test substitute for fresh actual continuation is accepted.
+
+Source follow-through passes108binding/ordinary-lifecycle/creation/confirmation
+tests, independent exact-diff review and fast checks. The new positive ordinary
+fixture initially called a nonexistent test helper; correcting that fixture then
+passes the complete lane. No production guard is weakened to accommodate the
+fixture. Native qualification and exact new candidate/protected-main CI remain
+separate; c4fdc05's in-flight CI cannot qualify this later source or relabel017.

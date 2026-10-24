@@ -243,6 +243,10 @@ or payload rewriting. Actual Pause, takeover, unresolved delivery, integrity and
 global-limit faults retain their stopping paths. Lifecycle stale selection defers
 to its existing specialized active/paused transition guard. Recovery cannot manufacture an
 unknown-delivery candidate for a key that was never dispatched.
+Invalid semantic whole-field creation-name targets use the same guarded local
+draft refusal, retaining the strict complete admitted identity requirement.
+Ordinary bounded input remains a separate explicit player choice; software does
+not truncate a target, choose clearing keys or construct replacement chunks.
 Known ordinary request-composition refusals before SDK submission return
 `submission=not_submitted` and no collection handle; no request exists to collect.
 Errors from staging onward retain the assigned original collection identity. The

@@ -149,3 +149,8 @@ No day, successor, reload or normal ending is credited. Owned runtime is closed,
 original saves unchanged; exceptional native exit code/cause remain unknown.
 The focused collection/local-refusal repair and cleanup lesson use existing
 standards and controls. Full independent survival, learning and cadence remain open.
+[Fresh017](changes/062-player-decision-context.md#closed-fresh017-optional-semantic-failure-must-allow-ordinary-correction)
+then fails before adoption when a partial semantic name edit destroys healthy
+lifecycle custody. Its targeted repair preserves ordinary correction; the lead
+also retains an unactivated adviser-brief mistake. All owned runtime is closed,
+191saves unchanged and exceptional native exit0 is explicitly not normal ending.
