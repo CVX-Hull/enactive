@@ -2,14 +2,15 @@
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from harness.gameplay.campaign_memory import CampaignMemory
 from harness.gameplay.contracts import ContractError
-from harness.gameplay.evidence import EvidenceStore
+from harness.gameplay.evidence import CapacityError, EvidenceError, EvidenceStore
 from harness.gameplay.mission_contracts import LearningPolicy, MEMORY_VERSION
 from harness.gameplay.mission_ledger import MissionLedger
 from tests.test_gameplay_evidence import observation, png
-from tests.test_mission_contracts import admission, request, scope, skill
+from tests.test_mission_contracts import admission, claim, request, scope, skill
 from tests.test_mission_ledger import intent
 from tests.test_procedures import procedure, successor
 
@@ -49,8 +50,86 @@ class CampaignProcedureTests(unittest.TestCase):
         self.ledger.complete_request(data["request_id"], "completed", result, now=1000)
         return result
 
-    def context(self):
-        return self.memory.context(scope(), "water", max_bytes=32768, now_monotonic=100, now_timestamp_ms=1_000_000)
+    def context(self, **changes):
+        values = dict(max_bytes=32768, now_monotonic=100, now_timestamp_ms=1_000_000)
+        return self.memory.context(scope(), "water", **(values | changes))
+
+    def test_oversized_procedure_closure_is_omitted_before_reading_support_images(self):
+        episodes = [self.episode(number) for number in range(30, 47)]
+        first = procedure(mission_id=self.admission.mission_id, support=episodes[:8])
+        self.remember(first)
+        second = successor(first, support=episodes[8:16])
+        self.remember(second)
+        self.remember(successor(second, support=episodes[16:]))
+        with patch.object(self.store, "_frame_bytes", wraps=self.store._frame_bytes) as reads:
+            packet = self.context()
+        self.assertEqual(packet["procedures"], [])
+        self.assertEqual(packet["omitted"]["reasons"]["procedure/source limit"], 1)
+        self.assertEqual([call.args[0].observation_id for call in reads.call_args_list],
+                         episodes[-1]["source_ids"])
+        with patch.object(self.store, "_frame_bytes", wraps=self.store._frame_bytes) as reads:
+            complete = self.context(required_work_ids=frozenset(), max_bytes=131072)
+        self.assertEqual(len(complete["procedures"]), 1)
+        self.assertEqual(len(complete["procedure_sources"]), 17)
+        self.assertCountEqual([call.args[0].observation_id for call in reads.call_args_list],
+                              [episode["source_ids"][0] for episode in episodes])
+        with self.assertRaisesRegex(CapacityError, "packet byte limit; no omission"):
+            self.context(required_work_ids=frozenset(), max_bytes=1024)
+
+    def test_overlapping_procedures_and_claim_sources_share_image_checks(self):
+        episodes = [self.episode(number) for number in range(30, 33)]
+        for index, support in enumerate((episodes[:2], episodes[1:])):
+            self.remember(procedure(id=f"revision-{index}", procedure_id=f"water-{index}",
+                mission_id=self.admission.mission_id, support=support))
+        ref = self.store.historical_references[0]
+        entry = claim(sources=[ref.observation_id],
+            supports=[{"sources": [ref.observation_id], "claims": []}],
+            observed_time={"revision": ref.revision, "turn": ref.turn})
+        data = request("remember", request_id="remember-claim", entry_type="claim", entry=entry)
+        self.ledger.begin_request(data, now=1000)
+        self.memory.apply(data, now=1000)
+        with patch.object(self.store, "_frame_bytes", wraps=self.store._frame_bytes) as reads:
+            packet = self.context()
+        self.assertEqual(len(packet["procedures"]), 2)
+        self.assertEqual(len(packet["claims"]), 1)
+        self.assertCountEqual([call.args[0].observation_id for call in reads.call_args_list],
+                              [episode["source_ids"][0] for episode in episodes])
+
+    def test_procedure_checks_count_candidates_omitted_for_packet_bytes(self):
+        episodes = [self.episode(number) for number in range(30, 47)]
+        for index in range(3):
+            support = episodes[index * 8:(index + 1) * 8]
+            self.remember(procedure(id=f"revision-{index}", procedure_id=f"water-{index}",
+                mission_id=self.admission.mission_id, support=support))
+        with patch.object(self.store, "_frame_bytes", wraps=self.store._frame_bytes) as reads:
+            packet = self.context(max_bytes=1024)
+        self.assertEqual(packet["procedures"], [])
+        self.assertEqual(packet["omitted"]["reasons"]["procedure/source limit"], 1)
+        self.assertEqual(packet["omitted"]["reasons"]["procedure packet byte limit"], 2)
+        self.assertLessEqual(reads.call_count, 16)
+
+    def test_corrupt_selected_support_fails_selection_and_complete_context(self):
+        episode = self.episode()
+        entry = procedure(mission_id=self.admission.mission_id, support=[episode])
+        self.remember(entry)
+        packet = self.context()
+        decision = dict(schema=MEMORY_VERSION, record_type="Decision", id="corrupt-decision",
+            packet_id=packet["packet_id"], scope=scope(), query=packet["query"],
+            memory_version=packet["memory_version"], claim_ids=[], work_ids=[], source_ids=[],
+            procedure_refs=packet["procedure_refs"], procedure_sources=packet["procedure_sources"],
+            omitted=0, reason="Try the supported procedure")
+        retained = Path(self.store.historical_references[0].frame_path)
+        retained.chmod(0o644)
+        retained.write_bytes(png(b"corrupt"))
+        selection = dict(mission_id=entry["mission_id"], revision_id=entry["id"],
+                         use_id="corrupt-use", applicability="Visible water")
+        with self.assertRaises(EvidenceError):
+            self.memory.select_procedure(selection)
+        with self.assertRaises(EvidenceError):
+            self.memory.record_decision(decision, now=1000)
+        self.assertEqual(self.context()["procedures"], [])
+        with self.assertRaisesRegex(CapacityError, "unavailable support"):
+            self.context(required_work_ids=frozenset())
 
     def test_admission_is_immutable_and_missing_current_learning_field_rejects(self):
         raw = self.admission.to_dict()

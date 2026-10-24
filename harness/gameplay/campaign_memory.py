@@ -96,8 +96,8 @@ class CampaignMemory:
             raise ContractError("Historical procedure evidence is not admitted")
         return self.library.source(mission_id, source_id)
 
-    def _procedure_support(self, entry: dict, *, candidate=False) -> set[tuple[str, str]]:
-        """Validate complete ancestry and actual episode joins; never semantic truth."""
+    def _procedure_dependencies(self, entry: dict, *, candidate=False) -> dict[tuple[str, str], type[ContractError]]:
+        """Collect qualified ancestry sources and validate joins without image I/O."""
         records = self._procedure_records()
         by_id = {(record["mission_id"], record["id"]): record for record in records}
         chain = [entry]
@@ -106,7 +106,7 @@ class CampaignMemory:
             parent = current["parent"]
             current = by_id[(parent["mission_id"], parent["revision_id"])]
             chain.append(current)
-        sources: set[tuple[str, str]] = set()
+        sources: dict[tuple[str, str], type[ContractError]] = {}
         primitives = self.ledger.primitive_records()
         # Retained ancestry stays strict even while validating a new revision.
         for record in reversed(chain):
@@ -152,11 +152,17 @@ class CampaignMemory:
                     qualified = (mission, source)
                     if qualified in sources:
                         continue
-                    metadata, _ = self.procedure_source(*qualified)
-                    if metadata["disposition"] != "retained":
-                        raise refusal("Disputed procedure evidence is ineligible")
-                    sources.add(qualified)
+                    sources[qualified] = refusal
         return sources
+
+    def _procedure_support(self, entry: dict, *, candidate=False) -> set[tuple[str, str]]:
+        """Validate complete ancestry, episode joins and images; never semantic truth."""
+        sources = self._procedure_dependencies(entry, candidate=candidate)
+        for qualified, refusal in sources.items():
+            metadata, _ = self.procedure_source(*qualified)
+            if metadata["disposition"] != "retained":
+                raise refusal("Disputed procedure evidence is ineligible")
+        return set(sources)
 
     def select_procedure(self, selection: dict) -> dict:
         heads = self._procedure_heads()
@@ -484,13 +490,18 @@ class CampaignMemory:
             different_orders = len({canonical(claims[i]["observed_time"]) for i in ids}) > 1
             if different_values or different_orders:
                 disputed.update(ids)
-        checks: dict[str, str] = {}
+        mission_id = self.ledger.admission.mission_id
+        checks: dict[tuple[str, str], str] = {}
+
+        def qualified_current(identities: set[str]) -> set[tuple[str, str]]:
+            return {(mission_id, identity) for identity in identities}
+
         current = None
         try:
             current, fresh = (None, False) if complete else self.store.inspect_current(
                 now_monotonic=now_monotonic, now_timestamp_ms=now_timestamp_ms)
             if current is not None:
-                checks[current.observation_id] = "retained"
+                checks[(mission_id, current.observation_id)] = "retained"
             if not fresh:
                 current = None
         except CapacityError:
@@ -502,23 +513,32 @@ class CampaignMemory:
         # None. Reserve its one check even when its identity was not returned.
         reserved_check = 0 if complete or checks else 1
 
-        def check(identity: str) -> str:
-            if identity not in checks:
+        def check(identity: str, mission: str = mission_id) -> str:
+            qualified = (mission, identity)
+            if qualified not in checks:
                 if len(checks) + reserved_check >= source_limit:
                     raise CapacityError("Packet source-check budget exhausted")
                 ref = refs.get(identity)
-                if source_status is not None:
-                    checks[identity] = source_status(identity)
+                if mission != mission_id:
+                    try:
+                        metadata, _ = self.procedure_source(mission, identity)
+                        checks[qualified] = metadata["disposition"]
+                    except CapacityError:
+                        raise
+                    except (ContractError, OSError) as exc:
+                        checks[qualified] = "unavailable: " + str(exc)
+                elif source_status is not None:
+                    checks[qualified] = source_status(identity)
                 elif ref is None:
-                    checks[identity] = "unavailable"
+                    checks[qualified] = "unavailable"
                 else:
                     try:
-                        checks[identity] = self.store.source_status(ref)
+                        checks[qualified] = self.store.source_status(ref)
                     except CapacityError:
                         raise
                     except EvidenceError as exc:
-                        checks[identity] = "unavailable: " + str(exc)
-            return checks[identity]
+                        checks[qualified] = "unavailable: " + str(exc)
+            return checks[qualified]
 
         valid: dict[str, bool] = {}
         def supported(identity: str, visiting: frozenset[str] = frozenset()) -> bool:
@@ -602,7 +622,7 @@ class CampaignMemory:
             new_ids = closure - selected
             source_ids = selected_sources | sources_for(closure)
             if (len(selected | closure) > MAX_CLAIMS or len(source_ids) > MAX_SOURCES
-                    or len(set(checks) | source_ids) + reserved_check > MAX_SOURCES):
+                    or len(set(checks) | qualified_current(source_ids)) + reserved_check > MAX_SOURCES):
                 reason = "claim/dependency limit" if len(selected | closure) > MAX_CLAIMS else "distinct source/check limit"
                 omit(reason, len(new_ids))
                 continue
@@ -645,7 +665,7 @@ class CampaignMemory:
             source_ids = selected_sources | set(original["sources"])
             if (len(original["sources"]) > MAX_HANDOFF_SOURCES or len(packet["work"]) >= MAX_WORK
                     or len(source_ids) > source_limit
-                    or len(set(checks) | source_ids) + reserved_check > source_limit):
+                    or len(set(checks) | qualified_current(source_ids)) + reserved_check > source_limit):
                 if complete:
                     raise CapacityError("Complete handoff Work/source bound exhausted; no omission")
                 omit("work/source limit", 1)
@@ -697,17 +717,26 @@ class CampaignMemory:
             if not complete and terms and not any(term in canonical(entry).lower() for term in terms):
                 continue
             try:
-                support = self._procedure_support(entry)
+                support = set(self._procedure_dependencies(entry))
             except (ContractError, OSError) as exc:
                 if complete:
                     raise CapacityError("Complete procedure context has unavailable support: " + str(exc)) from exc
                 omit("procedure support unavailable: " + str(exc)[:256], 1)
                 continue
             qualified = {(source["mission_id"], source["source_id"]) for source in packet["procedure_sources"]} | support
-            if len(packet["procedures"]) >= 16 or len(qualified) + len(selected_sources) > source_limit:
+            if (len(packet["procedures"]) >= 16
+                    or len(qualified | qualified_current(selected_sources)) > source_limit
+                    or len(set(checks) | support) + reserved_check > source_limit):
                 if complete:
                     raise CapacityError("Complete handoff procedure/source bound exhausted; no omission")
                 omit("procedure/source limit", 1)
+                continue
+            bad = [check(source, mission) for mission, source in sorted(support)]
+            if any(status != "retained" for status in bad):
+                reason = "procedure support unavailable: " + next(status for status in bad if status != "retained")[:256]
+                if complete:
+                    raise CapacityError("Complete procedure context has unavailable support: " + reason)
+                omit(reason, 1)
                 continue
             candidate = _copy(packet)
             candidate["procedures"].append(entry)

@@ -19,6 +19,113 @@ class OrdinaryLifecycleTests(MissionCreationFixture, unittest.TestCase):
         super().setUp()
         self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
 
+    def superseding_capture(self, execute, *, changed=False):
+        def dispatch(*args, **kwargs):
+            raw = execute(*args, **kwargs)
+            self.bridge.value["timestamp_ms"] += 1
+            if changed:
+                self.bridge.value["category"] = "UNFAMILIAR_CHANGED"
+                self.bridge.value["boundary"]["id"] = "changed-current"
+                self.bridge.value["revision"] += 1
+            self.bridge.publish(self.bridge.value.copy())
+            self.controller.status()
+            return raw
+        return dispatch
+
+    def test_resume_uses_current_capture_without_replacing_ack_or_root_limits(self):
+        self.ready()
+        with patch.object(self.controller, "resume_mission",
+                side_effect=self.superseding_capture(self.controller.resume_mission)):
+            operation = self.run_request(self.lifecycle("create"))
+        self.assertEqual(operation["state"], "partial", operation)
+        phase = self.runtime._registered_lifecycle.phase
+        self.assertEqual(phase.checkpoint, self.runtime._current)
+        primitive = self.runtime._ledger.primitive_records()[-1]
+        self.assertNotEqual(primitive["result"]["source_after"], phase.checkpoint.observation_id)
+        self.assertEqual(primitive["state"], "returned")
+        self.observe("after-new-resume-capture")
+        self.assertEqual(self.runtime._registered_lifecycle.phase.root_id, "create")
+
+    def assert_lifecycle_current_continuation(self, *, semantic=False, changed=False):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        root = self.runtime._ledger.request("create")
+        request = (super().control("new-capture", "Create World") if semantic else self.raw("new-capture", "ENTER"))
+        with patch.object(self.controller, "execute_mission",
+                side_effect=self.superseding_capture(self.controller.execute_mission, changed=changed)):
+            operation = self.run_request(request)
+        self.assertEqual(operation["state"], "partial", operation)
+        phase = self.runtime._registered_lifecycle.phase
+        self.assertEqual(phase.checkpoint, self.runtime._current)
+        primitive = self.runtime._ledger.primitive_records()[-1]
+        self.assertEqual(primitive["state"], "returned")
+        self.assertNotEqual(primitive["result"]["source_after"], phase.checkpoint.observation_id)
+        self.assertEqual(self.runtime._ledger.request("create")["deadline"], root["deadline"])
+        self.assertEqual(self.runtime._ledger.request("create")["request"]["limits"], root["request"]["limits"])
+        self.observe("after-new-control-capture")
+        self.assertEqual(self.runtime._registered_lifecycle.phase.root_id, "create")
+
+    def test_ordinary_control_preserves_current_capture_and_known_ack(self):
+        self.assert_lifecycle_current_continuation()
+
+    def test_semantic_control_current_drift_is_partial_instead_of_unknown(self):
+        self.assert_lifecycle_current_continuation(semantic=True)
+
+    def test_changed_current_receiver_needs_a_new_decision_and_remains_observable(self):
+        self.assert_lifecycle_current_continuation(changed=True)
+
+    def test_stage_confirmation_keeps_equivalent_current_capture(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        self.run_request(super().control("world-form", "Create World"))
+        with patch.object(self.controller, "execute_mission",
+                side_effect=self.superseding_capture(self.controller.execute_mission)):
+            operation = self.run_request(self.lifecycle("world-finalize", parent="create"))
+        self.assertEqual(operation["state"], "partial", operation)
+        phase = self.runtime._registered_lifecycle.phase
+        self.assertEqual(phase.checkpoint, self.runtime._current)
+        self.assertEqual(phase.stage, "world_confirmation")
+        self.observe("after-stage-current")
+
+    def test_save_confirmation_keeps_equivalent_current_capture(self):
+        self.create()
+        with patch.object(self.controller, "execute_mission",
+                side_effect=self.superseding_capture(self.controller.execute_mission)):
+            operation = self.run_request(self.lifecycle("save", "save"))
+        self.assertEqual(operation["state"], "partial", operation)
+        phase = self.runtime._registered_lifecycle.phase
+        self.assertEqual(phase.checkpoint, self.runtime._current)
+        self.assertEqual(phase.stage, "save_confirmation")
+        self.observe("after-save-current")
+
+    def test_distinct_identity_capture_keeps_completed_ack_proof_for_adoption(self):
+        execute, remember = self.controller.execute_mission, self.remember_identity
+        proofs = []
+
+        def dispatch(*args, **kwargs):
+            raw = execute(*args, **kwargs)
+            if self.bridge.value["category"] == "PLAYER_INFO":
+                self.bridge.value["timestamp_ms"] += 1
+                self.bridge.publish(self.bridge.value.copy())
+                self.controller.status()
+            return raw
+
+        def remember_screen(identity, subject, reference, epoch, **kwargs):
+            if subject == "character":
+                phase = self.runtime._registered_lifecycle.phase
+                self.assertNotEqual(phase.identity_screen, phase.checkpoint)
+                self.assertEqual(phase.checkpoint, self.runtime._current)
+                self.assertEqual(self.runtime._ledger.request(phase.identity_inspect)["state"], "completed")
+                reference = phase.identity_screen  # Select the returned exact proof source.
+                proofs.append(reference)
+            return remember(identity, subject, reference, epoch, **kwargs)
+
+        with patch.object(self.controller, "execute_mission", side_effect=dispatch), \
+                patch.object(self, "remember_identity", side_effect=remember_screen):
+            self.create()
+        self.assertEqual(len(proofs), 1)
+        self.assertIsNotNone(adopted_timeline(self.runtime._ledger, self.runtime._store))
+
     def raw(self, identity, key, *, parent="create"):
         data = super().control(identity, "ignored", parent=parent)
         data.update(skill_kind="direct", perception=None, goal=dict(

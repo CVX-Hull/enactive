@@ -6,7 +6,9 @@ import hashlib
 import json
 from pathlib import Path
 import sys
+import threading
 import unittest
+from unittest.mock import patch
 
 from harness.gameplay.contracts import canonical
 from harness.player_tools import DETAIL_SECTIONS, PlayerTools
@@ -207,6 +209,78 @@ class ImagePresentationTests(unittest.TestCase):
 
 
 class ImageSDKTests(unittest.TestCase):
+    def test_historical_image_invalidates_at_presentation_after_another_worker(self):
+        player = PlayerTools(ImageClient())
+        current, pixels = player.call("enactive_result", dict(
+            mission_id="mission", operation_id="operation", wait_seconds=0), present_image=False)
+        historical, history_pixels = player.call("enactive_source", dict(
+            mission_id="mission", source_id="source"), present_image=False)
+        player.present_image("enactive_result", current, pixels)
+        player.present_image("enactive_source", historical, history_pixels)
+        _, shown = player.call("enactive_result", dict(
+            mission_id="mission", operation_id="operation", wait_seconds=0))
+        self.assertEqual(shown, png())
+
+    def test_cancelled_worker_cannot_establish_image_presentation(self):
+        from mcp import types
+        entered, release, finished = threading.Event(), threading.Event(), threading.Event()
+        self.addCleanup(release.set)
+
+        class DelayedClient(ImageClient):
+            def collect(self, **arguments):
+                entered.set()
+                if not release.wait(3):
+                    raise TimeoutError("Test did not release collection")
+                return super().collect(**arguments)
+
+        class TrackedPlayer(PlayerTools):
+            def call(self, *args, **kwargs):
+                try:
+                    return super().call(*args, **kwargs)
+                finally:
+                    finished.set()
+
+        async def exercise():
+            player = TrackedPlayer(DelayedClient())
+            callback = make_server(player).get_request_handler("tools/call").handler
+            params = types.CallToolRequestParams(name="enactive_result", arguments=dict(
+                mission_id="mission", operation_id="operation"))
+            task = asyncio.create_task(callback(None, params))
+            self.assertTrue(await asyncio.to_thread(entered.wait, 2))
+            task.cancel()
+            with self.assertRaises(asyncio.CancelledError):
+                await task
+            self.assertFalse(finished.is_set())
+            release.set()
+            self.assertTrue(await asyncio.to_thread(finished.wait, 2))
+            reply = await callback(None, params)
+            self.assertEqual(sum(part.type == "image" for part in reply.content), 1)
+        asyncio.run(exercise())
+
+    def test_failed_response_cannot_suppress_the_next_actual_image(self):
+        from mcp import Client
+
+        async def exercise():
+            for failure in ("projection", "serialization"):
+                player = PlayerTools(ImageClient())
+                async with Client(make_server(player)) as client:
+                    target = "decision_view" if failure == "projection" else "canonical"
+                    effect = ValueError("failed projection") if failure == "projection" else [
+                        ValueError("failed serialization"), '{"error":"failed serialization"}']
+                    with patch("harness.player_mcp." + target, side_effect=effect):
+                        failed = await client.call_tool("enactive_result", dict(
+                            mission_id="mission", operation_id="operation"))
+                    self.assertTrue(failed.is_error)
+                    self.assertFalse(any(part.type == "image" for part in failed.content))
+                    recovered = await client.call_tool("enactive_result", dict(
+                        mission_id="mission", operation_id="operation"))
+                    self.assertFalse(recovered.is_error)
+                    images = [part for part in recovered.content if part.type == "image"]
+                    self.assertEqual(len(images), 1)
+                    self.assertEqual(base64.b64decode(images[0].data), png())
+                    self.assertNotIn("image_presentation", json.loads(recovered.content[0].text))
+        asyncio.run(exercise())
+
     def test_repeated_same_response_forwards_one_actual_image_then_explicit_rereads(self):
         from mcp import Client
         from mcp.client.stdio import StdioServerParameters

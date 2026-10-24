@@ -95,11 +95,20 @@ class ReflectionClientTests(unittest.TestCase):
         self.assertEqual(len(self.server.calls), 3)
         self.assertTrue(all(call[3] == value for call in self.server.calls))
         self.assertTrue(all(0 <= call.args[0] <= .2 for call in sleep.call_args_list))
+        self.assertFalse(self.stage_path(value).exists())
+        # A new client can retry a positively unadmitted claim after capacity
+        # returns. The deterministic identity and immutable body stay the same.
+        self.server.callback = lambda handler, body: handler.reply(receipt(value))
+        self.assertEqual(MissionClient(self.root).reflection_command(value, wait_seconds=0), receipt(value))
+        self.assertEqual(self.server.calls[-1][0], "POST")
+        self.assertEqual(self.server.calls[-1][3], value)
+        self.assertTrue(self.stage_path(value).exists())
         self.server.calls.clear()
         submitted = command("submit-busy", submit=True)
         self.server.callback = lambda handler, body: handler.reply(receipt(submitted, status="busy", admitted=False))
         self.client.reflection_command(submitted, wait_seconds=1)
         self.assertEqual(len(self.server.calls), 1)
+        self.assertTrue(self.stage_path(submitted).exists())
 
     def test_busy_retry_uses_original_deadline_and_uncertain_busy_never_retries(self):
         value = command()
@@ -114,6 +123,19 @@ class ReflectionClientTests(unittest.TestCase):
         self.server.callback = lambda handler, body: handler.reply(receipt(value, status="busy", admitted=False, grants_authority=True))
         self.assertEqual(self.client.reflection_command(value, wait_seconds=1)["status"], "unknown")
         self.assertEqual(len(self.server.calls), 1)
+
+    def test_busy_followed_by_uncertainty_keeps_collection_only_fence(self):
+        value = command("busy-then-unknown")
+        busy = receipt(value, status="busy", admitted=False)
+        responses = iter([busy, dict(status="missing", admitted=False,
+            command_id=value["command_id"], grants_authority=False)])
+        self.server.callback = lambda handler, body: handler.reply(next(responses))
+        with patch("harness.mission_client.time.sleep"):
+            self.assertEqual(self.client.reflection_command(value, wait_seconds=1)["status"], "unknown")
+        self.assertTrue(self.stage_path(value).exists())
+        self.server.callback = lambda handler, body: handler.reply(receipt(value, status="missing", admitted=False))
+        self.assertEqual(MissionClient(self.root).reflection_command(value, wait_seconds=0)["status"], "unknown")
+        self.assertEqual([call[0] for call in self.server.calls], ["POST", "POST", "GET"])
 
     def test_bounded_malformed_receipts_return_unknown_without_post_retry(self):
         for index, change in enumerate((dict(result=dict(huge="x" * (MAX_RESULT_BYTES + 1))),

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import base64
+from functools import partial
 from pathlib import Path
 
 import anyio
@@ -31,7 +32,10 @@ def make_server(player: PlayerTools) -> Server:
             arguments, collection = player.model_arguments(params.name, params.arguments or {})
             # The thread runs to its own finite transport deadline. Cancellation
             # never creates a new request ID or replays an admitted operation.
-            value, png = await anyio.to_thread.run_sync(player.call, params.name, arguments)
+            value, png = await anyio.to_thread.run_sync(partial(player.call, params.name, arguments, present_image=False))
+            # A cancelled worker may still finish later. It cannot establish
+            # presentation; only this synchronous response-building path can.
+            value, png = player.present_image(params.name, value, png)
             value = decision_view(params.name, value)
             content = [types.TextContent(type="text", text=canonical(value))]
             if png is not None:
@@ -45,6 +49,7 @@ def make_server(player: PlayerTools) -> Server:
                     "do not collect this unsubmitted request. No authority is granted.")
             return types.CallToolResult(is_error=True, content=[types.TextContent(type="text", text=canonical(value))])
         except Exception as exc:
+            player.invalidate_image_presentation()
             # This is the outer invocation boundary: even an unexpected Python
             # formatting error after staging must retain the assigned identity.
             # Cancellation/BaseException still propagates without another call.
@@ -57,6 +62,9 @@ def make_server(player: PlayerTools) -> Server:
                     delivery="Not proved by this error; collect the original if submission is uncertain")
                 return types.CallToolResult(is_error=True, content=[types.TextContent(type="text", text=canonical(value))])
             return types.CallToolResult(is_error=True, content=[types.TextContent(type="text", text=str(exc)[:1024])])
+        except BaseException:
+            player.invalidate_image_presentation()
+            raise
 
     server = Server("enactive-player", version="5.2.2",
         instructions="Use only your designated role and admitted mission. Choose gameplay intent, exact returned snapshot/source and finite execution limits. Snapshots and proof receipts are read-only: grants_authority=false is not a failed adoption or an execution refusal. Follow the actual result, next_needed_decision and active phase; the writer checks each request. Software assigns request IDs and bounded collection waits; do not supply request_id or wait_seconds. Pending/uncertain delivery requires original result collection, never resubmission. User Pause remains independent. An adviser uses only enactive_reflect_next/submit/source/result, computes only after a durable claim and submits candidate data without input or memory adoption. The player reads advice and owns adoption. Roles are procedural, not security isolation.",

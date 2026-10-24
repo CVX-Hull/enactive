@@ -349,7 +349,8 @@ class MissionClient:
         """Stage an advisory command once; uncertainty permits only collection.
 
         Only an explicit zero-admission busy claim can be retried, at most three
-        attempts within this call's original deadline. Submissions never retry.
+        attempts within this call's original deadline. A final known busy claim
+        releases its local fence for a later bounded call. Submissions never retry.
         """
         wait = _wait(wait_seconds)
         body = validate_command(command)
@@ -368,7 +369,16 @@ class MissionClient:
                 break
             time.sleep(min(.1 * (attempt + 1), remaining))
             if time.monotonic() >= deadline:
-                return response
+                break
+        if body["kind"] == "claim" and response["status"] == "busy" and response["admitted"] is False:
+            # This validated receipt proves zero admission, unlike a missing
+            # result after uncertainty. Preserve all other dispatch fences.
+            with self._runtime() as runtime, _directory("reflection-commands", parent=runtime) as directory:
+                name = f"rc-{identity}.json"
+                if _regular_bytes(directory, name, MAX_COMMAND_BYTES, private=True) != payload:
+                    raise MissionClientError("Busy claim stage differs from its original payload")
+                os.unlink(name, dir_fd=directory)
+                os.fsync(directory)
         remaining = deadline - time.monotonic()
         if response["status"] == "pending" and remaining > 0:
             return self.reflection_collect(body["mission_id"], body["reflector_id"], body["command_id"], wait_seconds=remaining)

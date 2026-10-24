@@ -430,6 +430,10 @@ class PlayerTools:
         return (mission["mission_id"], mission["player_id"], mission["epoch"],
             hashlib.sha256(canonical(context).encode()).hexdigest(), hashlib.sha256(image).hexdigest())
 
+    def invalidate_image_presentation(self) -> None:
+        """A failed response cannot establish that its image was presented."""
+        self._last_image = None
+
     def _present_image(self, output: dict, image: bytes | None, *, explicit: bool) -> tuple[dict, bytes | None]:
         snapshot = output if explicit else output.get("next_snapshot")
         context = self._image_context(snapshot, image)
@@ -445,7 +449,18 @@ class PlayerTools:
             return output, None
         return output, image
 
-    def call(self, name: str, arguments: dict) -> tuple[dict, bytes | None]:
+    def present_image(self, name: str, output: dict, image: bytes | None) -> tuple[dict, bytes | None]:
+        """Present only after the transport's background call has returned."""
+        if name == "enactive_source":
+            self.invalidate_image_presentation()
+        if name == "enactive_snapshot":
+            return self._present_image(output, image, explicit=True)
+        if name not in ("enactive_source", "enactive_detail", "enactive_reflect_next",
+                        "enactive_reflect_submit", "enactive_reflect_source", "enactive_reflect_result", "enactive_advice"):
+            return self._present_image(output, image, explicit=False)
+        return output, image
+
+    def call(self, name: str, arguments: dict, *, present_image: bool = True) -> tuple[dict, bytes | None]:
         if name not in self.specs:
             raise ContractError("Unknown player tool")
         data = json_object(arguments)
@@ -459,15 +474,8 @@ class PlayerTools:
             self._preparation_refusal(name, data,
                 ContractError("Another player tool is active; collect its original operation before continuing"))
         try:
-            if name == "enactive_source":
-                # Historical sources carry no current player/epoch context.
-                self._last_image = None
             output, image = self._call(name, data)
-            if name == "enactive_snapshot":
-                return self._present_image(output, image, explicit=True)
-            if name != "enactive_source" and name != "enactive_detail":
-                return self._present_image(output, image, explicit=False)
-            return output, image
+            return self.present_image(name, output, image) if present_image else (output, image)
         except (OSError, ValueError):
             self._last_image = None
             raise

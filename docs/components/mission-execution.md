@@ -68,6 +68,13 @@ sources never restore consent. Handoff requires settled operations, paused custo
 required Work and the actual predecessor's exit before a new host is activated.
 Source-read declarations are audit statements, not proof of model attention.
 
+Lifecycle checkpoints follow the separately validated current capture; an ACK
+remains immutable delivery evidence even when a newer capture arrives. Different
+current evidence ends the batch for a new player decision. Confirmation-stage
+consent survives only equivalent evidence, and an identity inspection retains its
+exact completed ACK proof separately from the current checkpoint. Diagnostic
+transitions still require their existing reconciliation and readmission.
+
 Review a change from the owner/phase and flow down to shared limits, publication,
 receipt/reopen readers and tests. The large runtime and ledger remain concentrated
 implementation seams; this map does not claim they have been refactored. Extract

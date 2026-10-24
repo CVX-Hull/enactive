@@ -83,6 +83,15 @@ class RegisteredLifecycle:
             self.phase = phase
         return phase
 
+    def _returned_checkpoint(self) -> EvidenceRef:
+        """Use the independently retained current capture, not the ACK proof."""
+        r = self.runtime
+        current, _ = r._store.inspect_current_boundary(**r._clocks())
+        if current is None or current != r._current:
+            raise EvidenceError("Known lifecycle input lost its current evidence authority")
+        r._capture_custody(r._store.observation(current), r._live()[0])
+        return current
+
     def launch_mark(self, mark: tuple[str, int], request_id: str) -> None:
         r = self.runtime
         if self.lineage is None:
@@ -367,13 +376,14 @@ class RegisteredLifecycle:
         r._check_cancelled(work)
         if feedback.transport_disposition != "returned" or feedback.after is None:
             raise ControlError("Lifecycle Resume was not verified; original receipt retained: " + feedback.reason)
-        state = r._store.observation(feedback.after)
+        checkpoint = self._returned_checkpoint()
+        state = r._store.observation(checkpoint)
         if state["paused"] or state["session"] != phase.checkpoint.session or self.candidate is not None:
             raise ControlError("Lifecycle Resume did not return its same supported session")
         r._lease = r.controller.acquire_mission(r._admission.mission_id, phase.epoch, phase.actor_id,
             operation="lifecycle", expected_session=state["session"], expected_revision=state["revision"],
             expected_boundary_id=state["boundary"]["id"])
-        phase = self._install(work, replace(phase, checkpoint=feedback.after), previous=phase)
+        phase = self._install(work, replace(phase, checkpoint=checkpoint), previous=phase)
         return phase
 
     def command(self, work: _Work) -> tuple[str, dict]:
@@ -428,7 +438,9 @@ class RegisteredLifecycle:
         after = self.runtime._store.observation(feedback.after)
         if after["category"] != "YESNO":
             raise ControlError("Stage commit did not produce its supported visible confirmation")
-        phase = self._install(work, replace(phase, checkpoint=feedback.after), previous=phase)
+        checkpoint = self._returned_checkpoint()
+        stage = phase.stage if self.runtime._store.equivalent(feedback.after, checkpoint, rule="exact_png_bytes") else "awaiting_control"
+        phase = self._install(work, replace(phase, checkpoint=checkpoint, stage=stage), previous=phase)
         return "partial", {"reason": "Explicit lifecycle stage awaits the player's interpreted confirmation",
             "phase": self.receipt(phase, "awaiting_control"), "grants_authority": False}
 
@@ -497,7 +509,9 @@ class RegisteredLifecycle:
         after = r._store.observation(feedback.after)
         if after["category"] != "YESNO":
             raise ControlError("Normal Save did not produce its supported confirmation")
-        phase = self._install(work, replace(phase, checkpoint=feedback.after, stage="save_confirmation"), previous=phase)
+        checkpoint = self._returned_checkpoint()
+        stage = "save_confirmation" if r._store.equivalent(feedback.after, checkpoint, rule="exact_png_bytes") else "awaiting_control"
+        phase = self._install(work, replace(phase, checkpoint=checkpoint, stage=stage), previous=phase)
         return "partial", {"reason": "Normal Save awaits explicit Save and quit? confirmation",
             "phase": self.receipt(phase, "awaiting_control"), "grants_authority": False}
 
@@ -617,8 +631,16 @@ class RegisteredLifecycle:
                 r._check_cancelled(work)
                 outcome = skill.accept(feedback, r._store, **r._clocks())
                 if feedback.transport_disposition == "returned" and feedback.after is not None:
-                    after = r._store.observation(feedback.after)
+                    checkpoint = self._returned_checkpoint()
+                    after = r._store.observation(checkpoint)
+                    if checkpoint != feedback.after and self.candidate is None:
+                        # Policy attribution cannot turn known delivery into an
+                        # unknown merely because a newer healthy view arrived.
+                        outcome = replace(outcome, disposition="partial", pending_logical_id=None)
                     stage = phase.stage
+                    if (checkpoint != feedback.after and not r._store.equivalent(feedback.after, checkpoint, rule="exact_png_bytes")
+                            and stage in ("world_confirmation", "character_confirmation", "points_confirmation", "save_confirmation")):
+                        stage = "awaiting_control"
                     if (phase.operation == "load" and state["category"] == "MAIN_MENU"
                             and after["category"] == "UILIST" and proposal.action in ("CONFIRM", "UILIST.CONFIRM")):
                         stage = "load_selection"
@@ -630,16 +652,25 @@ class RegisteredLifecycle:
                         stage = "awaiting_control"
                     if after["boundary"]["kind"] == "normal_play":
                         if (phase.operation == "save" and phase.first_normal is not None
-                                and feedback.after.session == phase.first_normal.session):
+                                and checkpoint.session == phase.first_normal.session):
                             self.phase = None
-                            r._publish_source(feedback.after, authoritative=True)
+                            r._publish_source(checkpoint, authoritative=True)
                             result = r._control_result(outcome)
-                            result["phase"] = self.receipt(replace(phase, checkpoint=feedback.after), "complete")
+                            result["phase"] = self.receipt(replace(phase, checkpoint=checkpoint), "complete")
                             result["reason"] = "Save returned to the adopted normal session; no saved-checkpoint claim"
                             return "partial", result
                         if phase.identity_screen is not None:
                             stage = "awaiting_adoption"
-                    phase = self._install(work, replace(phase, checkpoint=feedback.after, stage=stage), previous=phase)
+                    phase = self._install(work, replace(phase, checkpoint=checkpoint, stage=stage), previous=phase)
+                    if checkpoint != feedback.after and self.candidate is None:
+                        self.guard(work, phase, ordinary=data["skill_kind"] == "direct")
+                        r._check_lease()
+                        result = r._control_result(outcome)
+                        result.update(reason="Known input returned; current lifecycle evidence needs a new decision",
+                            source_ids=list(dict.fromkeys([*result.get("source_ids", []),
+                                feedback.after.observation_id, checkpoint.observation_id])),
+                            phase=self.receipt(phase, "awaiting_control"), grants_authority=False)
+                        return "partial", result
                 if outcome is None:
                     continue
             result = r._control_result(outcome)
@@ -937,10 +968,12 @@ class RegisteredLifecycle:
         after = r._store.observation(feedback.after)
         if after["category"] != "PLAYER_INFO" or not after["in_game"] or feedback.after.session != phase.first_normal.session:
             raise ControlError("Registered identity inspection did not return the expected character screen")
-        phase = self._install(work, replace(phase, checkpoint=feedback.after,
+        checkpoint = self._returned_checkpoint()
+        stage = "awaiting_adoption" if checkpoint.boundary_kind == "normal_play" else phase.stage
+        phase = self._install(work, replace(phase, checkpoint=checkpoint, stage=stage,
             identity_inspect=data["request_id"], identity_screen=feedback.after), previous=phase)
         return "completed", {"identity_screen_source_id": feedback.after.observation_id,
-            "source_ids": [proposal.before.observation_id, feedback.after.observation_id],
+            "source_ids": list(dict.fromkeys([proposal.before.observation_id, feedback.after.observation_id, checkpoint.observation_id])),
             "phase": self.receipt(phase, "awaiting_identity"), "grants_authority": False}
 
     def _adopt(self, work: _Work, phase: NormalPhase) -> tuple[str, dict]:

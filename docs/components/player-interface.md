@@ -43,6 +43,13 @@ nondelivery. Restart cannot reconstruct missing settled identities or permission
 to replay. The [binding contract](../protocol.md#skill-request-binding-errors)
 and [operator contract](../protocol.md#designated-campaign-operator) own exact rules.
 
+An advisory Claim's validated `busy, admitted=false` receipt proves zero admission;
+its local fence can be released for another bounded attempt. Missing receipts,
+uncertainty and admitted commands remain collection-only. This exception does not
+retry gameplay or advisory submissions. Image deduplication records presentation
+in the response-building path, after background work returns. Failed/cancelled
+responses and intervening historical-source images cannot suppress an unseen image.
+
 The actual host's loaded schema, image presentation and context sufficiency need
 qualification; SDK tests alone do not establish those properties. Routine player
 work starts with the compact [guide](../player-guide.md), frozen mission and

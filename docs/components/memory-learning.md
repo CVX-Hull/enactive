@@ -35,6 +35,12 @@ file/process behavior. Project code owns domain provenance, finite capacity and
 uncertain delivery, rather than another transaction/history/recovery system.
 Context views and cached spectator packets are projections, not new authorities.
 
+Context retrieval collects qualified procedure dependencies before reading support
+images. One operation-scoped cache shares checks across claims, Work and procedures;
+the source-work limit includes checked candidates later omitted for packet size.
+Oversized closures are omitted before image I/O. Complete handoff fails rather than
+truncating required support, and actual procedure selection still verifies it.
+
 ## Current flow and feedback
 
 The writer retains intent/dispatch/result sources and charges automatically.
