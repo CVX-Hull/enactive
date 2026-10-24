@@ -532,12 +532,14 @@ After external mission admission, the lead may use the thin
 [campaign player driver](../tools/campaign_player.py) to run the frozen original
 and at most one clean successor through the maintained CLI. Prepare
 `frozen/player-host-configuration.json`, `frozen/original-player-prompt.txt` and
-`frozen/successor-player-brief.txt` inside that run. Example (choose the actual
+`frozen/successor-player-brief.txt` inside that run. The current run directory must
+be exactly `.runtime/campaigns/<mission_id>`; arbitrary descendants or aliases
+are unsupported. Example (choose the actual
 frozen mission/model/effort/deadline, rather than copying a previous allowance):
 
 ```sh
 .venv/bin/python -m tools.campaign_player \
-  --root "$PWD" --run-dir "$PWD/.runtime/campaigns/RUN_ID" \
+  --root "$PWD" --run-dir "$PWD/.runtime/campaigns/MISSION_ID" \
   --mission-id MISSION_ID --model gpt-6-luna --effort low \
   --timeout-seconds 900
 ```
@@ -553,6 +555,11 @@ expected initial freeze. User Pause, failed/uncertain hosts and unexpected state
 stop activation without fallback or budget renewal. Timeout cleanup signals only
 the exact owned host; it cannot claim native cleanup. All outputs are exclusive
 run-local files. A terminal report describes observed phase, never acceptance.
+The spectator's Deciding host and Assigned successor fields read these same
+receipts. A successor may launch or fail before mission adoption; inspect that
+separate row instead of inferring it from the mission actor. Launch evidence is
+not current liveness, and missing receipts remain unknown. These fields never
+activate an actor, change ownership or authorize another run.
 Source/fake-host checks qualify this implementation; actual fresh-host graphical
 activation remains separately required under#136/#164/#145.
 

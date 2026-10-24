@@ -434,5 +434,24 @@ proxies without asserting causality. Existing issues own focused investigation
 before new adapters or frameworks. c7146e1's exact CI failed one existing lifecycle
 fixture's unlocked private verifier; independent contract review supports using
 the ledger's existing mutex in that fixture, not a production DB recovery layer.
+
+### Integrated observer and workflow follow-through
+
+The passive observer now projects existing driver outputs at the single canonical
+`.runtime/campaigns/<mission_id>` directory. Mission ownership, original host and
+assigned successor/adoption are separate; a successor launch/failure before Claim
+remains visible. No heartbeat, process discovery, new store or activation authority
+is added. Review caught that pre-Claim omission in the first diff and verified the
+repair. Missing/partial/mismatched files and unresolved exits remain uncertain;
+launch does not prove current liveness. Architecture/protocol/runbook/walkthrough
+and all current driver fixtures migrate together, without aliases or fallback paths.
+
+Root integration passes77host/driver/HTTP tests and the production viewer regression;
+the fixture mutex repair passes43creation tests. HTTP fixture binding required
+scoped loopback permission. Independent015 evidence/workflow review corrected the
+transferred-revision count and found no remaining scoped issue. Fast/document/
+governance checks pass; exact new CI, actual host display and the full campaign
+remain separate. Native binary/protocol and MCP5.2.1 tool declarations are unchanged;
+no desktop restart or global setup change is needed for these source changes.
 Precedingc17500b passes [exact CI40049271526](https://github.com/CVX-Hull/enactive/actions/runs/40049271526);
 that does not qualify this later source or any failed campaign.

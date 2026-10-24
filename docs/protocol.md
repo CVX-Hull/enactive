@@ -1107,6 +1107,22 @@ not a public JSON field. Terminal history remains visible and owns no execution.
 `/api/status.mission` is null or a copied bounded mission snapshot: objective, actor,
 epoch, phase/cause, active operation/skill/progress, exact source/receipt identifiers,
 remaining limits/reserve, unresolved effects, memory version and diagnostic.
+Sibling `/api/status.deciding_host` is a passive, non-authorizing projection of
+the exact mission's canonical driver preparation outputs, not mission state.
+`current` binds host evidence to the mission snapshot's actor; `original` retains
+predecessor evidence. `successor` is null or separately assignment-bound evidence,
+including before Claim, with `mission_adoption_observed` describing actor equality
+in that snapshot. Each reported host is unreported, launch_reported, exited,
+timed_out, interrupted or exit_unresolved, with observed timestamps/returncode
+where available. No launch receipt establishes current liveness, and a predecessor
+exit does not rule out future succession. Missing, partial, malformed or mismatched
+outputs remain unreported/unknown. A final matching driver report may say
+`no_continuing_host_reported` only when every reported launch has a matching resolved
+exit; unresolved or uncovered successor launches cannot establish that conclusion.
+Driver outcome is unreported, incomplete or terminal, never gameplay acceptance.
+The spectator displays assigned successor/adoption separately and marks disconnected
+evidence last reported. No PIDs, command arguments, local paths or secrets are
+forwarded by this projection; rendering grants no Claim, readmission or Resume.
 `coordinate_scope` is nullable passive metadata derived from the current retained
 normal-play source's adopted timeline: mission ID, session and coordinate epoch.
 Normal source publication verifies adoption and creates the current session map;

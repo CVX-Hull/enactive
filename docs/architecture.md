@@ -41,6 +41,13 @@ and exact quiescent internal-handoff verification, including current controller/
 native Pause binding. It assigns identity separately from the issued role and
 performs no gameplay, memory adoption, Claim or readmission. Original finite
 resources stay in the runtime; the driver's terminal report is not acceptance.
+Current driver outputs live only at `.runtime/campaigns/<mission_id>`.
+The HTTP/spectator adapter reads those existing outputs to show original and
+assigned-successor host events separately from mission ownership, including a
+successor that exits before Claim. It performs no process discovery, heartbeat,
+actor activation or input. [Protocol](protocol.md#integrated-mission-lifecycle)
+owns the passive projection and uncertainty semantics; live graphical qualification
+is still required beyond its component/viewer tests.
 The driver supplies absolute frozen-context/index paths to both hosts. Lifecycle
 summaries describe their effective ordinary-child interruption consent. A known
 insufficient paused-menu exit allowance refuses before its fixed Resume/Quit plan
