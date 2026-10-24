@@ -287,7 +287,8 @@ class CampaignMemory:
         return _copy({"memory_version": sequence, "entries": entries, "grants_authority": False})
 
     @staticmethod
-    def _frontier(claims: dict[str, dict]) -> tuple[list[list[str]], set[str]]:
+    def _frontier(claims: dict[str, dict], *, selected_ids: set[str] | None = None) -> tuple[list[list[str]], set[str]]:
+        """Validate the full graph, then reduce complete groups containing selected IDs."""
         seen = set()
         for identity, claim in claims.items():
             parents = set(claim["supersedes"]) | {c for group in claim["supports"] for c in group["claims"]}
@@ -300,9 +301,12 @@ class CampaignMemory:
             ancestors[identity] = set(claim["supersedes"])
             for predecessor in claim["supersedes"]:
                 ancestors[identity].update(ancestors.get(predecessor, ()))
+        selected_groups = None if selected_ids is None else {_group(claims[identity]) for identity in selected_ids}
         groups: dict[str, list[str]] = {}
         for identity, claim in claims.items():
-            groups.setdefault(_group(claim), []).append(identity)
+            group = _group(claim)
+            if selected_groups is None or group in selected_groups:
+                groups.setdefault(group, []).append(identity)
         frontiers = []
         for ids in groups.values():
             frontiers.append([identity for identity in ids if not any(

@@ -131,6 +131,20 @@ primitive charge. Prepared refusal retains its actual charge. Processing/storage
 faults still stop. Observe may close an exhausted local macro through the existing
 closure receipt; it cannot renew its root or spend protected mission reserves.
 
+An ordinary semantic shortcut may also expire after its distinct actual preflight
+was retained but before reservation/preparation. If the failed source is exactly
+the prior entry and its only failed predicates are age limits, the writer may
+refuse it through the existing controller fences and authenticated unpublished
+receipt. The actual preflight must still be fresh; ownership, retained sources,
+store generation, pending-work and global limits must remain healthy. Preserve
+only the existing read-only Observe lineage, earlier delivered effects and costs;
+clear the refused proposal's pending ID without attributing any new effect.
+The player explicitly observes and chooses a distinct intent. Never refresh,
+replay or finish the old suffix automatically. Expired actual preflight, clock
+reversal/future capture, invalidated custody and specialized lifecycle/activity/
+recovery paths retain their stopping behavior. Freshness audit records retain
+the actual source, check clocks and failed predicates without granting authority.
+
 Native passive captures freshly present and encode. Only unchanged complete
 observation metadata, geometry and actual bounded PNG bytes may reuse the current
 identity within its original three-second window, checked after encoding/comparison.

@@ -112,7 +112,8 @@ class ProducerLifecycleIntegrationTests(ProducedCreationFixture, unittest.TestCa
         self.exit()
         result = self.run_request(self.lifecycle("finish", "finish"))
         self.assertEqual(result["result"]["normal_finish"]["disposition"], "stopped")
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_create_save_new_child_exact_reload_and_retained_finish(self):
         self.create()
@@ -142,7 +143,8 @@ class ProducerLifecycleIntegrationTests(ProducedCreationFixture, unittest.TestCa
         self.assertEqual(self.runtime.status()["phase"], "stopped")
         self.assertEqual(self.runtime.status()["spent_inputs"], before)
         self.assertEqual(self.runtime._ledger.request("character-yes"), original_ack)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def save_final(self):
         self.run_request(self.lifecycle("final-save", "save"))
@@ -222,7 +224,8 @@ class ProducerLifecycleIntegrationTests(ProducedCreationFixture, unittest.TestCa
         finished = self.run_request(self.lifecycle("finish", "finish"))
         self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
         self.assertEqual(self.runtime._ledger.primitive(original["logical_id"]), original)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_changed_pixels_after_composition_block_before_finalize(self):
         self.ready()
@@ -282,4 +285,5 @@ class ProducerActivityIntegrationTests(unittest.TestCase):
         self.assertEqual(self.runtime._ledger.primitive_records()[-2], receipt)
         self.assertEqual(self.runtime._ledger.request("rest-root"), original)
         self.assertEqual(len([x for x in self.bridge.delivered if x["kind"] == "resume"]), self.resumes_at_start + 1)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)

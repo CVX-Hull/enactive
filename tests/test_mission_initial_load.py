@@ -58,7 +58,8 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         adopted = self.finish_identity("initial-load", world)
         self.assertEqual(adopted["state"], "completed", adopted)
         self.assertIsNone(adopted["result"]["normal_adoption"]["saved_checkpoint_request_id"])
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def assert_premature_continuation_fault(self):
         delivered = len(self.bridge.delivered)
@@ -127,7 +128,8 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         adopted = self.run_request(self.lifecycle("corrected-adoption", "load", parent="initial-load", claims=[world_id, corrected["id"]]))
         self.assertEqual(adopted["state"], "completed", adopted)
         self.assertEqual(original["value"]["state"], wrong_name)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def pending_initial_load(self):
         world = self.picker()
@@ -184,7 +186,8 @@ class InitialLoadTests(MissionCreationFixture, unittest.TestCase):
         self.observe("reload-observe")
         reloaded = self.finish_identity("reload", world, 1)
         self.assertEqual(reloaded["result"]["normal_adoption"]["saved_checkpoint_request_id"], "save-reconcile")
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
         self.runtime.close()
         self.runtime = MissionRuntime(self.controller)
         self.start()

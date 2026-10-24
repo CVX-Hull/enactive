@@ -173,7 +173,8 @@ class MissionFinishTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(self.runtime.status()["phase"], "completed")
         self.assertEqual(self.runtime.status()["reason"], "Player-reported objective completion")
         self.assertEqual(len(self.bridge.requests), count)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
         self.runtime.close()
         self.runtime = MissionRuntime(self.controller)
         self.start()
@@ -292,7 +293,8 @@ class MissionFinishTests(MissionCreationFixture, unittest.TestCase):
             self.assertEqual(self.finish(work_id="objective-work")["state"], "completed")
         normal = [ref for ref in self.runtime._store.historical_references if ref.boundary_kind == "normal_play"][-1]
         self.remember_work("later-incomplete-report", source=normal, status="active")
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
         self.assertEqual(self.runtime._ledger.request("finish")["result"]["normal_finish"]["completed_work_event_id"], "objective")
         self.assertEqual(self.runtime.status()["phase"], "paused")
 

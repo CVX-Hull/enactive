@@ -156,7 +156,8 @@ class ActivityRecoveryTests(unittest.TestCase):
         self.assertEqual(self.runtime.status()["spent_inputs"], 4)
         self.assertEqual(len([x for x in self.bridge.delivered if x["kind"] == "resume"]), self.resumes_at_start + 1)
         self.assertEqual(self.runtime._ledger.memory_records("work"), ())
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_passive_capture_after_interrupt_ack_preserves_phase_and_receipt(self):
         from tests.test_mission_observation_churn import passive_capture
@@ -197,7 +198,8 @@ class ActivityRecoveryTests(unittest.TestCase):
         result = self.settled("natural-return")
         self.assertEqual(result["result"]["phase"]["stage"], "awaiting_readmission")
         self.assertEqual(self.recovery("resume")["state"], "partial")
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_resume_at_poll_is_refused_without_an_input_or_new_lease(self):
         self.prepare()
@@ -226,7 +228,8 @@ class ActivityRecoveryTests(unittest.TestCase):
         self.assertEqual(result["state"], "blocked", result)
         self.assertEqual(self.runtime.status()["spent_inputs"], 3)
         self.assertEqual(len([x for x in self.bridge.delivered if x["kind"] == "resume"]), self.resumes_at_start)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_user_pause_after_control_publication_retains_delivery_without_continuation(self):
         self.prepare()
@@ -322,7 +325,8 @@ class ActivityRecoveryTests(unittest.TestCase):
         self.assertEqual(self.recovery("answer_interrupt", identity="answer-again")["state"], "partial")
         self.assertEqual(self.recovery("resume")["state"], "partial")
         self.assertEqual(self.runtime.status()["spent_inputs"], 6)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_missing_after_observation_does_not_rewrite_known_answer_ack(self):
         self.prepare()
@@ -343,7 +347,8 @@ class ActivityRecoveryTests(unittest.TestCase):
         self.assertEqual(self.runtime.status()["spent_inputs"], 3)
         self.assertIsNone(self.runtime._lease)
         self.assertIsNone(self.runtime._registered_activity.phase)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_publication_bookkeeping_failure_settles_known_ack_atomically(self):
         self.prepare()
@@ -355,7 +360,8 @@ class ActivityRecoveryTests(unittest.TestCase):
         self.assertEqual(row["native_id"], self.controls.requests[-1]["id"])
         self.assertEqual(row["result"]["control"]["result"]["status"], "prompt_opened")
         self.assertEqual(len(self.controls.requests), 1)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_controller_post_ack_storage_fault_blocks_observation_continuation(self):
         self.prepare()
@@ -368,7 +374,8 @@ class ActivityRecoveryTests(unittest.TestCase):
         self.assertEqual(self.runtime.status()["spent_inputs"], 2)
         self.assertIsNone(self.runtime._registered_activity.phase)
         self.assertIsNone(self.runtime._lease)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_user_pause_during_preflight_prevents_control_publication(self):
         self.prepare()
@@ -428,7 +435,8 @@ class ActivityRecoveryTests(unittest.TestCase):
     def test_reopen_rejects_changed_terminal_interrupt_owner(self):
         self.prepare()
         self.recovery("interrupt")
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
         row = self.runtime._ledger.primitive_records()[-1]
         row["result"]["control"]["result"]["state"]["boundary"]["interrupt_request_id"] = "other-owner"
         path, database = self.runtime._ledger.directory, self.runtime._ledger.path
@@ -442,7 +450,8 @@ class ActivityRecoveryTests(unittest.TestCase):
     def test_reopen_restores_costs_and_history_without_activity_authority(self):
         self.prepare()
         self.recovery("interrupt")
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
         path = self.runtime._ledger.directory
         self.runtime.close()
         with MissionLedger(path, admission=self.a, now=time.time()) as ledger:

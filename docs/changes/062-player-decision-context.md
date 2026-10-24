@@ -622,3 +622,35 @@ The integrated pending/binding/ordinary suite passes68tests; the exact final
 pre-cache/context/advisory lane passes16tests. These are source checks, not native
 continuation or causal performance evidence. Fast checks and independent review
 pass; exact new CI and the full accepted campaign outcome remain open.
+
+## Closed018: preserve organic correction and measure the real hot path
+
+The [dated018 assessment](../acceptance/2026-10-24-independent-seven-day-eighteenth-attempt.md)
+owns the32h22m34 failed campaign, procedure revisions, known unpublication, missing
+check clocks, actual costs and exceptional closure. It does not qualify seven
+days, successor/reload/normal ending or apparent real time. The prior018 freeze
+and failures remain unchanged.
+
+Current source reuses the existing controller refusal and writer read-only
+Observe lineage when only an unprepared semantic entry's age expires after a
+distinct actual preflight was retained. Actual preflight/custody/global faults
+still stop; no automatic refresh, suffix retry or recovery from lost authority.
+An explicit absent-candidate diagnostic distinguishes nondelivery from lost
+published-delivery custody. Predicate-specific audit records preserve actual
+source/check clocks without placing more bookkeeping in player context.
+
+Offline closed-ledger CPU profiles identify redundant structural Claim validation
+and whole-frontier pair comparisons in the repeated identity guard. Ledger
+insertion/reopen remain structural boundaries; full dependency/retirement/ancestry
+checks remain, then comparison selects complete identity groups across all
+coverage. This uses existing storage/contracts rather than a cache or new engine.
+The profile is not whole-loop speedup or proof of018 causation. Existing #164/#178
+also retain measured context bytes, progressive revelation and automation work;
+#177 owns failed-episode transfer without silently qualifying the paused library.
+
+The exact predecessor CI's unlocked private test verifier motivates a one-time
+consistent use of its existing mutex:33calls repaired, assertions preserved.
+S-CODE and existing C-PORTABLE/C-REVIEW/C-MAINTENANCE cover this lesson. No new
+framework, per-action review, duplicate backlog or menu-specific tactic is needed.
+Current source/native/graphical/exact-CI/protected publication remain separate
+evidence lanes. GitHub owns remaining actions and the complete outcome.

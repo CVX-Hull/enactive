@@ -363,7 +363,8 @@ class OrdinaryLifecycleTests(MissionCreationFixture, unittest.TestCase):
         corrected = self.run_request(self.raw("fresh-focus", "ENTER"))
         self.assertEqual(corrected["state"], "partial", corrected)
         self.assertEqual(self.current()[1]["category"], "STRING_INPUT")
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_stale_direct_request_preserves_healthy_lifecycle(self):
         self.assert_stale_request_refusal("direct")
@@ -423,7 +424,8 @@ class OrdinaryLifecycleTests(MissionCreationFixture, unittest.TestCase):
         self.assertTrue(exited["result"]["normal_exit"]["no_save_required"])
         finished = self.run_request(self.lifecycle("finish", "finish"))
         self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def assert_rejected_stage_can_be_explicitly_reselected(self, *, character):
         self.ready()
@@ -463,7 +465,8 @@ class OrdinaryLifecycleTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(self.runtime._registered_lifecycle.phase.stage,
             "character_confirmation" if character else "world_confirmation")
         self.assertEqual(self.runtime._ledger.primitive_records()[-2]["state"], "rejected")
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_rejected_world_stage_can_be_explicitly_reselected(self):
         self.assert_rejected_stage_can_be_explicitly_reselected(character=False)
@@ -505,7 +508,8 @@ class OrdinaryLifecycleTests(MissionCreationFixture, unittest.TestCase):
         self.assertTrue(exited["result"]["normal_exit"]["no_save_required"])
         finished = self.run_request(self.lifecycle("finish", "finish"))
         self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_expired_setup_observe_cannot_hide_controller_failure(self):
         self.expired_setup()

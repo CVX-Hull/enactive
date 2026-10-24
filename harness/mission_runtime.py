@@ -26,7 +26,7 @@ from .mission_recovery import RecoveryEvidenceError, RecoveryPhase, RegisteredRe
 from .mission_reflection import RegisteredReflection
 from .gameplay.campaign_memory import CampaignMemory
 from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
-from .gameplay.evidence import MAX_AGE_SECONDS, MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore, same_native_custody, same_native_state, validate_native_progression
+from .gameplay.evidence import MAX_AGE_SECONDS, MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore, FreshnessError, same_native_custody, same_native_state, validate_native_progression
 from .gameplay.interaction import MenuIntent, MenuOutcome, MenuSkill
 from .gameplay.contracts import canonical
 from .gameplay.mission_contracts import VERSION, MissionAdmission, InputObservation, SourceBinding, SourceRevalidation, validate_submission
@@ -2253,7 +2253,7 @@ class MissionRuntime:
                 self._registered_recovery.guard(work, lifecycle, proposal)
             else:
                 self._exit_guard(work, lifecycle, proposal)
-        def preflight(observed: dict, received: float) -> None:
+        def checked_preflight(observed: dict, received: float) -> None:
             nonlocal reservation, preflight_source, preflight_observation, prepared, prepared_intent
             guard()
             self._capacity(frames=2, byte_count=2 * MAX_FRAME_BYTES)
@@ -2295,6 +2295,26 @@ class MissionRuntime:
             guard()
             self._store.verify(proposal.before)
             self._store.verify(preflight_source)
+
+        def preflight(observed: dict, received: float) -> None:
+            try:
+                checked_preflight(observed, received)
+            except FreshnessError as exc:
+                self._record("mission_preflight_freshness", dict(request_id=work.request["request_id"],
+                    logical_action_id=proposal.logical_id, **exc.details, grants_authority=False))
+                # An aged semantic entry cannot authorize input. When its
+                # distinct actual preflight was already retained and nothing
+                # prepared, refuse this shortcut through the existing controller
+                # health checks; preserve only explicit Observe/redecision.
+                if (lifecycle is None and activity is None and not ordinary
+                        and reservation is None and not prepared and preflight_source is not None
+                        and exc.details["source_id"] == proposal.before.observation_id
+                        and exc.details["failures"]
+                        and set(exc.details["failures"]) <= {"wall_age", "receipt_age"}
+                        and self._ordinary_refusal_guard(work, proposal.before, command_work=1)):
+                    raise MissionInputRefusal("Semantic entry expired before publication; Observe and choose again",
+                                              status="rejected") from exc
+                raise
 
         def bounded_preflight(observed: dict, received: float) -> None:
             try:
@@ -2705,6 +2725,17 @@ class MissionRuntime:
                         outcome = ControlOutcome("partial", "Known input returned; explicit Observe required before a new input decision",
                             proposed_count, tuple(dict.fromkeys((original, proposal.before, feedback.after))), None, True,
                             "ordinary_input", input_observation=relation if isinstance(relation, InputObservation) else None)
+                    elif feedback.transport_disposition == "not_dispatched":
+                        # _dispatch authenticated this read-only scope. Passive
+                        # semantic attribution requires fresh current evidence;
+                        # it cannot turn positively known nondelivery into an
+                        # unknown input merely because the old entry aged.
+                        outcome = ControlOutcome("partial" if proposed_count > 1 else "blocked", feedback.reason,
+                            proposed_count, tuple(dict.fromkeys((*skill._sources, original, proposal.before))), None, proposed_count > 1,
+                            "ordinary_input" if data["skill_kind"] in ("direct", "program") else
+                            "native_rows" if isinstance(skill, MenuSkill) else "player_interpretation",
+                            relation if isinstance(relation, SourceRevalidation) else None,
+                            relation if isinstance(relation, InputObservation) else None)
                     else:
                         outcome = skill.accept(feedback, self._store, **self._clocks())
                 elif current_changed:
@@ -2832,7 +2863,12 @@ class MissionRuntime:
                 live = self._live()[0]
                 self._capture_custody(observed, live)
                 changed = current != feedback.after or not same_native_state(observed, live)
-            if changed and current != feedback.after:
+            if (feedback.transport_disposition == "not_dispatched" and self._prompt_phase is not None
+                    and self._prompt_phase.observation_generation is not None):
+                outcome = NavigationOutcome("partial" if skill._steps else "blocked", feedback.reason,
+                    skill._steps, skill._proposals, skill._position,
+                    tuple(dict.fromkeys((*skill._sources, feedback.before))), None, skill._revalidation)
+            elif changed and current != feedback.after:
                 # The separate current sample cannot prove this step's effect.
                 # Preserve delivery and the already verified route prefix.
                 outcome = NavigationOutcome("partial", "Current capture changed after returned navigation",

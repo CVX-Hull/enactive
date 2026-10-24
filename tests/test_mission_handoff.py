@@ -97,7 +97,8 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(completed["state"], "completed", completed)
         self.assertEqual(self.runtime.status()["phase"], "completed")
         self.assertIsNone(self.runtime._native)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
         self.runtime.close()
         self.runtime = MissionRuntime(self.controller)
         self.start()

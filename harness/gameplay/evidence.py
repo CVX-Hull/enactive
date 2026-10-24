@@ -73,6 +73,14 @@ class EvidenceError(ContractError):
     """Evidence missing, inconsistent, stale, or unavailable; stop and re-observe."""
 
 
+class FreshnessError(EvidenceError):
+    """Original clock-check facts for audit; no source refresh or input authority."""
+
+    def __init__(self, details: dict):
+        super().__init__("Observation is stale or clock continuity is unknown")
+        self.details = details
+
+
 class CapacityError(EvidenceError):
     """Retention cannot be guaranteed before dispatch; nothing is deleted."""
 
@@ -485,8 +493,17 @@ class EvidenceStore:
             raise EvidenceError("Native clock comparison requires integer milliseconds")
         elapsed = now_monotonic - entry.reference.received_monotonic
         wall_age = now_timestamp_ms - entry.reference.timestamp_ms
-        if elapsed < 0 or wall_age < -1000 or wall_age > 3000 or entry.initial_lag_seconds + elapsed > MAX_AGE_SECONDS:
-            raise EvidenceError("Observation is stale or clock continuity is unknown")
+        failures = [name for name, failed in (
+            ("monotonic_reversal", elapsed < 0),
+            ("future_capture", wall_age < -1000),
+            ("wall_age", wall_age > 3000),
+            ("receipt_age", entry.initial_lag_seconds + elapsed > MAX_AGE_SECONDS),
+        ) if failed]
+        if failures:
+            raise FreshnessError(dict(source_id=entry.reference.observation_id, failures=failures,
+                now_monotonic=now_monotonic, received_monotonic=entry.reference.received_monotonic,
+                now_timestamp_ms=now_timestamp_ms, capture_timestamp_ms=entry.reference.timestamp_ms,
+                elapsed_seconds=elapsed, initial_lag_seconds=entry.initial_lag_seconds, wall_age_ms=wall_age))
 
     def _historical_age(self, entry: _Entry, now_monotonic: float, now_timestamp_ms: int) -> None:
         """Bound historical receipt age without renewing its immutable clocks."""

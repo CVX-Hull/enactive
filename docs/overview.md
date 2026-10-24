@@ -19,6 +19,12 @@ The engineering lead maintains the project and verifies outcomes; routine play
 must not depend on lead tactics, keys or memory curation. This is not yet an
 accepted unattended seven-day survival service.
 
+Latest [Fresh018 evidence](acceptance/2026-10-24-independent-seven-day-eighteenth-attempt.md)
+retains32h22m34 of independent development play, player-authored procedural
+revision and an unpublished semantic-preflight failure. No seven-day, successor,
+reload, normal-ending or useful-cadence acceptance is credited. Owned runtime is
+closed; the existing Issues/Project own repair and the full outcome.
+
 The browser spectator shows actual Tiles frames, ownership, progress and
 uncertainty. The game stays windowed and project-local. You can Pause or take
 over in the native window; Pause cannot undo a committed action or cancel an
@@ -55,111 +61,24 @@ facts, procedures and proposals retain their sources and limitations.
 | Watchable stopped history | The [local-refusal001 report](acceptance/2026-10-22-native-local-refusal.md) records actual STOPPED/HISTORY/DISCONNECTED presentation, no current mission decision and a timeout diagnostic explicitly labelled historical. |
 | Latency | Current play speed is unacceptable. [Fresh010](acceptance/2026-10-22-independent-seven-day-tenth-attempt.md) retains the motivating useful-play evidence. [Luna013](acceptance/2026-10-23-luna-responsiveness-thirteenth-attempt.md) verifies useful pickup and normal ending but advances two game seconds in596wall seconds; short tool execution and longer inter-call gaps do not isolate inference or qualify a routine cohort. [Evaluation](evaluation.md#latency-budgets-for-interactive-play) owns definitions; [#164](https://github.com/CVX-Hull/enactive/issues/164) owns delivery. |
 
-Recent Luna trials verify an actual fresh CLI producer, compact text/detail/typed
-images and scoped browser timing; [008](acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md)
-loads/adopts/saves but fails ending. [012](acceptance/2026-10-23-luna-responsiveness-twelfth-attempt.md)
-retains an unsupported identity Claim and deadline failure. The
-[latest013](acceptance/2026-10-23-luna-responsiveness-thirteenth-attempt.md) independently
-loads/adopts with appropriate identity sources, picks up a ration and normally
-Saves/exits/Finishes stopped. Useful travel, a complete learning mission, apparent
-responsiveness and independent seven-day survival remain unaccepted.
-Subsequent [015](changes/060-responsive-player.md#closed015-and-restart-checkpoint)
-verifies software-owned request identities but fails a premature Load continuation
-before character adoption. Its actor and owned processes are closed. The local
-refusal repair now has source support; actual player qualification remains open.
-Restarting the desktop loads current tool declarations and does not qualify play.
-Later [016](changes/060-responsive-player.md#closed016-organic-correction-and-responsiveness-stay-coupled)
-loads and reconciles but fails identity adoption after an imprecise Claim and
-misdiagnosed rejection. Current feedback improvements have source support only;
-organic correction, learning and useful apparent responsiveness remain coupled
-acceptance requirements.
+The [responsive-player design](changes/060-responsive-player.md) and
+[decision-context follow-through](changes/062-player-decision-context.md) separate
+semantic judgment from mechanical SDK identities, staging, original collection
+and progressive detail. The player should decide intent, inspect relevant evidence
+and evaluate outcomes; software handles canonical metadata and provenance.
 
-[Closed017](acceptance/2026-10-23-luna-responsiveness-seventeenth-attempt.md)
-independently loads/adopts, wields a knife and ends normally, but advances only
-seven game seconds in557wall seconds. Six one-tile navigation completions qualify
-narrow binding, not high-level batching. No procedure was authored or used;
-organic learning and useful cadence remain unqualified.
+The [executable-routine substrate](changes/061-player-program-execution.md) lets
+the player author observation-conditioned JavaScript procedures over ordinary
+inputs through the same writer. Host bounds and automatic action/result joins
+remain outside generated control flow. Its current view supplies structured
+visible state, without pixels; image-only conditions return to the player.
+Novel interfaces must remain discoverable through ordinary input, rather than
+requiring a hand-written semantic handler. Bounded organic learning is demonstrated;
+useful apparent cadence and the complete fresh campaign remain unqualified.
 
-The [responsive-player brief](changes/060-responsive-player.md) addresses actual
-duplication and manual memory metadata using the existing SDK/cache/staging
-facilities. Canonical evidence and player judgment remain separate from mechanical
-binding. Source/SDK checks cannot substitute for a new actual independent
-continuation and useful-play measurement. [Work](work.md#current-integrated-checkpoint)
-links decisive reports; the archive retains intermediate failures.
-Current MCP also assigns request IDs and collection waits through that same SDK;
-explicit as-of evidence, scope and execution budgets remain player choices.
-
-The [executable-routine candidate](changes/061-player-program-execution.md) lets
-the player store an explicit JavaScript artifact with procedure memory and run
-observation-conditioned steps through the same writer. Host limits and automatic
-source/action/result linkage remain outside generated control flow. This is a
-source implementation with narrow organic authorship/reuse qualification in
-Learning009; latency and the fresh campaign remain unqualified. Its first program view
-contains visible structured data; image-only conditions return to the player.
-Procedure authoring keeps meaning, code, evidence and parent selection with the
-player while software supplies canonical IDs, versions and the frozen environment.
-
-The subsequent [learning007 attempt](acceptance/2026-10-23-discovery-learning-seventh-attempt.md)
-reached actual adoption but failed ordinary tool use and normal closure. Its
-player/adviser are closed; all191saves are unchanged after exceptional cleanup.
-[Delivery062](changes/062-player-decision-context.md) reduces repeated context and
-improves validation feedback. Source ergonomics is not actual learning or cadence.
-Its subsequent Sol/low008 trial exposed valid visible world evidence rejected by
-a menu-category list, before adoption. [The retained finding and repair](changes/062-player-decision-context.md#closed008-valid-world-evidence-rejected-by-menu-taxonomy)
-apply the existing generality rule; new real learning/cadence acceptance is still
-required. That008 attempt's owned processes are closed and saves unchanged.
-
-[Learning009](acceptance/2026-10-23-discovery-learning-ninth-attempt.md) subsequently
-demonstrates the bounded independent learning and lifecycle sequence, including
-actual UILIST world evidence. It still fails combined readiness:16game seconds
-in about908mission-wall seconds, with long compaction stalls. The next frozen
-profile uses maintained host/model compaction defaults; configuration is not a
-latency pass. All009actors, native children and controller are normally closed.
-
-[Closed010](changes/062-player-decision-context.md#closed010-defaults-do-not-establish-responsiveness)
-repeats bounded independent executable learning, useful supplies/advice overlap and
-normal same-character reload/ending with maintained host defaults. Zero persisted
-compaction events do not qualify cadence:588game seconds in1259.828wall seconds,
-without the20-useful-decision cohort. Its actors and owned runtime are closed.
-The next broader fresh development campaign will assess survival, learning and
-cadence together after narrow mechanical handoff fixes; formal acceptance is unchanged.
-
-[Fresh011](changes/062-player-decision-context.md#closed-fresh011-unknown-before-character-adoption)
-subsequently creates a new world but stops before character adoption on an unknown
-ENTER acknowledgment. Its player does not replay; the driver correctly starts no
-successor. All owned processes are closed and original saves unchanged. The next
-fresh development trial uses the existing longer bounded transport allowance as a
-loading hypothesis, with routine responsiveness and full survival gates unchanged.
-The subsequent [012 startup failure](changes/062-player-decision-context.md#closed-fresh012-correctable-startup-argument-failure)
-sends no game input; its closed evidence motivates explicit initial-snapshot
-guidance and a fresh deciding context, leaving that loading hypothesis untested.
-[Fresh013](changes/062-player-decision-context.md#closed-fresh013-setup-consent-and-unaffordable-exit)
-launches but stops before creation after a consent refusal and insufficient exit
-allowance. All owned runtime is closed and saves unchanged. Source follow-through
-clarifies phase guidance/context location and refuses the known exit cost before
-input; actual independent survival/learning/cadence remain unaccepted.
-
-The [fresh015 assessment](acceptance/2026-10-23-independent-seven-day-fifteenth-attempt.md)
-adds actual fresh creation, supplies, a player-authored doorway routine reused at
-two doors, claimed-advice overlap and normal ending. It stops after67game seconds;
-no day, successor, midpoint reload or responsiveness qualification is credited.
-Its premature development ending motivates a prospective stopping-policy correction,
-while numerical acceptance remains unchanged. All owned runtime is closed and the
-failed world's normal save is reversibly archived; original saves are unchanged.
-
-
-[Fresh016](changes/062-player-decision-context.md#closed-fresh016-pending-input-is-not-a-new-decision)
-adds transferred procedure use, an authored bench-aware revision and actual travel,
-but Stops after312game seconds following a pending-text/stale-selection failure.
-No day, successor, reload or normal ending is credited. Owned runtime is closed,
-original saves unchanged; exceptional native exit code/cause remain unknown.
-The focused collection/local-refusal repair and cleanup lesson use existing
-standards and controls. Full independent survival, learning and cadence remain open.
-[Fresh017](changes/062-player-decision-context.md#closed-fresh017-optional-semantic-failure-must-allow-ordinary-correction)
-then fails before adoption when a partial semantic name edit destroys healthy
-lifecycle custody. Its targeted repair preserves ordinary correction; the lead
-also retains an unactivated adviser-brief mistake. All owned runtime is closed,
-191saves unchanged and exceptional native exit0 is explicitly not normal ending.
+[Work](work.md#current-integrated-checkpoint) links the decisive successful and
+failed evidence. Dated reports own attempt history, costs and interventions;
+this overview describes the product and its demonstrated limits.
 
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and

@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import patch
 
 from harness.gameplay.campaign_memory import CampaignMemory
 from harness.gameplay.contracts import ContractError
@@ -453,6 +454,50 @@ class LifecycleTests(unittest.TestCase):
         corrected["supersedes"] = ["create-character"]
         self.ledger.append_memory("correction", "claim", corrected, now=1000)
         with self.assertRaises(EvidenceError): adopted_timeline(self.ledger, self.store)
+
+    def test_unrelated_identity_keeps_its_nonidentity_support_parent(self):
+        created = self.create()
+        expected = adopted_timeline(self.ledger, self.store)
+        parent = self.identity("other-scope-parent", "character", created["screen"], 1)
+        parent["key"].update(property="place", unit="display")
+        self.remember(parent)
+        derived = self.identity("other-scope-identity", "character", created["screen"], 1)
+        derived["supports"][0]["claims"] = [parent["id"]]
+        self.remember(derived)
+        with patch("harness.gameplay.lifecycle.CampaignMemory._frontier", wraps=CampaignMemory._frontier) as frontier:
+            self.assertEqual(adopted_timeline(self.ledger, self.store), expected)
+        self.assertEqual(frontier.call_args.kwargs["selected_ids"],
+            {"create-world", "create-character", "other-scope-identity"})
+
+    def test_nonidentity_correction_still_retires_adopted_identity(self):
+        created = self.create()
+        replacement = self.identity("nonidentity", "character", created["screen"], 0)
+        replacement["key"].update(property="place", unit="display")
+        replacement["supersedes"] = ["create-character"]
+        self.correct(replacement)
+        with self.assertRaisesRegex(EvidenceError, "wrong value, scope, kind or status"):
+            adopted_timeline(self.ledger, self.store)
+
+    def test_unrelated_nonidentity_dependency_cycle_still_rejects_adoption(self):
+        created = self.create()
+        for identity, parent in (("unrelated-a", "unrelated-b"), ("unrelated-b", "unrelated-a")):
+            entry = self.identity(identity, "character", created["screen"], 0)
+            entry["key"].update(property="place", unit="display")
+            entry["supports"][0]["claims"] = [parent]
+            self.ledger.append_memory(identity, "claim", entry, now=1000)
+        with self.assertRaisesRegex(EvidenceError, "missing/forward/cyclic"):
+            adopted_timeline(self.ledger, self.store)
+
+    def test_conflicting_identity_in_another_coverage_still_rejects(self):
+        created = self.create()
+        conflict = self.identity("other-coverage", "character", created["screen"], 0)
+        self.remember(conflict)
+        # Preserve the cross-coverage semantic guard even after durable corruption.
+        conflict["key"]["coverage_id"] = "another-visible-screen"
+        conflict["value"]["state"] = "Other"
+        self.ledger._db.execute("UPDATE memory SET body=? WHERE record_id='other-coverage'", (canonical(conflict),))
+        with self.assertRaisesRegex(EvidenceError, "conflicting durable assertions"):
+            adopted_timeline(self.ledger, self.store)
 
     def test_conflicting_identity_assertion_rejects(self):
         created = self.create()

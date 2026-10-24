@@ -228,6 +228,64 @@ class CampaignMemoryTests(unittest.TestCase):
         self.ledger.append_memory("untrusted-b", "claim", second, now=1000)
         with self.assertRaises(ContractError): self.context()
 
+    def test_selected_frontier_keeps_complete_groups_and_full_default(self):
+        ref = self.source()
+        identity_key = dict(subject="character", property="identity", unit="name", coverage_id="screen")
+        entries = [self.assertion("parent", ref),
+            self.assertion("identity", ref, key=identity_key, supports=[{"sources": [], "claims": ["parent"]}]),
+            self.assertion("conflict", ref, key=identity_key, value=dict(quantity=None, state="Other")),
+            self.assertion("other-coverage", ref, key={**identity_key, "coverage_id": "menu"})]
+        claims = {entry["id"]: entry for entry in entries}
+        full = CampaignMemory._frontier(claims)
+        self.assertEqual(full, ([["parent"], ["identity", "conflict"], ["other-coverage"]], set()))
+        self.assertEqual(CampaignMemory._frontier(claims, selected_ids={"identity"}),
+            ([["identity", "conflict"]], set()))
+        self.assertEqual(CampaignMemory._frontier(claims, selected_ids=set()), ([], set()))
+
+    def test_selected_frontier_keeps_global_retirement_and_cross_type_ancestors(self):
+        ref = self.source()
+        identity_key = dict(subject="character", property="identity", unit="name", coverage_id="screen")
+        for old_order, new_order in ((dict(revision=99, turn=99), dict(revision=1, turn=1)),
+                                     (dict(revision=1, turn=99), dict(revision=99, turn=1))):
+            with self.subTest(old_order=old_order, new_order=new_order):
+                old = self.assertion("old-identity", ref, key=identity_key, observed_time=old_order)
+                bridge = self.assertion("nonidentity", ref, supersedes=["old-identity"])
+                claims = {entry["id"]: entry for entry in (old, bridge)}
+                self.assertEqual(CampaignMemory._frontier(claims, selected_ids={"old-identity"}),
+                    ([["old-identity"]], {"old-identity"}))
+                new = self.assertion("new-identity", ref, key=identity_key,
+                    observed_time=new_order, supersedes=["nonidentity"])
+                claims[new["id"]] = new
+                self.assertEqual(CampaignMemory._frontier(claims, selected_ids={"old-identity"}),
+                    ([["new-identity"]], {"old-identity", "nonidentity"}))
+                self.assertEqual(CampaignMemory._frontier(claims),
+                    ([["new-identity"], ["nonidentity"]], {"old-identity", "nonidentity"}))
+
+    def test_selected_frontier_skips_unselected_group_comparisons(self):
+        ref = self.source()
+        entries = [self.assertion("parent", ref), self.assertion("unrelated", ref),
+            self.assertion("identity", ref,
+                key=dict(subject="character", property="identity", unit="name", coverage_id="screen"))]
+        claims = {entry["id"]: entry for entry in entries}
+        with patch("harness.gameplay.campaign_memory._later", side_effect=AssertionError("Unselected comparison")):
+            self.assertEqual(CampaignMemory._frontier(claims, selected_ids={"identity"}), ([["identity"]], set()))
+
+    def test_selected_frontier_rejects_unrelated_invalid_dependency_graphs(self):
+        ref = self.source()
+        selected = self.assertion("identity", ref,
+            key=dict(subject="character", property="identity", unit="name", coverage_id="screen"))
+        for dependency in ("supports", "supersedes"):
+            for parents in (("missing", None), ("bad-a", None), ("bad-b", None), ("bad-b", "bad-a")):
+                with self.subTest(dependency=dependency, parents=parents):
+                    bad = [self.assertion("bad-a", ref), self.assertion("bad-b", ref)]
+                    for entry, parent in zip(bad, parents):
+                        if parent is not None:
+                            entry[dependency] = ([parent] if dependency == "supersedes" else
+                                [{"sources": [], "claims": [parent]}])
+                    claims = {entry["id"]: entry for entry in (selected, *bad)}
+                    with self.assertRaisesRegex(ContractError, "missing/forward/cyclic"):
+                        CampaignMemory._frontier(claims, selected_ids={"identity"})
+
     def test_frontier_dispute_and_supersession_invalidate_derived_support(self):
         first = self.source()
         self.remember(self.assertion("premise", first))

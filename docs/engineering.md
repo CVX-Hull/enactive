@@ -281,6 +281,9 @@ behavior tests; new game bindings migrate current contracts together.
 Separate causal concurrency/deadline assertions from measured performance targets.
 Use synchronization or an isolated controlled clock so fixture setup cannot consume
 the short deadline under test; keep real bounded watchdogs and adversarial checks.
+Test helpers reading live private state must use that component's existing
+synchronization. A collected result does not establish writer quiescence; preserve
+the integrity assertions instead of adding sleeps or weakening them.
 Review these choices through C-REVIEW; C-PORTABLE executes the resulting regressions.
 Changed expectations require a contract-grounded reason, not agreement with
 newly generated output. Do not weaken a check to conceal a failure. Syntax and

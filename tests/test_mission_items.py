@@ -240,7 +240,8 @@ class MissionItemTests(unittest.TestCase):
         self.assertTrue(all(r["state"] == "returned" for r in records))
         self.assertFalse([r for r in self.runtime._ledger.memory_records("claim")
                           if r["entry"]["key"]["property"] == "supply"])
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_quantity_claim_cannot_borrow_an_unopened_editor(self):
         self.open_items(direct_editor=True)
@@ -318,7 +319,8 @@ class MissionItemTests(unittest.TestCase):
         self.assertEqual([r.get("action") for r in self.bridge.delivered[delivered_before:]], ["eat", "QUIT"])
         self.assertEqual(self.runtime.status()["spent_inputs"], 2)
         self.assertIsNone(self.runtime._prompt_phase)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_inspection_root_opens_and_dismisses_without_claiming_inventory(self):
         self.bridge.value["actions"].append("inventory")
@@ -358,7 +360,8 @@ class MissionItemTests(unittest.TestCase):
         self.assertEqual(closed["result"]["phase"]["stage"], "complete")
         self.assertIsNone(self.runtime._prompt_phase)
         self.assertEqual(self.runtime.status()["spent_inputs"], 2)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
 
 if __name__ == "__main__":

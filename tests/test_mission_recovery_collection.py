@@ -85,11 +85,65 @@ class MissionRecoveryCollectionTests(unittest.TestCase):
         self.assertTrue(self.controller.pause_requested)
         # The actual ACK frame consumes its original reservation; it does not
         # settle the effect or grant a lease. Missing proof keeps capacity below.
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def reconcile_request(self, candidate, identity="resolve"):
         return self.request("reconcile", request_id=identity, unresolved_request_id=candidate.request_id,
             evidence_id=self.runtime._current.observation_id, reason="Assess exact captured delivery, not semantic success")
+
+    def test_absent_delivery_candidate_is_not_reported_as_lost_custody(self):
+        self.start()
+        self.runtime.pause("Known unpublished preflight failure", cause="internal_recovery")
+        self.wait(lambda: (self.runtime.status()["phase"] == "paused"
+            and self.runtime.status()["epoch"] == self.runtime._ledger.snapshot(now=self.runtime._wall())["epoch"]))
+        self.observe("absent-candidate-diagnostic")
+        before = self.runtime.status()
+        count = len(self.bridge.delivered)
+        operation = self.run_request(self.request("reconcile", request_id="no-delivery-candidate",
+            unresolved_request_id="start-1", evidence_id=self.runtime._current.observation_id,
+            reason="Inspect missing delivery candidate without input"))
+        self.assertEqual(operation["state"], "blocked")
+        self.assertIn("No captured unresolved published delivery", operation["result"]["reason"])
+        self.assertNotIn("lost its original", operation["result"]["reason"])
+        after = self.runtime.status()
+        self.assertEqual((after["epoch"], after["pause_cause"], after["spent_inputs"]),
+                         (before["epoch"], before["pause_cause"], before["spent_inputs"]))
+        self.assertEqual(len(self.bridge.delivered), count)
+        self.assertIsNone(self.runtime._registered_recovery.candidate)
+        self.assertIsNone(self.runtime._lease)
+
+    def test_expired_actual_preflight_records_clock_facts_without_dispatch(self):
+        self.start()
+        reserve = self.runtime._store.reserve_dispatch
+
+        def expire(before, *, preflight, rule, now_monotonic, now_timestamp_ms):
+            # Advance only this actual reservation check after real retention.
+            # Do not refresh evidence, alter runtime clocks or replace its guard.
+            return reserve(before, preflight=preflight, rule=rule,
+                now_monotonic=now_monotonic + 4, now_timestamp_ms=now_timestamp_ms + 4000)
+
+        request = self.navigation(request_id="expired-actual-preflight")
+        prior = list(self.runtime._ledger.primitive_records())
+        count = sum(row["kind"] != "observe" for row in self.bridge.delivered)
+        with patch.object(self.runtime._store, "reserve_dispatch", side_effect=expire):
+            operation = self.run_request(request)
+        self.assertNotEqual(operation["state"], "completed")
+        self.assertEqual(list(self.runtime._ledger.primitive_records()), prior)
+        self.assertEqual(sum(row["kind"] != "observe" for row in self.bridge.delivered), count)
+        records = [json.loads(line) for line in self.controller.journal.read_text().splitlines()]
+        audits = [row["outcome"] for row in records
+                  if row["request"].get("kind") == "mission_preflight_freshness"]
+        self.assertEqual(len(audits), 1)
+        facts = audits[0]
+        self.assertEqual(facts["request_id"], request["request_id"])
+        self.assertEqual(facts["failures"], ["wall_age", "receipt_age"])
+        self.assertGreaterEqual(facts["elapsed_seconds"], 4)
+        source = self.runtime._store._entries[facts["source_id"]]
+        self.assertEqual(source.retention, "preflight")
+        self.assertEqual(facts["capture_timestamp_ms"], source.reference.timestamp_ms)
+        self.assertEqual(facts["received_monotonic"], source.reference.received_monotonic)
+        self.assertFalse(facts["grants_authority"])
 
     def run_request(self, data):
         response = self.runtime.command(data)
@@ -136,7 +190,8 @@ class MissionRecoveryCollectionTests(unittest.TestCase):
         self.assertEqual(self.runtime.status()["spent_inputs"], 3)
         self.assertIsNone(self.runtime._registered_recovery.continuation)
         self.assertEqual(self.runtime._ledger.primitive(candidate.logical_id), original)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_recovered_suffix_menu_transfers_to_original_root_without_new_allowance(self):
         candidate, _ = self.ready_resolution()
@@ -175,7 +230,8 @@ class MissionRecoveryCollectionTests(unittest.TestCase):
         self.assertEqual(self.runtime.status()["spent_inputs"], 4)
         self.assertEqual(self.runtime._ledger.request(candidate.root_id)["deadline"], deadline)
         self.assertEqual(self.runtime._ledger.primitive(candidate.logical_id), original)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_ambiguous_input_cannot_reconcile_from_a_later_frame(self):
         candidate = self.unknown()

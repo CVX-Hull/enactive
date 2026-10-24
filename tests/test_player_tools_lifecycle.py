@@ -228,7 +228,8 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         finished = self.run_request(self.lifecycle("finish", "finish"))
         self.assertEqual(finished["state"], "completed", finished)
         self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_save_image_change_cannot_reuse_the_old_informing_source(self):
         informing = self.save_image_fixture()
@@ -384,7 +385,8 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(finished["state"], "completed", finished)
         self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
         self.assertEqual(self.runtime._ledger.request("character-yes"), original_unknown)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_save_root_draft_is_local_and_raw_rejection_preserves_explicit_normal_ending(self):
         self.create()
@@ -425,7 +427,8 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         finished = self.run_request(self.lifecycle("finish", "finish"))
         self.assertEqual(finished["state"], "completed", finished)
         self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def test_corrected_save_draft_cannot_restore_user_revoked_authority(self):
         self.create()
@@ -838,4 +841,5 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(inspected["state"], "completed", inspected)
         self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"] + 2)
         self.assertEqual(self.runtime._ledger.request("character-yes"), original_unknown)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)

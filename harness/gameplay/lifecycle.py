@@ -11,7 +11,7 @@ from .contracts import ContractError, EvidenceRef, json_object
 from .evidence import EvidenceError, EvidenceStore
 from .mission_contracts import (
     effect_reconciliation,
-    validate_lifecycle_transition, validate_memory_entry,
+    validate_lifecycle_transition,
     validate_normal_adoption, validate_prompt_result, validate_request, validate_saved_checkpoint,
 )
 from .mission_ledger import MissionLedger
@@ -90,9 +90,12 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
         for identity, claim in consumed.items())
     primitives = {p["logical_id"]: p for p in ledger.primitive_records()}
     claim_rows = {row["entry"]["id"]: row for row in ledger.memory_records("claim")}
-    claims = {identity: validate_memory_entry(row["entry"], "claim") for identity, row in claim_rows.items()}
+    # The ledger validates immutable entries on insertion/reopen and returns fresh copies.
+    claims = {identity: row["entry"] for identity, row in claim_rows.items()}
     # Identity selection shares the campaign reducer's correction/partial order.
-    frontiers, retired = CampaignMemory._frontier(claims)
+    identity_ids = {identity for identity, claim in claims.items()
+                    if claim["key"]["property"] == "identity" and claim["key"]["unit"] == "name"}
+    frontiers, retired = CampaignMemory._frontier(claims, selected_ids=identity_ids)
     frontier_ids = {identity for group in frontiers for identity in group}
     proofs: dict[str, dict[str, dict]] = {}
     validators = {"lifecycle_transition": validate_lifecycle_transition,

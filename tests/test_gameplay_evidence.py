@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import (
-    CapacityError, EvidenceError, EvidenceStore, MAX_BYTES, MAX_FRAME_BYTES, same_native_state,
+    CapacityError, EvidenceError, EvidenceStore, FreshnessError, MAX_BYTES, MAX_FRAME_BYTES, same_native_state,
 )
 
 
@@ -565,6 +565,32 @@ class EvidenceTests(unittest.TestCase):
         self.store = self.open_store()
         with self.assertRaises(EvidenceError):
             self.ingest(observation(), received_monotonic=1, now_monotonic=1)
+
+    def test_freshness_refusal_retains_actual_clock_predicates_without_refresh(self):
+        for number, (monotonic, wall, failed) in enumerate((
+            (103.0001, 1_003_000, ["receipt_age"]),
+            (100.0, 1_003_001, ["wall_age"]),
+            (99.0, 1_000_000, ["monotonic_reversal"]),
+            (100.0, 998_999, ["future_capture"]),
+            (104.0, 1_004_000, ["wall_age", "receipt_age"]),
+        ), start=1):
+            store = EvidenceStore(self.bridge, self.root / f"freshness-{number}")
+            self.addCleanup(store.close)
+            original = store.ingest(self.publish(observation(number)), received_monotonic=100.0,
+                now_monotonic=100.0, now_timestamp_ms=1_000_000)
+            with self.subTest(failed=failed), self.assertRaises(FreshnessError) as raised:
+                store.current(now_monotonic=monotonic, now_timestamp_ms=wall)
+            facts = raised.exception.details
+            self.assertEqual(facts["source_id"], original.observation_id)
+            self.assertEqual(facts["failures"], failed)
+            self.assertEqual(facts["received_monotonic"], original.received_monotonic)
+            self.assertEqual(facts["capture_timestamp_ms"], original.timestamp_ms)
+            self.assertEqual(facts["now_monotonic"], monotonic)
+            self.assertEqual(facts["now_timestamp_ms"], wall)
+            self.assertEqual(facts["elapsed_seconds"], monotonic - original.received_monotonic)
+            self.assertEqual(facts["wall_age_ms"], wall - original.timestamp_ms)
+            self.assertIsNone(store._current)
+            self.assertEqual(store.historical_references, (original,))
 
     def test_invalid_time_types_and_nonfinite_fail_closed(self):
         for number, changes in enumerate((
