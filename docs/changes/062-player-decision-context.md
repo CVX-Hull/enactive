@@ -333,3 +333,24 @@ rebuild, menu catalogue or weakened identity/unknown-delivery check is justified
 by this evidence. Keep the2s/5s routine targets and count loading/repair/cleanup
 costs; never revive011 or replay its ENTER. Existing#164/#176 own follow-through;
 #178 also tracks avoiding passive advisory cost after a deciding host has stopped.
+
+## Closed fresh012: correctable startup argument failure
+
+Development012 on c17500b sends no game input and launches no native child. Its
+Luna/low player resumes passive preflight, calls Launch with an empty snapshot
+handle and stops on local argument validation. The original host exits0 after
+8.151s; the driver refuses a successor and exits1. The idle adviser is cancelled1,
+controller exits0, all191original saves are unchanged, and no world or advisory
+job is created. Private012 evidence retains the exact call/error, host receipts,
+stopped ledger and integrity manifests. The15-second loading hypothesis is
+unexercised; no survival, learning, cadence or normal game ending is credited.
+
+The guide now explicitly starts with a post-admission snapshot and distinguishes
+correctable pre-staging argument refusals from uncertain dispatch. The next fresh
+deciding context will use the driver's existing fresh-start default rather than
+resume passive preflight. This is interface guidance, not game tactics or a new
+bootstrap contract. Existing S-UX/S-ARCH and C-REVIEW/C-USABILITY already cover
+context sufficiency and actual independent continuation; no new policy layer is
+needed. GitHub#143/#164/#178 also own host-terminal spectator visibility, local
+validation-error feedback and advisory terminal-tail costs. These remain gaps,
+not implemented capabilities or reasons to replace the full campaign outcome.

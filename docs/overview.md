@@ -130,6 +130,9 @@ ENTER acknowledgment. Its player does not replay; the driver correctly starts no
 successor. All owned processes are closed and original saves unchanged. The next
 fresh development trial uses the existing longer bounded transport allowance as a
 loading hypothesis, with routine responsiveness and full survival gates unchanged.
+The subsequent [012 startup failure](changes/062-player-decision-context.md#closed-fresh012-correctable-startup-argument-failure)
+sends no game input; its closed evidence motivates explicit initial-snapshot
+guidance and a fresh deciding context, leaving that loading hypothesis untested.
 
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and

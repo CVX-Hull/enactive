@@ -17,10 +17,13 @@ reason to read the entire repository during every game.
 
 ## Calls and returned evidence
 
-- An admitted mission without an owned child starts with source-free
-  `enactive_lifecycle(operation=launch, scope=new_root, source_id=null)`. Select
-  create/load from its returned menu. This startup contract belongs in initial
-  context; progressive reference reads must not omit the interface entry point.
+- After admission, first call `enactive_snapshot` in this player context and use
+  its nonempty returned `snapshot_id`. A passive pre-admission check supplies no
+  launch handle. Without an owned child, then use source-free
+  `enactive_lifecycle(operation=launch, scope=new_root, source_id=null)` with that
+  handle and valid finite limits. Select create/load from its returned menu.
+  Source-free means no informing image is required; it does not mean an empty
+  snapshot handle is accepted. Keep this entry point in initial player context.
 - `enactive_snapshot` gives a descriptive snapshot handle and the selected source
   image. Select those exact handles for a new intent. Software supplies mission,
   epoch, source bindings and stable child lineage. A snapshot never Resumes.
@@ -78,6 +81,11 @@ reason to read the entire repository during every game.
   disappear from that status field. If the identity is lost, quiesce rather than
   recreate or replay the action. Advisory next waits up to40 seconds without model
   polling; it preserves the original deterministic job claim and deadline.
+- A malformed argument is not evidence that the required capability is absent.
+  Consult the selected tool's current schema and correct the argument when the
+  result establishes a local pre-staging refusal. Obtain a snapshot if no valid
+  handle was selected. Keep this separate from uncertain dispatch, which requires
+  original collection rather than a corrected or repeated action.
 - Read the description/schema of the **one tool needed**, rather than printing
   every declaration. Some hosts reduce nested argument schemas to `unknown`; this
   is not a usable field contract. If the frozen brief supplies focused interface
@@ -148,7 +156,7 @@ new lifecycle fallback remains pending.
 
 | Current situation | Interface operation and verification |
 | --- | --- |
-| Admitted, no owned child | `enactive_lifecycle`, `scope=new_root`, `operation=launch`, no source. Launch sends no creation intent and establishes no character identity. |
+| Admitted, no owned child | First `enactive_snapshot`; then `enactive_lifecycle` with its handle, `scope=new_root`, `operation=launch`, no source. Launch sends no creation intent and establishes no character identity. |
 | Owned paused main menu | Use `operation=create` for a fresh admission, or `operation=load` for an explicit initial-load admission. Use that root's `scope=lifecycle` for children. Entire setup shares its original limits. |
 | Creating a world/character | Menu/editor skills interpret the current visible screen. World/character editors must match the admission. A quick start that generates another identity does not satisfy the named scenario. |
 | Ready to commit the supported world form or final character description | A separate same-root `enactive_lifecycle` create call commits the stage. Inspect the resulting question; a menu key is not a substitute for this registered transition. |

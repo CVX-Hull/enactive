@@ -79,6 +79,13 @@ retains actual driver failure-phase evidence and trials the existing bounded nat
 wait configuration in the next genuinely fresh development campaign. No cause,
 routine cadence, normal ending or survival outcome is inferred from the diagnostic.
 
+[Fresh012](changes/062-player-decision-context.md#closed-fresh012-correctable-startup-argument-failure)
+then fails before launch on an empty snapshot argument. Its processes are closed,
+no world/input/advisory job is created and original saves are unchanged. The guide
+clarifies the initial snapshot and correctable local errors; the next fresh player
+uses a separate deciding context. The loading hypothesis remains unexercised;
+GitHub retains the full outcome and related interface/observer/reflection work.
+
 | Evidence | What it establishes; the linked report owns details and limits |
 | --- | --- |
 | [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) | Bounded supply/shelter play, memory correction, fresh-context continuation and normal lifecycle |
