@@ -21,6 +21,7 @@ from harness.gameplay.evidence import CapacityError
 from harness.gameplay.contracts import canonical
 from harness.gameplay.mission_contracts import CleanupReserve, MissionLimits
 from harness.gameplay.mission_ledger import MissionLedger
+from harness.gameplay.navigation import ObservedMap
 from tests.test_mission_ledger import intent
 from harness.mission_runtime import MissionRuntime
 from tests.test_controller import FakeBridge
@@ -1564,11 +1565,18 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.runtime.status()["spent_inputs"], 2)
         self.assertFalse(any(r["kind"] == "direct" for r in self.bridge.requests))
 
-    def test_wide_ordinary_exploration_keeps_bounded_map_and_current_navigation(self):
-        # Reproduce the fresh003 publication failure with real runtime components,
-        # not native gameplay: this visible transport supplies a broad trajectory.
+    def test_ordinary_exploration_keeps_evicting_map_and_current_navigation(self):
+        # Exercise the fresh003 eviction/publication failure with real components
+        # at a smaller supported capacity. test_navigation retains default-512
+        # scale coverage; this integration keeps every input/evidence boundary.
         self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
-        original = self.start()
+        capacity = 32
+
+        def bounded_map(mission_id, session, coordinate_epoch):
+            return ObservedMap(mission_id, session, coordinate_epoch, max_nodes=capacity)
+
+        with patch("harness.mission_runtime.ObservedMap", bounded_map):
+            original = self.start()
         first = self.runtime._current
         observed_map = self.runtime._map
         projected = set()
@@ -1591,7 +1599,7 @@ class MissionRuntimeTests(unittest.TestCase):
                 footprint(bridge.value["scene"])
             return True
         self.bridge.behavior = move
-        keys = ["RIGHT"] * 60 + ["DOWN"] * 4 + ["LEFT"] * 60 + ["DOWN"] * 4 + ["RIGHT"] * 60
+        keys = ["RIGHT"] * 10 + ["DOWN"] * 4 + ["LEFT"] * 10 + ["DOWN"] * 4 + ["RIGHT"] * 10
         for index, key in enumerate(keys, 1):
             request = self.control("direct", dict(input=dict(type="key", key=key, modifiers=[]),
                 interrupt_allowed=False, intent="Explore the visible surroundings",
@@ -1609,19 +1617,20 @@ class MissionRuntimeTests(unittest.TestCase):
             self.assertEqual(operation["result"]["basis"], "ordinary_input")
             self.assertIsNone(operation["result"]["pending_logical_id"])
             self.assertIs(self.runtime._map, observed_map)
-            self.assertLessEqual(observed_map.node_count, 512)
+            self.assertLessEqual(observed_map.node_count, capacity)
 
-        self.assertGreater(len(projected), 512)
-        self.assertEqual(self.runtime._store.position(self.runtime._current), (60, 8, 0))
+        self.assertGreater(len(projected), capacity)
+        self.assertEqual(observed_map.node_count, capacity)
+        self.assertEqual(self.runtime._store.position(self.runtime._current), (10, 8, 0))
         # The retained current footprint still supports a useful guarded request.
-        request = self.navigation(target=(61, 8, 0), request_id="navigate-after-wide-exploration")
+        request = self.navigation(target=(11, 8, 0), request_id="navigate-after-eviction")
         self.assertEqual(self.runtime.command(request)["status"], "accepted")
         operation = self.settled(request["request_id"])
         self.assertEqual(operation["state"], "completed", operation)
         self.assertEqual(operation["result"]["verified_steps"], 1)
-        self.assertEqual(self.runtime._store.position(self.runtime._current), (61, 8, 0))
+        self.assertEqual(self.runtime._store.position(self.runtime._current), (11, 8, 0))
         self.assertIs(self.runtime._map, observed_map)
-        self.assertLessEqual(observed_map.node_count, 512)
+        self.assertLessEqual(observed_map.node_count, capacity)
 
         rows = self.runtime._ledger.primitive_records()
         delivered = [r for r in self.bridge.delivered if r["kind"] in ("direct", "action")]
