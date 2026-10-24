@@ -240,7 +240,12 @@ and prepared executable/userdir against that run's owned launch evidence. Send
 exceptional SIGTERM only to that verified child **while its controller is still
 alive**, and wait finitely for native exit (an OS zombie has exited but awaits
 parent reaping). Use the run's finite cleanup allowance; a still-running child
-needs explicit owned-process disposition, not a claim of success. Then stop the
+needs explicit owned-process disposition, not a claim of success. For an authorized
+failed-run cleanup, a retained stack sample can distinguish a crash modal from
+healthy execution. After a finite SIGTERM wait, reverify the same owned PID,
+parent, executable and userdir before exceptional SIGKILL if it remains stuck.
+Record both intents, actual exit and unresolved effects; never close a crash
+dialog by replaying gameplay or assume an alive PID is responsive. Then stop the
 controller so its existing retained `Popen` handle can poll/reap and record the
 actual exit status. Check final owned-process/listener absence. Never target an
 unrelated process or use a source/signal repair to resume the failed player.

@@ -83,6 +83,15 @@ class SetupTests(unittest.TestCase):
                 '        if( entry.is_item() ) {\n            int xx = p.x;\n        }\n    }\n}\n'
                 'void unrelated() { trim_and_print( win, point( 0, 0 ), 10, c_white, hidden ); }\n'),
 
+            "src/input_popup.cpp": ('    if( data->EventFlag == ImGuiInputTextFlags_CallbackEdit ) {\n'
+                '        int max = popup->get_max_input_length();\n'
+                '        if( max > 0 && data->BufTextLen > max ) {\n'
+                '            data->BufTextLen = max;\n'
+                '            data->SelectionStart = data->BufTextLen;\n'
+                '            data->SelectionEnd = data->BufTextLen;\n'
+                '            data->CursorPos = data->BufTextLen;\n'
+                '            data->BufDirty = true;\n'
+                '        }\n    }\n'),
             "src/input_context.cpp": "const std::string &input_context::handle_input( const int timeout )\n{\n        next_action = inp_mngr.get_input_event( preferred_keyboard_mode );\n}",
             "src/handle_action.cpp": "input_context game::get_player_input( std::string &action )\n{\n}",
             "src/bodygraph.cpp": ('    bool done = false;\n'
@@ -165,7 +174,7 @@ class SetupTests(unittest.TestCase):
         self.assertEqual(first.returncode, 0, first.stderr)
         expected = {path.relative_to(source): path.read_bytes()
                     for path in source.rglob("*") if path.is_file()}
-        for name in ("ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp", "cata_imgui.cpp", "inventory_ui.cpp",
+        for name in ("ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp", "cata_imgui.cpp", "inventory_ui.cpp", "input_popup.cpp",
                      "third-party/imgui/imgui_impl_sdl2.cpp"):
             (source / "src" / name).write_text("stale patched contents")
         second = self.run_patch(repository, source)
@@ -176,6 +185,13 @@ class SetupTests(unittest.TestCase):
         self.assertIn('#include "cdda_harness.h"', imgui)
         self.assertEqual(imgui.count('if( cdda_harness::enabled() ) { io.ConfigInputTextCursorBlink = false; }'), 1)
         self.assertLess(imgui.index('ImGuiIO &io = ImGui::GetIO();'), imgui.index('io.ConfigInputTextCursorBlink = false;'))
+        popup = (source / "src/input_popup.cpp").read_text()
+        self.assertEqual(popup.count('data->DeleteChars( max, data->BufTextLen - max );'), 1)
+        self.assertNotIn('data->BufTextLen = max;', popup)
+        self.assertNotIn('data->BufDirty = true;', popup)
+        # Retain upstream's end cursor/selection policy after ImGui truncates.
+        for field in ("SelectionStart", "SelectionEnd", "CursorPos"):
+            self.assertIn(f'data->{field} = data->BufTextLen;', popup)
         self.assertIn("harness_input( category, registered_actions, this )", (source / "src/input_context.cpp").read_text())
         self.assertIn("harness_player( uquit == QUIT_WATCH", (source / "src/handle_action.cpp").read_text())
         for name in ("action.cpp", "bodygraph.cpp", "ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp"):
@@ -448,9 +464,9 @@ class SetupTests(unittest.TestCase):
         self.assertLess(poll.index('event = *binding;'), poll.index('ordinary_commit_gate( request, false, direct && direct->type == direct_input::kind::click );'))
         self.assertLess(poll.index('ordinary_commit_gate( request, false, direct && direct->type == direct_input::kind::click );'), poll.index('++revision;\n        pending = id;'))
 
-    def test_patch_rejects_changed_render_owner_hashes_and_anchors(self):
+    def test_patch_rejects_changed_patched_owner_hashes_and_anchors(self):
         for name in ("src/uilist.cpp", "src/inventory_ui.cpp", "src/ui_manager.cpp", "src/cata_imgui.cpp",
-                     "src/third-party/imgui/imgui_impl_sdl2.cpp"):
+                     "src/input_popup.cpp", "src/third-party/imgui/imgui_impl_sdl2.cpp"):
             for change in ("hash", "missing", "duplicate"):
                 with self.subTest(owner=name, change=change), tempfile.TemporaryDirectory() as temporary:
                     self.root = Path(temporary)

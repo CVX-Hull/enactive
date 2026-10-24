@@ -205,6 +205,9 @@ Use cohesive responsibilities, descriptive names, explicit types at Python
 boundaries and upstream conventions in C++ patches. Validate inputs at trust
 boundaries; bound sizes, waits and action counts. Use atomic publication and
 explicit expected-error handling; service-boundary catches must retain diagnostics.
+Use library-owned mutation APIs to preserve their buffer/state invariants instead
+of manually changing shadow lengths or flags. Qualify real boundary behavior when
+native callbacks change; patch-anchor tests alone do not exercise the widget.
 Comments explain otherwise unavailable intent. Select dependencies for concrete
 capability and lifetime cost; pin locally and record provenance. Evaluate mature
 tools before writing generic controls, parsers or infrastructure. Use maintained

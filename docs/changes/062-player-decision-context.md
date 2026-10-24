@@ -737,3 +737,25 @@ masking is narrowed and a new test's dictionary/use-identity error is corrected.
 Original sandbox binding/import/fixture failures remain in verification evidence.
 Exact new CI, real independent continuation, normal lifecycle and the full
 learning/cadence/seven-day outcome remain open; these checks do not qualify them.
+
+
+## Closed021: preserve library mutation invariants
+
+[Fresh021](../acceptance/2026-10-24-independent-seven-day-twenty-first-attempt.md)
+failed before adoption: ordinary overlength text reached an upstream callback
+that changed ImGui's length without truncating its buffer. Actual stack sampling
+shows assertion→crash handler→modal alert, explaining why process presence was
+not responsive execution. Unknown dispatch remains unknown; explicit Observe
+was never claimed, rather than producing a failed capture. All owned runtime is
+closed;191original saves are unchanged. Exact40ab05bCI passes1926tests/1136.079s
+plus viewer, separately from native/full-outcome qualification.
+
+The pinned patch reuses ImGui DeleteChars and existing source-hash/count-checked
+installation, preserving byte-oriented limits and end selection/cursor behavior.
+29setup tests pass1.311s; independent review is clean. A rebuilt pin and real
+below/at/above-limit editing/cancellation/continuation remain required. UTF-8 split
+risk is inherited and unqualified. Existing S-CODE and source/native/review lanes
+cover this lesson; no model/menu-specific limit guard, timeout increase, new
+service, compatibility path or per-action approval follows. #176/#191own repair
+and limits, while the same complete learning/seven-day/cadence/lifecycle goal and
+other memory/advice/observer actions remain open. No failed authority is revived.

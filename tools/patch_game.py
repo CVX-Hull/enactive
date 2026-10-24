@@ -53,6 +53,23 @@ replace_once(source / "src/cata_imgui.cpp",
     '    if( cdda_harness::enabled() ) { io.ConfigInputTextCursorBlink = false; }\n'
     '    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls')
 
+# Preserve upstream's byte limit and end cursor/selection policy while using
+# ImGui's edit API to keep the buffer, terminator and reported length consistent.
+replace_once(source / "src/input_popup.cpp",
+    '        if( max > 0 && data->BufTextLen > max ) {\n'
+    '            data->BufTextLen = max;\n'
+    '            data->SelectionStart = data->BufTextLen;\n'
+    '            data->SelectionEnd = data->BufTextLen;\n'
+    '            data->CursorPos = data->BufTextLen;\n'
+    '            data->BufDirty = true;\n'
+    '        }',
+    '        if( max > 0 && data->BufTextLen > max ) {\n'
+    '            data->DeleteChars( max, data->BufTextLen - max );\n'
+    '            data->SelectionStart = data->BufTextLen;\n'
+    '            data->SelectionEnd = data->BufTextLen;\n'
+    '            data->CursorPos = data->BufTextLen;\n'
+    '        }')
+
 # Only the last/topmost redraw callback may attest UI. An unsupported overlay
 # clears a lower supported menu even when the overlay has no harness hooks.
 replace_once(source / "src/ui_manager.cpp",
