@@ -346,8 +346,11 @@ upgrading. Launch only the prepared windowed wrapper with explicit userdir.
 A new game/compiler/patch build needs relevant native acceptance before a release
 claim. Inspect the staged diff and verify the exact candidate before checkpointing.
 Use the [development-first checkpoints](project-management.md#development-first-delivery):
-fast checks plus applicable focused tests for a development commit, full assurance
-for formal acceptance/merge. Git owns tracked-source history and identity. Commit
+fast checks plus applicable focused tests for a development commit, and the
+appropriate protected CI profile for formal acceptance/merge. Broad source changes
+require full regression before merge; reduced profiles retain their declared scope
+under the [delivery policy](project-management.md#protected-ci-profiles). Git owns
+tracked-source history and identity. Commit
 the exact source before a native development or acceptance run; identify it by
 commit/tree and PR, and use Git diffs to show later source changes. Do not maintain a parallel per-source hash/history inventory.
 Checksums remain appropriate for downloaded inputs, built binaries and external
@@ -675,8 +678,9 @@ Exercise and maintenance review are independent events. Dated reports retain pri
 observations when the latest record changes. A failure remains in history after repair.
 
 Active/deprecated controls need a next review within 90 days of the recorded review,
-with event triggers requiring earlier work. Full common checks and standalone
-governance fail **after** the due date. Fast development checkpoints instead
+with event triggers requiring earlier work. Every strict CI profile and standalone
+governance uses the current date and fails **after** the due date. Fast development
+checkpoints instead
 print calendar-expiry warnings for all controls; they do not infer which controls
 are relevant or relax structural, ownership, evidence/reference, chronology,
 protocol or generated-map checks. Event-triggered review on resumption, incidents,
@@ -697,11 +701,12 @@ Define outcome/failure conditions → inspect real interfaces → brief/design w
 needed → implement a cohesive slice → run relevant checks → review risk and
 semantic drift → inspect staged candidate → checkpoint with honest scope.
 The fast development-checkpoint command is `python tools/check.py --fast`, with
-applicable focused behavior tests chosen by the lead. The full common command is
-`python tools/check.py`, required for integrated formal acceptance/merge and run by
-CI. Neither fast checks nor targeted tests may be labeled a full portable pass.
-[Development-first delivery](project-management.md#development-first-delivery) owns
-sequencing and escalation; setup owns environment requirements.
+applicable focused behavior tests chosen by the lead. The default common command
+`python tools/check.py` remains full. The [protected CI profile policy](project-management.md#protected-ci-profiles)
+owns eligibility and evidence reuse; [development-first delivery](project-management.md#development-first-delivery)
+owns sequencing and escalation. Setup owns commands and environment requirements.
+Only a successful full profile establishes a full portable pass; fast, editorial
+and selected smoke results must state their narrower executed and unrun lanes.
 
 On behavior changes, update contract, tests, guide and overview as applicable.
 On failure, classify transport/perception/decision/engine/process, preserve

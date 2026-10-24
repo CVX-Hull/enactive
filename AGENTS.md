@@ -48,6 +48,7 @@ planner remains candidate-only; explorers/reviewers never send game inputs.
   against actual deployment, failure evidence, latency and maintenance cost.
 - Use the [development-first workflow](docs/project-management.md#development-first-delivery):
   fast checkpoint checks and relevant focused tests before development play;
-  independent review, full checks and protected CI before formal acceptance/merge.
+  independent review and the appropriate protected CI profile before formal acceptance/merge;
+  broad source changes require full regression before merge.
   Freeze each finite run and retain failures. Inspect staged changes before commits.
   Control coverage and gaps are in [the control map](docs/controls.md).

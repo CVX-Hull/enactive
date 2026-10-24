@@ -326,8 +326,17 @@ success. Exact acceptance is tracked in
 .venv/bin/python tools/check.py
 ```
 
-The common lane also runs governance, dependency-boundary and protocol-version
-checks described in the [control map](controls.md). To update the generated map
+The default command is full, equivalent to `--profile full`. Explicit strict
+profiles are available for the [delivery policy](project-management.md#protected-ci-profiles):
+
+```sh
+.venv/bin/python tools/check.py --profile editorial
+.venv/bin/python tools/check.py --profile main-smoke
+```
+
+Every strict profile runs current-date governance, dependency-boundary and
+protocol-version checks described in the [control map](controls.md). To update the
+generated map
 after changing its registry, run `.venv/bin/python tools/governance.py --write`; the normal
 check fails on stale generated output. It also validates document YAML metadata,
 control lifecycle/references/review dates and diagram receipts, and renders all
@@ -338,10 +347,14 @@ rendering verifies the local renderer can process the current source.
 
 This compiles Python syntax in memory, runs selected Ruff correctness diagnostics,
 checks Import Linter dependency contracts, checks browser JavaScript syntax with
-Node.js, runs delayed-image viewer regressions, validates required documents and
-local Markdown file/image targets using markdown-it-py, runs all unit tests
-(including real loopback HTTP tests), and checks staged/unstaged Git diff whitespace. It fails if Node.js is unavailable, a link is broken, or a test
-fails. Fragment anchors, raw HTML links and external web availability are not checked. HTTP
+Node.js, validates required documents and local Markdown file/image targets using
+markdown-it-py, and checks staged/unstaged Git diff whitespace. Full additionally
+runs complete unittest discovery (including real loopback HTTP tests) with the 20 slowest
+durations and delayed-image viewer regressions. Editorial omits runtime/viewer tests;
+main-smoke runs the fixed selection in `tools/check.py` and viewer regressions.
+Both reduced profiles explicitly report that full regression was not run. Commands
+print elapsed times in the existing logs. It fails if Node.js is unavailable, a
+link is broken, or a selected check fails. Fragment anchors, raw HTML links and external web availability are not checked. HTTP
 tests require permission to bind loopback; a sandbox denial is a failed check,
 not permission to skip those tests.
 
@@ -366,14 +379,15 @@ For fast development checkpoints, `.githooks/pre-commit` runs
 document structure/links, governance and whitespace, without behavioral tests or
 browser-based diagram rendering. Run relevant focused tests separately.
 [Development-first delivery](project-management.md#development-first-delivery) owns
-when full checks and independent review gate formal acceptance.
+when the appropriate profile and independent review gate formal acceptance.
 
-[The portable CI job](../.github/workflows/check.yml) keeps the full default command
-on PRs and pushes to main. It cancels superseded PR runs, without cancelling
-running main checks, and avoids duplicate feature-branch push/PR jobs. Required PR
-checks have no path filters. CI tests only the
-controller/setup/documentation lane on Linux; it makes no native compilation or
-real-game claim. The hook is opt-in and setup does not change Git configuration.
+[The portable CI job](../.github/workflows/check.yml) runs `python tools/ci.py` on
+PRs targeting main and pushes to main. The adapter selects and reports a strict
+profile under the [delivery policy](project-management.md#protected-ci-profiles).
+It cancels superseded PR runs, without cancelling running main checks, and avoids
+duplicate feature-branch push/PR jobs. The always-present required `controller`
+job has no path filters. CI validates the selected portable lane on Linux; it
+makes no native compilation or real-game claim. The hook is opt-in and setup does not change Git configuration.
 To enable it for this repository, run:
 
 ```sh

@@ -1,0 +1,20 @@
+---
+title: Proportional checks before and after protected integration
+---
+flowchart TB
+  accTitle: Relevant validation with an always-present required controller check
+  accDescr: Main-targeting pull requests use strict editorial validation for a complete eligible editorial diff, otherwise full portable regression. The required controller reports actual execution and failures block protected merge. After merge, main uses strict editorial validation, or selected smoke only when an earlier successful full PR run and Git relationships cover the actual tree with unchanged validation context. Otherwise main runs full regression. Native and gameplay acceptance remain separate.
+  P["Main-targeting PR<br/>complete original comparison"] --> E{"Eligible editorial paths?"}
+  E -- Yes --> D["Strict structure, documents<br/>governance and diagrams"]
+  E -- No or unknown --> F["Strict full regression<br/>and viewer tests"]
+  D --> C["Always-present controller<br/>selected failure blocks merge"]
+  F --> C
+  C --> M["Protected main merge"]
+  M --> A{"Main validation choice"}
+  A -- Editorial diff --> Q["Strict editorial checks"]
+  A -- Qualified full PR coverage --> S["Strict selected smoke<br/>and viewer tests"]
+  A -- Changed context or missing proof --> R["Strict full regression<br/>and viewer tests"]
+  Q --> V["Done only for verified scope<br/>report executed and unrun lanes"]
+  S --> V
+  R --> V
+  V -. "Separate evidence" .-> N["Native behavior and gameplay<br/>require their own acceptance"]

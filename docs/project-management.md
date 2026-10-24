@@ -83,15 +83,16 @@ The same approach applies to workflow, documentation and controls themselves.
 | Editorial: correct text or links without behavior/requirement change | Document/metadata/link checks and diff inspection; render changed visuals | Lead checks meaning; no game/native build or full behavioral rerun solely for wording |
 | Contained: behavior change within understood existing boundaries | Fast checks and focused positive/negative behavioral cases | Lead reviews implementation against design; consolidate independent review at the coherent integration checkpoint |
 | Boundary: change ownership, input, persistence/schema, permission, dependency or native contract | Brief/alternatives, focused independent architecture/risk review before commitment; affected failure cases and coordinated migration | Review changed contracts against callers; matching native build/affected qualification when native support is claimed; security/product/research lens only when relevant |
-| Outcome: integration, release, new support, performance or learning claim | Independently assessed outcome/evidence against original acceptance | Exact full protected CI, applicable native/usability/held-out lanes and unresolved finding dispositions; merge alone is insufficient |
+| Outcome: integration, release, new support, performance or learning claim | Independently assessed outcome/evidence against original acceptance | Appropriate exact protected CI profile, full regression for broad source changes before merge, applicable native/usability/held-out lanes and unresolved finding dispositions; merge alone is insufficient |
 
 Choose checks that could detect a plausible consequential error; state unrun lanes
 and why they are inapplicable or pending. A high-consequence boundary is not made
 low risk by a small diff. Passing fixtures do not replace actual required native
 evidence, and an unexplained red check is not waived by a cheaper green one.
 Authority/Pause/identity/delivery/migration/cleanup failures block affected inputs.
-Required full CI and branch protection remain unchanged for merge; an editorial
-change can avoid a local full rerun without claiming one passed.
+The required `controller` check and branch protection remain unchanged; the
+[profile policy](#protected-ci-profiles) selects the executed portable scope.
+An editorial or smoke result cannot be reported as a full regression pass.
 
 Use a larger **coherent outcome** with small inspectable implementation steps and
 cheap feedback throughout. Integrate related components and pay for broad checks
@@ -108,9 +109,9 @@ defects caught/escaped, review/rework/waiting effort and cost of checks. Record
 unknowns without inventing measurements. Keep, narrow, replace or retire a control
 from that evidence under C-MAINTENANCE. Do not create another metrics service,
 review queue or per-action gameplay approval. Fast checkpoints visibly warn on
-calendar-only maintenance expiry for every control; full checks and merge remain
-strict. No dates are renewed automatically. Event-triggered review and applicable
-actual failures/evidence gaps still govern the affected work; resolve overdue
+calendar-only maintenance expiry for every control; every hosted profile remains
+strict at the current date. No dates are renewed automatically. Event-triggered
+review and applicable actual failures/evidence gaps still govern the affected work; resolve overdue
 review at the existing integration/formal-acceptance checkpoint under S-DOCS.
 
 ## Development-first delivery
@@ -126,8 +127,8 @@ S-WORK/S-EVIDENCE/S-DOCS. The full user outcome remains the definition of Done.
 | --- | --- | --- |
 | Development checkpoint | Fast checks, relevant focused behavioral/negative tests, inspected diff and a Git commit; record unrun or failed lanes | A finite development run on that exact source; full review/CI may be pending |
 | Development run | Declared development purpose, objective, actor, source/native/configuration, finite attempts/resources/reserve and stop rules; retain original ledger/frames/unknowns | Player-owned meaningful gameplay and learning about the implementation; no acceptance or reliability claim |
-| Integration checkpoint | A useful behavior composes end to end, or evidence identifies a concrete blocker; consolidate findings and current contracts | One cohesive independent review, full portable checks and PR validation; split ownership without fragmenting the outcome |
-| Formal acceptance and merge | Review the exact frozen candidate and retained run evidence; require passed exact PR `controller` check/full suite, required native/graphical outcomes and finding dispositions | Merge through existing main protection; Done/release waits for actual merged-main validation and applicable outcome evidence |
+| Integration checkpoint | A useful behavior composes end to end, or evidence identifies a concrete blocker; consolidate findings and current contracts | One cohesive independent review and appropriate portable profile/PR validation; broad source changes receive full regression before merge |
+| Formal acceptance and merge | Review the exact frozen candidate and retained run evidence; require the appropriate passed exact PR `controller` profile, full regression for broad source changes, required native/graphical outcomes and finding dispositions | Merge through existing main protection; Done/release waits for actual appropriate merged-main validation and applicable outcome evidence |
 
 For example, the supply-and-shelter checkpoint required useful
 navigation/replanning, supplies/needs, shelter/rest, genuine memory correction and
@@ -242,15 +243,94 @@ passed hosted suite locally solely to complete a checklist.
 
 ### Enforcement and upkeep
 
-The local commit hook runs the fast command. CI runs the full command on PRs and
-pushes to main, with no path filters on the required PR job. Superseded PR runs are
-cancelled through GitHub concurrency; running main checks are not cancelled by
-that policy. Development play need not wait for CI, but formal acceptance/merge
-must use the actual successful exact candidate check. It may be completed after
-the development run, before acceptance is granted. The required job name,
-GitHub App association and main ruleset remain unchanged. C-PORTABLE/C-RELEASE
-own those mechanical boundaries; C-REVIEW checks selected tests, outcome scope and
-evidence rather than approving ordinary gameplay actions.
+The local commit hook runs the fast command. Development play need not wait for
+CI, but formal acceptance/merge requires the actual successful exact-candidate
+check under the profile policy below. It may complete after an unchanged development
+run, before acceptance is granted. C-PORTABLE/C-RELEASE own the mechanical
+boundaries; C-REVIEW checks selected tests, outcome scope and evidence rather than
+approving ordinary gameplay actions.
+
+### Protected CI profiles
+
+![Proportional validation before and after protected integration.](diagrams/ci-validation.svg)
+
+This view separates the required PR gate from post-merge evidence. Unknown
+eligibility uses full checks; native/gameplay outcomes remain separate.
+[Editable source](diagrams/ci-validation.mmd).
+
+One always-present Actions `controller` job remains required with its existing App
+association and strict main ruleset. Pull-request triggers explicitly target main;
+main pushes also run. There are no workflow path filters, conditional required jobs,
+manual labels/overrides or ignored failures. Superseded PR runs are cancelled;
+running main checks are not cancelled by that policy. `tools/ci.py` chooses a closed
+profile from existing Git/GitHub facts and invokes `tools/check.py`. Missing or
+ambiguous eligibility selects full; checker or execution failure fails the job.
+The [proportional validation brief](changes/065-proportional-ci.md) records rationale.
+
+All hosted profiles run syntax, selected Ruff, import contracts, JavaScript syntax,
+document metadata/local links, current-date strict governance, whitespace and diagram
+rendering. Local `--fast` retains calendar-only warnings and omits behavioral tests
+and diagram rendering. It is not a hosted profile.
+
+| Profile | Additional executed checks | Supported claim |
+| --- | --- | --- |
+| Full (also the default local command) | Complete unittest discovery with the 20 slowest durations, plus viewer regressions | Full portable regression; native build/gameplay remain separate |
+| Editorial | No runtime tests or viewer regressions | Strict document/structural validation only |
+| Main-smoke | The fixed existing selected gameplay/evidence/request, ledger and HTTP cases in `tools/check.py`, plus viewer regressions | Bounded smoke on main with linked qualifying full PR coverage; full regression was not rerun on main |
+
+PR source, mixed, control and unknown changes require full. Editorial eligibility
+requires a complete nonempty native Git diff, using the event's original PR base/head
+via merge base or main before/after, with `--no-renames` and NUL-separated paths.
+Both sides of renames/deletions participate. Every changed object must be regular.
+Eligible paths are README.md; `docs/research*.md`; Markdown under `docs/changes/`
+and `docs/acceptance/`; diagrams (`.mmd`, `.svg`, `rendered.json`) directly under
+`docs/diagrams/`; and report assets (`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`,
+`.mp4`, `.webm`) under `docs/assets/` or `docs/acceptance/`, plus acceptance JSON.
+All other paths initially require full PR validation, including executable code,
+current policy/contracts, player/prompt guides, setup/runbook, configuration,
+dependencies, schemas, tools and tests. Eligibility does not certify prose truth;
+the lead still reviews behavioral impact and evidence. Expand it only through
+reviewed coverage and demonstrated need.
+
+A main editorial diff can independently use editorial. Otherwise main-smoke is
+eligible only for an ordinary single-parent squash push adding exactly one commit:
+the event's before SHA equals its parent P; exactly one actual merged PR has that
+merge SHA, a main base P and head H; P is an ancestor of H; and H's tree equals
+actual main. The latest expected `check.yml` pull_request run at H must be completed
+and successful, with one successful completed `controller` job, its unique successful
+completed `Run strict full validation` step, and an original
+`created_at` strictly earlier than the PR's `merged_at`. Equality, malformed times,
+a newer failed/cancelled/incomplete run or missing/ambiguous facts require full;
+do not search past a newer run for an older success. A successful editorial step
+is not full coverage: the earlier run's comparison can differ from the merged PR's
+comparison even at the same head. The native step receipt identifies actual full
+execution without a new evidence store. The main-only PR trigger,
+strict up-to-date protection and default PR merge checkout bind that coverage to
+the actual main tree. GitHub's run `pull_requests` list may be empty after merge;
+use actual PR/run/Git relationships without fabricating an association.
+
+Changes to validation machinery/context force full on main too: `.github/`, all
+engineering `tools/` initially (including checker, selector and package bootstrap),
+tests package bootstrap,
+dependency manifests/locks, renderer
+configuration, schemas, AGENTS and current control/engineering/project-management/
+documentation policy. This coarse tools boundary avoids maintaining a checker-helper
+dependency graph; narrower reuse needs a demonstrated benefit. Normal feature regression tests still receive full PR coverage
+but do not alone change validation context. Unknown main paths, nonstandard pushes,
+nonregular objects, tree mismatch or unavailable proof select full. Existing pinned
+workflow/dependency contracts define the supported environment; no green cache,
+provenance service or ambient host fingerprint is introduced. This migration itself
+changes validation context and requires full PR and main checks.
+
+Print the selected profile and reason in logs and the Actions summary. Main-smoke
+links its qualifying PR run and explicitly reports full regression as unrun on main.
+Done requires the appropriate actual PR/main profile and outcome evidence; a reduced
+pass never establishes full regression, native support or gameplay acceptance.
+Broad source changes always receive full regression before merge. Reuse valid
+exact-candidate evidence without duplicating a hosted full pass locally solely for
+a checklist; new changes, failures or uncovered risk can require fresh coverage.
+
+### Upkeep
 
 At meaningful integration/closeout checkpoints, C-MAINTENANCE reviews time to real
 play, verification/review/waiting effort, useful gameplay reached, recurring failures,
@@ -274,7 +354,7 @@ every change, require consensus, or repeat a full review of unchanged material.
 | New player capability or observer workflow | Product/player or observer perspective on goals, acceptance and a working flow, diagram or prototype. Validate actual usability later; an agent persona is not a real user study. |
 | New memory/adaptation policy or consequential literature claim | Research/evidence perspective checks prior documents, primary support, transfer limits, conflicts and functional-versus-efficacy claims. No fresh full survey for each leaf fix. |
 | Permissions, external access or isolation change | Focused security/operations review at that boundary. This is not gameplay strategy review or a critic/approval per key. |
-| Integrated acceptance/publication | Independent outcome/evidence and maintainability review against original requirements, source/configuration and failure/unknown receipts. Full checks and protected publication remain. |
+| Integrated acceptance/publication | Independent outcome/evidence and maintainability review against original requirements, source/configuration and failure/unknown receipts. Appropriate protected CI profiles and required outcome evidence remain. |
 
 For maintainer-facing design review, lead with the user outcome, a small boundary
 diagram when useful, important alternatives/tradeoffs, open decisions and evidence
@@ -453,7 +533,8 @@ endpoints, reason/forecast and retained costs before input; preserve the effecti
 final cleanup reserve against both whole and aggregate limits.
 Use the [development-first checkpoints](#development-first-delivery) to select
 validation timing: frozen finite development runs follow fast/focused checks;
-formal acceptance follows reviewed exact-candidate full checks. Unchanged-runtime
+formal acceptance follows reviewed exact-candidate checks under the
+[profile policy](#protected-ci-profiles). Unchanged-runtime
 procedural admissions reuse applicable evidence; they do not trigger another suite
 or reviewer. Consolidate publication, review and merged-main CI for the coherent
 outcome. Do not require a new PR per tactical segment. Source/native changes and
