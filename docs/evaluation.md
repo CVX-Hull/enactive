@@ -114,6 +114,14 @@ percentiles. Revisit targets after representative navigation/items/activities an
 fresh-context player measurements, retaining both tails and failures. Reuse CDDA
 travel/activities where qualified before adding an execution framework.
 
+[Fresh019's closed program trace](acceptance/2026-10-24-independent-seven-day-nineteenth-attempt.md#cost-and-responsiveness-evidence)
+separates selected-capture-to-root admission (median7.742s, eight roots) from
+within-program returned-normal capture intervals (median520.5ms,42pairs) and V8
+execution (median0.880ms,58evaluations). These are selected same-host proxies,
+not isolated inference, useful-task/display latency or a causal comparison.
+Measure whether player-authored routines amortize decision gaps across useful
+outcomes while retaining organic surprise/correction, not merely fast evaluation.
+
 The next bounded measurement should correlate existing request/dispatch IDs across
 admission, bridge publication, terminal receipt, semantic settlement, status
 response and successful image decode. Use monotonic intervals within each process;

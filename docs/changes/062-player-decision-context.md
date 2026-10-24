@@ -700,3 +700,40 @@ input, extra authority, compatibility format or per-action review is introduced.
 Other local allowances, failed-episode transfer, useful memory/advice benefit and
 whole-player cadence remain owned work in the existing Issues/Project; no new
 control framework or separate backlog is warranted.
+
+
+## Closed020: caller validation is separate from durable faults
+
+[Fresh020](../acceptance/2026-10-24-independent-seven-day-twentieth-attempt.md)
+retains79game seconds, supplies, four candidate procedures and exceptional closure.
+A nonexistent caller episode request escaped as a fatal ledger lookup; conversely,
+the broad memory exemption could mask actual evidence corruption. The coherent
+repair introduces explicit candidate-only refusal, leaves retained ancestry,
+bytes, storage, clocks and capacity strict, and preserves corrected distinct
+requests without restoring lost authority. Existing SQLite transactions and
+exact-request collection remain authoritative. Linear retained dependency checks
+are reused without computing pairwise Claim frontiers on authored append.
+
+The adviser's fifth proposal failed pure local closure validation before any
+stage/POST, but received a phantom collection handle. Pure preflight now uses
+existing `not_submitted` presentation; actual staging/transport/presentation
+uncertainty still collects its original command. Tool descriptions distinguish
+selected trajectory records from RPC count and finite job windows. Neither fix
+introduces a menu handler, tactical rescue, new store or per-action approval.
+
+Existing S-ARCH/C-PORTABLE/C-RUNTIME/C-REVIEW cover classification and reciprocal
+fault tests; GitHub #177/#178 own delivery, #136/#176 integration, #145 the full
+campaign, #143 observer truth and #191 visible-state sufficiency. The
+[019 timing supplement](../acceptance/2026-10-24-independent-seven-day-nineteenth-attempt.md#cost-and-responsiveness-evidence)
+adds within-program and new-root proxies for #164/#177/#178. Fast local evaluation
+cannot establish organic adoption, useful cadence or causal improvement. Failed
+019/020 remain closed and ineligible under the current library contract; transfer
+of useful failure evidence remains owned work, not a silent phase rewrite.
+
+
+The coherent repair passes201focused tests in12.321s and fast checks. Independent
+memory/advisory reviews find no outstanding defect after procedure-selection
+masking is narrowed and a new test's dictionary/use-identity error is corrected.
+Original sandbox binding/import/fixture failures remain in verification evidence.
+Exact new CI, real independent continuation, normal lifecycle and the full
+learning/cadence/seven-day outcome remain open; these checks do not qualify them.

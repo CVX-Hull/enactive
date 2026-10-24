@@ -23,8 +23,9 @@ known unchanged player/control context; explicit image reads remain complete.
 MCP server5.2.2 assigns request identities and bounded result waits before invoking
 the existing imperative SDK. Its public schemas reject caller-owned IDs/waits;
 snapshot/source, scope, execution limits and semantic decisions remain explicit.
-Errors preserve assigned original collection arguments through the presentation
-boundary. Durable staging/collection remain in MissionClient and the existing
+Known pure composition/advisory validation failures before SDK submission return
+`not_submitted` without a collection handle. Errors from staging onward preserve
+assigned original collection arguments through the presentation boundary. Durable staging/collection remain in MissionClient and the existing
 ledger; no extra history or executor is introduced. Lost settled identities after
 a producer restart remain a disclosed quiescence case, not permission to replay.
 The existing pure request composer also derives navigation coordinate scope and
@@ -101,7 +102,9 @@ the existing mission writer, native input transport, SQLite history and image
 archive. A root's explicit procedure selection joins its actual child inputs and
 results automatically; adoption remains a player judgment over scoped data.
 The read-only library accepts pinned closed current-contract archives without
-restoring old-world facts or execution handles. Old native5 libraries remain
+restoring old-world facts or execution handles. New caller memory candidates have
+explicit refusable validation; retained-history, evidence and storage faults stay
+fatal. A memory write never restores input authority. Old native5 libraries remain
 immutable historical evidence and cannot be mounted under native6. See
 [the current contract](protocol.md#ordinary-discovery-and-procedure-data).
 The [executable-policy research](research-executable-policies.md) motivates

@@ -19,7 +19,7 @@ from typing import Any
 from .contracts import ContractError, json_object
 from .contracts import canonical
 from .native_receipts import validate_ordinary_mapping, validate_published_input
-from .mission_contracts import VERSION, MissionAdmission, InputObservation, SourceRevalidation, validate_handoff_binding, effect_reconciliation, validate_effect_reconciliation, validate_delivery_resolution, validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption, validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission
+from .mission_contracts import MemoryRequestRefusal, VERSION, MissionAdmission, InputObservation, SourceRevalidation, validate_handoff_binding, effect_reconciliation, validate_effect_reconciliation, validate_delivery_resolution, validate_handoff_result, validate_lifecycle_transition, validate_memory_entry, validate_normal_adoption, validate_normal_exit, validate_normal_finish, validate_prompt_result, validate_request, validate_saved_checkpoint, validate_readmission
 
 DB_VERSION = 12
 MAX_DATABASE_BYTES = 64 * 1024 * 1024
@@ -50,6 +50,10 @@ _DDL = (
 
 class LedgerError(ContractError):
     """Invalid or unavailable accounting. Caller must revoke input before repair."""
+
+
+class RequestNotFound(LedgerError):
+    """An exact request lookup found no row; trusted durable references stay fatal."""
 
 
 class BudgetError(LedgerError):
@@ -884,7 +888,7 @@ class MissionLedger:
         with self._mutex:
             if self._db is None: raise LedgerError("Ledger is closed")
             row = self._db.execute("SELECT payload,epoch,state,result,admitted_at,deadline FROM requests WHERE id=?", (request_id,)).fetchone()
-            if row is None: raise LedgerError("Unknown semantic request")
+            if row is None: raise RequestNotFound("Unknown semantic request")
             return {"request": json_object(row[0]), "epoch": row[1], "state": row[2],
                     "result": None if row[3] is None else json_object(row[3]),
                     "admitted_at": row[4], "deadline": row[5]}
@@ -1825,16 +1829,22 @@ class MissionLedger:
         return self.snapshot(now=now)
 
     @staticmethod
-    def _check_work_lineage(entry: dict, previous: dict[str, dict]) -> None:
+    def _check_work_lineage(entry: dict, previous: dict[str, dict], *, refusal=LedgerError) -> None:
         old = previous.get(entry["id"])
         if old is not None:
             if any(entry[key] != old[key] for key in ("scope", "intent", "predecessor_work_id")):
-                raise LedgerError("Work retains immutable scope, intent and predecessor")
+                raise refusal("Work retains immutable scope, intent and predecessor")
         elif entry["predecessor_work_id"] is not None and entry["predecessor_work_id"] not in previous:
-            raise LedgerError("Work predecessor must already exist in this mission")
+            raise refusal("Work predecessor must already exist in this mission")
 
-    def append_memory(self, event_id: str, entry_type: str, entry: dict, *, now: float) -> int:
-        """Immutable typed storage; semantic reduction belongs to campaign memory."""
+    def append_memory(self, event_id: str, entry_type: str, entry: dict, *, now: float, candidate=False) -> int:
+        """Append typed storage, with candidate-only semantic refusals.
+
+        Native/retained callers stay strict. The new-candidate marker changes only
+        immutable-record/lineage validation; clocks, event identity, capacity and
+        SQLite transactions retain their original fatal failure contracts.
+        """
+        refusal = MemoryRequestRefusal if candidate else LedgerError
         _id(event_id)
         data = validate_memory_entry(entry, entry_type)
         if (data["mission_id"] if entry_type == "procedure" else data["scope"]["mission_id"]) != self.admission.mission_id:
@@ -1851,11 +1861,15 @@ class MissionLedger:
             if self._db.execute("SELECT count(*) FROM memory WHERE entry_type=?", (entry_type,)).fetchone()[0] >= maximum:
                 raise BudgetError("Memory event retention limit reached")
             if entry_type != "work" and self._db.execute("SELECT 1 FROM memory WHERE entry_type=? AND record_id=?", (entry_type, data["id"])).fetchone():
-                raise LedgerError("An immutable assertion/decision identity cannot be overwritten")
+                raise refusal("An immutable assertion/decision identity cannot be overwritten")
             if entry_type == "work":
-                self._check_work_lineage(data, {row["entry"]["id"]: row["entry"] for row in self.memory_records("work")})
+                previous = {}
+                for row in self.memory_records("work"):
+                    self._check_work_lineage(row["entry"], previous)
+                    previous[row["entry"]["id"]] = row["entry"]
+                self._check_work_lineage(data, previous, refusal=refusal)
             if entry_type == "procedure":
-                self._check_procedure_lineage(data, [row["entry"] for row in self.memory_records("procedure")], self.admission)
+                self._check_procedure_lineage(data, [row["entry"] for row in self.memory_records("procedure")], self.admission, refusal=refusal)
             cursor = self._db.execute("INSERT INTO memory(event_id,entry_type,record_id,body) VALUES (?,?,?,?)", (event_id, entry_type, data["id"], encoded))
             return cursor.lastrowid
 
@@ -1867,25 +1881,25 @@ class MissionLedger:
                          for row in self._db.execute("SELECT sequence,event_id,body FROM memory WHERE entry_type=? ORDER BY sequence", (entry_type,)))
 
     @staticmethod
-    def _check_procedure_lineage(entry: dict, previous: list[dict], admission: MissionAdmission) -> None:
+    def _check_procedure_lineage(entry: dict, previous: list[dict], admission: MissionAdmission, *, refusal=LedgerError) -> None:
         policy = admission.learning
         if policy is None or entry["environment"] != dict(policy.environment):
-            raise LedgerError("Procedure requires its exact admitted learning environment")
+            raise refusal("Procedure requires its exact admitted learning environment")
         parent = entry["parent"]
         family = [record for record in previous if record["procedure_id"] == entry["procedure_id"]]
         if parent is None:
             if family or entry["revision"] != 1:
-                raise LedgerError("Procedure family must have one first revision")
+                raise refusal("Procedure family must have one first revision")
         else:
             if any(record["parent"] == parent for record in previous):
-                raise LedgerError("Procedure ancestry cannot branch")
+                raise refusal("Procedure ancestry cannot branch")
             if parent["mission_id"] == admission.mission_id:
                 matches = [record for record in previous if record["id"] == parent["revision_id"]]
                 if (not matches or matches[0]["procedure_id"] != entry["procedure_id"]
                         or matches[0]["revision"] + 1 != entry["revision"]):
-                    raise LedgerError("Procedure parent must be an earlier consecutive family revision")
+                    raise refusal("Procedure parent must be an earlier consecutive family revision")
             elif parent["mission_id"] not in {source.mission_id for source in policy.library_sources}:
-                raise LedgerError("Historical procedure parent must be explicitly admitted")
+                raise refusal("Historical procedure parent must be explicitly admitted")
 
     def reflection_records(self) -> tuple[tuple[dict, ...], tuple[dict, ...]]:
         """Original advisory jobs/proposals, on a sequence separate from memory."""

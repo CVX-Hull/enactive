@@ -124,7 +124,14 @@ Exercise exploration beyond the cache working set in the existing component and
 whole-runtime lanes; this is not permission to ignore integrity or storage failure.
 Separate a rejected request, an unexpected in-game outcome and actual loss of
 authority or uncertain delivery. A correctable request error must not revoke a
-healthy input scope. Review the entire observe/try/correct/cancel loop, including
+healthy input scope. Classify positively identified new caller-data errors at the
+validation boundary; do not infer nondelivery from arbitrary exceptions or treat
+trusted-history/storage failures as caller mistakes. Pure validation before SDK
+submission must not direct collection of a nonexistent operation. Pair correction
+regressions with actual integrity/transaction faults, preserving original costs,
+exact retry semantics and Pause. Reuse existing ledger/OS contracts and avoid
+recomputing full semantic projections merely to classify a rejected candidate.
+Review the entire observe/try/correct/cancel loop, including
 raw-input fallback, rather than only each adapter's successful path. C-REVIEW
 checks this distinction and C-PORTABLE exercises boundary regressions; actual
 keyboard/mouse capabilities still need their separate C-NATIVE evidence.

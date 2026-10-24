@@ -272,8 +272,10 @@ Invalid semantic whole-field creation-name targets use the same guarded local
 draft refusal, retaining the strict complete admitted identity requirement.
 Ordinary bounded input remains a separate explicit player choice; software does
 not truncate a target, choose clearing keys or construct replacement chunks.
-Known ordinary request-composition refusals before SDK submission return
-`submission=not_submitted` and no collection handle; no request exists to collect.
+Known ordinary request-composition and pure advisory-submit validation refusals
+before SDK submission return `submission=not_submitted` and no collection handle;
+no request exists to collect. Advisory closure lookup/validation must precede any
+staging or POST; failures after that boundary retain original collection.
 Errors from staging onward retain the assigned original collection identity. The
 adapter never infers nondelivery from an arbitrary exception or a missing reply.
 Exact selected snapshot/source, phase scope, finite execution limits and semantic
@@ -1519,6 +1521,18 @@ refuse. Episodes must join actual settled request/source evidence. Candidates ca
 be tested; disputed/retired heads are inspectable and cannot be newly selected.
 The current player judges descriptive applicability; memory grants no authority.
 
+Positively identified validation failures of a new caller memory candidate use
+`MemoryRequestRefusal`: a missing selected episode request, unrelated support,
+invalid predecessor/correction/selection or a duplicate immutable record in a
+new request blocks that request without revoking healthy ownership. Its original
+admission/result costs remain; no memory append or input follows. A corrected
+candidate needs a distinct request. Exact retries collect the original result;
+conflicting event identity remains fatal. Validation of retained ancestry,
+evidence bytes, SQLite transactions, clocks and global capacity remains strict.
+The memory path has no blanket exemption for `ContractError`. Pause and input
+custody checks remain in their existing writer/controller boundaries; memory
+writes, including after a stop, never acquire or restore authority.
+
 The read-only library uses SQLite over hash-verified bytes, shared archive locks
 and derived project paths. It never reopens a runtime writer, restores a phase or
 imports old-world Claims/Work as current facts. Only current ledger12/archive5
@@ -1549,6 +1563,8 @@ passive mailbox/cache with the existing writer and SQLite ledger. Four routine
 root skill decisions coalesce a job; failures, recovery and handoff boundaries
 can trigger earlier work. Each job retains original request/result order and
 cutoff, memory version, bounded sources/procedures and explicit omissions.
+`requests_per_job` bounds selected trajectory records, not tool RPCs; job count
+and each claimed job's original wall window are separate finite limits.
 Interrupted missing results and individually oversized rows remain omitted
 original evidence rather than preventing subsequent review. Pending overload
 coalesces future work; exhausting finite reflection limits leaves it unreviewed.

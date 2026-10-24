@@ -33,7 +33,7 @@ DETAIL_SECTIONS = ("mission", "configuration", "metrics", "receipt", "progress",
 
 
 class UnsubmittedRequest(ContractError):
-    """Ordinary request composition refused before calling SDK submission."""
+    """Pure request validation/composition refused before calling SDK submission."""
 
 
 @dataclass(frozen=True)
@@ -180,9 +180,9 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
     proposal = proposal_schema()["properties"]
     reflection_scope = dict(mission_id=identity, reflector_id=identity)
     specs.extend((
-        ToolSpec("enactive_reflect_next", "Advisory actor only: get and durably claim bounded original work. Compute only when status is claimed. Pending, busy or unknown grants no permission to compute; no gameplay input or automatic model work.",
+        ToolSpec("enactive_reflect_next", "Advisory actor only: get and durably claim bounded original work. requests_per_job bounds selected trajectory records per job, not tool calls or the admission's total jobs budget. Compute only when status is claimed. Pending, busy or unknown grants no permission to compute; no gameplay input or automatic model work.",
             _object({**reflection_scope, "wait_seconds": {**wait, "maximum": MAX_REFLECTION_READ_WAIT_SECONDS}})),
-        ToolSpec("enactive_reflect_submit", "Advisory actor only: submit explicitly authored candidates/notes/reason for a cached claimed job. Software preserves original headers; the original submission is immutable. Corrected output is a separate new intent; collect an uncertain original instead of resubmitting. No automatic memory adoption or gameplay.",
+        ToolSpec("enactive_reflect_submit", "Advisory actor only: submit explicitly authored candidates/notes/reason for a cached claimed job. Software preserves original headers; the original submission is immutable. Local validation refusal is not_submitted and has no command to collect. Corrected output is a separate new intent; collect an uncertain original instead of resubmitting. No automatic memory adoption or gameplay.",
             _object({**reflection_scope, "job_id": identity, "request_id": identity, "wait_seconds": wait,
                 **{field: proposal[field] for field in ("candidates", "notes", "reason")}})),
         ToolSpec("enactive_reflect_source", "Advisory actor only: read an allowlisted original image from a cached claimed job. Never Observe; this presentation cannot serve as a deciding player's source-read declaration.",
@@ -532,21 +532,26 @@ class PlayerTools:
                 while len(self._reflection_jobs) > 64:
                     self._reflection_jobs.popitem(last=False)
             return output, None
-        original = self._reflection_job(mission_id, reflector_id, data["job_id"])
-        job = original["job"]["job"]
         if name == "enactive_reflect_source":
+            job = self._reflection_job(mission_id, reflector_id, data["job_id"])["job"]["job"]
             if dict(mission_id=mission_id, source_id=data["source_id"]) not in job["sources"]:
                 raise ContractError("Reflection source is outside the original claimed job allowlist")
             # Deliberately bypass source(), which populates player presentation
             # handles used by active-input and fresh-context handoff contracts.
             return self.client.reflection_source(mission_id, reflector_id, job["id"], data["source_id"])
-        proposal = validate_proposal(dict(schema="reflection/2", record_type="ReflectionProposal",
-            id="proposal-" + hashlib.sha256(data["request_id"].encode()).hexdigest(),
-            job_id=job["id"], mission_id=job["mission_id"], reflector_id=job["reflector_id"],
-            epoch=job["epoch"], cutoff_sequence=job["through_sequence"], memory_version=job["memory_version"],
-            **{field: data[field] for field in ("candidates", "notes", "reason")}), job)
-        command = validate_command(dict(schema="reflection/2", kind="submit", command_id=data["request_id"],
-            mission_id=mission_id, reflector_id=reflector_id, job_id=job["id"], proposal=proposal))
+        try:
+            job = self._reflection_job(mission_id, reflector_id, data["job_id"])["job"]["job"]
+            proposal = validate_proposal(dict(schema="reflection/2", record_type="ReflectionProposal",
+                id="proposal-" + hashlib.sha256(data["request_id"].encode()).hexdigest(),
+                job_id=job["id"], mission_id=job["mission_id"], reflector_id=job["reflector_id"],
+                epoch=job["epoch"], cutoff_sequence=job["through_sequence"], memory_version=job["memory_version"],
+                **{field: data[field] for field in ("candidates", "notes", "reason")}), job)
+            command = validate_command(dict(schema="reflection/2", kind="submit", command_id=data["request_id"],
+                mission_id=mission_id, reflector_id=reflector_id, job_id=job["id"], proposal=proposal))
+        except ContractError as exc:
+            # Only immutable cache lookup and pure validation precede this
+            # classification. SDK staging, submission and collection stay out.
+            raise UnsubmittedRequest(str(exc)) from None
         return self.client.reflection_command(command, wait_seconds=data["wait_seconds"]), None
 
     def _claim_entry(self, selected: dict, identity: str, kind: str, intent: dict) -> dict:

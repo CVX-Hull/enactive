@@ -18,7 +18,7 @@ from harness.gameplay.campaign_memory import CampaignMemory
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import CapacityError, EvidenceStore
 from harness.gameplay.contracts import canonical
-from harness.gameplay.mission_contracts import MEMORY_VERSION, VERSION, validate_memory_entry, validate_work_view
+from harness.gameplay.mission_contracts import MEMORY_VERSION, VERSION, MemoryRequestRefusal, validate_memory_entry, validate_work_view
 from harness.gameplay.mission_ledger import LedgerError, MissionLedger
 from tests.test_gameplay_evidence import observation, png
 from tests.test_mission_contracts import admission, claim, request, scope, skill
@@ -116,7 +116,7 @@ class CampaignMemoryTests(unittest.TestCase):
     def test_work_lineage_requires_existing_parent_and_immutable_scope_intent_and_link(self):
         ref = self.source()
         old = self.work(ref)
-        with self.assertRaisesRegex(LedgerError, "predecessor must already exist"):
+        with self.assertRaisesRegex(MemoryRequestRefusal, "predecessor must already exist"):
             self.remember({**old, "predecessor_work_id": "future"})
         with self.assertRaises(ContractError): self.remember({**old, "predecessor_work_id": old["id"]})
         self.remember(old)

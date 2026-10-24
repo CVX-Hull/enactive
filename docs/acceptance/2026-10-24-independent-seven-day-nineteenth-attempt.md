@@ -91,6 +91,20 @@ retrieval/reduction cost; the prior [scaling profile](../changes/062-player-deci
 and owned #164/#177/#178 work remain relevant. This report introduces no new
 memory store, mandatory model tier or approval step.
 
+A later closed-trace join covers eight player-authored program roots,50returned
+normal deliveries,42within-program delivery pairs and58V8evaluations. Median
+selected-capture-to-root-admission is7,742.029ms; root-admission-to-first-after
+capture is493.302ms. Within-program after-to-after median is520.5ms, nearest-rank
+p95634ms. V8evaluation median is0.880ms, p952.574ms (cold maximum73.899ms).
+Before-to-preflight capture median is246.5ms; preflight-to-after is222.5ms.
+These same-host timestamp proxies exclude no failures from total run costs but
+select returned normal program deliveries for this cohort. They do not isolate
+inference, physical paint or whole useful-task latency. Do not add phase medians
+or infer a causal speedup from faster local execution. The evidence supports
+investigating decision/context gaps and useful closed-loop amortization, rather
+than choosing a model from evaluation time alone. Raw join/definitions remain in
+`preparation/closed019-program-latency-proxies.json`; #164/#177/#178 own follow-up.
+
 ## Closure and follow-through
 
 The ledger retains129requests (24completed/102partial/two blocked/one unknown),

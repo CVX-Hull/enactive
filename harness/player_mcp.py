@@ -38,7 +38,7 @@ def make_server(player: PlayerTools) -> Server:
                 content.append(types.ImageContent(type="image", data=base64.b64encode(png).decode("ascii"), mime_type="image/png"))
             return types.CallToolResult(content=content)
         except UnsubmittedRequest as exc:
-            # This type can only escape pure ordinary request composition,
+            # This type escapes pure ordinary composition or advisory preflight,
             # before SDK staging/submission. No original operation exists.
             value = dict(error=str(exc)[:1024], submission="not_submitted",
                 next_step="Correct the selected arguments for a new decision under original limits; "

@@ -29,7 +29,7 @@ from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
 from .gameplay.evidence import MAX_AGE_SECONDS, MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore, FreshnessError, same_native_custody, same_native_state, validate_native_progression
 from .gameplay.interaction import MenuIntent, MenuOutcome, MenuSkill
 from .gameplay.contracts import canonical
-from .gameplay.mission_contracts import VERSION, MissionAdmission, InputObservation, SourceBinding, SourceRevalidation, validate_submission
+from .gameplay.mission_contracts import VERSION, MissionAdmission, InputObservation, SourceBinding, SourceRevalidation, MemoryRequestRefusal, validate_submission
 from .gameplay.mission_ledger import BudgetError, LedgerError, LocalBudgetRefusal, MissionLedger, TERMINAL
 from .gameplay.native_receipts import compact_native_ack
 from .gameplay.navigation import NavigationIntent, NavigationOutcome, NavigationSkill, ObservedMap
@@ -1191,7 +1191,7 @@ class MissionRuntime:
         if work.request["entry_type"] in ("work", "procedure") and self._registered_handoff.phase is not None:
             raise HandoffEvidenceError("Work/procedure adoption is frozen during handoff; retrieve/claim/readmit first")
         if work.request["entry_type"] == "decision" and work.request["entry"]["packet_id"] not in self._issued_packets:
-            raise ContractError("Decision requires a durably issued context wrapper")
+            raise MemoryRequestRefusal("Decision requires a durably issued context wrapper")
         result = self._memory.apply(work.request, now=self._wall())
         self._memory_version = result["memory_version"]
         return result
@@ -2961,7 +2961,7 @@ class MissionRuntime:
             if work.request["procedure"] is not None:
                 try:
                     self._memory.select_procedure(work.request["procedure"])
-                except ContractError as exc:
+                except MemoryRequestRefusal as exc:
                     return "blocked", {"reason": "Procedure selection refused before input: " + str(exc),
                         "source_ids": list(work.request["sources"]), "grants_authority": False}
             self._registered_recovery.executable_guard(work.request)
@@ -3075,6 +3075,10 @@ class MissionRuntime:
             disposition, result = "blocked", {"reason": str(exc), "proposals": 0,
                 "source_ids": [] if self._current is None else [self._current.observation_id],
                 "grants_authority": False}
+        except MemoryRequestRefusal as exc:
+            disposition, result = "blocked", {"reason": f"MemoryRequestRefusal: {exc}"[:1024],
+                "source_ids": [] if self._current is None else [self._current.observation_id],
+                "grants_authority": False}
         except LocalBudgetRefusal as exc:
             try:
                 refusal = self._exhausted_prompt_refusal(work) if data["kind"] == "skill" else None
@@ -3106,7 +3110,7 @@ class MissionRuntime:
             disposition, result = "blocked", {"reason": f"{type(exc).__name__}: {exc}"[:1024], "grants_authority": False}
             result["source_ids"] = [] if self._current is None else [self._current.observation_id]
             self._diagnostic = result["reason"]
-            if (data["kind"] not in ("remember", "correct") and not isinstance(exc, (HandoffEvidenceError, RecoveryEvidenceError))
+            if (not isinstance(exc, (HandoffEvidenceError, RecoveryEvidenceError))
                     or isinstance(exc, (OSError, LedgerError))):
                 self._stop_after_failure(result["reason"])
         self._rotation = None

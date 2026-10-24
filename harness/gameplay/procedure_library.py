@@ -42,6 +42,10 @@ class ProcedureLibraryError(ContractError):
     """Historical support is unavailable or not an admitted sealed closure."""
 
 
+class ProcedureEpisodeRefusal(ProcedureLibraryError):
+    """An episode selects a mission/request/source outside the pinned support."""
+
+
 def _id(value: Any) -> str:
     if type(value) is not str or re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", value) is None:
         raise ProcedureLibraryError("Library identifier must be bounded ASCII")
@@ -445,15 +449,15 @@ class ProcedureLibrary:
         for identity in [*episode["request_ids"], *episode["source_ids"]]:
             _id(identity)
         if mission not in self._pins:
-            raise ProcedureLibraryError("Procedure episode mission is missing from pinned closure")
+            raise ProcedureEpisodeRefusal("Procedure episode mission is missing from pinned closure")
         linked = set()
         for identity in episode["request_ids"]:
             if identity not in self._requests[mission]:
-                raise ProcedureLibraryError("Procedure episode request is not retained")
+                raise ProcedureEpisodeRefusal("Procedure episode request is not retained")
             linked.update(self._links[mission][identity])
         for identity in episode["source_ids"]:
             if identity not in self._entries[mission] or identity not in linked:
-                raise ProcedureLibraryError("Procedure source is unavailable or unrelated to its episode requests")
+                raise ProcedureEpisodeRefusal("Procedure source is unavailable or unrelated to its episode requests")
         return tuple((mission, identity) for identity in episode["source_ids"])
 
     def records(self) -> tuple[dict, ...]:

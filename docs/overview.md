@@ -19,12 +19,12 @@ The engineering lead maintains the project and verifies outcomes; routine play
 must not depend on lead tactics, keys or memory curation. This is not yet an
 accepted unattended seven-day survival service.
 
-Latest [Fresh019 evidence](acceptance/2026-10-24-independent-seven-day-nineteenth-attempt.md)
-retains11h54m29 of independent development play and player-authored movement
-revisions. A mistaken wait selection exceeded a local allowance; the harness
-incorrectly revoked mission ownership and prevented normal Save. No seven-day,
-successor, reload, normal-ending or useful-cadence acceptance is credited. Owned
-runtime is closed; the existing Issues/Project own repair and the full outcome.
+Latest [Fresh020 evidence](acceptance/2026-10-24-independent-seven-day-twentieth-attempt.md)
+retains independent creation, supplies and79game seconds before a correctable
+memory reference error wrongly revoked ownership. Separate advisory validation
+was misleadingly presented as submitted. Owned runtime is closed; source repairs
+are distinct from the failed run. Seven-day, successor, reload, normal-ending and
+useful-cadence acceptance remain open in the existing Issues/Project.
 
 The browser spectator shows actual Tiles frames, ownership, progress and
 uncertainty. The game stays windowed and project-local. You can Pause or take

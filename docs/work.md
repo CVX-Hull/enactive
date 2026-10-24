@@ -16,12 +16,12 @@ for the authority split and workflow.
 
 ## Current integrated checkpoint
 
-[Fresh019](acceptance/2026-10-24-independent-seven-day-nineteenth-attempt.md)
-retains11h54m29 of independent development play and player-authored movement
-revisions. A mistaken wait selection exposed a local-limit/mission-stop defect.
-It supplies useful partial evidence,
-but no seven-day, successor/reload/normal ending or responsiveness acceptance.
-The dated report owns exact source, costs, uncertainty and exceptional closure.
+[Fresh020](acceptance/2026-10-24-independent-seven-day-twentieth-attempt.md)
+retains79game seconds of independent creation/supplies before a caller memory
+reference wrongly caused loss of ownership. Advisory preflight also exposed a
+misleading collection response. Both receive coherent source repairs; the dated
+report owns costs, failure and exceptional closure. Seven days, successor/reload,
+normal ending and useful responsiveness remain unaccepted.
 
 The [integrated discovery-and-learning design](changes/057-discovery-learning-campaign.md)
 connects ordinary input, revisable procedural memory and asynchronous advice to
@@ -41,6 +41,7 @@ the selected implementation and lessons. Current contracts live in
 | [Fresh016/017](changes/062-player-decision-context.md#closed-fresh016-pending-input-is-not-a-new-decision) | Pending collection, healthy correction/custody failures and retained cleanup/activation lessons |
 | [Fresh018](acceptance/2026-10-24-independent-seven-day-eighteenth-attempt.md) | Useful revision and32h22m34 partial; known unpublication misclassified, costs/profile limits and exceptional closure |
 | [Fresh019](acceptance/2026-10-24-independent-seven-day-nineteenth-attempt.md) | Movement revision and11h54m29 partial; healthy activity-local overshoot wrongly revoked the mission, preventing normal Save |
+| [Fresh020](acceptance/2026-10-24-independent-seven-day-twentieth-attempt.md) | Supplies and four candidate procedures; invalid caller support wrongly stopped healthy play, while advisory preflight supplied a phantom collection handle |
 | [Native capture boundary](acceptance/2026-10-22-native-capture-preconditions.md) and [local refusal](acceptance/2026-10-22-native-local-refusal.md) | Scoped native ordinary input, explicit Observe/correction and normal save/reload/ending; wider mouse/capture cases remain unqualified |
 | [Luna responsiveness017](acceptance/2026-10-23-luna-responsiveness-seventeenth-attempt.md) | Independent equipment handling and normal ending; seven game seconds in557wall seconds is not useful cadence |
 

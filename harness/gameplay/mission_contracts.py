@@ -17,6 +17,13 @@ from .contracts import (
 from .native_input import direct_goal_schema, validate_input
 from .procedures import procedure_schema, validate_procedure
 
+class MemoryRequestRefusal(ContractError):
+    """A positively identified validation failure of a new memory candidate.
+
+    This says nothing about retained evidence, storage health or input authority.
+    """
+
+
 VERSION = "mission/11"
 MEMORY_VERSION = "campaign-memory/6"
 IDENTITY_UNIT = "name"
