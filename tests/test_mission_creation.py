@@ -802,20 +802,30 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
         data, before = self.control("world-form", "Create World"), self.runtime._current
         data["limits"]["wall_seconds"] = 5
         observe = self.runtime._observe_native
+        inspect = self.runtime._store.inspect_current_boundary
         deadlines = []
+        def expired_original(**kwargs):
+            reference, fresh = inspect(**kwargs)
+            # Expire the child's selected entry, not every later checkpoint.
+            # The returned ACK and independently current post-input capture
+            # still pass through the real evidence validator.
+            return reference, False if reference == before else fresh
         def bounded_observe(work, *, deadline_monotonic=None):
             child = self.runtime._ledger.request(work.request["request_id"])
             remaining = child["deadline"] - self.runtime._wall()
             self.assertLessEqual(deadline_monotonic, self.runtime._clock() + remaining + 0.005)
             deadlines.append(child["deadline"])
             return observe(work, deadline_monotonic=deadline_monotonic)
-        with patch.object(self.runtime._store, "inspect_current_boundary", return_value=(before, False)), \
+        with patch.object(self.runtime._store, "inspect_current_boundary", side_effect=expired_original), \
                 patch.object(self.runtime, "_observe_native", side_effect=bounded_observe):
             operation = self.run_request(data)
         self.assertEqual(operation["state"], "partial", operation)
         self.assertEqual(deadlines, [operation["deadline"]])
         self.assertLess(operation["deadline"], root_deadline)
         self.assertEqual(self.runtime._ledger.request("create")["deadline"], root_deadline)
+        self.assertEqual(self.runtime._registered_lifecycle.phase.checkpoint, self.runtime._current)
+        self.assertNotEqual(self.runtime._current, before)
+        self.assertEqual(self.runtime._ledger.primitive_records()[-1]["state"], "returned")
 
     def test_new_lifecycle_child_does_not_spend_wall_budget_before_admission(self):
         self.ready()
