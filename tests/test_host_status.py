@@ -57,6 +57,7 @@ class HostStatusTests(unittest.TestCase):
         self.host("successor")
         self.mission["actor_id"] = "successor"
         self.assertEqual(self.projection()["current"]["state"], "unreported")
+        self.assertIsNone(self.projection()["successor"])
         self.write("successor-assignment", dict(mission_id="mission", actor_id="wrong"))
         self.assertEqual(self.projection()["current"]["state"], "unreported")
 
@@ -82,10 +83,46 @@ class HostStatusTests(unittest.TestCase):
         result = self.projection()
         self.assertEqual(result["current"]["state"], "launch_reported")
         self.assertEqual(result["current"]["role"], "successor")
+        self.assertTrue(result["successor"]["mission_adoption_observed"])
         for changes, state in (({}, "exited"), (dict(timed_out=True), "timed_out"),
                 (dict(interrupted=True), "interrupted")):
             self.host("successor", **changes)
             self.assertEqual(self.projection()["current"]["state"], state)
+
+    def test_assigned_successor_launch_is_visible_before_mission_actor_adoption(self):
+        self.initial()
+        self.host()
+        self.mission["phase"] = "handoff"
+        self.write("successor-assignment", dict(mission_id="mission", actor_id="successor"))
+        self.host("successor", receipt=False)
+        result = self.projection()
+        self.assertEqual(result["current"], result["original"])
+        self.assertEqual(result["current"]["actor_id"], "original")
+        self.assertEqual(result["successor"]["state"], "launch_reported")
+        self.assertEqual(result["successor"]["actor_id"], "successor")
+        self.assertFalse(result["successor"]["mission_adoption_observed"])
+        self.assertFalse(result["driver"]["no_continuing_host_reported"])
+
+    def test_successor_failure_before_adoption_keeps_continuation_unknown_until_final_report(self):
+        self.initial()
+        original = self.host()
+        self.mission["phase"] = "handoff"
+        self.write("successor-assignment", dict(mission_id="mission", actor_id="successor"))
+        for changes, state in ((dict(returncode=7), "exited"),
+                (dict(returncode=-15, timed_out=True), "timed_out"),
+                (dict(returncode=None, timed_out=True, host_exit_unresolved=True), "exit_unresolved")):
+            with self.subTest(state=state):
+                successor = self.host("successor", **changes)
+                self.write("report", {})
+                result = self.projection()
+                self.assertEqual(result["current"]["actor_id"], "original")
+                self.assertEqual(result["successor"]["state"], state)
+                self.assertFalse(result["successor"]["mission_adoption_observed"])
+                self.assertFalse(result["driver"]["no_continuing_host_reported"])
+                self.write("report", dict(mission_id="mission", outcome="incomplete", exit_code=1,
+                    hosts=[original, successor]))
+                self.assertEqual(self.projection()["driver"]["no_continuing_host_reported"],
+                    state != "exit_unresolved")
 
     def test_precreated_and_invalid_terminal_receipts_never_prove_exit(self):
         self.initial()

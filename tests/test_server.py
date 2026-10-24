@@ -174,6 +174,15 @@ class ServerTests(unittest.TestCase):
         self.assertFalse(decoded["deciding_host"]["driver"]["no_continuing_host_reported"])
         self.assertEqual(decoded["mission"], runtime.snapshot)
         self.assertNotRegex(json.dumps(decoded["deciding_host"]), "private-|/private|pid|argv|token")
+        write("successor-assignment", dict(mission_id="mission-test", actor_id="successor-test"))
+        write("successor-process", dict(start=121, pid=456, argv=["private-command", "/private/path"]))
+        decoded = json.loads(self.request()[1])
+        self.assertEqual(decoded["mission"], runtime.snapshot)
+        self.assertEqual(decoded["deciding_host"]["current"]["actor_id"], "player-test")
+        self.assertEqual(decoded["deciding_host"]["successor"]["state"], "launch_reported")
+        self.assertFalse(decoded["deciding_host"]["successor"]["mission_adoption_observed"])
+        self.assertFalse(decoded["deciding_host"]["driver"]["no_continuing_host_reported"])
+        self.assertNotRegex(json.dumps(decoded["deciding_host"]), "private-|/private|pid|argv|token")
         self.assertEqual(runtime.calls, [], "passive evidence cannot command, pause or readmit")
 
     def test_mission_validates_exact_fields_types_and_current_version(self):

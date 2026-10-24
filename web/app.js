@@ -412,6 +412,16 @@ function renderDecidingHost(mission) {
     const event = {exited: 'exit', timed_out: 'timeout and exit', interrupted: 'interruption and exit'}[value.state];
     return typeof event === 'string' && Number.isSafeInteger(value.returncode) ? `${label} observed ${event} · code ${value.returncode}` : null;
   };
+  const successor = bound && record(host.successor) && host.successor.role === 'successor' &&
+    recordedId(host.successor.actor_id) ? host.successor : null;
+  const adoption = successor?.mission_adoption_observed === true && successor.actor_id === mission.actor_id ?
+    'mission actor adoption observed in reported snapshot' :
+    successor?.mission_adoption_observed === false && successor.actor_id !== mission.actor_id ?
+    'mission actor adoption not observed in reported snapshot' : 'mission actor adoption unknown';
+  const successorParts = [describe(successor) || (successor ? 'Assigned successor host evidence unreported' :
+    'Successor assignment unreported'), adoption, 'current liveness unknown', 'host evidence grants no game authority'];
+  if (successor) successorParts.splice(1, 0, `assigned actor ${successor.actor_id}`);
+  $('mission-successor-host').textContent = `${statusTransportFailed ? 'Last reported evidence · ' : ''}${successorParts.join(' · ')}`;
   const current = bound && record(host.current) && host.current.actor_id === mission.actor_id ? host.current : null;
   const parts = [describe(current) || 'Host evidence unreported', 'current liveness unknown'];
   if (bound && host.original?.actor_id !== mission.actor_id) {
@@ -421,7 +431,9 @@ function renderDecidingHost(mission) {
   const driver = bound && record(host.driver) ? host.driver : null;
   if (driver && ['incomplete', 'terminal'].includes(driver.outcome)) {
     const allExited = driver.no_continuing_host_reported === true &&
-      !['launch_reported', 'exit_unresolved'].includes(current?.state) && host.original?.state !== 'exit_unresolved';
+      !['launch_reported', 'exit_unresolved'].includes(current?.state) && host.original?.state !== 'exit_unresolved' &&
+      (host.successor === null || successor && ['exited', 'timed_out', 'interrupted'].includes(successor.state) &&
+        Number.isSafeInteger(successor.returncode));
     parts.push(`Driver ended ${driver.outcome}; ${allExited ? 'no continuing host reported' : 'continuing host unknown'}`);
   } else parts.push('Driver completion unreported; continuation unknown');
   parts.push('host evidence grants no game authority');

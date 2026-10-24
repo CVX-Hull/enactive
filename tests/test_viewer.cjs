@@ -681,7 +681,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   // Deciding-host receipts describe events separately from phase, lease and native custody.
   const deciding = {grants_authority: false, mission_id: mission.mission_id, actor_id: mission.actor_id,
     current: {role: 'original', actor_id: mission.actor_id, state: 'launch_reported', returncode: null},
-    original: null, driver: {outcome: 'unreported', no_continuing_host_reported: false}};
+    original: null, successor: null, driver: {outcome: 'unreported', no_continuing_host_reported: false}};
   const ownerBeforeHost = element('mission-owner').textContent;
   for (const state of ['launch_reported', 'exited', 'timed_out', 'interrupted', 'exit_unresolved', 'unreported']) {
     context.input.deciding_host = {...deciding, current: {...deciding.current, state,
@@ -702,12 +702,44 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   run('render(input)');
   assert.match(element('mission-host').textContent, /Original host observed exit.*continuation unknown/);
   assert.equal(element('mission-state').textContent, 'HANDOFF');
+  const assignedSuccessor = {role: 'successor', actor_id: 'successor-host-test',
+    state: 'launch_reported', returncode: null, mission_adoption_observed: false};
+  for (const [state, code, label] of [
+    ['launch_reported', null, /Successor host launch reported; no verified exit receipt/],
+    ['exited', 7, /Successor host observed exit.*code 7/],
+    ['timed_out', -15, /Successor host observed timeout and exit.*code -15/],
+    ['exit_unresolved', null, /Successor host exit unresolved/]
+  ]) {
+    Object.assign(assignedSuccessor, {state, returncode: code});
+    context.input.deciding_host = {...deciding, current: original, original, successor: assignedSuccessor};
+    run('render(input)');
+    assert.match(element('mission-successor-host').textContent, label);
+    assert.match(element('mission-successor-host').textContent, /assigned actor successor-host-test/);
+    assert.match(element('mission-successor-host').textContent, /mission actor adoption not observed.*current liveness unknown/);
+    assert.doesNotMatch(element('mission-successor-host').textContent, /host (alive|running)|mission actor adoption observed/);
+    assert.match(element('mission-host').textContent, /Original host observed exit.*continuation unknown/);
+    assert.doesNotMatch(element('mission-host').textContent, /no continuing host reported/);
+    assert.equal(element('mission-player').textContent.split(' · ')[0], deciding.actor_id);
+    assert.equal(element('mission-owner').textContent, ownerBeforeHost);
+    assert.equal(element('mission-state').textContent, 'HANDOFF');
+    assert.ok(sendButtons.every(button => button.disabled));
+    assert.equal(element('resume').disabled, true);
+    assert.equal(element('pause').disabled, false);
+    context.input.deciding_host.driver = {outcome: 'incomplete', no_continuing_host_reported: true};
+    run('render(input)');
+    if (['launch_reported', 'exit_unresolved'].includes(state)) {
+      assert.match(element('mission-host').textContent, /continuing host unknown/);
+      assert.doesNotMatch(element('mission-host').textContent, /no continuing host reported/);
+    } else assert.match(element('mission-host').textContent, /no continuing host reported/);
+  }
   mission.actor_id = 'successor-host-test';
+  Object.assign(assignedSuccessor, {state: 'launch_reported', returncode: null, mission_adoption_observed: true});
   context.input.deciding_host = {...deciding, actor_id: mission.actor_id, original,
-    current: {role: 'successor', actor_id: mission.actor_id, state: 'launch_reported', returncode: null}};
+    current: assignedSuccessor, successor: assignedSuccessor};
   run('render(input)');
   assert.match(element('mission-host').textContent, /Successor host launch reported.*liveness unknown.*Historical original host observed exit/);
-  context.input.deciding_host.current = {...context.input.deciding_host.current, state: 'exited', returncode: 9};
+  assert.match(element('mission-successor-host').textContent, /Successor host launch reported.*mission actor adoption observed in reported snapshot/);
+  Object.assign(assignedSuccessor, {state: 'exited', returncode: 9});
   context.input.deciding_host.driver = {outcome: 'incomplete', no_continuing_host_reported: true};
   run('render(input)');
   assert.match(element('mission-host').textContent, /Successor host observed exit.*Driver ended incomplete; no continuing host reported/);
@@ -721,6 +753,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
     context.input.deciding_host = broken;
     run('render(input)');
     assert.match(element('mission-host').textContent, /Host evidence unreported.*current liveness unknown/);
+    assert.match(element('mission-successor-host').textContent, /Successor assignment unreported.*mission actor adoption unknown.*current liveness unknown/);
   }
   mission.actor_id = deciding.actor_id;
   mission.phase = 'active';
@@ -765,6 +798,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   await tick();
   assert.match(element('mission-process').textContent, /service disconnected.*current liveness unknown/i);
   assert.match(element('mission-host').textContent, /Last reported evidence.*current liveness unknown/i);
+  assert.match(element('mission-successor-host').textContent, /Last reported evidence.*current liveness unknown/i);
   assert.match(element('mission-exit').textContent, /No verified normal exit/);
   assert.ok(sendButtons.every(button => button.disabled));
   context.input.connection = 'disconnected';
@@ -1441,7 +1475,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.match(html, /Historical, query-specific/);
   assert.match(html, /cannot undo a committed input or cancel an activity/);
   assert.match(html, /<summary>Memory context/);
-  for (const id of ['mission-host', 'mission-lifecycle', 'mission-process', 'mission-exit']) {
+  for (const id of ['mission-host', 'mission-successor-host', 'mission-lifecycle', 'mission-process', 'mission-exit']) {
     assert.ok(html.includes(`<dd id="${id}">`), `${id} must exist in the mission facts`);
   }
   assert.doesNotMatch(html + app, /api\/gameplay|task-form|task-start|task-continue|task-abandon|goal-form|mission_lease|renderGameplay/);
@@ -1450,5 +1484,5 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.equal(bounded.status.length, 8192);
   assert.ok(bounded.dropped.status > 0, 'overflow remains explicit rather than silently claiming complete coverage');
   assert.equal(bounded.status.at(-1).bounded_export_sample, 8192);
-  console.log('Viewer regressions passed: native6 geometry and decoded authority/freshness; mission11 observation and memory6 history; terminal snapshot versus historical uncertainty; reconnect without replay; bounded native/status/DOM clock correlation with monotonic durations; independent Pause and ordinary recovery; rotated credentials without action replay; one bounded rejected-Pause retry; recorded terminal diagnostics.');
+  console.log('Viewer regressions passed: native6 geometry and decoded authority/freshness; mission11 observation and memory6 history; assignment-bound successor evidence before adoption; terminal snapshot versus historical uncertainty; reconnect without replay; bounded native/status/DOM clock correlation with monotonic durations; independent Pause and ordinary recovery; rotated credentials without action replay; one bounded rejected-Pause retry; recorded terminal diagnostics.');
 })().catch(error => { console.error(error); process.exitCode = 1; });

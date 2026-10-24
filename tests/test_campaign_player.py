@@ -10,6 +10,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from harness.mission_client import MissionClient, MissionClientError
+from harness.host_status import deciding_host_status
 from tools import campaign_player as driver
 
 
@@ -388,6 +389,36 @@ class CampaignPlayerTests(unittest.TestCase):
                 self.assertEqual(report["exit_code"], 1)
                 self.assertEqual(self.launch_count, 2)
                 self.assertEqual(self.client.collect.call_count, 1)
+
+    def test_successor_failure_before_claim_projects_assignment_without_changing_current_actor(self):
+        for outcome, state in ((7, "exited"), ("timeout", "timed_out")):
+            with self.subTest(outcome=outcome):
+                handoff = status("handoff")
+                report = self.invoke(statuses=[status(), handoff, handoff], outcomes=[0, outcome])
+                self.assertEqual(report["outcome"], "incomplete")
+                self.assertEqual(self.client.status.call_count, 3, "failed successor cannot supply a new actor snapshot")
+                projection = deciding_host_status(self.root, handoff)
+                self.assertEqual(projection["current"]["actor_id"], "original")
+                self.assertEqual(projection["successor"]["actor_id"], "successor-mechanical-uuid")
+                self.assertEqual(projection["successor"]["state"], state)
+                self.assertFalse(projection["successor"]["mission_adoption_observed"])
+                self.assertTrue(projection["driver"]["no_continuing_host_reported"])
+                self.client.submit.assert_not_called()
+
+    def test_successor_launch_is_projected_before_host_claim_or_exit_receipt(self):
+        handoff = status("handoff")
+        def before_claim(process):
+            projection = deciding_host_status(self.root, handoff)
+            self.assertEqual(projection["current"]["actor_id"], "original")
+            self.assertEqual(projection["original"]["state"], "exited")
+            self.assertEqual(projection["successor"]["state"], "launch_reported")
+            self.assertFalse(projection["successor"]["mission_adoption_observed"])
+            self.assertFalse(projection["driver"]["no_continuing_host_reported"])
+            process.returncode = 7
+        report = self.invoke(statuses=[status(), handoff, handoff], outcomes=[0, before_claim])
+        self.assertEqual(report["outcome"], "incomplete")
+        self.assertEqual(self.launch_count, 2)
+        self.client.submit.assert_not_called()
 
     def test_terminal_status_still_requires_quiescence(self):
         report = self.invoke(statuses=[status(), status("stopped", unresolved_effects=["uncertain"])])

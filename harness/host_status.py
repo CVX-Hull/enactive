@@ -71,7 +71,7 @@ def _host(preparation: Path, role: str, actor_id: str) -> tuple[dict[str, Any], 
 def deciding_host_status(root: Path, mission: dict[str, Any] | None) -> dict[str, Any]:
     """Read only the exact mission's canonical driver outputs, with no discovery."""
     unknown = dict(role=None, state="unreported", returncode=None)
-    result = dict(grants_authority=False, current=unknown, original=None,
+    result = dict(grants_authority=False, current=unknown, original=None, successor=None,
         driver=dict(outcome="unreported", no_continuing_host_reported=False))
     if not isinstance(mission, dict) or not all(_identity(mission.get(key)) for key in ("mission_id", "actor_id")):
         return result
@@ -92,6 +92,7 @@ def deciding_host_status(root: Path, mission: dict[str, Any] | None) -> dict[str
             and assignment["actor_id"] != initial["actor_id"]):
         successor = _host(preparation, "successor", assignment["actor_id"])
         hosts["successor"] = successor
+        result["successor"] = dict(successor[0], mission_adoption_observed=actor_id == assignment["actor_id"])
         if actor_id == assignment["actor_id"]:
             result["current"] = successor[0]
     report = _record(preparation / "driver-report.json") or {}
