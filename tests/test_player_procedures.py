@@ -12,6 +12,7 @@ from tests import test_campaign_procedures as procedure_fixture
 from tests.test_player_claims import StagingClient
 from tests.test_mission_request_producer import snapshot
 from tests.test_procedures import procedure
+from tests.test_reflection_exchange import proposal
 
 
 MECHANICAL = ('schema', 'record_type', 'id', 'mission_id', 'procedure_id', 'revision', 'environment')
@@ -54,6 +55,81 @@ class PlayerProcedureAuthoringTests(unittest.TestCase):
         self.client.packet = dict(procedures=deepcopy(records))
         self.player.call('enactive_context', dict(snapshot_id='chosen', intent=dict(handoff=None,
             scope=dict(session='game-test', coordinate_epoch=0), query='test procedure', max_bytes=32768)))
+
+    def advice(self, identities=None):
+        self.player.snapshots['chosen']['mission']['reflection'] = dict(proposals=identities or ['proposal-1'])
+        self.offered = proposal(mission_id=self.selected['mission']['mission_id'], candidates=[
+            procedure(mission_id=self.selected['mission']['mission_id'])])
+        self.advice_reads = []
+        def read(mission_id, identity):
+            self.advice_reads.append((mission_id, identity))
+            return dict(status='available', proposal={**deepcopy(self.offered), 'id': identity}, grants_authority=False)
+        self.client.reflection_advice = read
+        return self.player.call('enactive_advice', dict(snapshot_id='chosen', proposal_index=None))[0]
+
+    def adopt(self, *, snapshot_id='chosen', proposal_index=0, candidate_index=0, identity='adopt'):
+        return self.player.call('enactive_remember', dict(snapshot_id=snapshot_id, request_id=identity,
+            wait_seconds=0, intent=dict(entry_type='procedure_candidate', proposal_index=proposal_index,
+                                      candidate_index=candidate_index)))
+
+    def test_compact_advice_preserves_original_indexes_and_exact_candidate_body(self):
+        view = self.advice([f'proposal-{n}' for n in range(6)])
+        self.assertEqual([item['proposal_index'] for item in view['proposals']], [2, 3, 4, 5])
+        self.assertEqual(view['omitted_proposals'], 2)
+        self.assertEqual(len(self.advice_reads), 4)
+        candidate = view['proposals'][0]['candidates'][0]
+        self.assertEqual(candidate['goal'], self.offered['candidates'][0]['goal'])
+        self.assertNotIn('id', candidate)
+        self.assertNotIn('support', candidate)
+        self.assertNotIn('program', candidate)
+        self.adopt(proposal_index=2)
+        self.assertEqual(self.client.writes[0]['entry'], self.offered['candidates'][0])
+        self.assertEqual(self.client.writes[0]['entry_type'], 'procedure')
+        validate_request(self.client.writes[0])
+
+    def test_exact_advice_detail_and_adoption_use_defensive_original_copy(self):
+        self.advice()
+        view, image = self.player.call('enactive_advice', dict(snapshot_id='chosen', proposal_index=0))
+        self.assertIsNone(image)
+        self.assertEqual(view['proposals'][0]['proposal']['candidates'], self.offered['candidates'])
+        view['proposals'][0]['proposal']['candidates'][0]['reason'] = 'changed return'
+        self.offered['candidates'][0]['goal'] = 'changed remote fixture'
+        self.adopt()
+        self.assertNotEqual(self.client.writes[0]['entry']['goal'], 'changed remote fixture')
+        self.assertNotEqual(self.client.writes[0]['entry']['reason'], 'changed return')
+
+    def test_unread_new_snapshot_wrong_indexes_and_eviction_never_retarget(self):
+        with self.assertRaisesRegex(ContractError, 'Read this snapshot'):
+            self.adopt()
+        self.advice()
+        self.player.snapshots['newer'] = deepcopy(self.player.snapshots['chosen'])
+        for selection in (dict(snapshot_id='newer'), dict(candidate_index=1), dict(proposal_index=1)):
+            with self.subTest(selection=selection), self.assertRaises(ContractError):
+                self.adopt(**selection)
+        with self.assertRaisesRegex(ContractError, 'outside'):
+            self.player.call('enactive_advice', dict(snapshot_id='chosen', proposal_index=1))
+        self.player._advice.clear()
+        with self.assertRaisesRegex(ContractError, 'Read this snapshot'):
+            self.adopt()
+        self.assertEqual(self.client.writes, [])
+
+    def test_missing_or_wrong_proposal_does_not_make_candidate_selectable(self):
+        self.advice()
+        self.player._advice.clear()
+        self.client.reflection_advice = lambda *args: dict(status='missing', grants_authority=False)
+        view, _ = self.player.call('enactive_advice', dict(snapshot_id='chosen', proposal_index=0))
+        self.assertEqual(view['proposals'], [dict(proposal_index=0, status='missing')])
+        with self.assertRaises(ContractError): self.adopt()
+        for changes in (dict(id='other'), dict(mission_id='other')):
+            self.client.reflection_advice = lambda *args: dict(status='available', proposal={**self.offered, **changes})
+            with self.assertRaisesRegex(ContractError, 'differs'):
+                self.player.call('enactive_advice', dict(snapshot_id='chosen', proposal_index=0))
+        self.assertEqual(self.client.writes, [])
+
+    def test_old_advice_model_shape_is_rejected_without_compatibility(self):
+        with self.assertRaises(ContractError):
+            self.player.call('enactive_advice', dict(mission_id='mission-test', proposal_id='proposal-1'))
+        self.assertEqual(self.client.events, [])
 
     def test_new_family_derives_frozen_metadata_without_source_or_status_refresh(self):
         original = self.semantic(program=dict(language='javascript/1', source="function step(v,s){return {status:'yield',state:s,input:null,reason:'fixture'}}"))

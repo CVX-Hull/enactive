@@ -6,6 +6,7 @@ boundaries and idle writer ticks mutate SQLite; no model or network wait runs he
 from __future__ import annotations
 
 from hashlib import sha256
+from math import floor
 
 from .gameplay.contracts import ContractError, canonical
 from .gameplay.evidence import EvidenceError
@@ -21,10 +22,11 @@ class RegisteredReflection:
         self._proposals: tuple[dict, ...] = ()
         self._dirty = False
         self._semantic_count = 0
+        self._oldest_admitted_at: float | None = None
         self._urgent = False
         self._published = None
         self._revision = 0
-        self._coverage = {"unreviewed_requests": 0, "reason": None}
+        self._coverage = {"unreviewed_requests": 0, "omitted_requests": 0, "reason": None}
 
     def reset(self) -> None:
         r = self.runtime
@@ -33,12 +35,16 @@ class RegisteredReflection:
                     ReflectiveExchange(pending_limit=policy.reflection_limits.pending, wall_clock=r._wall))
         self._jobs, self._proposals = (), ()
         self._dirty, self._urgent, self._semantic_count = False, False, 0
+        self._oldest_admitted_at = None
         self._published = None
         self._revision = 0
-        self._coverage = {"unreviewed_requests": 0, "reason": None}
+        self._coverage = {"unreviewed_requests": 0, "omitted_requests": 0, "reason": None}
         if exchange is not None:
             exchange.restore(r._ledger.reflection_command_records())
             self._jobs, self._proposals = r._ledger.reflection_records()
+            self._coverage["omitted_requests"] = sum(row["job"]["omitted_requests"] for row in self._jobs)
+            if self._coverage["omitted_requests"]:
+                self._coverage["reason"] = "Original requests omitted from bounded reflection context; retained unreviewed"
         with r._metadata:
             self.exchange = exchange
         if exchange is not None:
@@ -73,17 +79,43 @@ class RegisteredReflection:
             return
         self._dirty = True
         self._coverage["unreviewed_requests"] += 1
-        self._urgent |= disposition in ("blocked", "failed", "unknown", "paused")
+        row = self.runtime._ledger.request(request["request_id"])
+        admitted_at = row["admitted_at"]
+        self._oldest_admitted_at = (admitted_at if self._oldest_admitted_at is None
+                                    else min(self._oldest_admitted_at, admitted_at))
+        self._urgent |= self._exceptional(request, disposition, row["result"])
         # Children and setup remain in the trajectory, but do not each wake the
-        # learner. Four root decisions coalesce routine work; surprises are early.
+        # learner. Root decisions and original request age coalesce routine work.
         if request["kind"] == "skill" and request.get("phase_id") is None:
             self._semantic_count += 1
-            self._urgent |= disposition not in ("completed", "partial")
-        elif request["kind"] in ("reconcile", "handoff", "claim", "readmit", "stop"):
-            self._urgent = True
         # Publish the settled phase before its operation becomes collectable;
         # the next idle tick may run after an advisory reader.
         self._publish()
+
+    @staticmethod
+    def _exceptional(request: dict, disposition: str, result: dict | None) -> bool:
+        program = (result or {}).get("program")
+        return (disposition in ("blocked", "failed", "unknown", "paused")
+                or request["kind"] == "skill" and request.get("phase_id") is None
+                and disposition not in ("completed", "partial")
+                or request["kind"] in ("reconcile", "handoff", "claim", "readmit", "stop")
+                or isinstance(program, dict) and program.get("status") == "error")
+
+    @classmethod
+    def _select(cls, settled: list, slots: int) -> list:
+        # Reserve the original oldest obligation and latest event, then retain
+        # earliest exceptions before routine rows. Byte-fit trimming uses the
+        # same priority, so it cannot blindly discard a middle failure.
+        priority = settled[:1]
+        if slots >= 2 and len(settled) > 1:
+            priority += settled[-1:]
+        reserved = {sequence for sequence, _ in priority}
+        remaining = [(sequence, row) for sequence, row in settled if sequence not in reserved]
+        exceptional = [(sequence, row) for sequence, row in remaining
+                       if cls._exceptional(row["request"], row["state"], row["result"])]
+        exceptions = {sequence for sequence, _ in exceptional}
+        normal = [(sequence, row) for sequence, row in remaining if sequence not in exceptions]
+        return sorted((priority + exceptional + normal)[:slots], key=lambda item: item[0])
 
     def _publish(self) -> None:
         r = self.runtime
@@ -133,7 +165,8 @@ class RegisteredReflection:
     def _schedule(self, state: dict, now: float) -> bool:
         r, policy = self.runtime, self.runtime._admission.learning
         limits = policy.reflection_limits
-        if len(self._jobs) >= limits.jobs:
+        capacity = min(limits.jobs, floor(limits.total_seconds / limits.job_seconds))
+        if len(self._jobs) >= capacity:
             self._coverage["reason"] = "Original reflective job allowance exhausted; trajectory retained"
             self._dirty = False
             return False
@@ -144,8 +177,16 @@ class RegisteredReflection:
         if sum(row["state"] in ("offered", "claimed") for row in self._jobs) >= limits.pending:
             self._coverage["reason"] = "Pending reflection coalesces subsequent settled work"
             return False
-        if not self._urgent and self._semantic_count < 4:
-            self._coverage["reason"] = "Coalescing routine semantic decisions"
+        span = state["deadline"] - state["started_at"]
+        progress = max(min(1., max(0., (now - state["started_at"]) / span)),
+                       min(1., max(0., state["spent_inputs"] / r._admission.limits.inputs)))
+        earned = min(capacity, 1 + floor(progress * capacity))
+        if len(self._jobs) >= min(capacity, earned + int(self._urgent)):
+            self._coverage["reason"] = "Original horizon credit deferred; settled trajectory retained"
+            return False
+        age = 0. if self._oldest_admitted_at is None else now - self._oldest_admitted_at
+        if not self._urgent and self._semantic_count < 4 and age < min(limits.job_seconds, span / (capacity + 1)):
+            self._coverage["reason"] = "Coalescing routine semantic decisions until count or original request age"
             return False
         after = self._jobs[-1]["job"]["through_sequence"] if self._jobs else 0
         records = r._ledger.request_records()
@@ -160,9 +201,7 @@ class RegisteredReflection:
             self._coverage["reason"] = "Interrupted requests have no original result; retained unreviewed"
             self._dirty = False
             return False
-        selected = settled[:limits.requests_per_job]
-        if len(settled) > limits.requests_per_job and limits.requests_per_job > 1:
-            selected = [*selected[:-1], settled[-1]]
+        selected = self._select(settled, limits.requests_per_job)
         heads = sorted(r._memory._procedure_heads().values(), key=lambda value: (value["procedure_id"], value["id"]))
         procedures = heads[:16]
         primitives = r._ledger.primitive_records()
@@ -196,13 +235,16 @@ class RegisteredReflection:
                 self._jobs, self._proposals = r._ledger.reflection_records()
                 self._revision += 1
                 self._dirty, self._urgent, self._semantic_count = False, False, 0
-                self._coverage = {"unreviewed_requests": 0, "reason": None}
+                self._oldest_admitted_at = None
+                omitted = self._coverage["omitted_requests"] + job["omitted_requests"]
+                self._coverage = {"unreviewed_requests": 0, "omitted_requests": omitted,
+                    "reason": ("Original requests omitted from bounded reflection context; retained unreviewed"
+                               if omitted else None)}
                 return True
             if procedures:
                 procedures = procedures[:-1]
             elif len(selected) > 1:
-                # Preserve oldest obligation and latest event where two fit.
-                selected = selected[:1] + selected[2:] if len(selected) > 2 else selected[:1]
+                selected = self._select(settled, len(selected) - 1)
             else:
                 excluded = selected[0][0]
                 settled = [(sequence, row) for sequence, row in settled if sequence != excluded]
@@ -210,9 +252,7 @@ class RegisteredReflection:
                     self._coverage["reason"] = "Single original result exceeds reflective context; retained unreviewed"
                     self._dirty = False
                     return False
-                selected = settled[:limits.requests_per_job]
-                if len(settled) > limits.requests_per_job and limits.requests_per_job > 1:
-                    selected = [*selected[:-1], settled[-1]]
+                selected = self._select(settled, limits.requests_per_job)
                 procedures = heads[:16]
         return False
 

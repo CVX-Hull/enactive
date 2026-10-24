@@ -6,6 +6,7 @@ input authority. Callers own source validation and environment-pin matching.
 from __future__ import annotations
 
 from collections.abc import Sequence
+import hashlib
 from typing import Any
 
 from .contracts import (
@@ -57,6 +58,47 @@ _SCHEMA = _object({
 def procedure_schema() -> dict[str, Any]:
     """Return a defensive copy of the closed procedure/3 record schema."""
     return json_object(_SCHEMA)
+
+
+def procedure_authoring_schema() -> dict[str, Any]:
+    """Return the closed semantic entry schema without software-owned metadata."""
+    schema = procedure_schema()
+    for field in ("schema", "record_type", "id", "mission_id", "procedure_id", "revision", "environment"):
+        del schema["properties"][field]
+        schema["required"].remove(field)
+    return schema
+
+
+def author_procedure(
+    entry: dict[str, Any] | str | bytes, *, mission_id: str, identity: str,
+    environment: dict[str, Any], parent: dict[str, Any] | str | bytes | None = None,
+) -> dict[str, Any]:
+    """Bind semantic authorship to caller-selected admission and parent metadata.
+
+    The caller supplies the original admitted environment and owns source,
+    availability, lineage/conflict and authority checks. This pure helper only
+    validates shape, exact selected-parent identity and final canonical bounds.
+    """
+    semantic = json_object(entry)
+    validate_json(semantic, procedure_authoring_schema())
+    validate_json({"mission_id": mission_id, "identity": identity},
+                  _object({"mission_id": _ID, "identity": _ID}))
+    digest = hashlib.sha256((mission_id + "\0" + identity).encode()).hexdigest()
+    family, revision = "procedure-" + digest, 1
+    if semantic["parent"] is None:
+        if parent is not None:
+            raise ContractError("Root procedure cannot use a selected parent")
+    else:
+        if parent is None:
+            raise ContractError("Procedure successor requires a selected parent revision")
+        selected = validate_procedure(parent)
+        if semantic["parent"] != {"mission_id": selected["mission_id"], "revision_id": selected["id"]}:
+            raise ContractError("Procedure parent must match the selected qualified revision")
+        family, revision = selected["procedure_id"], selected["revision"] + 1
+    return validate_procedure({**semantic, "schema": VERSION, "record_type": "Procedure",
+                               "id": "revision-" + digest, "mission_id": mission_id,
+                               "procedure_id": family, "revision": revision,
+                               "environment": environment})
 
 
 def validate_procedure(value: dict[str, Any] | str | bytes) -> dict[str, Any]:

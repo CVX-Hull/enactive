@@ -35,11 +35,14 @@ User Pause remains independent. [Diagram source](../diagrams/asynchronous-reflec
 
 ## Execution-first learning
 
-This is the **proposed next source slice**, informed by the
+The [source boundary064](../changes/064-execution-first-learning.md) implements
+shared candidate authoring/selection, horizon allocation and software adviser
+waiting. This broader responsibility model remains partly proposed, informed by the
 [Fresh024 execution review](../acceptance/2026-10-24-fresh024-execution-review.md)
 and [October24 primary-source synthesis](../research-multirate-agents.md).
 Current architecture/protocol remain authoritative. This section refines the
-broader proposal below; it does not introduce deployed roles or authorize a run.
+broader proposal below; remaining semantic prioritization/strategic reasoning and
+benefit claims are unqualified. It introduces no extra deployed role or run authorization.
 
 ![Proposed decision horizons, one input writer and one optional learner.](../diagrams/multirate-player.svg)
 

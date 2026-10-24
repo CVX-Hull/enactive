@@ -106,7 +106,13 @@ A seven-day CDDA result would not prove family-wide support.
 Recovery retains original dispatch custody and reconciles effects. Memory retains
 fallible historical assertions and procedure candidates. Neither authorizes input.
 Reflection does not introduce a required critic pause; the player adopts advice
-and the lead stays outside routine curation.
+and the lead stays outside routine curation. Software binds procedure metadata,
+exposes compact snapshot-indexed candidates and submits explicitly selected
+originals. Finite horizon/age allocation and optional software idle waiting keep
+routine learner bookkeeping off the deciding path. These source capabilities do
+not establish graphical cadence or useful learning; the
+[offline execution experiment](acceptance/2026-10-24-execution-first-offline.md)
+keeps those evidence lanes separate.
 [Memory/learning flow](components/memory-learning.md), [native control](components/native-control.md).
 
 ## Bounded planning without execution authority

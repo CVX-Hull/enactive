@@ -19,7 +19,7 @@ from harness.mission_reflection import RegisteredReflection
 from harness.mission_client import MissionClient
 from harness.player_tools import PlayerTools
 from harness.server import Server
-from tests.test_mission_contracts import admission
+from tests.test_mission_contracts import admission, skill
 from tests import test_mission_runtime as runtime_fixture
 from tests.test_reflection_exchange import command, job, procedure, wrapper
 
@@ -29,7 +29,10 @@ class ReflectionCompositionTests(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory()
         self.addCleanup(self.temporary.cleanup)
         self.a = admission(mission_id="mission-a", learning=LearningPolicy(procedure()["environment"],
-            reflector_id="reflector-a", reflection_limits=ReflectionLimits(total_seconds=360)))
+            reflector_id="reflector-a", reflection_limits=getattr(self, "limits", ReflectionLimits(total_seconds=360))))
+        if hasattr(self, "wall_span"):
+            self.a = replace(self.a, limits=replace(self.a.limits, wall_seconds=self.wall_span),
+                cleanup_reserve=replace(self.a.cleanup_reserve, wall_seconds=self.wall_span / 2))
         self.ledger = MissionLedger(Path(self.temporary.name) / "mission", admission=self.a, now=1000.)
         self.addCleanup(lambda: self.ledger.close())
         self.wall = 1000.
@@ -40,14 +43,17 @@ class ReflectionCompositionTests(unittest.TestCase):
         self.reflection = RegisteredReflection(self.r)
         self.reflection.reset()
 
-    def settled(self, number, *, payload=None):
+    def settled(self, number, *, payload=None, root=False, disposition="completed"):
         request = dict(schema="mission/11", kind="observe", request_id=f"request-{number}",
                        mission_id="mission-a", epoch=self.ledger.snapshot(now=self.wall)["epoch"])
+        if root:
+            request = skill(mission_id="mission-a", request_id=f"request-{number}", epoch=request["epoch"])
+            request["goal"]["scope"]["mission_id"] = "mission-a"
         self.ledger.begin_request(request, now=self.wall)
         result = dict(source_ids=[f"source-{number}"], grants_authority=False, **(payload or {}))
-        self.ledger.complete_request(request["request_id"], "completed", result, now=self.wall)
+        self.ledger.complete_request(request["request_id"], disposition, result, now=self.wall)
         self.r._store.historical_references.append(SimpleNamespace(observation_id=f"source-{number}"))
-        self.reflection.completed(request, "completed")
+        self.reflection.completed(request, disposition)
 
     def schedule(self):
         self.reflection._urgent = True
@@ -211,6 +217,199 @@ class ReflectionCompositionTests(unittest.TestCase):
         self.assertEqual(job["omitted_requests"], 1)
 
 
+class ReflectionPacingTests(unittest.TestCase):
+    settled = ReflectionCompositionTests.settled
+    schedule = ReflectionCompositionTests.schedule
+
+    def setUp(self):
+        self.limits = ReflectionLimits(total_seconds=720, requests_per_job=4)
+        ReflectionCompositionTests.setUp(self)
+
+    def roots(self, start):
+        for number in range(start, start + 4):
+            self.settled(number, root=True)
+        self.reflection.tick()
+
+    def release_pending(self):
+        self.reflection.finish(permanent=False)
+        self.reflection.cancel_finish()
+
+    def test_early_routine_credit_and_single_urgent_borrow(self):
+        self.roots(1)
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 1)
+        self.release_pending()
+        self.roots(5)
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 1)
+        self.assertIn("credit", self.reflection.summary()["reason"])
+        self.settled(9, payload={"program": {"status": "error"}})
+        self.reflection.tick()
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 2)
+        self.release_pending()
+        self.settled(10, disposition="blocked")
+        self.reflection.tick()
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 2)
+        self.assertIn("credit", self.reflection.summary()["reason"])
+
+    def test_horizon_progress_releases_routine_credit(self):
+        self.roots(1)
+        self.release_pending()
+        self.roots(5)
+        self.wall = 3400.  # One third of the original 7200-second horizon.
+        self.reflection.tick()
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 2)
+        self.release_pending()
+        self.roots(9)
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 2)
+        state = self.ledger.snapshot(now=self.wall)
+        with patch.object(self.ledger, "snapshot", return_value={**state, "spent_inputs": self.a.limits.inputs}):
+            self.reflection.tick()
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 3)
+
+    def test_age_releases_below_four_roots_from_original_admission(self):
+        self.settled(1)
+        self.wall += self.limits.job_seconds - 1
+        with patch.object(self.ledger, "request_records", wraps=self.ledger.request_records) as records:
+            for _ in range(5):
+                self.reflection.tick()
+            self.assertEqual(records.call_count, 0)
+        self.assertEqual(self.ledger.reflection_records()[0], ())
+        self.reflection.reset()
+        self.wall += 1
+        self.reflection.tick()
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 1)
+
+    def test_quiet_credit_and_pending_ticks_do_not_reload_full_history(self):
+        self.roots(1)
+        self.roots(5)
+        with patch.object(self.ledger, "request_records", wraps=self.ledger.request_records) as records:
+            for _ in range(5):
+                self.reflection.tick()
+            self.assertEqual(records.call_count, 0)
+        self.settled(9, disposition="blocked")
+        self.reflection.tick()
+        self.settled(10, disposition="blocked")
+        self.wall = 8199.
+        with patch.object(self.ledger, "request_records", wraps=self.ledger.request_records) as records:
+            for _ in range(5):
+                self.reflection.tick()
+            self.assertEqual(records.call_count, 0)
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 2)
+        self.assertIn("Pending", self.reflection.summary()["reason"])
+
+    def test_reset_does_not_renew_credits_or_original_claim_cost(self):
+        self.roots(1)
+        original_job = self.ledger.reflection_records()[0][0]["job"]
+        self.reflection.exchange.offer(command(job_id=original_job["id"]))
+        self.reflection.tick()
+        receipt = self.reflection.exchange.collect("command-1")
+        self.assertEqual(receipt["result"]["charged_seconds"], self.limits.job_seconds)
+        self.assertEqual(receipt["result"]["deadline"], 1180.)
+        self.release_pending()
+        self.ledger.close()
+        self.ledger = MissionLedger(Path(self.temporary.name) / "mission", now=self.wall)
+        self.r._ledger = self.ledger
+        self.reflection.reset()
+        self.roots(5)
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 1)
+        self.assertEqual(self.reflection.exchange.collect("command-1"), receipt)
+        self.settled(9, disposition="blocked")
+        self.reflection.tick()
+        self.release_pending()
+        self.reflection.reset()
+        self.settled(10, disposition="blocked")
+        self.reflection.tick()
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 2)
+        self.wall = 8199.
+        self.reflection.tick()
+        self.release_pending()
+        self.settled(11, disposition="blocked")
+        self.reflection.tick()
+        self.release_pending()
+        self.settled(12, disposition="blocked")
+        self.reflection.tick()
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 4)
+        self.assertIn("exhausted", self.reflection.summary()["reason"])
+        self.ledger._verify(self.a)
+
+    def test_middle_exceptions_take_priority_and_omissions_stay_explicit(self):
+        for number in range(1, 8):
+            self.settled(number, payload={"program": {"status": "error"}} if number == 5 else None,
+                         disposition="blocked" if number == 4 else "completed")
+        job = self.schedule()
+        self.assertEqual(job["included_request_ids"], ["request-1", "request-4", "request-5", "request-7"])
+        self.assertEqual(job["omitted_requests"], 3)
+        self.assertIn("omitted", self.reflection.summary()["reason"])
+        self.assertEqual(self.reflection.summary()["omitted_requests"], 3)
+        self.assertEqual(self.reflection.summary()["unreviewed_requests"], 0)
+        self.reflection.reset()
+        self.assertEqual(self.reflection.summary()["omitted_requests"], 3)
+        self.assertEqual(self.reflection.summary()["unreviewed_requests"], 0)
+
+    def test_byte_fit_keeps_earlier_exception_before_middle_routine(self):
+        self.r._admission = replace(self.a, learning=replace(self.a.learning,
+            reflection_limits=replace(self.limits, context_bytes=3000)))
+        for number in range(1, 6):
+            self.settled(number, payload={"padding": "x" * 500},
+                         disposition="blocked" if number == 2 else "completed")
+        job = self.schedule()
+        self.assertEqual(job["included_request_ids"], ["request-1", "request-2", "request-5"])
+        self.assertEqual(job["omitted_requests"], 2)
+        self.assertLessEqual(len(canonical(job).encode()), 3000)
+
+    def test_error_text_alone_does_not_make_routine_urgent(self):
+        self.settled(1, payload={"program": "error", "reason": "error"})
+        self.reflection.tick()
+        self.assertEqual(self.ledger.reflection_records()[0], ())
+        self.settled(2, payload={"program": {"status": "error"}})
+        self.reflection.tick()
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 1)
+
+
+class ReflectionSmallCapacityTests(unittest.TestCase):
+    settled = ReflectionCompositionTests.settled
+    roots = ReflectionPacingTests.roots
+    release_pending = ReflectionPacingTests.release_pending
+
+    def setUp(self):
+        self.limits = ReflectionLimits(total_seconds=360)
+        self.wall_span = 120.
+        ReflectionCompositionTests.setUp(self)
+
+    def test_capacity_two_final_routine_slot_releases_at_half_horizon(self):
+        self.roots(1)
+        self.release_pending()
+        self.roots(5)
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 1)
+        self.wall = 1059.
+        self.reflection.tick()
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 1)
+        self.wall = 1060.
+        self.reflection.tick()
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 2)
+        self.release_pending()
+        self.settled(9, disposition="blocked")
+        self.reflection.tick()
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 2)
+        self.assertIn("exhausted", self.reflection.summary()["reason"])
+
+    def test_capacity_one_ages_before_long_job_or_deadline_and_never_borrows(self):
+        self.r._admission = replace(self.a, learning=replace(self.a.learning,
+            reflection_limits=replace(self.limits, jobs=1)))
+        self.settled(1)
+        self.wall = 1059.
+        self.reflection.tick()
+        self.assertEqual(self.ledger.reflection_records()[0], ())
+        self.reflection.reset()
+        self.wall = 1060.
+        self.reflection.tick()
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 1)
+        self.release_pending()
+        self.settled(2, disposition="blocked")
+        self.reflection.tick()
+        self.assertEqual(len(self.ledger.reflection_records()[0]), 1)
+        self.assertIn("exhausted", self.reflection.summary()["reason"])
+
+
 class ReflectionHTTPIntegrationTests(unittest.TestCase):
     def setUp(self):
         self.f = runtime_fixture.MissionRuntimeTests(methodName="runTest")
@@ -286,15 +485,36 @@ class ReflectionHTTPIntegrationTests(unittest.TestCase):
         self.assertEqual(len(self.player.sources), 0)
         self.assertEqual(self.navigate(5)["state"], "completed")
         self.assertEqual(self.f.runtime.status()["reflection"]["jobs"][0]["state"], "claimed")
+        from harness.gameplay.procedures import procedure_authoring_schema
+        candidate = {key: value for key, value in procedure().items()
+                     if key in procedure_authoring_schema()["properties"]}
+        candidate["support"] = [dict(mission_id=self.f.a.mission_id,
+            request_ids=job["included_request_ids"], source_ids=[source], interpretation="Synthetic episode")]
+        unrelated = json.loads(json.dumps(candidate))
+        unrelated["support"][0]["request_ids"] = job["included_request_ids"][:1]
         result, _ = self.player.call("enactive_reflect_submit", {**self.scope,
             "job_id": job["id"], "request_id": "advice-1", "wait_seconds": 2,
-            "candidates": [], "notes": [], "reason": "Synthetic overlap boundary, no gameplay efficacy claim"})
+            "candidates": [unrelated, candidate], "notes": [], "reason": "Synthetic overlap boundary, no gameplay efficacy claim"})
         self.assertEqual(result["status"], "committed", result)
         proposal_id = result["result"]["proposal_id"]
         self.f.wait(lambda: proposal_id in self.f.runtime.status()["reflection"]["proposals"])
-        advice, _ = self.player.call("enactive_advice", dict(mission_id=self.f.a.mission_id, proposal_id=proposal_id))
-        self.assertEqual(advice["proposal"]["cutoff_sequence"], 5)
+        selected, _ = self.player.call("enactive_snapshot", {})
+        index = selected["mission"]["reflection"]["proposals"].index(proposal_id)
+        advice, _ = self.player.call("enactive_advice", dict(snapshot_id=selected["snapshot_id"], proposal_index=index))
+        original = advice["proposals"][0]["proposal"]
+        self.assertEqual(original["cutoff_sequence"], 5)
         self.assertEqual(self.f.runtime._ledger.memory_records("procedure"), ())
+        refused, _ = self.player.call("enactive_remember", dict(snapshot_id=selected["snapshot_id"],
+            request_id="refuse-unrelated-advice", wait_seconds=2, intent=dict(entry_type="procedure_candidate",
+                proposal_index=index, candidate_index=0)))
+        self.assertEqual(refused["response"]["operation"]["state"], "blocked")
+        self.assertIn("unrelated", refused["response"]["operation"]["result"]["reason"])
+        self.assertEqual(self.f.runtime._ledger.memory_records("procedure"), ())
+        adopted, _ = self.player.call("enactive_remember", dict(snapshot_id=selected["snapshot_id"],
+            request_id="adopt-advice-1", wait_seconds=2, intent=dict(entry_type="procedure_candidate",
+                proposal_index=index, candidate_index=1)))
+        self.assertEqual(adopted["response"]["operation"]["state"], "completed", adopted)
+        self.assertEqual(self.f.runtime._ledger.memory_records("procedure")[0]["entry"], original["candidates"][1])
 
     def test_passive_wait_does_not_block_player_and_invalid_queries_refuse(self):
         began, release = threading.Event(), threading.Event()

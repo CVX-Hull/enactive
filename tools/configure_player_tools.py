@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 from copy import deepcopy
 import json
+import math
 import os
 from pathlib import Path
 import tempfile
@@ -36,14 +37,24 @@ def describe(name: str, variant: str | None = None) -> dict:
     return dict(name=spec.name, description=spec.description, input_schema=schema)
 
 
-def configuration(root: Path) -> dict:
-    return dict(command=str(root / ".venv" / "bin" / "python"),
+def configuration(root: Path, *, advisory_idle_seconds: float = 0) -> dict:
+    if (type(advisory_idle_seconds) not in (int, float) or not math.isfinite(advisory_idle_seconds)
+            or advisory_idle_seconds < 0):
+        raise ValueError("Advisory idle wait must be finite and nonnegative")
+    value = dict(command=str(root / ".venv" / "bin" / "python"),
         args=["-m", "harness.player_mcp"], cwd=str(root),
         enabled=True, enabled_tools=[spec.name for spec in tool_specs()],
         default_tools_approval_mode="approve", startup_timeout_sec=10,
         tool_timeout_sec=60,
         tools={name: {"output_token_limit": 131072} for name in (
             "enactive_context", "enactive_reflect_next", "enactive_advice")})
+    if advisory_idle_seconds:
+        value["args"] += ["--advisory-idle-seconds", str(advisory_idle_seconds)]
+        value["tool_timeout_sec"] = advisory_idle_seconds + 30
+        value["enabled_tools"] = ["enactive_reflect_next", "enactive_reflect_submit",
+            "enactive_reflect_source", "enactive_reflect_result"]
+        value["tools"] = {name: options for name, options in value["tools"].items() if name in value["enabled_tools"]}
+    return value
 
 
 def configure(root: Path, *, write=False) -> dict:
@@ -99,10 +110,16 @@ def main() -> None:
     mode.add_argument("--write", action="store_true", help="Add only the reviewed project MCP table")
     mode.add_argument("--describe", metavar="TOOL", help="Print one current tool schema; change no configuration")
     parser.add_argument("--variant", help="Select one skill_kind or entry_type for focused context")
+    parser.add_argument("--advisory-idle-seconds", type=float,
+                        help="Export a finite adviser-only frozen host profile; does not write active configuration")
     args = parser.parse_args()
     if args.variant and not args.describe:
         parser.error("--variant requires --describe")
-    value = describe(args.describe, args.variant) if args.describe else configure(ROOT, write=args.write)
+    if args.advisory_idle_seconds is not None and (args.write or args.describe):
+        parser.error("Adviser profile export cannot write configuration or describe a tool")
+    value = (configuration(ROOT, advisory_idle_seconds=args.advisory_idle_seconds)
+        if args.advisory_idle_seconds is not None else
+        describe(args.describe, args.variant) if args.describe else configure(ROOT, write=args.write))
     print(json.dumps(value, indent=2))
 
 

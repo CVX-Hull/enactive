@@ -127,7 +127,7 @@ reflection-job and advice replies have explicit output limits to preserve bounde
 records. Direct input is an intent on `enactive_skill`, not a new input tool;
 Observe macro closure likewise uses `enactive_observe`. These project settings
 do not prove the running host loaded the current schemas/help or grant authority.
-Current MCP server5.2.2 generates request IDs and collection waits; its model
+Current MCP server5.3.0 generates request IDs and collection waits; its model
 arguments reject caller-supplied `request_id`/`wait_seconds`. Focused help exports
 this same current model schema. The imperative Python SDK's explicit-ID surface
 serves engineering and duplicate collection, not a compatibility mode for MCP.
@@ -141,6 +141,17 @@ Handoff authoring uses `checkpoint_sources`: null selects the exact cached
 snapshot source, and explicit IDs require a prior source read. Software supplies
 canonical checkpoint IDs; old authoring fields refuse. Re-export focused help and
 load a fresh producer after this schema change.
+
+To export a finite adviser-only profile without writing active configuration, use
+`.venv/bin/python -m tools.configure_player_tools --advisory-idle-seconds 3600`.
+Choose the frozen finite window from the planned mission's wall allowance; the
+adapter also caps it at the original mission deadline. Freeze this exported JSON
+for the adviser host, preserving its configured tool filters/timeout. It enables
+only reflection next/submit/source/result; the default player profile stays60s.
+Software waits through empty polls; a non-idle claim/refusal/unknown/closed result
+still returns immediately. This export is not installation, host launch or actual
+profile qualification. Re-export current selected schema cards for MCP5.3.0;
+old full-canonical candidate authoring and mission/proposal-ID advice calls reject.
 
 For a dedicated CLI player, a frozen run profile may narrow `enabled_tools` to the
 admitted role's needs and mark its essential server `required=true`, using the

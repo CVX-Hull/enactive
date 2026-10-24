@@ -44,7 +44,11 @@ and delivery. A returned key alone does not establish success.
 The background adviser reads recorded trajectories and proposes fallible advice
 without pausing ordinary player reasoning. Software links selected procedures,
 actions and results; the player decides applicability and adoption. Historical
-facts, procedures and proposals retain their sources and limitations.
+facts, procedures and proposals retain their sources and limitations. Software
+fills canonical procedure metadata and can submit a player-selected background
+candidate without copying its record. The [offline execution repair](acceptance/2026-10-24-execution-first-offline.md)
+reduces measured local overhead; the complete player's apparent responsiveness
+and independent campaign remain separate acceptance questions.
 
 [Editable diagram](diagrams/player.mmd) · [Architecture](architecture.md) ·
 [Player contract](protocol.md#designated-campaign-operator)

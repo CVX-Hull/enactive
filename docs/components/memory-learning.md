@@ -32,7 +32,7 @@ when measured closure, payload or setup cost approaches those limits under
 
 | Block | State and responsibility | Implementation |
 | --- | --- | --- |
-| EvidenceStore | Immutable selected observations/frames, integrity, source disposition and finite retention reservations | [evidence.py](../../harness/gameplay/evidence.py) |
+| EvidenceStore | Immutable selected observations/frames, integrity, source disposition and finite retention reservations; exact metadata length cache avoids repeated serialization | [evidence.py](../../harness/gameplay/evidence.py) |
 | MissionLedger | SQLite canonical requests, primitives, effects, memory/procedure/reflection records and costs | [mission_ledger.py](../../harness/gameplay/mission_ledger.py) |
 | CampaignMemory | Derived claims/Work/context, conflicts, applicability, procedure ancestry and selected packets | [campaign_memory.py](../../harness/gameplay/campaign_memory.py) |
 | Historical library | Pinned closed donor evidence and procedure dependencies; no live phase or current world facts | [procedure_library.py](../../harness/gameplay/procedure_library.py) |
@@ -62,10 +62,18 @@ visible evidence govern use. Old world facts do not become current possession.
 The existing advisory mailbox accepts passive work while a skill runs. Writer
 boundaries/idle ticks commit records; the runtime performs no model/network wait
 for advice. One admitted adviser claims bounded work, reads allowed evidence and
-submits candidate data. The player owns adoption. Automatic selection/action/result
+submits candidate data. The learner authors semantic candidates/code; software supplies canonical metadata
+from original admission/job context. The player reads compact snapshot-indexed
+advice and can explicitly select a candidate without copying its record. Direct
+authorship and raw input remain available. The writer checks the same source,
+lineage and environment contracts. The player owns adoption. Automatic selection/action/result
 joins reduce narration; exposure, explicit selection, delivery, interpreted success
 and causal benefit remain distinct. Queued or finished advice proves no usefulness.
 Advisory budgets do not become gameplay approvals or a required lead slow path.
+Deterministic original-horizon credits, routine count/age and exception priority
+spread bounded work; unreviewed and omitted rows remain distinct. An optional
+frozen adviser profile waits through empty polls in software within the original
+deadline. No maintained subgoal tree or additional permanent model tier is assumed.
 
 ## Failure, bounds and ownership
 
@@ -86,8 +94,10 @@ lineage pruning or second store is implied.
 
 The [execution-first learning proposal](../design/asynchronous-reflection.md#execution-first-learning)
 separates decision horizons within the existing player/learner/writer split. It
-proposes easier candidate authoring/selection and horizon-aware work allocation;
-it does not change the current adoption or input contract.
+motivated the [implemented source boundary](../changes/064-execution-first-learning.md):
+shared authoring, explicit candidate selection and horizon-aware allocation.
+It retains broader questions about relevance, strategic questions and learning
+benefit; these are not established by source checks or offline timing.
 
 [Ordinary/procedure contracts](../protocol.md#ordinary-discovery-and-procedure-data),
 [handoff](../protocol.md#quiescent-player-replacement) and

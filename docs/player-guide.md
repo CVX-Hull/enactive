@@ -36,7 +36,7 @@ reason to read the entire repository during every game.
   Software verifies hashes and binds requests; do not reconstruct omitted audit data.
   The producer retains metadata for up to 128 distinct source reads. If metadata
   is unavailable, explicitly reread the exact selected image; do not substitute
-  another source. Snapshot and procedure-packet caches each retain 32 entries.
+  another source. Snapshot, procedure-packet and read-advice caches each retain 32 entries.
   Default snapshots are explicitly read-only. A proof receipt's grants_authority=false
   does not mean adoption failed or ordinary execution is refused: use the actual
   operation result, next_needed_decision and active phase. The writer checks inputs.
@@ -67,7 +67,14 @@ reason to read the entire repository during every game.
   qualified parent already returned by `enactive_context`. Omit schema/record/IDs,
   mission/family/revision number and environment: software derives these from the
   assigned operation and selected cached snapshot. An unavailable parent needs
-  explicit memory retrieval. Canonical records are returned with their new IDs;
+  explicit memory retrieval. For background candidates, read
+  `enactive_advice(snapshot_id,proposal_index=null)` for compact recent candidates,
+  then optionally select a returned original proposal index for full detail.
+  Choose `enactive_remember` with `intent={entry_type:procedure_candidate,
+  proposal_index:...,candidate_index:...}` and the same snapshot to adopt one
+  original candidate. Software copies its canonical body; you choose applicability
+  and later use. Indexes never follow newer snapshots; unavailable handles need an
+  explicit reread. Advice can be wrong or stale. Canonical records are returned with their new IDs;
   no manual hashes or full record reconstruction are required. A `program` skill
   starts a new root, explicitly selects that
   revision and supplies initial `goal.state`, intent, expected outcome and interrupt

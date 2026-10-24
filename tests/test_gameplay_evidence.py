@@ -1,15 +1,17 @@
 """Synthetic native-v6 observations only; never real CDDA/pipeline acceptance."""
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager, nullcontext
 import base64
 from dataclasses import replace
 import hashlib
 import json
+import os
 from pathlib import Path
 import tempfile
 import threading
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import (
@@ -399,6 +401,127 @@ class EvidenceTests(unittest.TestCase):
                 self.store.reserve_dispatch(ref, preflight=preflight, rule="native_state", now_monotonic=100, now_timestamp_ms=1_000_000)
         self.assertEqual(self.current(), ref)
         self.assertEqual(len(self.store.historical_references), 2)
+
+    def canonical_metadata_size(self):
+        with self.store._mutex:
+            return len(json.dumps(self.store._manifest(), sort_keys=True, separators=(",", ":"),
+                                  allow_nan=False).encode())
+
+    def test_repeated_usage_and_capacity_checks_do_not_reserialize_history(self):
+        for number in range(1, 9):
+            self.ingest(self.publish(observation(number)))
+        expected = self.canonical_metadata_size()
+        with patch.object(self.store, "_manifest", wraps=self.store._manifest) as manifest:
+            for _ in range(4):
+                self.assertEqual(self.store.usage()["metadata_bytes"], expected)
+                self.store.preflight_retention()
+            manifest.assert_not_called()
+
+    def test_metadata_size_tracks_entries_terminal_promotion_and_sessions(self):
+        original_save = self.store._save
+        def save_after_size_check():
+            self.assertEqual(self.store.usage()["metadata_bytes"], self.canonical_metadata_size())
+            return original_save()
+        save_check = patch.object(self.store, "_save", save_after_size_check)
+        save_check.start()
+        self.addCleanup(save_check.stop)
+        self.assertEqual(self.store.usage()["metadata_bytes"], self.canonical_metadata_size())
+        self.ingest()
+        self.assertEqual(self.store.usage()["metadata_bytes"], self.canonical_metadata_size())
+        incoming = self.publish(observation(2))
+        terminal = self.store.retain_terminal(incoming, received_monotonic=100,
+            now_monotonic=100, now_timestamp_ms=1_000_000)
+        terminal_size = self.store.usage()["metadata_bytes"]
+        self.assertEqual(terminal_size, self.canonical_metadata_size())
+        self.assertEqual(self.ingest(incoming), terminal)
+        self.assertNotEqual(self.store.usage()["metadata_bytes"], terminal_size)
+        self.assertEqual(self.store.usage()["metadata_bytes"], self.canonical_metadata_size())
+        # The capacity check must see session/retirement mutations before save.
+        original_capacity = self.store._capacity
+        def capacity_after_session_change(*args, **kwargs):
+            self.assertEqual(self.store.usage()["metadata_bytes"], self.canonical_metadata_size())
+            return original_capacity(*args, **kwargs)
+        with patch.object(self.store, "_capacity", capacity_after_session_change):
+            self.ingest(self.publish(observation(3, session="another-longer-world")))
+        self.assertEqual(self.store.usage()["metadata_bytes"], self.canonical_metadata_size())
+
+    def test_reopen_lazily_measures_canonical_metadata_not_file_length(self):
+        self.ingest()
+        expected = self.canonical_metadata_size()
+        self.store.close()
+        path = self.directory / "evidence.json"
+        path.write_text(json.dumps(json.loads(path.read_bytes()), indent=4) + "\n")
+        self.assertNotEqual(path.stat().st_size, expected)
+        self.store = self.open_store()
+        with patch.object(self.store, "_manifest", wraps=self.store._manifest) as manifest:
+            self.assertEqual(self.store.usage()["metadata_bytes"], expected)
+            self.assertEqual(self.store.usage()["metadata_bytes"], self.canonical_metadata_size())
+            self.store.preflight_retention()
+            # One lazy measurement plus this test's independent canonical check.
+            self.assertEqual(manifest.call_count, 2)
+
+    def test_failed_atomic_save_does_not_reuse_primed_metadata_size(self):
+        before = self.ingest()
+        old_size = self.store.usage()["metadata_bytes"]
+        old_manifest = (self.directory / "evidence.json").read_bytes()
+        incoming = self.publish(observation(2))
+        with patch("harness.gameplay.evidence.os.replace", side_effect=OSError("synthetic replace failure")) as replace:
+            with self.assertRaisesRegex(EvidenceError, "Cannot persist evidence metadata"):
+                self.ingest(incoming)
+            self.assertEqual(replace.call_count, 2)
+        self.assertEqual((self.directory / "evidence.json").read_bytes(), old_manifest)
+        self.assertNotEqual(self.store.usage()["metadata_bytes"], old_size)
+        self.assertEqual(self.store.usage()["metadata_bytes"], self.canonical_metadata_size())
+        self.assertEqual(len(self.store.historical_references), 2)
+        self.store.verify(before)
+        with self.assertRaises(EvidenceError): self.current()
+
+    def test_failed_session_transition_and_dispute_invalidate_metadata_size(self):
+        before = self.ingest()
+        old_size = self.store.usage()["metadata_bytes"]
+        failed = observation(2, session="failed-longer-world")
+        failed["frame_ok"] = False
+        with patch("harness.gameplay.evidence.os.replace", side_effect=OSError("synthetic replace failure")):
+            with self.assertRaises(EvidenceError): self.ingest(failed)
+        self.assertNotEqual(self.store.usage()["metadata_bytes"], old_size)
+        self.assertEqual(self.store.usage()["metadata_bytes"], self.canonical_metadata_size())
+        self.store.close()
+        self.store = self.open_store()
+        old_size = self.store.usage()["metadata_bytes"]
+        changed = observation()
+        changed["scene"]["position"][0] = 1
+        with patch("harness.gameplay.evidence.os.replace", side_effect=OSError("synthetic replace failure")):
+            with self.assertRaises(EvidenceError): self.ingest(changed)
+        self.assertEqual(self.store.source_status(before), "disputed")
+        self.assertNotEqual(self.store.usage()["metadata_bytes"], old_size)
+        self.assertEqual(self.store.usage()["metadata_bytes"], self.canonical_metadata_size())
+
+    def test_metadata_size_is_unchanged_by_defensive_observation_and_export_copies(self):
+        incoming = self.publish()
+        reference = self.ingest(incoming)
+        expected = self.store.usage()["metadata_bytes"]
+        incoming["actions"].clear()
+        self.store.observation(reference)["scene"]["position"][0] = 99
+        exported, _ = self.store.export_source(reference.observation_id)
+        exported["observation"]["actions"].clear()
+        exported["reference"]["revision"] = 99
+        self.assertEqual(self.store.usage()["metadata_bytes"], expected)
+        self.assertEqual(expected, self.canonical_metadata_size())
+        self.assertEqual(self.store.position(reference), (0, 0, 0))
+        self.assertTrue(self.store.observation(reference)["actions"])
+
+    def test_source_invalidation_changes_metadata_size_before_attempting_save(self):
+        reference = self.ingest()
+        old_size = self.store.usage()["metadata_bytes"]
+        retained = Path(reference.frame_path)
+        retained.chmod(0o600)
+        retained.write_bytes(png(b"changed"))
+        with patch.object(self.store, "_save", side_effect=EvidenceError("synthetic unavailable writer")):
+            with self.assertRaisesRegex(EvidenceError, "synthetic unavailable writer"):
+                self.store.verify(reference)
+        self.assertNotEqual(self.store.usage()["metadata_bytes"], old_size)
+        self.assertEqual(self.store.usage()["metadata_bytes"], self.canonical_metadata_size())
+        with self.assertRaises(EvidenceError): self.current()
 
     def test_mission_caps_can_increase_retention_without_changing_defaults(self):
         from harness.gameplay.mission_contracts import MissionLimits
@@ -1096,18 +1219,29 @@ class EvidenceTests(unittest.TestCase):
     def test_usage_tolerates_indexed_source_loss_after_directory_listing_without_releasing_slot(self):
         reference = self.ingest()
         target = Path(reference.frame_path)
-        original = Path.iterdir
+        original = os.scandir
+        @contextmanager
         def lose_after_listing(path):
-            entries = list(original(path))
-            if path == self.store.frames:
-                target.unlink()
-            return iter(entries)
-        with patch.object(Path, "iterdir", lose_after_listing):
+            with original(path) as scan:
+                entries = list(scan)
+                if path == self.store.frames:
+                    target.unlink()
+                yield iter(entries)
+        with patch("harness.gameplay.evidence.os.scandir", lose_after_listing):
             measured = self.store.usage()
         self.assertEqual((measured["frames"], measured["bytes"]), (1, 0))
         self.assertEqual(self.store.historical_references, (reference,))
         with self.assertRaises(EvidenceError): self.store.source_status(reference)
         with self.assertRaises(EvidenceError): self.current()
+
+    def test_usage_propagates_unexpected_directory_and_entry_io_errors(self):
+        with patch("harness.gameplay.evidence.os.scandir", side_effect=PermissionError("scan denied")):
+            with self.assertRaisesRegex(PermissionError, "scan denied"): self.store.usage()
+        entry = Mock()
+        entry.stat.side_effect = PermissionError("stat denied")
+        with patch("harness.gameplay.evidence.os.scandir", return_value=nullcontext([entry])):
+            with self.assertRaisesRegex(PermissionError, "stat denied"): self.store.usage()
+        entry.stat.assert_called_once_with(follow_symlinks=False)
 
     def test_usage_still_rejects_directory_and_dangling_symlink(self):
         unexpected = self.store.frames / "unexpected"
