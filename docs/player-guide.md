@@ -208,6 +208,12 @@ consume **pre-reserve** input/wall/frame capacity: the declared cleanup reserve 
 not an extra spendable normal-ending allowance. Begin ending early enough for
 every remaining step. Children, Observe and handoff cannot reset original limits.
 
+Distinguish the brief's qualification criteria from its development stop rules.
+In a prospectively declared development run, missing a latency target or useful
+sample cohort rejects qualification but need not end useful play. Continue only
+if that brief permits it and the original resources/ending forecast still fit;
+never silently extend a run or turn filler actions into latency samples.
+
 Keep the current objective, task/Work, source, unresolved effects, active phase,
 remaining capacity and relevant memory/procedure invalidators in working context.
 Retrieve older detail for a reason. Do not wait for optional advice to continue

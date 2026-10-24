@@ -36,6 +36,16 @@ the slow current arrangement is not qualified. New requirements do not rewrite
 a frozen deciding run's acceptance. A functional run can remain useful evidence
 while failing to qualify responsiveness.
 
+Freeze both the qualification decision and development stopping policy. An
+uninstrumented interval or fewer than the required useful decisions establishes
+no percentile pass; a measured miss rejects the configuration. Neither alone
+requires an otherwise eligible, finite development run to end. Continue only
+within the original coupled forecast, ending deadline and authority/delivery
+constraints under the [development workflow](project-management.md#minimum-checks-and-escalation).
+Retain acquisition, repair, slow intervals and failures in total costs. Do not
+relax the numerical targets, retrospectively alter a frozen brief or call a
+seven-day functional result a responsive service without the required evidence.
+
 Native input, skill execution, observer presentation and player reasoning have
 separate clocks. A timeout is a ceiling, not a fixed delay: return immediately
 when the matching acknowledgement arrives. Use one higher-level player decision

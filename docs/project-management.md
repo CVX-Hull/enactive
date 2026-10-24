@@ -123,6 +123,21 @@ Routine gameplay keeps zero human/automatic approval-review round trips. The lea
 owns engineering and observes; development labeling does not authorize tactical
 rescue or make assisted evidence independent.
 
+Separate **qualification** from **development continuation** in each prospective
+brief. A missed latency target or incomplete useful-decision cohort rejects the
+configuration's responsiveness claim; alone it need not end an explicitly finite
+development campaign. Within its original limits, the player can continue useful
+survival, acquisition, revision and memory succession to expose the next important
+failure. Do not manufacture samples, count filler as progress or deploy the slow
+configuration as qualified. Freeze an ending deadline and reassess the coupled
+forecast at meaningful boundaries. Pause/custody loss and uncertain delivery still
+stop dispatch; insufficient ending capacity, terminal failure or unresolved
+authority/source uncertainty require the declared quiescence/ending procedure.
+No automatic extension, revival or retrospective change to a failed run follows.
+This applies the [existing non-myopic development distinction](research-executable-policies.md#evidence-matrix-and-project-judgment),
+not a guarantee of convergence. C-REVIEW checks the two decisions in the brief and
+closed evidence; C-USABILITY keeps the original acceptance criteria.
+
 ### Efficient discovery
 
 Optimize for useful uncertainty resolved and capability progress per unit of work.

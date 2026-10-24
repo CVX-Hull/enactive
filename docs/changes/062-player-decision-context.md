@@ -405,5 +405,34 @@ under the restricted sandbox; the supported socket-enabled rerun passes, without
 changing tests or bypassing guards. Independent design and implemented-diff review
 find no confirmed defects. Fast checks pass; actual fresh graphical continuation,
 useful cadence, exact candidate CI and protected publication remain unaccepted.
+
+## Closed fresh014/015: development must permit useful convergence
+
+Fresh014 on c7146e1 launches successfully but its Luna/low host imposes a stop:
+it mistakes filesystem read-only for a gameplay-tool ban and the not-yet-created
+world for missing capability. No continuation tool refuses. It sends no input,
+creates no world/job and retains one33,624-byte frame. Original host18.608s/exit0,
+driver1, adviser161.782s/cancelled1 and controller0; exceptional native exit0 is
+not normal ending. All owned runtime is closed and191saves unchanged. This is a
+configuration failure, not evidence of a source permission/native blocker or a
+causal model ranking.
+
+The [fresh015 report](../acceptance/2026-10-23-independent-seven-day-fifteenth-attempt.md)
+then records independent Sol/low fresh creation, supplies, ordinary discovery,
+transferred procedure use, new doorway authorship/reuse, actual claimed-advice
+overlap and normal ending. Only67game seconds pass. No day, successor, midpoint
+reload, changed-condition revision or responsiveness cohort is credited.
+The player followed a frozen policy that treated missing cadence qualification
+as a reason to end development. The prospective workflow now distinguishes those
+decisions: reject the configuration's qualification while allowing useful finite
+development under original resource/ending/authority constraints. This implements
+the prior research's non-myopic candidate-development distinction without assuming
+convergence, relaxing acceptance or retroactively changing015.
+
+The report also retains a genuine structured-visible-state gap and capture timing
+proxies without asserting causality. Existing issues own focused investigation
+before new adapters or frameworks. c7146e1's exact CI failed one existing lifecycle
+fixture's unlocked private verifier; independent contract review supports using
+the ledger's existing mutex in that fixture, not a production DB recovery layer.
 Precedingc17500b passes [exact CI40049271526](https://github.com/CVX-Hull/enactive/actions/runs/40049271526);
 that does not qualify this later source or any failed campaign.

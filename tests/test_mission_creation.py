@@ -887,7 +887,9 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
         adopted = self.finish_identity("load", world, 1)
         self.assertEqual(adopted["result"]["normal_adoption"]["saved_checkpoint_request_id"], "save-reconcile")
         self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 0)
-        self.runtime._ledger._verify(self.a)
+        # Cached result settlement does not make the writer connection idle.
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def reload_picker(self):
         self.create()

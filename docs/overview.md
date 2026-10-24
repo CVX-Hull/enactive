@@ -139,6 +139,14 @@ allowance. All owned runtime is closed and saves unchanged. Source follow-throug
 clarifies phase guidance/context location and refuses the known exit cost before
 input; actual independent survival/learning/cadence remain unaccepted.
 
+The [fresh015 assessment](acceptance/2026-10-23-independent-seven-day-fifteenth-attempt.md)
+adds actual fresh creation, supplies, a player-authored doorway routine reused at
+two doors, claimed-advice overlap and normal ending. It stops after67game seconds;
+no day, successor, midpoint reload or responsiveness qualification is credited.
+Its premature development ending motivates a prospective stopping-policy correction,
+while numerical acceptance remains unchanged. All owned runtime is closed and the
+failed world's normal save is reversibly archived; original saves are unchanged.
+
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and
 host. Failures and unknown acknowledgments stay recorded even when separate

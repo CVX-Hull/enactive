@@ -91,6 +91,15 @@ allowance. All owned runtime is closed and saves unchanged. Source follow-throug
 clarifies phase guidance/context location and refuses the known exit cost before
 input; actual independent survival/learning/cadence remain unaccepted.
 
+[Fresh015](acceptance/2026-10-23-independent-seven-day-fifteenth-attempt.md) creates
+a fresh character, gathers supplies and reuses a newly authored doorway procedure,
+then normally ends after67game seconds. No day, successor, midpoint reload or
+cadence pass is credited. The assessment owns costs, representation/timing limits,
+the failed exact-source CI and cleanup. The next coherent development checkpoint
+separates qualification from finite continuation, fixes passive host outcomes and
+profiles existing execution stages; GitHub retains action ownership and the full
+independent learning/seven-day/cadence outcome.
+
 | Evidence | What it establishes; the linked report owns details and limits |
 | --- | --- |
 | [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) | Bounded supply/shelter play, memory correction, fresh-context continuation and normal lifecycle |

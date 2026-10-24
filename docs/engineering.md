@@ -38,7 +38,10 @@ Qualify apparent responsiveness for the complete player configuration, including
 host context, model work, tools, execution and display. Freeze numerical useful-
 progress, stall and quality criteria before the measured attempt; retain loading,
 long activities, failures and exceptions in separate declared cohorts and the
-whole-run accounting. Reject configurations that miss the criteria. A slow model
+whole-run accounting. Reject configurations that miss the criteria. Keep this
+qualification decision separate from finite development continuation under the
+[prospective stopping policy](project-management.md#minimum-checks-and-escalation);
+missing qualification alone need not terminate useful development. A slow model
 may remain where genuinely useful authorized execution covers its delay and the
 whole configuration qualifies; filler actions or animation cannot hide waiting.
 Tool duration, cached-token share and engine ACK speed alone do not establish
@@ -516,7 +519,9 @@ known limitations are explicit and the lead verifies evidence. Fast development
 checkpoints improve reviewability and expose actual integration failures before
 full qualification; preserve unsuccessful attempts. Use the development-first
 checkpoint table rather than treating every attempt as formal acceptance. Review
-should improve overall code health without indefinite polish or stylistic vetoes.
+the stopping policy as well as the success criteria: finite development must allow
+useful investigation without granting deployment acceptance or erasing limits.
+Review should improve overall code health without indefinite polish or stylistic vetoes.
 Controls: C-REVIEW, C-RELEASE, C-USABILITY.
 
 ## S-MIGRATION One current contract, coordinated migration
