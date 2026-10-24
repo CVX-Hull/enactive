@@ -74,7 +74,7 @@ def main(argv: list[str] | None = None) -> int:
         raise ValueError("\n".join(errors))
     print("Required documents and local Markdown file links: passed", flush=True)
     run([sys.executable, "-m", "tools.documents"])
-    run([sys.executable, "tools/governance.py"])
+    run([sys.executable, "tools/governance.py"] + (["--development"] if args.fast else []))
     if not args.fast:
         run([sys.executable, "tools/diagrams.py"])
         run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v"])

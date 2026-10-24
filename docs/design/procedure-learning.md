@@ -90,7 +90,7 @@ must include required procedures and source coverage in the handoff fit check.
 
 Freeze transitive closure explicitly: a revision's identity is its owning mission
 plus immutable revision ID; episode request/source IDs are qualified by their own
-mission. Admission lists at most4 source missions with exact ledger/index hashes,
+mission. Admission lists at most8 source missions with exact ledger/index hashes,
 including every predecessor and evidence mission needed by imported revisions.
 Only the current schema is eligible as library input; old run formats remain
 historical evidence, not a compatibility reader in live retrieval. The read-only

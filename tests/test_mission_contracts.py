@@ -6,7 +6,7 @@ import unittest
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.mission_contracts import (
     CleanupReserve, Configuration, InputObservation, MissionAdmission, MissionLimits, Scenario, SourceBinding, SourceRevalidation,
-    MAX_REQUEST_BYTES, validate_memory_entry, validate_request, validate_submission, validate_visible_ui,
+    LearningPolicy, LibrarySource, MAX_REQUEST_BYTES, validate_memory_entry, validate_request, validate_submission, validate_visible_ui,
 )
 
 
@@ -113,6 +113,26 @@ class MissionContractTests(unittest.TestCase):
         with self.assertRaises(ContractError): SourceRevalidation(original.to_dict(), current, "native_state")
         with self.assertRaises(ContractError): SourceRevalidation.from_dict({**refreshed.to_dict(), "grants_authority": True})
         with self.assertRaises(ContractError): SourceBinding.from_dict({**original.to_dict(), "epoch": True})
+
+    def test_learning_admission_accepts_eight_exact_pins_and_refuses_ninth(self):
+        from tests.test_procedures import procedure
+
+        pins = tuple(LibrarySource(f"donor-{index}", "a" * 64, "b" * 64) for index in range(9))
+        policy = LearningPolicy(procedure()["environment"], pins[:8])
+        current = admission(learning=policy)
+        self.assertEqual(MissionAdmission.from_dict(current.to_dict()), current)
+        self.assertEqual(len(current.to_dict()["learning"]["library_sources"]), 8)
+        with self.assertRaises(ContractError):
+            LearningPolicy(procedure()["environment"], pins)
+        encoded = current.to_dict()
+        encoded["learning"]["library_sources"].append(
+            {"mission_id": pins[8].mission_id, "ledger_sha256": "a" * 64, "index_sha256": "b" * 64})
+        with self.assertRaises(ContractError):
+            MissionAdmission.from_dict(encoded)
+        with self.assertRaises(ContractError):
+            LearningPolicy(procedure()["environment"], pins[:7] + pins[:1])
+        with self.assertRaises(ContractError):
+            admission(mission_id="donor-0", learning=policy)
 
     def test_admission_roundtrip_is_typed_and_immutable(self):
         original = admission()

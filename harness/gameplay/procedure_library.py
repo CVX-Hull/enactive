@@ -24,7 +24,7 @@ from .evidence import (
     MAX_FRAME_BYTES, MAX_FRAMES, MAX_BYTES, MAX_METADATA_BYTES, MAX_AGE_SECONDS, MAX_HISTORICAL_LAG_SECONDS, _check_frame_bytes,
     _identity, _validate_observation,
 )
-from .mission_contracts import MissionAdmission, validate_effect_reconciliation, validate_request
+from .mission_contracts import MAX_LIBRARY_SOURCES, MissionAdmission, validate_effect_reconciliation, validate_request
 from .mission_ledger import DB_VERSION, MissionLedger, _intent, _primitive_parent, _ordinary_sequence
 from .native_receipts import compact_native_ack, validate_ordinary_mapping
 from .procedures import MAX_PROCEDURE_RECORDS, procedure_schema, project_procedures, validate_procedure
@@ -59,8 +59,8 @@ def _sha(value: Any) -> None:
 
 def _pins(sources: Sequence[dict], current: str) -> dict[str, dict]:
     if (not isinstance(sources, Sequence) or isinstance(sources, (str, bytes, bytearray))
-            or len(sources) > 4):
-        raise ProcedureLibraryError("Library requires at most four explicit source pins")
+            or len(sources) > MAX_LIBRARY_SOURCES):
+        raise ProcedureLibraryError(f"Library requires at most {MAX_LIBRARY_SOURCES} explicit source pins")
     result = {}
     for value in sources:
         if type(value) is not dict or set(value) != {"mission_id", "ledger_sha256", "index_sha256"}:

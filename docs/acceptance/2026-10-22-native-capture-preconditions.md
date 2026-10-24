@@ -110,7 +110,7 @@ unresolved effect or process owner. Raw ledger/index/journal/host copies and the
 original freeze remain local. The single current controller is retained for the
 next genuinely fresh campaign; it grants no old-world authority. The technical
 world's51files were hash-verified into a local archive before active-menu retirement;
-all191prior accepted-world files remain unchanged. The [environment ledger](../environment.md#user-directed-stale-save-cleanup-2026-10-22)
+all191prior accepted-world files remain unchanged. The [environment ledger](https://github.com/CVX-Hull/enactive/blob/de73b79b28a1aa61f1cb99fbf8642d62bc81d722/docs/environment.md#user-directed-stale-save-cleanup-2026-10-22)
 owns archive hash and restoration details. Protected
 publication and the full [#145 outcome](https://github.com/CVX-Hull/enactive/issues/145)
 remain separate.

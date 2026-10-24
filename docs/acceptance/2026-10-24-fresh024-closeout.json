@@ -1,0 +1,173 @@
+{
+  "scope": "Offline failed Fresh024 closeout; no normal ending, new gameplay or causal benefit",
+  "archive": {
+    "archive": ".runtime/campaign-closeout/independent-seven-day-024/failed-run-and-world.tar",
+    "archive_bytes": 709959680,
+    "archive_sha256": "0d8a398ada95aef2cbdb1695d526a87ee673bb8d6aa4ae11c45aaeb3deabbebd",
+    "member_count": 3882,
+    "member_bytes": 702992527,
+    "preexisting_save_count": 191,
+    "preexisting_saves_unchanged": true,
+    "retired": true,
+    "remaining_active_worlds": [
+      "Belgium",
+      "Enactive Twenty Four",
+      "EnactiveLearningSix"
+    ]
+  },
+  "five_donor_mount": {
+    "at": 1792866485.729811,
+    "scope": "Current strict read-only library mount; closed paused donor eligibility, not normal ending, gameplay or causal benefit",
+    "pins": [
+      {
+        "index_sha256": "a0c46c3bd543fbc5991c947aac6a7adefda6a0481c1e6f6e56da48207064dbf1",
+        "ledger_sha256": "ebb9638ef8caa0dec62d75ef96641fc6e4c22707ace2030c704ddeb8a2832654",
+        "mission_id": "discovery-learning-009"
+      },
+      {
+        "index_sha256": "7bde44f2911515c8f1a7941aae894f530b18ab0fbf504fd1ff0e34b6863d39bf",
+        "ledger_sha256": "311c24d3588111a8cf5b701db40807c7635ff8a8f1c6516a42efbac032c2434c",
+        "mission_id": "discovery-learning-010"
+      },
+      {
+        "index_sha256": "6907a6490faa70de017fc0e1531fe2427e27caa9390d347e9c41f1584ae4a291",
+        "ledger_sha256": "2dd61bf6184e940ffb8f8b622f2aacfabe89180f00e14805f6825e136b9b5513",
+        "mission_id": "independent-seven-day-015"
+      },
+      {
+        "index_sha256": "12c1ead45bc74403950581123468637fc6794d5a256d7560b9cf0fb3cd69ab2e",
+        "ledger_sha256": "f08c53fc1d734a9ee63da0a1f040f8a65b3ebd12b489a7cdc9d342762791833e",
+        "mission_id": "independent-seven-day-023"
+      },
+      {
+        "mission_id": "independent-seven-day-024",
+        "ledger_sha256": "9144c5f9d978144494fbe7b95fea8b821a1ea116e46fa28ef2cd51e53b8289f7",
+        "index_sha256": "47e5b9cd55556f2bdb1775faf1f25b886788f960b54ecfe10dacb45754834a44"
+      }
+    ],
+    "records": 23,
+    "mount_seconds": 7.586641708388925,
+    "process_peak_rss_bytes": 221937664,
+    "measurement": "Darwin fresh Python process peak includes admission/hash reads; timer covers mount and records only",
+    "frozen_envelope": {
+      "wall_seconds": 30,
+      "process_peak_rss_bytes": 536870912
+    },
+    "source_baseline": "de73b79 plus reviewed shared-eight-cap source patch",
+    "all_ledger_index_hashes_unchanged": true
+  },
+  "public_images": [
+    {
+      "path": "docs/assets/fresh024-final-prompt.png",
+      "bytes": 217346,
+      "sha256": "8aeb1dd61a05f2258e1b686581412b857edfe7d53ccaa997d03a3da02d277be2"
+    },
+    {
+      "path": "docs/assets/fresh024-wait-menu.png",
+      "bytes": 195483,
+      "sha256": "a6d1adaf2a97ca3595682dab60cf6c228fe8d08ad04da0aef8ce291bd6040a53"
+    }
+  ],
+  "cost_accounting": {
+    "roles": {
+      "driver-original": {
+        "host_span_seconds": 15758.67695903778,
+        "returncode": 0,
+        "reported_usage": {
+          "input_tokens": 193737142,
+          "cached_input_tokens": 190977536,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 121785,
+          "reasoning_output_tokens": 60465
+        },
+        "completed_item_counts": {
+          "mcp_items": 937,
+          "failed_status_items": 14,
+          "text_blocks": 937,
+          "text_utf8_bytes": 6244081,
+          "command_execution_items": 14,
+          "image_blocks": 866,
+          "remember_attempts": 21,
+          "top_level_errors": 4,
+          "error_items": 1
+        }
+      },
+      "active-adviser-activated": {
+        "host_span_seconds": 1293.5687170028687,
+        "returncode": 0,
+        "reported_usage": {
+          "input_tokens": 8577302,
+          "cached_input_tokens": 8412160,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 12812,
+          "reasoning_output_tokens": 92
+        },
+        "completed_item_counts": {
+          "mcp_items": 62,
+          "failed_status_items": 0,
+          "text_blocks": 62,
+          "text_utf8_bytes": 568338,
+          "image_blocks": 13
+        }
+      },
+      "player-preflight": {
+        "host_span_seconds": 11.025726079940796,
+        "returncode": 0,
+        "reported_usage": {
+          "input_tokens": 34652,
+          "cached_input_tokens": 24064,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 174,
+          "reasoning_output_tokens": 0
+        },
+        "completed_item_counts": {
+          "mcp_items": 1,
+          "failed_status_items": 0,
+          "text_blocks": 1,
+          "text_utf8_bytes": 1689
+        }
+      },
+      "adviser-preflight": {
+        "host_span_seconds": 9.258900880813599,
+        "returncode": 0,
+        "reported_usage": {
+          "input_tokens": 34274,
+          "cached_input_tokens": 24192,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 224,
+          "reasoning_output_tokens": 0
+        },
+        "completed_item_counts": {
+          "mcp_items": 1,
+          "failed_status_items": 1,
+          "text_blocks": 1,
+          "text_utf8_bytes": 31
+        }
+      }
+    },
+    "total_reported_usage": {
+      "input_tokens": 202383370,
+      "cached_input_tokens": 199437952,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 134995,
+      "reasoning_output_tokens": 60557
+    },
+    "adviser_jobs": 16,
+    "adviser_charged_seconds": 1920.0,
+    "observed_claim_to_submit_seconds": 224.2292218208313,
+    "deterministic_driver": {
+      "exit_code": 1,
+      "outcome": "incomplete",
+      "separate_model_usage": "not applicable; orchestration overhead unmeasured"
+    },
+    "successor": "not activated; empty trace and no recorded usage",
+    "interpretation": "Cached counters are within input counters. Reasoning-output is a separate reported counter, not added to output. Host/job spans overlap and are not inference or summed campaign elapsed time. MCP bytes count text blocks only, excluding arguments, structured-content duplication, command output, prompts and other surfaces.",
+    "unknown": [
+      "monetary cost",
+      "isolated inference",
+      "hidden approval delay",
+      "complete engineering/cleanup overhead",
+      "joined useful-decision latency cohort"
+    ]
+  }
+}

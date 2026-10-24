@@ -19,6 +19,15 @@ input?” Solid arrows carry ordinary play/memory updates; dotted arrows carry
 bounded advisory data. Boxes are logical roles, not necessarily separate processes.
 The flow below is its text equivalent. [Editable source](../diagrams/asynchronous-reflection.mmd).
 
+The current library permits eight explicit donor pins to cover the observed
+four-ancestor plus fifth-donor continuation. Full donor closure and exact archive
+pins remain mandatory, including for a self-contained procedure in that donor.
+The existing aggregate 256-record and context/handoff/image bounds still apply;
+there is no recursive fetch, pruning or compatibility reader. This bounded
+headroom is not a long-campaign scalability claim. Revisit the representation
+when measured closure, payload or setup cost approaches those limits under
+[#177](https://github.com/CVX-Hull/enactive/issues/177).
+
 ## Internal responsibilities
 
 | Block | State and responsibility | Implementation |

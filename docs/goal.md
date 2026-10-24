@@ -1,8 +1,12 @@
 ---
 owner: lead
-status: active
-review_trigger: User changes scope, constraints or acceptance; milestone completion
+status: historical
+date: 2026-10-24
+scope: Consolidated user requests through the recorded campaign extensions; historical outcome context, not live acceptance or sequencing
 ---
+
+Historical consolidated request record. The body below preserves prior requests and checkpoints; its uses of “current”, “active” and “next” refer to that recorded context. The [charter](charter.md) owns durable purpose and constraints, [operator permissions](operator-permissions.md#finite-gameplay-budget-delegation) owns the standing finite-budget delegation, and [GitHub Issues/Project](work.md) own live outcomes, acceptance and sequencing. This page is not a second project goal or backlog.
+
 
 # Project goal
 
@@ -42,7 +46,7 @@ Use the first run's water-possession corrections, interrupted craft and uncertai
 rest as development cases. Prefer composed engine activities and bounded travel
 over a model decision per key. Keep optional curator, model-tier comparisons,
 training and broader efficacy studies outside this iteration unless an observed
-blocker makes them necessary. [The work map](work.md#selected-independent-player-iteration)
+blocker makes them necessary. [The work map](work.md#campaign-delivery-path)
 explains the path; GitHub owns live sequencing and allocation. Finite deciding/
 cleanup limits are frozen only after integrated source and native preflight,
 not by this goal.

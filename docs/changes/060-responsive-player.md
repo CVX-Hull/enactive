@@ -1,8 +1,12 @@
 ---
 owner: lead
-review_trigger: Player host, tool presentation, context, model configuration or responsiveness evidence changes
-status: proposed
+status: historical
+date: 2026-10-23
+scope: Historical responsiveness proposal and accumulated diagnostic evidence; not current architecture or operating instructions
 ---
+
+Historical proposal and diagnostic record. Earlier contracts, actor instructions, pending claims and numerical proposals below retain their original scope; this page does not adopt every proposed threshold or define current support. Use the [player interface](../components/player-interface.md), [mission execution](../components/mission-execution.md), [protocol](../protocol.md) and [evaluation](../evaluation.md#latency-budgets-for-interactive-play) for current responsibilities, interfaces and measurement. [#164](https://github.com/CVX-Hull/enactive/issues/164) owns remaining responsiveness work.
+
 
 # Responsive independent play
 

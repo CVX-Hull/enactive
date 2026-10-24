@@ -161,7 +161,7 @@ recorded process-check receipt supports that narrower claim.
 
 All 43 failed-world files were verified in the private ordinary tar archive before
 removing the active menu copy; all 191 accepted-world files remained unchanged.
-[Environment](../environment.md#user-directed-stale-save-cleanup-2026-10-22) owns
+[Environment](https://github.com/CVX-Hull/enactive/blob/de73b79b28a1aa61f1cb99fbf8642d62bc81d722/docs/environment.md#user-directed-stale-save-cleanup-2026-10-22) owns
 archive/restoration details. Mission evidence and original unknowns remain intact.
 
 The [current contract](../protocol.md#ordinary-discovery-and-procedure-data)
