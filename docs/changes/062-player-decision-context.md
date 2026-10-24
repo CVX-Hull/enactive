@@ -354,3 +354,56 @@ context sufficiency and actual independent continuation; no new policy layer is
 needed. GitHub#143/#164/#178 also own host-terminal spectator visibility, local
 validation-error feedback and advisory terminal-tail costs. These remain gaps,
 not implemented capabilities or reasons to replace the full campaign outcome.
+
+
+## Closed fresh013: setup consent and unaffordable exit
+
+Fresh013 on224cc59/native690fe96 uses a fresh Luna/low deciding context. It
+obtains a snapshot, launches and corrects malformed scope/direct arguments. Its
+first well-formed direct child requests activity-interruption consent that the
+Create root does not grant. Validation refuses without input and leaves the
+original phase available. The player abandons setup instead of choosing a
+corrected child. Its subsequent one-primitive exit root charges Resume, then
+cannot afford the built-in Quit. Reconciliation does not restore custody; the
+player exits0 after65.442s and the driver refuses a successor (1). No world,
+character adoption, survival, procedural learning or normal game ending is credited.
+
+Retained costs:8ledger requests (3completed/3blocked/2partial),2charged returned
+Resume primitives,10frames/335,740bytes,21player MCP calls/62,069text bytes/7images.
+The adviser completes3jobs with7calls/48,134text bytes/0images over128.279host
+seconds including waiting/cancellation (1). Native exits0 after exceptional
+SIGTERM, explicitly normal_exit_verified=false; controller exits0. All owned
+processes/listener are absent and191original saves unchanged. Private013 evidence
+retains raw host streams, exact refusals, stopped ledger/frames, shutdown receipts
+and save-integrity manifests. Host spans/returned bytes are not inference time,
+billing, unique context or display latency. World-creation loading remains untested.
+
+Independent design review confirms a deterministic immediate-cost gap and missing
+phase guidance; it does not justify a flat-tool redesign. The source-derived
+nested schemas are complete; a player's claim that the host showed `unknown`
+is not a captured host declaration. The driver also omitted the frozen directory's
+location, provoking avoidable discovery. Follow-through supplies absolute frozen
+context/index paths, descriptive effective lifecycle direct consent and actionable
+local refusal, and rejects an unaffordable paused-menu Resume/Quit plan before
+installing a phase or sending input. The separate menu-only setup abort remains
+zero-input. A newly chosen sufficient exit still needs ordinary completion proof;
+no allowance or failed013authority is renewed.
+
+MCP5.2.1 additionally marks proven ordinary source/request-composition refusals
+`submission=not_submitted` without an original collection handle. Staging, dispatch
+and presentation failures retain their original uncertain collection identity.
+This uses a narrow typed pre-submission boundary, not exception-text classification,
+a second staging store, silent source selection or retry. Current guide/protocol/
+architecture/setup follow the same contract. Existing S-UX/S-ARCH/S-CODE and
+C-REVIEW/C-USABILITY cover this work; no new approval or policy layer is introduced.
+Focused checks and actual next-run qualification remain separate evidence lanes.
+
+
+Source verification:78exit/ordinary-lifecycle/driver tests and40player MCP/validation/
+HTTP-lifecycle tests pass. The latter initially hits21loopback-fixture EPERM errors
+under the restricted sandbox; the supported socket-enabled rerun passes, without
+changing tests or bypassing guards. Independent design and implemented-diff review
+find no confirmed defects. Fast checks pass; actual fresh graphical continuation,
+useful cadence, exact candidate CI and protected publication remain unaccepted.
+Precedingc17500b passes [exact CI40049271526](https://github.com/CVX-Hull/enactive/actions/runs/40049271526);
+that does not qualify this later source or any failed campaign.

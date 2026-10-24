@@ -20,7 +20,7 @@ uncertainty and differing views retained. Discriminated malformed intents get
 bounded branch-specific schema errors before staging, with no repaired/defaulted input.
 One bounded producer-local fingerprint avoids identical implicit image parts in a
 known unchanged player/control context; explicit image reads remain complete.
-MCP server5.2.0 assigns request identities and bounded result waits before invoking
+MCP server5.2.1 assigns request identities and bounded result waits before invoking
 the existing imperative SDK. Its public schemas reject caller-owned IDs/waits;
 snapshot/source, scope, execution limits and semantic decisions remain explicit.
 Errors preserve assigned original collection arguments through the presentation
@@ -41,6 +41,10 @@ and exact quiescent internal-handoff verification, including current controller/
 native Pause binding. It assigns identity separately from the issued role and
 performs no gameplay, memory adoption, Claim or readmission. Original finite
 resources stay in the runtime; the driver's terminal report is not acceptance.
+The driver supplies absolute frozen-context/index paths to both hosts. Lifecycle
+summaries describe their effective ordinary-child interruption consent. A known
+insufficient paused-menu exit allowance refuses before its fixed Resume/Quit plan
+starts; no input, phase installation or allowance renewal follows that refusal.
 Actual launch qualification remains open in [delivery062](changes/062-player-decision-context.md).
 The prior wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.

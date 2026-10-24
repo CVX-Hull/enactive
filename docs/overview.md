@@ -133,6 +133,11 @@ loading hypothesis, with routine responsiveness and full survival gates unchange
 The subsequent [012 startup failure](changes/062-player-decision-context.md#closed-fresh012-correctable-startup-argument-failure)
 sends no game input; its closed evidence motivates explicit initial-snapshot
 guidance and a fresh deciding context, leaving that loading hypothesis untested.
+[Fresh013](changes/062-player-decision-context.md#closed-fresh013-setup-consent-and-unaffordable-exit)
+launches but stops before creation after a consent refusal and insufficient exit
+allowance. All owned runtime is closed and saves unchanged. Source follow-through
+clarifies phase guidance/context location and refuses the known exit cost before
+input; actual independent survival/learning/cadence remain unaccepted.
 
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and

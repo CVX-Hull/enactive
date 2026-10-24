@@ -148,14 +148,14 @@ Coverage gap: Human judgment; no automated usability score or user study is clai
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-23. Outcome: Fresh011 fails before character adoption or useful-play cadence; original unknown retained and no successor launched. Bounded functional009/010 evidence remains positive; full cadence/survival unqualified.
-Scope: Frozene56671b/native690,Luna-low/defaults,3settled advisoryjobs,player host0/driver1/adviser cancellation1,exceptionalnativeexit0 not normalending;191originalsavesunchanged. No causal model or input-delivery claim.
+Last exercise: 2026-10-23. Outcome: Fresh012 fails before launch;013 launches but fails before creation after local consent refusal and undersized exit. No survival, learning or cadence accepted;009/010 bounded positives remain.
+Scope: 0120inputs/8.151playerhost seconds;0132returnedResumeprimitives/65.442playerhost seconds,21calls/62069textbytes/7images;adviser128.279seconds includes idle/cancellation. Allownedprocessesclosed,191savesunchanged; exceptionalnativeexit0 not normalending.
 Exercise evidence: [docs/changes/062-player-decision-context.md](../docs/changes/062-player-decision-context.md).
 
 Maintenance review: 2026-10-23. Effectiveness: partially_effective.
-Findings: Controls expose unaccepted outcome and retain actual counters/unknowns.011 driver phase report was stale on quiescence refusal; source now retains matched status/phase first, with27focused tests and independent review. Same-session diagnostic contradicts an initial session-rotation inference; specific ACK cause remains unknown. No protocol rewrite or historical-error blacklist inferred.
-Cost: Original host213.153s,44MCPcalls/229054textbytes/38images;adviser475.822s includes waiting/cancellation,16calls/84608bytes/1image;3jobs charge360windowseconds. Full source/native/browser/cleanup limits are in062; bytes/spans are not modelcompute, billing or paint.
-Follow-up: #164 actual whole-player cadence and prospective supported15-second transport ceiling in the next genuinely fresh development campaign; unchanged2s/5s routine targets, full loading/repair/ending cost. #178 eliminate avoidable advisory waiting after player termination. #143 current/historical startup diagnostics. #145 full7day/learning/lifecycle/exactCI/protectedpublication remains open; periodic review date unchanged.
+Findings: Actual independent context reveals concrete ergonomics gaps: empty initial handle, undisclosed lifecycle child consent, missing frozen-context paths and predictable Resume/Quit allowance failure. Current source supplies phase guidance, actionable refusal, absolute paths and zero-input known-cost preflight. These source checks do not qualify play or cadence.
+Cost: Retained012/013 hosts, input/ledger/frame/save and shutdown evidence in062; no new framework/control tier. Adviser waiting is a measured cost, not all compute.
+Follow-up: #164 new independent whole-player continuation/cadence and supported15second creation/loading test; #178 existing local-validation feedback/advisory terminal-tail work; #143 host-terminal/current-versus-history visibility; #145 full7day/learning/lifecycle/protectedpublication remains open.
 Review evidence: [docs/changes/062-player-decision-context.md](../docs/changes/062-player-decision-context.md).
 
 Next review: 2027-01-15.
@@ -200,14 +200,14 @@ Coverage gap: No code checker proves reasoning quality, typing completeness, dec
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-23. Outcome: Independent handoff/host-boundary/doc review and actual011 field verification; source corrections pass focused checks, actual new-candidate qualification remains required.
-Scope: Current controller binding, original host termination, role/identity separation,required hostoption,matched paused/unresolved failure snapshot retention; corrected source-field attribution. No per-action review or tactical rescue.
+Last exercise: 2026-10-23. Outcome: Independent clean-context013 ergonomics design and implemented-diff review; no confirmed defects after bounded repairs. Real new-candidate qualification remains required.
+Scope: Pure composition versus uncertain submission boundary; lifecycle consent remains explicit; immediate exit cost checked before Resume; zero-input setup abort preserved; absolute frozen paths for original/successor. No API redesign inferred from unverified host unknown-shape claim.
 Exercise evidence: [docs/changes/062-player-decision-context.md](../docs/changes/062-player-decision-context.md).
 
 Maintenance review: 2026-10-23. Effectiveness: partially_effective.
-Findings: Review resolves current-controller-state loss, identity/role conflation and documentedrequired configuration mismatch before real play.011 reveals separate stale failure-phase metadata, now covered. Lead cross-check retracts explorer boundary-ID/session confusion; unknown ACK cause is not asserted by analogy. Existing supported transport configuration is preferred over an unproved native/protocol redesign.
-Cost: One isolated bounded driver worker, clean-context read-only reviews,79localHTTP/lifecycle/adapter tests and27driver tests; reviewer loopback fixture EPERM retained separately from lead pass. No new framework/store/approval ceremony.
-Follow-up: Fresh actual activation and full learning/cadence/survival with unchanged native/identity/Pause/uncertainty guards; exact candidate/protected-main CI and honest process cleanup. Existing#136/#145/#164/#176/#178/#191 retain ownership; review dates unchanged.
+Findings: Review verifies exactsource/trace rather than model assertion: complete SDK schemas do not prove host-rendered schemas. Confirmed predictable exit cost and missing context/phase guidance are repaired through existing facilities. Post-staging/presentation failures retain original collection identity.
+Cost: One clean-context reviewer reused for design and diff review,78lifecycle/driver regression tests; player SDK/HTTP tests separately recorded. No independent per-action approval, extra store or capability engine.
+Follow-up: Qualify a genuinely fresh deciding player on frozen repaired source through useful independent learning/cadence/survival and normal lifecycle. Exact candidate/protected-main CI, current artifacts and resource cleanup remain distinct gates.
 Review evidence: [docs/changes/062-player-decision-context.md](../docs/changes/062-player-decision-context.md).
 
 Next review: 2027-01-15.

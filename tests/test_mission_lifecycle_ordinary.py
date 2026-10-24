@@ -44,6 +44,29 @@ class OrdinaryLifecycleTests(MissionCreationFixture, unittest.TestCase):
             return super().behavior(bridge, {**request, "action": action})
         return super().behavior(bridge, request)
 
+    def test_lifecycle_consent_refusal_keeps_same_root_for_explicit_corrected_child(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        phase = self.runtime._registered_lifecycle.phase
+        root = self.runtime._ledger.request("create")
+        before = list(self.bridge.delivered)
+        spent = self.runtime.status()["spent_inputs"]
+        self.assertFalse(self.runtime.status()["lifecycle_phase"]["direct_interrupt_allowed"])
+        invalid = self.raw("wrong-consent", "ENTER")
+        invalid["goal"]["interrupt_allowed"] = True
+        refused = self.runtime.command(invalid)
+        self.assertEqual(refused["status"], "rejected", refused)
+        self.assertIn("interrupt_allowed=false", refused["reason"])
+        self.assertIn("not admitted", refused["reason"])
+        self.assertEqual(self.bridge.delivered, before)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        corrected = self.run_request(self.raw("corrected-consent", "ENTER"))
+        self.assertEqual(corrected["state"], "partial", corrected)
+        self.assertEqual(self.runtime._registered_lifecycle.phase.root_id, phase.root_id)
+        self.assertEqual(self.runtime._ledger.request("create")["deadline"], root["deadline"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent + 1)
+
     def test_raw_creation_intermediate_save_cancel_reload_and_history(self):
         self.raw_confirmations, self.spare_points, self.raw_exit = True, True, True
         self.create()

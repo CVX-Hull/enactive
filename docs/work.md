@@ -85,6 +85,11 @@ no world/input/advisory job is created and original saves are unchanged. The gui
 clarifies the initial snapshot and correctable local errors; the next fresh player
 uses a separate deciding context. The loading hypothesis remains unexercised;
 GitHub retains the full outcome and related interface/observer/reflection work.
+[Fresh013](changes/062-player-decision-context.md#closed-fresh013-setup-consent-and-unaffordable-exit)
+launches but stops before creation after a consent refusal and insufficient exit
+allowance. All owned runtime is closed and saves unchanged. Source follow-through
+clarifies phase guidance/context location and refuses the known exit cost before
+input; actual independent survival/learning/cadence remain unaccepted.
 
 | Evidence | What it establishes; the linked report owns details and limits |
 | --- | --- |

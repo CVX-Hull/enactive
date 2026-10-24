@@ -399,6 +399,7 @@ class MissionRuntime:
                 "observation_needed": self._prompt_phase.observation_generation is not None, "grants_authority": False},
             "lifecycle_phase": self._registered_lifecycle.summary() if self._exit_phase is None else {
                 "origin_request_id": self._exit_phase.root_id, "operation": "exit",
+                "direct_interrupt_allowed": False,
                 "checkpoint_id": self._exit_phase.checkpoint.observation_id, "grants_authority": False},
             "activity_phase": self._registered_activity.summary(),
             "reflection": self._registered_reflection.summary(),
@@ -1591,6 +1592,14 @@ class MissionRuntime:
             raise ControlError("Untouched exit requires its exact paused main-menu binding")
         ledger = self._ledger.snapshot(now=self._wall())
         saved = self._registered_lifecycle.saved_exit_checkpoint()
+        # This immediate plan always charges Resume and Quit separately. Refuse
+        # an unaffordable draft before installing a phase or sending either.
+        if data["limits"]["primitives"] < 2:
+            return "blocked", {"reason": "Owned paused-menu exit requires at least2 primitives for "
+                "Resume plus Quit, before any later confirmation. No input was sent or exit phase "
+                "installed. Choose a separate new exit request with a sufficient finite allowance; "
+                "original mission limits remain unchanged.", "required_primitives": 2,
+                "source_ids": [launch.checkpoint.observation_id], "grants_authority": False}
         self._exit_phase = phase = _ExitPhase(data["request_id"], launch.checkpoint, launch,
             ledger["player_id"], ledger["epoch"], saved)
         phase = self._refresh_exit(work, phase)

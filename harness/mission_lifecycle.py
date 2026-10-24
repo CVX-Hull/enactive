@@ -120,6 +120,7 @@ class RegisteredLifecycle:
         checkpoint = phase.checkpoint if self.candidate is None else self.candidate.latest_after or phase.checkpoint
         root = self.runtime._ledger.request(phase.root_id)
         return {"origin_request_id": phase.root_id, "operation": phase.operation,
+            "direct_interrupt_allowed": False,
             "stage": "awaiting_transition" if self.candidate is not None else phase.stage,
             "remaining_limits": {
                 "wall_seconds": max(0, root["deadline"] - self.runtime._wall()),

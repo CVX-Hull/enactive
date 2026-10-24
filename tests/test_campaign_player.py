@@ -181,9 +181,11 @@ class CampaignPlayerTests(unittest.TestCase):
         self.assertIn("resume", original.args)
         self.assertEqual(original.args[original.args.index("resume") + 1], "old-thread")
         self.assertNotIn("resume", successor.args)
-        self.assertEqual(original.prompt, "original frozen prompt\n")
+        location = (f"Frozen context directory: {self.run / 'frozen'}\n"
+            f"Focused current-schema index: {self.run / 'frozen' / 'interface' / 'index.json'}\n\n")
+        self.assertEqual(original.prompt, location + "original frozen prompt\n")
         generic, assignment = successor.prompt.split("\n\nMechanical player assignment:\n")
-        self.assertEqual(generic, "generic frozen successor brief\n")
+        self.assertEqual(generic, location + "generic frozen successor brief\n")
         assignment = json.loads(assignment)
         self.assertEqual(assignment, dict(mission_id="mission", actor_id="successor-mechanical-uuid", actor_role="successor",
             handoff_id="issued-handoff", epoch=3,

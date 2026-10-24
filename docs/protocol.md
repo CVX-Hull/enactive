@@ -222,13 +222,17 @@ refuse, and uncertain publication permits only collection of the original operat
 Concurrent first creators may safely lose the exclusive-stage race and refuse;
 there is no transparent retry or second request history store.
 
-The current MCP server is5.2.0; its presentation remains `player-view/4`, marked by `presentation_schema`.
+The current MCP server is5.2.1; its presentation remains `player-view/4`, marked by `presentation_schema`.
 Its tool arguments omit `request_id` and `wait_seconds`; old MCP payloads are
 rejected, not translated. The adapter assigns one UUID to each invocation whose
 imperative SDK request needs an ID, then uses existing immutable staging and
 bounded submit/collection. Result waits are15 seconds; advisory next waits40,
 retaining the existing per-job deterministic claim and original remaining window.
 These waits are transport collection, not execution budgets or renewed authority.
+Known ordinary request-composition refusals before SDK submission return
+`submission=not_submitted` and no collection handle; no request exists to collect.
+Errors from staging onward retain the assigned original collection identity. The
+adapter never infers nondelivery from an arbitrary exception or a missing reply.
 Exact selected snapshot/source, phase scope, finite execution limits and semantic
 intent remain explicit. Neither a JSON-RPC correlation ID nor a new status read
 replaces the selected evidence or original mission operation.

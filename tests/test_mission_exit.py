@@ -88,6 +88,26 @@ class MissionExitTests(unittest.TestCase):
         self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
         self.assertIsNone(self.runtime._map)
         self.assertEqual(self.runtime._ledger.memory_records("claim"), ())
+
+    def test_insufficient_immediate_exit_plan_refuses_before_resume_then_allows_new_choice(self):
+        self.ready()
+        current = self.runtime._current
+        before = list(self.bridge.delivered)
+        operation = self.begin_exit(limits=dict(primitives=1, wall_seconds=10, game_seconds=1))
+        self.assertEqual(operation["state"], "blocked", operation)
+        self.assertEqual(operation["result"]["required_primitives"], 2)
+        self.assertIn("No input was sent", operation["result"]["reason"])
+        self.assertEqual(self.bridge.delivered, before)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 0)
+        self.assertEqual(self.runtime._current, current)
+        self.assertIsNone(self.runtime._exit_phase)
+        self.assertIsNone(self.runtime._lease)
+        self.assertTrue(self.controller.pause_requested)
+        corrected = self.run_request(self.exit_request("sufficient-exit",
+            limits=dict(primitives=3, wall_seconds=10, game_seconds=1)))
+        self.assertEqual(corrected["state"], "partial", corrected)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertFalse(self.runtime.status()["lifecycle_phase"]["direct_interrupt_allowed"])
         self.assertEqual(self.controller._mission_lease.operation, "lifecycle")
 
     def test_published_yes_unknown_ack_and_owned_exit_are_distinct_retained_facts(self):

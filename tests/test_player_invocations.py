@@ -228,6 +228,25 @@ class InvocationTests(unittest.TestCase):
                     self.run_client(exercise)
         self.assertEqual(len(self.backend.writes), 1)
 
+    def test_proven_composition_refusals_do_not_send_player_to_nonexistent_collection(self):
+        args = dict(snapshot_id='chosen', scope='lifecycle', source_id=None, supporting_source_ids=[],
+            limits=dict(primitives=4, wall_seconds=7, game_seconds=10),
+            intent=dict(operation='exit', world='test-world', character='test-character',
+                identity_claim_ids=[], work_id=None))
+        async def exercise(client):
+            for missing_source in (False, True):
+                if missing_source:
+                    self.player.snapshots['chosen']['source'] = None
+                result = await client.call_tool('enactive_lifecycle', args)
+                self.assertTrue(result.is_error)
+                value = self.value(result)
+                self.assertEqual(value['submission'], 'not_submitted')
+                self.assertNotIn('original_collection', value)
+                self.assertIn('No authority', value['next_step'])
+                self.assertEqual(self.backend.writes, [])
+                self.assertFalse((self.root / '.runtime/mission-requests').exists())
+        self.run_client(exercise)
+
     def test_malformed_post_stage_operation_keeps_identity_through_unexpected_type_error(self):
         def malformed_reply(path, *, data=None, **options):
             request = json.loads(data)

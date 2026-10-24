@@ -11,7 +11,7 @@ from mcp.server.stdio import stdio_server
 
 from .gameplay.contracts import canonical
 from .mission_client import MissionClient
-from .player_tools import PlayerTools
+from .player_tools import PlayerTools, UnsubmittedRequest
 from .player_view import decision_view
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -37,6 +37,13 @@ def make_server(player: PlayerTools) -> Server:
             if png is not None:
                 content.append(types.ImageContent(type="image", data=base64.b64encode(png).decode("ascii"), mime_type="image/png"))
             return types.CallToolResult(content=content)
+        except UnsubmittedRequest as exc:
+            # This type can only escape pure ordinary request composition,
+            # before SDK staging/submission. No original operation exists.
+            value = dict(error=str(exc)[:1024], submission="not_submitted",
+                next_step="Correct the selected arguments for a new decision under original limits; "
+                    "do not collect this unsubmitted request. No authority is granted.")
+            return types.CallToolResult(is_error=True, content=[types.TextContent(type="text", text=canonical(value))])
         except Exception as exc:
             # This is the outer invocation boundary: even an unexpected Python
             # formatting error after staging must retain the assigned identity.
@@ -51,7 +58,7 @@ def make_server(player: PlayerTools) -> Server:
                 return types.CallToolResult(is_error=True, content=[types.TextContent(type="text", text=canonical(value))])
             return types.CallToolResult(is_error=True, content=[types.TextContent(type="text", text=str(exc)[:1024])])
 
-    server = Server("enactive-player", version="5.2.0",
+    server = Server("enactive-player", version="5.2.1",
         instructions="Use only your designated role and admitted mission. Choose gameplay intent, exact returned snapshot/source and finite execution limits. Snapshots and proof receipts are read-only: grants_authority=false is not a failed adoption or an execution refusal. Follow the actual result, next_needed_decision and active phase; the writer checks each request. Software assigns request IDs and bounded collection waits; do not supply request_id or wait_seconds. Pending/uncertain delivery requires original result collection, never resubmission. User Pause remains independent. An adviser uses only enactive_reflect_next/submit/source/result, computes only after a durable claim and submits candidate data without input or memory adoption. The player reads advice and owns adoption. Roles are procedural, not security isolation.",
         on_list_tools=list_tools, on_call_tool=call_tool,
         get_tool_input_schema=lambda name: player.model_specs[name].schema if name in player.model_specs else None)

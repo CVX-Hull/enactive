@@ -842,7 +842,10 @@ class MissionLedger:
                 if not lifecycle and (root["kind"] != "skill" or root["skill_kind"] not in ("interact", "item", "inspect", "activity", "direct", "program")):
                     raise LedgerError("Direct child requires its original ordinary or lifecycle scope")
                 if data["goal"]["interrupt_allowed"] and not root.get("goal", {}).get("interrupt_allowed", False):
-                    raise LedgerError("Direct child cannot enlarge original interruption consent")
+                    raise LedgerError("Direct child cannot enlarge original interruption consent. "
+                        + ("Lifecycle roots permit only interrupt_allowed=false. This child was not admitted; "
+                           "choose a new direct child with false if no activity interruption is intended."
+                           if lifecycle else "This child was not admitted; retain the original root's consent."))
             if data["skill_kind"] == "activity" and root.get("skill_kind") in ("direct", "program"):
                 if (data["goal"]["operation"] != "direct" or data["goal"]["target"] != root["goal"]["expected"]
                         or data["goal"]["game_seconds"] > root["limits"]["game_seconds"]

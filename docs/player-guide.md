@@ -71,7 +71,10 @@ reason to read the entire repository during every game.
   The summary is returned automatically; read exact continuation only when needed
   through `enactive_detail(next_snapshot.snapshot_id, progress)`.
 - MCP assigns each new request ID and waits up to15 seconds for its original
-  result; do not supply `request_id` or `wait_seconds`. A new invocation is a new
+  result; do not supply `request_id` or `wait_seconds`. A composition refusal explicitly
+  marked `submission=not_submitted` has no original operation to collect. Correct
+  the selected arguments for a new decision under the original limits. Errors
+  during staging, dispatch or presentation retain uncertain collection instead. A new invocation is a new
   intent, never a retry. Pending/uncertain results require `enactive_result` with
   the returned original ID. If an error includes `original_collection`, use those
   exact collection arguments when dispatch is uncertain. Validation can fail
@@ -157,7 +160,7 @@ new lifecycle fallback remains pending.
 | Current situation | Interface operation and verification |
 | --- | --- |
 | Admitted, no owned child | First `enactive_snapshot`; then `enactive_lifecycle` with its handle, `scope=new_root`, `operation=launch`, no source. Launch sends no creation intent and establishes no character identity. |
-| Owned paused main menu | Use `operation=create` for a fresh admission, or `operation=load` for an explicit initial-load admission. Use that root's `scope=lifecycle` for children. Entire setup shares its original limits. |
+| Owned paused main menu | Begin a `new_root`: `operation=create` for a fresh admission, or `operation=load` for an explicit initial-load admission. Use that root's `scope=lifecycle` for children. Entire setup shares its original limits. |
 | Creating a world/character | Menu/editor skills interpret the current visible screen. World/character editors must match the admission. A quick start that generates another identity does not satisfy the named scenario. |
 | Ready to commit the supported world form or final character description | A separate same-root `enactive_lifecycle` create call commits the stage. Inspect the resulting question; a menu key is not a substitute for this registered transition. |
 | Confirmation or unfamiliar setup dialog | Use a same-root interpreted menu skill when applicable, or `direct` input to try/cancel through the visible interface. Inspect the actual response. Successful creation still needs the committed character route; a delivered key or familiar question alone proves no transition. |
@@ -165,6 +168,13 @@ new lifecycle fallback remains pending.
 | Reconciled transition, paused provisional character | Continue with `enactive_lifecycle`, `scope=lifecycle`, unchanged `operation=create` or `load`; this separate call readmits the provisional session. Do not use `enactive_readmit`, which is for ordinary recovery/handoff. Then inspect `purpose=character_identity`, read the actual character screen, retain truthful world/character Claims, dismiss it and separately adopt through the same lifecycle operation with those Claim IDs. Adoption, not launch or Observe, starts ordinary input authority. |
 | Normal ending | New `save` lifecycle root with null Work and empty identity IDs; confirm ordinarily and reconcile/checkpoint through the same Save phase. After completion choose a new owned `exit` root. After recorded normal exit choose `finish` as a separate `new_root`, never a child of exit; report the actual outcome. Returning to the same normal session cancels Save without a checkpoint claim. Later reload requires this mission's own saved checkpoint. Initial Load instead establishes new identity/accounting; old authority/world facts are not imported. |
 | Abandoning menu-only setup | Return organically to the same owned main menu. A new `exit` request can revoke settled setup without input; then explicitly Observe and use a new finite normal-exit root. A fresh Observe and this zero-input MAIN_MENU abort remain available after local setup expiry under healthy custody and global limits; they cannot renew expired inputs or cancel another form. This does not clean up an unadopted normal session. |
+
+The returned lifecycle summary reports `direct_interrupt_allowed=false`: its
+ordinary children cannot interrupt an activity. Choose that explicit false value
+for a direct child; a rejected true value does not mean ordinary input is absent.
+Owned paused-menu exit itself charges Resume plus Quit, at least2primitives before
+any confirmation. Its known insufficient immediate allowance refuses before input;
+a menu-only setup abort is a separate zero-input operation.
 
 Create/load limits cover the complete original lifecycle: opening menus, transition,
 identity inspection, Claims, dismissal and adoption. Choose a prospective finite

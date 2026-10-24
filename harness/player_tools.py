@@ -32,6 +32,10 @@ from .mission_client import MissionClient
 DETAIL_SECTIONS = ("mission", "configuration", "metrics", "receipt", "progress", "native", "source")
 
 
+class UnsubmittedRequest(ContractError):
+    """Ordinary request composition refused before calling SDK submission."""
+
+
 @dataclass(frozen=True)
 class ToolSpec:
     name: str
@@ -122,7 +126,7 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
         ToolSpec("enactive_source", "Read one explicitly selected historical source and its actual image; grants no input authority.", _object(dict(mission_id=identity, source_id=identity)), True),
         ToolSpec("enactive_result", "Collect only the original operation ID, including after interrupted submission. Never replays input.", _object(dict(mission_id=identity, operation_id=identity, wait_seconds=wait)), True),
         ToolSpec("enactive_skill", "Choose ordinary input (direct), a semantic skill, or a selected executable procedure (program) with an explicit returned snapshot/source and finite limits. source_id=null selects that exact cached source. Direct uses perception=null; clicks keep informing geometry. Program requires its own new_root, selected current procedure revision and initial state, perception=null; software supplies each current visible program-view/1 and click geometry through the same writer and original cumulative limits. Its act/yield/done is fallible program behavior, never verified task success; unknown delivery stops evaluation. Semantic preconditions remain strict. Software retains lineage and collects delivery and current evidence separately.", skill),
-        ToolSpec("enactive_lifecycle", "Explicit registered launch/create/save/exit/load/finish. With no owned child, first launch using scope=new_root and source_id=null; then choose create/load from its returned menu. For other operations, source_id=null selects that exact cached snapshot source. Continue a returned lifecycle phase with scope=lifecycle and the same operation, including transition reconciliation, identity readmission and adoption. No implicit Resume, save or restart.", lifecycle),
+        ToolSpec("enactive_lifecycle", "Explicit registered launch/create/save/exit/load/finish. First obtain enactive_snapshot. With no owned child, launch using scope=new_root and source_id=null; then begin create/load with scope=new_root from its returned menu. For other operations, source_id=null selects that exact cached snapshot source. Continue an existing lifecycle phase with scope=lifecycle and the same operation, including transition reconciliation, identity readmission and adoption. Lifecycle direct children require interrupt_allowed=false. Owned paused-menu exit charges Resume plus Quit (at least2 primitives before any confirmation); a separate menu-only setup abort sends no input. No implicit save or restart.", lifecycle),
         ToolSpec("enactive_observe", "Request one typed native observation using the chosen snapshot epoch. A healthy ordinary prompt may advance or record local macro_closure without task success or renewed mission allowance; explicitly choose any next root from fresh evidence. Does not Resume or reconcile unknown delivery. After known direct input with absent/aged current evidence, explicit Observe can refresh its read-only scope across the exact authenticated operation rotation; input requires the fresh binding. It never restores failed custody or renews limits.", _object(common)),
     ]
     # Authoring projections bind metadata; canonical ledger contracts and
@@ -644,19 +648,22 @@ class PlayerTools:
             intent["kind"] = kind
             if intent.get("perception") is not None:
                 intent["perception"]["basis"] = "player_interpretation"
-            if data["source_id"] is not None:
-                source = self._source(snapshot["mission_id"], data["source_id"])
-            elif kind == "lifecycle" and intent["operation"] == "launch":
-                source = None
-            else:
-                source = selected.get("source")
-                if source is None:
-                    raise ContractError("Selected snapshot has no source to bind. Null source_id selects only "
-                        "that cached snapshot source. If an Observe/lifecycle result returned diagnostic "
-                        "source_ids, read the chosen exact image with enactive_source and explicitly select "
-                        "its source_id. No request was submitted; no refresh, retarget or authority renewal.")
-            request = compose_request(snapshot, request_id=identity, intent=intent, limits=data["limits"],
-                scope=data["scope"], source=source, supporting_source_ids=data["supporting_source_ids"])
+            try:
+                if data["source_id"] is not None:
+                    source = self._source(snapshot["mission_id"], data["source_id"])
+                elif kind == "lifecycle" and intent["operation"] == "launch":
+                    source = None
+                else:
+                    source = selected.get("source")
+                    if source is None:
+                        raise ContractError("Selected snapshot has no source to bind. Null source_id selects only "
+                            "that cached snapshot source. If an Observe/lifecycle result returned diagnostic "
+                            "source_ids, read the chosen exact image with enactive_source and explicitly select "
+                            "its source_id. No request was submitted; no refresh, retarget or authority renewal.")
+                request = compose_request(snapshot, request_id=identity, intent=intent, limits=data["limits"],
+                    scope=data["scope"], source=source, supporting_source_ids=data["supporting_source_ids"])
+            except ContractError as exc:
+                raise UnsubmittedRequest(str(exc)) from None
         else:
             if kind == "handoff":
                 checkpoints = []

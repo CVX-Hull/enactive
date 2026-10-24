@@ -263,8 +263,10 @@ def run_campaign(*, root: Path, run_dir: Path, mission_id: str, model: str,
         raise DriverError("Frozen configuration must contain only known player MCP settings")
     # Validate/flatten before reserving any output or launching a process.
     list(_flags(configuration))
-    original_prompt = _read(frozen / "original-player-prompt.txt")
-    successor_brief = _read(frozen / "successor-player-brief.txt")
+    context_location = (f"Frozen context directory: {frozen}\n"
+        f"Focused current-schema index: {frozen / 'interface' / 'index.json'}\n\n")
+    original_prompt = context_location + _read(frozen / "original-player-prompt.txt")
+    successor_brief = context_location + _read(frozen / "successor-player-brief.txt")
     paths = {"driver-report.json": preparation / "driver-report.json",
         "driver-initial-status.json": preparation / "driver-initial-status.json",
         "driver-handoff-issuance.json": preparation / "driver-handoff-issuance.json",
