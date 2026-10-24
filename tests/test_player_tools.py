@@ -169,6 +169,45 @@ class PlayerHTTPTests(unittest.TestCase):
 
 
 class SnapshotDetailTests(unittest.TestCase):
+    def test_pending_and_busy_collection_guidance_preserves_original_mission_and_owner(self):
+        client = Mock()
+        client.status.return_value = dict(mission=dict(mission_id="later-snapshot", current_source=None))
+        player = PlayerTools(client)
+        original = dict(request=dict(kind="skill", mission_id="original-mission", request_id="text-owner"),
+            state="running", result=None)
+        pending = dict(transport="delivered", settled=False, operation_id="text-owner",
+            response=dict(status="accepted", operation=original))
+        busy = dict(transport="delivered", settled=False, operation_id="rejected-enter",
+            response=dict(status="rejected", input_owner_operation_id="text-owner",
+                mission=dict(mission_id="original-mission")))
+        for envelope in (pending, busy):
+            with self.subTest(envelope=envelope):
+                result, _ = player._finish(envelope)
+                self.assertEqual(result["next_call"], dict(tool="enactive_result", arguments=dict(
+                    mission_id="original-mission", operation_id="text-owner")))
+                self.assertEqual(result["next_snapshot"]["mission"]["mission_id"], "later-snapshot")
+                self.assertIn("never replay or retarget", result["next_step"])
+        self.assertEqual(player._finish(busy)[0]["input_admission"], "not_admitted")
+        for envelope in (pending, busy):
+            uncertain = deepcopy(envelope)
+            uncertain.update(transport="uncertain", reason="Original operation unavailable or mismatched")
+            result, _ = player._finish(uncertain)
+            self.assertNotIn("next_call", result)
+            self.assertNotIn("input_admission", result)
+            self.assertEqual(result["operation_id"], envelope["operation_id"])
+        mismatched = deepcopy(pending)
+        mismatched["response"]["operation"]["request"]["request_id"] = "foreign-operation"
+        self.assertNotIn("next_call", player._finish(mismatched)[0])
+        settled = deepcopy(pending)
+        settled.update(settled=True)
+        settled["response"]["operation"].update(state="partial", result=dict(reason="Finished text"))
+        self.assertNotIn("next_call", player._finish(settled)[0])
+        rejected = dict(transport="delivered", settled=False, operation_id="unadmitted",
+            response=dict(status="rejected", reason="No matching admission"))
+        self.assertNotIn("next_call", player._finish(rejected)[0])
+        client.submit.assert_not_called()
+        client.collect.assert_not_called()
+
     def test_old_admission_with_explicit_new_menu_source_still_composes(self):
         from tests.test_mission_request_producer import bundle, lifecycle, snapshot
         admission = snapshot(phase="admitted", native_process=dict(last_sample=None))

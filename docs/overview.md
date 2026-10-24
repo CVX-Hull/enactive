@@ -147,6 +147,15 @@ Its premature development ending motivates a prospective stopping-policy correct
 while numerical acceptance remains unchanged. All owned runtime is closed and the
 failed world's normal save is reversibly archived; original saves are unchanged.
 
+
+[Fresh016](changes/062-player-decision-context.md#closed-fresh016-pending-input-is-not-a-new-decision)
+adds transferred procedure use, an authored bench-aware revision and actual travel,
+but Stops after312game seconds following a pending-text/stale-selection failure.
+No day, successor, reload or normal ending is credited. Owned runtime is closed,
+original saves unchanged; exceptional native exit code/cause remain unknown.
+The focused collection/local-refusal repair and cleanup lesson use existing
+standards and controls. Full independent survival, learning and cadence remain open.
+
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and
 host. Failures and unknown acknowledgments stay recorded even when separate

@@ -246,6 +246,7 @@ class MissionRuntime:
             return self._response("accepted", operation_id=data["request_id"], operation=cached)
         work = _Work(data)
         busy_stop = False
+        input_owner = None
         with self._metadata:
             # Admission handles are bounded by the active writer and one queue slot.
             duplicate = next((h for h in self._handles if data.get("request_id") is not None
@@ -265,6 +266,8 @@ class MissionRuntime:
             elif (kind in ("skill", "lifecycle") and any(
                     h.request["kind"] in ("skill", "lifecycle") for h in self._handles)):
                 rejection = "An unfinished input operation already owns the writer"
+                input_owner = next(h.request["request_id"] for h in self._handles
+                    if h.request["kind"] in ("skill", "lifecycle"))
             elif (self._prompt_phase is not None and kind in ("skill", "lifecycle") and
                     (kind != "skill" or data["phase_id"] != self._prompt_phase.root_id
                      or data["skill_kind"] not in ("menu", "edit", "inspect", "item", "activity", "direct"))):
@@ -287,7 +290,8 @@ class MissionRuntime:
         if rejection:
             if busy_stop:
                 self.pause(data["reason"], cause="user")
-            return self._response("rejected", reason=rejection)
+            return self._response("rejected", reason=rejection,
+                **({"input_owner_operation_id": input_owner} if input_owner is not None else {}))
         # A timed-out admission may persist a blocked row, but cannot send future input.
         if not work.ready.wait(5):
             with self._metadata:
@@ -349,6 +353,9 @@ class MissionRuntime:
         measured = self._ledger.measured_counts()
         limits, reserve = self._admission.limits, self._admission.cleanup_reserve
         active = self._active.request if self._active is not None else None
+        with self._metadata:
+            input_pending = (active is not None and active["kind"] in ("skill", "lifecycle")
+                and self._operations.get(active["request_id"], {}).get("state") in ("accepted", "running"))
         current_available = self._current is not None and not (
             self._prompt_phase is not None and self._prompt_phase.observation_generation is not None)
         inspected = None
@@ -420,7 +427,8 @@ class MissionRuntime:
             "native_process": {"owner_mission_id": None if self._native_owner is None else self._native_owner[0],
                 "last_sample": copy.deepcopy(self._native_facts),
                 "unresolved_custody_requests": list(self._lost_process_custody), "restored_from_disk": False},
-            "next_needed_decision": "Explicit Observe needed before input" if state["phase"] == "active"
+            "next_needed_decision": "Collect the original unfinished input operation before choosing new input" if input_pending else
+                "Explicit Observe needed before input" if state["phase"] == "active"
                 and self._prompt_phase is not None and self._prompt_phase.observation_generation is not None else
                 "Player semantic decision" if state["phase"] == "active" else
                 "Mission ended; historical evidence only" if state["phase"] in TERMINAL else
@@ -1961,12 +1969,19 @@ class MissionRuntime:
         """
         data = work.request
         current, _ = self._store.inspect_current_boundary(**self._clocks())
-        if current is None or current != self._current or current.observation_id not in data["sources"]:
+        if current is None or current != self._current:
             return None
-        if data["perception"] is not None and data["perception"]["source_id"] != current.observation_id:
+        obsolete_selection = current.observation_id not in data["sources"]
+        if obsolete_selection and self._registered_lifecycle.phase is not None:
+            # Lifecycle already checks a stale selection against its owned
+            # active or paused transition. Preserve that narrower recovery path.
+            return None
+        if (not obsolete_selection and data["perception"] is not None
+                and data["perception"]["source_id"] != current.observation_id):
             return None
         observed = self._store.observation(current)
-        metadata_mismatch = ((data["expected_session"], data["expected_revision"], data["expected_boundary_id"]) !=
+        metadata_mismatch = (not obsolete_selection and
+                            (data["expected_session"], data["expected_revision"], data["expected_boundary_id"]) !=
                              (current.session, current.revision, observed["boundary"]["id"]))
         current_entry = self._bindings.get(current.observation_id)
         authority_fields = ("mission_id", "epoch", "actor_id", "controller_boot_id",
@@ -1982,7 +1997,8 @@ class MissionRuntime:
         item_control_reason = None if phase is None else self._item_control_reason(data,
             self._ledger.request(phase.root_id)["request"],
             self._store.observation(phase.checkpoint)["category"], phase.quantity_editor)
-        if not metadata_mismatch and not incompatible_support and not missing_native_rows and item_control_reason is None:
+        if (not obsolete_selection and not metadata_mismatch and not incompatible_support
+                and not missing_native_rows and item_control_reason is None):
             return None
 
         # A bad extra source must not conceal loss of another retained source,
@@ -2050,6 +2066,9 @@ class MissionRuntime:
                                       status="rejected")
         self._check_cancelled(work)
         reasons = []
+        if obsolete_selection:
+            reasons.append("The selected informing source has been superseded by another recorded observation. "
+                           "Collect any original unfinished input, then inspect and explicitly select current evidence.")
         if incompatible_support:
             reasons.append("Additional informing sources do not belong to the current actor and authority; "
                            "historical support belongs in memory.")
@@ -2063,7 +2082,7 @@ class MissionRuntime:
         reason = " ".join(reasons) + " "
         return {"reason": reason +
                     "No input or refresh was attempted; read the source and submit a new corrected request ID.",
-                "source_ids": [current.observation_id], "grants_authority": False}
+                "source_ids": [current.observation_id], "proposals": 0, "grants_authority": False}
 
     def _deadline(self, work: _Work, original: EvidenceRef) -> float:
         operation = self._ledger.request(work.request["request_id"])

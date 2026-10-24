@@ -222,13 +222,27 @@ refuse, and uncertain publication permits only collection of the original operat
 Concurrent first creators may safely lose the exclusive-stage race and refuse;
 there is no transparent retry or second request history store.
 
-The current MCP server is5.2.1; its presentation remains `player-view/4`, marked by `presentation_schema`.
+The current MCP server is5.2.2; its presentation remains `player-view/4`, marked by `presentation_schema`.
 Its tool arguments omit `request_id` and `wait_seconds`; old MCP payloads are
 rejected, not translated. The adapter assigns one UUID to each invocation whose
 imperative SDK request needs an ID, then uses existing immutable staging and
 bounded submit/collection. Result waits are15 seconds; advisory next waits40,
 retaining the existing per-job deterministic claim and original remaining window.
 These waits are transport collection, not execution budgets or renewed authority.
+Positively matched, delivered unfinished input returns a software-derived
+`next_call` to collect its original mission/operation; uncertain or mismatched
+response bodies cannot redirect collection. A delivered busy input refusal reports `input_owner_operation_id`; the
+SDK marks that new input `input_admission=not_admitted` and targets the actual
+owner for collection, never the rejected invocation. In-progress images are
+read-only partial evidence, not completed outcomes or permission for another
+input. After collection the player explicitly selects current evidence; software
+does not retarget the intended key. Guarded stale-selection refusal reuses the
+current request-draft checks: verify retained support and healthy current custody,
+then return blocked with zero proposals without input, refresh, lease/phase loss
+or payload rewriting. Actual Pause, takeover, unresolved delivery, integrity and
+global-limit faults retain their stopping paths. Lifecycle stale selection defers
+to its existing specialized active/paused transition guard. Recovery cannot manufacture an
+unknown-delivery candidate for a key that was never dispatched.
 Known ordinary request-composition refusals before SDK submission return
 `submission=not_submitted` and no collection handle; no request exists to collect.
 Errors from staging onward retain the assigned original collection identity. The

@@ -127,7 +127,7 @@ reflection-job and advice replies have explicit output limits to preserve bounde
 records. Direct input is an intent on `enactive_skill`, not a new input tool;
 Observe macro closure likewise uses `enactive_observe`. These project settings
 do not prove the running host loaded the current schemas/help or grant authority.
-Current MCP server5.2.1 generates request IDs and collection waits; its model
+Current MCP server5.2.2 generates request IDs and collection waits; its model
 arguments reject caller-supplied `request_id`/`wait_seconds`. Focused help exports
 this same current model schema. The imperative Python SDK's explicit-ID surface
 serves engineering and duplicate collection, not a compatibility mode for MCP.

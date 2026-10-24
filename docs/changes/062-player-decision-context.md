@@ -455,3 +455,92 @@ remain separate. Native binary/protocol and MCP5.2.1 tool declarations are uncha
 no desktop restart or global setup change is needed for these source changes.
 Precedingc17500b passes [exact CI40049271526](https://github.com/CVX-Hull/enactive/actions/runs/40049271526);
 that does not qualify this later source or any failed campaign.
+
+## Closed fresh016: pending input is not a new decision
+
+Fresh016 freezes ca37020/native690fe96, Sol/low player and Sol/medium adviser,
+maintained host defaults, the original finite ceilings and the prospective
+qualification-versus-development distinction. [Exact source CI40054739382](https://github.com/CVX-Hull/enactive/actions/runs/40054739382)
+passes1,885tests and the viewer regression. The player creates/adopts a fresh
+character, explores beyond the shelter and returns. It selects transferred010
+floor and015door procedures seven and three times respectively, then authors a
+source-linked floor revision allowing explicitly chosen bench crossings. That
+revision is selected six times: four report their chosen endpoint, one yields
+after three inputs, one yields without input. Across all16program roots,
+35primitives are charged;11report done and five yield. These are scoped procedure
+uses, not16completed tasks, a representative cadence cohort or causal learning benefit.
+
+Only312game seconds pass. No survival day, clean successor application, midpoint
+reload, normal ending or full learning/cadence outcome is accepted. The adviser
+completes16of16jobs and exits0 while play continues, consuming1,920charged claim-window
+seconds; this is not measured compute. Existing #178 prioritization/coalescing
+work remains relevant: early quota consumption must not become a gameplay gate.
+
+The decisive text operation returns an in-progress snapshot while still delivering
+its11scalars. An Enter request is refused before ledger admission because the
+original writer is busy. The last scalar then publishes a newer observation;
+the player's second Enter names the superseded snapshot and sends no Enter.
+The former generic evidence exception destroys otherwise healthy prompt custody.
+The recovery request correctly refuses: no uncertain Enter was dispatched and no
+eligible recovery candidate exists. Actual retained PNG says `Search: clean water`;
+complete text entry is verified, but confirmation/application of the filter is not. The player
+Stops and exits0; the driver exits1 without starting a successor. No tactical
+lead/user input or authority renewal rescues the attempt.
+
+### Repair and enforcement
+
+MCP5.2.2 keeps the existing SDK, collection path and single writer. A positively
+matched delivered pending result names its original collection call; a delivered
+busy refusal names the actual unfinished owner, explicitly marking the new input
+unadmitted. An uncertain/mismatched response cannot supply a replacement collection
+target. A pending image is read-only prefix evidence, not a finished outcome.
+No retry, automatic key, retargeting, new queue or stored authority is added.
+
+For ordinary skills, superseded selection is a zero-input local refusal only
+after the existing current source, lease, custody, ledger, clock, budget and
+retention checks pass. The player must explicitly choose current evidence for a
+new request. Real faults retain their stops. Lifecycle stale selection stays with
+its existing specialized active/paused transition guard; the generic repair must
+not destroy a valid paused identity candidate. Regression tests cover the pending
+text/busy refusal/final-ACK race, explicit corrected selection, uncertain foreign
+operation bodies and genuine authority/integrity/budget faults. Existing S-UX,
+S-ARCH, S-CODE and C-PORTABLE/C-REVIEW/C-USABILITY govern this lesson; another
+principle, menu handler or per-action reviewer would add no useful enforcement.
+
+### Costs, cleanup and remaining outcome
+
+Retained private016evidence has139requests (16completed/114partial/8blocked/1unknown),
+396primitives (395returned/1unknown),920indexed native PNGs/94,200,602bytes and
+400memory rows (399claim-type rows, many automatic trajectory links, plus one
+procedure). Counts are not independent learned facts. Original host:165completed
+MCP calls/1,021,762UTF-8 response-text bytes/139typed images/1,839.828host-wall seconds.
+Adviser:44calls/507,911text bytes/6images/870.486host-wall seconds. These include
+tool work and waiting, not isolated inference, unique context or billing.
+Browser timing exports retain bounded/censored observer samples; DOM/decode
+measurements do not establish paint time or whole-player cadence.
+
+All actors, controller/native PIDs and listener are closed. Cleanup exposed a
+lead mistake: controller shutdown was incorrectly assumed to terminate its child.
+The actual shutdown custody receipt still reported the native process running;
+its subsequent absence establishes neither exit code nor cause. Native exit is
+unknown and normal ending failed. The runbook now requires verified exceptional
+native termination while its controller parent can still poll/reap and record
+actual outcome, before closing that controller. No new automatic kill service is
+introduced. The74failed-world files are reversibly archived;191original saves
+remain unchanged. Original intent, error, receipts and the corrective assessment
+are preserved rather than overwritten. The paused016library is not automatically
+eligible for transfer. Existing eligible historical procedures remain available.
+
+The next finite fresh campaign must exercise the repaired interface while still
+pursuing useful survival, organic revision, actual successor memory, reload,
+normal ending and whole-player responsiveness. Source tests, actual graphics,
+exact candidate CI and protected-main publication remain distinct evidence lanes.
+
+Source verification:83pending/source/prompt/lifecycle tests and105SDK/view/invocation/
+lifecycle/recovery tests pass (overlapping suites). Independent current-diff and
+closed-evidence review finds no remaining scoped defect after correcting uncertain
+collection targeting and lifecycle routing. Fast checks pass after removing one
+trailing blank line; full exact candidate CI and fresh real qualification remain
+open. An earlier broader command also named a nonexistent recovery test module;
+that invocation error is retained, then the actual recovery modules pass. No native
+build or game behavior is inferred from these source checks.

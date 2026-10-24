@@ -141,6 +141,12 @@ class RequestBindingTests(unittest.TestCase):
         self.assertEqual(self.runtime._prompt_phase.root_id, corrected["request_id"])
 
     def test_bad_extra_cannot_mask_current_faults_or_mixed_support_loss(self):
+        self.bad_support_cannot_mask_faults(omit_current=False)
+
+    def test_obsolete_selection_cannot_mask_current_faults_or_mixed_support_loss(self):
+        self.bad_support_cannot_mask_faults(omit_current=True)
+
+    def bad_support_cannot_mask_faults(self, *, omit_current):
         for fault in ("takeover", "native_drift", "current_binding", "current_loss", "extra_loss",
                       "extra_corrupt", "extra_disputed", "mixed_loss", "input_reserve", "game_cap"):
             with self.subTest(fault=fault):
@@ -153,7 +159,10 @@ class RequestBindingTests(unittest.TestCase):
                     root, old = case.completed_prompt()
                     bad = case.control("interact", dict(action="open", intent="Open", desired_outcome="Inspect"),
                         request_id="bad-extra-real-fault")
-                    bad["sources"].append(old.observation_id)
+                    if omit_current:
+                        bad["sources"] = [old.observation_id]
+                    else:
+                        bad["sources"].append(old.observation_id)
                     if fault in ("takeover", "native_drift"):
                         with case.controller.data_lock:
                             case.controller.state["takeover_generation" if fault == "takeover" else "revision"] += 1
@@ -189,17 +198,16 @@ class RequestBindingTests(unittest.TestCase):
                 finally:
                     case.doCleanups()
 
-    def test_historical_sole_source_still_stops(self):
-        _, old = self.completed_prompt()
+    def test_historical_sole_source_is_refused_without_poisoning_current_authority(self):
+        root, old = self.completed_prompt()
         bad = self.control("interact", dict(action="open", intent="Open", desired_outcome="Inspect"),
             request_id="sole-old-source", sources=[old.observation_id])
-        spent = self.runtime.status()["spent_inputs"]
-        self.runtime.command(bad)
-        result = self.settled(bad["request_id"])
-        self.assertEqual(result["state"], "blocked")
-        self.assertNotIn("No input or refresh was attempted", result["result"]["reason"])
-        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
-        self.assertIsNone(self.runtime._lease)
+        result = self.assert_local_rejection(bad, root)
+        self.assertIn("superseded", result["result"]["reason"])
+        self.assertEqual(result["result"]["proposals"], 0)
+        corrected = self.navigation(target=(1, 0, 0), request_id="fresh-after-stale")
+        self.runtime.command(corrected)
+        self.assertEqual(self.settled(corrected["request_id"])["state"], "completed")
 
     def test_older_support_in_same_authority_remains_eligible(self):
         self.bridge.value["actions"].append("open")

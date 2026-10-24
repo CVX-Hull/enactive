@@ -364,6 +364,25 @@ class PlayerTools:
 
     def _finish(self, envelope: dict) -> tuple[dict, bytes | None]:
         output = self._compact(envelope)
+        response = envelope.get("response") or {}
+        operation = response.get("operation")
+        request = operation.get("request") if isinstance(operation, dict) else None
+        delivered = envelope.get("transport") == "delivered" and envelope.get("reason") is None
+        collection = None
+        if (delivered and request is not None and request["request_id"] == envelope.get("operation_id")
+                and operation["state"] in ("accepted", "running")
+                and request["kind"] in ("skill", "lifecycle")):
+            collection = dict(mission_id=request["mission_id"], operation_id=request["request_id"])
+        elif (delivered and response.get("status") == "rejected" and operation is None
+                and response.get("input_owner_operation_id") is not None):
+            collection = dict(mission_id=response["mission"]["mission_id"],
+                operation_id=response["input_owner_operation_id"])
+            output["input_admission"] = "not_admitted"
+        if collection is not None:
+            output["next_call"] = dict(tool="enactive_result", arguments=collection)
+            output["next_step"] = ("Collect this original input operation before choosing another input. "
+                "An in-progress image is read-only evidence, not its completed outcome. "
+                "After collection, inspect and explicitly select current evidence; never replay or retarget input.")
         image = None
         try:
             output["next_snapshot"], image = self.snapshot()

@@ -531,13 +531,14 @@
       "maintenance_review": {
         "date": "2026-10-23",
         "effectiveness": "partially_effective",
-        "findings": "Frozen015 stopped useful development on an uninstrumented cadence assessment before20useful decisions. Future briefs separate qualification rejection from bounded development continuation; numerical targets and hard authority/delivery/resource ending gates remain. Genuine structured-visible-state gaps and timing proxies need focused investigation, not causal claims.",
+        "findings": "Frozen015 stopped useful development on an uninstrumented cadence assessment before20useful decisions. Future briefs separate qualification rejection from bounded development continuation; numerical targets and hard authority/delivery/resource ending gates remain. Genuine structured-visible-state gaps and timing proxies need focused investigation, not causal claims. Closed016: a pending text prefix must direct original collection, not a new semantic decision; a busy refusal must identify the actual writer owner. Mismatched/uncertain response bodies cannot redirect collection. Actual seven-day, learning and useful-cadence acceptance remain open.",
         "cost": "Existing ledger/frames/host traces and independent read-only outcome review reused; no new control service or per-action approval.",
         "follow_up": "#164 existing-stage profiling and whole-player cohort;#176/#177 generic visible-state and learning follow-through;#145 full fresh campaign with actual succession/reload;#143 driver-observed host outcomes.",
         "evidence": [
           "docs/acceptance/2026-10-23-independent-seven-day-fifteenth-attempt.md",
           "docs/project-management.md",
-          "docs/evaluation.md"
+          "docs/evaluation.md",
+          "docs/changes/062-player-decision-context.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -655,17 +656,19 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-23",
-        "outcome": "Independent015 raw-evidence/workflow review corrected transferred revision count from3to2; no remaining scoped findings. Existing fixture mutex contract independently reviewed;43creation tests pass.",
-        "scope": "Frozen policy versus prospective finite continuation; actual library use, claimed-advice overlap, unknown effects, normal ending,321PNG hashes and CI failure/reproduction. Passive host-outcome source review/integration remains separate. Independent exact worker re-review found pre-Claim successor omission, then verified its repair at3629511;77root host/driver/HTTP tests and production viewer regression pass after integration. No native/gameplay qualification is claimed.",
+        "outcome": "Independent closed016 implemented-diff and evidence review found collection identity and lifecycle routing regressions; both corrected and reread clean.",
+        "scope": "Pending/busy original collection, uncertain mismatched bodies, healthy stale refusal versus actual faults, paused lifecycle candidate preservation, accurate cleanup/cost claims. Shared tests and remote CI remain lead verification.",
         "evidence": [
-          "docs/acceptance/2026-10-23-independent-seven-day-fifteenth-attempt.md",
-          "docs/project-management.md"
+          "docs/changes/062-player-decision-context.md",
+          "tests/test_mission_pending_observation.py",
+          "tests/test_mission_prompt_observation.py",
+          "tests/test_player_tools.py"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-23",
         "effectiveness": "partially_effective",
-        "findings": "Review verifies exactsource/trace rather than model assertion: complete SDK schemas do not prove host-rendered schemas. Confirmed predictable exit cost and missing context/phase guidance are repaired through existing facilities. Post-staging/presentation failures retain original collection identity. Independent015 outcome review identifies premature development ending and scopes representation/timing findings. c714 exact CI exposes an unlocked private verifier in a test fixture; existing mutex contract supplies the repair, without speculative DB recovery. Passive host projection retains assigned successor events independently of mission actor adoption; no process discovery, heartbeat, liveness claim or input authority.",
+        "findings": "Review verifies exactsource/trace rather than model assertion: complete SDK schemas do not prove host-rendered schemas. Confirmed predictable exit cost and missing context/phase guidance are repaired through existing facilities. Post-staging/presentation failures retain original collection identity. Independent015 outcome review identifies premature development ending and scopes representation/timing findings. c714 exact CI exposes an unlocked private verifier in a test fixture; existing mutex contract supplies the repair, without speculative DB recovery. Passive host projection retains assigned successor events independently of mission actor adoption; no process discovery, heartbeat, liveness claim or input authority. Closed016 review prevented mismatched response bodies from supplying collection targets and retained specialized paused lifecycle handling; migrated obsolete destructive-refusal fixture. Current report counts independently match closed ledger and host streams. No new review per gameplay action.",
         "cost": "One clean-context reviewer reused for design and diff review,78lifecycle/driver regression tests; player SDK/HTTP tests separately recorded. No independent per-action approval, extra store or capability engine.",
         "follow_up": "Qualify a genuinely fresh deciding player on frozen repaired source through useful independent learning/cadence/survival and normal lifecycle. Exact candidate/protected-main CI, current artifacts and resource cleanup remain distinct gates.",
         "evidence": [
@@ -900,7 +903,8 @@
         "docs/acceptance/2026-10-22-independent-seven-day-fourth-attempt.md",
         "docs/acceptance/2026-10-22-native-local-refusal.md",
         "docs/acceptance/2026-10-22-independent-seven-day-seventh-attempt.md",
-        "docs/acceptance/2026-10-23-independent-seven-day-fifteenth-attempt.md"
+        "docs/acceptance/2026-10-23-independent-seven-day-fifteenth-attempt.md",
+        "docs/changes/062-player-decision-context.md"
       ],
       "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",
@@ -910,21 +914,22 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-23",
-        "outcome": "Closed015 source/ledger/frames/save/host outcome reconciliation;321indexed hashes verified,415-file evidence manifest retained. Native normal exit0 and owned process/listener absence verified.",
-        "scope": "82normally saved failed-world files reversibly archived out of active menu,191original saves unchanged. No editing/restoration or accepted day/cadence.",
+        "outcome": "Closed016 source/ledger/frame/save/host reconciliation;920indexed native frames retained, owned actors/processes/listener closed. Native exit code/cause unknown; no normal ending credited.",
+        "scope": "74failed-world files reversibly archived,191original saves unchanged.16program roots/35primitives do not qualify useful cadence or seven-day survival.",
         "evidence": [
-          "docs/acceptance/2026-10-23-independent-seven-day-fifteenth-attempt.md"
+          "docs/changes/062-player-decision-context.md",
+          "docs/runbook.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-23",
         "effectiveness": "partially_effective",
-        "findings": "015 policy prematurely ended useful development despite remaining capacity. Promote the lesson into existing workflow/standards/evaluation/guide and owned GitHub actions; preserve failed frozen policy. Consolidate at this meaningful checkpoint rather than add a report per no-input failure.",
-        "cost": "Retained measured host/runtime/evidence costs; model-only compute and causal engineering-load attribution unknown. Reuse Git/Issues/ledger/archive/existing DB mutex; no new tracker, recovery framework or global setup.",
-        "follow_up": "#136/#145 next finite full campaign;#164 profiling/cohort;#143 host outcomes;#176/#177/#178/#191 relevant learning/context/generality actions. Exact current CI and protected publication remain open. Existing periodic due dates unchanged.",
+        "findings": "016 exposes pending-input guidance and healthy stale-selection custody loss. Existing lifecycle refusal must retain paused candidate semantics. Cleanup also exposes a lead assumption: parent closure does not terminate the native child; retain unknown outcome and require verified exceptional child termination before parent closure. No new menu handler, queue, tracker or automatic kill service.",
+        "cost": "Original host1839.828s/165MCP calls, adviser870.486s/44calls;16jobs consume1920charged claim-window seconds. These are not isolated inference or causal improvement measurements. Retain failures and bounded observer samples.",
+        "follow_up": "#136/#145 full fresh outcome;#164 pending/original collection and useful cadence;#176 ordinary refusal;#177/#191 source-linked organic revision;#178 advisory prioritization/coalescing;#143 passive terminal display. Exact new source CI, native qualification and protected publication remain separate. Existing due dates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-23-independent-seven-day-fifteenth-attempt.md",
-          "docs/project-management.md",
+          "docs/changes/062-player-decision-context.md",
+          "docs/runbook.md",
           "docs/work.md"
         ]
       },

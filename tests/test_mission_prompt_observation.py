@@ -111,16 +111,28 @@ class PromptObservationTests(unittest.TestCase):
                 finally:
                     case.doCleanups()
 
-    def test_old_source_request_stops_without_dispatch_after_new_observation(self):
+    def test_old_source_request_is_refused_without_losing_healthy_prompt_after_observe(self):
         root, _ = self.open_cancelable()
         old_choice = self.direct(root, "old-source-choice")
         self.changed()
         self.assertEqual(self.observe()["state"], "completed")
         before = copy.deepcopy(self.bridge.delivered)
-        self.assert_stopped(self.send(old_choice))
+        phase, lease = self.runtime._prompt_phase, self.runtime._lease
+        status = self.runtime.status()
+        refused = self.send(old_choice)
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertEqual(refused["result"]["proposals"], 0)
+        self.assertIn("superseded", refused["result"]["reason"])
+        self.assertIs(self.runtime._prompt_phase, phase)
+        self.assertIs(self.runtime._lease, lease)
+        for field in ("phase", "epoch", "deadline", "spent_inputs"):
+            self.assertEqual(self.runtime.status()[field], status[field])
         self.assertEqual(self.bridge.delivered, before)
         replay = self.runtime.command(old_choice)
         self.assertEqual(replay["operation"], self.result(old_choice["request_id"]))
+        current_choice = self.send(self.direct(root, "explicit-new-source-choice"))
+        self.assertEqual(current_choice["state"], "partial", current_choice)
+        self.assertEqual(len(self.bridge.delivered), len(before) + 1)
 
     def test_ordinary_key_keeps_physical_choice_and_lineage_across_changed_entry(self):
         root, _ = self.open_cancelable()

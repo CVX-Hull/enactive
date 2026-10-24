@@ -141,3 +141,11 @@ retains repository replacement history. Git retains earlier versions of this map
 User-directed save retirement follows the [runbook](runbook.md#evidence-retention-and-cleanup)
 and [environment ledger](environment.md#user-directed-stale-save-cleanup-2026-10-22);
 removing a save from the active menu does not remove its evidence or change its outcome.
+
+[Fresh016](changes/062-player-decision-context.md#closed-fresh016-pending-input-is-not-a-new-decision)
+adds transferred procedure use, an authored bench-aware revision and actual travel,
+but Stops after312game seconds following a pending-text/stale-selection failure.
+No day, successor, reload or normal ending is credited. Owned runtime is closed,
+original saves unchanged; exceptional native exit code/cause remain unknown.
+The focused collection/local-refusal repair and cleanup lesson use existing
+standards and controls. Full independent survival, learning and cadence remain open.

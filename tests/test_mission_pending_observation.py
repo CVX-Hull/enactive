@@ -2,6 +2,7 @@
 import copy
 from contextlib import nullcontext
 from dataclasses import replace
+import threading
 import unittest
 from unittest.mock import patch
 
@@ -20,6 +21,55 @@ class PendingObservationTests(unittest.TestCase):
     allow_direct = fixtures.PromptObservationTests.allow_direct
     direct = fixtures.PromptObservationTests.direct
     observe = fixtures.PromptObservationTests.observe
+
+    def test_pending_text_busy_refusal_then_obsolete_enter_preserves_healthy_prompt(self):
+        self.allow_direct()
+        second, release = threading.Event(), threading.Event()
+        self.addCleanup(release.set)
+
+        def text_effect(bridge, request):
+            if request["kind"] == "direct":
+                physical = request["input"]
+                if physical["type"] == "text":
+                    if physical["text"] == "b":
+                        second.set()
+                        self.assertTrue(release.wait(3))
+                    bridge.editor_text = (bridge.editor_text or "") + physical["text"]
+            return True
+
+        root, _ = self.open_direction(prompt=dict(category="STRING_INPUT", actions=["ANY_INPUT"]),
+            effect=text_effect)
+        text = self.control("direct", dict(input=dict(type="text", text="ab"), intent="Enter observed search text",
+            expected="Inspect the completed text", interrupt_allowed=False),
+            phase_id=root["request_id"], request_id="pending-text")
+        self.runtime.command(text)
+        self.assertTrue(second.wait(2))
+        stale = self.direct(root, request_id="busy-enter", key="ENTER")
+        busy = self.runtime.command(stale)
+        self.assertEqual(busy["status"], "rejected")
+        self.assertEqual(busy["input_owner_operation_id"], text["request_id"])
+        self.assertIn("Collect the original", busy["mission"]["next_needed_decision"])
+        stale["request_id"] = "obsolete-enter"
+        release.set()
+        self.assertEqual(self.settled(text["request_id"])["state"], "partial")
+        self.wait(lambda: self.runtime._active is None)
+        phase, lease = self.runtime._prompt_phase, self.runtime._lease
+        before, delivered = self.runtime.status(), copy.deepcopy(self.bridge.delivered)
+        self.runtime.command(stale)
+        refused = self.settled(stale["request_id"])
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertEqual(refused["result"]["proposals"], 0)
+        self.assertIn("superseded", refused["result"]["reason"])
+        self.assertIs(self.runtime._prompt_phase, phase)
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertEqual(self.runtime.status()["epoch"], before["epoch"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
+        self.assertEqual(self.bridge.delivered, delivered)
+        fresh = self.direct(root, request_id="fresh-explicit-enter", key="ENTER")
+        self.runtime.command(fresh)
+        self.assertEqual(self.settled(fresh["request_id"])["state"], "partial")
+        self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"] + 1)
 
     def pending(self, kind="absent", *, new_root=False, limits=None, advance=0, expect_pending=True):
         self.allow_direct()

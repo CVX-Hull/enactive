@@ -47,6 +47,12 @@ reason to read the entire repository during every game.
   Ordinary `direct` inputs use `perception=null`; visible-control interpretations
   belong to menu/edit/item controls. Inspect the returned image/effect; a delivered
   input is not task success.
+- When input is unfinished, use the returned `next_call` to collect the original
+  operation. A busy refusal's collection target is the actual writer owner, not
+  the new rejected invocation. An in-progress image can show a text prefix; it
+  is not the completed text or a cue to confirm. After collection, inspect and
+  explicitly select current evidence. An obsolete selection can be refused
+  without destroying healthy custody; no key is retargeted or replayed for you.
 - An eligible Procedure/3 can contain `program={language:javascript/1, source:...}`
   or null for advice. In `enactive_remember` choose the content, evidence,
   counterexamples/status and `parent=null` for a new family or an explicit

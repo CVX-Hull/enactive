@@ -20,7 +20,7 @@ uncertainty and differing views retained. Discriminated malformed intents get
 bounded branch-specific schema errors before staging, with no repaired/defaulted input.
 One bounded producer-local fingerprint avoids identical implicit image parts in a
 known unchanged player/control context; explicit image reads remain complete.
-MCP server5.2.1 assigns request identities and bounded result waits before invoking
+MCP server5.2.2 assigns request identities and bounded result waits before invoking
 the existing imperative SDK. Its public schemas reject caller-owned IDs/waits;
 snapshot/source, scope, execution limits and semantic decisions remain explicit.
 Errors preserve assigned original collection arguments through the presentation
