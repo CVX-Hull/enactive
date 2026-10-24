@@ -13,6 +13,7 @@ from urllib.parse import urlsplit
 
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.reflection import proposal_schema, validate_command, validate_proposal
+from harness.gameplay.procedures import procedure_authoring_schema
 from harness.player_mcp import make_server
 from harness.player_tools import PlayerTools, request_tool_specs, tool_specs
 from tests.test_gameplay_evidence import png
@@ -24,9 +25,23 @@ from tests.test_reflection_exchange import command, job, procedure, proposal, wr
 SCOPE = dict(mission_id="mission-a", reflector_id="reflector-a")
 
 
+def semantic(record=None):
+    record = procedure() if record is None else record
+    return {key: value for key, value in record.items() if key in procedure_authoring_schema()["properties"]}
+
+
+def admitted_status():
+    return dict(mission=dict(mission_id="mission-a", configuration=dict(procedure_environment=procedure()["environment"]),
+        reflection=dict(proposals=["proposal-1"])))
+
+
+def bind_advice(player):
+    player.snapshots["selected"] = admitted_status()
+
+
 def submit_args(**changes):
-    return dict(**SCOPE, job_id="job-1", request_id="submit-1", wait_seconds=0,
-                candidates=[procedure()], notes=proposal()["notes"], reason="Scoped findings", **changes)
+    return dict(dict(**SCOPE, job_id="job-1", request_id="submit-1", wait_seconds=0,
+                candidates=[semantic()], notes=proposal()["notes"], reason="Scoped findings"), **changes)
 
 
 class AdvisoryClient:
@@ -60,13 +75,14 @@ class AdvisoryClient:
 
     def status(self):
         self.calls.append(("status",))
-        return dict(mission=None)
+        return admitted_status()
 
 
 class ReflectionToolTests(unittest.TestCase):
     def setUp(self):
         self.client = AdvisoryClient()
         self.player = PlayerTools(self.client)
+        bind_advice(self.player)
 
     def claim(self):
         return self.player.call("enactive_reflect_next", dict(**SCOPE, wait_seconds=0))[0]
@@ -78,7 +94,7 @@ class ReflectionToolTests(unittest.TestCase):
         for name in names:
             self.assertFalse(specs[name].schema["additionalProperties"])
         schema = proposal_schema()["properties"]
-        for field in ("candidates", "notes", "reason"):
+        for field in ("notes", "reason"):
             self.assertEqual(specs["enactive_reflect_submit"].schema["properties"][field], schema[field])
         for args in (dict(**SCOPE, wait_seconds=40.1), dict(**SCOPE, wait_seconds=0, command_id="forged"),
                      dict(**SCOPE, wait_seconds=True)):
@@ -86,6 +102,7 @@ class ReflectionToolTests(unittest.TestCase):
         changed = proposal_schema()
         changed.clear()
         self.assertIn("properties", proposal_schema())
+        self.assertEqual(specs["enactive_reflect_submit"].schema["properties"]["candidates"]["items"], procedure_authoring_schema())
         self.assertEqual(self.client.calls, [])
 
     def test_only_next_tool_allows_extended_wait_and_claim_keeps_original_remaining_allowance(self):
@@ -160,7 +177,7 @@ class ReflectionToolTests(unittest.TestCase):
         self.assertEqual({key: submitted["proposal"][key] for key in ("mission_id", "reflector_id", "epoch", "cutoff_sequence", "memory_version")},
                          dict(**SCOPE, epoch=0, cutoff_sequence=1, memory_version=1))
         self.assertNotIn("next_snapshot", value)
-        self.assertFalse(any(row[0] == "status" for row in self.client.calls))
+        self.assertEqual([row[0] for row in self.client.calls].count("status"), 1)
 
     def test_committed_claim_refusal_returns_original_reason_without_job(self):
         identity = self.player._claim_id("mission-a", "job-1")
@@ -172,6 +189,40 @@ class ReflectionToolTests(unittest.TestCase):
         self.assertEqual(returned, original)
         self.assertIsNone(image)
         self.assertNotIn("job", returned)
+
+    def test_candidate_authoring_binds_exact_parent_environment_and_software_ids(self):
+        parent = procedure()
+        self.client.next_value["job"]["job"]["procedures"] = [parent]
+        self.claim()
+        entry = semantic()
+        entry["parent"] = dict(mission_id=parent["mission_id"], revision_id=parent["id"])
+        self.player.call("enactive_reflect_submit", submit_args(candidates=[entry], request_id="a" * 128))
+        record = self.client.calls[-1][1]["proposal"]["candidates"][0]
+        self.assertEqual(record["revision"], parent["revision"] + 1)
+        self.assertEqual(record["procedure_id"], parent["procedure_id"])
+        self.assertEqual(record["environment"], admitted_status()["mission"]["configuration"]["procedure_environment"])
+        self.assertEqual(record["parent"], entry["parent"])
+        self.assertNotEqual(record["id"], parent["id"])
+        self.assertEqual(self.player.procedures, {})
+
+    def test_old_candidate_metadata_unknown_parent_support_and_wrong_admission_refuse(self):
+        self.claim()
+        before = sum(row[0] == "command" for row in self.client.calls)
+        for candidates in ([procedure()], [{**semantic(), "parent": dict(mission_id="mission-a", revision_id="unread")}],
+                           [{**semantic(), "support": [{**semantic()["support"][0], "source_ids": ["unknown"]}]}]):
+            with self.subTest(candidates=candidates), self.assertRaises(ContractError):
+                self.player.call("enactive_reflect_submit", submit_args(candidates=candidates))
+        self.client.status = lambda: dict(mission=dict(mission_id="foreign"))
+        with self.assertRaisesRegex(ContractError, "original admitted"):
+            self.player.call("enactive_reflect_submit", submit_args())
+        self.assertEqual(sum(row[0] == "command" for row in self.client.calls), before)
+
+    def test_notes_only_need_no_environment_status_or_empty_candidate_filler(self):
+        self.claim()
+        self.client.status = lambda: self.fail("Notes alone must not read admission status")
+        result, _ = self.player.call("enactive_reflect_submit", submit_args(candidates=[]))
+        self.assertEqual(result["status"], "committed")
+        self.assertEqual(self.client.calls[-1][1]["proposal"]["candidates"], [])
 
     def test_original_submission_collection_survives_empty_adapter_cache(self):
         original = dict(status="committed", admitted=True, command_id="submit-1",
@@ -223,11 +274,11 @@ class ReflectionToolTests(unittest.TestCase):
         self.assertEqual(len(self.client.calls), count)
         self.player.call("enactive_reflect_source", args)
         self.assertEqual(self.player.sources, {})
-        self.assertEqual(self.player.snapshots, {})
+        self.assertEqual(self.player.snapshots, {"selected": admitted_status()})
         bad = submit_args()
         bad["notes"][0]["source_refs"][0]["source_id"] = "new-source"
         with self.assertRaises(ContractError): self.player.call("enactive_reflect_submit", bad)
-        self.assertEqual(self.client.calls[-1][0], "source")
+        self.assertEqual(self.client.calls[-1][0], "status")
 
     def test_all_advisory_tools_bypass_active_lock_without_touching_player_cache(self):
         self.claim()
@@ -236,7 +287,7 @@ class ReflectionToolTests(unittest.TestCase):
             for name, args in (("enactive_reflect_next", dict(**SCOPE, wait_seconds=0)),
                                ("enactive_reflect_submit", submit_args()),
                                ("enactive_reflect_source", dict(**SCOPE, job_id="job-1", source_id="source-1")),
-                               ("enactive_advice", dict(mission_id="mission-a", proposal_id="proposal-1"))):
+                               ("enactive_advice", dict(snapshot_id="selected", proposal_index=0))):
                 result, image = self.player.call(name, args)
                 self.assertFalse(result["grants_authority"])
                 if name == "enactive_reflect_source": self.assertEqual(image, self.client.image)
@@ -244,7 +295,7 @@ class ReflectionToolTests(unittest.TestCase):
         finally:
             self.player._lock.release()
         self.assertEqual(self.player.sources, {})
-        self.assertEqual(self.player.snapshots, {})
+        self.assertEqual(self.player.snapshots, {"selected": admitted_status()})
 
     def test_blocked_next_does_not_hold_advisory_cache_lock_or_active_lock(self):
         entered, release = threading.Event(), threading.Event()
@@ -262,7 +313,7 @@ class ReflectionToolTests(unittest.TestCase):
         self.assertTrue(entered.wait(1))
         self.assertTrue(self.player._lock.acquire(blocking=False))
         self.player._lock.release()
-        self.assertEqual(self.player.call("enactive_advice", dict(mission_id="mission-a", proposal_id="proposal-1"))[0]["status"], "available")
+        self.assertEqual(self.player.call("enactive_advice", dict(snapshot_id="selected", proposal_index=0))[0]["status"], "available")
         self.assertIsNone(self.player.call("enactive_snapshot", {})[1])
         release.set()
         thread.join(1)
@@ -288,12 +339,15 @@ class ReflectionHTTPConcurrencyTests(unittest.TestCase):
                     handler.connection.close()
                 else:
                     handler.reply(receipt(body))
+            elif path == "/api/status":
+                handler.reply(admitted_status())
             elif path == "/api/reflection/result":
                 handler.reply(receipt(proposals[0]))
             else:
                 raise AssertionError(path)
         self.server.callback = callback
         player = PlayerTools(self.client)
+        bind_advice(player)
         player.call("enactive_reflect_next", dict(**SCOPE, wait_seconds=0))
         first, image = player.call("enactive_reflect_submit", submit_args())
         self.assertIsNone(image)
@@ -306,7 +360,7 @@ class ReflectionHTTPConcurrencyTests(unittest.TestCase):
             player.call("enactive_reflect_submit", submit_args() | {"reason": "Changed body"})
         self.assertEqual(len(proposals), 1)
         self.assertEqual([urlsplit(call[1]).path for call in self.server.calls],
-                         ["/api/reflection/next", "/api/reflection/command", "/api/reflection/command", "/api/reflection/result"])
+                         ["/api/reflection/next", "/api/reflection/command", "/api/status", "/api/reflection/command", "/api/status", "/api/reflection/result", "/api/status"])
         self.assertFalse((self.root / ".runtime" / "mission-requests").exists())
 
     def test_actually_blocked_http_next_keeps_snapshot_and_advice_available(self):
@@ -321,17 +375,18 @@ class ReflectionHTTPConcurrencyTests(unittest.TestCase):
             elif path == "/api/reflection/proposal":
                 handler.reply(dict(status="available", proposal=proposal(), grants_authority=False))
             elif path == "/api/status":
-                handler.reply(dict(mission=None))
+                handler.reply(admitted_status())
             else: raise AssertionError(path)
         self.server.callback = callback
         player = PlayerTools(self.client)
+        bind_advice(player)
         results = []
         thread = threading.Thread(target=lambda: results.append(player.call("enactive_reflect_next", dict(**SCOPE, wait_seconds=40))))
         thread.start()
         self.addCleanup(thread.join, 2)
         self.addCleanup(release.set)
         self.assertTrue(entered.wait(1))
-        self.assertEqual(player.call("enactive_advice", dict(mission_id="mission-a", proposal_id="proposal-1"))[0]["status"], "available")
+        self.assertEqual(player.call("enactive_advice", dict(snapshot_id="selected", proposal_index=0))[0]["status"], "available")
         self.assertIsNone(player.call("enactive_snapshot", {})[1])
         release.set()
         thread.join(1)
@@ -358,7 +413,9 @@ class ReflectionSDKTests(unittest.TestCase):
                 self.assertFalse(source.is_error)
                 self.assertIsNone(source.structured_content)
                 self.assertEqual(base64.b64decode(source.content[1].data), png())
-                advice = await client.call_tool("enactive_advice", dict(mission_id="mission-a", proposal_id="proposal-1"))
+                snapshot = await client.call_tool("enactive_snapshot", {})
+                selected = json.loads(snapshot.content[0].text)["snapshot_id"]
+                advice = await client.call_tool("enactive_advice", dict(snapshot_id=selected, proposal_index=0))
                 self.assertFalse(advice.is_error)
                 self.assertIsNone(advice.structured_content)
                 self.assertEqual(len(advice.content), 1)

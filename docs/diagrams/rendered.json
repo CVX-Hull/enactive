@@ -9,7 +9,7 @@
     "tools/diagrams.py": "f36470eeee167ab0039e17f9b6288e6d0d620df704419dbffa864bad54b7d4c1",
     "docs/diagrams/action.mmd": "4ab5dfd2278ff63726e7e9da2154b4bf73de6d902765b6b4ddaa5200aa914371",
     "docs/diagrams/architecture-review.mmd": "fc717695a54a0d92981744cd0db5fab06c53a30139950419c1f699837d888996",
-    "docs/diagrams/asynchronous-reflection.mmd": "fabc5473e555c54e425657a89d75c4d94d8ec9f4dbca9be7adfed0bd26a59ba6",
+    "docs/diagrams/asynchronous-reflection.mmd": "22153be8e330a884daca9857f973e29b785724547c3478b26429f4779d11dfd2",
     "docs/diagrams/context.mmd": "e61c0ba0842bac3efd6356757c67ee558361d79c4219f04bd8574c0075c42d61",
     "docs/diagrams/memory-learning-loop.mmd": "b533f5ade625c8e1aa84a49c20c761cee491626b0e62fc5ac00881a4484e2aed",
     "docs/diagrams/multirate-player.mmd": "9e028c88eac8f598f9d87ba62d7e0c17da6ea89bf92086f416b40286737b25f5",
@@ -26,7 +26,7 @@
   "outputs": {
     "docs/diagrams/action.svg": "0d4a7a0b7c97435ceaad9ae788c7d0d5d2b3a82c1e11d32df9f2e6e20a0d9bde",
     "docs/diagrams/architecture-review.svg": "7820c5c8728464a617ff373827a029922c26b135afb01baa6da36cebbd61d1e5",
-    "docs/diagrams/asynchronous-reflection.svg": "3c2499f69eb8e270957f5e90ea393d4ed309c8a1c41609e322c4ecd4407124bf",
+    "docs/diagrams/asynchronous-reflection.svg": "cfb44da99f4e75ea42229719731dd92781c9e2f11c47ca8f7e911a06f2e6b3a6",
     "docs/diagrams/context.svg": "f037088d34bdd410a588f209303b46e01da99615224776d4107d2ed434261b93",
     "docs/diagrams/memory-learning-loop.svg": "86fcc72ccfcab07570ff11f58058e5fc066016a455087dbdfe819c28b56006ce",
     "docs/diagrams/multirate-player.svg": "2c168de5345c5561fe3b64074ee248fdd318064b11204fbe858de49adcc2a052",

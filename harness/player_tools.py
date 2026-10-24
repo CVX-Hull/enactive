@@ -22,7 +22,7 @@ from .gameplay.mission_contracts import (
     VERSION, SKILLS, IDENTITY_COVERAGE, IDENTITY_UNIT, MAX_HANDOFF_SOURCES, perception_schema, request_schema, validate_request,
 )
 from .gameplay.mission_requests import _source_binding, compose_request
-from .gameplay.procedures import validate_procedure
+from .gameplay.procedures import author_procedure, procedure_authoring_schema, validate_procedure
 from .gameplay.reflection import (
     MAX_REFLECTION_READ_WAIT_SECONDS, proposal_schema, validate_command, validate_job, validate_proposal,
 )
@@ -75,12 +75,6 @@ def _claim_authoring_schema(canonical_schema: dict) -> dict:
             _object({"kind": {"const": "unobserved"}, "session": scope["session"],
                 "coordinate_epoch": scope["coordinate_epoch"]})]},
         "supports": support})
-
-
-def _procedure_authoring_schema(canonical_schema: dict) -> dict:
-    """Keep learned content/parent/evidence explicit; bind mechanical metadata."""
-    return _without(canonical_schema, "schema", "record_type", "id", "mission_id",
-                    "procedure_id", "revision", "environment")
 
 
 def request_tool_specs() -> tuple[ToolSpec, ...]:
@@ -136,7 +130,10 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
                     for entry in (("claim",) if kind == "correct" else ("claim", "work", "decision", "procedure"))]
         variants[0]["properties"]["entry"] = _claim_authoring_schema(variants[0]["properties"]["entry"])
         if kind == "remember":
-            variants[-1]["properties"]["entry"] = _procedure_authoring_schema(variants[-1]["properties"]["entry"])
+            variants[-1]["properties"]["entry"] = procedure_authoring_schema()
+            variants.append(_object(dict(entry_type={"const": "procedure_candidate"},
+                proposal_index={"type": "integer", "minimum": 0, "maximum": 63},
+                candidate_index={"type": "integer", "minimum": 0, "maximum": 3})))
         specs.append(ToolSpec("enactive_" + kind,
             "Write explicit evidence-linked memory through the existing ledger. For Claims choose key, value, text, coverage, status, grounding and support groups. "
             "Identity keys choose world/character; software supplies the existing name unit/coverage, interpretation kind, schema/record type, Claim ID, scope/native observation order and host receipt time. "
@@ -147,6 +144,7 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
             + ("Correction supersedes come only from explicit retired_ids. " if kind == "correct" else "Remember supersedes are empty. ")
             + ("For Procedures choose content/program, support/counterexamples and parent=null for a new family or an explicit qualified revision already revealed by enactive_context. "
                "Software derives schema, record/mission/family/revision IDs, revision number and frozen admission environment from that selected cached context; do not supply them. "
+               "Alternatively choose entry_type=procedure_candidate with proposal_index/candidate_index read by enactive_advice for this exact snapshot. Software submits that original candidate through the same writer; no copying or automatic adoption. "
                if kind == "remember" else "")
             + "No inferred support, truth, success or automatic lesson promotion.",
             _object({**common, "intent": {"anyOf": variants}})))
@@ -182,15 +180,17 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
     specs.extend((
         ToolSpec("enactive_reflect_next", "Advisory actor only: get and durably claim bounded original work. requests_per_job bounds selected trajectory records per job, not tool calls or the admission's total jobs budget. Compute only when status is claimed. Pending, busy or unknown grants no permission to compute; no gameplay input or automatic model work.",
             _object({**reflection_scope, "wait_seconds": {**wait, "maximum": MAX_REFLECTION_READ_WAIT_SECONDS}})),
-        ToolSpec("enactive_reflect_submit", "Advisory actor only: submit explicitly authored candidates/notes/reason for a cached claimed job. Software preserves original headers; the original submission is immutable. Local validation refusal is not_submitted and has no command to collect. Corrected output is a separate new intent; collect an uncertain original instead of resubmitting. No automatic memory adoption or gameplay.",
+        ToolSpec("enactive_reflect_submit", "Advisory actor only: author semantic candidates/programs, notes and reason for a cached claimed job. Software supplies canonical candidate metadata from original admission and submission identity; parent must be an exact revision in that job's procedures. Prefer reusable executable repairs when supported, without inventing success or filling quotas. The original submission is immutable. Local validation refusal is not_submitted and has no command to collect. Collect uncertain original submissions instead of resubmitting. No automatic memory adoption or gameplay.",
             _object({**reflection_scope, "job_id": identity, "request_id": identity, "wait_seconds": wait,
-                **{field: proposal[field] for field in ("candidates", "notes", "reason")}})),
+                **{field: proposal[field] for field in ("notes", "reason")},
+                "candidates": {**proposal["candidates"], "items": procedure_authoring_schema()}})),
         ToolSpec("enactive_reflect_source", "Advisory actor only: read an allowlisted original image from a cached claimed job. Never Observe; this presentation cannot serve as a deciding player's source-read declaration.",
             _object({**reflection_scope, "job_id": identity, "source_id": identity}), True),
         ToolSpec("enactive_reflect_result", "Collect an original advisory command by its stable ID, including after adapter restart. Never submits or claims work; unavailable remains unknown.",
             _object({**reflection_scope, "command_id": identity, "wait_seconds": wait}), True),
-        ToolSpec("enactive_advice", "Deciding player: passively read one exact advisory proposal. Missing is explicit; proposal data grants no current authority and is never automatically accepted.",
-            _object(dict(mission_id=identity, proposal_id=identity)), True),
+        ToolSpec("enactive_advice", "Deciding player: read advice indexed by the selected exact snapshot. proposal_index=null lists the latest four proposals with compact candidate summaries; select one returned index for full original proposal detail. An index never follows a newer snapshot. Read candidates can be explicitly adopted with enactive_remember entry_type=procedure_candidate; advice grants no current authority or guaranteed success.",
+            _object(dict(snapshot_id=identity, proposal_index={"anyOf": [
+                {"type": "integer", "minimum": 0, "maximum": 63}, {"type": "null"}]})), True),
     ))
     return tuple(specs)
 
@@ -258,6 +258,7 @@ class PlayerTools:
         self.snapshots: OrderedDict[str, dict] = OrderedDict()
         self.sources: OrderedDict[tuple[str, str], dict] = OrderedDict()
         self.procedures: OrderedDict[tuple[str, str], dict] = OrderedDict()
+        self._advice: OrderedDict[tuple[str, int], dict] = OrderedDict()
         self.specs = {spec.name: spec for spec in request_tool_specs()}
         self.model_specs = {spec.name: spec for spec in tool_specs()}
         self._lock = threading.Lock()
@@ -528,7 +529,7 @@ class PlayerTools:
         # Every network/wait/image operation is outside both cache and active
         # input locks. Only short immutable-handle copies take the cache lock.
         if name == "enactive_advice":
-            return self.client.reflection_advice(**data), None
+            return self._read_advice(data), None
         if name == "enactive_reflect_result":
             return self.client.reflection_collect(**data), None
         mission_id, reflector_id = data["mission_id"], data["reflector_id"]
@@ -576,13 +577,34 @@ class PlayerTools:
             # Deliberately bypass source(), which populates player presentation
             # handles used by active-input and fresh-context handoff contracts.
             return self.client.reflection_source(mission_id, reflector_id, job["id"], data["source_id"])
+        # Admission metadata is immutable; read it off the deciding player's hot
+        # path only when the learner actually authors a candidate. This is not a
+        # new observation or an authority refresh. Transport errors stay outside
+        # the pure-validation/not_submitted classification below.
         try:
             job = self._reflection_job(mission_id, reflector_id, data["job_id"])["job"]["job"]
+        except ContractError as exc:
+            raise UnsubmittedRequest(str(exc)) from exc
+        environment = None
+        if data["candidates"]:
+            mission = self.client.status().get("mission") or {}
+            if mission.get("mission_id") != mission_id:
+                raise UnsubmittedRequest("Candidate authoring requires its original admitted mission")
+            environment = (mission.get("configuration") or {}).get("procedure_environment")
+        try:
+            parents = {(record["mission_id"], record["id"]): record for record in job["procedures"]}
+            candidates = []
+            for index, entry in enumerate(data["candidates"]):
+                parent = entry["parent"]
+                selected = None if parent is None else parents.get((parent["mission_id"], parent["revision_id"]))
+                identity = "candidate-" + hashlib.sha256((data["request_id"] + "\0" + str(index)).encode()).hexdigest()
+                candidates.append(author_procedure(entry, mission_id=mission_id,
+                    identity=identity, environment=environment, parent=selected))
             proposal = validate_proposal(dict(schema="reflection/2", record_type="ReflectionProposal",
                 id="proposal-" + hashlib.sha256(data["request_id"].encode()).hexdigest(),
                 job_id=job["id"], mission_id=job["mission_id"], reflector_id=job["reflector_id"],
                 epoch=job["epoch"], cutoff_sequence=job["through_sequence"], memory_version=job["memory_version"],
-                **{field: data[field] for field in ("candidates", "notes", "reason")}), job)
+                candidates=candidates, **{field: data[field] for field in ("notes", "reason")}), job)
             command = validate_command(dict(schema="reflection/2", kind="submit", command_id=data["request_id"],
                 mission_id=mission_id, reflector_id=reflector_id, job_id=job["id"], proposal=proposal))
         except ContractError as exc:
@@ -590,6 +612,49 @@ class PlayerTools:
             # classification. SDK staging, submission and collection stay out.
             raise UnsubmittedRequest(str(exc)) from None
         return self.client.reflection_command(command, wait_seconds=data["wait_seconds"]), None
+
+    def _read_advice(self, data: dict) -> dict:
+        """Bind compact discovery and detail to an explicitly retained snapshot."""
+        selected = self._cached_snapshot(data["snapshot_id"])
+        mission = selected.get("mission") or {}
+        identities = (mission.get("reflection") or {}).get("proposals", [])
+        index = data["proposal_index"]
+        if index is not None and index >= len(identities):
+            raise ContractError("Proposal index is outside the selected snapshot")
+        indices = range(max(0, len(identities) - 4), len(identities)) if index is None else [index]
+        proposals = []
+        for number in indices:
+            value = self.client.reflection_advice(mission["mission_id"], identities[number])
+            if value["status"] != "available":
+                proposals.append(dict(proposal_index=number, status=value["status"]))
+                continue
+            proposal = validate_proposal(value["proposal"])
+            if (proposal["mission_id"], proposal["id"]) != (mission["mission_id"], identities[number]):
+                raise ContractError("Advice differs from the exact selected snapshot proposal")
+            with self._reflection_lock:
+                self._remember(self._advice, (data["snapshot_id"], number), proposal)
+            if index is not None:
+                proposals.append(dict(proposal_index=number, status="available", proposal=proposal))
+            else:
+                candidates = [dict(candidate_index=n, **{field: record[field] for field in (
+                    "goal", "applicability", "invalidators", "stop_conditions", "limits", "status", "reason")},
+                    executable=record["program"] is not None) for n, record in enumerate(proposal["candidates"])]
+                proposals.append(dict(proposal_index=number, status="available", candidates=candidates,
+                    notes=[{field: note[field] for field in ("kind", "text")} for note in proposal["notes"]],
+                    reason=proposal["reason"]))
+        return dict(snapshot_id=data["snapshot_id"], status="available" if proposals else "empty",
+            proposals=proposals, omitted_proposals=max(0, len(identities) - 4) if index is None else 0,
+            grants_authority=False)
+
+    def _selected_candidate(self, snapshot_id: str, mission: dict, intent: dict) -> dict:
+        with self._reflection_lock:
+            proposal = deepcopy(self._advice.get((snapshot_id, intent["proposal_index"])))
+        if proposal is None:
+            raise ContractError("Read this snapshot's proposal with enactive_advice before selecting a candidate")
+        index = intent["candidate_index"]
+        if proposal["mission_id"] != mission["mission_id"] or index >= len(proposal["candidates"]):
+            raise ContractError("Candidate index is outside the read proposal")
+        return validate_procedure(proposal["candidates"][index])
 
     def _claim_entry(self, selected: dict, identity: str, kind: str, intent: dict) -> dict:
         """Expand explicit interpretation without choosing its truth or support."""
@@ -647,18 +712,13 @@ class PlayerTools:
         if not isinstance(environment, dict):
             raise ContractError("Selected snapshot has no admitted procedure environment; obtain explicit current context")
         parent = entry["parent"]
-        digest = hashlib.sha256((mission["mission_id"] + "\0" + identity).encode()).hexdigest()
-        family, revision = "procedure-" + digest, 1
+        record = None
         if parent is not None:
             record = self.procedures.get((parent["mission_id"], parent["revision_id"]))
             if record is None:
                 raise ContractError("Parent revision unavailable; explicitly retrieve its procedure through enactive_context")
-            family, revision = record["procedure_id"], record["revision"] + 1
-        schema = request_schema("remember", entry_type="procedure")["properties"]["entry"]["properties"]
-        return validate_procedure({**entry, "schema": schema["schema"]["const"],
-            "record_type": schema["record_type"]["const"], "id": "revision-" + digest,
-            "mission_id": mission["mission_id"], "procedure_id": family, "revision": revision,
-            "environment": environment})
+        return author_procedure(entry, mission_id=mission["mission_id"], identity=identity,
+            environment=environment, parent=record)
 
     def _call(self, name: str, data: dict) -> tuple[dict, bytes | None]:
         if name == "enactive_snapshot":
@@ -749,6 +809,8 @@ class PlayerTools:
                 intent["entry"] = self._claim_entry(selected, identity, kind, intent)
             elif kind == "remember" and intent["entry_type"] == "procedure":
                 intent["entry"] = self._procedure_entry(selected, identity, intent["entry"])
+            elif kind == "remember" and intent["entry_type"] == "procedure_candidate":
+                intent = dict(entry_type="procedure", entry=self._selected_candidate(data["snapshot_id"], snapshot, intent))
             elif kind == "claim":
                 for source in intent["read_procedure_sources"]:
                     self._source(source["mission_id"], source["source_id"])

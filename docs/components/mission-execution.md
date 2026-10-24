@@ -70,6 +70,16 @@ service would add coordination without changing ownership. Reconsider extraction
 when a demonstrated independent responsibility requires it, under
 [#191](https://github.com/CVX-Hull/enactive/issues/191).
 
+## Local feedback cost
+
+Evidence capacity queries reuse an exact canonical metadata byte length, invalidated
+on serialized state changes and refreshed after successful atomic persistence.
+They still scan actual files with standard `os.scandir`; selected-source integrity,
+freshness/custody, reservations, atomic writes and fsync retain their contracts.
+This is a derived scalar, not cached authority or a second evidence store.
+The [offline measurement](../acceptance/2026-10-24-execution-first-offline.md)
+separates retained-scale dispatch improvement from unqualified graphical cadence.
+
 ## Lifecycle and change review
 
 Start cannot adopt an unrelated running game. First normal identity/adoption

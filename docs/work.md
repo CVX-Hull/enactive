@@ -23,6 +23,10 @@ for the independent-play outcome and [maintenance #75](https://github.com/CVX-Hu
 for architecture/workflow upkeep. A source repair, bounded demo or successful CI
 does not replace independent seven-day acceptance.
 
+The [execution-first boundary](changes/064-execution-first-learning.md) connects
+#164/#177/#178 to the [offline local-execution measurement](acceptance/2026-10-24-execution-first-offline.md).
+These source improvements leave graphical, learning-benefit and campaign gates open.
+
 ## Decisive evidence
 
 | Evidence family | What it establishes; linked records own details and limits |

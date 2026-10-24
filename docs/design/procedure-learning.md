@@ -128,8 +128,10 @@ submission must not become late because a game operation delayed bookkeeping.
 Unknown computation and omitted/unreviewed work remain explicit. Exact cutoff/
 source checks and immutable command/result correlation apply on reopen too.
 The source implementation now integrates this mailbox with RegisteredReflection,
-the existing writer/server and structured MCP tools. Four routine root skill
-decisions coalesce work; failed/unknown results and recovery/handoff boundaries
+the existing writer/server and structured MCP tools. Routine root count or original
+request age coalesces work within original-horizon credits; the
+[current protocol](../protocol.md#ordinary-discovery-and-procedure-data) owns the
+exact policy. Failed/unknown results and recovery/handoff boundaries
 can trigger earlier review. Context selection preserves original omissions when
 interrupted results are absent or individual records cannot fit. Reopening
 reconstructs pending coverage from the ledger. Actual official host integration

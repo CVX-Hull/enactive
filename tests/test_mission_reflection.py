@@ -485,15 +485,36 @@ class ReflectionHTTPIntegrationTests(unittest.TestCase):
         self.assertEqual(len(self.player.sources), 0)
         self.assertEqual(self.navigate(5)["state"], "completed")
         self.assertEqual(self.f.runtime.status()["reflection"]["jobs"][0]["state"], "claimed")
+        from harness.gameplay.procedures import procedure_authoring_schema
+        candidate = {key: value for key, value in procedure().items()
+                     if key in procedure_authoring_schema()["properties"]}
+        candidate["support"] = [dict(mission_id=self.f.a.mission_id,
+            request_ids=job["included_request_ids"], source_ids=[source], interpretation="Synthetic episode")]
+        unrelated = json.loads(json.dumps(candidate))
+        unrelated["support"][0]["request_ids"] = job["included_request_ids"][:1]
         result, _ = self.player.call("enactive_reflect_submit", {**self.scope,
             "job_id": job["id"], "request_id": "advice-1", "wait_seconds": 2,
-            "candidates": [], "notes": [], "reason": "Synthetic overlap boundary, no gameplay efficacy claim"})
+            "candidates": [unrelated, candidate], "notes": [], "reason": "Synthetic overlap boundary, no gameplay efficacy claim"})
         self.assertEqual(result["status"], "committed", result)
         proposal_id = result["result"]["proposal_id"]
         self.f.wait(lambda: proposal_id in self.f.runtime.status()["reflection"]["proposals"])
-        advice, _ = self.player.call("enactive_advice", dict(mission_id=self.f.a.mission_id, proposal_id=proposal_id))
-        self.assertEqual(advice["proposal"]["cutoff_sequence"], 5)
+        selected, _ = self.player.call("enactive_snapshot", {})
+        index = selected["mission"]["reflection"]["proposals"].index(proposal_id)
+        advice, _ = self.player.call("enactive_advice", dict(snapshot_id=selected["snapshot_id"], proposal_index=index))
+        original = advice["proposals"][0]["proposal"]
+        self.assertEqual(original["cutoff_sequence"], 5)
         self.assertEqual(self.f.runtime._ledger.memory_records("procedure"), ())
+        refused, _ = self.player.call("enactive_remember", dict(snapshot_id=selected["snapshot_id"],
+            request_id="refuse-unrelated-advice", wait_seconds=2, intent=dict(entry_type="procedure_candidate",
+                proposal_index=index, candidate_index=0)))
+        self.assertEqual(refused["response"]["operation"]["state"], "blocked")
+        self.assertIn("unrelated", refused["response"]["operation"]["result"]["reason"])
+        self.assertEqual(self.f.runtime._ledger.memory_records("procedure"), ())
+        adopted, _ = self.player.call("enactive_remember", dict(snapshot_id=selected["snapshot_id"],
+            request_id="adopt-advice-1", wait_seconds=2, intent=dict(entry_type="procedure_candidate",
+                proposal_index=index, candidate_index=1)))
+        self.assertEqual(adopted["response"]["operation"]["state"], "completed", adopted)
+        self.assertEqual(self.f.runtime._ledger.memory_records("procedure")[0]["entry"], original["candidates"][1])
 
     def test_passive_wait_does_not_block_player_and_invalid_queries_refuse(self):
         began, release = threading.Event(), threading.Event()

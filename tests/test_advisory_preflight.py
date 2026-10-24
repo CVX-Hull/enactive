@@ -17,7 +17,7 @@ from harness.player_tools import PlayerTools
 from tests.test_mission_contracts import admission
 from tests import test_reflection_client as reflection_fixture
 from tests.test_reflection_exchange import job, procedure, wrapper
-from tests.test_reflection_tools import SCOPE, submit_args
+from tests.test_reflection_tools import SCOPE, admitted_status, submit_args
 
 
 class AdvisoryPreflightTests(unittest.TestCase):
@@ -38,11 +38,14 @@ class AdvisoryPreflightTests(unittest.TestCase):
         self.ledger.append_reflection_job(self.job, now=1000.)
         self.server.callback = self.respond
         self.player = PlayerTools(self.client)
+        self.status_value = admitted_status()
 
     def respond(self, handler, body):
         path = urlsplit(handler.path).path
         if path == "/api/reflection/next":
             handler.reply(dict(status="offered", job=wrapper(self.job), grants_authority=False))
+        elif path == "/api/status":
+            handler.reply(self.status_value)
         elif path == "/api/reflection/command":
             result = self.ledger.apply_reflection(body, now=1001.)
             handler.reply(dict(status="committed", admitted=True, command_id=body["command_id"],
@@ -109,7 +112,10 @@ class AdvisoryPreflightTests(unittest.TestCase):
                     self.assertIn("original job closure", value["error"])
                     self.assertFalse(self.staged(f"op-invalid-{index}").exists())
                     self.assertEqual(self.ledger.reflection_command_records(), commands)
-                    self.assertEqual(self.server.calls, calls)
+                    # Candidate metadata needs the original admission environment;
+                    # only its passive status read is allowed before refusal.
+                    self.assertEqual([urlsplit(call[1]).path for call in self.server.calls[len(calls):]],
+                                     ["/api/status"] * (index + 1))
                     self.assertEqual(sorted((self.root / ".runtime/reflection-commands").glob("*.json")), stages)
                 stage.assert_not_called()
             with patch("harness.player_tools.uuid.uuid4", return_value=SimpleNamespace(hex="corrected")):
@@ -120,7 +126,7 @@ class AdvisoryPreflightTests(unittest.TestCase):
             self.assertEqual(len(self.ledger.reflection_command_records()), len(commands) + 1)
             self.assertEqual(self.ledger.reflection_records()[0][0]["state"], "completed")
             self.assertEqual([urlsplit(call[1]).path for call in self.server.calls[len(calls):]],
-                ["/api/reflection/command"])
+                ["/api/status"] * (len(invalids) + 1) + ["/api/reflection/command"])
         self.run_client(exercise)
 
     def test_missing_claimed_handle_is_proven_unsubmitted_without_network_or_stage(self):
@@ -137,6 +143,24 @@ class AdvisoryPreflightTests(unittest.TestCase):
             self.assertEqual(self.ledger.reflection_command_records(), ())
         self.run_client(exercise)
 
+    def test_successful_wrong_or_missing_admission_read_is_proven_unsubmitted(self):
+        async def exercise(client):
+            self.assertFalse((await client.call_tool("enactive_reflect_next", SCOPE)).is_error)
+            original = self.ledger.reflection_command_records()
+            for index, mission in enumerate((None, dict(mission_id="other"))):
+                self.status_value = dict(mission=mission)
+                with patch("harness.player_tools.uuid.uuid4", return_value=SimpleNamespace(hex=f"no-admission-{index}")):
+                    reply = await client.call_tool("enactive_reflect_submit", self.args())
+                value = self.value(reply)
+                self.assertTrue(reply.is_error)
+                self.assertEqual(value["submission"], "not_submitted")
+                self.assertNotIn("original_collection", value)
+                self.assertFalse(self.staged(f"op-no-admission-{index}").exists())
+                self.assertEqual(self.ledger.reflection_command_records(), original)
+            self.assertEqual([urlsplit(call[1]).path for call in self.server.calls],
+                ["/api/reflection/next", "/api/reflection/command", "/api/status", "/api/status"])
+        self.run_client(exercise)
+
     def test_post_stage_uncertainty_and_format_failure_keep_original_collection_without_replay(self):
         async def exercise(client):
             self.assertFalse((await client.call_tool("enactive_reflect_next", SCOPE)).is_error)
@@ -147,6 +171,8 @@ class AdvisoryPreflightTests(unittest.TestCase):
                             if urlsplit(handler.path).path == "/api/reflection/command":
                                 handler.connection.shutdown(2)
                                 handler.connection.close()
+                            elif urlsplit(handler.path).path == "/api/status":
+                                handler.reply(self.status_value)
                             else:
                                 handler.reply(dict(status="missing", admitted=False,
                                     command_id=f"op-{failure}", grants_authority=False))
@@ -175,7 +201,7 @@ class AdvisoryPreflightTests(unittest.TestCase):
                     collected = await client.call_tool(collection["tool"], collection["arguments"])
                     self.assertFalse(collected.is_error)
                     self.assertEqual(self.value(collected)["command_id"], f"op-{failure}")
-                    self.assertEqual([call[0] for call in self.server.calls[start:]], ["POST", "GET"])
+                    self.assertEqual([call[0] for call in self.server.calls[start:]], ["GET", "POST", "GET"])
         self.run_client(exercise)
 
 
