@@ -31,6 +31,7 @@ does not replace independent seven-day acceptance.
 | [Independent supply/shelter mission](acceptance/2026-10-21-independent-supply-shelter.md) | Bounded useful planning, supplies/needs, memory correction, succession and normal lifecycle |
 | [Learning009](acceptance/2026-10-23-discovery-learning-ninth-attempt.md) | Independent executable authorship/revision/reuse, successor application and claimed-advice overlap; not general cadence or causal benefit |
 | [Fresh023](acceptance/2026-10-24-independent-seven-day-twenty-third-attempt.md) | Two-day partial with learning/advice; successor Claim failure and exceptional closure retained, not full survival acceptance |
+| [Fresh024 offline closeout](acceptance/2026-10-24-independent-seven-day-twenty-fourth-attempt.md) | Failed 30h44m partial with procedure corrections, bounded advice and verified exceptional cleanup; no seven-day/cadence/normal ending |
 | [Native capture boundary](acceptance/2026-10-22-native-capture-preconditions.md) and [local refusal](acceptance/2026-10-22-native-local-refusal.md) | Scoped ordinary input/lifecycle/refusal evidence; wider conditions remain unqualified |
 | [Architecture/governance assessment](acceptance/2026-10-24-architecture-governance-audit.md) | Artifact coverage, findings/dispositions and failed024 context; no new gameplay acceptance |
 

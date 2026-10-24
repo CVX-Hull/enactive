@@ -665,7 +665,7 @@ Keep three facts distinct: the control exists; it was exercised with a particula
 result; its effectiveness has been assessed within a stated scope. `last_exercise`
 links to a dated execution/review result recording candidate, environment, lane,
 outcome and limits, not merely implementation source. Null means no recorded exercise.
-Maintenance review records findings, effectiveness, cost and follow-up with evidence.
+Maintenance review records findings, effectiveness and cost with evidence; its follow-up links the existing Issue, which owns changing acceptance, allocation and stage.
 Include custom tools/processes and previously rejected reuse options: revisit on
 changed needs, upstream capability/support, repeated defects or excessive upkeep;
 replace or retire redundant machinery rather than accumulating controls. Keep the
@@ -675,7 +675,14 @@ Exercise and maintenance review are independent events. Dated reports retain pri
 observations when the latest record changes. A failure remains in history after repair.
 
 Active/deprecated controls need a next review within 90 days of the recorded review,
-with event triggers requiring earlier work. Common checks fail **after** the due date.
+with event triggers requiring earlier work. Full common checks and standalone
+governance fail **after** the due date. Fast development checkpoints instead
+print calendar-expiry warnings for all controls; they do not infer which controls
+are relevant or relax structural, ownership, evidence/reference, chronology,
+protocol or generated-map checks. Event-triggered review on resumption, incidents,
+changed boundaries and release still applies; actual affected failures or evidence
+gaps stop the affected work. Resolve overdue review at the existing integration/
+formal-acceptance checkpoint. A warning is not effectiveness or support evidence.
 The standalone `tools/governance.py --as-of YYYY-MM-DD` forecasts maintenance only;
 it never renews records and cannot substitute for the common command's current-date
 check. No check or background job edits dates automatically. At an overdue failure,

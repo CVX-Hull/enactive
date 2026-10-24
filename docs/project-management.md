@@ -107,9 +107,11 @@ At integration use existing command/CI/PR/run receipts to compare useful progres
 defects caught/escaped, review/rework/waiting effort and cost of checks. Record
 unknowns without inventing measurements. Keep, narrow, replace or retire a control
 from that evidence under C-MAINTENANCE. Do not create another metrics service,
-review queue or per-action gameplay approval. Existing maintenance expiry still
-applies; an alternative scoped-development exception needs a separately reviewed
-policy/check change, not an undocumented bypass.
+review queue or per-action gameplay approval. Fast checkpoints visibly warn on
+calendar-only maintenance expiry for every control; full checks and merge remain
+strict. No dates are renewed automatically. Event-triggered review and applicable
+actual failures/evidence gaps still govern the affected work; resolve overdue
+review at the existing integration/formal-acceptance checkpoint under S-DOCS.
 
 ## Development-first delivery
 
@@ -445,13 +447,10 @@ serial short probe–cleanup–amendment–publication cycles. Retire redundant 
 class limits prospectively when their measured cost no longer serves the outcome;
 retain every prior limit/result/cost and finite new total/segment/attempt ceilings.
 Never change user guarantees or original whole ceilings through an internal exception.
-For this survival campaign the user explicitly delegated **gameplay-related
-extensions**, including prospective time and input budgets, to prioritize quality
-data. Record finite revised ceilings/endpoints, reason/forecast and retained costs
-before input; preserve the effective final cleanup reserve against both whole and
-aggregate limits. This delegation does not waive safety, renew failed phases, reset
-costs or authorize provider spending or permission/global environment changes.
-No routine gameplay-budget question is required within that delegation.
+[Operator permissions](operator-permissions.md#finite-gameplay-budget-delegation)
+owns the standing delegation and its limits. Record finite revised ceilings/
+endpoints, reason/forecast and retained costs before input; preserve the effective
+final cleanup reserve against both whole and aggregate limits.
 Use the [development-first checkpoints](#development-first-delivery) to select
 validation timing: frozen finite development runs follow fast/focused checks;
 formal acceptance follows reviewed exact-candidate full checks. Unchanged-runtime

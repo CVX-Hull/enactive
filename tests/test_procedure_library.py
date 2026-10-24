@@ -242,7 +242,7 @@ class ProcedureLibraryTests(unittest.TestCase):
     def test_empty_sources_and_exact_bounded_unique_pins(self):
         self.assertEqual(self.library().records(), ())
         _, _, _, pin = self.archive()
-        for sources in ([pin] * 2, [pin] * 5, [{**pin, "path": "/tmp/foreign"}],
+        for sources in ([pin] * 2, [pin] * 9, [{**pin, "path": "/tmp/foreign"}],
                         [{**pin, "ledger_sha256": "A" * 64}], [{**pin, "mission_id": "../escape"}],
                         [{**pin, "mission_id": "current"}], [{**pin, "mission_id": "bad\n"}]):
             with self.subTest(sources=sources), self.assertRaises(ContractError):
@@ -508,6 +508,86 @@ class ProcedureLibraryTests(unittest.TestCase):
         b = self.edit_db(directory, "UPDATE metadata SET value=? WHERE key='admission'", (canonical(admission),))
         with self.assertRaises(ContractError):
             self.library(a, b)
+
+    def test_fifth_donor_retains_self_contained_root_and_full_ancestry_on_reopen(self):
+        pins, ancestors = [], []
+        for index in range(4):
+            mission = f"ancestor-{index}"
+            support = [{"mission_id": mission, "request_ids": ["request-1"],
+                "source_ids": [_identity(observation(session=mission))], "interpretation": "Synthetic ancestor"}]
+            record = (procedure(mission_id=mission, support=support) if not ancestors else
+                successor(ancestors[-1], mission_id=mission, support=ancestors[-1]["support"] + support))
+            _, _, _, pin = self.archive(mission, records=[record], dependencies=pins)
+            pins.append(pin)
+            ancestors.append(record)
+        mission = "fifth-donor"
+        own_support = [{"mission_id": mission, "request_ids": ["request-1"],
+            "source_ids": [_identity(observation(session=mission))], "interpretation": "Synthetic fifth donor"}]
+        own = procedure(mission_id=mission, id="fifth-root", procedure_id="fifth-only", support=own_support)
+        descendant = successor(ancestors[-1], mission_id=mission, id="fifth-descendant",
+            support=ancestors[-1]["support"] + own_support)
+        directory, _, _, fifth = self.archive(mission, records=[own, descendant], dependencies=pins)
+        expected = tuple(ancestors + [own, descendant])
+        all_pins = [*pins, fifth]
+        originals = {path.relative_to(self.root): path.read_bytes()
+            for path in self.root.rglob("*") if path.is_file()}
+        for _ in range(2):
+            with self.library(*all_pins) as library:
+                self.assertEqual(library.records(), expected)
+                self.assertEqual(project_procedures(library.records()),
+                    {own["procedure_id"]: own, descendant["procedure_id"]: descendant})
+                for episode in descendant["support"]:
+                    self.assertEqual(library.validate_episode(episode),
+                        ((episode["mission_id"], episode["source_ids"][0]),))
+                    self.assertEqual(library.source(episode["mission_id"], episode["source_ids"][0])[1], png())
+        self.assertEqual(all_pins, [self.pin(pin["mission_id"]) for pin in all_pins])
+        self.assertEqual(originals, {path.relative_to(self.root): path.read_bytes()
+            for path in self.root.rglob("*") if path.is_file()})
+        # Even a self-contained fifth-owned root does not prune its owner's
+        # declared whole-donor dependencies or fetch omitted archives.
+        for selected in ([fifth], all_pins[1:], [*pins[:-1], {**pins[-1], "ledger_sha256": "0" * 64}, fifth]):
+            with self.subTest(selected=selected), self.assertRaises(ContractError):
+                self.library(*selected)
+        db = sqlite3.connect(directory / "mission.sqlite3")
+        stored = json.loads(db.execute("SELECT value FROM metadata WHERE key='admission'").fetchone()[0])
+        db.close()
+        self.assertEqual(stored["learning"]["library_sources"], pins)
+        # Remove the descendant in this separate synthetic variant: admission
+        # closure still applies when the fifth archive retains only its own root.
+        self_contained = self.edit_db(directory, "DELETE FROM memory WHERE record_id=?", (descendant["id"],))
+        with self.library(*pins, self_contained) as library:
+            self.assertEqual(library.records(), tuple(ancestors + [own]))
+        with self.assertRaisesRegex(ContractError, "missing or conflicting dependency pin"):
+            self.library(self_contained)
+
+    def test_eight_donor_256_record_fixture_mounts_and_ninth_or_257_records_refuse(self):
+        # Frozen synthetic setup envelope: eight sealed donors, each with 32
+        # independent records, one PNG and one settled observe request. This is
+        # setup/mount evidence, not a routine-play cadence or archive-size claim.
+        pins, expected = [], []
+        for index in range(8):
+            mission = f"capacity-{index}"
+            support = [{"mission_id": mission, "request_ids": ["request-1"],
+                "source_ids": [_identity(observation(session=mission))], "interpretation": "Synthetic capacity"}]
+            records = [procedure(mission_id=mission, id=f"revision-{row}",
+                procedure_id=f"procedure-{index}-{row}", support=support) for row in range(32)]
+            _, _, _, pin = self.archive(mission, records=records)
+            pins.append(pin)
+            expected.extend(records)
+        for _ in range(2):
+            with self.library(*pins) as library:
+                self.assertEqual(library.records(), tuple(expected))
+                self.assertEqual(len(project_procedures(library.records())), 256)
+        _, _, _, ninth = self.archive("capacity-8")
+        with self.assertRaisesRegex(ContractError, "at most 8"):
+            self.library(*pins, ninth)
+        extra = procedure(mission_id="capacity-7", id="extra-revision", procedure_id="extra-procedure",
+            support=expected[-1]["support"])
+        directory = self.root / ".runtime" / "missions" / "capacity-7"
+        pins[-1] = self.edit_db(directory, "INSERT INTO memory VALUES (?,?,?,?,?)",
+            (33, "extra-event", "procedure", extra["id"], canonical(extra)))
+        with self.assertRaisesRegex(ContractError, "procedure record"):
+            self.library(*pins)
 
     def test_current_revision_can_validate_historical_episodes_with_exact_qualified_ids(self):
         _, identity, record, pin = self.archive()

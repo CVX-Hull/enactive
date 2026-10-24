@@ -59,6 +59,17 @@ is in [binding errors](../protocol.md#skill-request-binding-errors), not a menu
 whitelist in this explanation. Repeated SDK calls must not silently mint a new
 parent allowance. Generic autonomous strategy/inference overlap is not yet qualified.
 
+A known native refusal also consumes an operation rotation even though it
+commits no input. The writer retains its rejected receipt, then reuses the
+existing custody/evidence/global-capacity proof before marking read-only Observe
+needed. The next input remains a new player choice. Unknown delivery and actual
+faults still stop. Stable predicate labels in the existing operation reason make
+prompt failures diagnosable without another log or authority store. This small
+ordered check remains with the writer: splitting four predicates into a new
+service would add coordination without changing ownership. Reconsider extraction
+when a demonstrated independent responsibility requires it, under
+[#191](https://github.com/CVX-Hull/enactive/issues/191).
+
 ## Lifecycle and change review
 
 Start cannot adopt an unrelated running game. First normal identity/adoption

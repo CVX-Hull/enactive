@@ -260,7 +260,7 @@
         "effectiveness": "partially_effective",
         "findings": "An exact full lane caught a stale assertion missed by focused selection. Correct the real expiry scenario, not production behavior to satisfy the predecessor test. Derive source metadata capacity from the atomic handoff contract and distinguish pure new refusal from staged/transport uncertainty.",
         "cost": "Focused suites and independent review at closed integration checkpoints, followed by exact hosted full CI before formal acceptance. Existing test/governance tools and real short root expiry suffice; no custom semantic scanner or per-action review.",
-        "follow_up": "Lead owns #136/#145 full independent learning, seven-day survival, successor application and normal lifecycle; #143 observer truth; #164 SDK/context/cadence; #176 ordinary interaction; #177 retained learning and bounded donor closure; #178 useful advisory allocation; #191 portability. Preserve failed023 and require a new finite admission; do not close outcomes from component checks.",
+        "follow_up": "@CVX-Hull owns live follow-up through [#75](https://github.com/CVX-Hull/enactive/issues/75); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence.",
         "evidence": [
           "docs/acceptance/2026-10-24-independent-seven-day-eighteenth-attempt.md",
           "docs/engineering.md",
@@ -389,7 +389,7 @@
         "effectiveness": "partially_effective",
         "findings": "The 32-entry source cache cannot represent the permitted handoff working set. A genuinely read image can lose producer metadata; a positively local refusal must not invent uncertain submission. Preserve actual staged/dispatch uncertainty, current custody and original finite costs.",
         "cost": "Pinned two-job build27.831s/install0, 29setup tests1.311s and one182.010s diagnostic host; earlier63.718s zero-input bootstrap failure retained. No global setup, hidden-state read, disabled assertion or engineered menu guard.",
-        "follow_up": "Lead owns #136/#145 full independent learning, seven-day survival, successor application and normal lifecycle; #143 observer truth; #164 SDK/context/cadence; #176 ordinary interaction; #177 retained learning and bounded donor closure; #178 useful advisory allocation; #191 portability. Preserve failed023 and require a new finite admission; do not close outcomes from component checks.",
+        "follow_up": "@CVX-Hull owns live follow-up through [#176](https://github.com/CVX-Hull/enactive/issues/176); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence.",
         "evidence": [
           "docs/acceptance/2026-10-22-native-capture-preconditions.md",
           "docs/acceptance/2026-10-22-independent-seven-day-eighth-attempt.md",
@@ -479,7 +479,7 @@
         "effectiveness": "partially_effective",
         "findings": "Actual021 stack diagnosis establishes an upstream callback buffer invariant violation inside a crash modal, not a capture attempt or healthy process merely waiting. Rebuilt ImGui DeleteChars correction preserves byte limits and ordinary input, with an independent real ASCII boundary/normal-ending assessment. Unknown ACK remains separate from actual exit proof. Byte cutoff can split UTF-8; previous capture/mouse/activity qualifications remain scoped in their reports.",
         "cost": "Pinned two-job build27.831s/install0, 29setup tests1.311s and one182.010s diagnostic host; earlier63.718s zero-input bootstrap failure retained. No global setup, hidden-state read, disabled assertion or engineered menu guard.",
-        "follow_up": "New finite fresh seven-day campaign with actual organic learning, retained-memory successor, midpoint normal Save/new-child Load/final ending and useful cadence. #176/#191 retain wider receiver/Unicode/cross-game limits and #164 context/collection usability. A narrow native diagnostic is no full-outcome pass.",
+        "follow_up": "@CVX-Hull owns live follow-up through [#176](https://github.com/CVX-Hull/enactive/issues/176); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence.",
         "evidence": [
           "docs/acceptance/2026-10-22-native-capture-preconditions.md",
           "docs/acceptance/2026-10-22-independent-seven-day-eighth-attempt.md",
@@ -553,7 +553,7 @@
         "effectiveness": "partially_effective",
         "findings": "Correct mechanical producer limits without asking the model to reconstruct audit metadata. Historical proof inspection and source-read declaration ergonomics need progressive-context review in #164/#177. Sixteen advisory jobs exhaust early; #178 owns remaining-horizon allocation, not live renewal. Fast component retrieval does not qualify whole-player cadence.",
         "cost": "Existing host events, frames, SDK/ledger/native receipts and independent read-only assessment reused. No new telemetry service, extra provider or per-action approval.",
-        "follow_up": "Lead owns #136/#145 full independent learning, seven-day survival, successor application and normal lifecycle; #143 observer truth; #164 SDK/context/cadence; #176 ordinary interaction; #177 retained learning and bounded donor closure; #178 useful advisory allocation; #191 portability. Preserve failed023 and require a new finite admission; do not close outcomes from component checks.",
+        "follow_up": "@CVX-Hull owns live follow-up through [#164](https://github.com/CVX-Hull/enactive/issues/164); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence.",
         "evidence": [
           "docs/acceptance/2026-10-23-independent-seven-day-fifteenth-attempt.md",
           "docs/project-management.md",
@@ -608,7 +608,7 @@
         "effectiveness": "effective",
         "findings": "Independent reviews found expiry ordering, terminal status, foreign-world budgets, missing completion evidence and sticky-dispute admission defects. Regression fixes and rereviews passed; controls remain bounded and do not prove native/model effectiveness.",
         "cost": "Existing project-local tools, 313 portable tests, one isolated worker and targeted independent reviews; no new generic framework or global dependency.",
-        "follow_up": "Review on changed supervisor/lease/receipt contracts or failures; #36 owns production integration, #24 owns native/model evaluation, #13 owns broad maintenance."
+        "follow_up": "@CVX-Hull owns live follow-up through [#75](https://github.com/CVX-Hull/enactive/issues/75); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence."
       },
       "next_review": "2027-01-15"
     },
@@ -688,22 +688,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-24",
-        "outcome": "Scoped architecture/documentation/control/GitHub review identifies and fixes authority/status/ownership omissions; independent verify-fixes is clean in its reviewed source/reader/governance scope. Games remain paused.",
-        "scope": "Five current component views, historical-role metadata without body rewrites, concise mechanisms and risk-based workflow; source/visual/GitHub reviews retain limits and actual failed evidence. Exact new-candidate CI/publication is separate in PR180.",
+        "outcome": "Passed scoped source/document/control checks and independent review; exact later candidate/main CI and gameplay remain separate.",
+        "scope": "Post-audit governance/documentation remediation: strict full versus warning-only calendar expiry at fast checkpoints, one document/task authority and preserved historical evidence.",
         "evidence": [
-          "docs/acceptance/2026-10-24-architecture-governance-audit.md"
+          "docs/acceptance/2026-10-24-audit-remediation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-24",
         "effectiveness": "partially_effective",
-        "findings": "Repository/GitHub audit finds incident chronology in current architecture, active metadata on historical records, repeated requirements in control definitions and stale Project/Issue activation summaries. Source guards and dependency contracts are present, but semantic documentation/WIP accuracy remains manual. Implement recursive current views and proportionate assurance using existing tooling; preserve failure evidence and original outcome acceptance.",
-        "cost": "Known baseline exact CI: 1,970 Python tests/1,160.497s plus other portable checks; prior selected 214 tests/15.264s and new document lane 8 tests/0.404s have different scopes, not a causal cost comparison. Whole review, waiting and model effort remain unmeasured. Remove duplicated requirements/status narration; keep cheap feedback and applicable authority/claim gates.",
-        "follow_up": "Lead owns #75 audit disposition, #198 architecture/document roles and #199 assurance/GitHub reconciliation. #145/#176 retain failed024 closeout and unproved observation-binding failure; #164 context/cadence and #177 donor closure remain separate. Revisit overdue-maintenance coupling before expiry or demonstrated obstruction, without bypassing current policy. Games remain paused until user instruction.",
+        "findings": "Focused negative tests preserve strict structural/protocol/map enforcement while calendar-only expiry warns in development. Independent policy and reader reviews preserve event-triggered stops and repair lost historical fragments plus duplicated delegation authority. Semantic truth, review quality, actual native/campaign outcomes and sustained control effectiveness remain outside these checks.",
+        "cost": "Integrated 143-test lane 29.335s and 48-test prompt lane 44.739s, with fast checks and scoped independent reviews. Lanes cover different responsibilities; no additive productivity or inference claim. Whole review/model/waiting cost is not reliably measured. Existing mature tools reused, no new service.",
+        "follow_up": "@CVX-Hull owns live follow-up through [#199](https://github.com/CVX-Hull/enactive/issues/199); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence.",
         "evidence": [
-          "docs/acceptance/2026-10-24-architecture-governance-audit.md",
-          "docs/engineering.md",
-          "docs/project-management.md"
+          "docs/acceptance/2026-10-24-audit-remediation.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -713,7 +711,7 @@
       "name": "Registry, evidence schema and map validation",
       "mode": "automatic",
       "scope": "Standard mappings, control lifecycle/maintenance, document stewardship, local references, curated manifest metadata and generated map.",
-      "mechanism": "Existing jsonschema validates records and YAML metadata parsed by python-frontmatter; project checks enforce current lifecycle relationships, safe references, active-only mappings, due dates, protocol source agreement and generated-map freshness. --as-of explicitly forecasts maintenance; the common command evaluates today.",
+      "mechanism": "Existing jsonschema and python-frontmatter validate lifecycle records, references, active-only mappings and current protocol/source agreement; the generator detects map drift. Full/default checks enforce due dates. Fast development checkpoints visibly warn for calendar expiry only, for every control. --as-of forecasts strictly; no mode renews records.",
       "owner": "maintainer",
       "trigger": "common command; regenerate map after registry change",
       "evidence": [
@@ -732,27 +730,27 @@
       ],
       "failure_response": "Fix missing/unknown mappings, unsafe references or metadata; regenerate stale map with --write and inspect the result.",
       "limitations": "Structure, recorded dates and local file existence are checked, not prose truth, artifact hashes outside diagram receipts, media availability, actual review/execution, owner performance or historical lifecycle authorization. Due checks run only when invoked; fragment targets are not validated.",
-      "enforcement": "Common command fails; negative tests exercise mapping/field/reference/drift failures. Normal mode never rewrites the map.",
+      "enforcement": "Structural, reference, chronology, ownership, protocol and map errors fail in both lanes. Calendar-only expiry warns in --fast and fails full/default checks; negative tests exercise both. Development mode cannot write or forecast.",
       "status": "active",
       "rationale": null,
       "replacement": null,
       "last_exercise": {
-        "date": "2026-10-17",
-        "outcome": "Passed within round010 portable/review scope; no native or live-provider claim.",
-        "scope": "Current metadata, local links, registry relationships, generated control map and maintenance records validated in common checks.",
+        "date": "2026-10-24",
+        "outcome": "Passed scoped source/document/control checks and independent review; exact later candidate/main CI and gameplay remain separate.",
+        "scope": "Post-audit governance/documentation remediation: strict full versus warning-only calendar expiry at fast checkpoints, one document/task authority and preserved historical evidence.",
         "evidence": [
-          "docs/acceptance/2026-10-17-passive-supervisor.md"
+          "docs/acceptance/2026-10-24-audit-remediation.md"
         ]
       },
       "maintenance_review": {
-        "date": "2026-10-17",
+        "date": "2026-10-24",
         "evidence": [
-          "docs/acceptance/2026-10-17-passive-supervisor.md"
+          "docs/acceptance/2026-10-24-audit-remediation.md"
         ],
-        "effectiveness": "effective",
-        "findings": "Independent reviews found expiry ordering, terminal status, foreign-world budgets, missing completion evidence and sticky-dispute admission defects. Regression fixes and rereviews passed; controls remain bounded and do not prove native/model effectiveness.",
-        "cost": "Existing project-local tools, 313 portable tests, one isolated worker and targeted independent reviews; no new generic framework or global dependency.",
-        "follow_up": "Review on changed supervisor/lease/receipt contracts or failures; #36 owns production integration, #24 owns native/model evaluation, #13 owns broad maintenance."
+        "effectiveness": "partially_effective",
+        "findings": "Focused negative tests preserve strict structural/protocol/map enforcement while calendar-only expiry warns in development. Independent policy and reader reviews preserve event-triggered stops and repair lost historical fragments plus duplicated delegation authority. Semantic truth, review quality, actual native/campaign outcomes and sustained control effectiveness remain outside these checks.",
+        "cost": "Integrated 143-test lane 29.335s and 48-test prompt lane 44.739s, with fast checks and scoped independent reviews. Lanes cover different responsibilities; no additive productivity or inference claim. Whole review/model/waiting cost is not reliably measured. Existing mature tools reused, no new service.",
+        "follow_up": "@CVX-Hull owns live follow-up through [#199](https://github.com/CVX-Hull/enactive/issues/199); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence."
       },
       "next_review": "2027-01-15"
     },
@@ -797,7 +795,7 @@
         "effectiveness": "effective",
         "findings": "Known representations agree on v3 and drift fixtures reject changes. Final native wire-v2 control rejection observed. This is not a whole-code proof against compatibility paths.",
         "cost": "Targeted independent review, existing common checks and serialized native probes; manual acceptance remains substantial.",
-        "follow_up": "Review on relevant contract/failure/release or recorded due date. #31 public controls, #8 broad recovery, #33 gameplay evidence and #13 maintenance remain separate work."
+        "follow_up": "@CVX-Hull owns live follow-up through [#75](https://github.com/CVX-Hull/enactive/issues/75); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence."
       },
       "next_review": "2027-01-15"
     },
@@ -840,7 +838,7 @@
         "effectiveness": "partially_effective",
         "findings": "Compiled source compared with checkpoint; no global installs or setup changes. Successful only on recorded Mac; other hosts remain unverified.",
         "cost": "Existing cache/toolchain reused; full compile plus incremental menu repair.",
-        "follow_up": "Review on changed contracts, native failures, tool/refactor or next_review; #13 tracks upkeep. Full recovery and real gameplay evidence pipeline remain separate acceptance gates."
+        "follow_up": "@CVX-Hull owns live follow-up through [#75](https://github.com/CVX-Hull/enactive/issues/75); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence."
       },
       "next_review": "2027-01-15"
     },
@@ -887,7 +885,7 @@
         "effectiveness": "partially_effective",
         "findings": "Exact runtime hashes, unchanged native binary, scoped portable and real native lanes recorded; immutable official Node24 action identities verified. Hosted candidate/main checks, warning resolution and active rules require separate publication readback; no new enforcement probe or human approval claimed. Round014 ad-hoc source hashes are retained history; current standard now requires a Git checkpoint before future native acceptance, avoiding parallel source inventories. User-directed development-first checkpoints retain protected formal acceptance while avoiding full local+duplicate hosted checks before every short attempt. A passing exact hosted full suite can satisfy portable qualification; no redundant local rerun is required solely for ceremony.",
         "cost": "Existing project-local tooling; one worker, read-only source sweeps and independent reviews, lead integration and one serialized native session. Failed repairs and first planner timeout retained; Codex usage and sustained review cost unmeasured.",
-        "follow_up": "Lead completes #13/#53/#56 only after protected exact candidate/main publication verification; #75 owns next workflow/dependency/runner/control release/failure/resumption trigger or 2027-01-15 review. #26 retains October24 research review. #24 stays blocked by #72/#73/#74; do not renew unrelated dates. Development-first delivery: verify fast/full distinction and actual hosted triggers; use concise development findings and consolidated acceptance evidence. Existing review dates are unchanged."
+        "follow_up": "@CVX-Hull owns live follow-up through [#75](https://github.com/CVX-Hull/enactive/issues/75); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence."
       },
       "next_review": "2027-01-15"
     },
@@ -940,30 +938,28 @@
         "docs/acceptance/2026-10-24-independent-seven-day-twenty-third-attempt.md",
         "docs/acceptance/2026-10-24-architecture-governance-audit.md"
       ],
-      "failure_response": "Record specific owner and next action, repair inaccurate guidance and preserve unresolved failures; never delete saves as routine cleanup.",
+      "failure_response": "Record the owner and action in the existing Issue, repair guidance and preserve failures. Retire saves only through owned archive/hash verification and applicable authorization in the runbook; cleanup is not normal game completion.",
       "limitations": "Review quality and event-trigger detection remain manual. No background scheduler, automatic drift measurement or deletion job; passing date checks proves only that recorded dates are not overdue, not that review occurred.",
-      "enforcement": "Manual requirements under S-OPS/S-AGENT/S-DOCS/S-EVIDENCE, with registry fields, references and overdue dates enforced by C-GOVERNANCE in the common lane.",
+      "enforcement": "Manual event-triggered review under S-OPS/S-AGENT/S-DOCS/S-EVIDENCE; C-GOVERNANCE checks registry structure and dates. Fast warnings do not postpone applicable incident/resumption/change/release review or permit work across actual failures/evidence gaps. Resolve overdue review at the existing integration/formal-acceptance checkpoint; full CI remains strict.",
       "status": "active",
       "rationale": null,
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-24",
-        "outcome": "Scoped architecture/documentation/control/GitHub review identifies and fixes authority/status/ownership omissions; independent verify-fixes is clean in its reviewed source/reader/governance scope. Games remain paused.",
-        "scope": "Five current component views, historical-role metadata without body rewrites, concise mechanisms and risk-based workflow; source/visual/GitHub reviews retain limits and actual failed evidence. Exact new-candidate CI/publication is separate in PR180.",
+        "outcome": "Passed scoped source/document/control checks and independent review; exact later candidate/main CI and gameplay remain separate.",
+        "scope": "Post-audit governance/documentation remediation: strict full versus warning-only calendar expiry at fast checkpoints, one document/task authority and preserved historical evidence.",
         "evidence": [
-          "docs/acceptance/2026-10-24-architecture-governance-audit.md"
+          "docs/acceptance/2026-10-24-audit-remediation.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-24",
         "effectiveness": "partially_effective",
-        "findings": "Repository/GitHub audit finds incident chronology in current architecture, active metadata on historical records, repeated requirements in control definitions and stale Project/Issue activation summaries. Source guards and dependency contracts are present, but semantic documentation/WIP accuracy remains manual. Implement recursive current views and proportionate assurance using existing tooling; preserve failure evidence and original outcome acceptance.",
-        "cost": "Known baseline exact CI: 1,970 Python tests/1,160.497s plus other portable checks; prior selected 214 tests/15.264s and new document lane 8 tests/0.404s have different scopes, not a causal cost comparison. Whole review, waiting and model effort remain unmeasured. Remove duplicated requirements/status narration; keep cheap feedback and applicable authority/claim gates.",
-        "follow_up": "Lead owns #75 audit disposition, #198 architecture/document roles and #199 assurance/GitHub reconciliation. #145/#176 retain failed024 closeout and unproved observation-binding failure; #164 context/cadence and #177 donor closure remain separate. Revisit overdue-maintenance coupling before expiry or demonstrated obstruction, without bypassing current policy. Games remain paused until user instruction.",
+        "findings": "Focused negative tests preserve strict structural/protocol/map enforcement while calendar-only expiry warns in development. Independent policy and reader reviews preserve event-triggered stops and repair lost historical fragments plus duplicated delegation authority. Semantic truth, review quality, actual native/campaign outcomes and sustained control effectiveness remain outside these checks.",
+        "cost": "Integrated 143-test lane 29.335s and 48-test prompt lane 44.739s, with fast checks and scoped independent reviews. Lanes cover different responsibilities; no additive productivity or inference claim. Whole review/model/waiting cost is not reliably measured. Existing mature tools reused, no new service.",
+        "follow_up": "@CVX-Hull owns live follow-up through [#75](https://github.com/CVX-Hull/enactive/issues/75); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence.",
         "evidence": [
-          "docs/acceptance/2026-10-24-architecture-governance-audit.md",
-          "docs/engineering.md",
-          "docs/project-management.md"
+          "docs/acceptance/2026-10-24-audit-remediation.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -1014,7 +1010,7 @@
         "effectiveness": "unassessed",
         "findings": "Added stopped-walk reconciliation to existing recovery view rather than a second diagram. File-URL navigation was denied and not retried; trusted offline artifact rendering provided diagram inspection without browser navigation.",
         "cost": "Existing project-local tools and one serialized runtime; one worker plus independent reviews. Two probes total17charges and856.281seconds through native closeout; review/publication continues original45-minute envelope. Model/approval spend and sustained benefit unmeasured.",
-        "follow_up": "#108 publication, then prospective #100/#82 finite campaign admission. #75 reviews restrictive wording/capture duplication at existing triggers; keep January15maintenance and October24research dates unchanged. No old attempt revival, compatibility path, broader permissions or automatic learning."
+        "follow_up": "@CVX-Hull owns live follow-up through [#143](https://github.com/CVX-Hull/enactive/issues/143); the Issue owns acceptance, allocation and stage. This scoped maintenance assessment does not close product outcomes or renew evidence."
       },
       "next_review": "2027-01-15"
     }

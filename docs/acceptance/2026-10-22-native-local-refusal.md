@@ -114,7 +114,7 @@ and private host trace copies match originals; all canonical frame hashes remain
 verified. No game signal or user intervention was needed.
 
 Standing user-directed cleanup archived the closed technical world before removing
-its active copy; the [environment ledger](../environment.md#user-directed-stale-save-cleanup-2026-10-22)
+its active copy; the [environment ledger](https://github.com/CVX-Hull/enactive/blob/de73b79b28a1aa61f1cb99fbf8642d62bc81d722/docs/environment.md#user-directed-stale-save-cleanup-2026-10-22)
 owns the archive receipt. All 191 accepted-world files and mission evidence stayed
 intact. Private host traces and saves remain excluded from publication.
 

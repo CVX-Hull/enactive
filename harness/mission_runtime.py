@@ -891,12 +891,15 @@ class MissionRuntime:
         if ((binding.source_id, binding.mission_id, binding.epoch, binding.actor_id,
              binding.controller_boot_id, binding.takeover_generation) !=
                 (phase.checkpoint.observation_id, self._admission.mission_id, phase.epoch, phase.actor_id,
-                 phase.controller_boot_id, phase.takeover_generation)
-                or (phase.observation_generation != generation or binding.pause_generation not in (generation, generation - 1)
-                    if pending else binding.pause_generation != generation)
-                or self._store.authority_generation() != binding.store_generation + (reference is not None)
-                or self._store.source_status(phase.checkpoint) != "retained"):
-            raise EvidenceError("Observe lost its original prompt source integrity or binding authority")
+                 phase.controller_boot_id, phase.takeover_generation)):
+            raise EvidenceError("Observe prompt authority lost: binding_identity")
+        if (phase.observation_generation != generation or binding.pause_generation not in (generation, generation - 1)
+                if pending else binding.pause_generation != generation):
+            raise EvidenceError("Observe prompt authority lost: pause_generation")
+        if self._store.authority_generation() != binding.store_generation + (reference is not None):
+            raise EvidenceError("Observe prompt authority lost: store_generation")
+        if self._store.source_status(phase.checkpoint) != "retained":
+            raise EvidenceError("Observe prompt authority lost: source_retention")
         before = self._store.observation(phase.checkpoint)
         if (phase.checkpoint.boundary_kind not in (("normal_play", "menu") if pending else ("menu",))
                 or state["session"] != phase.checkpoint.session
@@ -2555,6 +2558,14 @@ class MissionRuntime:
                 self._stop_after_failure(current_error)
         typed_refusal = (envelope_valid and not control and lifecycle is None and activity is None
                          and not raw["published"] and raw["result"].get("status") == "rejected")
+        if (ordinary and envelope_valid and disposition == "rejected" and raw["published"] and prepared
+                and after is None and lifecycle is None and activity is None
+                and not processing_fatal and evidence_loss is None):
+            # An authenticated native refusal settled no input, but the lease
+            # rotation already happened. Preserve only read-only lineage after
+            # re-proving healthy custody; never retry or manufacture an ACK frame.
+            if self._ordinary_refusal_guard(work, proposal.before, proposal.logical_id):
+                self._await_current_observation(work, proposal.before, original, operator_mark, reason)
         if (ordinary and envelope_valid or local_nonpublication or typed_refusal) and disposition == "not_dispatched":
             live = self._live()
             if processing_fatal or evidence_loss is not None:

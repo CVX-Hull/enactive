@@ -68,6 +68,18 @@ and resource health after the locks release before retaining read-only Observe
 lineage. It never retargets acquisition or applies to specialized lifecycle,
 activity, recovery or exit authority.
 
+An authenticated published native rejection settles the primitive as rejected,
+with no after-source; it does not prove delivery or restore the old lease. For
+ordinary input only, after settlement the runtime may preserve read-only Observe
+lineage across that exact operation rotation if the existing refusal guard proves
+healthy current custody, retained evidence, no unsettled work and global capacity.
+A new explicit observation precedes any new input choice. Lifecycle/activity/
+recovery scopes, unhealthy native status, uncertain delivery and actual faults
+remain outside this continuation. No retry, allowance renewal or error-text
+classification follows. Prompt authority failures identify binding identity,
+pause generation, store generation or source retention in the existing durable
+operation reason; they do not publish private binding dumps or infer a past cause.
+
 Ordinary external key/action/walk/resume reject while leased. Existing HTTP/CLI
 input reaches this same controller gate; it cannot supply or obtain a capability.
 At the controller layer Observe/status, record-only goal and Pause remain
@@ -1541,7 +1553,7 @@ requests, root links, primitives, results and cumulative costs provide automatic
 usage feedback. Neither an input ACK nor that linkage proves semantic success.
 
 Admission has required nullable`learning`. A policy freezes the exact environment,
-at most4 closed library mission pins (ledger/index SHA256), advisory actor and
+at most8 closed library mission pins (ledger/index SHA256), advisory actor and
 finite reflection limits. Procedure/3 records live in the existing immutable
 memory table. Full qualified ancestry resolves heads; branches/missing parents
 refuse. Episodes must join actual settled request/source evidence. Candidates can

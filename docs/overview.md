@@ -62,13 +62,13 @@ facts, procedures and proposals retain their sources and limitations.
 | Watchable stopped history | The [local-refusal001 report](acceptance/2026-10-22-native-local-refusal.md) records actual STOPPED/HISTORY/DISCONNECTED presentation, no current mission decision and a timeout diagnostic explicitly labelled historical. |
 | Latency | Current play speed is unacceptable. [Fresh010](acceptance/2026-10-22-independent-seven-day-tenth-attempt.md) retains the motivating useful-play evidence. [Luna013](acceptance/2026-10-23-luna-responsiveness-thirteenth-attempt.md) verifies useful pickup and normal ending but advances two game seconds in596wall seconds; short tool execution and longer inter-call gaps do not isolate inference or qualify a routine cohort. [Evaluation](evaluation.md#latency-budgets-for-interactive-play) owns definitions; [#164](https://github.com/CVX-Hull/enactive/issues/164) owns delivery. |
 
-The [responsive-player design](changes/060-responsive-player.md) and
-[decision-context follow-through](changes/062-player-decision-context.md) separate
+The [player interface](components/player-interface.md) and
+[current protocol](protocol.md) separate
 semantic judgment from mechanical SDK identities, staging, original collection
 and progressive detail. The player should decide intent, inspect relevant evidence
 and evaluate outcomes; software handles canonical metadata and provenance.
 
-The [executable-routine substrate](changes/061-player-program-execution.md) lets
+The [executable-routine substrate](components/memory-learning.md) lets
 the player author observation-conditioned JavaScript procedures over ordinary
 inputs through the same writer. Host bounds and automatic action/result joins
 remain outside generated control flow. Its current view supplies structured

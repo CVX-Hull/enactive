@@ -140,7 +140,9 @@ class DevToolTests(unittest.TestCase):
                 self.assertEqual(any("unittest" in command for command in executed), full)
                 self.assertEqual(any("tools/diagrams.py" in command for command in executed), full)
                 self.assertEqual(any("tests/test_viewer.cjs" in command for command in executed), full)
-                self.assertTrue(any("tools/governance.py" in command for command in executed))
+                governance_commands = [command for command in executed if "tools/governance.py" in command]
+                self.assertEqual(governance_commands, [[sys.executable, "tools/governance.py"] +
+                                                       ([] if full else ["--development"])])
                 self.assertTrue(any("ruff" in command for command in executed))
                 self.assertEqual("Portable checks passed." in output.getvalue(), full)
                 if not full:

@@ -1,8 +1,12 @@
 ---
 owner: lead
-status: proposed
-review_trigger: Ordinary activity prompt ownership, native proof or campaign continuation changes
+status: historical
+date: 2026-10-18
+scope: Historical activity-distraction repair design and evidence; original pending claims retained
 ---
+
+Historical repair record. The original pending #120/#100 statements below are preserved in their dated context; both Issues subsequently closed. Current native behavior is defined by the [protocol](../protocol.md) and [native component](../components/native-control.md), not this proposal.
+
 
 # Cover the ordinary activity-distraction question
 

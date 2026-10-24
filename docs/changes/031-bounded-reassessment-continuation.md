@@ -1,8 +1,12 @@
 ---
 owner: lead
-review_trigger: Campaign evidence, reassessment, allocation, actor or source changes
-status: proposed
+status: historical
+date: 2026-10-18
+scope: Historical campaign continuation proposal and its finite original allowances; no present gameplay authority
 ---
+
+Historical proposal for the original campaign. Actors, clocks, budgets and pending statements below belong to that attempt and grant no present authority. Current [protocol](../protocol.md), [operator permissions](../operator-permissions.md) and [campaign Issue](https://github.com/CVX-Hull/enactive/issues/145) own their respective current rules and outcome.
+
 
 # Continue the full campaign with bounded reassessment
 

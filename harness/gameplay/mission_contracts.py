@@ -32,6 +32,7 @@ MAX_REQUEST_BYTES = 65_536
 MAX_CONTEXT_BYTES = 32_768
 MAX_HANDOFF_CONTEXT_BYTES = 131_072
 MAX_HANDOFF_SOURCES = 128
+MAX_LIBRARY_SOURCES = 8
 # Explicit campaign retention ceilings; ordinary defaults remain smaller.
 MAX_RETAINED_FRAMES = 8192
 MAX_RETAINED_BYTES = 2 * 1024 * 1024 * 1024
@@ -85,7 +86,7 @@ _REFLECTION_LIMITS = _object({
 })
 _LEARNING = _object({
     "environment": procedure_schema()["properties"]["environment"],
-    "library_sources": _array(_LIBRARY_SOURCE, 4),
+    "library_sources": _array(_LIBRARY_SOURCE, MAX_LIBRARY_SOURCES),
     "reflector_id": _nullable(_ID), "reflection_limits": _REFLECTION_LIMITS,
 })
 _ADMISSION = _object({

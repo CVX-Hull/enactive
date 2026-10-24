@@ -16,6 +16,17 @@ authority; the player judges the visible game outcome. An allow rule changes
 only the first boundary. It cannot grant a lease, make stale input current,
 replay an unknown request or override CDDA.
 
+## Finite gameplay budget delegation
+
+The user delegated prospective finite gameplay time and input extensions to the
+lead, emphasizing useful evidence for development. The lead may revise a finite
+phase allocation with explicit scope, ceilings and a feasibility forecast without
+routine budget questions. Preserve cumulative spent costs, original failures,
+unknown outcomes and reserve; do not reset them or automatically renew a failed
+actor. This standing delegation grants no paid-provider spending, security waiver,
+global environment changes or gameplay during a user pause. A frozen admission
+owns the actual limits; this policy supplies no current input authority.
+
 ## Command permissions
 
 This section records CLI permission background and engineering allowances.
