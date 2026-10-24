@@ -170,11 +170,14 @@ For a timeout or frozen viewer: preserve the error/journal and last frame; inspe
 the native window. Unsupported upstream error screens may need native dismissal.
 Observe to reconcile current state, then explicitly resume only when interpretable.
 Do not resend an uncertain action. New observations do not prove its old objective.
-The agent must handle routine prompts through verified engine input rather
-than requiring the user to press a key. At the explicitly instrumented common
-direction query, a fresh DEFAULTMODE/menu frame supports ordinary selection or
-cancel after explicit Resume; it has no gameplay scene. Unrelated DEFAULTMODE
-contexts remain unsupported. If using verified desktop automation for a different
+The player must handle routine prompts through the current ordinary-input path
+rather than requiring the user or lead to press a key. Native6 attests the actual
+ordinary receiver independently of menu category names; an unfamiliar category
+alone is not an unsupported-input judgment. The dated direction-query qualification
+below covers ordinary selection/cancellation, not every prompt. Current source,
+custody, Pause, receiver and delivery checks remain mandatory. If a required
+receiver is unavailable, retain the failed attempt rather than request tactical
+rescue. If using verified desktop automation for a different
 prompt, Pause remote control first, inspect the actual prompt, charge any native
 input to the same accounting, and retain its result separately from remote receipts.
 Never send a remote key at an
@@ -513,6 +516,36 @@ owns ordinary tactics and supported lifecycle; source faults or unsupported requ
 capabilities stop the attempt with evidence instead of inviting engineering rescue.
 Role assignment is procedural, not filesystem isolation. Optional curation or
 additional model tiers do not gate this functional path. No paid API is implied.
+
+### Bounded player host activation
+
+After external mission admission, the lead may use the thin
+[campaign player driver](../tools/campaign_player.py) to run the frozen original
+and at most one clean successor through the maintained CLI. Prepare
+`frozen/player-host-configuration.json`, `frozen/original-player-prompt.txt` and
+`frozen/successor-player-brief.txt` inside that run. Example (choose the actual
+frozen mission/model/effort/deadline, rather than copying a previous allowance):
+
+```sh
+.venv/bin/python -m tools.campaign_player \
+  --root "$PWD" --run-dir "$PWD/.runtime/campaigns/RUN_ID" \
+  --mission-id MISSION_ID --model gpt-6-luna --effort low \
+  --timeout-seconds 900
+```
+
+`--original-thread` may resume the explicitly prepared original context; the
+successor is always fresh. The driver waits for actual host exit0, validates cached
+quiescence and current controller/native Pause binding, and collects the exact
+completed handoff. It records a distinct successor ID and preserves the issued role.
+The successor itself retrieves memory/evidence, Claims and readmits. Historical
+diagnostics remain visible; they do not replace current unresolved-effect and
+live-slot checks. Only the original admitted bootstrap can have the controller's
+expected initial freeze. User Pause, failed/uncertain hosts and unexpected state
+stop activation without fallback or budget renewal. Timeout cleanup signals only
+the exact owned host; it cannot claim native cleanup. All outputs are exclusive
+run-local files. A terminal report describes observed phase, never acceptance.
+Source/fake-host checks qualify this implementation; actual fresh-host graphical
+activation remains separately required under#136/#164/#145.
 
 The [stopped functional continuation](acceptance/2026-10-18-seven-day-continuation-stop.md)
 and [ordinary menu repair](acceptance/2026-10-18-ordinary-menus.md) retain historical

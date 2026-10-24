@@ -353,6 +353,12 @@ new source/budget from this automation. Specialized memory,
 handoff and recovery use their same current receiver schemas. Request retention,
 serialization, bounded result collection and actual-image presentation belong to
 software; routine player-authored files/private scripts are not the operating path.
+Repeated opaque-ID copying and actor activation bookkeeping are evidence for thin
+software binding through the existing SDK/cache/host lifecycle. Preserve explicit
+evidence selection and verify the actual old host has exited before activating a
+fresh deciding successor. Software cannot infer tactics, memory adoption, successful
+outcomes, new resources or permission from the automation. Focused negative tests
+and actual handoff evidence enforce this boundary; no new per-action review applies.
 Consume the standard MCP result envelope: retain and surface text, images and
 `isError` before inspecting optional `structuredContent`. Never discard an error
 by assuming a success-only payload. Tool errors alone do not prove nondelivery;

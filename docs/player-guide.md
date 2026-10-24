@@ -176,6 +176,13 @@ for stage commit/reconciliation/readmission/adoption; consult the returned phase
 receipt, not just the operation name. A tool error that gives no usable next step
 is a defect, not authority to guess or bypass it.
 
+For an explicit handoff, choose `checkpoint_sources=[null]` to retain the exact
+selected snapshot observation, or select previously read source IDs. These are
+observations, never Claim or Work IDs. Software binds the canonical checkpoint
+identities; you still choose relevant evidence, the complete unfinished Work set
+and successor role. A clean successor reads its issued context and required source
+images, then explicitly Claims/readmits. No handoff renews resources or authority.
+
 ## Resources, stopping and context
 
 Use the frozen coupled forecast and stop rule. Current normal Save/exit still

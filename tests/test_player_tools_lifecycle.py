@@ -16,6 +16,7 @@ from unittest.mock import patch
 from harness.mission_client import MissionClient
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import EvidenceError
+from harness.gameplay.mission_ledger import LedgerError
 from harness.player_tools import PlayerTools
 from harness.server import Server
 from tests.test_gameplay_evidence import black_png, png
@@ -83,6 +84,11 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
             self.player.call("enactive_source", dict(mission_id=self.a.mission_id, source_id=data["source_id"]))
             for field in ("sources", "expected_session", "expected_revision", "expected_boundary_id"):
                 intent.pop(field)
+            data["intent"] = intent
+        elif kind == "handoff":
+            intent["checkpoint_sources"] = intent.pop("checkpoint_ids")
+            for source_id in intent["checkpoint_sources"]:
+                self.player.call("enactive_source", dict(mission_id=self.a.mission_id, source_id=source_id))
             data["intent"] = intent
         elif kind != "observe":
             data["intent"] = intent
@@ -520,10 +526,15 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         source = selected["source"]["reference"]["observation_id"]
         before, lease = self.runtime.status(), self.runtime._lease
         delivered = deepcopy(self.bridge.delivered)
-        for identity, checkpoints, unfinished in (("wrong-reference", ["pending"], ["pending"]),
-                                                  ("missing-work", [source], [])):
+        with self.assertRaisesRegex(ContractError, "Read the selected exact source"):
+            self.player.call("enactive_handoff", dict(snapshot_id=selected["snapshot_id"],
+                request_id="wrong-reference", wait_seconds=3, intent=dict(checkpoint_sources=["pending"],
+                    unfinished_work_ids=["pending"], successor_role="player")))
+        with self.assertRaises(LedgerError):
+            self.runtime._ledger.request("wrong-reference")
+        for identity, checkpoints, unfinished in (("missing-work", [None], []),):
             refused, _ = self.player.call("enactive_handoff", dict(snapshot_id=selected["snapshot_id"],
-                request_id=identity, wait_seconds=3, intent=dict(checkpoint_ids=checkpoints,
+                request_id=identity, wait_seconds=3, intent=dict(checkpoint_sources=checkpoints,
                     unfinished_work_ids=unfinished, successor_role="player")))
             operation = refused["response"]["operation"]
             self.assertEqual(operation["state"], "blocked", refused)
@@ -534,12 +545,49 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
             self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
             self.assertEqual(self.bridge.delivered, delivered)
         corrected, _ = self.player.call("enactive_handoff", dict(snapshot_id=selected["snapshot_id"],
-            request_id="corrected-handoff", wait_seconds=3, intent=dict(checkpoint_ids=[source],
+            request_id="corrected-handoff", wait_seconds=3, intent=dict(checkpoint_sources=[None],
                 unfinished_work_ids=["pending"], successor_role="player")))
         self.assertEqual(corrected["response"]["operation"]["state"], "completed", corrected)
+        self.assertEqual(corrected["response"]["operation"]["result"]["checkpoint_ids"], [source])
         self.assertEqual(self.runtime.status()["phase"], "handoff")
         self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
         self.assertIsNone(self.runtime._lease)
+
+    def test_handoff_source_binding_rejects_old_shape_duplicates_and_absent_source(self):
+        self.create()
+        selected, _ = self.player.call("enactive_snapshot", {})
+        source = selected["source"]["reference"]["observation_id"]
+        before = self.runtime.status()["spent_inputs"]
+        for identity, intent in (
+                ("old-handoff", dict(checkpoint_ids=[source], unfinished_work_ids=[], successor_role="player")),
+                ("duplicate-handoff", dict(checkpoint_sources=[None, source], unfinished_work_ids=[], successor_role="player")),
+                ("foreign-handoff", dict(checkpoint_sources=["foreign-source"], unfinished_work_ids=[], successor_role="player"))):
+            with self.assertRaises(ContractError):
+                self.player.call("enactive_handoff", dict(snapshot_id=selected["snapshot_id"],
+                    request_id=identity, wait_seconds=3, intent=intent))
+            with self.assertRaises(LedgerError):
+                self.runtime._ledger.request(identity)
+        self.player.snapshots[selected["snapshot_id"]]["source"] = None
+        with self.assertRaisesRegex(ContractError, "no checkpoint source"):
+            self.player.call("enactive_handoff", dict(snapshot_id=selected["snapshot_id"],
+                request_id="no-source", wait_seconds=3, intent=dict(checkpoint_sources=[None],
+                    unfinished_work_ids=[], successor_role="player")))
+        self.assertEqual(self.runtime.status()["spent_inputs"], before)
+
+    def test_handoff_explicit_historical_source_is_bound_without_refresh(self):
+        self.create()
+        selected, _ = self.player.call("enactive_snapshot", {})
+        source = selected["source"]["reference"]["observation_id"]
+        self.player.call("enactive_source", dict(mission_id=self.a.mission_id, source_id=source))
+        self.run_request(self.operation("observe", "later-observe"))
+        selected, _ = self.player.call("enactive_snapshot", {})
+        with patch.object(self.player.client, "submit", wraps=self.player.client.submit) as submit:
+            result, _ = self.player.call("enactive_handoff", dict(snapshot_id=selected["snapshot_id"],
+                request_id="historical-handoff", wait_seconds=3, intent=dict(checkpoint_sources=[source],
+                    unfinished_work_ids=[], successor_role="player")))
+        self.assertEqual(submit.call_args.args[0]["checkpoint_ids"], [source])
+        self.assertEqual(result["response"]["operation"]["state"], "completed", result)
+        self.assertEqual(result["response"]["operation"]["result"]["checkpoint_ids"], [source])
 
     def test_disputed_normal_source_cannot_publish_coordinate_scope(self):
         self.create()

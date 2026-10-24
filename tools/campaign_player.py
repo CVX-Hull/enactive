@@ -23,7 +23,7 @@ from harness.mission_client import MissionClient, MissionClientError
 
 DEFAULT_CODEX = "/opt/homebrew/bin/codex"
 TERMINAL = frozenset(("completed", "failed", "stopped"))
-_CONFIG_KEYS = frozenset(("command", "args", "cwd", "enabled", "enabled_tools",
+_CONFIG_KEYS = frozenset(("command", "args", "cwd", "enabled", "required", "enabled_tools",
     "default_tools_approval_mode", "startup_timeout_sec", "tool_timeout_sec", "tools"))
 _LIMITS = ("wall_seconds", "inputs", "game_seconds", "frames", "frame_bytes", "primitive_mappings")
 

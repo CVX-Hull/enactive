@@ -146,7 +146,14 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
                if kind == "remember" else "")
             + "No inferred support, truth, success or automatic lesson promotion.",
             _object({**common, "intent": {"anyOf": variants}})))
-    for kind in ("handoff", "stop", "reconcile"):
+    handoff = _without(request_schema("handoff"), *headers, "kind", "checkpoint_ids")
+    handoff["properties"]["checkpoint_sources"] = {
+        **request_schema("handoff")["properties"]["checkpoint_ids"], "items": nullable_id}
+    handoff["required"].append("checkpoint_sources")
+    specs.append(ToolSpec("enactive_handoff",
+        "Explicit handoff through the existing mission state machine. checkpoint_sources selects retained observation sources, never Claim/Work IDs: null binds the exact selected cached snapshot source; an explicit source ID requires a prior source/image read. Software binds canonical checkpoint IDs without refreshing or substituting evidence. Choose the exact complete unfinished_work_ids and successor_role explicitly; original costs and uncertainty remain.",
+        _object({**common, "intent": handoff})))
+    for kind in ("stop", "reconcile"):
         specs.append(ToolSpec("enactive_" + kind,
             "Pause the current mission/control; does not terminate the owned game or prove normal Finish. Original costs and uncertainty remain."
             if kind == "stop" else
@@ -651,7 +658,16 @@ class PlayerTools:
             request = compose_request(snapshot, request_id=identity, intent=intent, limits=data["limits"],
                 scope=data["scope"], source=source, supporting_source_ids=data["supporting_source_ids"])
         else:
-            if kind in ("remember", "correct") and intent["entry_type"] == "claim":
+            if kind == "handoff":
+                checkpoints = []
+                for source_id in intent.pop("checkpoint_sources"):
+                    source = selected.get("source") if source_id is None else self._source(snapshot["mission_id"], source_id)
+                    if source is None:
+                        raise ContractError("Selected snapshot has no checkpoint source. Read and explicitly select "
+                            "a retained source/image; null selects only this exact cached snapshot. No request was submitted.")
+                    checkpoints.append(source["reference"]["observation_id"])
+                intent["checkpoint_ids"] = checkpoints
+            elif kind in ("remember", "correct") and intent["entry_type"] == "claim":
                 intent["entry"] = self._claim_entry(selected, identity, kind, intent)
             elif kind == "remember" and intent["entry_type"] == "procedure":
                 intent["entry"] = self._procedure_entry(selected, identity, intent["entry"])

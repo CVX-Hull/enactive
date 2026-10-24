@@ -116,6 +116,14 @@ in about908mission-wall seconds, with long compaction stalls. The next frozen
 profile uses maintained host/model compaction defaults; configuration is not a
 latency pass. All009actors, native children and controller are normally closed.
 
+[Closed010](changes/062-player-decision-context.md#closed010-defaults-do-not-establish-responsiveness)
+repeats bounded independent executable learning, useful supplies/advice overlap and
+normal same-character reload/ending with maintained host defaults. Zero persisted
+compaction events do not qualify cadence:588game seconds in1259.828wall seconds,
+without the20-useful-decision cohort. Its actors and owned runtime are closed.
+The next broader fresh development campaign will assess survival, learning and
+cadence together after narrow mechanical handoff fixes; formal acceptance is unchanged.
+
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and
 host. Failures and unknown acknowledgments stay recorded even when separate

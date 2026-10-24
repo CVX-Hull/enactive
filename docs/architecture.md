@@ -20,7 +20,7 @@ uncertainty and differing views retained. Discriminated malformed intents get
 bounded branch-specific schema errors before staging, with no repaired/defaulted input.
 One bounded producer-local fingerprint avoids identical implicit image parts in a
 known unchanged player/control context; explicit image reads remain complete.
-MCP server5.1.0 assigns request identities and bounded result waits before invoking
+MCP server5.2.0 assigns request identities and bounded result waits before invoking
 the existing imperative SDK. Its public schemas reject caller-owned IDs/waits;
 snapshot/source, scope, execution limits and semantic decisions remain explicit.
 Errors preserve assigned original collection arguments through the presentation
@@ -31,7 +31,17 @@ The existing pure request composer also derives navigation coordinate scope and
 activity interrupt ownership from the explicitly selected matching snapshot/source.
 SDK and MCP intents omit those nested mechanical fields; supplied copies refuse.
 Targets, answers, outer scope, source selection and limits remain player choices.
+Handoff authoring similarly binds explicit `checkpoint_sources` (null means the
+exact selected snapshot source; explicit IDs require prior image reads) to
+canonical observation IDs. It cannot select evidence, refresh or deduplicate.
 Canonical receiver records and live guards are unchanged.
+The optional outer [host driver](../tools/campaign_player.py) uses the existing
+CLI/SDK to activate at most one fresh successor after actual predecessor exit0
+and exact quiescent internal-handoff verification, including current controller/
+native Pause binding. It assigns identity separately from the issued role and
+performs no gameplay, memory adoption, Claim or readmission. Original finite
+resources stay in the runtime; the driver's terminal report is not acceptance.
+Actual launch qualification remains open in [delivery062](changes/062-player-decision-context.md).
 The prior wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.
 Start is source-free and cannot adopt an unrelated already-running character. The

@@ -161,3 +161,121 @@ combined cadence gate and compaction diagnosis. Exact repaired-source CI passed;
 the next frozen profile removes the arbitrary128000threshold and uses maintained
 host defaults. No model/context configuration alone establishes readiness, and
 the genuinely fresh seven-day outcome remains open.
+
+## Closed010: defaults do not establish responsiveness
+
+Frozen source6a9ed2b (same executable boundary as e174bff), native
+`690fe96e27e5d31046e1600918caad1ccd9f5964ff291ea9b01a33d4f25a86b1`,
+Sol/low original and clean successor, and Sol/medium adviser use maintained host
+context/compaction defaults. The read-only library explicitly pins closed009;
+old-world facts and authority are not imported. Source6a9ed2b passed
+[exact CI40042706770](https://github.com/CVX-Hull/enactive/actions/runs/40042706770).
+
+Independent review verifies executable authorship, useful distinct table approaches,
+a no-input changed-terrain yield followed by revision, actual successor retrieval/
+application and first-aid-kit acquisition. Useful flashlight activation occurs
+during a genuinely claimed advice window. This is bounded functional learning,
+not causal improvement, safe general navigation or independent seven-day survival.
+Normal Save, owned exit, new-child Load/Casey adoption and continuation end in a
+final normal Save/owned exit0/Finish stopped. All three actor hosts and controller
+exit0; both owned natives exit0; final process/listener checks find none remaining.
+There is no pending operation or unresolved effect. Save comparison retains
+173unchanged/18normally changed/0added/0removed files, with no restoration/edit.
+
+The ledger retains124requests (38completed/76partial/6blocked/4unknown),
+109charged primitives (103returned/6historically unknown),315frames/27,321,452bytes
+and588game seconds. Original protected reserves remain intact. Admission→normal
+Finish is1259.828wall seconds; later stopped snapshots/controller shutdown include
+extra stopped time and are not active-play denominators. Eight program invocations
+include one no-input yield; they do not establish20genuine useful routine decisions.
+
+| Active host | Completed MCP calls | Result UTF-8 text bytes | Typed images | Host span seconds |
+| --- | --- | --- | --- | --- |
+| Original player | 74 | 465,592 | 51 | 558.674 |
+| Adviser | 28 | 201,658 | 8 | 409.449 |
+| Clean successor | 101 | 580,905 | 71 | 637.387 |
+
+Separate passive preflight is excluded (player1call/873text bytes/no image;
+adviser0calls). Owned CLI metadata has zero persisted compaction records for all
+three active hosts; reported window is475000, with final input-token samples
+230160/93515/242466 respectively. Host spans include waiting and orchestration;
+raw cumulative usage is not unique context, billing or model compute. No inference,
+network, native or display attribution follows from these counts. Browser timing
+is page-local instrumentation, not paint. Useful whole-player cadence remains
+unqualified despite no recorded compaction; model-only ranking is unsupported.
+
+Original actor streams, receipts, ledger/archive, actual images, observer export,
+save differences, host timestamp/type/usage-only extraction, absence checks and
+byte manifest are retained under private `discovery-learning-010/closed-evidence`.
+Earlier local admission/handshake/path-formatting failures are retained in its
+preparation notes; none sent corrective gameplay input. Both players independently
+corrected handoff/source declaration errors; the engineering lead supplied no
+tactics, keys or memory curation. The current-format009+010 library validates
+five revisions and retained support; it does not prove future applicability.
+
+## Follow-through: mechanical handoff and the broader development campaign
+
+Closed010 repeats useful executable learning and normal successor/reload/ending,
+but does not establish the20-useful-decision cohort. Repeating short depleted
+shelter diagnostics is insufficient evidence for the overall survival objective.
+After closure and the narrow fixes below, use the existing development-first
+workflow for a genuinely fresh broader campaign that measures learning, meaningful
+survival and cadence together. Freeze Luna/low with maintained host defaults as a
+whole-configuration experiment; retain the Sol trials and every failed gate.
+Neither that model choice nor development labeling qualifies acceptance.
+
+Both009 and010 initially confused memory Claim IDs with handoff observation IDs.
+Replace the model-facing `checkpoint_ids` field with `checkpoint_sources`: each
+item explicitly selects an already-read source ID, or null for the exact selected
+snapshot source. Software binds canonical observation IDs from the existing cache;
+it never refreshes, guesses, substitutes, deduplicates or selects evidence. Reject
+the old authoring shape and migrate current callers/help together in MCP5.2.0.
+Canonical mission/11 issuance and all receiver checks remain unchanged. Focused
+tests cover selected-source binding, cached historical sources, missing/foreign
+sources, duplicate resolved IDs and unchanged Pause/unfinished-Work refusal.
+
+The lead also incurred a private path-formatting error while preparing010's
+successor. Reuse the maintained Codex CLI, standard subprocess lifecycle and
+MissionClient for one bounded outer driver, owned by the lead. It waits for the
+actual original host to exit successfully, reads cached quiescent internal-handoff
+state and collects the exact completed issuance before starting one fresh host.
+The successor receives its frozen brief and mechanical assignment/issuance only;
+it chooses and performs context retrieval, Claim and readmission itself. The driver
+never selects tactics, promotes memory, sends game inputs or extends original
+resources. Unexpected state, user Pause, uncertain collection or a failed host
+reports incomplete; it cannot create a fallback player. A finite overall host
+deadline and ordinary owned-child receipts replace lead polling. Advisory work
+remains independent. No new agent-management framework, authority store, dependency
+or per-action approval is needed. Lead owns maintenance; replace the thin driver
+when the supported host provides the same bounded handoff facility.
+
+Source tests are component evidence; a fresh actual campaign must qualify both
+binding and activation. Review the new launch boundary before play, then apply
+the existing exact-source CI/formal acceptance gates. Existing#136/#164 own the
+mechanical work; #145/#177/#178/#176/#191 retain survival, learning, advice and
+generality obligations. Keep the overview/work/contracts/control map and public
+Project current without turning them into duplicate run logs.
+
+### Source checkpoint evidence
+
+The implemented MCP5.2 adapter retains21tools and player-view/4. Its production
+stdio initialization/list_tools verifies the new handoff schema and absence of the
+old authoring field with zero gameplay calls. The first probe incorrectly resolved
+the venv interpreter symlink into global Python and failed before initialization;
+using the configured project interpreter corrects it without installs/global changes.
+The coupled local HTTP/lifecycle/adapter/invocation/canonical-handoff suite passes
+79tests in224.953s. The first three new tests had fixture errors, subsequently fixed;
+the passing source result does not erase them or qualify real play.
+
+The bounded outer driver passes26fake-process/SDK tests, also independently rerun
+and inspected. Review caught loss of current controller state behind a cached
+mission, identity/role conflation and omission of the documented `required=true`
+host option; all are fixed and covered before play. Current live slots,
+freeze, exact issued Pause/native/operator binding and canonical unresolved effects
+gate activation. Historical unknown/diagnostic arrays alone do not block it. No
+new history, semantic error classifier or generic orchestration system was added.
+Mac `/var` versus `/private/var` fixture expectations were corrected; socket-bound
+reviewer fixtures could not run in its sandbox, separately from the lead's actual
+79-test pass. Fast checks pass; exact subsequent candidate CI and actual graphical
+activation/learning/survival remain separate lanes. The worker worktree is archived
+after inspected integration. No game or campaign is running at this checkpoint.

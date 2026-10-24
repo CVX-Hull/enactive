@@ -222,7 +222,7 @@ refuse, and uncertain publication permits only collection of the original operat
 Concurrent first creators may safely lose the exclusive-stage race and refuse;
 there is no transparent retry or second request history store.
 
-The current MCP server is5.1.0; its presentation remains `player-view/4`, marked by `presentation_schema`.
+The current MCP server is5.2.0; its presentation remains `player-view/4`, marked by `presentation_schema`.
 Its tool arguments omit `request_id` and `wait_seconds`; old MCP payloads are
 rejected, not translated. The adapter assigns one UUID to each invocation whose
 imperative SDK request needs an ID, then uses existing immutable staging and
@@ -997,9 +997,14 @@ reserving the128th for the future post-Pause source. Required Work must fit a
 complete96KiB packet;32KiB of the128KiB handoff envelope remains reserved for the
 mission wrapper, maximum query and future source metadata. A narrowly typed
 representation refusal sends no input and preserves the original lease, epoch and
-bindings. `checkpoint_ids` identifies retained source observation IDs, not memory
-Claim or Work IDs; `unfinished_work_ids` identifies the exact complete unfinished
-Work set. Unknown checkpoint references and omitted/extra Work IDs are correctable
+bindings. Canonical `checkpoint_ids` identifies retained source observation IDs,
+not memory Claim or Work IDs. MCP/PlayerTools authoring instead requires
+`checkpoint_sources`: null binds the exact selected cached snapshot source; an
+explicit ID requires a previously read source/image in this mission. Software
+binds observation IDs without refresh, substitution or deduplication; missing,
+foreign, duplicate resolved sources and the old authoring field refuse before
+staging. Canonical receiver checks still apply. `unfinished_work_ids` identifies
+the exact complete unfinished Work set. Unknown checkpoint references and omitted/extra Work IDs are correctable
 draft errors before stopping input. The player selects actual retained sources or
 retrieves complete current Work and submits a NEW explicit request while still
 eligible. No handoff, source substitution, Resume or budget renewal is automatic.

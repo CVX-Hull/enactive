@@ -65,6 +65,13 @@ still fails cadence. Its measured compaction stalls motivate maintained host
 defaults in the next full qualification. GitHub owns that work and the unchanged
 fresh seven-day outcome; the linked report owns costs and limitations.
 
+[Closed010 and follow-through](changes/062-player-decision-context.md#closed010-defaults-do-not-establish-responsiveness)
+retain another bounded independent learning/supplies/lifecycle result, failed cadence
+and zero persisted compaction events under maintained defaults. The next cohesive
+checkpoint automates selected checkpoint binding and mechanical successor activation,
+then tests learning/cadence/survival in a genuinely fresh development campaign.
+GitHub owns the live assignments; source fixes cannot relabel the010 outcome.
+
 | Evidence | What it establishes; the linked report owns details and limits |
 | --- | --- |
 | [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) | Bounded supply/shelter play, memory correction, fresh-context continuation and normal lifecycle |

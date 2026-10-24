@@ -103,7 +103,7 @@ class CampaignPlayerTests(unittest.TestCase):
         self.counter = 0
         self.now = 100.0
         self.configuration = dict(command="/project/python", args=["-m", "harness.player_mcp"],
-            cwd="/project", enabled=True, enabled_tools=["enactive_context"],
+            cwd="/project", enabled=True, required=True, enabled_tools=["enactive_context"],
             default_tools_approval_mode="approve", startup_timeout_sec=10, tool_timeout_sec=60,
             tools={"enactive_context": dict(output_token_limit=131072)})
 
@@ -206,6 +206,7 @@ class CampaignPlayerTests(unittest.TestCase):
             "-c", 'mcp_servers.enactive_player.args=["-m", "harness.player_mcp"]',
             "-c", 'mcp_servers.enactive_player.cwd="/project"',
             "-c", "mcp_servers.enactive_player.enabled=true",
+            "-c", "mcp_servers.enactive_player.required=true",
             "-c", 'mcp_servers.enactive_player.enabled_tools=["enactive_context"]',
             "-c", 'mcp_servers.enactive_player.default_tools_approval_mode="approve"',
             "-c", "mcp_servers.enactive_player.startup_timeout_sec=10",
