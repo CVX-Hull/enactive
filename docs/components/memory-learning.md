@@ -84,6 +84,11 @@ lineage pruning or second store is implied.
 
 ## Drill down and verification
 
+The [execution-first learning proposal](../design/asynchronous-reflection.md#execution-first-learning)
+separates decision horizons within the existing player/learner/writer split. It
+proposes easier candidate authoring/selection and horizon-aware work allocation;
+it does not change the current adoption or input contract.
+
 [Ordinary/procedure contracts](../protocol.md#ordinary-discovery-and-procedure-data),
 [handoff](../protocol.md#quiescent-player-replacement) and
 [passive memory](../protocol.md#passive-task-memory) own exact rules. The older

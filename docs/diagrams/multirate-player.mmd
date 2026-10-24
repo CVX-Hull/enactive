@@ -1,0 +1,18 @@
+---
+title: Proposed execution-first learning responsibilities
+---
+flowchart TB
+  accTitle: Proposed decision horizons with one player and one optional background learner
+  accDescr: The active player chooses current goals and handles surprises. Pinned local routines process fresh feedback through the existing writer. Canonical evidence automatically feeds bounded background work for diagnosis, compilation and optional strategic questions. Relevant candidate advice returns at decision boundaries. This is a proposal, not a deployed multi-model hierarchy. User Pause stays independent.
+  P["Active player<br/>current goal, interpretation, surprise"] --> R["Pinned local routine or raw input<br/>fresh feedback at every step"]
+  R --> W["Existing writer and native boundary<br/>accounting, current input checks"]
+  W --> G["Windowed game"]
+  G --> E["Existing evidence and memory<br/>automatic receipts and compact state"]
+  E --> R
+  E --> P
+  E -. "Coalesced question, cutoff, counterexamples" .-> L["One optional background learner<br/>diagnose, compile, revise<br/>strategic questions when useful"]
+  L -. "Candidate routine, correction or plan suffix<br/>original basis and applicability" .-> P
+  P -. "Select at a meaningful boundary<br/>no per-key review" .-> E
+  U["User Pause"] --> W
+  classDef background fill:#eef2ff,stroke:#4f46e5,color:#111827
+  class L background

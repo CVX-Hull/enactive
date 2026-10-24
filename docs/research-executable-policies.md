@@ -26,14 +26,13 @@ the lead to implement each discovered behavior, or replace exploration with a
 fixed menu catalogue. Code, small trees, state machines and natural-language
 strategies can coexist; no single representation is established as best.
 
-Current [procedure/2](design/procedure-learning.md#representation-and-storage)
-contains advisory descriptions, not evaluated code. The existing runtime records
-selection and outcomes but does not interpret procedure steps as executable
-branches/loops. Existing navigation, activities and input expansion are bounded
-executors; they are not a player-program execution facility. This distinction is
-verified in [procedures.py](../harness/gameplay/procedures.py),
-[campaign memory](../harness/gameplay/campaign_memory.py) and
-[mission runtime](../harness/mission_runtime.py).
+The assessed Procedure/2 baseline contained advisory descriptions, not evaluated
+code; its runtime recorded selection/outcomes without executing those steps.
+That historical gap motivated the subsequent Procedure/3 execution slice.
+The [current component view](components/memory-learning.md) owns implemented
+bounded program support. The [October24 follow-up](research-multirate-agents.md)
+assesses current program coverage and asynchronous learning; it does not infer
+cadence or causal benefit from execution support.
 
 [Diagnostic017](acceptance/2026-10-23-luna-responsiveness-seventeenth-attempt.md)
 is motivating evidence: six completed navigation goals each moved one tile;
@@ -140,7 +139,9 @@ during play while substrate, capabilities and original limits remain fixed.
 Pin the version used by a running instance; later advice can affect a subsequent
 selection or explicit player replan. This needs one reviewed substrate contract,
 not a PR, human approval or independent model approval for each learned routine.
-Current admissions do not yet provide this capability.
+Current Procedure/3 admissions provide bounded executable artifact evolution
+under their frozen policy. That is substrate support, not proof of general
+learning benefit or sufficient routine coverage.
 
 ## Representation, reuse and maintenance
 
@@ -165,10 +166,11 @@ not a selected dependency or justification for a large runtime project.
 Keep executable artifact bytes and revision identity in the existing owned
 artifact/history facilities, with memory indexing purpose, parameters,
 applicability, invalidators, source episodes and observed outcomes. Git owns
-engineering source history; do not rebuild Git in campaign memory. Exact storage,
-language and interprocess binding remain an implementation decision after the
-reuse/latency spike. Progressive context supplies summaries first; the model does
-not need source hashes, full scripts or traces on every invocation.
+engineering source history; do not rebuild Git in campaign memory. The subsequent
+execution slice selected the bounded V8 embedding and current Procedure/3 storage;
+its component/protocol own those choices. Progressive context supplies summaries
+first; the model does not need source hashes, full scripts or traces on every
+invocation.
 
 Maintain fallible selectors/detectors with their routines. Retain contrary
 episodes and prior working behavior. Distinguish absent knowledge, missed
@@ -183,9 +185,9 @@ evidence and assessment beyond the routine's own success declaration.
 | Existing authority | Retain / change needed |
 | --- | --- |
 | [Tiered gameplay](research-tiered-gameplay.md) and [responsive gameplay](research-responsive-gameplay.md) | Retain mixed primitives/skills, empirical tier choice and useful latency. Extend beyond authored executors toward player-authored programs. |
-| [Memory architecture](research-memory-architecture.md) and [procedure design](design/procedure-learning.md) | Retain evidence, immutable revisions and current advisory behavior. Their prohibition on live executable changes is the current boundary; a future declared artifact-update contract is required, not a silent reinterpretation. |
+| [Memory architecture](research-memory-architecture.md) and [procedure design](design/procedure-learning.md) | Retain evidence, immutable revisions and the distinction between advisory meaning and execution authority. Earlier offline-only boundaries are historical; current Procedure/3 admissions explicitly govern bounded artifact evolution. |
 | [Learning research](research-memory-learning.md) and [representations](research-memory-representations.md) | Retain source-linked hypotheses and counterexamples. Add executable artifacts without equating storage, reuse or detector agreement with learning benefit. |
-| [Protocol](protocol.md#ordinary-discovery-and-procedure-data), [architecture](architecture.md) | Keep one writer, original uncertainty, ordinary fallback and current authority. A learned-program ingress/runner is a missing capability, not existing procedure/2 semantics. |
+| [Protocol](protocol.md#ordinary-discovery-and-procedure-data), [architecture](architecture.md) | Keep one writer, original uncertainty, ordinary fallback and current authority. The implemented Procedure/3 runner closes the advisory-baseline execution gap; actual acquisition, useful coverage and cadence remain distinct acceptance. |
 | [S-ARCH/S-CODE](engineering.md), [control map](controls.md) | Review the stable boundary and reuse once; automatic runtime/accounting controls operate thereafter. Actual learning, changed-condition recovery and cadence require gameplay evidence. |
 
 GitHub owns the action items: **#177** executable representation, runtime/reuse

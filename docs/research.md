@@ -41,12 +41,19 @@ maintenance question rather than expanding bibliography for its own sake.
 
 ## Embodied control / VLA
 
+The [October24 multi-rate review](research-multirate-agents.md) checks fresh
+control/skill and contrary memory evidence against Fresh024. It recommends
+improving routine coverage and off-path candidate authoring within the existing
+player/learner/writer split. It does not prescribe additional model tiers or
+establish responsiveness, learning benefit or a resumed campaign.
+
 The [October23 executable-policy review](research-executable-policies.md) starts
 with fresh recent searches and cross-checks player-authored scripts, branching
 strategies, online revision and their failure modes against current procedure
-memory. It recommends a bounded executable-artifact path alongside ordinary
-exploration; the current procedure/2 contract remains advisory and no learned
-program runner is implemented by that recommendation.
+memory. It recommended a bounded executable-artifact path alongside ordinary
+exploration from an advisory Procedure/2 baseline. Current bounded Procedure/3
+execution is described in the [memory component](components/memory-learning.md);
+the research recommendation itself did not implement or qualify it.
 
 The [October 22 responsive-gameplay update](research-responsive-gameplay.md)
 cross-checks recent roguelike skills, asynchronous VLA control, context/memory and
