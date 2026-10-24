@@ -1,5 +1,6 @@
 """Pure procedure shape/ancestry tests; sources and truth require integration."""
 from copy import deepcopy
+import hashlib
 import json
 import unittest
 
@@ -8,7 +9,8 @@ from jsonschema import Draft202012Validator
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.contracts import canonical
 from harness.gameplay.procedures import (
-    procedure_schema, project_procedures, validate_procedure,
+    author_procedure, procedure_authoring_schema, procedure_schema, project_procedures,
+    validate_procedure,
 )
 
 
@@ -211,6 +213,137 @@ class ProcedureValidationTests(unittest.TestCase):
         value = procedure(goal="A possibly mistaken interpretation", status="active")
         self.assertEqual(validate_procedure(value), value)
         self.assertEqual(project_procedures([value]), {value["procedure_id"]: value})
+
+
+class ProcedureAuthoringTests(unittest.TestCase):
+    mechanical = {"schema", "record_type", "id", "mission_id", "procedure_id", "revision", "environment"}
+
+    def entry(self, **changes):
+        return {key: value for key, value in procedure(**changes).items() if key not in self.mechanical}
+
+    def author(self, entry=None, **changes):
+        return author_procedure(self.entry() if entry is None else entry,
+                                **{"mission_id": "mission-a", "identity": "request-1",
+                                   "environment": procedure()["environment"], **changes})
+
+    def test_semantic_schema_is_derived_closed_and_defensively_copied(self):
+        schema = procedure_authoring_schema()
+        Draft202012Validator.check_schema(schema)
+        expected = procedure_schema()
+        for field in self.mechanical:
+            del expected["properties"][field]
+            expected["required"].remove(field)
+        self.assertEqual(schema, expected)
+        self.assertFalse(schema["additionalProperties"])
+        schema["properties"]["steps"]["items"]["required"].clear()
+        schema["required"].clear()
+        self.assertEqual(procedure_authoring_schema(), expected)
+        self.assertTrue(procedure_schema()["properties"]["steps"]["items"]["required"])
+
+    def test_root_has_stable_canonical_ids_and_semantics(self):
+        entry = self.entry(program={"language": "javascript/1", "source": "return null;"})
+        result = self.author(entry)
+        digest = hashlib.sha256(b"mission-a\0request-1").hexdigest()
+        self.assertEqual(result, {**entry, "schema": "procedure/3", "record_type": "Procedure",
+                                 "id": "revision-" + digest, "mission_id": "mission-a",
+                                 "procedure_id": "procedure-" + digest, "revision": 1,
+                                 "environment": procedure()["environment"]})
+        self.assertEqual(self.author(entry), result)
+        for change in ({"mission_id": "mission-b"}, {"identity": "request-2"}):
+            other = self.author(entry, **change)
+            self.assertNotEqual(other["id"], result["id"])
+            self.assertNotEqual(other["procedure_id"], result["procedure_id"])
+        self.assertEqual(validate_procedure(result), result)
+
+    def test_successor_inherits_selected_family_and_advances_foreign_mission_parent(self):
+        parent = procedure(revision=3, mission_id="older-mission",
+                           environment={**procedure()["environment"], "configuration": "Older setup"})
+        entry = self.entry(parent={"mission_id": parent["mission_id"], "revision_id": parent["id"]})
+        result = self.author(entry, parent=parent)
+        self.assertEqual(result["mission_id"], "mission-a")
+        self.assertEqual(result["procedure_id"], parent["procedure_id"])
+        self.assertEqual(result["revision"], 4)
+        self.assertEqual(result["parent"], entry["parent"])
+        self.assertEqual(result["id"], self.author()["id"])
+        # A full validated revision is sufficient; ancestry/source availability is the caller's job.
+        self.assertEqual(result["environment"], procedure()["environment"])
+
+    def test_missing_unused_mismatched_and_invalid_selected_parents_refuse(self):
+        parent = procedure()
+        entry = self.entry(parent={"mission_id": parent["mission_id"], "revision_id": parent["id"]})
+        cases = [(entry, None), (self.entry(), parent),
+                 (entry, {**parent, "id": "other-revision"}),
+                 (entry, {**parent, "mission_id": "other-mission"}),
+                 (entry, entry["parent"]), (entry, {**parent, "extra": True})]
+        for semantic, selected in cases:
+            with self.subTest(entry_parent=semantic["parent"], selected=selected):
+                with self.assertRaises(ContractError):
+                    self.author(semantic, parent=selected)
+
+    def test_semantic_fields_are_required_and_canonical_overrides_refuse(self):
+        for field in self.entry():
+            with self.subTest(missing=field):
+                entry = self.entry()
+                del entry[field]
+                with self.assertRaises(ContractError):
+                    self.author(entry)
+        for field in self.mechanical | {"unknown"}:
+            with self.subTest(override=field):
+                with self.assertRaises(ContractError):
+                    self.author({**self.entry(), field: procedure().get(field)})
+        for entry in (None, [], True, {**self.entry(), "steps": []},
+                      {**self.entry(), "parameters": procedure()["parameters"] * 2}):
+            with self.subTest(entry=entry):
+                with self.assertRaises(ContractError):
+                    author_procedure(entry, mission_id="mission-a", identity="request-1",
+                                     environment=procedure()["environment"])
+
+    def test_mission_and_identity_use_existing_bounded_ascii_id_shape(self):
+        for field in ("mission_id", "identity"):
+            for invalid in (None, True, "", "a" * 129, "_leading", "a/b", "a b", "é", "a\n"):
+                with self.subTest(field=field, invalid=invalid):
+                    with self.assertRaises(ContractError):
+                        self.author(**{field: invalid})
+        self.assertEqual(self.author(mission_id="a" * 128, identity="A_-9")["mission_id"], "a" * 128)
+
+    def test_nested_inputs_and_outputs_are_independent(self):
+        parent = procedure()
+        entry = self.entry(parent={"mission_id": parent["mission_id"], "revision_id": parent["id"]})
+        environment = procedure()["environment"]
+        before = deepcopy((entry, parent, environment))
+        result = self.author(entry, parent=parent, environment=environment)
+        result["steps"][0]["intent"] = "changed"
+        result["support"][0]["source_ids"].clear()
+        result["parent"]["mission_id"] = "changed"
+        result["environment"]["configuration"] = "changed"
+        self.assertEqual((entry, parent, environment), before)
+        clean = self.author(entry, parent=parent, environment=environment)
+        entry["parameters"][0]["description"] = "changed"
+        parent["procedure_id"] = "changed"
+        environment["configuration"] = "changed"
+        self.assertEqual(clean["parameters"], before[0]["parameters"])
+        self.assertEqual(clean["procedure_id"], before[1]["procedure_id"])
+        self.assertEqual(clean["environment"], before[2])
+
+    def test_final_canonical_environment_revision_and_byte_bounds_remain(self):
+        for environment in (None, {}, {**procedure()["environment"], "native_protocol": True},
+                            {**procedure()["environment"], "mission_schema": "mission/10"}):
+            with self.subTest(environment=environment):
+                with self.assertRaises(ContractError):
+                    self.author(environment=environment)
+        reference = {"mission_id": "mission-a", "revision_id": "rev-1"}
+        self.assertEqual(self.author(self.entry(parent=reference),
+                                     parent=procedure(revision=1023))["revision"], 1024)
+        with self.assertRaises(ContractError):
+            self.author(self.entry(parent=reference), parent=procedure(revision=1024))
+        entry = self.entry(steps=[{"intent": "x" * 1024, "expected": "x" * 1024,
+                                  "on_unexpected": "x" * 1024} for _ in range(10)])
+        size = len(canonical(self.author(entry)).encode())
+        entry["goal"] = "x" * (32768 - size + len(entry["goal"]))
+        self.assertEqual(len(canonical(self.author(entry)).encode()), 32768)
+        entry["goal"] += "x"
+        with self.assertRaises(ContractError):
+            self.author(entry)
 
 
 class ProcedureProjectionTests(unittest.TestCase):
