@@ -33,7 +33,7 @@ MAX_DATABASE_BYTES = 64 * 1024 * 1024
 MAX_REQUESTS = 4096
 MAX_PRIMITIVES = 8192
 MAX_ARCHIVE_BYTES = MAX_BYTES
-_TERMINAL = frozenset({"completed", "failed", "stopped"})
+_ELIGIBLE_ARCHIVE_PHASES = frozenset({"completed", "failed", "stopped", "paused"})
 _REQUEST_TERMINAL = frozenset({"completed", "partial", "blocked", "failed", "unknown", "paused"})
 _PRIMITIVE_TERMINAL = frozenset({"returned", "rejected", "not_dispatched", "unknown"})
 
@@ -282,8 +282,10 @@ class ProcedureLibrary:
             metadata = dict(metadata)
             admission = MissionAdmission.from_dict(_object(metadata["admission"]))
             state = _object(metadata["state"])
-            if admission.mission_id != mission or state.get("phase") not in _TERMINAL:
-                raise ProcedureLibraryError("Library requires the current admission and a terminal mission")
+            # Campaign outcome does not decide procedure validity. Shared locks,
+            # exact pins and settled retained work also fence paused archives.
+            if admission.mission_id != mission or state.get("phase") not in _ELIGIBLE_ARCHIVE_PHASES:
+                raise ProcedureLibraryError("Library requires the current admission and an eligible archive phase")
             reflection = self._rows(database, "SELECT state FROM reflection_jobs", 64)
             if any(row[0] not in ("completed", "expired", "unknown", "unreviewed") for row in reflection):
                 raise ProcedureLibraryError("Historical reflection admission must be closed before library use")

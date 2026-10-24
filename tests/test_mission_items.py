@@ -1,5 +1,6 @@
 """Synthetic item/inspection composition; no native inventory acceptance claim."""
 import copy
+import threading
 import time
 import unittest
 from unittest.mock import patch
@@ -87,7 +88,7 @@ class MissionItemTests(unittest.TestCase):
         return self.control("edit", dict(purpose=purpose, text=text, commit=commit),
             phase_id="water-root", perception=view, request_id=request_id)
 
-    def open_consumption_selector(self):
+    def open_consumption_selector(self, *, wall_seconds=120):
         self.bridge.value["actions"].append("eat")
         self.start()
         normal = copy.deepcopy(self.bridge.value["scene"])
@@ -113,7 +114,8 @@ class MissionItemTests(unittest.TestCase):
         self.bridge.behavior = behavior
         goal = dict(purpose="consume", label="ration", quantity=1, quantity_unit="items",
             step="start", outcome="consumed")
-        self.root = self.control("item", goal, request_id="consume-root")
+        self.root = self.control("item", goal, request_id="consume-root",
+            limits=dict(primitives=8, wall_seconds=wall_seconds, game_seconds=1200))
         self.assertEqual(self.send(self.root)["state"], "partial")
 
     def consumption_selection(self, request_id="consume-selection"):
@@ -125,8 +127,8 @@ class MissionItemTests(unittest.TestCase):
         return self.control("item", {**self.root["goal"], "step": "select"}, phase_id="consume-root",
             perception=view, request_id=request_id)
 
-    def begin_consumption_activity(self):
-        self.open_consumption_selector()
+    def begin_consumption_activity(self, *, wall_seconds=120):
+        self.open_consumption_selector(wall_seconds=wall_seconds)
         selected = self.send(self.consumption_selection())
         self.assertEqual(selected["result"]["phase"]["stage"], "activity_poll", selected)
 
@@ -181,15 +183,63 @@ class MissionItemTests(unittest.TestCase):
         self.assertIsNone(self.runtime._lease)
         self.assertEqual(self.bridge.delivered, before)
 
-    def test_consumption_observe_uses_original_deadline_without_new_input(self):
-        self.begin_consumption_activity()
+    def expire_consumption_root(self):
         deadline = self.runtime._ledger.request("consume-root")["deadline"]
-        before = len(self.bridge.requests)
-        with patch.object(self.runtime, "_wall", return_value=deadline):
-            result = self.observe_consumption()
-        self.assertEqual(result["state"], "blocked", result)
-        self.assertIsNone(self.runtime._lease)
-        self.assertEqual(len(self.bridge.requests), before)
+        threading.Event().wait(max(0, deadline - self.runtime._wall() + .03))
+
+    def test_consumption_observe_after_root_expiry_preserves_lineage_without_input(self):
+        self.begin_consumption_activity(wall_seconds=1)
+        root = self.runtime._ledger.request("consume-root")
+        phase, lease = self.runtime._prompt_phase, self.runtime._lease
+        before, delivered = self.runtime.status()["spent_inputs"], copy.deepcopy(self.bridge.delivered)
+        requests = len(self.bridge.requests)
+        self.expire_consumption_root()
+        result = self.observe_consumption()
+        self.assertEqual(result["state"], "completed", result)
+        self.assertEqual(result["result"]["macro_exhausted"], "wall_seconds")
+        self.assertEqual(result["result"]["phase"]["stage"], "activity_poll")
+        self.assertEqual(result["result"]["phase"]["origin_request_id"], "consume-root")
+        self.assertFalse(result["result"]["grants_authority"])
+        self.assertNotIn("macro_closure", result["result"])
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(self.runtime._prompt_phase.root_id, phase.root_id)
+        self.assertEqual(self.runtime._prompt_phase.game_anchor, phase.game_anchor)
+        self.assertEqual(self.runtime._ledger.request("consume-root"), root)
+        self.assertEqual(self.runtime.status()["spent_inputs"], before)
+        self.assertEqual(self.bridge.delivered, delivered)
+        self.assertEqual(len(self.bridge.requests), requests + 1)
+        self.assertEqual(self.bridge.requests[-1]["kind"], "observe")
+
+    def test_expired_consumption_menu_requires_explicit_durable_closure(self):
+        self.begin_consumption_activity(wall_seconds=1)
+        root = self.runtime._ledger.request("consume-root")
+        phase, lease = self.runtime._prompt_phase, self.runtime._lease
+        before, delivered = self.runtime.status()["spent_inputs"], copy.deepcopy(self.bridge.delivered)
+        self.expire_consumption_root()
+        self.consume_return = True
+        result = self.observe_consumption()
+        self.assertEqual(result["state"], "completed", result)
+        self.assertEqual(result["result"]["macro_exhausted"], "wall_seconds")
+        self.assertEqual(result["result"]["phase"]["stage"], "awaiting_control")
+        self.assertNotIn("macro_closure", result["result"])
+        self.assertEqual(self.runtime._prompt_phase.game_anchor, phase.game_anchor)
+        old_child = self.consumption_selection("expired-consume-child")
+        self.assertEqual(self.runtime.command(old_child)["status"], "rejected")
+        checkpoint = self.runtime._prompt_phase.checkpoint
+        closed = self.observe_consumption("consume-explicit-closure")
+        self.assertEqual(closed["state"], "completed", closed)
+        closure = closed["result"]["macro_closure"]
+        self.assertEqual(closure["limit"], "wall_seconds")
+        self.assertEqual(closure["root_request_id"], "consume-root")
+        self.assertEqual(closure["checkpoint_source_id"], checkpoint.observation_id)
+        self.assertEqual(closure["fresh_source_id"], self.runtime._current.observation_id)
+        self.assertFalse(closure["grants_authority"])
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.result("consume-explicit-closure"), closed)
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(self.runtime._ledger.request("consume-root"), root)
+        self.assertEqual(self.runtime.status()["spent_inputs"], before)
+        self.assertEqual(self.bridge.delivered, delivered)
 
     def test_user_pause_wins_during_consumption_observation(self):
         self.begin_consumption_activity()

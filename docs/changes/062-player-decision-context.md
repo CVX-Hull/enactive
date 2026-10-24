@@ -792,3 +792,32 @@ qualification and the full outcome remain open. Known receiver-rejection
 collection remains separately owned in#164, without a compatibility path or new
 store. S-PROTOCOL/C-PORTABLE/C-REVIEW cover the boundary; dated evidence and Git,
 not this design note, own the detailed run history.
+
+
+## Closed023: fit the actual decision working set
+
+[Fresh023](../acceptance/2026-10-24-independent-seven-day-twenty-third-attempt.md)
+retains two days, four procedure revision pairs, distinct reuse and limited
+supported advice adoption. Genuine clean-successor retrieval of 37 images exceeds
+the incidental 32-entry source cache and fails before Claim submission. A plain
+preparation error then incorrectly suggests original collection. The narrow repair
+uses the existing 128-source handoff contract for source metadata and positively
+distinguishes a new unsubmitted refusal from existing/corrupt stages and actual
+submit/presentation uncertainty. It adds no read-proof store, replay, auto-read or
+model attention claim. S-ARCH's working-set/correction requirements and existing
+C-PORTABLE/C-REVIEW enforce this distinction; actual new handoff remains separate.
+
+The existing historical library now accepts physically/internally closed paused
+archives as fallible procedure donors without phase rewriting or authority. Its
+four exact pins load 14 records including eight from023, preserving original
+bytes. Full dependency-closure scaling remains owned in #177; copying a partial
+run does not establish successor use or normally completed learning acceptance.
+
+A reviewed no-supersession clock-frontier path reuses built-in sorting, preserving
+ties, missing clocks and the existing ancestry-aware path. Independent differential
+checks and a reused SQLite/evidence/context profile support the optimization:
+ordinary retrieval at about 3,200 Claims falls from roughly 1.07 seconds to 48–57 ms
+with unchanged compact output. Setup, model, native and display work are excluded;
+this is component performance, not qualified whole-player cadence. The dated
+report owns counts, costs, failure and cleanup; GitHub owns remaining ergonomics,
+reflective allocation and full independent-outcome actions.

@@ -23,9 +23,12 @@ known unchanged player/control context; explicit image reads remain complete.
 MCP server5.2.2 assigns request identities and bounded result waits before invoking
 the existing imperative SDK. Its public schemas reject caller-owned IDs/waits;
 snapshot/source, scope, execution limits and semantic decisions remain explicit.
-Known pure composition/advisory validation failures before SDK submission return
-`not_submitted` without a collection handle. Errors from staging onward preserve
-assigned original collection arguments through the presentation boundary. Durable staging/collection remain in MissionClient and the existing
+Positively pure new preparation/advisory validation failures before SDK submission
+return `not_submitted` without a collection handle. For ordinary mutations, an
+existing stage lookup on the refusal path prevents relabeling an already staged
+identity as unsubmitted; a corrupt or unavailable stage remains uncertain. Successful
+preparation adds no stage probe. Errors from staging onward preserve assigned
+original collection arguments through the presentation boundary. Durable staging/collection remain in MissionClient and the existing
 ledger; no extra history or executor is introduced. Lost settled identities after
 a producer restart remain a disclosed quiescence case, not permission to replay.
 The existing pure request composer also derives navigation coordinate scope and
@@ -36,6 +39,10 @@ Handoff authoring similarly binds explicit `checkpoint_sources` (null means the
 exact selected snapshot source; explicit IDs require prior image reads) to
 canonical observation IDs. It cannot select evidence, refresh or deduplicate.
 Canonical receiver records and live guards are unchanged.
+Source metadata retains the contract's maximum 128 distinct handoff reads; snapshot
+and procedure-packet caches retain 32 entries each. Eviction only requires an
+explicit exact reread; it never substitutes evidence or erases durable images.
+This is bounded producer context, not a record of model attention or a new store.
 The optional outer [host driver](../tools/campaign_player.py) uses the existing
 CLI/SDK to activate at most one fresh successor after actual predecessor exit0
 and exact quiescent internal-handoff verification, including current controller/

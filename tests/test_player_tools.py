@@ -10,6 +10,7 @@ import unittest
 from unittest.mock import Mock
 
 from harness.gameplay.contracts import ContractError, validate_json
+from harness.gameplay.mission_contracts import MAX_HANDOFF_SOURCES
 from harness.gameplay.mission_requests import compose_request
 from harness.mission_client import MissionClient
 from harness.player_mcp import make_server
@@ -169,6 +170,31 @@ class PlayerHTTPTests(unittest.TestCase):
 
 
 class SnapshotDetailTests(unittest.TestCase):
+    def test_source_metadata_supports_handoff_bound_without_expanding_other_caches(self):
+        client = Mock()
+        client.status.return_value = dict(mission=dict(mission_id="mission", current_source=None))
+        client.source.side_effect = lambda mission, source: (
+            dict(reference=dict(observation_id=source), disposition="retained", grants_authority=False), b"pixels")
+        player = PlayerTools(client)
+        for index in range(MAX_HANDOFF_SOURCES):
+            player.source("mission", f"source-{index}")
+        self.assertEqual(len(player.sources), MAX_HANDOFF_SOURCES)
+        self.assertEqual(player._source("mission", "source-0")["reference"]["observation_id"], "source-0")
+        player.source("mission", "overflow")
+        self.assertEqual(len(player.sources), MAX_HANDOFF_SOURCES)
+        before = client.source.call_count
+        with self.assertRaisesRegex(ContractError, "selected exact source"):
+            player._source("mission", "source-0")
+        self.assertEqual(client.source.call_count, before)
+        player.source("mission", "source-0")
+        self.assertEqual(player._source("mission", "source-0")["reference"]["observation_id"], "source-0")
+        for index in range(33):
+            player.snapshot()
+            player._remember(player.procedures, ("mission", f"revision-{index}"), dict(id=f"revision-{index}"))
+        self.assertEqual(len(player.snapshots), 32)
+        self.assertEqual(len(player.procedures), 32)
+        self.assertNotIn(("mission", "revision-0"), player.procedures)
+
     def test_pending_and_busy_collection_guidance_preserves_original_mission_and_owner(self):
         client = Mock()
         client.status.return_value = dict(mission=dict(mission_id="later-snapshot", current_source=None))
@@ -237,8 +263,9 @@ class SnapshotDetailTests(unittest.TestCase):
                 client.source.assert_not_called()
                 self.assertEqual(player.snapshots[selected["snapshot_id"]], selected)
 
-    def test_unlaunched_admission_explains_bootstrap_without_io_or_implicit_launch(self):
+    def test_unlaunched_admission_explains_bootstrap_without_refresh_or_implicit_launch(self):
         client = Mock()
+        client.staged_request.return_value = None
         client.status.return_value = dict(mission=dict(mission_id="unlaunched", epoch=0,
             phase="admitted", current_source=None, native_process=dict(last_sample=None)))
         player = PlayerTools(client)
@@ -254,13 +281,15 @@ class SnapshotDetailTests(unittest.TestCase):
             with self.subTest(operation=operation), self.assertRaisesRegex(ContractError,
                     "operation=launch, source_id=null"):
                 player.call("enactive_lifecycle", arguments)
-            self.assertEqual(client.mock_calls, [], "No native launch, source read, retarget or submission")
+            client.staged_request.assert_called_once_with("unlaunched", "missing-source")
+            self.assertEqual(len(client.mock_calls), 1, "Only the original-stage refusal check may run")
             self.assertEqual(player.snapshots[selected["snapshot_id"]], before)
 
-    def test_lifecycle_readmission_misroute_is_actionable_without_io_or_retarget(self):
+    def test_lifecycle_readmission_misroute_is_actionable_without_submit_or_retarget(self):
         from tests.test_player_view import snapshot
         original = snapshot()
         client = Mock()
+        client.staged_request.return_value = None
         client.status.return_value = dict(mission=original["mission"], **original["native"])
         client.source.return_value = (original["source"], b"original PNG")
         player = PlayerTools(client)
@@ -278,7 +307,8 @@ class SnapshotDetailTests(unittest.TestCase):
             with self.subTest(operation=operation), self.assertRaisesRegex(ContractError,
                     f"enactive_lifecycle, scope=lifecycle, operation={operation}"):
                 player.call("enactive_readmit", arguments)
-            self.assertEqual(client.mock_calls, [], "No submit, fresh read, source substitution or Resume")
+            client.staged_request.assert_called_once_with(original["mission"]["mission_id"], "wrong-readmission")
+            self.assertEqual(len(client.mock_calls), 1, "Only the original-stage refusal check may run")
             self.assertEqual(player.snapshots[identity], retained, "Selected as-of context is unchanged")
 
     def test_detail_is_exact_as_of_selected_snapshot_without_io_or_mutation_aliases(self):
@@ -547,6 +577,9 @@ class _FixtureClient:
     """Only SDK framing/image-format fixture; it proves no game state or action."""
     from tests.test_gameplay_evidence import png
     image = png()
+    def staged_request(self, mission_id, request_id):
+        return None
+
     def status(self):
         return dict(state=dict(session="sdk-session", health="healthy", actions=["open"],
             scene={"position": [1, 2, 0]}, ui={"visible": "menu"}),

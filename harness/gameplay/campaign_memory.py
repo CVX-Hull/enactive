@@ -336,6 +336,39 @@ class CampaignMemory:
                 groups.setdefault(group, []).append(identity)
         frontiers = []
         for ids in groups.values():
+            if not any(claims[identity]["supersedes"] for identity in ids):
+                # Missing clocks cannot align different masks. Within each
+                # mask, maxima preserve all equal-order claims and conflicts.
+                masks: dict[tuple[bool, bool], list[str]] = {}
+                for identity in ids:
+                    order = claims[identity]["observed_time"]
+                    mask = (order["revision"] is not None, order["turn"] is not None)
+                    masks.setdefault(mask, []).append(identity)
+                surviving: set[str] = set()
+                for mask, members in masks.items():
+                    if not any(mask):
+                        surviving.update(members)
+                    elif all(mask):
+                        pairs = {(claims[identity]["observed_time"]["revision"],
+                                  claims[identity]["observed_time"]["turn"]) for identity in members}
+                        maxima = set()
+                        max_turn = None
+                        # Descending pairs visit the highest turn first at
+                        # each revision; lower revisions must exceed it.
+                        for revision, turn in sorted(pairs, reverse=True):
+                            if max_turn is None or turn > max_turn:
+                                maxima.add((revision, turn))
+                                max_turn = turn
+                        surviving.update(identity for identity in members if
+                            (claims[identity]["observed_time"]["revision"],
+                             claims[identity]["observed_time"]["turn"]) in maxima)
+                    else:
+                        clock = "revision" if mask[0] else "turn"
+                        maximum = max(claims[identity]["observed_time"][clock] for identity in members)
+                        surviving.update(identity for identity in members
+                            if claims[identity]["observed_time"][clock] == maximum)
+                frontiers.append([identity for identity in ids if identity in surviving])
+                continue
             frontiers.append([identity for identity in ids if not any(
                 identity in ancestors[other] or (other not in ancestors[identity] and _later(claims[other], claims[identity]))
                 for other in ids if other != identity)])

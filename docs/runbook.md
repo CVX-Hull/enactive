@@ -394,8 +394,16 @@ ledgers/archives as historical evidence; do not relabel them as eligible procedu
 libraries or restore their execution authority. Current stores accept native6
 only. Procedure/3 and reflection/2 also reject older records. Historical
 learning004/006 libraries keep their original contracts and are not relabelled or
-mounted as current. Complete and normally close an eligible current-contract
-learning mission before using its library in the subsequent fresh campaign.
+mounted as current.
+
+For current-contract donors, the procedure library accepts completed, failed,
+stopped and paused archives only after physical and internal closure: both shared
+locks exclude runtime writers; exact ledger/index/dependency pins, settled
+requests/primitives/effects and closed reflective work must validate. Preserve the
+original phase and bytes. A failed or closed paused donor can supply historical
+fallible procedures, but cannot restore authority or satisfy the separate
+normally completed learning requirement for campaign acceptance. Complete and
+normally close that learning outcome before the subsequent fresh campaign.
 GitHub and the current delivery evidence own exact prospective identifiers.
 
 ## Passive skill acceptance

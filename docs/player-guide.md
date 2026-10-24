@@ -34,6 +34,9 @@ reason to read the entire repository during every game.
   metrics, receipt, progress, native or source metadata when needed. It never refreshes or
   grants authority. Use `enactive_source` when you need the actual retained image.
   Software verifies hashes and binds requests; do not reconstruct omitted audit data.
+  The producer retains metadata for up to 128 distinct source reads. If metadata
+  is unavailable, explicitly reread the exact selected image; do not substitute
+  another source. Snapshot and procedure-packet caches each retain 32 entries.
   Default snapshots are explicitly read-only. A proof receipt's grants_authority=false
   does not mean adoption failed or ordinary execution is refused: use the actual
   operation result, next_needed_decision and active phase. The writer checks inputs.
@@ -82,7 +85,7 @@ reason to read the entire repository during every game.
   The summary is returned automatically; read exact continuation only when needed
   through `enactive_detail(next_snapshot.snapshot_id, progress)`.
 - MCP assigns each new request ID and waits up to15 seconds for its original
-  result; do not supply `request_id` or `wait_seconds`. A composition refusal explicitly
+  result; do not supply `request_id` or `wait_seconds`. A positively new preparation refusal explicitly
   marked `submission=not_submitted` has no original operation to collect. Correct
   the selected arguments for a new decision under the original limits. Errors
   during staging, dispatch or presentation retain uncertain collection instead. A new invocation is a new

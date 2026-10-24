@@ -19,14 +19,15 @@ The engineering lead maintains the project and verifies outcomes; routine play
 must not depend on lead tactics, keys or memory curation. This is not yet an
 accepted unattended seven-day survival service.
 
-Latest [Fresh022](acceptance/2026-10-24-independent-seven-day-twenty-second-attempt.md)
-creates and adopts the character, obtains supplies and uses a revised movement
-routine, then fails when observation inherits an expired activity root's deadline.
-Normal Save is blocked after lease loss. The subsequent source repair separates
-bounded observation from spent execution scope and exposes frozen scenario context;
-93 focused tests and independent code review pass, with real qualification still
-required. All owned runtime is closed. Complete learning, seven days,
-successor/reload/normal ending and useful cadence remain open.
+Latest [Fresh023](acceptance/2026-10-24-independent-seven-day-twenty-third-attempt.md)
+reaches two days of independent survival with four revised/reused procedure
+families and limited supported advice adoption. A clean successor reads memory
+and images, but a source-cache/preflight defect prevents Claim. The run is closed
+failed, with original saves preserved. Reviewed repairs address that boundary,
+spent-root observation tests and costly memory retrieval, and allow closed paused
+archives to supply fallible historical procedures. Source checks and a new actual
+campaign remain separate: successor application, normal lifecycle, seven days and
+useful cadence are still unaccepted.
 
 The browser spectator shows actual Tiles frames, ownership, progress and
 uncertainty. The game stays windowed and project-local. You can Pause or take

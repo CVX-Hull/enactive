@@ -9,6 +9,7 @@ from contextlib import closing
 import inspect
 import json
 from pathlib import Path
+import random
 import sqlite3
 import tempfile
 import unittest
@@ -23,6 +24,43 @@ from harness.gameplay.mission_ledger import LedgerError, MissionLedger
 from tests.test_gameplay_evidence import observation, png
 from tests.test_mission_contracts import admission, claim, request, scope, skill
 from tests.test_mission_ledger import intent
+
+
+def reference_frontier(claims, selected_ids=None):
+    """Retain the original pairwise semantics independently of the reducer."""
+    ancestors, retired = {}, set()
+    for identity, entry in claims.items():
+        parents = set(entry["supersedes"]) | {parent for support in entry["supports"] for parent in support["claims"]}
+        if not parents <= ancestors.keys() or any(claims[parent]["scope"] != entry["scope"] for parent in parents):
+            raise ContractError("Invalid reference dependency history")
+        ancestors[identity] = set(entry["supersedes"])
+        retired.update(entry["supersedes"])
+        for parent in entry["supersedes"]:
+            ancestors[identity].update(ancestors[parent])
+    groups = {}
+    for identity, entry in claims.items():
+        key = canonical({"scope": entry["scope"], "key": entry["key"]})
+        groups.setdefault(key, []).append(identity)
+    frontiers = []
+    for ids in groups.values():
+        if selected_ids is not None and not selected_ids.intersection(ids):
+            continue
+        frontier = []
+        for identity in ids:
+            current = tuple(claims[identity]["observed_time"][key] for key in ("revision", "turn"))
+            for other in ids:
+                if other == identity:
+                    continue
+                candidate = tuple(claims[other]["observed_time"][key] for key in ("revision", "turn"))
+                comparable = all((left is None) == (right is None) for left, right in zip(candidate, current))
+                later = (comparable and candidate != current
+                    and all(left >= right for left, right in zip(candidate, current) if left is not None))
+                if identity in ancestors[other] or other not in ancestors[identity] and later:
+                    break
+            else:
+                frontier.append(identity)
+        frontiers.append(frontier)
+    return frontiers, retired
 
 
 class CampaignMemoryTests(unittest.TestCase):
@@ -269,6 +307,53 @@ class CampaignMemoryTests(unittest.TestCase):
         claims = {entry["id"]: entry for entry in entries}
         with patch("harness.gameplay.campaign_memory._later", side_effect=AssertionError("Unselected comparison")):
             self.assertEqual(CampaignMemory._frontier(claims, selected_ids={"identity"}), ([["identity"]], set()))
+
+    def test_clock_frontier_preserves_ties_reversals_masks_and_original_order(self):
+        ref = self.source()
+        clocks = [(8, 3), (7, 4), (9, 1), (8, 2), (8, 3), (6, 4), (5, 5), (4, 0),
+                  (None, None), (None, None), (9, None), (9, None), (8, None),
+                  (None, 5), (None, 4), (None, 5)]
+        claims = {str(index): self.assertion(str(index), ref,
+            observed_time=dict(revision=revision, turn=turn), value=dict(quantity=index, state=None))
+            for index, (revision, turn) in enumerate(clocks)}
+        expected = ([["0", "1", "2", "4", "6", "8", "9", "10", "11", "13", "15"]], set())
+        self.assertEqual(reference_frontier(claims), expected)
+        self.assertEqual(CampaignMemory._frontier(claims), expected)
+
+    def test_frontier_matches_pairwise_reference_across_randomized_histories_and_selection(self):
+        ref = self.source()
+        for supersession in (False, True):
+            for seed in range(24):
+                rng = random.Random(seed)
+                claims = {}
+                for index in range(80):
+                    identity = f"claim-{index}"
+                    predecessors = list(claims)
+                    entry = self.assertion(identity, ref,
+                        key={**claim()["key"], "subject": "group-" + str(rng.randrange(5))},
+                        observed_time={key: rng.choice([None, *range(6)]) for key in ("revision", "turn")},
+                        value=dict(quantity=rng.randrange(4), state=None))
+                    if predecessors and rng.randrange(4) == 0:
+                        entry["supports"] = [{"sources": [], "claims": [rng.choice(predecessors)]}]
+                    if supersession and predecessors and rng.randrange(4) == 0:
+                        entry["supersedes"] = rng.sample(predecessors, min(len(predecessors), rng.randrange(1, 3)))
+                    claims[identity] = entry
+                before = deepcopy(claims)
+                selections = (None, set(), set(claims), set(rng.sample(list(claims), 4)))
+                for selected in selections:
+                    with self.subTest(seed=seed, supersession=supersession, selected=selected):
+                        self.assertEqual(CampaignMemory._frontier(claims, selected_ids=selected),
+                            reference_frontier(claims, selected))
+                self.assertEqual(claims, before)
+
+    def test_no_supersession_frontier_eliminates_pairwise_clock_comparisons(self):
+        ref = self.source()
+        claims = {f"claim-{index}": self.assertion(f"claim-{index}", ref,
+            key={**claim()["key"], "subject": "group-" + str(index % 3)},
+            observed_time=dict(revision=index, turn=index)) for index in range(3201)}
+        with patch("harness.gameplay.campaign_memory._later", side_effect=AssertionError("Pairwise frontier work")):
+            self.assertEqual(CampaignMemory._frontier(claims),
+                ([["claim-3198"], ["claim-3199"], ["claim-3200"]], set()))
 
     def test_selected_frontier_rejects_unrelated_invalid_dependency_graphs(self):
         ref = self.source()

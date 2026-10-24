@@ -272,9 +272,13 @@ Invalid semantic whole-field creation-name targets use the same guarded local
 draft refusal, retaining the strict complete admitted identity requirement.
 Ordinary bounded input remains a separate explicit player choice; software does
 not truncate a target, choose clearing keys or construct replacement chunks.
-Known ordinary request-composition and pure advisory-submit validation refusals
-before SDK submission return `submission=not_submitted` and no collection handle;
-no request exists to collect. Advisory closure lookup/validation must precede any
+Positively pure new mutation-preparation and pure advisory-submit validation
+refusals before SDK submission return `submission=not_submitted` and no collection
+handle; no new request exists to collect. Ordinary mutation refusal checks the
+existing SDK stage for the assigned identity before making that classification.
+An existing stage or corrupt/unavailable stage retains original collection and
+uncertainty. Successful preparation needs no extra stage read. Submit, finish and
+presentation errors stay outside that preparation boundary. Advisory closure lookup/validation must precede any
 staging or POST; failures after that boundary retain original collection.
 Errors from staging onward retain the assigned original collection identity. The
 adapter never infers nondelivery from an arbitrary exception or a missing reply.
@@ -306,6 +310,12 @@ snapshot (without PNG bytes or the already-excluded historical memory preview).
 renewal. Missing sections return null; unavailable/evicted IDs require an explicit
 new snapshot. The original selected snapshot never silently retargets. Actual
 source images still use the existing exact source reader.
+The separate source-metadata cache retains up to `MAX_HANDOFF_SOURCES` (128)
+distinct reads, so one allowed Claim working set fits. Other snapshot/procedure
+caches remain 32 entries. A source evicted from producer context requires an
+explicit exact reread before an explicit source binding/declaration; it is not
+proof that the image was never shown. Durable sources and read declarations remain
+unchanged. No automatic source selection, reading or declaration is introduced.
 
 For skill/non-Launch lifecycle composition, null `source_id` selects only the full
 source already cached inside that explicitly selected snapshot; no source fetch or
@@ -1548,10 +1558,18 @@ and derived project paths. It never reopens a runtime writer, restores a phase o
 imports old-world Claims/Work as current facts. Only current ledger12/archive5
 input with the exact native6/mission11 procedure environment is eligible. Earlier
 contracts, including learning004/006, remain immutable historical evidence,
-unmountable as current libraries. A normally closed current-contract learning
-mission must supply an eligible library before the subsequent fresh seven-day
-admission; exact mission identifiers and acceptance belong to GitHub/current
-delivery evidence. Old failures never resume.
+unmountable as current libraries. Eligible archive phases are completed, failed,
+stopped and paused, with physical and internal closure required in every case:
+the reader holds both shared archive locks, verifies exact pins and dependency
+closure, and rejects unsettled requests, primitives, effects or reflective work.
+A paused archive cannot be read while its writer holds the exclusive locks.
+Eligibility supplies fallible historical procedures, not a completed learning
+outcome, current-world facts or authority to resume the old mission.
+
+The delivery requirement for a normally closed current-contract learning mission
+before the subsequent fresh seven-day admission remains separate. Reusing a
+failed or closed paused donor does not satisfy it. Exact mission identifiers and
+acceptance belong to GitHub/current delivery evidence. Old failures never resume.
 Authority-blocked retained sources are historical evidence, as in EvidenceStore:
 a bounded unique list of valid retained blocked IDs does not itself dispute their
 bytes or support. Library exports remain historical and `grants_authority:false`.

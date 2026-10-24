@@ -121,7 +121,10 @@ optional shortcuts and stronger claims about those actions. Missing semantic
 coverage must not prevent otherwise supported ordinary exploration or cancellation.
 Treat optional accelerators and derived caches accordingly: bound their working
 set and forget/recompute candidates when appropriate, rather than make historical
-cache growth a lifetime limit on ordinary observation/input. Preserve durable
+cache growth a lifetime limit on ordinary observation/input. Size a producer cache
+to the permitted atomic decision/handoff working set using the existing contract,
+with explicit exact rereads after eviction; test the cross-boundary case rather
+than treating a local cache size as a new semantic limit. Preserve durable
 evidence, current guards, explicit uncertainty and original resource accounting.
 Exercise exploration beyond the cache working set in the existing component and
 whole-runtime lanes; this is not permission to ignore integrity or storage failure.

@@ -7,13 +7,16 @@ import tempfile
 import threading
 import sys
 import unittest
-from unittest.mock import patch
+import uuid
+from unittest.mock import Mock, patch
 
 from mcp import Client
 
 from harness.mission_client import MissionClientError
+from harness.gameplay.contracts import ContractError
+from harness.gameplay.mission_contracts import MAX_HANDOFF_SOURCES
 from harness.player_mcp import make_server
-from harness.player_tools import PlayerTools, tool_specs
+from harness.player_tools import PlayerTools, tool_specs, _validate_arguments
 from tests.test_player_claims import StagingClient
 from tests.test_mission_request_producer import bundle, snapshot
 from tests.test_reflection_tools import AdvisoryClient, SCOPE, submit_args
@@ -39,6 +42,164 @@ class InvocationTests(unittest.TestCase):
             value=dict(quantity=18, state=None), text='Visible count', coverage='menu page',
             status='last_seen', grounding=dict(kind='source', source_id=None, coordinate_epoch=None),
             supports=[dict(primary=True, sources=[], claims=[])])))
+
+    def handoff_claim(self, procedure_sources):
+        binding = dict(pause_generation=2, takeover_generation=3, session=self.source['reference']['session'],
+            revision=7, boundary_id='issued-boundary', pause_origin='host')
+        self.backend.collect = Mock(return_value=dict(transport='delivered', response=dict(operation=dict(
+            state='completed', request=dict(kind='handoff'), result=binding))))
+        return dict(snapshot_id='chosen', intent=dict(handoff_id='issued-handoff', player_id='fresh-player',
+            actor_role='campaign-player', packet_ids=['issued-packet'], read_source_ids=[self.source['reference']['observation_id']],
+            read_procedure_sources=procedure_sources))
+
+    def readable_sources(self, qualified):
+        sources = {(mission, source['reference']['observation_id']): source for mission, source in qualified}
+        self.backend.source = Mock(side_effect=lambda mission, source: (deepcopy(sources[(mission, source)]), b'pixels'))
+        return [dict(mission_id=mission, source_id=source['reference']['observation_id']) for mission, source in qualified]
+
+    def test_actual_shaped_thirty_seven_source_reads_with_overlap_submit_one_claim(self):
+        local = [('mission-test', bundle(index)) for index in range(7, 13)]
+        historical = [('history-mission', bundle(index)) for index in range(100, 131)]
+        reads = self.readable_sources(local + historical)
+        declared = [*reads[6:27], reads[0], *reads[27:]]
+        args = self.handoff_claim(declared)
+        args['intent']['read_source_ids'] = [source['source_id'] for source in reads[:6]]
+        async def exercise(client):
+            for source in reads:
+                self.assertFalse((await client.call_tool('enactive_source', source)).is_error)
+            reply = await client.call_tool('enactive_claim', args)
+            self.assertFalse(reply.is_error, self.value(reply))
+        self.run_client(exercise)
+        self.assertEqual(len(self.player.sources), 37)
+        self.assertEqual(self.backend.source.call_count, 37)
+        self.backend.collect.assert_called_once_with('mission-test', 'issued-handoff', wait_seconds=0)
+        self.assertEqual(len(self.backend.writes), 1)
+        request = self.backend.writes[0]
+        self.assertEqual(request['read_procedure_sources'], declared)
+        self.assertEqual(request['read_source_ids'], args['intent']['read_source_ids'])
+        self.assertEqual(request['packet_ids'], ['issued-packet'])
+        self.assertEqual(request['player_id'], 'fresh-player')
+
+    def test_unread_or_evicted_exact_source_is_unsubmitted_then_explicit_reread_works(self):
+        qualified = [('history-mission', bundle(index)) for index in range(MAX_HANDOFF_SOURCES + 1)]
+        reads = self.readable_sources(qualified)
+        args = self.handoff_claim([reads[0]])
+        async def exercise(client):
+            for fault in ('unread', 'evicted'):
+                if fault == 'evicted':
+                    for source in reads:
+                        await client.call_tool('enactive_source', source)
+                reply = await client.call_tool('enactive_claim', args)
+                value = self.value(reply)
+                self.assertTrue(reply.is_error)
+                self.assertEqual(value['submission'], 'not_submitted')
+                self.assertNotIn('original_collection', value)
+                self.assertEqual(self.backend.writes, [])
+                self.backend.collect.assert_not_called()
+                self.assertFalse((self.root / '.runtime/mission-requests').exists())
+            await client.call_tool('enactive_source', reads[0])
+            self.assertFalse((await client.call_tool('enactive_claim', args)).is_error)
+        self.run_client(exercise)
+        self.assertEqual(len(self.backend.writes), 1)
+
+    def test_full_handoff_source_bound_submits_only_explicit_declarations(self):
+        reads = self.readable_sources([('history-mission', bundle(index)) for index in range(MAX_HANDOFF_SOURCES)])
+        args = self.handoff_claim(reads)
+        for source in reads:
+            self.player.source(source['mission_id'], source['source_id'])
+        async def exercise(client):
+            reply = await client.call_tool('enactive_claim', args)
+            self.assertFalse(reply.is_error, self.value(reply))
+        self.run_client(exercise)
+        self.assertEqual(len(self.backend.writes), 1)
+        self.assertEqual(self.backend.writes[0]['read_procedure_sources'], reads)
+        self.assertEqual(self.backend.source.call_count, MAX_HANDOFF_SOURCES)
+        self.assertEqual(len(self.player.sources), MAX_HANDOFF_SOURCES)
+
+    def test_invalid_explicit_snapshot_preserves_schema_error_without_io(self):
+        args = self.claim()
+        args.update(request_id='invalid-explicit', wait_seconds=0, snapshot_id=[])
+        with patch.object(self.backend, 'staged_request', side_effect=AssertionError('No valid mission binding')):
+            with self.assertRaisesRegex(ContractError, 'snapshot_id'):
+                self.player.call('enactive_remember', args)
+        self.assertEqual(self.backend.writes, [])
+        self.assertFalse((self.root / '.runtime/mission-requests').exists())
+
+    def test_new_schema_snapshot_claim_and_busy_refusals_have_no_original_collection(self):
+        async def exercise(client):
+            for fault in ('schema', 'snapshot', 'grounding', 'busy', 'issuance'):
+                args = self.claim()
+                name = 'enactive_remember'
+                if fault == 'schema':
+                    args['intent']['entry']['status'] = 'invented'
+                elif fault == 'snapshot':
+                    args['snapshot_id'] = 'unavailable'
+                elif fault == 'grounding':
+                    args['intent']['entry']['grounding']['source_id'] = 'unread'
+                elif fault == 'issuance':
+                    args = self.handoff_claim([])
+                    self.backend.collect.return_value = dict(transport='uncertain', response=None)
+                    name = 'enactive_claim'
+                if fault == 'busy':
+                    self.player._lock.acquire()
+                try:
+                    reply = await client.call_tool(name, args)
+                finally:
+                    if fault == 'busy':
+                        self.player._lock.release()
+                value = self.value(reply)
+                self.assertTrue(reply.is_error, fault)
+                self.assertEqual(value['submission'], 'not_submitted', (fault, value))
+                self.assertNotIn('original_collection', value)
+                self.assertFalse((self.root / '.runtime/mission-requests').exists())
+                self.assertEqual(self.backend.writes, [])
+        self.run_client(exercise)
+
+    def test_existing_or_corrupt_stage_preparation_errors_keep_original_and_never_repost(self):
+        fixed = uuid.UUID(int=1)
+        async def exercise(client):
+            first = await client.call_tool('enactive_remember', self.claim())
+            self.assertFalse(first.is_error)
+            identity = self.value(first)['operation_id']
+            self.assertEqual(identity, 'op-' + fixed.hex)
+            original = self.backend.staged_request('mission-test', identity)
+            # Identical semantic duplicate uses SDK's original collection fence.
+            await client.call_tool('enactive_remember', self.claim())
+            self.assertEqual(len(self.backend.writes), 1)
+            self.assertEqual(len(self.backend.reads), 1)
+            path, = (self.root / '.runtime/mission-requests').glob('*.json')
+            before = path.read_bytes()
+            for fault in ('source', 'busy', 'schema', 'corrupt-stage'):
+                args = self.claim()
+                if fault in ('source', 'corrupt-stage'):
+                    args['intent']['entry']['grounding']['source_id'] = 'unread'
+                if fault == 'schema':
+                    # Model validation has no assigned identity yet; use the
+                    # explicit SDK tool schema after model argument binding.
+                    def sdk_schema_failure(name, data, schema):
+                        if 'request_id' in data:
+                            raise ContractError('SDK preparation schema')
+                        return _validate_arguments(name, data, schema)
+                    with patch('harness.player_tools._validate_arguments', side_effect=sdk_schema_failure):
+                        reply = await client.call_tool('enactive_remember', args)
+                else:
+                    if fault == 'busy': self.player._lock.acquire()
+                    if fault == 'corrupt-stage': path.write_bytes(b'{')
+                    try:
+                        reply = await client.call_tool('enactive_remember', args)
+                    finally:
+                        if fault == 'busy': self.player._lock.release()
+                value = self.value(reply)
+                self.assertTrue(reply.is_error)
+                self.assertNotIn('submission', value)
+                self.assertEqual(value['original_collection'], dict(tool='enactive_result',
+                    arguments=dict(mission_id='mission-test', operation_id=identity)))
+                self.assertEqual(len(self.backend.writes), 1)
+                self.assertEqual(len(self.backend.reads), 1)
+            path.write_bytes(before)
+            self.assertEqual(self.backend.staged_request('mission-test', identity), original)
+        with patch('harness.player_tools.uuid.uuid4', return_value=fixed):
+            self.run_client(exercise)
 
     def run_client(self, exercise, player=None):
         async def run():
@@ -208,10 +369,16 @@ class InvocationTests(unittest.TestCase):
         self.assertEqual(self.backend.staged_request('mission-test', original['request_id']), original)
 
     def test_dispatch_and_presentation_errors_keep_original_collection_scope(self):
-        for failure in ('stage', 'presentation'):
+        for failure in ('stage', 'submit-contract', 'finish-contract', 'presentation', 'presentation-contract'):
             with self.subTest(failure=failure):
                 if failure == 'stage':
                     target = patch.object(self.backend, '_stage', side_effect=MissionClientError('Stage failed'))
+                elif failure == 'submit-contract':
+                    target = patch.object(self.backend, 'submit', side_effect=ContractError('SDK submit failed'))
+                elif failure == 'finish-contract':
+                    target = patch.object(self.player, '_compact', side_effect=ContractError('Finish failed'))
+                elif failure == 'presentation-contract':
+                    target = patch('harness.player_mcp.decision_view', side_effect=ContractError('Presentation failed'))
                 else:
                     target = patch('harness.player_mcp.decision_view', side_effect=ValueError('Presentation failed'))
                 async def exercise(client):
@@ -222,11 +389,11 @@ class InvocationTests(unittest.TestCase):
                     self.assertEqual(collection['tool'], 'enactive_result')
                     self.assertEqual(collection['arguments']['mission_id'], 'mission-test')
                     self.assertTrue(collection['arguments']['operation_id'].startswith('op-'))
-                    if failure == 'presentation':
+                    if failure in ('finish-contract', 'presentation', 'presentation-contract'):
                         self.assertEqual(collection['arguments']['operation_id'], self.backend.writes[-1]['request_id'])
                 with target:
                     self.run_client(exercise)
-        self.assertEqual(len(self.backend.writes), 1)
+        self.assertEqual(len(self.backend.writes), 3)
 
     def test_proven_composition_refusals_do_not_send_player_to_nonexistent_collection(self):
         args = dict(snapshot_id='chosen', scope='lifecycle', source_id=None, supporting_source_ids=[],

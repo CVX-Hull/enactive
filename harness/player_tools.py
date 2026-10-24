@@ -19,7 +19,7 @@ from jsonschema.exceptions import best_match
 from .gameplay.contracts import ContractError, _object, canonical, json_object, validate_json
 from .gameplay.evidence import same_native_state
 from .gameplay.mission_contracts import (
-    VERSION, SKILLS, IDENTITY_COVERAGE, IDENTITY_UNIT, perception_schema, request_schema, validate_request,
+    VERSION, SKILLS, IDENTITY_COVERAGE, IDENTITY_UNIT, MAX_HANDOFF_SOURCES, perception_schema, request_schema, validate_request,
 )
 from .gameplay.mission_requests import _source_binding, compose_request
 from .gameplay.procedures import validate_procedure
@@ -273,9 +273,19 @@ class PlayerTools:
         """
         if name not in self.model_specs:
             raise ContractError("Unknown player tool")
-        data = json_object(arguments)
-        _validate_arguments(name, data, self.model_specs[name].schema)
         properties = self.specs[name].schema["properties"]
+        try:
+            data = json_object(arguments)
+            _validate_arguments(name, data, self.model_specs[name].schema)
+            if "request_id" in properties and name != "enactive_reflect_submit":
+                mission_id = (data["admission"]["mission_id"] if name == "enactive_start" else
+                    self._cached_snapshot(data["snapshot_id"])["mission"]["mission_id"])
+        except ContractError as exc:
+            # No original identity has been assigned or staged for this new
+            # model invocation. Read-tool errors keep their ordinary meaning.
+            if "request_id" in properties:
+                raise UnsubmittedRequest(str(exc)) from None
+            raise
         if "wait_seconds" in properties:
             data["wait_seconds"] = (MAX_REFLECTION_READ_WAIT_SECONDS
                 if name == "enactive_reflect_next" else 15)
@@ -287,17 +297,15 @@ class PlayerTools:
                 collection = dict(tool="enactive_reflect_result", arguments=dict(
                     mission_id=data["mission_id"], reflector_id=data["reflector_id"], command_id=identity))
             else:
-                mission_id = (data["admission"]["mission_id"] if name == "enactive_start" else
-                    self._cached_snapshot(data["snapshot_id"])["mission"]["mission_id"])
                 collection = dict(tool="enactive_result", arguments=dict(
                     mission_id=mission_id, operation_id=identity))
         return data, collection
 
     @staticmethod
-    def _remember(cache: OrderedDict, key, value):
+    def _remember(cache: OrderedDict, key, value, *, maximum: int = 32):
         cache[key] = deepcopy(value)
         cache.move_to_end(key)
-        while len(cache) > 32:
+        while len(cache) > maximum:
             cache.popitem(last=False)
 
     def _cached_snapshot(self, identity: str) -> dict:
@@ -320,12 +328,12 @@ class PlayerTools:
         if identity is None:
             return None
         if (mission_id, identity) not in self.sources:
-            raise ContractError("Read the selected exact source/image before using it; no source substitution")
+            raise ContractError("Read the selected exact source/image explicitly; its metadata is unavailable in this producer; no source substitution")
         return deepcopy(self.sources[(mission_id, identity)])
 
     def source(self, mission_id: str, identity: str) -> tuple[dict, bytes]:
         metadata, image = self.client.source(mission_id, identity)
-        self._remember(self.sources, (mission_id, identity), metadata)
+        self._remember(self.sources, (mission_id, identity), metadata, maximum=MAX_HANDOFF_SOURCES)
         return metadata, image
 
     def snapshot(self) -> tuple[dict, bytes | None]:
@@ -441,11 +449,15 @@ class PlayerTools:
         if name not in self.specs:
             raise ContractError("Unknown player tool")
         data = json_object(arguments)
-        _validate_arguments(name, data, self.specs[name].schema)
+        try:
+            _validate_arguments(name, data, self.specs[name].schema)
+        except ContractError as exc:
+            self._preparation_refusal(name, data, exc)
         if name in ("enactive_reflect_next", "enactive_reflect_submit", "enactive_reflect_source", "enactive_reflect_result", "enactive_advice"):
             return self._reflection_call(name, data)
         if not self._lock.acquire(blocking=False):
-            raise ContractError("Another player tool is active; collect its original operation before continuing")
+            self._preparation_refusal(name, data,
+                ContractError("Another player tool is active; collect its original operation before continuing"))
         try:
             if name == "enactive_source":
                 # Historical sources carry no current player/epoch context.
@@ -461,6 +473,23 @@ class PlayerTools:
             raise
         finally:
             self._lock.release()
+
+    def _preparation_refusal(self, name: str, data: dict, error: ContractError) -> None:
+        """Only a proven new ordinary intent can have no original to collect."""
+        if "request_id" not in self.specs[name].schema["properties"] or name == "enactive_reflect_submit":
+            raise error
+        snapshot_id = data.get("snapshot_id")
+        selected = self.snapshots.get(snapshot_id) if isinstance(snapshot_id, str) else None
+        mission = data.get("admission") if name == "enactive_start" else (
+            None if selected is None else selected.get("mission"))
+        if (not isinstance(mission, dict) or not isinstance(mission.get("mission_id"), str)
+                or not isinstance(data.get("request_id"), str)):
+            raise error
+        # Probe only a refusal path. Existing, corrupt or unavailable stages
+        # retain their original uncertainty; SDK stage/submit is never inside.
+        if self.client.staged_request(mission["mission_id"], data["request_id"]) is not None:
+            raise error
+        raise UnsubmittedRequest(str(error)) from None
 
     @staticmethod
     def _claim_id(mission_id: str, job_id: str) -> str:
@@ -624,9 +653,6 @@ class PlayerTools:
             "environment": environment})
 
     def _call(self, name: str, data: dict) -> tuple[dict, bytes | None]:
-        if name == "enactive_start":
-            request = validate_request(dict(schema=VERSION, kind="start", request_id=data["request_id"], admission=data["admission"]))
-            return self._finish(self.client.submit(request, wait_seconds=data["wait_seconds"]))
         if name == "enactive_snapshot":
             return self.snapshot()
         if name == "enactive_detail":
@@ -635,6 +661,36 @@ class PlayerTools:
             return self.source(data["mission_id"], data["source_id"])
         if name == "enactive_result":
             return self._finish(self.client.collect(**data))
+        if name == "enactive_context":
+            selected = self._cached_snapshot(data["snapshot_id"])
+            snapshot = selected["mission"]
+            intent = data["intent"]
+            intent["scope"]["mission_id"] = snapshot["mission_id"]
+            request = dict(schema=VERSION, kind="context", mission_id=snapshot["mission_id"], **intent)
+            envelope = self.client.submit(validate_request(request), wait_seconds=0)
+            response = envelope.get("response") or {}
+            context = response.get("context")
+            if response.get("status") == "accepted" and isinstance(context, dict):
+                if context.get("mission_id") != snapshot["mission_id"]:
+                    raise ContractError("Returned procedure context belongs to another mission")
+                for value in (context.get("packet") or {}).get("procedures", ()):
+                    record = validate_procedure(value)
+                    self._remember(self.procedures, (record["mission_id"], record["id"]), record)
+            return self._finish(envelope)
+        try:
+            request = self._prepare_mutation(name, data)
+        except ContractError as exc:
+            self._preparation_refusal(name, data, exc)
+        return self._finish(self.client.submit(request, wait_seconds=data["wait_seconds"]))
+
+    def _prepare_mutation(self, name: str, data: dict) -> dict:
+        """Bind one explicit intent; no staging, submit or response presentation.
+
+        Claim preparation may read an immutable local stage or collect the
+        selected old handoff issuance. Neither creates the new request.
+        """
+        if name == "enactive_start":
+            return validate_request(dict(schema=VERSION, kind="start", request_id=data["request_id"], admission=data["admission"]))
         selected = self._cached_snapshot(data["snapshot_id"])
         snapshot = selected["mission"]
         kind = name.removeprefix("enactive_")
@@ -652,42 +708,25 @@ class PlayerTools:
                 f"Continue with enactive_lifecycle, scope=lifecycle, operation={phase['operation']}; "
                 "not recovery/handoff readmission. No request was submitted; "
                 "this as-of guidance grants no authority or renewed limits.")
-        if kind == "context":
-            intent = data["intent"]
-            intent["scope"]["mission_id"] = snapshot["mission_id"]
-            request = dict(schema=VERSION, kind=kind, mission_id=snapshot["mission_id"], **intent)
-            envelope = self.client.submit(validate_request(request), wait_seconds=0)
-            response = envelope.get("response") or {}
-            context = response.get("context")
-            if response.get("status") == "accepted" and isinstance(context, dict):
-                if context.get("mission_id") != snapshot["mission_id"]:
-                    raise ContractError("Returned procedure context belongs to another mission")
-                for value in (context.get("packet") or {}).get("procedures", ()):
-                    record = validate_procedure(value)
-                    self._remember(self.procedures, (record["mission_id"], record["id"]), record)
-            return self._finish(envelope)
         identity = data["request_id"]
         intent = deepcopy(data.get("intent", {}))
         if kind in ("skill", "lifecycle"):
             intent["kind"] = kind
             if intent.get("perception") is not None:
                 intent["perception"]["basis"] = "player_interpretation"
-            try:
-                if data["source_id"] is not None:
-                    source = self._source(snapshot["mission_id"], data["source_id"])
-                elif kind == "lifecycle" and intent["operation"] == "launch":
-                    source = None
-                else:
-                    source = selected.get("source")
-                    if source is None:
-                        raise ContractError("Selected snapshot has no source to bind. Null source_id selects only "
-                            "that cached snapshot source. If an Observe/lifecycle result returned diagnostic "
-                            "source_ids, read the chosen exact image with enactive_source and explicitly select "
-                            "its source_id. No request was submitted; no refresh, retarget or authority renewal.")
-                request = compose_request(snapshot, request_id=identity, intent=intent, limits=data["limits"],
-                    scope=data["scope"], source=source, supporting_source_ids=data["supporting_source_ids"])
-            except ContractError as exc:
-                raise UnsubmittedRequest(str(exc)) from None
+            if data["source_id"] is not None:
+                source = self._source(snapshot["mission_id"], data["source_id"])
+            elif kind == "lifecycle" and intent["operation"] == "launch":
+                source = None
+            else:
+                source = selected.get("source")
+                if source is None:
+                    raise ContractError("Selected snapshot has no source to bind. Null source_id selects only "
+                        "that cached snapshot source. If an Observe/lifecycle result returned diagnostic "
+                        "source_ids, read the chosen exact image with enactive_source and explicitly select "
+                        "its source_id. No request was submitted; no refresh, retarget or authority renewal.")
+            request = compose_request(snapshot, request_id=identity, intent=intent, limits=data["limits"],
+                scope=data["scope"], source=source, supporting_source_ids=data["supporting_source_ids"])
         else:
             if kind == "handoff":
                 checkpoints = []
@@ -721,4 +760,4 @@ class PlayerTools:
                     expected_revision=reference["revision"], expected_boundary_id=observation["boundary"]["id"])
             request = validate_request(dict(schema=VERSION, kind=kind, request_id=identity,
                 mission_id=snapshot["mission_id"], epoch=snapshot["epoch"], **intent))
-        return self._finish(self.client.submit(request, wait_seconds=data["wait_seconds"]))
+        return request

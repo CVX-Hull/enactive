@@ -33,7 +33,7 @@ class ProcedureLibraryTests(unittest.TestCase):
         self.root = Path(self.temporary.name).resolve()
         self.environment = procedure()["environment"]
 
-    def archive(self, mission="mission-a", *, records=None, dependencies=()):
+    def archive(self, mission="mission-a", *, records=None, dependencies=(), phase="stopped"):
         directory = self.root / ".runtime" / "missions" / mission
         frames = directory / "evidence" / "frames"
         frames.mkdir(parents=True)
@@ -65,7 +65,7 @@ class ProcedureLibraryTests(unittest.TestCase):
             db.execute("CREATE TABLE reflection_commands(id TEXT PRIMARY KEY)")
             db.execute("INSERT INTO metadata VALUES ('admission',?)", (canonical(admission(
                 mission_id=mission, learning=LearningPolicy.from_dict(learning)).to_dict()),))
-            db.execute("INSERT INTO metadata VALUES ('state',?)", (canonical({"phase": "stopped"}),))
+            db.execute("INSERT INTO metadata VALUES ('state',?)", (canonical({"phase": phase}),))
             payload = canonical({"schema": "mission/11", "kind": "observe", "request_id": "request-1",
                                  "mission_id": mission, "epoch": 0})
             db.execute("INSERT INTO requests VALUES (?,?,?,?,?)", ("request-1", payload, digest(payload.encode()),
@@ -142,6 +142,26 @@ class ProcedureLibraryTests(unittest.TestCase):
                         "learning": None}),))
         with self.assertRaises(ContractError):
             self.library(pin)
+
+    def test_closed_campaign_outcomes_preserve_procedure_data_without_authority(self):
+        for phase in ("completed", "failed", "stopped", "paused"):
+            with self.subTest(phase=phase):
+                mission = "mission-" + phase
+                directory, identity, record, pin = self.archive(mission, phase=phase)
+                before = {p.relative_to(directory): p.read_bytes() for p in directory.rglob("*") if p.is_file()}
+                with self.library(pin) as library:
+                    self.assertEqual(library.records(), (record,))
+                    self.assertEqual(library.validate_episode(record["support"][0]), ((mission, identity),))
+                    request = library.request(mission, "request-1")
+                    self.assertEqual(request["state"], "completed")
+                    self.assertEqual(request["result"], {"source_ids": [identity], "grants_authority": False})
+                    metadata, frame = library.source(mission, identity)
+                    self.assertEqual(frame, png())
+                    self.assertEqual(metadata["disposition"], "retained")
+                    self.assertFalse(metadata["grants_authority"])
+                self.assertEqual(self.pin(mission), pin)
+                self.assertEqual(before,
+                    {p.relative_to(directory): p.read_bytes() for p in directory.rglob("*") if p.is_file()})
 
     def test_stopped_archive_retains_revoked_support_and_menu_without_restoring_authority(self):
         directory, identity, record, _ = self.archive()
@@ -242,7 +262,10 @@ class ProcedureLibraryTests(unittest.TestCase):
             self.library({**original, "ledger_sha256": "0" * 64})
         with self.assertRaises(ContractError):
             self.library({**original, "index_sha256": "0" * 64})
-        for sql in ("PRAGMA user_version=10", "PRAGMA user_version=11", "UPDATE metadata SET value='{\"phase\":\"active\"}' WHERE key='state'",
+        for sql in ("PRAGMA user_version=10", "PRAGMA user_version=11",
+                    "UPDATE metadata SET value='{\"phase\":\"active\"}' WHERE key='state'",
+                    "UPDATE metadata SET value='{\"phase\":\"admitted\"}' WHERE key='state'",
+                    "UPDATE metadata SET value='{\"phase\":\"handoff\"}' WHERE key='state'",
                     "UPDATE requests SET state='running'", "UPDATE requests SET result=NULL",
                     "UPDATE requests SET digest='bad'", "UPDATE memory SET record_id='foreign'"):
             data = (directory / "mission.sqlite3").read_bytes()
@@ -530,6 +553,13 @@ class ProcedureLibraryTests(unittest.TestCase):
                 (i + 1, f"event-{i}", "procedure", value["id"], canonical(value)))
         with self.assertRaises(ContractError):
             self.library(pin)
+
+
+class PausedProcedureLibraryTests(ProcedureLibraryTests):
+    """Apply the same integrity and closure checks to closed paused archives."""
+
+    def archive(self, mission="mission-a", *, records=None, dependencies=(), phase="paused"):
+        return super().archive(mission, records=records, dependencies=dependencies, phase=phase)
 
 
 if __name__ == "__main__":
