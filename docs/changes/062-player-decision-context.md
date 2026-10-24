@@ -279,3 +279,57 @@ reviewer fixtures could not run in its sandbox, separately from the lead's actua
 79-test pass. Fast checks pass; exact subsequent candidate CI and actual graphical
 activation/learning/survival remain separate lanes. The worker worktree is archived
 after inspected integration. No game or campaign is running at this checkpoint.
+
+## Closed fresh011: unknown before character adoption
+
+Fresh development011 freezes e56671b/native690fe96, Luna/low maintained defaults,
+original plus at most one fresh successor, and a Sol/medium adviser. The player
+independently creates EnactiveSurvivalEleven. ENTER on the selected new world
+times out; collection retains that exact unknown, and the subsequent diagnostic
+image shows NEW_CHAR_POINTS without transition reconciliation/adoption authority.
+The player permanently quiesces without replay. No character adoption, game-time
+credit, learning, useful-advice overlap, day, handoff, reload or normal ending is
+accepted. The driver correctly refuses successor activation with unresolved effects.
+Its report incorrectly retains the earlier admitted phase instead of paused;
+that separate diagnostic defect does not cause the missing ACK.
+
+Closed evidence retains35requests (3completed/29partial/2blocked/1unknown),
+52charged primitives (51returned/1unknown),137frames/2,660,165bytes. Original host
+span is213.153s; admission→original host exit is226.184s, excluding later failed-run
+investigation/cleanup. Its44completed MCP calls return229,054text bytes/38images.
+The adviser completes3jobs, charging360claim-window seconds, with16calls/
+84,608text bytes/1image over475.822host seconds including passive waiting and
+cancellation. Original host exits0, driver1, adviser cancellation1. Native exits0
+after exceptional SIGTERM; the shutdown receipt explicitly says normal exit was
+not verified. Controller exits0. All owned processes/listener are absent. All191
+original saves are unchanged; six new world-generation files are preserved by
+reversibly archiving only the failed world outside selectable saves. No save
+editing/restoration or cleanup-based success is credited.
+
+Both active hosts have zero persisted compaction records; reported windows are
+258400 for Luna and475000 for Sol. These are whole-configuration observations,
+not model-compute/billing/causal comparisons or a cadence pass. Sourcee56671b
+passes [exact CI40046710356](https://github.com/CVX-Hull/enactive/actions/runs/40046710356).
+Private011 closed evidence retains the ledger/archive, raw host streams, timing,
+actual images, bridge snapshots, corrected field analysis and cleanup/save manifests.
+
+The diagnostic session is unchanged; `-b20` is its boundary ID suffix. An initial
+read-only sweep conflated those fields and retracted its session-rotation/playing()
+attribution after primary-field verification. The original terminal ACK is absent;
+the particular cause remains unproved. No bridge-error file was retained, which
+does not prove no error occurred. The separate known `playing()` pending-ID loss
+in delivery060 remains open; this attempt does not establish that cause.
+
+Next, retain the actual matched status and observed phase before the driver's
+quiescence refusal; all launch checks stay in place. The regression reproduces
+paused/unresolved closure and verifies one host, no collection/successor and the
+retained actual snapshot; the27-test driver suite and independent review pass.
+For the next genuinely fresh broader development campaign, prospectively freeze
+the existing `serve --timeout 15` instead of default5. The failed native exchange
+had a five-second ceiling despite a45-second root allowance. Longer legitimate
+loading is a hypothesis, not a diagnosed cause or claimed fix. Exchanges still
+return on ACK and fit original root/mission deadlines. No new protocol, native
+rebuild, menu catalogue or weakened identity/unknown-delivery check is justified
+by this evidence. Keep the2s/5s routine targets and count loading/repair/cleanup
+costs; never revive011 or replay its ENTER. Existing#164/#176 own follow-through;
+#178 also tracks avoiding passive advisory cost after a deciding host has stopped.

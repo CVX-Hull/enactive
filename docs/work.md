@@ -72,6 +72,13 @@ checkpoint automates selected checkpoint binding and mechanical successor activa
 then tests learning/cadence/survival in a genuinely fresh development campaign.
 GitHub owns the live assignments; source fixes cannot relabel the010 outcome.
 
+[Fresh011](changes/062-player-decision-context.md#closed-fresh011-unknown-before-character-adoption)
+then stops before adoption with one unknown input. Its failed world is archived,
+owned processes are closed and191original saves unchanged. Current follow-through
+retains actual driver failure-phase evidence and trials the existing bounded native
+wait configuration in the next genuinely fresh development campaign. No cause,
+routine cadence, normal ending or survival outcome is inferred from the diagnostic.
+
 | Evidence | What it establishes; the linked report owns details and limits |
 | --- | --- |
 | [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) | Bounded supply/shelter play, memory correction, fresh-context continuation and normal lifecycle |

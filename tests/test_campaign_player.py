@@ -391,6 +391,16 @@ class CampaignPlayerTests(unittest.TestCase):
         self.assertEqual(report["exit_code"], 1)
         self.assertEqual(self.launch_count, 1)
 
+    def test_unresolved_post_host_snapshot_is_retained_with_actual_paused_phase(self):
+        paused = status("paused", unresolved_effects=["original-unknown-input"])
+        report = self.invoke(statuses=[status(), paused], outcomes=[0])
+        self.assertEqual(report["exit_code"], 1)
+        self.assertEqual(report["phase"], "paused")
+        self.assertIn("effects remain unresolved", report["reason"])
+        self.assertEqual(self.launch_count, 1)
+        self.assertEqual(self.receipt("driver-original-status.json")["mission"], paused)
+        self.client.collect.assert_not_called()
+
     def test_timeout_signals_only_owned_host_and_retains_actual_exit(self):
         report = self.invoke(statuses=[status()], outcomes=["timeout"])
         self.assertEqual(report["exit_code"], 1)

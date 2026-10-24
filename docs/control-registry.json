@@ -521,24 +521,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-23",
-        "outcome": "Learning007 reached actual Load/adoption but misinterpreted read-only flags and submitted malformed ordinary intents; no useful play, learned program, handoff, reload, normal ending or cadence acceptance. A closure-only continuation also failed; exact owned exceptional cleanup retained failure.",
-        "scope": "Frozen59ba149/native690fe96; Luna/low, one independent bounded adviser.37ledger requests/7charged primitives(6returned/1unknown);73active+closure player tool calls/430503text bytes/29images. All191saves unchanged, actor handles terminal, native/controller/listener absent.",
+        "outcome": "Fresh011 fails before character adoption or useful-play cadence; original unknown retained and no successor launched. Bounded functional009/010 evidence remains positive; full cadence/survival unqualified.",
+        "scope": "Frozene56671b/native690,Luna-low/defaults,3settled advisoryjobs,player host0/driver1/adviser cancellation1,exceptionalnativeexit0 not normalending;191originalsavesunchanged. No causal model or input-delivery claim.",
         "evidence": [
-          "docs/acceptance/2026-10-23-discovery-learning-seventh-attempt.md"
+          "docs/changes/062-player-decision-context.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-23",
         "effectiveness": "partially_effective",
-        "findings": "012 verifies actual one-copy MCP output and semantic Claim storage, while the stored Claim lacks semantically appropriate support. Null source refusal is correct when both snapshot/current source are absent despite a separately returned diagnostic image; improve its explicit read/select hint rather than infer archive/cache replacements. MCP now preserves receiver-derived null perception for non-control skills and focused cards omit their unused control definition. The guide clarifies whole-lifecycle limits and source support without supplying tactics or curated beliefs. No accepted learning, useful routine, normal ending or apparent cadence follows.",
-        "cost": "012 activated CLI170.872s; prepared Start-call-to-CLI interval0.562s includes admission, differently anchored from01139s gap.20MCPcalls102154text bytes/9typed images/zero structured duplicates,10shell reads(two failed). CLI reports3417214input/3272960cached/15144output tokens, aggregate rather than per-call/unique-context attribution. No browser raw export or repeated download-event wait. Harness API spend0; account billing unknown.",
-        "follow_up": "#164 qualify useful higher-level whole-player cadence and role-scoped existing CLI tool filtering, progressive card ergonomics, lifecycle-budget/collection/accounting automation;#177 truthful Claim/procedure grounding and real continuity;#178 useful asynchronous advice;#175 complete useful initial-Load/normal-ending;#176/#195 organic continuation and scoped lifecycle gaps. Full integrated learning and genuinely fresh#145seven days remain required. Keep the same project-preapproved table and original finite authority; periodic date unchanged.",
+        "findings": "Controls expose unaccepted outcome and retain actual counters/unknowns.011 driver phase report was stale on quiescence refusal; source now retains matched status/phase first, with27focused tests and independent review. Same-session diagnostic contradicts an initial session-rotation inference; specific ACK cause remains unknown. No protocol rewrite or historical-error blacklist inferred.",
+        "cost": "Original host213.153s,44MCPcalls/229054textbytes/38images;adviser475.822s includes waiting/cancellation,16calls/84608bytes/1image;3jobs charge360windowseconds. Full source/native/browser/cleanup limits are in062; bytes/spans are not modelcompute, billing or paint.",
+        "follow_up": "#164 actual whole-player cadence and prospective supported15-second transport ceiling in the next genuinely fresh development campaign; unchanged2s/5s routine targets, full loading/repair/ending cost. #178 eliminate avoidable advisory waiting after player termination. #143 current/historical startup diagnostics. #145 full7day/learning/lifecycle/exactCI/protectedpublication remains open; periodic review date unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-23-luna-responsiveness-twelfth-attempt.md",
-          "docs/changes/060-responsive-player.md",
-          "docs/player-guide.md",
-          "harness/player_tools.py",
-          "tools/configure_player_tools.py"
+          "docs/changes/062-player-decision-context.md"
         ]
       },
       "next_review": "2027-01-15"
@@ -655,35 +651,20 @@
       "replacement": null,
       "last_exercise": {
         "date": "2026-10-23",
-        "outcome": "Clean-context source/evidence review verified closed007 adoption/failure/cost/save/cleanup claims and canonical validation/selected-detail/projection boundaries. One P2 missed compaction consumer was fixed; independent six-test follow-up reports no remaining findings.",
-        "scope": "Decision-context candidate and dated learning007 report; no routine gameplay approval, actual new-player qualification or full-goal acceptance.",
+        "outcome": "Independent handoff/host-boundary/doc review and actual011 field verification; source corrections pass focused checks, actual new-candidate qualification remains required.",
+        "scope": "Current controller binding, original host termination, role/identity separation,required hostoption,matched paused/unresolved failure snapshot retention; corrected source-field attribution. No per-action review or tactical rescue.",
         "evidence": [
-          "docs/changes/062-player-decision-context.md",
-          "docs/acceptance/2026-10-23-discovery-learning-seventh-attempt.md",
-          "tests/test_player_view_compaction.py",
-          "tests/test_player_tools.py"
+          "docs/changes/062-player-decision-context.md"
         ]
       },
       "maintenance_review": {
         "date": "2026-10-23",
         "effectiveness": "partially_effective",
-        "findings": "October23 executable-routine review cross-checks prior tiered/memory/learning research, ordinary fallback, stable substrate versus evolving artifacts and primary-source limits. Real pinned-runtime probes exposed delayed scheduling, pre-serialization coercion, post-result heap exhaustion and default-loop teardown hazards; the selected public async lifetime and bounded drain/heap checks address those exercised paths. Independent source review found numeric coercion, invalid-timeout handling, lost menu-root settlement, viewer version drift and missing adviser step detail; repairs/regressions and remaining detached-Promise rejection limits are recorded in delivery061. Current source implementation is not organic learning, general pixel perception, useful total cadence or independent seven-day acceptance. Prior016/017 failures remain in their dated reports; no failure was relabeled or gameplay actor revived. The subsequent MCP5 procedure-authoring delta was independently reviewed clean against existing Claim/composer/cache/staging reuse;42 focused checks and62 adapter/lifecycle/program/reflection regressions passed. It removes mechanical player metadata without inferring support or success; advisory candidate metadata remains canonical.",
-        "cost": "016 activated wrapper147.616s;16ledger requests/6charges(5returned1unknown),21PNGs1458294bytes. Actual22MCPcalls/120698text bytes/11image parts/no structured duplicate; no useful routine cohort or normal ending. Source binding slice:30composition/MCP tests pass0.979s and24synthetic writer/SDK integration tests pass21.693s; fast checks pass. Read-only caller sweep plus independent design/implementation review; no per-action review or new store.",
-        "follow_up": "#177/#176 qualify independent program authorship, distinct-situation reuse, counterexample revision and fresh-context application; #178 actual useful asynchronous advice and #164 whole-player/model/tool/display cadence stay coupled. Program-view lacks PNG perception; #176/#191 own that gap and ordinary fallback. Full integrated learning and genuinely fresh#145 still require actual accepted outcomes and exact candidate/protected-main CI; source tests and scripted speed are insufficient.",
+        "findings": "Review resolves current-controller-state loss, identity/role conflation and documentedrequired configuration mismatch before real play.011 reveals separate stale failure-phase metadata, now covered. Lead cross-check retracts explorer boundary-ID/session confusion; unknown ACK cause is not asserted by analogy. Existing supported transport configuration is preferred over an unproved native/protocol redesign.",
+        "cost": "One isolated bounded driver worker, clean-context read-only reviews,79localHTTP/lifecycle/adapter tests and27driver tests; reviewer loopback fixture EPERM retained separately from lead pass. No new framework/store/approval ceremony.",
+        "follow_up": "Fresh actual activation and full learning/cadence/survival with unchanged native/identity/Pause/uncertainty guards; exact candidate/protected-main CI and honest process cleanup. Existing#136/#145/#164/#176/#178/#191 retain ownership; review dates unchanged.",
         "evidence": [
-          "docs/acceptance/2026-10-23-luna-responsiveness-thirteenth-attempt.md",
-          "docs/changes/060-responsive-player.md",
-          "docs/player-guide.md",
-          "harness/player_mcp.py",
-          "harness/player_tools.py",
-          "tests/test_player_invocations.py",
-          "tests/test_player_tools.py",
-          "harness/gameplay/mission_requests.py",
-          "tests/test_mission_request_producer.py",
-          "tests/test_mission_request_producer_integration.py",
-          "docs/research-executable-policies.md",
-          "docs/design/procedure-learning.md",
-          "docs/engineering.md"
+          "docs/changes/062-player-decision-context.md"
         ]
       },
       "next_review": "2027-01-15"

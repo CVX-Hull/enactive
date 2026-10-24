@@ -124,6 +124,13 @@ without the20-useful-decision cohort. Its actors and owned runtime are closed.
 The next broader fresh development campaign will assess survival, learning and
 cadence together after narrow mechanical handoff fixes; formal acceptance is unchanged.
 
+[Fresh011](changes/062-player-decision-context.md#closed-fresh011-unknown-before-character-adoption)
+subsequently creates a new world but stops before character adoption on an unknown
+ENTER acknowledgment. Its player does not replay; the driver correctly starts no
+successor. All owned processes are closed and original saves unchanged. The next
+fresh development trial uses the existing longer bounded transport allowance as a
+loading hypothesis, with routine responsiveness and full survival gates unchanged.
+
 Source tests, native builds, real gameplay and protected publication are separate
 evidence lanes. A dated demonstration supports its tested scenario, source and
 host. Failures and unknown acknowledgments stay recorded even when separate

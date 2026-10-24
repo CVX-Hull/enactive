@@ -153,10 +153,13 @@ def _status(client: MissionClient, mission_id: str, deadline: float) -> dict:
     value = snapshot.get("mission")
     if not isinstance(value, dict) or value.get("mission_id") != mission_id:
         raise DriverError("Cached status does not identify the requested mission")
-    if ("active_operation" not in value or value["active_operation"] is not None
-            or value.get("unresolved_effects") != []):
-        raise DriverError("Mission is not quiescent or effects remain unresolved")
     return snapshot
+
+
+def _quiescent(mission: dict) -> None:
+    if ("active_operation" not in mission or mission["active_operation"] is not None
+            or mission.get("unresolved_effects") != []):
+        raise DriverError("Mission is not quiescent or effects remain unresolved")
 
 
 def _launch_guard(snapshot: dict, issued: dict | None = None) -> None:
@@ -285,9 +288,10 @@ def run_campaign(*, root: Path, run_dir: Path, mission_id: str, model: str,
             client = _DeadlineClient(root, deadline)
             initial_snapshot = _status(client, mission_id, deadline)
             _write(streams["driver-initial-status.json"], initial_snapshot)
-            _launch_guard(initial_snapshot)
             initial = initial_snapshot["mission"]
             report["phase"] = initial.get("phase")
+            _quiescent(initial)
+            _launch_guard(initial_snapshot)
             if (initial.get("phase") not in ("admitted", "active")
                     or initial.get("pause_cause") not in ("internal_bootstrap", "internal_lifecycle",
                         "internal_recovery", "internal_handoff")
@@ -307,6 +311,7 @@ def run_campaign(*, root: Path, run_dir: Path, mission_id: str, model: str,
                 _write(streams[f"driver-{role}-status.json"], snapshot)
                 status = snapshot["mission"]
                 report["phase"] = status.get("phase")
+                _quiescent(status)
                 if status.get("phase") in TERMINAL:
                     report.update(outcome="terminal", exit_code=0)
                     break
@@ -320,9 +325,10 @@ def run_campaign(*, root: Path, run_dir: Path, mission_id: str, model: str,
                 _write(streams["driver-handoff-issuance.json"], issued)
                 current_snapshot = _status(client, mission_id, deadline)
                 _write(streams["driver-successor-admission-status.json"], current_snapshot)
-                _launch_guard(current_snapshot, issued)
                 current = current_snapshot["mission"]
                 report["phase"] = current.get("phase")
+                _quiescent(current)
+                _launch_guard(current_snapshot, issued)
                 if _handoff_status(current) != issued:
                     raise DriverError("Handoff changed before successor launch")
                 successor_id = "successor-" + uuid.uuid4().hex

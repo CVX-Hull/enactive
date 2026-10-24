@@ -173,6 +173,14 @@ state change. Verify this boundary with real changed images, negative custody/
 clock cases and a coherent lifecycle, not a screen mask or repeated retry loop.
 Controls: C-PROTOCOL, C-RUNTIME, C-PORTABLE, C-NATIVE.
 
+Distinguish transport collection ceilings, original execution/resource deadlines
+and useful-response targets. Freeze supported transport configuration against the
+actual operation envelope, including legitimate loading, before a new run; return
+on an ACK rather than waiting out the ceiling. A longer ceiling neither proves the
+cause of a missing ACK nor repairs lost correlation, and cannot relax routine
+latency targets, renew authority or justify replay. C-REVIEW checks the frozen
+configuration and actual receipts; C-NATIVE/C-USABILITY qualify the result.
+
 ## S-CODE Maintainable implementation
 
 Principles: P-CHANGE, P-UNCERTAINTY, P-KNOWLEDGE, P-GENERALITY.
