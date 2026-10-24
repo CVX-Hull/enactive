@@ -1,7 +1,9 @@
 ---
 owner: lead
-status: active
-review_trigger: Round 008 native findings, planner verification or publication changes
+status: historical
+date: '2026-10-17'
+scope: Dated candidate observations and qualification limits; not current instructions
+  or live work status
 ---
 
 # Native recovery and planner verification

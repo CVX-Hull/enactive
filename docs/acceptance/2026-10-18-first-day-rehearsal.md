@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: First-day, autonomous recovery, continuity or retained evidence claims change
-status: active
+status: historical
+date: '2026-10-18'
+scope: Dated candidate observations and qualification limits; not current instructions
+  or live work status
 ---
 
 # First-day rehearsal: real supplies, stopped autonomy

@@ -1,7 +1,9 @@
 ---
 owner: lead
-status: active
-review_trigger: Mission interface adoption; implementation or native validation contradicts this design; new source or player lifecycle constraints
+status: historical
+date: '2026-10-24'
+scope: Original mission migration design and development checkpoints; current behavior
+  lives in architecture/components and protocol
 ---
 
 # Player-owned mission design

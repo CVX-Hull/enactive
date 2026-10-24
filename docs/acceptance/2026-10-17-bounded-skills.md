@@ -1,7 +1,9 @@
 ---
 owner: lead
-status: active
-review_trigger: Round 009 evidence, support claims or publication changes
+status: historical
+date: '2026-10-17'
+scope: Dated candidate observations and qualification limits; not current instructions
+  or live work status
 ---
 
 # Bounded skills and native visible evidence

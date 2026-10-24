@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: Mission entry refresh, source equivalence or dispatch authority changes
-status: active
+status: historical
+date: '2026-10-24'
+scope: Design and development record preserved on this date; current architecture/protocol
+  and GitHub own behavior and remaining work
 ---
 
 # Refresh the selected checkpoint at operation entry

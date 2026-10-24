@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: Navigation feedback, ordinary prompt ownership or mission/ledger contracts change
-status: active
+status: historical
+date: '2026-10-24'
+scope: Design and development record preserved on this date; current architecture/protocol
+  and GitHub own behavior and remaining work
 ---
 
 # Let the player handle a menu opened by movement

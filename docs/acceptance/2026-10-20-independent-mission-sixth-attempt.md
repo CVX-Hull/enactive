@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: Independent mission, phase-resource or approval-free execution claims change
-status: active
+status: historical
+date: '2026-10-20'
+scope: Dated candidate observations and qualification limits; not current instructions
+  or live work status
 ---
 
 # Independent mission006: creation phase exhausted by Resume

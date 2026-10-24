@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: Discovery-learning evidence, capture-race diagnosis or qualification changes
-status: active
+status: historical
+date: '2026-10-21'
+scope: Dated candidate observations and qualification limits; not current instructions
+  or live work status
 ---
 
 # Discovery-learning first attempt: failed

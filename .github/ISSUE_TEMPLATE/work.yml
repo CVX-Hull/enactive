@@ -18,7 +18,7 @@ body:
     id: scope
     attributes:
       label: Scope
-      description: Identify the behavior, documents or boundaries affected.
+      description: Start at the highest affected outcome/architecture boundary, then name components, interfaces/state/callers, code/tests and operating docs. Link unchanged parent context; no duplicate plan is required.
     validations:
       required: true
   - type: textarea
@@ -32,7 +32,7 @@ body:
     id: acceptance
     attributes:
       label: Acceptance and evidence
-      description: Give observable success and failure conditions and the checks or review needed. Identify native acceptance when affected.
+      description: Give observable success/failure conditions. Select assurance by impact, uncertainty, reversibility and reach; name focused checks, needed design/code/outcome reviews and any native/held-out evidence. Do not require every lane for every change.
     validations:
       required: true
   - type: textarea

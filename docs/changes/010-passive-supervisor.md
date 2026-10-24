@@ -1,7 +1,9 @@
 ---
 owner: lead
-status: active
-review_trigger: Round 010 interfaces, ownership, acceptance or scope changes
+status: historical
+date: '2026-10-24'
+scope: Design and development record preserved on this date; current architecture/protocol
+  and GitHub own behavior and remaining work
 ---
 
 # Passive waypoint supervisor

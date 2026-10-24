@@ -69,6 +69,48 @@ triggers. A review finding is not fixed because it was filed, and a document is
 not accurate merely because it has a recent date. This uses GitHub and the current
 document/control system, without another tracker, parser or per-action ceremony.
 
+## Risk-based assurance
+
+The lead selects the required assurance when scoping the issue, based on impact,
+uncertainty, reversibility and dependency reach. Review the highest changed
+architectural responsibility first, then the affected component/internal design,
+contracts/state/callers and implementation. Unchanged ancestors need an impact
+statement and link, not serial approvals. A change can touch several branches.
+The same approach applies to workflow, documentation and controls themselves.
+
+| Change or claim | Minimum relevant feedback | Review / expensive evidence trigger |
+| --- | --- | --- |
+| Editorial: correct text or links without behavior/requirement change | Document/metadata/link checks and diff inspection; render changed visuals | Lead checks meaning; no game/native build or full behavioral rerun solely for wording |
+| Contained: behavior change within understood existing boundaries | Fast checks and focused positive/negative behavioral cases | Lead reviews implementation against design; consolidate independent review at the coherent integration checkpoint |
+| Boundary: change ownership, input, persistence/schema, permission, dependency or native contract | Brief/alternatives, focused independent architecture/risk review before commitment; affected failure cases and coordinated migration | Review changed contracts against callers; matching native build/affected qualification when native support is claimed; security/product/research lens only when relevant |
+| Outcome: integration, release, new support, performance or learning claim | Independently assessed outcome/evidence against original acceptance | Exact full protected CI, applicable native/usability/held-out lanes and unresolved finding dispositions; merge alone is insufficient |
+
+Choose checks that could detect a plausible consequential error; state unrun lanes
+and why they are inapplicable or pending. A high-consequence boundary is not made
+low risk by a small diff. Passing fixtures do not replace actual required native
+evidence, and an unexplained red check is not waived by a cheaper green one.
+Authority/Pause/identity/delivery/migration/cleanup failures block affected inputs.
+Required full CI and branch protection remain unchanged for merge; an editorial
+change can avoid a local full rerun without claiming one passed.
+
+Use a larger **coherent outcome** with small inspectable implementation steps and
+cheap feedback throughout. Integrate related components and pay for broad checks
+when they answer a meaningful integration question. Do not batch unrelated work
+into an unreviewable release or defer boundary review until after implementation.
+Split a slice when uncertainty prevents focused tests/review, coordination exceeds
+its benefit or the candidate cannot be understood as one outcome. Agile/Lean
+feedback and limited WIP inform this policy; sprint rituals, fixed batch sizes and
+more agents are not requirements. The [research basis](research-engineering.md#recursive-architecture-and-assurance--2026-10-24)
+distinguishes external guidance from this project's judgment.
+
+At integration use existing command/CI/PR/run receipts to compare useful progress,
+defects caught/escaped, review/rework/waiting effort and cost of checks. Record
+unknowns without inventing measurements. Keep, narrow, replace or retire a control
+from that evidence under C-MAINTENANCE. Do not create another metrics service,
+review queue or per-action gameplay approval. Existing maintenance expiry still
+applies; an alternative scoped-development exception needs a separately reviewed
+policy/check change, not an undocumented bypass.
+
 ## Development-first delivery
 
 Get a coherent behavior working through real use, then qualify it. The lead selects

@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: Discovery/learning scope, interfaces, ownership or actual campaign findings change
-status: active
+status: historical
+date: '2026-10-24'
+scope: Design and development record preserved on this date; current architecture/protocol
+  and GitHub own behavior and remaining work
 ---
 
 # Discovery, procedure learning and the next campaign

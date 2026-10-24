@@ -1,0 +1,13 @@
+---
+title: Review from purpose to implementation
+---
+flowchart TB
+  accTitle: Current documentation and review hierarchy
+  accDescr: The user reviews purpose, outcomes and tradeoffs before technical detail. The charter and standards constrain project architecture, which links focused component views and then exact contracts and code. An issue scopes a proposed change at the highest affected boundary. Checks and review provide scoped evidence back to the claim. Arrows mean constraint or drill down, not process isolation or serial approval. GitHub owns live work; dated reports retain history.
+  P["Purpose and user constraints<br/>Charter and overview"] -->|"Constrain responsibilities"| A["Project architecture<br/>System map and tradeoffs"]
+  S["Principles and standards<br/>Required qualities and rules"] -->|"Apply at every level"| A
+  A -->|"Zoom into the affected part"| C["Component design<br/>State, interfaces and failure paths"]
+  C -->|"Specify and implement"| I["Exact contracts and code<br/>Schemas, callers and tests"]
+  W["GitHub Issue and PR<br/>Scope and acceptance"] -.->|"Start at highest changed boundary"| A
+  I -->|"Produce scoped evidence"| E["Checks and review<br/>CI, native or outcome evidence as applicable"]
+  E -.->|"Support or reject the claim"| W

@@ -10,6 +10,9 @@ Designated deciding players start with [the compact player guide](docs/player-gu
 their frozen mission brief and the selected current tool schema. They do not need
 the engineering document set or recursive runtime/source searches for routine play.
 For engineering work, start with [the overview](docs/overview.md), then [engineering standards](docs/engineering.md).
+Use the [documentation map](docs/documentation.md) to scope a change from the
+highest affected responsibility through component design/contracts to code and
+select proportionate review. Current architecture is not an attempt log.
 Read [architecture](docs/architecture.md), [protocol](docs/protocol.md) and
 [current work](docs/work.md) before changing relevant boundaries. Follow S-AGENT
 for delegation: the lead owns design/integration/verification; parallel workers use

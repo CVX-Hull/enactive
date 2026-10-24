@@ -13,8 +13,8 @@ retained observations and bounded movement.
 Designs must apply across **CDDA-class survival/roguelike games**; CDDA is the first
 implemented target, and other games are not yet qualified. Game-specific bindings
 must remain separate from shared player, memory and learning responsibilities.
-The current ordinary-input source migration has a matching local native6 build
-installed in the isolated project app; graphical qualification remains pending. [Architecture](docs/architecture.md) separates
+The native integration has a matching local build in the isolated project app;
+graphical evidence is scoped to its tested boundaries. [Architecture](docs/architecture.md) separates
 implemented contracts from the remaining integration limits.
 General survival planning requires an active Codex player. An unattended survival
 service is not implemented.
@@ -27,12 +27,13 @@ deeper design and evidence so you can review the big picture without reading cod
 
 - [Set up locally](docs/setup.md): pinned inputs, isolated build and common checks.
 - [Run, pause and recover](docs/runbook.md): commands, takeover, uncertainty and cleanup.
-- [Current work](docs/work.md): next outcomes, blockers, exceptions and deferred work.
+- [Evidence index](docs/work.md): decisive results and links to the authoritative tracker.
 - [Public Project](https://github.com/users/CVX-Hull/projects/2) and
   [Issues](https://github.com/CVX-Hull/enactive/issues): authoritative work status.
 - [Contributing](CONTRIBUTING.md) and [project workflow](docs/project-management.md).
 - [Charter](docs/charter.md): purpose, constraints, principles and quality priorities.
 - [Architecture](docs/architecture.md): current responsibilities and authority.
+- [Documentation map](docs/documentation.md): artifact roles and the path from project design to code.
 - [Engineering standards](docs/engineering.md) and [control map](docs/controls.md).
 - [Research](docs/research.md), [environment history](docs/environment.md),
   [third-party provenance](NOTICE.md).

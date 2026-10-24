@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: Learning002 evidence, lifecycle submission repair or qualification changes
-status: active
+status: historical
+date: '2026-10-21'
+scope: Dated candidate observations and qualification limits; not current instructions
+  or live work status
 ---
 
 # Discovery-learning second attempt: failed

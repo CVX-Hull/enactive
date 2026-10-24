@@ -79,10 +79,9 @@ The existing service option `serve --timeout SECONDS` sets the native exchange
 ceiling (default5, supported maximum15seconds). It returns as soon as a matching
 ACK arrives and remains bounded by the original operation/mission deadlines.
 Freeze the chosen value in the run configuration/argv; legitimate loading may
-need more than the default. This is separate from the routine2s/5s quality targets
-and cannot repair a lost request identity or authorize replay. The next fresh
-development experiment after [011](changes/062-player-decision-context.md#closed-fresh011-unknown-before-character-adoption)
-trials15 as an explicit loading hypothesis, without changing the protocol/native.
+need more than the default. This is separate from routine responsiveness targets
+and cannot repair a lost request identity, extend original operation deadlines or
+authorize replay. GitHub owns any next experiment and its prospective conditions.
 
 For an admitted mission, start only the controller service below, then follow
 [typed mission requests](#typed-mission-requests-and-the-player). The designated

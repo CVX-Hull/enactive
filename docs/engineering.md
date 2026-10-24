@@ -27,6 +27,15 @@ source. User instructions take precedence. Proposed/superseded records cannot
 silently change current contracts. Link to authoritative facts instead of copying
 full contracts, procedures or delegation rules into multiple documents.
 
+Principles explain the desired qualities and tradeoffs. Policies are decision rules
+about when and by whom work proceeds; they live here and in project management.
+Standards specify required properties; contracts/design apply them at a boundary;
+controls provide prevention, detection, review or recovery; evidence records what
+actually happened. These are related responsibilities, not six mandatory documents
+per change. The registry maps P-* → S-* → C-*; it does not own another requirements
+copy. [Documentation organization](documentation.md) defines artifact roles and
+their lifecycle.
+
 ## S-UX Understandable and controllable experience
 
 Principles: P-AUTHORITY, P-TRUTH, P-REVIEW, P-UNCERTAINTY.
@@ -75,6 +84,14 @@ failure/recovery and acceptance for each consequential boundary. Keep controller
 logic independent of HTTP and build tooling. Explain consequential alternatives,
 maintenance cost and reversal triggers in a brief/ADR. Review boundary changes
 before implementation; keep current architecture synchronized afterward.
+Maintain a reviewable hierarchy: project context/responsibilities → affected
+component and internal design → exact contracts/state/callers → implementation.
+Each important view names its parent, children or source, owned state and limits;
+use diagrams where they help the reader challenge the design. The higher the view,
+the more it must explain user consequences and tradeoffs without code knowledge.
+Project standards apply throughout; component invariants specialize them without
+silently weakening them. An unchanged parent needs an impact statement and link,
+not another approval. Scope cross-cutting changes across all affected branches.
 Apply S-CODE's reuse review to infrastructure and architectural tool choices.
 Cross-check consequential input, memory, learning and autonomy changes against
 prior architecture, contracts, research and actual campaign findings. Record what
@@ -486,6 +503,13 @@ Respect the [documentation/GitHub authority split](project-management.md#authori
 C-REVIEW checks that an updated summary links its authoritative source instead of
 mirroring live fields or accumulating another run narrative. Retire obsolete
 summaries through ordinary Git edits; retain dated evidence and owned action items.
+Use the [documentation roles and lifecycle](documentation.md) when deciding where
+an artifact belongs. Dated acceptance/audit records are historical, even when their
+observations remain relevant; the existing metadata check enforces that narrow
+role rule. Incorporate adopted design into current architecture/contracts, transfer
+remaining actions to GitHub and retain its brief as dated rationale. Partial
+proposals identify their remaining proposal scope. No new attempt paragraph is
+required in current architecture or the overview.
 
 ### Visual explanations
 
@@ -516,6 +540,11 @@ Controls: C-GOVERNANCE, C-USABILITY, C-REVIEW, C-MAINTENANCE, C-VISUAL.
 
 Principles: P-REVIEW, P-CHANGE, P-KNOWLEDGE.
 Keep one integration queue and a bounded number of active outcomes in GitHub.
+Before assigning implementation, record the outcome and highest changed boundary,
+then affected components, interfaces/state/callers, code/tests and operating docs.
+Review from that boundary down, using the [risk-based assurance policy](project-management.md#risk-based-assurance).
+The existing Issue/PR is sufficient for a contained change; a consequential change
+links its brief. This impact record is not a second plan or clause-by-clause matrix.
 Issues own scope, acceptance, accountable owner, blockers and exceptions; Project
 Status owns execution stage: Backlog, Ready, In progress, Review, Validation, Done.
 Blocked work retains its stage and records the condition, owner and next action.

@@ -2,6 +2,10 @@
 
 <!-- Explain the user-visible problem and resulting behavior. Keep one reviewable outcome. -->
 
+<!-- Scope from the highest changed responsibility down to components, contracts/state/callers,
+implementation and procedures. Link the parent/component design; explain unchanged boundaries.
+Select applicable risk-based assurance from docs/project-management.md; no duplicate plan needed. -->
+
 <!-- S-CODE reuse review: for new/expanded custom tools, processes, docs generators or
 controls, link the existing brief/ADR or briefly name the existing option, unmet gap,
 smallest custom scope, maintenance owner/cost and replacement/retirement trigger.
@@ -42,3 +46,7 @@ scope exclusions, migration limits and follow-up issues. Say why no docs change 
 <!-- For consequential changes, identify reviewer (human or agent), candidate reviewed,
 findings and disposition. Challenge custom infrastructure/reuse rationale and reject
 unjustified duplication. If pending, say so. Do not present agent review as human approval. -->
+
+<!-- Review changed architecture/design before commitment, code against the adopted design,
+then outcome evidence. Select product/security/research/operations lenses only as relevant.
+Consolidate expensive assurance around a coherent outcome; record material gaps and cost. -->

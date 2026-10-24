@@ -108,7 +108,7 @@ experiment. The existing native journals/ledger/archive, closed host traces and
 viewer provide the starting evidence; isolated model time, hidden approval delay
 and complete tool-to-visible-effect cost remain unmeasured where not correlated. #143 owns
 observer latency, #154 integrated timing evidence and #156 prospective setup;
-#145 uses actual mission results before a full campaign. Existing S-UX/S-VERIFY
+#145 uses actual mission results before a full campaign. Existing S-UX/S-EVIDENCE
 and native acceptance enforce honest evidence; common tests do not enforce wall
 percentiles. Revisit targets after representative navigation/items/activities and
 fresh-context player measurements, retaining both tails and failures. Reuse CDDA

@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: Capture-precondition qualification, lifecycle continuity or evidence interpretation changes
-status: active
+status: historical
+date: '2026-10-22'
+scope: Dated candidate observations and qualification limits; not current instructions
+  or live work status
 ---
 
 # Native capture-precondition qualification

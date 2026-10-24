@@ -9,6 +9,11 @@ status: active
 Protocol version: 6.
 
 This is the detailed current contract supporting [architecture](architecture.md).
+Use the component views for understanding before this exact reference:
+[player tools](components/player-interface.md), [mission phases](components/mission-execution.md),
+[memory/advice](components/memory-learning.md), [native control](components/native-control.md)
+and [observer/operations](components/observer-operations.md). Select the relevant
+section below; routine contributors and players need not read this whole reference.
 Authority rules are [S-PROTOCOL](engineering.md#s-protocol-command-and-observation-authority).
 Current source is native6/mission11/ledger12/archive5, with procedure/3,
 campaign-memory/6 and reflection/2; gameplay/2 is unchanged. The matching rebuilt
@@ -402,8 +407,10 @@ The service constructs one [MissionRuntime](../harness/mission_runtime.py), with
 one bounded writer, one queue slot and no automatic admission, launch or Resume.
 The old waypoint runtime and its live API/CLI are removed. Passive movement,
 planner and supervisor components below remain source/study tools, not another
-execution ingress. The [mission design](design/player-owned-mission.md) owns the
-chosen records, lifecycle requirements and separate native acceptance.
+execution ingress. The [mission component view](components/mission-execution.md)
+explains current responsibilities; this protocol and receiver schemas own exact
+records/lifecycle requirements. The [original design](design/player-owned-mission.md)
+is historical rationale. Native/outcome evidence remains separately scoped.
 
 Authenticated `POST /api/mission` accepts one strict mission/11 record, at most65536
 UTF-8 bytes. It reuses host/origin/token and finite/duplicate-key JSON validation;
@@ -1584,8 +1591,9 @@ include`read_procedure_sources` alongside current-world source reads, within one
 aggregate128-source bound. Source-read declarations and retrieval are evidence
 of presentation/selection, not proof of attention or causal improvement.
 
-The [procedure/exchange design](design/procedure-learning.md) owns the asynchronous
-integration boundary; current records use reflection/2. One private
+This protocol owns the current asynchronous integration boundary; the
+[procedure/exchange design](design/procedure-learning.md) retains rationale and
+remaining proposals. Current records use reflection/2. One private
 RegisteredReflection composes a per-admission
 passive mailbox/cache with the existing writer and SQLite ledger. Four routine
 root skill decisions coalesce a job; failures, recovery and handoff boundaries

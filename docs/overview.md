@@ -19,15 +19,12 @@ The engineering lead maintains the project and verifies outcomes; routine play
 must not depend on lead tactics, keys or memory curation. This is not yet an
 accepted unattended seven-day survival service.
 
-Latest [Fresh023](acceptance/2026-10-24-independent-seven-day-twenty-third-attempt.md)
-reaches two days of independent survival with four revised/reused procedure
-families and limited supported advice adoption. A clean successor reads memory
-and images, but a source-cache/preflight defect prevents Claim. The run is closed
-failed, with original saves preserved. Reviewed repairs address that boundary,
-spent-root observation tests and costly memory retrieval, and allow closed paused
-archives to supply fallible historical procedures. Source checks and a new actual
-campaign remain separate: successor application, normal lifecycle, seven days and
-useful cadence are still unaccepted.
+Bounded independent play has demonstrated supplies/travel, procedure revision/reuse
+and limited supported advice adoption. Complete independent seven-day survival,
+normal lifecycle and useful apparent cadence remain unaccepted. The
+[evidence index](work.md) links decisive results and failures; GitHub owns current
+execution and remaining actions. Source repairs do not retrospectively qualify
+failed runs.
 
 The browser spectator shows actual Tiles frames, ownership, progress and
 uncertainty. The game stays windowed and project-local. You can Pause or take
@@ -132,7 +129,7 @@ implementation detail stays behind links. Routine work continues under the agree
 constraints, while changes to those constraints require your input.
 
 For a first session, use the [spectator walkthrough](walkthrough.md). For technical
-review, follow [architecture](architecture.md), [standards](engineering.md) and the
+review, follow the [documentation map](documentation.md), [architecture](architecture.md), [standards](engineering.md) and the
 [maintenance table](controls.md#maintenance). Their owners and review triggers
 support upkeep; a recent date is not proof of accuracy. Historical MVP and migration
 records remain in [acceptance](acceptance/), rather than being copied here.

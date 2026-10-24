@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: Closed-evidence reconciliation or a consequential measurement correction
-status: active
+status: historical
+date: '2026-10-22'
+scope: Dated candidate observations and qualification limits; not current instructions
+  or live work status
 ---
 
 # Independent seven-day attempt010: normally stopped partial run

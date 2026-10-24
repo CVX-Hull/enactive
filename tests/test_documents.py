@@ -84,6 +84,19 @@ class DocumentTests(unittest.TestCase):
         (self.root / "README.md").write_text(';;;\n{"owner":"lead","status":"active","review_trigger":"change"}\n;;;\nText\n')
         self.assertIn("YAML", "\n".join(documents.check_metadata(self.root)))
 
+    def test_acceptance_records_cannot_be_current_guidance(self):
+        directory = self.root / "docs/acceptance/nested"
+        directory.mkdir(parents=True)
+        path = directory / "2026-10-24-outcome.md"
+        for status in ("active", "proposed"):
+            path.write_text(self.active.replace("status: active", f"status: {status}"))
+            self.assertIn("acceptance records must be historical", "\n".join(documents.check_metadata(self.root)))
+        path.write_text("---\nowner: lead\nstatus: historical\ndate: 2026-10-24\n"
+                        "scope: frozen source outcome, including failure\n---\n# Outcome\n")
+        original = path.read_bytes()
+        self.assertEqual(documents.check_metadata(self.root), [])
+        self.assertEqual(path.read_bytes(), original)
+
 
 if __name__ == "__main__":
     unittest.main()

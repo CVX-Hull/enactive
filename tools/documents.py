@@ -44,6 +44,8 @@ def check_metadata(root: Path) -> list[str]:
             errors.extend(invalid)
             if invalid:
                 continue
+            if path.is_relative_to(root / "docs/acceptance") and metadata["status"] != "historical":
+                errors.append(f"{label}: acceptance records must be historical evidence")
             if metadata["status"] == "superseded":
                 reference = metadata["replacement"]
                 if (not local_reference(root, reference)

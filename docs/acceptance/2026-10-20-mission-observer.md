@@ -1,7 +1,9 @@
 ---
 owner: lead
-review_trigger: Observer, memory-effect or mission-publication behavior changes
-status: active
+status: historical
+date: '2026-10-20'
+scope: Dated candidate observations and qualification limits; not current instructions
+  or live work status
 ---
 
 # Mission observer and nondelivery memory checkpoint
