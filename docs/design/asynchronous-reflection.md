@@ -33,6 +33,134 @@ User Pause remains independent. [Diagram source](../diagrams/asynchronous-reflec
 | [Memory architecture assessment](../research-memory-architecture.md) / [optional curator #146](https://github.com/CVX-Hull/enactive/issues/146) | Curation advises, has no input authority and must earn its cost. The proposed exchange belongs to the player system, not a standing lead/engineer review service. Curator benefit comparison remains separate from functional procedure learning. |
 | [Representation study](../research-memory-representations.md) and [memory review](../research-memory-learning.md) | Keep evidence/interpretation/procedure distinctions and source-linked retirement. Earlier offline reviewed-promotion defaults conflict with autonomous procedure-data evolution: migrate the affected policy/contracts prospectively before implementation. Existing no-online-promotion admissions are unchanged. Code, prompt-template, weight and substrate edits remain versioned engineering work. |
 
+## Execution-first learning
+
+This is the **proposed next source slice**, informed by the
+[Fresh024 execution review](../acceptance/2026-10-24-fresh024-execution-review.md)
+and [October24 primary-source synthesis](../research-multirate-agents.md).
+Current architecture/protocol remain authoritative. This section refines the
+broader proposal below; it does not introduce deployed roles or authorize a run.
+
+![Proposed decision horizons, one input writer and one optional learner.](../diagrams/multirate-player.svg)
+
+The diagram answers “Which work belongs on the next-action path?” Solid arrows
+carry current intent/feedback; dotted arrows carry fallible background work.
+Its text equivalent is the responsibility table below.
+[Editable diagram](../diagrams/multirate-player.mmd).
+
+### Responsibility before model count
+
+| Horizon | Owner and trigger | What must stay off this path |
+| --- | --- | --- |
+| Each ordinary input | Existing writer/controller and local routine consume fresh feedback, retain actual effects/costs and honor Pause/custody. No LLM is needed for canonical metadata, supported checks or collection. | Memory narration, retrospective synthesis, a second input writer or model approval. |
+| Useful local task / surprise | The deciding player selects a routine or raw action from compact current goal/Work, relevant evidence and invalidators. It interprets unfamiliar or image-only conditions and chooses recovery. A routine can branch repeatedly without another model turn. | Copying canonical procedure bodies, source archaeology, empty advice polling and routine retrospective curation. |
+| Completed/failed segment; likely upcoming work | One existing bounded learner diagnoses selected evidence, proposes/revises code or guidance, and retains counterexamples. Software coalesces jobs and assembles the useful question. | Taking input custody, live Observe, automatic world-fact overwrite or blocking ordinary justified play. |
+| Mission strategy / material plan failure | The active player retains its objective and working plan. The same learner may answer a scoped longer-horizon question in the background. A separate strategic model is deferred until a measured benefit warrants it. | A permanent extra tier, planning on every key, lead tactical advice or ungrounded plan replacement. |
+
+These are decision scales, not four required agents. The convolutional analogy
+suggests reusing local computation, but does not establish learned features,
+correctness or convergence. Start with one deciding actor and the existing
+optional learner. A slow strategic answer can help while useful work proceeds;
+if the next decision truly depends on it, show the deliberation rather than filler.
+
+Immediate working memory cannot all move into the background: current obligations,
+hazards and interpretations necessary for the next action remain available to the
+player. Raw evidence, exact state projections and use/result bookkeeping are
+already mostly automatic. Move optional durable abstraction and mechanical
+authoring away from that decision; do not create a memory-agent call per action.
+
+### One coherent implementation slice
+
+First address the observed **local execution latency floor** (#164): Fresh024's
+85 adjacent within-program ACK gaps have median2.260s/p95=2.935s without model
+calls. Profile native exchange/capture, evidence/memory/accounting and publication
+on retained scale using existing journals/profilers. Fix demonstrated repeated
+history work or other hot-path cost, relying on existing DB/OS contracts; do not
+assume a model or manual memory write caused it. Retain original fidelity and
+negative cases. The following authoring/scheduling work must not hide this delay.
+
+1. **Canonical candidate authoring and selection** (#177/#178): reuse the player
+   SDK's existing metadata derivation for adviser-authored semantic content/code,
+   selected parent and allowed support. Expose relevant candidate summaries at
+   natural boundaries and exact detail on request. Let explicit player selection
+   adopt a candidate through the existing writer without copying its canonical
+   JSON into another tool call. Selection is a gameplay decision, not a new
+   reviewer/lead approval. A player may still author directly or ignore advice.
+   The learner never silently overwrites current facts/Work or executes its code.
+2. **Useful questions across the finite horizon** (#178): replace indiscriminate
+   four-root expenditure where appropriate with bounded event/recurrence/subgoal
+   prioritization, coalescing, age and remaining-horizon allocation. Reuse the
+   existing job/mailbox/ledger; do not build an event bus or learned scheduler.
+   Known bookkeeping/refusal handling stays automatic. Preserve urgent questions,
+   original charged limits, explicit omissions and exhausted/absent-worker states.
+3. **Routine coverage with truthful feedback** (#177/#191): use retained pickup,
+   wait-menu and changed-condition cases to check what the present view can express.
+   Prefer current observed labels/state to remembered indexes. Where a genuinely
+   needed visible fact is absent, compare existing rendered-widget/text/image
+   facilities before adding the smallest general observation capability. Do not
+   hand-code a CDDA recovery policy or claim that a new HUD field fixes the run.
+   Keep raw image-informed discovery, yield/revision/retirement and exact versions.
+4. **Mechanical collection and measured response** (#164/#143): carry known pending
+   operations through existing bounded SDK/host collection without unnecessary
+   model round trips where supported. Add only missing correlated timing endpoints
+   to existing host/request/native/browser records; retain clock domains and
+   unavailable spans. There is no new telemetry service or success-label model.
+   Do not infer nondelivery from error text or reset unknown staging; the separate
+   positive pre-admission refusal repair stays an explicitly scoped #164 action.
+
+Before dispatching implementation, the lead freezes the changed tool/record
+shapes, ownership and migration after a focused boundary review. Reuse existing
+schemas/canonical derivation rather than a second authoring API; migrate affected
+callers/persisted formats together and remove old paths. The design must say how
+original job sources/environment/parents bind a candidate, how selection handles
+stale/conflicting revisions and which existing operation owns adoption. These
+exact interface choices remain open here; they are not permission to bypass the
+current contract. No new dependency is selected by this proposal.
+
+### Allocation, assurance and stopping point
+
+Treat this as one integrated source iteration with small inspectable steps, not
+four campaigns or a broad framework. Lead owns shared tool/SDK/runtime/ledger
+integration and timing. After the interface review, at most two workers use
+disjoint managed worktrees: one owns pure candidate authoring/projection plus
+its tests; the other owns reflection scheduling/context plus its tests. The lead
+assigns exact paths from the accepted diff scope, avoiding shared-file writes.
+A clean-context reviewer checks authority, product responsiveness and evidence
+claims at the coherent checkpoint. Existing S-AGENT/C-REVIEW apply.
+
+Source acceptance covers a bounded cost regression/profile for any chosen local
+feedback-path repair, with realistic retained history and no weakened guarantees;
+canonical authoring without model metadata arithmetic;
+explicit selection without retranscribing a procedure; correct source/parent and
+stale-conflict behavior; useful-question coverage across early/middle/late synthetic
+trajectory phases within the same finite allowance; no routine reflective calls
+for successful bookkeeping; worker absence and long compilation leaving the input
+path available; original Pause/unknown accounting; and correlated timing with
+unknown clock mappings rejected. Replay can test projection/selection and trace
+joins, not counterfactual survival or organically learned competence.
+
+Use fast/focused checks throughout, independent boundary/integration review and
+protected full CI once coherent. Do not build native or launch games solely to
+accept this proposal. **Gameplay remains user-paused.** After an explicit resume,
+one finite integrated development assessment should combine organically acquired
+useful routines, a counterexample-driven revision/abstention, fresh-context use,
+meaningful progress during optional learning, and normal lifecycle. The deciding
+system must do this without lead tactics, curation or a per-procedure approver.
+
+Freeze the existing useful-decision cohort and quality/latency criteria before
+that assessment: count acquisition, repair, fallback, context, all actor costs,
+long activities, misses and failures. A program's `done`, a returned key, higher
+coverage or a compact reply is not task success or speed qualification. Reject
+the responsiveness claim if thresholds fail; retain useful development evidence
+under the existing stopping policy. The seven-day outcome remains separate #145
+acceptance, and optional matched-budget causal studies remain #146/#70/#24 work.
+
+No new principle or standing control is needed: S-ARCH owns the automatic/model
+split and lead independence, S-UX whole-configuration response, S-MIGRATION contract
+changes, C-PORTABLE boundary regressions and C-USABILITY actual adoption/cadence.
+Issues/Project own estimates, sequence and current disposition. Revisit extra
+model tiers, perception or infrastructure only on a measured decision/coverage gap.
+
 ## Responsibilities and concurrency
 
 The active player owns the current objective/plan, local recovery, working facts,
