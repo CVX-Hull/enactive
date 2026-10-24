@@ -128,6 +128,19 @@ class PendingObservationTests(unittest.TestCase):
     def test_stale_current_retains_scope_and_ack_then_explicit_observe_permits_new_choice(self):
         self.resume_from_pending("stale")
 
+    def test_completed_input_publication_precedes_terminal_collection_cache(self):
+        cached = self.runtime._cache_operation
+        published = []
+        def collect_after_publication(operation):
+            result = operation.get("result")
+            if result is not None and result.get("phase", {}).get("stage") == "awaiting_observation":
+                published.append(self.runtime.status()["next_needed_decision"])
+            cached(operation)
+        with patch.object(self.runtime, "_cache_operation", side_effect=collect_after_publication):
+            self.resume_from_pending("stale")
+        self.assertTrue(published)
+        self.assertTrue(all("Observe" in decision for decision in published), published)
+
     def resume_from_pending(self, kind):
         root, old, request, operation = self.pending(kind)
         phase = self.runtime._prompt_phase

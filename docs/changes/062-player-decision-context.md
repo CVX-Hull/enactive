@@ -597,3 +597,28 @@ fixture initially called a nonexistent test helper; correcting that fixture then
 passes the complete lane. No production guard is weakened to accommodate the
 fixture. Native qualification and exact new candidate/protected-main CI remain
 separate; c4fdc05's in-flight CI cannot qualify this later source or relabel017.
+
+### Exact predecessor CI found a publication-order defect
+
+c4fdc05 [CI40059279827](https://github.com/CVX-Hull/enactive/actions/runs/40059279827)
+fails1of1,888tests after1,057.699s: a completed input awaiting explicit Observe
+still advertises original collection. The ledger has committed its partial result,
+but publication reads the older accepted collection cache; that cache becomes
+terminal immediately afterward. This is a real source ordering defect, not an
+excuse to relax the assertion or label the run a pass. Later viewer/full checks
+are not credited from this failed lane.
+
+The repair uses existing cache membership only for admission, then the canonical
+ledger request state for pending guidance, releasing the metadata lock before the
+existing ledger read. Publication still precedes terminal collection-cache exposure.
+Read-only requests without request IDs cannot enter the input lookup. A deterministic
+regression inspects that exact pre-cache boundary, then verifies explicit Observe
+and continuation. Independent review finds no scoped defect. Existing SQLite,
+writer serialization and C-PORTABLE/C-REVIEW supply the mechanism; no new pending
+store, ordering flag, sleep, retry or framework is introduced. A new exact candidate
+CI is required after focused verification; earlier failed results remain retained.
+
+The integrated pending/binding/ordinary suite passes68tests; the exact final
+pre-cache/context/advisory lane passes16tests. These are source checks, not native
+continuation or causal performance evidence. Fast checks and independent review
+pass; exact new CI and the full accepted campaign outcome remain open.

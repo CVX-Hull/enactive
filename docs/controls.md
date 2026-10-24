@@ -46,12 +46,12 @@ Active and deprecated controls fail after their due date. Event triggers can req
 | C-NATIVE | active | 2026-10-23 | 2026-10-23 | partially_effective | 2027-01-15 |
 | C-USABILITY | active | 2026-10-23 | 2026-10-23 | partially_effective | 2027-01-15 |
 | C-BOUNDARY | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
-| C-REVIEW | active | 2026-10-23 | 2026-10-23 | partially_effective | 2027-01-15 |
+| C-REVIEW | active | 2026-10-24 | 2026-10-24 | partially_effective | 2027-01-15 |
 | C-GOVERNANCE | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-PROTOCOL | active | 2026-10-17 | 2026-10-17 | effective | 2027-01-15 |
 | C-SETUP | active | 2026-10-17 | 2026-10-17 | partially_effective | 2027-01-15 |
 | C-RELEASE | active | 2026-10-18 | 2026-10-18 | partially_effective | 2027-01-15 |
-| C-MAINTENANCE | active | 2026-10-23 | 2026-10-23 | partially_effective | 2027-01-15 |
+| C-MAINTENANCE | active | 2026-10-23 | 2026-10-24 | partially_effective | 2027-01-15 |
 | C-VISUAL | active | 2026-10-18 | 2026-10-18 | unassessed | 2027-01-15 |
 
 ## Mechanisms and coverage
@@ -200,12 +200,12 @@ Coverage gap: No code checker proves reasoning quality, typing completeness, dec
 
 Lifecycle: active. Rationale: none recorded. Replacement: none.
 
-Last exercise: 2026-10-23. Outcome: Independent017 actual-source/PNG/ledger diagnosis and guarded identity-draft diff review find no remaining scoped defect.
+Last exercise: 2026-10-24. Outcome: Independent017 actual-source/PNG/ledger diagnosis and guarded identity-draft diff review find no remaining scoped defect. Subsequent independent canonical publication/cache-order review finds no scoped defect; deterministic pre-cache test covers exact failed-CI ordering.
 Scope: 25-character admitted identity versus optional24-character semantic target, zero dispatch, unchanged healthy lifecycle then explicit synthetic ordinary chunks; strict identity and genuine-fault checks retained. Broader tests and actual continuation are lead lanes.
 Exercise evidence: [docs/changes/062-player-decision-context.md](../docs/changes/062-player-decision-context.md), [tests/test_mission_lifecycle_ordinary.py](../tests/test_mission_lifecycle_ordinary.py), [tests/test_mission_request_bindings.py](../tests/test_mission_request_bindings.py).
 
-Maintenance review: 2026-10-23. Effectiveness: partially_effective.
-Findings: Review verifies exactsource/trace rather than model assertion: complete SDK schemas do not prove host-rendered schemas. Confirmed predictable exit cost and missing context/phase guidance are repaired through existing facilities. Post-staging/presentation failures retain original collection identity. Independent015 outcome review identifies premature development ending and scopes representation/timing findings. c714 exact CI exposes an unlocked private verifier in a test fixture; existing mutex contract supplies the repair, without speculative DB recovery. Passive host projection retains assigned successor events independently of mission actor adoption; no process discovery, heartbeat, liveness claim or input authority. Closed016 review prevented mismatched response bodies from supplying collection targets and retained specialized paused lifecycle handling; migrated obsolete destructive-refusal fixture. Current report counts independently match closed ledger and host streams. No new review per gameplay action.
+Maintenance review: 2026-10-24. Effectiveness: partially_effective.
+Findings: Review verifies exactsource/trace rather than model assertion: complete SDK schemas do not prove host-rendered schemas. Confirmed predictable exit cost and missing context/phase guidance are repaired through existing facilities. Post-staging/presentation failures retain original collection identity. Independent015 outcome review identifies premature development ending and scopes representation/timing findings. c714 exact CI exposes an unlocked private verifier in a test fixture; existing mutex contract supplies the repair, without speculative DB recovery. Passive host projection retains assigned successor events independently of mission actor adoption; no process discovery, heartbeat, liveness claim or input authority. Closed016 review prevented mismatched response bodies from supplying collection targets and retained specialized paused lifecycle handling; migrated obsolete destructive-refusal fixture. Current report counts independently match closed ledger and host streams. No new review per gameplay action. Exact c4fdc05 CI failed1/1888 on final publication consulting an accepted collection-cache entry after ledger completion. Independent ordering review verifies canonical ledger state and unchanged publication-before-terminal-cache order; a deterministic pre-cache regression replaces timing luck. No passed CI/viewer claim is made for that failed lane.
 Cost: One clean-context reviewer reused for design and diff review,78lifecycle/driver regression tests; player SDK/HTTP tests separately recorded. No independent per-action approval, extra store or capability engine.
 Follow-up: Qualify a genuinely fresh deciding player on frozen repaired source through useful independent learning/cadence/survival and normal lifecycle. Exact candidate/protected-main CI, current artifacts and resource cleanup remain distinct gates.
 Review evidence: [docs/changes/062-player-decision-context.md](../docs/changes/062-player-decision-context.md), [docs/acceptance/2026-10-23-independent-seven-day-fifteenth-attempt.md](../docs/acceptance/2026-10-23-independent-seven-day-fifteenth-attempt.md).
@@ -334,10 +334,10 @@ Last exercise: 2026-10-23. Outcome: Closed017 source/ledger/17indexed frame hash
 Scope: Before adoption:5returned primitives, no memory/adviser work or accepted day.191saves unchanged; no added world save.016unknown native outcome stays unknown.
 Exercise evidence: [docs/changes/062-player-decision-context.md](../docs/changes/062-player-decision-context.md), [docs/runbook.md](../docs/runbook.md).
 
-Maintenance review: 2026-10-23. Effectiveness: partially_effective.
+Maintenance review: 2026-10-24. Effectiveness: partially_effective.
 Findings: 016 exposes pending-input guidance and healthy stale-selection custody loss. Existing lifecycle refusal must retain paused candidate semantics. Cleanup also exposes a lead assumption: parent closure does not terminate the native child; retain unknown outcome and require verified exceptional child termination before parent closure. No new menu handler, queue, tracker or automatic kill service. 017 confirms another request-composition error destructively routed as lifecycle fault; reuse existing guarded draft refusal for whole-field identity targets, preserving ordinary correction. Retain lead standby-only adviser launch mistake; actual frozen active stdin must explicitly activate and match source/mission/actor. Ordered exceptional cleanup now records real exit0, never normal ending.
 Cost: Original host1839.828s/165MCP calls, adviser870.486s/44calls;16jobs consume1920charged claim-window seconds. These are not isolated inference or causal improvement measurements. Retain failures and bounded observer samples.
-Follow-up: #136/#145 full fresh outcome;#164 pending/original collection and useful cadence;#176 ordinary refusal;#177/#191 source-linked organic revision;#178 advisory prioritization/coalescing;#143 passive terminal display. Exact new source CI, native qualification and protected publication remain separate. Existing due dates unchanged.
+Follow-up: #136/#145 full fresh outcome;#164 pending/original collection and useful cadence;#176 ordinary refusal;#177/#191 source-linked organic revision;#178 advisory prioritization/coalescing;#143 passive terminal display. Exact new source CI, native qualification and protected publication remain separate. Existing due dates unchanged. Retain c4fdc05 CI40059279827 failure1/1888; canonical publication repair needs exact candidate CI and actual fresh continuation.
 Review evidence: [docs/changes/062-player-decision-context.md](../docs/changes/062-player-decision-context.md), [docs/runbook.md](../docs/runbook.md), [docs/work.md](../docs/work.md).
 
 Next review: 2027-01-15.

@@ -354,8 +354,12 @@ class MissionRuntime:
         limits, reserve = self._admission.limits, self._admission.cleanup_reserve
         active = self._active.request if self._active is not None else None
         with self._metadata:
-            input_pending = (active is not None and active["kind"] in ("skill", "lifecycle")
-                and self._operations.get(active["request_id"], {}).get("state") in ("accepted", "running"))
+            input_admitted = (active is not None and active["kind"] in ("skill", "lifecycle")
+                and active["request_id"] in self._operations)
+        # The collection cache is deliberately updated after this publication.
+        # Its older state cannot describe the result already committed in SQLite.
+        input_pending = (input_admitted
+            and self._ledger.request(active["request_id"])["state"] in ("accepted", "running"))
         current_available = self._current is not None and not (
             self._prompt_phase is not None and self._prompt_phase.observation_generation is not None)
         inspected = None
