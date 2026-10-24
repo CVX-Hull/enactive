@@ -11,7 +11,8 @@ import unittest
 from unittest.mock import patch
 
 from harness.gameplay.contracts import ContractError
-from harness.gameplay.mission_contracts import VERSION, CleanupReserve, MissionLimits, SourceRevalidation, canonical
+from harness.gameplay.contracts import canonical
+from harness.gameplay.mission_contracts import VERSION, CleanupReserve, MissionLimits, SourceRevalidation
 from harness.gameplay.mission_ledger import BudgetError, LedgerError, MissionLedger
 from tests.test_mission_contracts import admission, binding, claim, request, skill
 
@@ -19,24 +20,46 @@ from tests.test_mission_contracts import admission, binding, claim, request, ski
 def intent(**changes):
     values = {"kind": "action", "value": "RIGHT", "expected_session": "native-session",
               "expected_revision": 30, "expected_boundary_id": "boundary-1",
-              "source_before": "source-1", "preflight_source": "preflight-1", "revalidation": None,
+              "source_before": "source-1", "preflight_source": "preflight-1", "revalidation": None, "input_observation": None,
               "reservation_id": "reservation-1"}
     values.update(changes)
     return values
 
 
 def published_receipt(*, native_id="native-uuid-1", logical_id="logical-1", proposed=None,
-                      controller_boot_id="controller-test", dispatch_epoch=0, actor_id="player-test"):
+                      controller_boot_id="controller-test", dispatch_epoch=0, actor_id="player-test", frame=None):
     """Pure SQLite correlation fixture, not evidence of actual file custody."""
     proposed = proposed or intent()
-    native = dict(protocol=4, id=native_id, kind=proposed["kind"], session=proposed["expected_session"],
+    payload = ({} if proposed["kind"] == "resume" else
+               {"input" if proposed["kind"] == "direct" else proposed["kind"]: proposed["value"]})
+    native = dict(protocol=6, id=native_id, kind=proposed["kind"], session=proposed["expected_session"],
         revision=proposed["expected_revision"], boundary_id=proposed["expected_boundary_id"], takeover_generation=0,
         authority=dict(controller_boot_id=controller_boot_id, counter=1), deadline_ms=1,
-        frame="synthetic.png", require_exact_frame=False, **{proposed["kind"]: proposed["value"]})
+        frame=frame or f"frame-{proposed['expected_session']}-{proposed['expected_revision']}.png",
+        require_exact_frame=False, **payload)
     return dict(published=True, native_request_id=native_id, logical_action_id=logical_id,
                 native_request_json=canonical(native), dispatch_binding=dict(controller_boot_id=controller_boot_id,
                     operator_pause_generation=0, takeover_generation=0, actor_id=actor_id,
                     epoch=dispatch_epoch, game_anchor_source_id=proposed["source_before"]))
+
+
+def known_receipt(*, native_id="native-uuid-1", logical_id="logical-1", proposed=None,
+                  disposition="returned", source_after=..., evidence_loss=None,
+                  after=None, frame=None):
+    """Current complete receipt fixture; no compatibility path in production."""
+    from harness.gameplay.native_receipts import compact_native_ack
+    from harness.gameplay.evidence import _identity
+    from tests.test_gameplay_evidence import observation
+    proposed = proposed or intent()
+    native = after or observation(proposed["expected_revision"] + 1, session=proposed["expected_session"])
+    native = dict(native, id=native_id, status="ready" if disposition == "returned" else "rejected")
+    return published_receipt(native_id=native_id, logical_id=logical_id, proposed=proposed, frame=frame) | {
+        **{key: proposed[key] for key in ("kind", "value", "expected_session", "expected_revision",
+                                         "expected_boundary_id", "source_before", "preflight_source")},
+        "transport_disposition": disposition, "received_monotonic": 100.5,
+        "native_ack": compact_native_ack(native),
+        "source_after": _identity(native) if source_after is ... else source_after,
+        "processing_error": None, "evidence_loss": evidence_loss}
 
 
 def delivery_resolution(ledger, *, now, logical_id="logical-1"):
@@ -81,7 +104,7 @@ def handoff_claim(issuance, **changes):
         packet_ids=["packet-1"], read_source_ids=[issuance["post_pause_source_id"]],
         expected_session=issuance["session"], expected_revision=issuance["revision"],
         expected_boundary_id=issuance["boundary_id"], expected_pause_origin=issuance["pause_origin"],
-        pause_generation=issuance["pause_generation"], takeover_generation=issuance["takeover_generation"])
+        pause_generation=issuance["pause_generation"], takeover_generation=issuance["takeover_generation"], read_procedure_sources=[])
     values.update(changes)
     return values
 
@@ -150,6 +173,22 @@ class LedgerTests(unittest.TestCase):
         values.update(changes)
         return values
 
+    def test_rejected_lifecycle_root_history_reopens_without_rewriting_payload_or_digest(self):
+        # A formerly admitted malformed request is immutable failure evidence,
+        # even though the new pure submission boundary refuses its execution.
+        rejected = phase_lifecycle(operation="save", work_id="pending", identity_claim_ids=["old-identity"])
+        self.active_request(rejected)
+        self.ledger.complete_request(rejected["request_id"], "blocked",
+            dict(reason="Lifecycle root cannot import Work or old identity authority", grants_authority=False), now=1002)
+        before = self.ledger.request(rejected["request_id"])
+        payload = self.ledger._db.execute("SELECT payload,digest FROM requests WHERE id=?",
+            (rejected["request_id"],)).fetchone()
+        self.reopen(now=1003)
+        self.assertEqual(self.ledger.request(rejected["request_id"]), before)
+        self.assertEqual(self.ledger._db.execute("SELECT payload,digest FROM requests WHERE id=?",
+            (rejected["request_id"],)).fetchone(), payload)
+        self.assertEqual(self.ledger.primitive_records(), ())
+
     def test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen(self):
         empty = self.ledger.measured_counts()
         self.assertEqual(empty, {"operations": {"total": 0, "by_kind": {}, "by_skill": {}, "by_state": {}},
@@ -209,7 +248,7 @@ class LedgerTests(unittest.TestCase):
         self.ledger.settle_primitive(logical_id, "not_dispatched", {"reason": "Synthetic accounting probe"}, now=now)
 
     def prompt_receipt(self, **changes):
-        value = dict(schema="mission/8", record_type="PhaseReceipt", origin_request_id="request-1",
+        value = dict(schema="mission/11", record_type="PhaseReceipt", origin_request_id="request-1",
             phase_kind="interact", operation="open_consume", stage="awaiting_control", epoch=0,
             actor_id="player-test", controller_boot_id="controller-test", operator_pause_generation=0,
             takeover_generation=0, source_ids=["source-1"], continuity=None, grants_authority=False)
@@ -717,7 +756,7 @@ class LedgerTests(unittest.TestCase):
 
     def test_earlier_ledger_format_is_rejected_without_conversion(self):
         self.ledger.close()
-        for version in (1, 2, 3, 4, 5, 6, 7, 8, 9):
+        for version in range(1, 12):
             with self.subTest(version=version):
                 with closing(sqlite3.connect(self.ledger.path)) as connection, connection:
                     connection.execute(f"PRAGMA user_version={version}")
@@ -830,7 +869,8 @@ class LedgerTests(unittest.TestCase):
         self.active_request()
         first = SourceRevalidation(binding(), binding(source_id="fresh-1", store_generation=2), "native_state")
         self.ledger.prepare_primitive("request-1", "logical-old", intent(source_before="fresh-1", revalidation=first.to_dict()), now=1002)
-        self.ledger.settle_primitive("logical-old", "returned", {"synthetic": True}, now=1003)
+        self.ledger.settle_primitive("logical-old", "returned", known_receipt(logical_id="logical-old",
+            proposed=intent(source_before="fresh-1", revalidation=first.to_dict())), now=1003)
         self.ledger.complete_request("request-1", "completed", {"synthetic": True}, now=1003)
         self.ledger.begin_request(request("handoff", request_id="handoff-actor", checkpoint_ids=["source-1"], successor_role="player"), now=1004)
         issued = self.ledger.issue_handoff("handoff-actor", binding=handoff_binding(), now=1005)
@@ -914,7 +954,8 @@ class LedgerTests(unittest.TestCase):
         self.active_request()
         for n in [1, 2]:
             self.ledger.prepare_primitive("request-1", f"logical-{n}", intent(), now=1001+n)
-            self.ledger.settle_primitive(f"logical-{n}", "returned", {"status": "ready"}, now=1001+n)
+            self.ledger.settle_primitive(f"logical-{n}", "returned", known_receipt(
+                logical_id=f"logical-{n}", native_id=f"native-{n}"), now=1001+n)
         with self.assertRaises(BudgetError): self.ledger.prepare_primitive("request-1", "logical-3", intent(), now=1004)
         self.assertEqual(self.ledger.snapshot(now=1004)["spent_inputs"], 2)
         state = self.ledger.begin_finishing(epoch=0, reason="Normal ending", now=1004)
@@ -923,7 +964,8 @@ class LedgerTests(unittest.TestCase):
                           expected_revision=30, expected_boundary_id="boundary-1", limits={"primitives": 2, "wall_seconds": 120, "game_seconds": 1})
         self.ledger.begin_request(cleanup, now=1004)
         self.ledger.prepare_primitive("cleanup", "logical-3", intent(), now=1005, cleanup=True)
-        self.ledger.settle_primitive("logical-3", "returned", {"status": "ready"}, now=1006)
+        self.ledger.settle_primitive("logical-3", "returned", known_receipt(
+            logical_id="logical-3", native_id="native-3"), now=1006)
         with self.assertRaises(BudgetError): self.ledger.prepare_primitive("cleanup", "logical-4", intent(), now=1007, cleanup=True)
         self.reopen(now=1010)
         self.assertEqual(self.ledger.snapshot(now=1010)["remaining_inputs"], 0)
@@ -956,7 +998,7 @@ class LedgerTests(unittest.TestCase):
         self.ledger.complete_request("request-1", "completed", {"goal": "reached", "delivery": "unknown"}, now=1006)
         self.assertEqual(self.ledger.primitive("logical-1")["state"], "unknown")
         self.assertEqual(self.ledger.primitive("logical-1")["result"], receipt)
-        with self.assertRaises(LedgerError): self.ledger.settle_primitive("logical-1", "returned", {"status": "ready"}, now=1007)
+        with self.assertRaises(LedgerError): self.ledger.settle_primitive("logical-1", "returned", known_receipt(), now=1007)
         self.assertEqual(self.ledger.snapshot(now=1007)["phase"], "paused")
         self.assertEqual(self.reopen().primitive("logical-1")["state"], "unknown")
 
@@ -970,12 +1012,115 @@ class LedgerTests(unittest.TestCase):
     def test_failure_settling_published_input_reopens_as_unknown(self):
         self.prepared(native=True)
         self.ledger._db.execute("CREATE TRIGGER fail_settle BEFORE UPDATE OF result ON primitives BEGIN SELECT RAISE(ABORT,'storage fault'); END")
-        with self.assertRaises(LedgerError): self.ledger.settle_primitive("logical-1", "returned", {"status": "ready"}, now=1004)
+        with self.assertRaises(LedgerError): self.ledger.settle_primitive("logical-1", "returned", known_receipt(), now=1004)
         self.assertEqual(self.ledger.primitive("logical-1")["state"], "published")
         self.ledger._db.execute("DROP TRIGGER fail_settle")
         self.reopen()
         self.assertEqual(self.ledger.primitive("logical-1")["state"], "unknown")
         self.assertEqual(self.ledger.snapshot(now=1010)["spent_inputs"], 1)
+
+    def seed_memory_history(self, entry_type, entry, count):
+        """Compact valid history; boundary appends still use the public ledger API."""
+        from harness.gameplay.mission_contracts import validate_memory_entry
+        entry = validate_memory_entry(entry, entry_type)
+        rows = []
+        for index in range(count):
+            identity = f"{entry_type}-seed-{index}"
+            body = {**entry, "id": identity}
+            if entry_type == "procedure": body["procedure_id"] = identity
+            rows.append((identity, entry_type, identity, canonical(body)))
+        with self.ledger._transaction():
+            self.ledger._db.executemany("INSERT INTO memory(event_id,entry_type,record_id,body) VALUES (?,?,?,?)", rows)
+
+    def test_claim_retention_scales_with_original_admitted_frames(self):
+        for frames in (2, 8192):
+            with self.subTest(frames=frames):
+                self.ledger.close()
+                self.directory = Path(self.tmp.name) / f"claims-{frames}"
+                self.a = admission(limits=MissionLimits(frames=frames), cleanup_reserve=CleanupReserve(frames=1))
+                self.ledger = MissionLedger(self.directory, admission=self.a, now=1000)
+                maximum = 2048 + 3 * frames
+                self.seed_memory_history("claim", claim(), maximum - 1)
+                entry = claim(id="last-claim")
+                sequence = self.ledger.append_memory("last-event", "claim", entry, now=1001)
+                self.assertEqual(sequence, maximum)
+                self.assertEqual(self.ledger.append_memory("last-event", "claim", entry, now=1002), sequence)
+                with self.assertRaisesRegex(BudgetError, "Memory event retention limit reached"):
+                    self.ledger.append_memory("overflow", "claim", claim(id="overflow"), now=1002)
+                with self.assertRaisesRegex(LedgerError, "Memory event identity reused"):
+                    self.ledger.append_memory("last-event", "claim", claim(id="last-claim", text="Changed"), now=1002)
+                self.assertEqual(len(self.ledger.memory_records("claim")), maximum)
+                if frames == 2:
+                    self.ledger.close()
+                    self.ledger = MissionLedger(self.directory, now=1003)
+                    self.assertEqual(self.ledger.admission.limits.frames, frames)
+                    self.assertEqual(self.ledger.append_memory("last-event", "claim", entry, now=1003), sequence)
+                    with self.assertRaisesRegex(BudgetError, "Memory event retention limit reached"):
+                        self.ledger.append_memory("reopened-overflow", "claim", claim(id="reopened-overflow"), now=1003)
+                    self.ledger.close()
+                    before = (self.directory / "mission.sqlite3").read_bytes()
+                    with self.assertRaisesRegex(LedgerError, "Original admission/configuration cannot be replaced"):
+                        MissionLedger(self.directory, admission=replace(self.a, limits=MissionLimits(frames=3)), now=1004)
+                    self.assertEqual((self.directory / "mission.sqlite3").read_bytes(), before)
+
+    def test_native_capture_and_authored_claims_share_retention_ceiling(self):
+        from harness.gameplay.campaign_memory import CampaignMemory
+        from harness.gameplay.evidence import EvidenceStore
+        from tests.test_gameplay_evidence import observation, png
+        from tests.test_mission_contracts import scope
+        self.ledger.close()
+        self.directory = Path(self.tmp.name) / "native-claims"
+        self.a = admission(limits=MissionLimits(frames=2), cleanup_reserve=CleanupReserve(frames=1))
+        self.ledger = MissionLedger(self.directory, admission=self.a, now=1000)
+        maximum = 2048 + 3 * self.a.limits.frames
+        self.seed_memory_history("claim", claim(), maximum - 4)
+        bridge = Path(self.tmp.name) / "bridge"
+        bridge.mkdir()
+        native = observation(30, session="native-session")
+        (bridge / native["frame"]).write_bytes(png())
+        with EvidenceStore(bridge, Path(self.tmp.name) / "sources", max_frames=2) as store:
+            ref = store.ingest(native, received_monotonic=100, now_monotonic=100, now_timestamp_ms=1_000_000)
+            memory = CampaignMemory(self.ledger, store)
+            captured = memory.capture_native(ref, scope(), now=1001)
+            self.assertEqual(len(captured["entries"]), 3)
+            self.assertEqual(captured["memory_version"], maximum - 1)
+            authored = claim(id="last-authored", sources=[ref.observation_id],
+                supports=[{"sources": [ref.observation_id], "claims": []}])
+            self.assertEqual(self.ledger.append_memory("authored", "claim", authored, now=1002), maximum)
+            again = memory.capture_native(ref, scope(), now=1003)
+            self.assertEqual(again["entries"], captured["entries"])
+            self.assertEqual(again["memory_version"], maximum)
+            with self.assertRaisesRegex(BudgetError, "Memory event retention limit reached"):
+                self.ledger.append_memory("extra-authored", "claim", claim(id="extra-authored"), now=1003)
+            other_scope = {**scope(), "coordinate_epoch": 1}
+            with self.assertRaisesRegex(BudgetError, "Memory event retention limit reached"):
+                memory.capture_native(ref, other_scope, now=1003)
+            self.assertEqual(len(self.ledger.memory_records("claim")), maximum)
+
+    def test_other_memory_retention_ceilings_remain_unchanged(self):
+        from harness.gameplay.mission_contracts import LearningPolicy, MEMORY_VERSION
+        from tests.test_mission_contracts import scope
+        from tests.test_procedures import procedure
+        work = dict(schema=MEMORY_VERSION, record_type="Work", id="last-work", predecessor_work_id=None,
+            intent="Verify supplies", scope=scope(), stage="inspect", progress=None, available=[], committed=[],
+            predicted_output=[], observed_output=[], unresolved_effects=[], sources=["source-1"],
+            next_verification="Inspect visible supplies", status="planned")
+        decision = dict(schema=MEMORY_VERSION, record_type="Decision", id="last-decision", packet_id="packet-1",
+            scope=scope(), query="water", memory_version=0, claim_ids=[], work_ids=[], source_ids=[],
+            procedure_refs=[], procedure_sources=[], omitted=0, reason="Inspect visible supplies")
+        candidate = procedure(id="last-procedure", mission_id=self.a.mission_id)
+        for kind, maximum, entry in (("work", 256, work), ("decision", 2048, decision), ("procedure", 256, candidate)):
+            with self.subTest(kind=kind):
+                self.ledger.close()
+                self.directory = Path(self.tmp.name) / kind
+                self.a = admission(learning=LearningPolicy(candidate["environment"]))
+                self.ledger = MissionLedger(self.directory, admission=self.a, now=1000)
+                self.seed_memory_history(kind, entry, maximum - 1)
+                self.assertEqual(self.ledger.append_memory("last-event", kind, entry, now=1001), maximum)
+                with self.assertRaisesRegex(BudgetError, "Memory event retention limit reached"):
+                    self.ledger.append_memory("overflow", kind, {**entry, "id": "overflow"}, now=1002)
+                self.assertEqual(self.ledger.append_memory("last-event", kind, entry, now=1002), maximum)
+                self.assertEqual(len(self.ledger.memory_records(kind)), maximum)
 
     def test_retention_and_corrupt_cost_reject_without_repair(self):
         self.ledger.append_memory("event-1", "claim", claim(), now=1001)
@@ -996,7 +1141,7 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(LedgerError):
             self.ledger.prepare_primitive("observe-only", "bad-input", intent(), now=1003)
         with self.assertRaises(LedgerError):
-            self.ledger.begin_request({"schema": "mission/8", "kind": "status", "mission_id": "mission-test"}, now=1003)
+            self.ledger.begin_request({"schema": "mission/11", "kind": "status", "mission_id": "mission-test"}, now=1003)
         with self.assertRaises(LedgerError):
             self.ledger.begin_request(skill(mission_id="other", goal={"scope": {"mission_id": "other", "session": "native-session", "coordinate_epoch": 0}, "target": [2, -3, 0]}), now=1003)
         self.ledger.close()

@@ -15,7 +15,7 @@ from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
 from harness.gameplay.contracts import ContractError, MAX_JSON_BYTES
-from harness.gameplay.mission_contracts import canonical
+from harness.gameplay.contracts import canonical
 from harness.mission_client import MissionClient, MissionClientError
 from tests.test_gameplay_evidence import png
 from tests.test_mission_contracts import admission, request
@@ -70,7 +70,7 @@ class MissionClientTests(unittest.TestCase):
         self.bridge = self.root / ".runtime" / "bridge"
         self.bridge.mkdir(parents=True)
         self.server = self.start_stub()
-        self.config = dict(protocol=4, port=self.server.server_port, token="private-test-token")
+        self.config = dict(protocol=6, port=self.server.server_port, token="private-test-token")
         self.write_config()
         self.client = MissionClient(self.root)
 
@@ -109,11 +109,11 @@ class MissionClientTests(unittest.TestCase):
         self.assertFalse((self.root / ".runtime" / "mission-requests").exists())
 
     def test_invalid_discovery_cannot_send_or_leak_credentials(self):
-        cases = [dict(protocol=3), dict(protocol=True), dict(port=True), dict(port=0), dict(port=65536),
+        cases = [dict(protocol=3), dict(protocol=5), dict(protocol=True), dict(port=True), dict(port=0), dict(port=65536),
                  dict(port="8765"), dict(token=""), dict(token=None), dict(token="header\ninjection")]
         for changes in cases:
             with self.subTest(changes=changes):
-                self.config = dict(protocol=4, port=self.server.server_port, token="private-test-token") | changes
+                self.config = dict(protocol=6, port=self.server.server_port, token="private-test-token") | changes
                 self.write_config()
                 with self.assertRaises(MissionClientError) as raised:
                     self.client.status()
@@ -133,7 +133,7 @@ class MissionClientTests(unittest.TestCase):
         config.unlink()
         config.write_bytes(b" " * (65536 + 1))
         with self.assertRaises(MissionClientError): self.client.status()
-        config.write_text('{"protocol":4,"protocol":4}')
+        config.write_text('{"protocol":6,"protocol":6}')
         with self.assertRaises(MissionClientError): self.client.status()
         config.unlink()
         self.bridge.rmdir()
@@ -288,12 +288,12 @@ class MissionClientTests(unittest.TestCase):
         self.assertEqual(self.server.calls, [])
 
     def test_start_staging_and_collection_use_admission_mission_id(self):
-        value = dict(schema="mission/8", kind="start", request_id="start-1", admission=admission().to_dict())
+        value = dict(schema="mission/11", kind="start", request_id="start-1", admission=admission().to_dict())
         self.respond_operation(value, state="completed", result=dict(lifecycle_needed=True))
         self.assertTrue(self.client.submit(value, wait_seconds=0)["settled"])
         self.assertTrue(self.stage_path(value).exists())
         self.assertTrue(self.client.submit(value, wait_seconds=0)["settled"])
-        self.assertEqual(self.server.calls[-1][3], dict(schema="mission/8", kind="result",
+        self.assertEqual(self.server.calls[-1][3], dict(schema="mission/11", kind="result",
             mission_id=value["admission"]["mission_id"], operation_id="start-1"))
 
     def test_polling_keeps_pending_and_unknown_receipts_without_resumption(self):
@@ -342,7 +342,7 @@ class MissionClientTests(unittest.TestCase):
 
     def test_read_only_requests_use_current_schema_without_staging(self):
         for kind in ("status", "context"):
-            value = dict(schema="mission/8", kind=kind, mission_id="mission-test")
+            value = dict(schema="mission/11", kind=kind, mission_id="mission-test")
             if kind == "context":
                 value.update(query="water", scope=dict(mission_id="mission-test", session="native-session", coordinate_epoch=0),
                              handoff=None, max_bytes=32768)

@@ -67,11 +67,12 @@ def _position(value: Vector) -> Vector:
 
 
 class ObservedMap:
-    """At most 512 projected coordinates in one explicitly supplied scope.
+    """Lossy candidate cache of at most 512 coordinates in one supplied scope.
 
     EvidenceRef carries a native session, not mission/coordinate-epoch metadata.
     The owner must create a new map on reload; requests match this exact scope.
     Standing positions anchor searches but never establish traversable terrain.
+    Eviction forgets routing candidates, never their retained source evidence.
     """
     def __init__(self, mission_id: str, session: str, coordinate_epoch: int, *, max_nodes: int = 512):
         scope = {"mission_id": mission_id, "session": session, "coordinate_epoch": coordinate_epoch}
@@ -104,7 +105,7 @@ class ObservedMap:
                 verified: dict[EvidenceRef, dict] | None = None) -> dict:
         if type(reference) is not EvidenceRef:
             raise ContractError("Observed map requires typed evidence references")
-        reference.to_dict()
+        reference.__post_init__()
         if reference.session != self._scope[1] or reference.boundary_kind != "normal_play":
             raise EvidenceError("Observed map requires normal evidence in its exact session")
         if verified is not None and reference in verified:
@@ -131,9 +132,11 @@ class ObservedMap:
     def _project(self, reference: EvidenceRef, scene: dict) -> None:
         """Project an observation already verified in this call; no store access."""
         position = _position(scene["position"])
+        footprint = {position}
         updates: dict[Vector, _Cell] = {}
         for dx, dy, _ in DIRECTIONS.values():
             point = expected_position(position, dx, dy)
+            footprint.add(point)
             try:
                 visible_destination(scene, dx, dy)
                 traversable = True
@@ -142,13 +145,28 @@ class ObservedMap:
             previous = self._cells.get(point)
             if previous is None or self._newer(reference, previous.source):
                 updates[point] = _Cell(traversable, reference)
-        if len(self._cells.keys() | self._anchors.keys() | updates.keys() | {position}) > self._max_nodes:
-            raise CapacityError("Observed-map node limit reached; retained evidence was preserved")
         anchor = self._anchors.get(position)
         replace_anchor = anchor is None or self._newer(reference, anchor)
-        self._cells.update(updates)
+        if len(footprint) > self._max_nodes:
+            raise CapacityError("Observed-map footprint exceeds node limit; retained evidence was preserved")
+        # Validate every update before replacing either cache. Source revisions
+        # already provide recency; a separate access journal would duplicate it.
+        cells = self._cells | updates
+        anchors = self._anchors.copy()
         if replace_anchor:
-            self._anchors[position] = reference
+            anchors[position] = reference
+        coordinates = cells.keys() | anchors.keys()
+        excess = len(coordinates) - self._max_nodes
+        if excess > 0:
+            def oldest(point: Vector) -> tuple[int, Vector]:
+                revision = max(cells[point].source.revision if point in cells else -1,
+                               anchors[point].revision if point in anchors else -1)
+                return revision, point
+
+            for point in sorted(coordinates - footprint, key=oldest)[:excess]:
+                cells.pop(point, None)
+                anchors.pop(point, None)
+        self._cells, self._anchors = cells, anchors
 
     def shortest_path(self, current_position: Vector, target: Vector, store: EvidenceStore) -> NavigationPath:
         """Deterministic cardinal BFS of candidates, never execution eligibility."""
@@ -395,7 +413,7 @@ class NavigationSkill:
                now_timestamp_ms: int) -> NavigationOutcome | None:
         if type(result) is not PrimitiveResult:
             raise ContractError("Navigation feedback requires typed PrimitiveResult")
-        result.to_dict()
+        result.__post_init__()
         pending = self._pending
         if (self._terminal is not None or pending is None or
                 (result.action_id, result.before) != (pending.logical_id, pending.before)):

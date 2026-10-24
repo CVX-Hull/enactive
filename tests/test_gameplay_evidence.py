@@ -1,4 +1,4 @@
-"""Synthetic native-v4 observations only; never real CDDA/pipeline acceptance."""
+"""Synthetic native-v6 observations only; never real CDDA/pipeline acceptance."""
 from copy import deepcopy
 from concurrent.futures import ThreadPoolExecutor
 import base64
@@ -13,7 +13,7 @@ from unittest.mock import patch
 
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import (
-    CapacityError, EvidenceError, EvidenceStore, MAX_BYTES, MAX_FRAME_BYTES, same_native_state,
+    CapacityError, EvidenceError, EvidenceStore, FreshnessError, MAX_BYTES, MAX_FRAME_BYTES, same_native_state,
 )
 
 
@@ -30,12 +30,14 @@ def black_png():
 
 
 def observation(number=1, *, session="synthetic-world", timestamp_ms=1_000_000):
-    return {"protocol": 4, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "", "session": session, "revision": number,
+    return {"protocol": 6, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "", "session": session, "revision": number,
             "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT"],
             "status": "ready", "error": "", "paused": False,
             "timestamp_ms": timestamp_ms, "frame_ok": True,
             "frame": f"frame-{session}-{number}.png", "in_game": True,
-            "boundary": {"kind": "normal_play", "id": "boundary-1", "control_generation": 0,
+            "frame_geometry": {"window_width": 1, "window_height": 1,
+                               "output_width": 1, "output_height": 1, "viewport": [0, 0, 1, 1]},
+            "boundary": {"kind": "normal_play", "id": "boundary-1", "control_generation": 0, "input_receiver": True,
                          "recovery_operations": [], "interrupt_request_id": None},
             "scene": {"provenance": "player-visible input boundary", "position": [0, 0, 0], "turn": 4,
                       "visible_creatures": [],
@@ -98,13 +100,21 @@ class EvidenceTests(unittest.TestCase):
     def retain(self, value, *, store=None, rule="native_state", **changes):
         arguments = dict(received_monotonic=100.25, now_monotonic=100.5, now_timestamp_ms=1_000_500)
         arguments.update(changes)
-        return (self.store if store is None else store).retain_equivalent(value, rule=rule, **arguments)
+        return (self.store if store is None else store).retain_preflight(value, rule=rule, **arguments)
 
     def recapture(self, value, number=2):
         copied = deepcopy(value)
         copied.update(frame=f"frame-{value['session']}-{number}.png", timestamp_ms=1_000_000,
                       id="final-preflight")
         return copied
+
+    def dispatch_preflight(self, before):
+        """Retain a distinct synthetic capture before requesting dispatch capacity."""
+        value = self.store.observation(before)
+        number = 10_000 + len(self.store.historical_references)
+        value.update(frame=f"frame-{before.session}-{number}.png", timestamp_ms=1_000_000)
+        return self.retain(self.publish(value), received_monotonic=100,
+                           now_monotonic=100, now_timestamp_ms=1_000_000)
 
     def menu(self):
         value = observation()
@@ -132,7 +142,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(self.store.authority_generation(), generation)
         manifest = json.loads((self.directory / "evidence.json").read_bytes())
         after_entry = next(item for item in manifest["entries"] if item["reference"]["observation_id"] == retained.observation_id)
-        self.assertEqual(after_entry["initial_lag_seconds"], 0.5)
+        self.assertEqual(after_entry["initial_lag_seconds"], 0.25)
         for path in self.bridge.iterdir(): path.unlink()
         self.assertEqual(self.retain(self.store.observation(retained), received_monotonic=101,
                                      now_monotonic=101, now_timestamp_ms=1_001_000), retained)
@@ -148,8 +158,8 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaises(EvidenceError): self.current()
         # The original lag plus elapsed time still applies after reopen.
         with self.assertRaises(EvidenceError):
-            self.ingest(self.store.observation(retained), received_monotonic=102.8,
-                        now_monotonic=102.8, now_timestamp_ms=1_002_800)
+            self.ingest(self.store.observation(retained), received_monotonic=103.0001,
+                        now_monotonic=103.0001, now_timestamp_ms=1_003_001)
 
     def test_menu_native_equivalence_attests_rows_but_not_pixels(self):
         before_value = self.publish(self.menu())
@@ -269,10 +279,11 @@ class EvidenceTests(unittest.TestCase):
     def test_preflight_requires_fresh_current_and_preserves_existing_reservation(self):
         value = self.publish()
         before = self.ingest(value)
-        token = self.store.reserve_dispatch(before, now_monotonic=100, now_timestamp_ms=1_000_000)
+        preflight = self.dispatch_preflight(before)
+        token = self.store.reserve_dispatch(before, preflight=preflight, rule="native_state", now_monotonic=100, now_timestamp_ms=1_000_000)
         with self.assertRaises(CapacityError): self.retain(self.publish(self.recapture(value)))
         self.store.release(token)  # Retention cannot consume the after reservation.
-        self.assertEqual(self.store.historical_references, (before,))
+        self.assertEqual(self.store.historical_references, (before, preflight))
         with self.assertRaises(EvidenceError): self.current()
         # Fresh Observe is required after any failed preflight, including expiry.
         value = self.publish(observation(3, timestamp_ms=1_004_000))
@@ -355,7 +366,7 @@ class EvidenceTests(unittest.TestCase):
             value.update(scene=None, category="ACTIVITY", paused=True, pause_origin="recovery")
             operation = {"activity_poll": ["request_interrupt"], "interrupt_confirmation": ["answer_interrupt"],
                          "debug_prompt": ["continue_debug_once"]}.get(kind, [])
-            value["boundary"].update(kind=kind, recovery_operations=operation,
+            value["boundary"].update(kind=kind, input_receiver=False, recovery_operations=operation,
                                      interrupt_request_id="exact-owner" if kind=="interrupt_confirmation" else None)
             with self.subTest(kind=kind):
                 ref = self.ingest(self.publish(value))
@@ -378,22 +389,34 @@ class EvidenceTests(unittest.TestCase):
 
     def test_metadata_capacity_is_checked_before_reserving_input_evidence(self):
         ref = self.ingest()
+        preflight = self.dispatch_preflight(ref)
         usage = self.store.usage()
-        self.assertEqual(usage["frames"], 1)
+        self.assertEqual(usage["frames"], 2)
         self.assertEqual(usage["max_frames"], 32)
         from harness.gameplay.evidence import MAX_ENTRY_BYTES, METADATA_HEADROOM
         with patch("harness.gameplay.evidence.MAX_METADATA_BYTES", usage["metadata_bytes"]+MAX_ENTRY_BYTES+METADATA_HEADROOM-1):
             with self.assertRaises(CapacityError):
-                self.store.reserve_dispatch(ref, now_monotonic=100, now_timestamp_ms=1_000_000)
+                self.store.reserve_dispatch(ref, preflight=preflight, rule="native_state", now_monotonic=100, now_timestamp_ms=1_000_000)
         self.assertEqual(self.current(), ref)
-        self.assertEqual(len(self.store.historical_references), 1)
+        self.assertEqual(len(self.store.historical_references), 2)
 
     def test_mission_caps_can_increase_retention_without_changing_defaults(self):
+        from harness.gameplay.mission_contracts import MissionLimits
+        limits = MissionLimits(frames=8192, frame_bytes=2*1024*1024*1024)
         self.store.close()
-        self.store = self.open_store(max_frames=4096, max_bytes=1024*1024*1024)
+        self.store = self.open_store(max_frames=limits.frames, max_bytes=limits.frame_bytes)
         ref = self.ingest()
-        self.assertEqual(self.store.usage()["max_frames"], 4096)
+        self.assertEqual(self.store.usage()["max_frames"], limits.frames)
+        self.assertEqual(self.store.usage()["max_bytes"], limits.frame_bytes)
         self.assertEqual(self.current(), ref)
+        preflight = self.dispatch_preflight(ref)
+        reservation = self.store.reserve_dispatch(ref, preflight=preflight, rule="native_state",
+            now_monotonic=100, now_timestamp_ms=1_000_000)
+        self.store.release(reservation)
+        self.store.close()
+        self.store = self.open_store(max_frames=limits.frames, max_bytes=limits.frame_bytes)
+        self.store.verify(ref)
+        self.assertEqual(self.store.inspect_current(now_monotonic=100, now_timestamp_ms=1_000_000), (None, False))
 
     def test_observation_copy_cannot_mutate_store_or_refresh_authority(self):
         first = self.ingest()
@@ -542,6 +565,32 @@ class EvidenceTests(unittest.TestCase):
         self.store = self.open_store()
         with self.assertRaises(EvidenceError):
             self.ingest(observation(), received_monotonic=1, now_monotonic=1)
+
+    def test_freshness_refusal_retains_actual_clock_predicates_without_refresh(self):
+        for number, (monotonic, wall, failed) in enumerate((
+            (103.0001, 1_003_000, ["receipt_age"]),
+            (100.0, 1_003_001, ["wall_age"]),
+            (99.0, 1_000_000, ["monotonic_reversal"]),
+            (100.0, 998_999, ["future_capture"]),
+            (104.0, 1_004_000, ["wall_age", "receipt_age"]),
+        ), start=1):
+            store = EvidenceStore(self.bridge, self.root / f"freshness-{number}")
+            self.addCleanup(store.close)
+            original = store.ingest(self.publish(observation(number)), received_monotonic=100.0,
+                now_monotonic=100.0, now_timestamp_ms=1_000_000)
+            with self.subTest(failed=failed), self.assertRaises(FreshnessError) as raised:
+                store.current(now_monotonic=monotonic, now_timestamp_ms=wall)
+            facts = raised.exception.details
+            self.assertEqual(facts["source_id"], original.observation_id)
+            self.assertEqual(facts["failures"], failed)
+            self.assertEqual(facts["received_monotonic"], original.received_monotonic)
+            self.assertEqual(facts["capture_timestamp_ms"], original.timestamp_ms)
+            self.assertEqual(facts["now_monotonic"], monotonic)
+            self.assertEqual(facts["now_timestamp_ms"], wall)
+            self.assertEqual(facts["elapsed_seconds"], monotonic - original.received_monotonic)
+            self.assertEqual(facts["wall_age_ms"], wall - original.timestamp_ms)
+            self.assertIsNone(store._current)
+            self.assertEqual(store.historical_references, (original,))
 
     def test_invalid_time_types_and_nonfinite_fail_closed(self):
         for number, changes in enumerate((
@@ -702,7 +751,7 @@ class EvidenceTests(unittest.TestCase):
     def test_wire_version_unknown_fields_bool_int_and_boundary_extra_fields_reject(self):
         changes = (
             lambda v: v.update(protocol=1), lambda v: v.update(protocol=2),
-            lambda v: v.update(protocol=3), lambda v: v.update(protocol=5), lambda v: v.update(protocol=True),
+            lambda v: v.update(protocol=4), lambda v: v.update(protocol=5), lambda v: v.update(protocol=True),
             lambda v: v.update(protocol=3.0), lambda v: v.update(revision=True),
             lambda v: v.update(revision=1.0), lambda v: v.update(timestamp_ms=True),
             lambda v: v.update(hidden_position=[1, 2, 3]), lambda v: v.pop("boundary"),
@@ -742,7 +791,8 @@ class EvidenceTests(unittest.TestCase):
 
     def test_oversized_native_png_is_missing_evidence_even_with_reservation(self):
         before = self.ingest()
-        reservation = self.store.reserve_dispatch(before, now_monotonic=100, now_timestamp_ms=1_000_000)
+        preflight = self.dispatch_preflight(before)
+        reservation = self.store.reserve_dispatch(before, preflight=preflight, rule="native_state", now_monotonic=100, now_timestamp_ms=1_000_000)
         value = observation(2)
         with (self.bridge / value["frame"]).open("wb") as stream:
             stream.write(png())
@@ -751,7 +801,7 @@ class EvidenceTests(unittest.TestCase):
         with self.assertRaises(EvidenceError):
             self.ingest(value, reservation=reservation)
         self.store.verify(before)
-        self.assertEqual(self.store.historical_references, (before,))
+        self.assertEqual(self.store.historical_references, (before, preflight))
         self.store.release(reservation)
 
     def test_retained_corruption_missing_source_and_modified_refs_fail(self):
@@ -801,7 +851,7 @@ class EvidenceTests(unittest.TestCase):
         self.assertTrue(Path(ref.frame_path).exists())
 
     def test_limits_can_only_be_lowered_and_cache_directory_cannot_be_store(self):
-        for arguments in ({"max_frames": 4097}, {"max_bytes": MAX_BYTES + 1},
+        for arguments in ({"max_frames": 8193}, {"max_bytes": MAX_BYTES + 1},
                           {"max_frames": True}, {"max_bytes": 0}):
             with self.subTest(arguments=arguments), self.assertRaises(CapacityError):
                 EvidenceStore(self.bridge, self.root / "other-store", **arguments)
@@ -819,21 +869,23 @@ class EvidenceTests(unittest.TestCase):
 
     def test_dispatch_reserves_worst_case_bytes_not_current_frame_size(self):
         self.store.close()
-        self.store = self.open_store(max_bytes=MAX_FRAME_BYTES + len(png()) - 1)
+        self.store = self.open_store(max_bytes=MAX_FRAME_BYTES + 2 * len(png()) - 1)
         ref = self.ingest()
+        preflight = self.dispatch_preflight(ref)
         with self.assertRaises(CapacityError):
-            self.store.reserve_dispatch(ref, now_monotonic=100, now_timestamp_ms=1_000_000)
+            self.store.reserve_dispatch(ref, preflight=preflight, rule="native_state", now_monotonic=100, now_timestamp_ms=1_000_000)
         self.assertEqual(self.current(), ref)
 
     def test_reservation_excludes_unrelated_ingestion_and_consumes_exactly_once(self):
         self.store.close()
-        self.store = self.open_store(max_frames=2)
+        self.store = self.open_store(max_frames=3)
         before = self.ingest()
-        token = self.store.reserve_dispatch(before, now_monotonic=100, now_timestamp_ms=1_000_000)
+        preflight = self.dispatch_preflight(before)
+        token = self.store.reserve_dispatch(before, preflight=preflight, rule="native_state", now_monotonic=100, now_timestamp_ms=1_000_000)
         self.assertEqual(token.frame_slots, 1)
         self.assertEqual(token.bytes_reserved, MAX_FRAME_BYTES)
         with self.assertRaises(CapacityError):
-            self.store.reserve_dispatch(before, now_monotonic=100, now_timestamp_ms=1_000_000)
+            self.store.reserve_dispatch(before, preflight=preflight, rule="native_state", now_monotonic=100, now_timestamp_ms=1_000_000)
         after = self.publish(observation(2))
         with self.assertRaises(CapacityError):
             self.ingest(after)
@@ -841,26 +893,29 @@ class EvidenceTests(unittest.TestCase):
         self.assertEqual(result.revision, 2)
         with self.assertRaises(CapacityError):
             self.store.release(token)
-        with self.assertRaises(CapacityError):
-            self.store.reserve_dispatch(result, now_monotonic=100, now_timestamp_ms=1_000_000)
+        with self.assertRaises(EvidenceError):
+            self.store.reserve_dispatch(result, preflight=preflight, rule="native_state", now_monotonic=100, now_timestamp_ms=1_000_000)
         self.store.verify(before)
 
     def test_release_reservation_and_require_exact_current_before(self):
         before = self.ingest()
-        token = self.store.reserve_dispatch(before, now_monotonic=100, now_timestamp_ms=1_000_000)
+        preflight = self.dispatch_preflight(before)
+        token = self.store.reserve_dispatch(before, preflight=preflight, rule="native_state", now_monotonic=100, now_timestamp_ms=1_000_000)
         with self.assertRaises(CapacityError):
             self.store.release(replace(token, token="forged"))
         self.store.release(token)
         new = self.ingest(self.publish(observation(2)))
         with self.assertRaises(EvidenceError):
-            self.store.reserve_dispatch(before, now_monotonic=100, now_timestamp_ms=1_000_000)
-        token = self.store.reserve_dispatch(new, now_monotonic=100, now_timestamp_ms=1_000_000)
+            self.store.reserve_dispatch(before, preflight=preflight, rule="native_state", now_monotonic=100, now_timestamp_ms=1_000_000)
+        new_preflight = self.dispatch_preflight(new)
+        token = self.store.reserve_dispatch(new, preflight=new_preflight, rule="native_state", now_monotonic=100, now_timestamp_ms=1_000_000)
         self.store.release(token)
 
     def test_before_frame_reread_cannot_consume_after_reservation(self):
         value = self.publish()
         before = self.ingest(value)
-        token = self.store.reserve_dispatch(before, now_monotonic=100, now_timestamp_ms=1_000_000)
+        preflight = self.dispatch_preflight(before)
+        token = self.store.reserve_dispatch(before, preflight=preflight, rule="native_state", now_monotonic=100, now_timestamp_ms=1_000_000)
         with self.assertRaises(CapacityError):
             self.ingest(value, reservation=token)
         after = self.ingest(self.publish(observation(2)), reservation=token)
@@ -868,12 +923,13 @@ class EvidenceTests(unittest.TestCase):
 
     def test_competing_threads_cannot_overbook_a_reservation(self):
         before = self.ingest()
+        preflight = self.dispatch_preflight(before)
         barrier = threading.Barrier(2)
 
         def reserve():
             barrier.wait(timeout=5)
             try:
-                return self.store.reserve_dispatch(before, now_monotonic=100, now_timestamp_ms=1_000_000)
+                return self.store.reserve_dispatch(before, preflight=preflight, rule="native_state", now_monotonic=100, now_timestamp_ms=1_000_000)
             except CapacityError:
                 return None
 
@@ -885,13 +941,14 @@ class EvidenceTests(unittest.TestCase):
 
     def test_one_writer_and_reopening_never_restores_dispatch_reservation(self):
         before = self.ingest()
-        self.store.reserve_dispatch(before, now_monotonic=100, now_timestamp_ms=1_000_000)
+        preflight = self.dispatch_preflight(before)
+        self.store.reserve_dispatch(before, preflight=preflight, rule="native_state", now_monotonic=100, now_timestamp_ms=1_000_000)
         with self.assertRaises(EvidenceError):
             self.open_store()
         self.store.close()
         self.store = self.open_store()
         with self.assertRaises(EvidenceError):
-            self.store.reserve_dispatch(before, now_monotonic=100, now_timestamp_ms=1_000_000)
+            self.store.reserve_dispatch(before, preflight=preflight, rule="native_state", now_monotonic=100, now_timestamp_ms=1_000_000)
 
     def test_current_historical_facts_and_interpretations_have_separate_authority(self):
         ref = self.ingest()
@@ -938,7 +995,7 @@ class EvidenceTests(unittest.TestCase):
         self.store.close()
         manifest = self.directory / "evidence.json"
         original = manifest.read_bytes()
-        for version in (None, 0, 1, 2, 4, True, 3.0):
+        for version in (None, 0, 1, 2, 3, 4, True, 5.0):
             with self.subTest(version=version):
                 value = json.loads(original)
                 if version is None:

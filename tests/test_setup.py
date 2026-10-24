@@ -52,6 +52,10 @@ class SetupTests(unittest.TestCase):
                 '                        ui.default_cursor();\n'
                 '                        ui.redraw_cb( ui );\n}\n'),
             "src/uilist.cpp": ('void uilist_impl::draw_controls()\n{\n'
+                '    if( mouse.hidekb && !cursor_shown ) {\n'
+                '        ImGui::GetIO().ConfigFlags |= ImGuiConfigFlags_NoMouse;\n'
+                '    } else {\n'
+                '        ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;\n    }\n'
                 '                    for( int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++ ) {\n'
                 '                        auto entry = parent.entries[parent.fentries[i]];\n'
                 '                        bool is_selected = i == parent.fselected;\n'
@@ -79,6 +83,15 @@ class SetupTests(unittest.TestCase):
                 '        if( entry.is_item() ) {\n            int xx = p.x;\n        }\n    }\n}\n'
                 'void unrelated() { trim_and_print( win, point( 0, 0 ), 10, c_white, hidden ); }\n'),
 
+            "src/input_popup.cpp": ('    if( data->EventFlag == ImGuiInputTextFlags_CallbackEdit ) {\n'
+                '        int max = popup->get_max_input_length();\n'
+                '        if( max > 0 && data->BufTextLen > max ) {\n'
+                '            data->BufTextLen = max;\n'
+                '            data->SelectionStart = data->BufTextLen;\n'
+                '            data->SelectionEnd = data->BufTextLen;\n'
+                '            data->CursorPos = data->BufTextLen;\n'
+                '            data->BufDirty = true;\n'
+                '        }\n    }\n'),
             "src/input_context.cpp": "const std::string &input_context::handle_input( const int timeout )\n{\n        next_action = inp_mngr.get_input_event( preferred_keyboard_mode );\n}",
             "src/handle_action.cpp": "input_context game::get_player_input( std::string &action )\n{\n}",
             "src/bodygraph.cpp": ('    bool done = false;\n'
@@ -123,8 +136,17 @@ class SetupTests(unittest.TestCase):
                 'void unrelated() { query_popup().context( "OTHER_QUERY" ).query(); }\n'),
             "src/debug.cpp": "    for( bool stop = false; !stop; ) {\n        ui_manager::redraw();\n}",
             "src/main.cpp": "        while( !do_turn() ) {}",
+            "src/third-party/imgui/imgui_impl_sdl2.cpp": (
+                '#include "imgui.h"\n'
+                'static void ImGui_ImplSDL2_UpdateMouseData(float x_scale, float y_scale)\n{\n}\n'
+                'static void ImGui_ImplSDL2_UpdateMouseCursor()\n{\n}\n'
+                '            if (window_event == SDL_WINDOWEVENT_ENTER) {}\n'
+                '    if (bd->MouseLastLeaveFrame && bd->MouseLastLeaveFrame >= ImGui::GetFrameCount() && bd->MouseButtonsDown == 0) {}\n'),
             "src/sdltiles.cpp": ("    while( SDL_PollEvent( &ev ) ) {\n        imclient->process_input( &ev );\n}\n"
                 "    SDL_RenderPresent( renderer.get() );\n"
+                "    if( mouse.enabled ) {\n"
+                "        ImGui::GetIO().ConfigFlags &= ~ImGuiConfigFlags_NoMouse;\n}\n"
+                "    SDL_GetMouseState( &last_input.mouse_pos.x, &last_input.mouse_pos.y );\n"
                 "input_event input_manager::get_input_event( const keyboard_mode preferred_keyboard_mode )\n{\n"
                 "    if( inputdelay < 0 ) {\n        do {\n" + "CheckMessages();\n" * (4 if extra_poll else 3) +
                 "}\n}\nbool gamepad_available() {}"),
@@ -146,13 +168,14 @@ class SetupTests(unittest.TestCase):
         return subprocess.run([sys.executable, str(repository / "tools/patch_game.py"), str(source)],
                               text=True, capture_output=True, check=False)
 
-    def test_native_v4_patch_is_repeatable_and_scopes_exact_input_paths(self):
+    def test_native_v6_patch_is_repeatable_and_scopes_exact_input_paths(self):
         repository, source = self.patch_fixture()
         first = self.run_patch(repository, source)
         self.assertEqual(first.returncode, 0, first.stderr)
         expected = {path.relative_to(source): path.read_bytes()
                     for path in source.rglob("*") if path.is_file()}
-        for name in ("ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp", "cata_imgui.cpp", "inventory_ui.cpp"):
+        for name in ("ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp", "bodygraph.cpp", "cata_imgui.cpp", "inventory_ui.cpp", "input_popup.cpp",
+                     "third-party/imgui/imgui_impl_sdl2.cpp"):
             (source / "src" / name).write_text("stale patched contents")
         second = self.run_patch(repository, source)
         self.assertEqual(second.returncode, 0, second.stderr)
@@ -162,36 +185,18 @@ class SetupTests(unittest.TestCase):
         self.assertIn('#include "cdda_harness.h"', imgui)
         self.assertEqual(imgui.count('if( cdda_harness::enabled() ) { io.ConfigInputTextCursorBlink = false; }'), 1)
         self.assertLess(imgui.index('ImGuiIO &io = ImGui::GetIO();'), imgui.index('io.ConfigInputTextCursorBlink = false;'))
-        self.assertIn("harness_input( category, registered_actions )", (source / "src/input_context.cpp").read_text())
+        popup = (source / "src/input_popup.cpp").read_text()
+        self.assertEqual(popup.count('data->DeleteChars( max, data->BufTextLen - max );'), 1)
+        self.assertNotIn('data->BufTextLen = max;', popup)
+        self.assertNotIn('data->BufDirty = true;', popup)
+        # Retain upstream's end cursor/selection policy after ImGui truncates.
+        for field in ("SelectionStart", "SelectionEnd", "CursorPos"):
+            self.assertIn(f'data->{field} = data->BufTextLen;', popup)
+        self.assertIn("harness_input( category, registered_actions, this )", (source / "src/input_context.cpp").read_text())
         self.assertIn("harness_player( uquit == QUIT_WATCH", (source / "src/handle_action.cpp").read_text())
-        direction = (source / "src/action.cpp").read_text()
-        self.assertIn('input_context ctxt( "DEFAULTMODE", keyboard_mode::keycode );', direction)
-        self.assertEqual(direction.count('menu_query harness_menu( "DEFAULTMODE" )'), 1)
-        self.assertIn('return ctxt.handle_input();\n        }();\n'
-                      '        if( std::optional<tripoint_rel_ms> vec', direction)
-        for name, callback in (("ui_iteminfo.cpp", 'data.handle_scrolling && data.arrow_scrolling && action == "UP"'),
-                               ("game_inventory.cpp", 'action == "UP"')):
-            with self.subTest(owner=name):
-                text = (source / "src" / name).read_text()
-                self.assertIn('#include "cdda_harness.h"', text)
-                self.assertEqual(text.count('menu_query harness_menu( "default" )'), 1)
-                self.assertIn('return ctxt.handle_input();\n        }();\n\n'
-                              f'        if( {callback} )', text)
-                self.assertIn('void unrelated() { std::string action = ctxt.handle_input(); }', text)
-        self.assertIn('has_button_action() ? get_button_action() : [&]() {',
-                      (source / "src/game_inventory.cpp").read_text())
-        item_info = (source / "src/output.cpp").read_text()
-        self.assertIn('input_context ctxt( "default", keyboard_mode::keychar );', item_info)
-        self.assertEqual(item_info.count('menu_query harness_menu( "default" )'), 1)
-        self.assertIn('return ctxt.handle_input();\n        }();\n'
-                      '        std::optional<point> coord = ctxt.get_coordinates_text( catacurses::stdscr );', item_info)
-        self.assertIn('void unrelated() { action = ctxt.handle_input(); }', item_info)
-        body = (source / "src/bodygraph.cpp").read_text()
-        self.assertIn('#include "cdda_harness.h"', body)
-        self.assertEqual(body.count('menu_query harness_menu( "BODYGRAPH" )'), 1)
-        self.assertIn('return ctxt.handle_input();\n        }();\n'
-                      '        if( action == "QUIT" || ( action == "LEFT" && id != bodygraph_full_body ) ) {', body)
-        self.assertIn('void unrelated() { std::string action = ctxt.handle_input(); }', body)
+        for name in ("action.cpp", "bodygraph.cpp", "ui_iteminfo.cpp", "game_inventory.cpp", "output.cpp"):
+            self.assertEqual((source / "src" / name).read_bytes(),
+                             (source / ".harness-originals/src" / name).read_bytes())
         self.assertIn("boundary_kind::activity_poll", (source / "src/do_turn.cpp").read_text())
         self.assertIn("boundary_kind::debug_prompt", (source / "src/debug.cpp").read_text())
         activity = (source / "src/do_turn.cpp").read_text()
@@ -199,22 +204,137 @@ class SetupTests(unittest.TestCase):
         self.assertIn("cdda_harness::interrupt_owner harness_interrupt;", activity)
         self.assertEqual((source / "src/game.cpp").read_text().count("interrupt_query harness_query"), 2)
         distraction = (source / "src/game.cpp").read_text()
-        self.assertEqual(distraction.count('menu_query harness_menu( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" )'), 1)
-        self.assertIn('const std::string action = [&]() {\n'
-                      '        cdda_harness::menu_query harness_menu( "CANCEL_ACTIVITY_OR_IGNORE_QUERY" );\n'
-                      '        return query_popup()', distraction)
-        self.assertIn('.action;\n    }();\n    if( action == "YES" )', distraction)
+        self.assertNotIn('menu_query', distraction)
         for action in ("YES", "NO", "MANAGER", "IGNORE"):
             self.assertEqual(distraction.count(f'.option( "{action}", allow_key )'), 1)
         self.assertIn('void unrelated() { query_popup().context( "OTHER_QUERY" ).query(); }', distraction)
         sdl = (source / "src/sdltiles.cpp").read_text()
         self.assertEqual(sdl.count("cdda_harness::poll("), 3)
+        self.assertEqual(sdl.count("cdda_harness::input_receiver harness_receiver;"), 1)
+        receive = sdl[sdl.index('input_event input_manager::get_input_event('):sdl.index('bool gamepad_available()')]
+        self.assertLess(receive.index('input_receiver harness_receiver;'), receive.index('cdda_harness::boundary();'))
+        self.assertIn('harness_input( category, registered_actions, this )',
+                      (source / 'src/input_context.cpp').read_text())
         self.assertLess(sdl.index("cdda_harness::capture_frame();"), sdl.index("SDL_RenderPresent("))
         self.assertIn("frame_presented( static_cast<bool>( harness_presented_frame ) )", sdl)
         encoder = sdl[sdl.index('bool cdda_harness::write_frame('):sdl.index('void cdda_harness::feed_imgui(')]
         self.assertIn('IMG_SavePNG( harness_presented_frame.get(), filename.c_str() )', encoder)
         self.assertNotIn('capture_frame(', encoder)
         self.assertNotIn('SDL_RenderReadPixels(', encoder)
+
+    def test_native_direct_schema_translation_and_commit_guards(self):
+        native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
+        self.assertIn('integer_member( request, "protocol" ) != 6', native)
+        self.assertNotIn('integer_member( request, "protocol" ) != 4', native)
+        direct = native[native.index('direct_input direct_event('):native.index('bool uuid_id(')]
+        for guard in ('input.size() != 3', 'input.size() != 2', 'input.size() != 5',
+                      'modifiers.size() > 3', '!explicit_modifiers.insert(',
+                      'single_printable_scalar( text )', 'geometry != saved_geometry',
+                      'x >= geometry->output_width', 'y >= geometry->output_height',
+                      'MouseInput::LeftButtonReleased', 'MouseInput::RightButtonReleased'):
+            self.assertIn(guard, direct)
+        for forbidden in ('sdl_keysym_to_curses(', 'SDL_GetKeyboardState(', 'handle_arrow_combo(',
+                          'feed_imgui(', 'process_input(', 'LeftButtonPressed', 'RightButtonPressed'):
+            self.assertNotIn(forbidden, direct)
+        poll = native[native.index('bool poll( keyboard_mode'):]
+        self.assertLess(poll.index('direct = direct_event('), poll.index('ordinary_commit_gate( request, false, direct && direct->type == direct_input::kind::click );'))
+        self.assertLess(poll.index('ordinary_commit_gate( request, false, direct && direct->type == direct_input::kind::click );'), poll.index('feed_direct_imgui( *direct );'))
+        self.assertIn('kind == "direct" && request.get_bool( "require_exact_frame" )', poll)
+        gate = native[native.index('void ordinary_commit_gate('):native.index('input_event action_event(')]
+        self.assertIn('current_frame_geometry() != saved_geometry', gate)
+        self.assertIn('cached_frame_geometry() != saved_geometry', gate)
+        self.assertLess(gate.index('current_frame_geometry() != saved_geometry'), gate.index('exact_frame_gate();'))
+        self.assertLess(gate.index('exact_frame_gate();'), gate.rindex('current_frame_geometry() != saved_geometry'))
+        self.assertIn('out.member( "frame_geometry" )', native)
+        scalar = native[native.index('int single_printable_scalar('):native.index('std::optional<frame_geometry> input_geometry(')]
+        for guard in ('text.size() > 4', 'UTF8_getch( text )', 'code > 0x10ffff',
+                      'code >= 0xd800 && code <= 0xdfff', 'code < 32', 'code >= 127 && code <= 159',
+                      'code == 0x2028', 'code == 0x2029', 'utf32_to_utf8( code ) != text',
+                      'code > IM_UNICODE_CODEPOINT_MAX'):
+            self.assertIn(guard, scalar)
+        self.assertIn('x * geometry->window_width / geometry->output_width', direct)
+        self.assertIn('y * geometry->window_height / geometry->output_height', direct)
+        self.assertIn('event.widget_position = point( static_cast<int>( x ), static_cast<int>( y ) )', direct)
+        self.assertIn('event.widget_modifiers = event.engine.modifiers', direct)
+        self.assertIn("event.widget_key - 'a' + 1", direct)
+        self.assertIn('arrow && ( ctrl || shift )', direct)
+
+    def test_direct_widget_completion_is_bounded_and_failure_stays_unknown(self):
+        repository, source = self.patch_fixture()
+        result = self.run_patch(repository, source)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        sdl = (source / "src/sdltiles.cpp").read_text()
+        legacy = sdl[sdl.index('void cdda_harness::feed_imgui('):sdl.index('void cdda_harness::feed_direct_imgui(')]
+        self.assertNotIn('feed_direct_imgui(', legacy)
+        self.assertNotIn('ConfigInputTrickleEventQueue', legacy)
+        direct = sdl[sdl.index('void cdda_harness::feed_direct_imgui('):]
+        for guard in ('restore_on_out_of_scope restore_trickle( io.ConfigInputTrickleEventQueue )',
+                      'io.ConfigInputTrickleEventQueue = true', 'attempt < 8',
+                      'ui_manager::redraw();', 'refresh_display();',
+                      'observed.EventId == terminal.EventId', 'GImGui->InputEventsQueue.empty()',
+                      'pressed_frame < consumed_frame', '!io.MouseDown[terminal.MouseButton.Button]',
+                      '!ImGui::GetKeyData( terminal.Key.Key )->Down'):
+            self.assertIn(guard, direct)
+        self.assertNotIn('ImGui::NewFrame(', direct)
+        self.assertNotIn('ClearInput', direct)
+        self.assertIn('if( !cdda_harness::enabled() && mouse.hidekb && !cursor_shown )',
+                      (source / "src/uilist.cpp").read_text())
+        native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
+        poll = native[native.index('bool poll( keyboard_mode'):]
+        self.assertLess(poll.index('input_committed = true;'), poll.index('feed_direct_imgui( *direct );'))
+        fault = poll[poll.index('if( input_committed )'):poll.index('publish( id, "rejected", e.what() );')]
+        for guard in ('fault_pause();',
+                      'publish( id, "dispatched", e.what(), false )', 'return false;'):
+            self.assertIn(guard, fault)
+
+    def test_semantic_modifier_release_and_direct_click_text_normalization(self):
+        repository, source = self.patch_fixture()
+        result = self.run_patch(repository, source)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        sdl = (source / "src/sdltiles.cpp").read_text()
+        legacy = sdl[sdl.index('void cdda_harness::feed_imgui('):sdl.index('void cdda_harness::feed_direct_imgui(')]
+        release = legacy[legacy.index('key.type = SDL_KEYUP;'):]
+        self.assertLess(release.index('key.key.keysym.mod = KMOD_NONE;'), release.index('imclient->process_input( &key );'))
+        direct = sdl[sdl.index('void cdda_harness::feed_direct_imgui('):]
+        for modifier in ('Ctrl', 'Alt', 'Shift', 'Super'):
+            self.assertIn(f'io.AddKeyEvent( ImGuiMod_{modifier}, false )', direct)
+            self.assertIn(f'!io.Key{modifier}', direct)
+        self.assertLess(direct.index('io.AddKeyEvent( ImGuiMod_Shift, false )'), direct.index('SDL_Event mouse = {}'))
+        self.assertIn('empty() && released && modifiers_released', direct)
+        self.assertNotIn('SDL_GetKeyboardState(', direct)
+
+    def test_native_pointer_geometry_and_physical_filtering(self):
+        repository, source = self.patch_fixture()
+        result = self.run_patch(repository, source)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        sdl = (source / "src/sdltiles.cpp").read_text()
+        self.assertLess(sdl.index('cdda_harness::human_input();'), sdl.index('ev.type == SDL_MOUSEMOTION'))
+        self.assertIn('if( !cdda_harness::enabled() )', sdl)
+        self.assertIn('if( mouse.enabled || cdda_harness::enabled() )', sdl)
+        capture = sdl[sdl.index('void cdda_harness::capture_frame()'):sdl.index('bool cdda_harness::write_frame(')]
+        for guard in ('SDL_GetRenderTarget( renderer.get() ) != nullptr', '16777216',
+                      'geometry->output_width, geometry->output_height', 'frame_presented('):
+            self.assertIn(guard, capture)
+        self.assertIn('SDL_WINDOW_MINIMIZED', sdl)
+        self.assertIn('16384', sdl)
+        self.assertIn('SDL_SetRenderTarget( renderer.get(), target )', sdl)
+        direct = sdl[sdl.index('void cdda_harness::feed_direct_imgui('):]
+        for event in ('SDL_MOUSEMOTION', 'SDL_MOUSEBUTTONDOWN', 'SDL_MOUSEBUTTONUP'):
+            self.assertIn(event, direct)
+        self.assertIn('event.widget_position.x', direct)
+        self.assertIn('key.key.keysym.mod = KMOD_NONE', sdl)
+        backend = (source / "src/third-party/imgui/imgui_impl_sdl2.cpp").read_text()
+        for function in ('ImGui_ImplSDL2_UpdateMouseData(float x_scale, float y_scale)',
+                         'ImGui_ImplSDL2_UpdateMouseCursor()'):
+            self.assertIn(function + '\n{\n    if (cdda_harness::enabled()) return;', backend)
+        self.assertIn('!cdda_harness::enabled() && bd->MouseLastLeaveFrame', backend)
+        restored = backend.replace('#include "../../cdda_harness.h"\n', '').replace(
+            '\n    if (cdda_harness::enabled()) return;', '').replace(
+            '            if (cdda_harness::enabled() && (window_event == SDL_WINDOWEVENT_ENTER ||\n'
+            '                window_event == SDL_WINDOWEVENT_LEAVE)) return true;\n', '').replace(
+            '!cdda_harness::enabled() && bd->MouseLastLeaveFrame', 'bd->MouseLastLeaveFrame')
+        original = source / ".harness-originals/src/third-party/imgui/imgui_impl_sdl2.cpp"
+        self.assertEqual(restored, original.read_text())
 
     def test_visible_ui_hooks_are_at_actual_clipped_and_paged_renderers(self):
         repository, source = self.patch_fixture()
@@ -254,10 +374,10 @@ class SetupTests(unittest.TestCase):
         manager = (source / "src/ui_manager.cpp").read_text()
         self.assertIn('cdda_harness::ui_redraw( ui.is_on_top );\n                        ui.redraw_cb( ui );', manager)
 
-    def test_native_v4_commit_and_presented_ui_guards(self):
+    def test_native_v6_commit_and_presented_ui_guards(self):
         # Source-lane checks establish executable guard placement, not C++ execution.
         native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
-        self.assertIn('out.member( "protocol", 4 )', native)
+        self.assertIn('out.member( "protocol", 6 )', native)
         self.assertNotIn(r'\"protocol\":3', native)
         self.assertIn('out.member( "pause_origin", pause_origin )', native)
         self.assertIn('out.member( "takeover_generation", takeover_generation )', native)
@@ -265,7 +385,7 @@ class SetupTests(unittest.TestCase):
         self.assertIn('integer_member( request, "takeover_generation" ) != takeover_generation', native)
         poll = native[native.index('bool poll( keyboard_mode'):]
         self.assertEqual(poll.count('ordinary_gate( request );'), 1)
-        self.assertLess(poll.rindex('ordinary_commit_gate( request, false );'), poll.index('pending = id;'))
+        self.assertLess(poll.rindex('ordinary_commit_gate( request, false, direct && direct->type == direct_input::kind::click );'), poll.index('pending = id;'))
         human = native[native.index('void human_input()'):native.index('void boundary()')]
         self.assertIn('++takeover_generation;', human)
         world = native[native.index('void playing('):native.index('void frame_presented(')]
@@ -283,11 +403,13 @@ class SetupTests(unittest.TestCase):
         self.assertIn('kind == "resume" ? 11 : 12', poll)
         self.assertIn('kind == "observe" || kind == "pause" ? 4', poll)
         gate = native[native.index('void ordinary_gate('):native.index('input_event action_event(')]
-        for guard in ('request.get_string( "frame" ) != frame_name', 'frame_name.empty()',
+        for guard in ('require_current_frame && source != frame_name', 'frame_name.empty()',
                       '!saved_frame_ok', 'frame_boundary != boundary_id', 'frame_session != session',
-                      'frame_revision != revision', 'now_ms() - frame_ms > 3000',
+                      'frame_revision != revision', 'checked_ms - frame_ms > 3000',
                       'presented_boundary != boundary_id', 'presented_session != session',
-                      'presented_revision != revision', 'now_ms() - presented_ms > 3000',
+                      'presented_revision != revision', 'checked_ms - presented_ms > 3000',
+                      'issued == retained_frames.end()', 'checked_ms - issued->timestamp_ms > 3000',
+                      'issued->metadata != capture_metadata( cached_frame_geometry() )',
                       'integer_member( request, "deadline_ms" ) < now_ms()', 'authority_gate( request );'):
             self.assertIn(guard, gate)
         self.assertIn('request.get_bool( "require_exact_frame" )', gate)
@@ -295,7 +417,7 @@ class SetupTests(unittest.TestCase):
 
     def test_exact_png_comparison_is_bounded_and_preserves_owned_files(self):
         native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
-        comparison = native[native.index('bool same_frame_png('):native.index('void ordinary_commit_gate(')]
+        comparison = native[native.rindex('bool same_frame_png('):native.index('void ordinary_commit_gate(')]
         self.assertIn('maximum_frame_bytes = 32 * 1024 * 1024', comparison)
         self.assertIn('std::array<char, 32 * 1024>', comparison)
         self.assertEqual(comparison.count('O_RDONLY | O_NOFOLLOW | O_NONBLOCK'), 2)
@@ -312,7 +434,7 @@ class SetupTests(unittest.TestCase):
         self.assertLess(temporary.index('if( descriptor < 0 )'), temporary.index('write_frame( latest )'))
         for guard in ('fstat( descriptor, &owned ) == 0', 'current.st_dev == owned.st_dev',
                       'current.st_ino == owned.st_ino', 'unlink( latest.c_str() ) == 0',
-                      'close( descriptor ) == 0', 'if( !removed )', 'if( !same || !closed )'):
+                      'close( descriptor ) == 0', 'if( !removed || !closed )', 'if( !same )'):
             self.assertIn(guard, temporary)
         self.assertNotIn('unlink( saved', temporary)
         for forbidden in ('capture_frame(', 'refresh_display(', 'ui_manager::redraw(', 'sync_scope('):
@@ -321,28 +443,30 @@ class SetupTests(unittest.TestCase):
     def test_exact_png_comparison_runs_once_at_final_commit_with_revocation_checks(self):
         native = (Path(__file__).resolve().parents[1] / "native/cdda_harness.cpp").read_text()
         gate = native[native.index('void ordinary_commit_gate('):native.index('input_event action_event(')]
+        self.assertIn('click || request.get_bool( "require_exact_frame" )', gate)
         self.assertEqual(gate.count('exact_frame_gate();'), 1)
-        self.assertEqual(gate.count('ordinary_gate( request );'), 2)
+        self.assertEqual(gate.count('ordinary_gate( request, require_current_frame );'), 2)
         self.assertEqual(gate.count('!resuming && ( paused || fs::exists( path( "pause" ) ) )'), 2)
-        self.assertLess(gate.index('ordinary_gate( request );'), gate.index('exact_frame_gate();'))
+        self.assertLess(gate.index('ordinary_gate( request, require_current_frame );'), gate.index('exact_frame_gate();'))
         self.assertLess(gate.index('request.get_bool( "require_exact_frame" )'), gate.index('exact_frame_gate();'))
-        self.assertLess(gate.index('exact_frame_gate();'), gate.rindex('ordinary_gate( request );'))
+        self.assertLess(gate.index('exact_frame_gate();'), gate.rindex('ordinary_gate( request, require_current_frame );'))
         self.assertLess(gate.index('exact_frame_gate();'), gate.rindex('fs::exists( path( "pause" ) )'))
         for guard in ('!waiting_interrupt.empty()', 'fs::exists( path( "control.json" ) )',
                       'fs::exists( path( "control-claimed.json" ) )',
                       'integer_member( request, "deadline_ms" ) < now_ms()'):
             self.assertLess(gate.index('exact_frame_gate();'), gate.index(guard))
-        self.assertLess(gate.rindex('ordinary_gate( request );'), gate.rindex('fs::exists( path( "pause" ) )'))
+        self.assertLess(gate.rindex('ordinary_gate( request, require_current_frame );'), gate.rindex('fs::exists( path( "pause" ) )'))
         poll = native[native.index('bool poll( keyboard_mode'):]
         resume = poll[poll.index('if( kind == "resume" )'):poll.index('if( paused ||')]
-        self.assertLess(resume.index('ordinary_commit_gate( request, true );'),
+        self.assertLess(resume.index('ordinary_commit_gate( request, true, false );'),
                         resume.index('fs::remove( path( "pause" ) );'))
         self.assertLess(resume.index('fs::remove( path( "pause" ) );'), resume.index('paused = false;'))
-        self.assertLess(poll.index('event = *binding;'), poll.index('ordinary_commit_gate( request, false );'))
-        self.assertLess(poll.index('ordinary_commit_gate( request, false );'), poll.index('++revision;\n        pending = id;'))
+        self.assertLess(poll.index('event = *binding;'), poll.index('ordinary_commit_gate( request, false, direct && direct->type == direct_input::kind::click );'))
+        self.assertLess(poll.index('ordinary_commit_gate( request, false, direct && direct->type == direct_input::kind::click );'), poll.index('++revision;\n        pending = id;'))
 
-    def test_patch_rejects_changed_render_owner_hashes_and_anchors(self):
-        for name in ("src/uilist.cpp", "src/inventory_ui.cpp", "src/ui_manager.cpp", "src/cata_imgui.cpp"):
+    def test_patch_rejects_changed_patched_owner_hashes_and_anchors(self):
+        for name in ("src/uilist.cpp", "src/inventory_ui.cpp", "src/ui_manager.cpp", "src/cata_imgui.cpp",
+                     "src/input_popup.cpp", "src/third-party/imgui/imgui_impl_sdl2.cpp"):
             for change in ("hash", "missing", "duplicate"):
                 with self.subTest(owner=name, change=change), tempfile.TemporaryDirectory() as temporary:
                     self.root = Path(temporary)
@@ -378,50 +502,8 @@ class SetupTests(unittest.TestCase):
                 self.assertNotEqual(result.returncode, 0)
                 self.assertIn(f"Upstream source differs from pinned release: {name}", result.stderr)
 
-    def test_patch_rejects_missing_and_ambiguous_item_owner_anchors(self):
-        for name in ("src/ui_iteminfo.cpp", "src/game_inventory.cpp", "src/output.cpp", "src/bodygraph.cpp"):
-            for change in ("missing", "duplicate"):
-                with self.subTest(owner=name, change=change), tempfile.TemporaryDirectory() as temporary:
-                    self.root = Path(temporary)
-                    repository, source = self.patch_fixture()
-                    path = source / name
-                    original = path.read_text()
-                    altered = (original.replace("ctxt.handle_input()", "ctxt.handle_input( 5 )")
-                               if change == "missing" else original * 2)
-                    path.write_text(altered)
-                    pin_path = repository / "native/upstream.json"
-                    pin = json.loads(pin_path.read_text())
-                    pin["source_files"][name] = hashlib.sha256(altered.encode()).hexdigest()
-                    pin_path.write_text(json.dumps(pin))
-                    result = self.run_patch(repository, source)
-                    self.assertNotEqual(result.returncode, 0)
-                    self.assertIn(f"Pinned source anchor changed: {path.resolve()}", result.stderr)
-
-    def test_patch_rejects_missing_or_duplicate_distraction_wait_anchors(self):
-        for anchor in ('CANCEL_ACTIVITY_OR_IGNORE_QUERY', '.option( "IGNORE", allow_key )'):
-            for change in ("missing", "duplicate"):
-                with self.subTest(anchor=anchor, change=change), tempfile.TemporaryDirectory() as temporary:
-                    previous = self.root
-                    self.root = Path(temporary)
-                    try:
-                        repository, source = self.patch_fixture()
-                        path = source / "src/game.cpp"
-                        original = path.read_text()
-                        altered = original.replace(anchor, "CHANGED") if change == "missing" else original * 2
-                        path.write_text(altered)
-                        pin_path = repository / "native/upstream.json"
-                        pin = json.loads(pin_path.read_text())
-                        pin["source_files"]["src/game.cpp"] = hashlib.sha256(altered.encode()).hexdigest()
-                        pin_path.write_text(json.dumps(pin))
-                        result = self.run_patch(repository, source)
-                        self.assertNotEqual(result.returncode, 0)
-                        self.assertIn(f"Pinned source anchor changed: {path.resolve()}", result.stderr)
-                    finally:
-                        self.root = previous
-
     def test_patch_rejects_ambiguous_normal_and_poll_anchors(self):
         for flags, message in (({"duplicate_normal": True}, "Pinned source anchor changed"),
-                               ({"duplicate_direction": True}, "Pinned source anchor changed"),
                                ({"extra_poll": True}, "SDL poll anchors changed")):
             with self.subTest(flags=flags), tempfile.TemporaryDirectory() as temporary:
                 previous = self.root

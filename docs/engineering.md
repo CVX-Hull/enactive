@@ -34,11 +34,42 @@ The operator must see control ownership, pause state, observation freshness and
 uncertain outcomes. Pause's limit on an already-started native activity must be
 visible in user guidance. Do not authorize an action from an old image decode.
 Verify ordinary and stale/paused/error paths, not just a successful screenshot.
+Qualify apparent responsiveness for the complete player configuration, including
+host context, model work, tools, execution and display. Freeze numerical useful-
+progress, stall and quality criteria before the measured attempt; retain loading,
+long activities, failures and exceptions in separate declared cohorts and the
+whole-run accounting. Reject configurations that miss the criteria. Keep this
+qualification decision separate from finite development continuation under the
+[prospective stopping policy](project-management.md#minimum-checks-and-escalation);
+missing qualification alone need not terminate useful development. A slow model
+may remain where genuinely useful authorized execution covers its delay and the
+whole configuration qualifies; filler actions or animation cannot hide waiting.
+Tool duration, cached-token share and engine ACK speed alone do not establish
+responsive play. [Evaluation](evaluation.md#latency-budgets-for-interactive-play)
+owns measurement definitions; C-USABILITY is manual, not an automated latency gate.
+Give deciding players a bounded, maintained interface working set, separate from
+engineering instructions and the evidence archive. Use existing role/mission tool
+filters to exclude irrelevant schemas; keep required capabilities and authority
+checks separate, and verify the actual frozen profile's sufficiency before play. Routine play must not require
+source-code archaeology, bulk declaration dumps or recursive runtime searches.
+Verify needed argument shapes and critical frozen task identity/context in the
+actual host, not just tool names. Required setup values must be available before
+the first choice, preferably derived from existing validated admission rather than
+manually duplicated or guessed. If a host
+reduces nested schemas to `unknown`, supply focused current-schema references
+before admission; never require argument guessing or source archaeology. Export
+from the existing SDK contract rather than maintain a second schema. Recheck the
+actual player at natural first use; this adds no per-action review gate.
+Treat repeated interface investigation as a tool/context defect; measure actual
+forwarded text and image parts before choosing a remedy. The
+[player guide](player-guide.md) is the current entry point, not a tactical script
+or a claim of new capabilities. C-REVIEW compares it with tool/phase contracts when
+those change; C-USABILITY verifies actual independent continuation and cadence.
 Controls: C-PORTABLE, C-RUNTIME, C-NATIVE, C-USABILITY.
 
 ## S-ARCH Explicit architectural boundaries
 
-Principles: P-CHANGE, P-ISOLATION, P-REVIEW.
+Principles: P-CHANGE, P-ISOLATION, P-REVIEW, P-GENERALITY.
 Describe responsibilities, owners, inputs/outputs, state/concurrency, authority,
 failure/recovery and acceptance for each consequential boundary. Keep controller
 logic independent of HTTP and build tooling. Explain consequential alternatives,
@@ -61,6 +92,86 @@ lead must not become the slow path or a per-procedure approver. Advisory learnin
 may remain provisional and revisable; current authority and delivery accounting
 must not depend on eventual correctness. C-REVIEW checks these distinctions;
 functional behavior and claims of improvement need their separate evidence.
+
+Design model-facing working context separately from machine-facing canonical
+records. Return the smallest sufficient decision view, retain exact evidence by
+reference, and expose detail on demand. Preserve required IDs, current ownership,
+obligations, unknown effects and relevant applicability limits. Keep images as
+image parts; avoid nested transport envelopes and repeated history. Verify the
+actual loaded host's presentation as well as SDK return values. Software owns
+deterministic request binding, bounded collection, cursors, joins and idle waiting;
+models own intent, interpretation and learning judgments. Do not require model
+narration for facts already available in receipts or another model turn just to
+discover an empty work queue. Measure context sufficiency by actual continuation,
+and migrate changed caller/persisted contracts under S-MIGRATION. These are design
+and qualification obligations, not claims that present tooling satisfies them.
+Apply progressive revelation: small current decision context first, selected
+tool/phase guidance and focused memory/evidence next, technical detail by exact
+retained reference when needed. A detail read must not silently change the target
+snapshot or grant authority. For each model task, identify the interpretation or
+choice it supplies and when it can change a decision. Automate deterministic
+verification/accounting and known-failure classification; invoke reflection for
+justified novelty, recurrence or consequence. Escalation needs an unresolved
+question and expected decision benefit, not merely any mismatch. C-REVIEW checks
+this responsibility split at consequential changes, without per-action review or
+an automated claim to judge semantic truth.
+
+Ordinary interface actions are the player's base capability; semantic skills are
+optional shortcuts and stronger claims about those actions. Missing semantic
+coverage must not prevent otherwise supported ordinary exploration or cancellation.
+Treat optional accelerators and derived caches accordingly: bound their working
+set and forget/recompute candidates when appropriate, rather than make historical
+cache growth a lifetime limit on ordinary observation/input. Size a producer cache
+to the permitted atomic decision/handoff working set using the existing contract,
+with explicit exact rereads after eviction; test the cross-boundary case rather
+than treating a local cache size as a new semantic limit. Preserve durable
+evidence, current guards, explicit uncertainty and original resource accounting.
+Exercise exploration beyond the cache working set in the existing component and
+whole-runtime lanes; this is not permission to ignore integrity or storage failure.
+Separate a rejected request, an unexpected in-game outcome and actual loss of
+authority or uncertain delivery. A correctable request error must not revoke a
+healthy input scope. Classify positively identified new caller-data errors at the
+validation boundary; do not infer nondelivery from arbitrary exceptions or treat
+trusted-history/storage failures as caller mistakes. Pure validation before SDK
+submission must not direct collection of a nonexistent operation. Pair correction
+regressions with actual integrity/transaction faults, preserving original costs,
+exact retry semantics and Pause. Reuse existing ledger/OS contracts and avoid
+recomputing full semantic projections merely to classify a rejected candidate.
+Review the entire observe/try/correct/cancel loop, including
+raw-input fallback, rather than only each adapter's successful path. C-REVIEW
+checks this distinction and C-PORTABLE exercises boundary regressions; actual
+keyboard/mouse capabilities still need their separate C-NATIVE evidence.
+
+For executable learning designs, distinguish stable platform implementation from
+player-authored scripts, decision trees, strategies and learned detectors. Specify
+which artifacts may evolve under the prospective adaptation policy, which local
+computation/observation/input capabilities they receive, how executions retain
+revision/outcome lineage, and how ordinary discovery resumes after surprise.
+Review that substrate boundary rather than requiring lead or model approval for
+each routine or action. Existing admissions remain governed by their actual
+contract; a proposal cannot silently expand capabilities. Compilation, invocation
+or agreement with a learned success detector does not establish task success,
+generalization or useful cadence. C-REVIEW checks the distinction; C-PORTABLE and
+C-NATIVE qualify implemented boundaries, with C-USABILITY retaining actual organic
+adoption and responsiveness evidence. See the [research crosswalk](research-executable-policies.md).
+
+For gameplay and learning boundaries, explain which assumptions concern the
+transport and which concern a particular game task or menu. Prefer the smallest
+general observation/input/feedback mechanism over enumerating menu types or
+engineering gameplay expectations. Shortcuts must retain a usable ordinary-input
+fallback. Design for unseen variants and changes after a sequence of interactions,
+including when a formerly useful procedure becomes wrong. C-REVIEW challenges
+new special cases and asks why existing general mechanisms are insufficient.
+
+Apply the charter's CDDA-class portability constraint to every new design. Name
+game-specific assumptions, place engine/UI bindings in the integration boundary,
+and keep player reasoning, memory, learning and orchestration independent of
+specific menu names, engine objects and world rules. An optional semantic skill
+may be game-specific; it cannot become a prerequisite for the general interaction
+loop. Identify existing coupling as migration work instead of claiming portability
+from an interface name. Review how a second game with different menus, time,
+inventory and persistence would fit. Do not build a universal adapter framework
+or compatibility layer without a demonstrated need.
 Controls: C-BOUNDARY, C-REVIEW, C-GOVERNANCE.
 
 ## S-PROTOCOL Command and observation authority
@@ -71,15 +182,42 @@ unique identity, expiry, bounded inputs, observation provenance and no blind
 retry of uncertain side effects. Game thread owns game state. Producer and
 consumer versions must agree. A new version or native input change requires
 real-game reconciliation/takeover probes; a mock cannot satisfy that lane.
+Distinguish immutable capture provenance, original freshness/custody and the
+preconditions of the chosen action. Require pixel equality where the decision is
+image-conditioned; incidental rendering changes are not themselves a semantic
+state change. Verify this boundary with real changed images, negative custody/
+clock cases and a coherent lifecycle, not a screen mask or repeated retry loop.
 Controls: C-PROTOCOL, C-RUNTIME, C-PORTABLE, C-NATIVE.
+
+Preserve the scope of a failure across input and observation entry points.
+Healthy local game-time exhaustion returns partial work with original effects
+and costs; it must not become a mission-wide ownership failure through a shared
+exception base. Global budget, custody, clock and integrity failures still win.
+Plain observation of an ordinary owned activity uses its own finite capture
+allowance within the original mission/ending budget. An expired execution root
+stays exhausted; it cannot grant input, renew itself or prevent healthy bounded
+observation and explicit closure. Typed polls and inputs retain their root limits.
+C-PORTABLE pairs local exhaustion with simultaneous global/fatal cases;
+C-REVIEW checks that test expectations enforce the authoritative contract.
+
+Distinguish transport collection ceilings, original execution/resource deadlines
+and useful-response targets. Freeze supported transport configuration against the
+actual operation envelope, including legitimate loading, before a new run; return
+on an ACK rather than waiting out the ceiling. A longer ceiling neither proves the
+cause of a missing ACK nor repairs lost correlation, and cannot relax routine
+latency targets, renew authority or justify replay. C-REVIEW checks the frozen
+configuration and actual receipts; C-NATIVE/C-USABILITY qualify the result.
 
 ## S-CODE Maintainable implementation
 
-Principles: P-CHANGE, P-UNCERTAINTY, P-KNOWLEDGE.
+Principles: P-CHANGE, P-UNCERTAINTY, P-KNOWLEDGE, P-GENERALITY.
 Use cohesive responsibilities, descriptive names, explicit types at Python
 boundaries and upstream conventions in C++ patches. Validate inputs at trust
 boundaries; bound sizes, waits and action counts. Use atomic publication and
 explicit expected-error handling; service-boundary catches must retain diagnostics.
+Use library-owned mutation APIs to preserve their buffer/state invariants instead
+of manually changing shadow lengths or flags. Qualify real boundary behavior when
+native callbacks change; patch-anchor tests alone do not exercise the widget.
 Comments explain otherwise unavailable intent. Select dependencies for concrete
 capability and lifetime cost; pin locally and record provenance. Evaluate mature
 tools before writing generic controls, parsers or infrastructure. Use maintained
@@ -97,18 +235,82 @@ and thin integration of maintained tools. Do not build another version-control,
 tracker, parser, validator, renderer or generic lint framework where an existing
 capability fits. Dependencies also have costs; reuse is a reasoned decision, not a
 requirement to add a package for every small project-specific rule.
+Judge the choice against the overall objective and the available ecosystem, not
+only the current implementation's convenience. Consider engine/platform features,
+standard libraries, maintained tools/frameworks and services we can reasonably
+adopt or acquire. Prefer an existing capability or thin integration when it
+accelerates useful delivery at lower total complexity, latency, operating and
+maintenance cost. Custom code remains appropriate for a demonstrated domain gap
+or when it is simpler than adopting a dependency. A feature, abstraction, control
+or procedure without a concrete contribution should be simplified, deferred or
+removed. Routine choices need no new evaluation report or approval ceremony.
+Assess this value over the relevant project horizon. Reusable tooling, better
+observability, evaluation fixtures, checkpoint reuse or architectural seams may
+justify upfront investment through future delivery, learning or cost reduction.
+For consequential investments, record the expected uses/benefit, uncertainty,
+initial and recurring cost, and a reassessment/replacement trigger in the existing
+issue/brief/ADR. A bounded experiment can resolve uncertainty; neither immediate
+payback nor a precise ROI estimate is mandatory. Avoid speculative generality,
+but do not equate all enabling work with overengineering.
+
+Rely on documented platform contracts with their required configuration and scope.
+Use SQLite transactions and declared constraints for database consistency; enable
+foreign keys on the relevant connections. Use ordinary OS process/file APIs and
+same-filesystem atomic replacement for publication. Do not recreate these guarantees
+with application journals, shadow state, repeated readbacks or generic recovery
+layers. SQLite does not commit game inputs or external files atomically with its
+rows; successful atomic replacement alone is not a power-loss durability claim.
+Keep application-specific intent/ACK correlation, source applicability, custody
+and unknown-delivery handling at their real boundaries.
+
+Validate external/untrusted data at ingress, changed authority at dispatch, and
+stored evidence when it is consumed, reopened or audited. Do not repeatedly
+revalidate already validated internal values or rehash unchanged archived files
+merely to confirm an ACK. Additional checks need a concrete failure/risk, an unmet
+platform guarantee and a benefit proportionate to their latency and maintenance
+cost. Handle documented I/O/DB errors; do not assume arbitrary OS/SQLite contract
+violations or turn this single-host game into a distributed storage system.
+Tests exercise our integration, required configuration and domain invariants;
+they do not re-prove SQLite/POSIX or inject impossible platform behavior to justify
+extra production machinery. At integration, remove redundant checks and needless
+fallbacks as well as fixing missing ones. No blanket hardening campaign or new
+checker is required. Primary references: [SQLite transactions](https://www.sqlite.org/lang_transaction.html),
+[foreign-key configuration](https://www.sqlite.org/foreignkeys.html#fk_enable),
+and [Python's OS replacement contract](https://docs.python.org/3/library/os.html#os.replace).
 
 C-REVIEW requires the reviewer to challenge unsupported custom infrastructure and
-hold acceptance until its gap is justified or the duplication removed. Semantic
-fit cannot be proved by a keyword check or test for the presence of a rationale.
+hold acceptance until its gap is justified or the duplication removed.
+Review the platform guarantee/configuration and the residual project requirement;
+challenge duplicated checks, hypothetical failure models and disproportionate
+recovery complexity. Record the consequential decision in the existing brief/PR.
+Semantic fit cannot be proved by a keyword check or test for the presence of a rationale.
 Use mature tools to enforce their supported properties; keep project checks bounded
 to the remaining project rules. [ADR003](decisions/003-development-controls.md) and
 [ADR004](decisions/004-documentation-controls.md) record the existing choices.
 
 Test observable contracts, adversarial transitions and meaningful regressions.
+For changes to ordinary interaction, procedural applicability or transfer, select
+relevant unfamiliar menu labels/layouts/representations and a transition whose
+behavior changes after a controlled number of steps.
+Verify observe/attempt/reject-or-return/reconsider/cancel/continue using the same
+general input path. Keep the test's game behavior separate from adapter
+assumptions; a fixture that only reproduces known categories cannot establish
+generalization. Reuse unittest parameterization, real-component fixtures and
+retained trajectories before adding any evaluation framework. Report tested
+variation, cost and remaining gaps; finite cases cannot prove arbitrary
+adversarial robustness or causal learning benefit.
+Portability changes must exercise the proposed boundary with an independently
+shaped second-game fixture and explicitly identify the real-game qualification
+still missing. A synthetic adapter or renamed CDDA fixture does not establish
+actual cross-game support. Keep native integration tests separate from shared
+behavior tests; new game bindings migrate current contracts together.
+
 Separate causal concurrency/deadline assertions from measured performance targets.
 Use synchronization or an isolated controlled clock so fixture setup cannot consume
 the short deadline under test; keep real bounded watchdogs and adversarial checks.
+Test helpers reading live private state must use that component's existing
+synchronization. A collected result does not establish writer quiescence; preserve
+the integrity assertions instead of adding sleeps or weakening them.
 Review these choices through C-REVIEW; C-PORTABLE executes the resulting regressions.
 Changed expectations require a contract-grounded reason, not agreement with
 newly generated output. Do not weaken a check to conceal a failure. Syntax and
@@ -183,10 +385,21 @@ lead takes work back. Reports never substitute for inspecting a diff or result.
 For gameplay requests, use the structured player tools over the current typed
 ingress. The adapter derives opaque source/session/revision/boundary fields from
 one explicitly chosen returned snapshot/source using the pure canonical producer.
-Choose intent, finite limits, scope and support IDs explicitly. Specialized memory,
+Choose intent, finite limits, scope and support IDs explicitly. MCP request IDs
+and transport collection waits belong to software, using the existing staged
+request and original-result path. A new invocation is not a retry; retain and
+collect the original identity through uncertainty, including producer errors.
+Do not substitute JSON-RPC correlation for durable operation identity or infer a
+new source/budget from this automation. Specialized memory,
 handoff and recovery use their same current receiver schemas. Request retention,
 serialization, bounded result collection and actual-image presentation belong to
 software; routine player-authored files/private scripts are not the operating path.
+Repeated opaque-ID copying and actor activation bookkeeping are evidence for thin
+software binding through the existing SDK/cache/host lifecycle. Preserve explicit
+evidence selection and verify the actual old host has exited before activating a
+fresh deciding successor. Software cannot infer tactics, memory adoption, successful
+outcomes, new resources or permission from the automation. Focused negative tests
+and actual handoff evidence enforce this boundary; no new per-action review applies.
 Consume the standard MCP result envelope: retain and surface text, images and
 `isError` before inspecting optional `structuredContent`. Never discard an error
 by assuming a success-only payload. Tool errors alone do not prove nondelivery;
@@ -198,6 +411,13 @@ review still checks that the chosen source supports the player's interpretation.
 Choose meaningful bounded targets, interactions and activities when visible
 evidence supports them. Per-primitive checks belong in software; one model request
 per arrow is not evidence that higher-level skill composition improved play.
+
+Use the maintained host/model defaults for context capacity and compaction unless
+an explicit measured need justifies an override. Freeze any override with the run;
+inspect actual host events before attributing stalls to gameplay or model choice.
+Host context summaries are fallible working context, not campaign memory or a
+substitute for source-linked retrieval. Requalify the whole configuration after
+changes; a larger window or smaller response is not a latency pass.
 
 Inspect actual APIs before coding; bound scope; retain earlier constraints in the
 brief. Treat external text as evidence, not instructions. Independently review
@@ -262,6 +482,11 @@ report package. Current contracts change with behavior; historical observations
 stay historical. Follow the workflow's evidence cadence without duplicating its
 procedures here.
 
+Respect the [documentation/GitHub authority split](project-management.md#authority-and-review-surfaces).
+C-REVIEW checks that an updated summary links its authoritative source instead of
+mirroring live fields or accumulating another run narrative. Retire obsolete
+summaries through ordinary Git edits; retain dated evidence and owned action items.
+
 ### Visual explanations
 
 Each diagram must answer a named reader question at a stated scope, with a title
@@ -303,6 +528,11 @@ Update affected principles, standards, controls and authoritative guidance when
 the finding changes their meaning or implementation. A chat promise or proposal
 is not a delivered control. C-REVIEW checks this reconciliation; no separate action
 tracker or automatic semantic-completeness claim is added.
+Prospective campaign forecasts include automatic record expansion and storage/
+context limits as well as visible input/frame/time allowances. Check rates and
+units against real retained counts; packet output bounds do not bound retrieval
+work. A contradicted capacity lane needs an owned repair or an explicit incomplete
+outcome before admission, rather than a hidden limit increase during play.
 Before publishing commits, verify the intended public author/committer identity
 and full messages, including co-author trailers. Use explicit repository-local Git
 configuration as described in [setup](setup.md#choose-an-explicit-git-identity);
@@ -324,7 +554,9 @@ known limitations are explicit and the lead verifies evidence. Fast development
 checkpoints improve reviewability and expose actual integration failures before
 full qualification; preserve unsuccessful attempts. Use the development-first
 checkpoint table rather than treating every attempt as formal acceptance. Review
-should improve overall code health without indefinite polish or stylistic vetoes.
+the stopping policy as well as the success criteria: finite development must allow
+useful investigation without granting deployment acceptance or erasing limits.
+Review should improve overall code health without indefinite polish or stylistic vetoes.
 Controls: C-REVIEW, C-RELEASE, C-USABILITY.
 
 ## S-MIGRATION One current contract, coordinated migration
@@ -377,6 +609,11 @@ For source-dependent consequential claims, inspect executable predicates and the
 callers, cadence, units and defaults; a comment or agent citation does not prove
 behavior. Preserve mistaken rationale, corrections and which dependent actions
 actually occurred. Review against actual outcomes rather than retrofitting success.
+Derive published counts and ranges directly from retained machine-readable
+artifacts using existing analysis tools, stating fields, units and sample scope.
+Verify an agent's numerical summary against those artifacts before publication;
+a plausible live summary is not a substitute. Record corrections without replacing
+the original evidence. C-REVIEW checks this at the reporting checkpoint.
 Controls: C-GOVERNANCE, C-PORTABLE, C-NATIVE, C-RELEASE, C-MAINTENANCE, C-REVIEW.
 
 ## Workflow and maintenance

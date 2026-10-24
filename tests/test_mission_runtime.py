@@ -16,9 +16,10 @@ import time
 import unittest
 from unittest.mock import patch
 
-from harness.controller import Controller
+from harness.controller import Controller, atomic_json
 from harness.gameplay.evidence import CapacityError
-from harness.gameplay.mission_contracts import CleanupReserve, MissionLimits, canonical
+from harness.gameplay.contracts import canonical
+from harness.gameplay.mission_contracts import CleanupReserve, MissionLimits
 from harness.gameplay.mission_ledger import MissionLedger
 from tests.test_mission_ledger import intent
 from harness.mission_runtime import MissionRuntime
@@ -66,11 +67,26 @@ class VisibleBridge(FakeBridge):
         value["frame"] = f'frame-{value["session"]}-{self.frames}.png'
         if not value["paused"]:
             value["pause_origin"] = "none"
+        (self.bridge / value["frame"]).write_bytes(self.visible_bytes(value))
+        super().publish(value)
+
+    def visible_bytes(self, value):
         # A synthetic visible-state marker, never a native or rendered PNG claim.
         content = {key: value[key] for key in ("scene", "ui", "category", "actions")}
         content["visible_editor"] = self.editor_text
-        (self.bridge / value["frame"]).write_bytes(b"\x89PNG\r\n\x1a\n" + canonical(content).encode())
-        super().publish(value)
+        return b"\x89PNG\r\n\x1a\n" + canonical(content).encode()
+
+    def publish_unchanged_passive(self, value):
+        """Model an already-eligible unchanged heartbeat, not capture eligibility.
+
+        Explicit captures still use publish; production PNG/age/metadata decisions
+        are separately covered by the compiled native component fixture.
+        """
+        value = copy.deepcopy(value)
+        assert (self.bridge / value["frame"]).read_bytes() == self.visible_bytes(value)
+        value["id"] = ""
+        # Native passive publication never overwrites the correlated ACK.
+        atomic_json(self.bridge / "state.json", value)
 
 
 class MissionRuntimeTests(unittest.TestCase):
@@ -97,7 +113,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.fail(f"Timed out; status={self.runtime.status()}")
 
     def request(self, kind, **changes):
-        data = dict(schema="mission/8", kind=kind, request_id=kind + "-1",
+        data = dict(schema="mission/11", kind=kind, request_id=kind + "-1",
                     mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"])
         if kind == "handoff":
             data.update(unfinished_work_ids=[])
@@ -109,7 +125,7 @@ class MissionRuntimeTests(unittest.TestCase):
         return data
 
     def result(self, identity):
-        out = self.runtime.command(dict(schema="mission/8", kind="result",
+        out = self.runtime.command(dict(schema="mission/11", kind="result",
             mission_id=self.a.mission_id, operation_id=identity))
         self.assertEqual(out["status"], "accepted", out)
         return out["operation"]
@@ -122,7 +138,7 @@ class MissionRuntimeTests(unittest.TestCase):
             self.assertEqual(self.controller.execute("observe")["status"], "ready")
             self.assertEqual(self.controller.execute("resume")["status"], "ready")
             self._prepared_native = True
-        req = dict(schema="mission/8", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/11", kind="start", request_id="start-1", admission=self.a.to_dict())
         with patch.object(self.runtime, "_bootstrap", side_effect=lambda work: bootstrap_core_fixture(self.runtime, work)):
             response = self.runtime.command(req)
             self.assertEqual(response["status"], "accepted", response)
@@ -137,7 +153,7 @@ class MissionRuntimeTests(unittest.TestCase):
             "target": list(target)}, sources=[ref["observation_id"]],
             expected_session=ref["session"], expected_revision=ref["revision"],
             expected_boundary_id=self.runtime._store.observation(self.runtime._current)["boundary"]["id"],
-            limits={"primitives": 8, "wall_seconds": 120, "game_seconds": 1200})
+            limits={"primitives": 8, "wall_seconds": 120, "game_seconds": 1200}, procedure=None)
         data.update(changes)
         return data
 
@@ -147,7 +163,7 @@ class MissionRuntimeTests(unittest.TestCase):
             phase_id=phase_id, perception=perception, sources=[reference["observation_id"]],
             expected_session=reference["session"], expected_revision=reference["revision"],
             expected_boundary_id=self.runtime._store.observation(self.runtime._current)["boundary"]["id"],
-            limits={"primitives": 8, "wall_seconds": 120, "game_seconds": 1200})
+            limits={"primitives": 8, "wall_seconds": 120, "game_seconds": 1200}, procedure=None)
         data.update(changes)
         return data
 
@@ -322,7 +338,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.runtime._ledger.request(root["request_id"])["result"], opened["result"])
         self.assertEqual(self.runtime.status()["spent_inputs"], 5)
 
-    def test_navigation_menu_children_keep_root_budget_and_pause_revokes_ownership(self):
+    def test_navigation_menu_exhaustion_keeps_observe_until_actual_pause(self):
         root, opened = self.navigation_menu(primitives=2)
         self.assertEqual(opened["state"], "partial", opened)
         self.runtime.command(self.navigation_cancel(root))
@@ -330,7 +346,16 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(rejected["state"], "blocked", rejected)
         self.assertEqual(self.runtime.status()["spent_inputs"], 3)
         self.assertEqual(len([r for r in self.bridge.delivered if r.get("action") == "UILIST.QUIT"]), 0)
+        self.assertEqual(rejected["result"]["macro_exhausted"], "primitives")
+        self.assertEqual(self.runtime._prompt_phase.root_id, root["request_id"])
+        self.assertIs(self.controller._mission_lease, self.runtime._lease)
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.runtime.command(self.request("observe"))
+        observed = self.settled("observe-1")
+        self.assertEqual(observed["result"]["macro_closure"]["limit"], "primitives")
         self.assertIsNone(self.runtime._prompt_phase)
+        self.runtime.pause("Actual user Pause after local exhaustion")
+        self.wait(lambda: not self.runtime._pending_pauses)
         self.assertIsNone(self.controller._mission_lease)
 
     def test_user_pause_revokes_navigation_menu_without_automatic_response(self):
@@ -343,6 +368,65 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertIsNone(self.controller._mission_lease)
         self.assertEqual(self.runtime.status()["spent_inputs"], charged)
         self.assertNotIn("UILIST.QUIT", [r.get("action") for r in self.bridge.delivered])
+
+    def test_pause_hides_current_source_before_writer_can_publish(self):
+        self.start()
+        before = self.runtime.status()
+        self.assertIsNotNone(before["current_source"])
+        self.assertIsNotNone(before["coordinate_scope"])
+        entered, release = threading.Event(), threading.Event()
+        apply_pauses = self.runtime._apply_pauses
+
+        def blocked_writer():
+            entered.set()
+            release.wait(3)
+            return apply_pauses()
+
+        with patch.object(self.runtime, "_apply_pauses", side_effect=blocked_writer):
+            try:
+                self.assertTrue(entered.wait(2))
+                self.runtime.pause("Pause while writer cannot refresh status")
+                paused = self.runtime.status()
+                self.assertEqual(paused["phase"], "paused")
+                self.assertIsNone(paused["current_source"])
+                self.assertIsNone(paused["coordinate_scope"])
+                self.assertEqual(paused["freshness"], {"age_seconds": None, "fresh": False})
+                self.assertIsNone(self.controller._mission_lease)
+                retained, image = self.runtime.source(self.a.mission_id, before["current_source"]["observation_id"])
+                self.assertEqual(retained["reference"], before["current_source"])
+                self.assertTrue(image)
+            finally:
+                release.set()
+
+    def test_pause_during_normal_summary_cannot_restore_source_or_scope(self):
+        self.start()
+        self.assertIsNotNone(self.runtime.status()["coordinate_scope"])
+        summary, publish = self.runtime._registered_activity.summary, self.runtime._publish
+        interrupted, snapshots = [], []
+
+        def pause_after_summary():
+            value = summary()
+            active = self.runtime._active
+            if not interrupted and active is not None and active.request["request_id"] == "normal-summary-race":
+                interrupted.append(True)
+                self.runtime.pause("Pause after normal source and scope summary")
+            return value
+
+        def capture_publication():
+            publish()
+            snapshots.append(self.runtime.status())
+
+        with patch.object(self.runtime._registered_activity, "summary", side_effect=pause_after_summary), \
+             patch.object(self.runtime, "_publish", side_effect=capture_publication):
+            self.runtime.command(self.request("observe", request_id="normal-summary-race"))
+            self.settled("normal-summary-race")
+        self.assertTrue(interrupted)
+        paused = [snapshot for snapshot in snapshots if snapshot["phase"] == "paused"]
+        self.assertTrue(paused)
+        for snapshot in paused:
+            self.assertIsNone(snapshot["current_source"])
+            self.assertIsNone(snapshot["coordinate_scope"])
+            self.assertEqual(snapshot["freshness"], {"age_seconds": None, "fresh": False})
 
     def test_prompt_dismissal_is_one_accounted_input_with_partial_effect_verification(self):
         normal = copy.deepcopy(self.bridge.value["scene"])
@@ -467,7 +551,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertIsNone(self.controller._mission_lease)
         self.assertIsNone(self.runtime._prompt_phase)
 
-    def test_native_takeover_after_menu_input_keeps_pending_unknown_policy_receipt(self):
+    def test_native_takeover_after_known_menu_input_blocks_continuation_without_losing_ack(self):
         def takeover(bridge, request):
             if request.get("action") == "UILIST.DOWN":
                 bridge.value.update(paused=True, pause_origin="human", takeover_generation=1)
@@ -478,21 +562,30 @@ class MissionRuntimeTests(unittest.TestCase):
                              phase_id=root["request_id"])
         self.runtime.command(child)
         operation = self.settled(child["request_id"])
-        self.assertEqual(operation["state"], "unknown", operation)
-        self.assertIsNotNone(operation["result"]["pending_logical_id"])
+        self.assertEqual(operation["state"], "blocked", operation)
+        self.assertIn("takeover", operation["result"]["reason"])
         self.assertEqual(self.runtime.status()["pause_cause"], "takeover")
         self.assertEqual([r["state"] for r in self.runtime._ledger.primitive_records()], ["returned", "returned"])
+        self.assertEqual(self.runtime.status()["unresolved_effects"], [])
         self.assertIsNone(self.runtime._prompt_phase)
         self.assertIsNone(self.controller._mission_lease)
 
-    def test_changed_image_observe_cannot_refresh_owned_prompt(self):
-        self.open_direction()
+    def test_changed_image_explicit_observe_advances_same_owned_prompt(self):
+        root, original_result = self.open_direction()
+        original = self.runtime._prompt_phase
+        original_root = self.runtime._ledger.request(root["request_id"])
         self.bridge.value["actions"].remove("RIGHT")
+        self.bridge.value["revision"] += 1
         self.runtime.command(self.request("observe"))
         operation = self.settled("observe-1")
-        self.assertEqual(operation["state"], "blocked", operation)
-        self.assertIsNone(self.runtime._prompt_phase)
-        self.assertIsNone(self.controller._mission_lease)
+        self.assertEqual(operation["state"], "completed", operation)
+        self.assertNotIn("revalidation", operation["result"])
+        current = self.runtime._prompt_phase
+        self.assertEqual(current.root_id, original.root_id)
+        self.assertEqual(current.game_anchor, original.game_anchor)
+        self.assertNotEqual(current.checkpoint, original.checkpoint)
+        self.assertEqual(self.runtime._ledger.request(root["request_id"]), original_root)
+        self.assertEqual(self.result(root["request_id"]), original_result)
         self.assertEqual(self.runtime.status()["spent_inputs"], 1)
 
     def test_owned_prompt_root_input_ceiling_cannot_be_renewed_by_child(self):
@@ -517,10 +610,11 @@ class MissionRuntimeTests(unittest.TestCase):
         self.runtime.command(self.request("observe"))
         operation = self.settled("observe-1")
         self.assertEqual(operation["state"], "completed", operation)
-        self.assertIn("budget", operation["result"]["budget_stop"])
-        self.assertEqual(operation["result"]["phase"]["stage"], "complete")
+        self.assertEqual(operation["result"]["macro_closure"]["limit"], "game_seconds")
+        self.assertNotIn("phase", operation["result"])
         self.assertIsNone(self.runtime._prompt_phase)
-        self.assertIsNone(self.controller._mission_lease)
+        self.assertIs(self.controller._mission_lease, self.runtime._lease)
+        self.assertEqual(self.runtime.status()["phase"], "active")
         self.assertEqual(self.runtime.status()["spent_inputs"], 1)
 
     def test_interaction_without_prompt_does_not_block_following_navigation(self):
@@ -588,7 +682,7 @@ class MissionRuntimeTests(unittest.TestCase):
         initial = self.start()
         self.assertIsNone(initial["memory_context"])
         scope = dict(mission_id=self.a.mission_id, session=initial["current_source"]["session"], coordinate_epoch=0)
-        response = self.runtime.command(dict(schema="mission/8", kind="context", handoff=None, mission_id=self.a.mission_id,
+        response = self.runtime.command(dict(schema="mission/11", kind="context", handoff=None, mission_id=self.a.mission_id,
             scope=scope, query="position", max_bytes=32768))
         packet = copy.deepcopy(response["context"]["packet"])
         response["context"]["packet"]["query"] = "Modified caller copy"
@@ -722,12 +816,12 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_active_stop_revokes_now_and_never_queues_or_retargets_old_epoch(self):
         self.start()
         entered, release = threading.Event(), threading.Event()
-        real = self.runtime._store.retain_equivalent
+        real = self.runtime._store.retain_preflight
         def blocked(*args, **kwargs):
             entered.set()
             release.wait(3)
             return real(*args, **kwargs)
-        with patch.object(self.runtime._store, "retain_equivalent", blocked):
+        with patch.object(self.runtime._store, "retain_preflight", blocked):
             request = self.navigation()
             self.runtime.command(request)
             self.assertTrue(entered.wait(2))
@@ -744,7 +838,7 @@ class MissionRuntimeTests(unittest.TestCase):
             release.set()
             self.assertEqual(self.settled(request["request_id"])["state"], "paused")
         self.wait(lambda: self.runtime.status()["active_operation"] is None)
-        absent = self.runtime.command(dict(schema="mission/8", kind="result", mission_id=self.a.mission_id,
+        absent = self.runtime.command(dict(schema="mission/11", kind="result", mission_id=self.a.mission_id,
                                            operation_id=stop["request_id"]))
         self.assertEqual(absent["status"], "rejected")
         retry = self.request("stop", request_id="stop-new-epoch", reason=stop["reason"])
@@ -777,7 +871,7 @@ class MissionRuntimeTests(unittest.TestCase):
         req = self.request("remember", request_id="new-stock", entry_type="claim", entry=assertion("new", second, 0))
         self.runtime.command(req)
         self.assertEqual(self.settled("new-stock")["state"], "completed")
-        work = {"schema": "campaign-memory/3", "record_type": "Work", "predecessor_work_id": None, "id": "water-pending",
+        work = {"schema": "campaign-memory/6", "record_type": "Work", "predecessor_work_id": None, "id": "water-pending",
             "intent": "Treat water and verify storage", "scope": scope, "stage": "pending-storage",
             "progress": None, "available": [], "committed": [],
             "predicted_output": [{"subject": "clean-water", "quantity": 2, "unit": "charges", "coverage_id": "kettle"}],
@@ -787,7 +881,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.runtime.command(req)
         self.assertEqual(self.settled("pending-work")["state"], "completed")
         Path(second["frame_path"]).unlink()
-        context_request = dict(schema="mission/8", kind="context", handoff=None, mission_id=self.a.mission_id,
+        context_request = dict(schema="mission/11", kind="context", handoff=None, mission_id=self.a.mission_id,
                                scope=scope, query="water", max_bytes=32768)
         out = self.runtime.command(context_request)
         self.assertEqual(out["status"], "accepted", out)
@@ -806,12 +900,12 @@ class MissionRuntimeTests(unittest.TestCase):
         self.start()
         source = self.runtime.status()["current_source"]
         scope = dict(mission_id=self.a.mission_id, session=source["session"], coordinate_epoch=0)
-        out = self.runtime.command(dict(schema="mission/8", kind="context", handoff=None, mission_id=self.a.mission_id,
+        out = self.runtime.command(dict(schema="mission/11", kind="context", handoff=None, mission_id=self.a.mission_id,
             scope=scope, query="water", max_bytes=32768))
         packet = out["context"]["packet"]
-        decision = dict(schema="campaign-memory/3", record_type="Decision", id="decision-1",
+        decision = dict(schema="campaign-memory/6", record_type="Decision", id="decision-1",
             packet_id=packet["packet_id"], scope=scope, query=packet["query"], memory_version=packet["memory_version"],
-            claim_ids=[], work_ids=[], source_ids=[], lesson_ids=packet["lesson_ids"],
+            claim_ids=[], work_ids=[], source_ids=[], procedure_refs=packet["procedure_refs"], procedure_sources=[],
             omitted=packet["omitted"]["claims"] + packet["omitted"]["work"], reason="Inspect actual water")
         lease = self.controller._mission_lease
         valid = self.request("remember", request_id="decision", entry_type="decision", entry=decision)
@@ -938,7 +1032,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.bridge.delivered, [])
 
     def test_paused_start_admits_without_native_resume_or_planning_binding(self):
-        req = dict(schema="mission/8", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/11", kind="start", request_id="start-1", admission=self.a.to_dict())
         self.assertEqual(self.runtime.command(req)["status"], "accepted")
         op = self.settled("start-1")
         self.assertTrue(op["result"]["lifecycle_needed"])
@@ -957,7 +1051,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(self.controller.execute("observe")["status"], "ready")
         self.assertEqual(self.controller.execute("resume")["status"], "ready")
         delivered = copy.deepcopy(self.bridge.delivered)
-        req = dict(schema="mission/8", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/11", kind="start", request_id="start-1", admission=self.a.to_dict())
         with patch.object(self.controller, "acquire_mission", side_effect=AssertionError("Start cannot adopt identity")):
             self.assertEqual(self.runtime.command(req)["status"], "accepted")
             self.assertTrue(self.settled("start-1")["result"]["lifecycle_needed"])
@@ -972,7 +1066,7 @@ class MissionRuntimeTests(unittest.TestCase):
 
     def test_missing_native_start_stays_admitted_without_launch(self):
         self.bridge.__exit__(None, None, None)
-        req = dict(schema="mission/8", kind="start", request_id="start-1", admission=self.a.to_dict())
+        req = dict(schema="mission/11", kind="start", request_id="start-1", admission=self.a.to_dict())
         self.runtime.command(req)
         op = self.settled("start-1")
         self.assertTrue(op["result"]["lifecycle_needed"])
@@ -1031,11 +1125,12 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual([r for r in self.bridge.delivered if r["kind"] == "action"], [])
         self.assertIsNone(self.runtime._store._reservation)
 
-    def test_after_storage_failure_stays_unknown_and_does_not_fake_before_as_after(self):
+    def test_after_storage_failure_settles_known_ack_with_explicit_evidence_loss(self):
         self.start()
         request = self.navigation()
-        ingest, execute = self.runtime._store.ingest, self.controller.execute_mission
+        retain, execute = self.runtime._store.retain_terminal, self.controller.execute_mission
         published = threading.Event()
+        failed = []
         def dispatch(*args, **kwargs):
             result = execute(*args, **kwargs)
             if result["published"]:
@@ -1045,16 +1140,22 @@ class MissionRuntimeTests(unittest.TestCase):
             # Entry Observe is intentionally before dispatch. Inject failure on
             # the actual correlated input ACK, preserving this post-input probe.
             if published.is_set():
+                failed.append(value["id"])
                 raise OSError("after-frame fsync failed")
-            return ingest(value, **kwargs)
+            return retain(value, **kwargs)
         with patch.object(self.controller, "execute_mission", side_effect=dispatch), \
-                patch.object(self.runtime._store, "ingest", side_effect=fail_after_input):
+                patch.object(self.runtime._store, "retain_terminal", side_effect=fail_after_input):
             self.runtime.command(request)
             op = self.settled(request["request_id"])
-        self.assertEqual(op["state"], "unknown", op)
+        self.assertEqual(op["state"], "blocked", op)
         row, = self.runtime._ledger.primitive_records()
-        self.assertEqual(row["state"], "unknown")
+        self.assertEqual(row["state"], "returned")
         self.assertIsNone(row["result"]["source_after"])
+        self.assertEqual(failed, [row["native_id"]])
+        self.assertEqual(row["result"]["native_ack"]["id"], row["native_id"])
+        self.assertIn("after-frame fsync failed", row["result"]["evidence_loss"])
+        self.assertIsNone(self.runtime._store._reservation)
+        self.assertEqual(self.runtime.status()["unresolved_effects"], [])
         self.assertEqual(len([r for r in self.bridge.delivered if r["kind"] == "action"]), 1)
         self.wait(lambda: self.runtime.status()["active_operation"] is None)
         self.assertIsNone(self.runtime.status()["current_source"])
@@ -1063,7 +1164,7 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_crash_prepared_reopen_keeps_unknown_effect_and_no_authority(self):
         directory = self.controller.root / ".runtime" / "missions" / self.a.mission_id
         with MissionLedger(directory, admission=self.a, now=time.time()) as ledger:
-            start = dict(schema="mission/8", kind="start", request_id="start-1", admission=self.a.to_dict())
+            start = dict(schema="mission/11", kind="start", request_id="start-1", admission=self.a.to_dict())
             ledger.begin_request(start, now=time.time())
             ledger.complete_request("start-1", "completed", {"admitted": True}, now=time.time())
             ledger.activate(epoch=0, player_id=self.a.player_id, now=time.time())
@@ -1092,9 +1193,14 @@ class MissionRuntimeTests(unittest.TestCase):
             return True
         self.bridge.behavior = elapsed
         first = self.navigation()
-        self.runtime.command(first)
-        self.assertEqual(self.settled(first["request_id"])["state"], "completed")
         second = self.navigation(target=(2, 0, 0), request_id="second")
+        self.runtime.command(first)
+        self.assertEqual(self.settled(first["request_id"])["state"], "partial")
+        self.assertEqual(self.runtime.status()["phase"], "paused")
+        self.assertIsNone(self.runtime._lease)
+        self.assertIsNone(self.runtime.status()["current_source"])
+        # Retained source data remains readable; stopped status is not a new source.
+        second["epoch"] = self.runtime.status()["epoch"]
         self.runtime.command(second)
         self.assertNotEqual(self.settled("second")["state"], "completed")
         self.assertEqual(self.runtime.status()["spent_inputs"], 1)
@@ -1170,7 +1276,7 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_context_journal_failure_never_issues_a_packet_or_allows_more_work(self):
         self.start()
         source = self.runtime.status()["current_source"]
-        request = dict(schema="mission/8", kind="context", handoff=None, mission_id=self.a.mission_id,
+        request = dict(schema="mission/11", kind="context", handoff=None, mission_id=self.a.mission_id,
             scope=dict(mission_id=self.a.mission_id, session=source["session"], coordinate_epoch=0),
             query="water", max_bytes=8192)
         record = self.controller._record
@@ -1188,12 +1294,12 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_close_wait_is_bounded_and_storage_stays_open_under_live_writer(self):
         self.start()
         entered, release = threading.Event(), threading.Event()
-        real = self.runtime._store.retain_equivalent
+        real = self.runtime._store.retain_preflight
         def blocked(*args, **kwargs):
             entered.set()
             release.wait(4)
             return real(*args, **kwargs)
-        with patch.object(self.runtime._store, "retain_equivalent", blocked):
+        with patch.object(self.runtime._store, "retain_preflight", blocked):
             request = self.navigation()
             self.runtime.command(request)
             self.assertTrue(entered.wait(2))
@@ -1249,6 +1355,301 @@ class MissionRuntimeTests(unittest.TestCase):
         self.assertEqual(primitive["native_id"], self.bridge.delivered[-1]["id"])
         self.assertEqual(self.runtime.command(req)["operation"], op)
 
+    def test_nonimage_text_capture_churn_keeps_original_sources_and_costs(self):
+        self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        original = self.start()
+        self.bridge.editor_text = ""
+
+        def type_scalar(bridge, request):
+            if request["kind"] == "direct":
+                bridge.editor_text += request["input"]["text"]
+            return True
+
+        self.bridge.behavior = type_scalar
+        prepare = self.runtime._ledger.prepare_primitive
+        prepared = []
+        dispatched_leases = []
+
+        def refresh_second_capture(*args, **kwargs):
+            result = prepare(*args, **kwargs)
+            prepared.append(result)
+            dispatched_leases.append(self.controller._mission_lease)
+            if len(prepared) == 2:
+                # Incidental capture churn retains the original prepared source.
+                # Native provenance/metadata/TTL checks remain the final fence.
+                current = copy.deepcopy(self.controller.state)
+                current.update(id="", frame="frame-game-test-999999.png")
+                (self.controller.bridge / current["frame"]).write_bytes(self.bridge.visible_bytes(current))
+                self.controller._accept(current)
+            return result
+
+        goal = dict(input=dict(type="text", text="abc"), interrupt_allowed=False,
+                    intent="Type the desired text", expected="Inspect the visible result")
+        request = self.control("direct", goal, request_id="text-original")
+        with patch.object(self.runtime._ledger, "prepare_primitive", refresh_second_capture):
+            self.assertEqual(self.runtime.command(request)["status"], "accepted")
+            operation = self.settled(request["request_id"])
+        self.assertEqual(operation["state"], "partial", operation)
+        rows = self.runtime._ledger.primitive_records()
+        self.assertEqual([row["state"] for row in rows], ["returned"] * 3)
+        self.assertEqual(self.bridge.editor_text, "abc")
+        delivered = [r for r in self.bridge.delivered if r["kind"] == "direct"]
+        self.assertEqual([r["input"]["text"] for r in delivered], ["a", "b", "c"])
+        references = {ref.observation_id: ref for ref in self.runtime._store.historical_references}
+        for row, native in zip(rows, delivered, strict=True):
+            self.assertEqual(row["native_id"], native["id"])
+            preflight = self.runtime._store.observation(
+                references[row["intent"]["preflight_source"]])
+            self.assertEqual(native["frame"], preflight["frame"])
+        current = self.runtime.status()
+        self.assertEqual(current["phase"], "active", current)
+        self.assertEqual(current["epoch"], original["epoch"])
+        self.assertEqual(current["spent_inputs"], 3)
+        self.assertEqual(current["unresolved_effects"], [])
+        self.assertIs(self.controller._mission_lease, dispatched_leases[-1])
+        for field in ("player_id", "started_at", "deadline", "cleanup_reserve"):
+            self.assertEqual(current[field], original[field], field)
+
+        # Collection of the identical request cannot replay any text scalar.
+        self.assertEqual(self.runtime.command(request)["operation"], operation)
+        self.assertEqual(self.bridge.editor_text, "abc")
+        self.assertEqual(len(self.runtime._ledger.primitive_records()), 3)
+        self.assertEqual(len([r for r in self.bridge.delivered if r["kind"] == "direct"]), 3)
+
+    def test_capture_refusal_does_not_restore_exhausted_prompt_root_budget(self):
+        self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        root, _ = self.open_direction(limits=dict(primitives=2, wall_seconds=120, game_seconds=1200))
+        deadline = self.runtime._ledger.request(root["request_id"])["deadline"]
+        prepare = self.runtime._ledger.prepare_primitive
+
+        def refresh_capture(*args, **kwargs):
+            result = prepare(*args, **kwargs)
+            current = copy.deepcopy(self.controller.state)
+            current.update(id="", frame="frame-game-test-999999.png")
+            (self.controller.bridge / current["frame"]).write_bytes(self.bridge.visible_bytes(current))
+            self.controller._accept(current)
+            return result
+
+        goal = dict(input=dict(type="click", button="left", x=0, y=0,
+                               geometry=copy.deepcopy(self.bridge.value["frame_geometry"])), interrupt_allowed=False,
+                    intent="Select the visible prompt position", expected="Inspect the returned screen")
+        child = self.control("direct", goal, phase_id=root["request_id"], request_id="refused-close")
+        with patch.object(self.runtime._ledger, "prepare_primitive", refresh_capture):
+            self.assertEqual(self.runtime.command(child)["status"], "accepted")
+            self.assertEqual(self.settled(child["request_id"])["state"], "blocked")
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        observe = self.request("observe", request_id="observe-exhausted-root")
+        self.assertEqual(self.runtime.command(observe)["status"], "accepted")
+        observed = self.settled(observe["request_id"])
+        self.assertEqual(observed["state"], "completed", observed)
+        self.assertEqual(observed["result"]["macro_closure"]["limit"], "primitives")
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertIsNone(self.runtime._prompt_phase)
+        retry = {**child, "request_id": "new-close"}
+        response = self.runtime.command(retry)
+        self.assertEqual(response["status"], "rejected", response)
+        self.assertFalse(any(r["kind"] == "direct" for r in self.bridge.delivered))
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertEqual(self.runtime._ledger.request(root["request_id"])["deadline"], deadline)
+
+    def test_first_prompt_capture_refusal_keeps_authenticated_read_only_observe(self):
+        self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        root, _ = self.open_direction()
+        before = self.runtime.status()
+        deadline = self.runtime._ledger.request(root["request_id"])["deadline"]
+        prepare = self.runtime._ledger.prepare_primitive
+
+        def refresh_capture(*args, **kwargs):
+            result = prepare(*args, **kwargs)
+            current = copy.deepcopy(self.controller.state)
+            current.update(id="", frame="frame-game-test-999999.png")
+            (self.controller.bridge / current["frame"]).write_bytes(self.bridge.visible_bytes(current))
+            self.controller._accept(current)
+            return result
+
+        goal = dict(input=dict(type="click", button="left", x=0, y=0,
+                               geometry=copy.deepcopy(self.bridge.value["frame_geometry"])), interrupt_allowed=False,
+                    intent="Select the visible prompt position", expected="Inspect the returned screen")
+        child = self.control("direct", goal, phase_id=root["request_id"], request_id="first-close-refused")
+        with patch.object(self.runtime._ledger, "prepare_primitive", refresh_capture):
+            self.assertEqual(self.runtime.command(child)["status"], "accepted")
+            refused = self.settled(child["request_id"])
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertEqual(refused["result"]["phase"]["stage"], "awaiting_observation")
+        self.assertEqual(self.runtime.status()["epoch"], before["epoch"])
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertIsNone(self.runtime.status()["current_source"])
+        self.assertFalse(any(r["kind"] == "direct" for r in self.bridge.requests))
+        premature = {**child, "request_id": "input-before-observe"}
+        self.assertEqual(self.runtime.command(premature)["status"], "rejected")
+        observe = self.request("observe", request_id="look-after-first-refusal")
+        self.assertEqual(self.runtime.command(observe)["status"], "accepted")
+        self.assertEqual(self.settled(observe["request_id"])["state"], "completed")
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertFalse(self.runtime.status()["prompt_phase"]["observation_needed"])
+        chosen = self.control("direct", goal, phase_id=root["request_id"], request_id="new-close-intent")
+        self.assertEqual(self.runtime.command(chosen)["status"], "accepted")
+        self.assertEqual(self.settled(chosen["request_id"])["state"], "partial")
+        self.assertEqual(len([r for r in self.bridge.delivered if r["kind"] == "direct"]), 1)
+        self.assertEqual([r["state"] for r in self.runtime._ledger.primitive_records()],
+                         ["returned", "not_dispatched", "returned"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 3)
+        self.assertEqual(self.runtime.status()["unresolved_effects"], [])
+        self.assertEqual(self.runtime._ledger.request(root["request_id"])["deadline"], deadline)
+
+    def test_unprepared_click_refusal_retains_read_only_rotation_without_input_charge(self):
+        self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        original = self.start()
+        execute = self.controller.execute_mission
+
+        def resize_before_preflight(*args, **kwargs):
+            self.bridge.value["frame_geometry"]["window_width"] = 2
+            # Publish changed observation metadata under a distinct revision;
+            # same-revision geometry contradiction must still fail integrity.
+            self.bridge.value["revision"] += 1
+            return execute(*args, **kwargs)
+
+        geometry = copy.deepcopy(self.bridge.value["frame_geometry"])
+        request = self.control("direct", dict(input=dict(type="click", button="left", x=0, y=0,
+            geometry=geometry), interrupt_allowed=False, intent="Select visible position",
+            expected="Inspect actual effect"), request_id="click-before-resize")
+        with patch.object(self.controller, "execute_mission", resize_before_preflight):
+            self.assertEqual(self.runtime.command(request)["status"], "accepted")
+            refused = self.settled(request["request_id"])
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIn("Click geometry", refused["result"]["reason"])
+        self.assertEqual(refused["result"]["phase"]["stage"], "awaiting_observation")
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertEqual(self.runtime.status()["spent_inputs"], 0)
+        self.assertEqual(self.runtime._ledger.primitive_records(), ())
+        self.assertFalse(any(r["kind"] == "direct" for r in self.bridge.requests))
+        observe = self.request("observe", request_id="look-after-resize")
+        self.assertEqual(self.runtime.command(observe)["status"], "accepted")
+        observed = self.settled(observe["request_id"])
+        self.assertEqual(observed["state"], "completed", observed)
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertIsNotNone(self.runtime.status()["current_source"])
+        self.assertIsNone(self.runtime._prompt_phase)
+        self.assertEqual(self.runtime.status()["epoch"], original["epoch"])
+        self.assertEqual(self.runtime.status()["deadline"], original["deadline"])
+
+    def test_unpublished_capture_refusal_with_reservation_fault_still_stops(self):
+        self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        root, _ = self.open_direction()
+        prepare = self.runtime._ledger.prepare_primitive
+
+        def refresh_capture(*args, **kwargs):
+            result = prepare(*args, **kwargs)
+            current = copy.deepcopy(self.controller.state)
+            current.update(id="", frame="frame-game-test-999999.png")
+            self.controller._accept(current)
+            return result
+
+        request = self.control("direct", dict(input=dict(type="click", button="left", x=0, y=0,
+            geometry=copy.deepcopy(self.bridge.value["frame_geometry"])),
+            interrupt_allowed=False, intent="Close this prompt", expected="Inspect resulting screen"),
+            phase_id=root["request_id"], request_id="refusal-with-storage-fault")
+        with patch.object(self.runtime._ledger, "prepare_primitive", refresh_capture), \
+                patch.object(self.runtime._store, "release", side_effect=OSError("reservation storage failed")):
+            self.assertEqual(self.runtime.command(request)["status"], "accepted")
+            self.settled(request["request_id"])
+        self.assertEqual(self.runtime.status()["phase"], "paused")
+        self.assertIsNone(self.controller._mission_lease)
+        self.assertIsNone(self.runtime._prompt_phase)
+        row = self.runtime._ledger.primitive_records()[-1]
+        self.assertEqual(row["state"], "not_dispatched")
+        self.assertFalse(row["result"]["published"])
+        self.assertIn("reservation storage failed", row["result"]["processing_error"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertFalse(any(r["kind"] == "direct" for r in self.bridge.requests))
+
+    def test_wide_ordinary_exploration_keeps_bounded_map_and_current_navigation(self):
+        # Reproduce the fresh003 publication failure with real runtime components,
+        # not native gameplay: this visible transport supplies a broad trajectory.
+        self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        original = self.start()
+        first = self.runtime._current
+        observed_map = self.runtime._map
+        projected = set()
+
+        def footprint(scene):
+            x, y, z = scene["position"]
+            projected.add((x, y, z))
+            projected.update((x + cell["dx"], y + cell["dy"], z)
+                for cell in scene["neighbors"] if abs(cell["dx"]) + abs(cell["dy"]) == 1)
+
+        footprint(self.bridge.value["scene"])
+        directions = {"RIGHT": (1, 0), "DOWN": (0, 1), "LEFT": (-1, 0)}
+        def move(bridge, request):
+            if request["kind"] == "direct":
+                dx, dy = directions[request["input"]["key"]]
+                bridge.value["scene"]["position"][0] += dx
+                bridge.value["scene"]["position"][1] += dy
+            if request["kind"] in ("direct", "action"):
+                bridge.value["scene"]["turn"] += 1
+                footprint(bridge.value["scene"])
+            return True
+        self.bridge.behavior = move
+        keys = ["RIGHT"] * 60 + ["DOWN"] * 4 + ["LEFT"] * 60 + ["DOWN"] * 4 + ["RIGHT"] * 60
+        for index, key in enumerate(keys, 1):
+            request = self.control("direct", dict(input=dict(type="key", key=key, modifiers=[]),
+                interrupt_allowed=False, intent="Explore the visible surroundings",
+                expected="Inspect the resulting position"), request_id=f"explore-{index}")
+            response = self.runtime.command(request)
+            self.assertEqual(response["status"], "accepted", response)
+            operation = self.settled(request["request_id"])
+            # A known delivered key must remain returned even at cache eviction.
+            primitive = self.runtime._ledger.primitive_records()[-1]
+            self.assertEqual(primitive["state"], "returned", primitive)
+            self.assertEqual(primitive["result"]["native_ack"]["id"], primitive["native_id"])
+            self.assertIsNone(primitive["result"]["evidence_loss"])
+            self.assertEqual(operation["state"], "partial",
+                f"Input {index}, {len(projected)} projected coordinates: {operation['result']}")
+            self.assertEqual(operation["result"]["basis"], "ordinary_input")
+            self.assertIsNone(operation["result"]["pending_logical_id"])
+            self.assertIs(self.runtime._map, observed_map)
+            self.assertLessEqual(observed_map.node_count, 512)
+
+        self.assertGreater(len(projected), 512)
+        self.assertEqual(self.runtime._store.position(self.runtime._current), (60, 8, 0))
+        # The retained current footprint still supports a useful guarded request.
+        request = self.navigation(target=(61, 8, 0), request_id="navigate-after-wide-exploration")
+        self.assertEqual(self.runtime.command(request)["status"], "accepted")
+        operation = self.settled(request["request_id"])
+        self.assertEqual(operation["state"], "completed", operation)
+        self.assertEqual(operation["result"]["verified_steps"], 1)
+        self.assertEqual(self.runtime._store.position(self.runtime._current), (61, 8, 0))
+        self.assertIs(self.runtime._map, observed_map)
+        self.assertLessEqual(observed_map.node_count, 512)
+
+        rows = self.runtime._ledger.primitive_records()
+        delivered = [r for r in self.bridge.delivered if r["kind"] in ("direct", "action")]
+        self.assertEqual(len(rows), len(keys) + 1)
+        self.assertEqual([r["native_id"] for r in rows], [r["id"] for r in delivered])
+        self.assertEqual([r["input"]["key"] for r in delivered[:-1]], keys)
+        self.assertEqual(delivered[-1]["action"], "RIGHT")
+        retained = {ref.observation_id: ref for ref in self.runtime._store.historical_references}
+        self.runtime._store.verify(first)
+        for row in rows:
+            self.assertEqual(row["state"], "returned")
+            self.assertEqual(row["result"]["transport_disposition"], "returned")
+            self.assertIsNone(row["result"]["evidence_loss"])
+            self.runtime._store.verify(retained[row["intent"]["source_before"]])
+            self.runtime._store.verify(retained[row["result"]["source_after"]])
+        status = self.runtime.status()
+        self.assertEqual(status["phase"], "active")
+        self.assertEqual(status["unresolved_effects"], [])
+        self.assertIsNotNone(status["lease_owner"])
+        self.assertEqual(status["spent_inputs"], len(rows))
+        self.assertEqual(status["metrics"]["game_seconds"], len(rows))
+        self.assertEqual(status["remaining_limits"]["inputs"], self.a.limits.inputs - len(rows))
+        self.assertEqual(status["remaining_limits"]["game_seconds"], self.a.limits.game_seconds - len(rows))
+        for field in ("epoch", "player_id", "started_at", "deadline", "cleanup_reserve", "coordinate_scope"):
+            self.assertEqual(status[field], original[field], field)
+        self.assertEqual(self.runtime._admission, self.a)
+        self.assertFalse(status["grants_authority"])
+
     def test_already_reached_and_unknown_route_do_not_rotate_or_send(self):
         self.start()
         lease = self.controller._mission_lease
@@ -1280,12 +1681,12 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_pause_status_while_runtime_preflight_storage_blocked(self):
         self.start()
         entered, release = threading.Event(), threading.Event()
-        real = self.runtime._store.retain_equivalent
+        real = self.runtime._store.retain_preflight
         def blocked(*args, **kwargs):
             entered.set()
             release.wait(3)
             return real(*args, **kwargs)
-        with patch.object(self.runtime._store, "retain_equivalent", blocked):
+        with patch.object(self.runtime._store, "retain_preflight", blocked):
             req = self.navigation()
             self.runtime.command(req)
             self.assertTrue(entered.wait(2))
@@ -1335,7 +1736,7 @@ class MissionRuntimeTests(unittest.TestCase):
         self.start()
         source = self.runtime.status()["current_source"]
         scope = dict(mission_id=self.a.mission_id, session=source["session"], coordinate_epoch=0)
-        req = dict(schema="mission/8", kind="context", handoff=None, mission_id=self.a.mission_id,
+        req = dict(schema="mission/11", kind="context", handoff=None, mission_id=self.a.mission_id,
                    scope=scope, query="water and pending work", max_bytes=8192)
         response = self.runtime.command(req)
         self.assertEqual(response["status"], "accepted", response)
@@ -1400,7 +1801,7 @@ class MissionRuntimeTests(unittest.TestCase):
         with closing(sqlite3.connect(path)) as db:
             db.execute("PRAGMA user_version=2")
         before = path.read_bytes()
-        response = self.runtime.command(dict(schema="mission/8", kind="start", request_id="start-1", admission=self.a.to_dict()))
+        response = self.runtime.command(dict(schema="mission/11", kind="start", request_id="start-1", admission=self.a.to_dict()))
         self.assertEqual(response["status"], "rejected", response)
         self.assertEqual(path.read_bytes(), before)
         self.assertEqual(self.bridge.delivered, [])
@@ -1408,23 +1809,26 @@ class MissionRuntimeTests(unittest.TestCase):
     def test_one_writer_blocks_concurrent_skill_and_pause_cancels_queue(self):
         self.start()
         entered, release = threading.Event(), threading.Event()
-        real = self.runtime._store.retain_equivalent
+        real = self.runtime._store.retain_preflight
         def blocked(*args, **kwargs):
             entered.set()
             release.wait(3)
             return real(*args, **kwargs)
-        with patch.object(self.runtime._store, "retain_equivalent", blocked):
+        with patch.object(self.runtime._store, "retain_preflight", blocked):
             req = self.navigation()
+            competing = self.navigation(request_id="competing")
             self.runtime.command(req)
             self.assertTrue(entered.wait(2))
-            competing = self.navigation(request_id="competing")
-            self.assertEqual(self.runtime.command(competing)["status"], "rejected")
-            with ThreadPoolExecutor(1) as pool:
-                queued = pool.submit(self.runtime.command, self.request("observe"))
-                self.wait(lambda: self.runtime._queue.qsize() == 1)
-                self.runtime.pause()
+            try:
+                self.assertEqual(self.runtime.command(competing)["status"], "rejected")
+                with ThreadPoolExecutor(1) as pool:
+                    queued = pool.submit(self.runtime.command, self.request("observe"))
+                    self.wait(lambda: self.runtime._queue.qsize() == 1)
+                    self.runtime.pause()
+                    release.set()
+                    self.assertEqual(queued.result(3)["status"], "rejected")
+            finally:
                 release.set()
-                self.assertEqual(queued.result(3)["status"], "rejected")
         self.assertEqual([r for r in self.bridge.delivered if r["kind"] == "action"], [])
 
 

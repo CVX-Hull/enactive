@@ -6,12 +6,11 @@ The caller alone owns authority, dispatch, phase and mission cost accounting.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass
 import hashlib
 import math
-from typing import Literal
 
 from .contracts import ContractError, EvidenceRef, PrimitiveResult
+from . import input_contracts as input_types
 from .evidence import EvidenceError, EvidenceStore
 from .mission_contracts import SourceRevalidation, validate_request
 from .interactions import check_visible_row_agreement, item_selection_plan
@@ -25,39 +24,21 @@ _COLUMNS = frozenset({"INVENTORY", "INVENTORY_SELECTOR"})
 _CONFIRMATIONS = frozenset({"YESNO", "CANCEL_ACTIVITY_OR_IGNORE_QUERY"})
 
 
-@dataclass(frozen=True)
-class ControlIntent:
-    logical_id: str
-    kind: Literal["action", "key"]
-    action: str
-    before: EvidenceRef
-    expected_boundary_id: str
-    revalidation: SourceRevalidation | None = None
-
-
-@dataclass(frozen=True)
-class ControlOutcome:
-    disposition: Literal["completed", "partial", "blocked", "unknown"]
-    reason: str
-    proposed_count: int
-    evidence: tuple[EvidenceRef, ...]
-    pending_logical_id: str | None
-    verification_required: bool
-    basis: Literal["native_rows", "player_interpretation", "registered_action"]
-    revalidation: SourceRevalidation | None = None
-
-
 class _ControlBlocked(Exception):
     """Current evidence or remaining budget cannot support another proposal."""
 
 
 class SemanticControlSkill:
     """One immutable request; explicit clocks and retained feedback, no executor."""
-    def __init__(self, request: dict | str | bytes):
+    def __init__(self, request: dict | str | bytes, *, deadline_monotonic: float):
         data = validate_request(request)
         if (data["kind"] != "skill" or data["skill_kind"] not in ("menu", "edit", "interact", "item", "activity", "inspect")
                 or data["skill_kind"] == "menu" and data["perception"] is None):
             raise ContractError("Semantic controls require edit/interact or an interpreted menu request")
+        if (type(deadline_monotonic) not in (int, float) or not math.isfinite(deadline_monotonic)
+                or deadline_monotonic < 0):
+            raise ContractError("Semantic-control deadline must be finite and nonnegative")
+        self._deadline_monotonic = deadline_monotonic
         self._request = data
         self._logical_prefix = "control-" + hashlib.sha256(data["request_id"].encode()).hexdigest()
         self._basis = "registered_action" if self._normal_root() else "player_interpretation"
@@ -70,10 +51,10 @@ class SemanticControlSkill:
         self._last_monotonic: float | None = None
         self._last_timestamp_ms: int | None = None
         self._proposals = 0
-        self._pending: ControlIntent | None = None
-        self._terminal: ControlOutcome | None = None
+        self._pending: input_types.ControlIntent | None = None
+        self._terminal: input_types.ControlOutcome | None = None
         self._revalidation: SourceRevalidation | None = None
-        self._plan: tuple[tuple[str, str], ...] = ()
+        self._plan: tuple[tuple[str, str | dict], ...] = ()
         self._index = 0
 
     def _normal_root(self) -> bool:
@@ -117,10 +98,10 @@ class SemanticControlSkill:
         self._last_monotonic, self._last_timestamp_ms = now_monotonic, now_timestamp_ms
 
     def _finish(self, reason: str, *, unknown: bool = False, inspected: bool = False,
-                blocked: bool = False, verification_required: bool = False) -> ControlOutcome:
+                blocked: bool = False, verification_required: bool = False) -> input_types.ControlOutcome:
         disposition = ("unknown" if unknown else "completed" if inspected else "blocked" if blocked
                        else "partial" if self._proposals or verification_required else "blocked")
-        self._terminal = ControlOutcome(disposition, reason, self._proposals, self._sources,
+        self._terminal = input_types.ControlOutcome(disposition, reason, self._proposals, self._sources,
                                         self._pending.logical_id if self._pending else None,
                                         verification_required, self._basis, self._revalidation)
         return self._terminal
@@ -151,7 +132,7 @@ class SemanticControlSkill:
     def _control_shape(state: dict) -> dict:
         ui = state["ui"]
         return {**{key: state[key] for key in ("session", "category", "actions", "scene", "paused",
-                                               "pause_origin", "takeover_generation", "in_game")},
+                                               "pause_origin", "takeover_generation", "in_game", "frame_geometry")},
                 "boundary": {key: value for key, value in state["boundary"].items() if key != "id"},
                 "ui": None if ui is None else {key: value for key, value in ui.items() if key != "selected"}}
 
@@ -214,7 +195,7 @@ class SemanticControlSkill:
         # Other axes describe another region and cannot acquire that assertion.
         check_visible_row_agreement(view, state)
 
-    def _native_focus_transition(self, pending: ControlIntent, before: dict, after: dict) -> None:
+    def _native_focus_transition(self, pending: input_types.ControlIntent, before: dict, after: dict) -> None:
         view = self._request["perception"]
         if (view is None or view["kind"] not in ("menu", "item_selection") or view["control"] != "vertical"
                 or before["ui"] is None or before["ui"]["purpose"] not in ("uilist", "inventory")
@@ -338,7 +319,7 @@ class SemanticControlSkill:
 
     def _budget(self, current: EvidenceRef, now_monotonic: float, *, completing: bool = False) -> None:
         limits = self._request["limits"]
-        remaining_wall = limits["wall_seconds"] - (now_monotonic - self._start.received_monotonic)
+        remaining_wall = self._deadline_monotonic - now_monotonic
         # Menu turns stay null; runtime owns mission costs across menu phases.
         remaining_game = None
         if self._start.turn is not None and current.turn is not None:
@@ -352,7 +333,7 @@ class SemanticControlSkill:
             raise _ControlBlocked("Original control proposal/wall/game budget exhausted")
 
     def propose(self, store: EvidenceStore, *, now_monotonic: float,
-                now_timestamp_ms: int) -> ControlIntent | ControlOutcome:
+                now_timestamp_ms: int) -> input_types.ControlIntent | input_types.ControlOutcome:
         if self._terminal is not None: return self._terminal
         try:
             self._clocks(now_monotonic, now_timestamp_ms)
@@ -384,12 +365,12 @@ class SemanticControlSkill:
             return self._finish(str(exc), unknown=self._pending is not None,
                                 verification_required=self._proposals > 0)
         self._proposals += 1
-        self._pending = ControlIntent(f"{self._logical_prefix}-{self._proposals}", kind, action, current,
+        self._pending = input_types.ControlIntent(f"{self._logical_prefix}-{self._proposals}", kind, action, current,
                                       state["boundary"]["id"], self._revalidation if self._proposals == 1 else None)
         return self._pending
 
     def accept(self, result: PrimitiveResult, store: EvidenceStore, *, now_monotonic: float,
-               now_timestamp_ms: int) -> ControlOutcome | None:
+               now_timestamp_ms: int) -> input_types.ControlOutcome | None:
         if self._terminal is not None: return self._terminal
         pending = self._pending
         if pending is None:
@@ -405,7 +386,7 @@ class SemanticControlSkill:
             # miscorrelated receipt; retaining it does not attribute delivery.
             if type(result.after) is EvidenceRef and result.after in store.historical_references:
                 self._sources = tuple(dict.fromkeys((*self._sources, result.after)))
-            result.to_dict()
+            result.__post_init__()
             after = store.observation(result.after) if result.after is not None else None
             if (result.action_id, result.before) != (pending.logical_id, pending.before):
                 raise EvidenceError("Feedback does not match the pending logical ID and before reference")

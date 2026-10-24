@@ -1,23 +1,138 @@
 """Normal-finish composition with real ledger/controller and synthetic UI only."""
 from dataclasses import replace
+from contextlib import contextmanager
 from pathlib import Path
+import threading
 import unittest
 from unittest.mock import patch
 
 from harness.mission_runtime import MissionRuntime
+from harness.gameplay.mission_contracts import LearningPolicy
+from harness.gameplay.mission_ledger import BudgetError
+from tests.test_reflection_exchange import procedure
 from tests.test_mission_creation import MissionCreationFixture
 
 
 class MissionFinishTests(MissionCreationFixture, unittest.TestCase):
+    @contextmanager
+    def hold_after_finish_publication(self):
+        published, release = threading.Event(), threading.Event()
+        original = self.runtime._cache_operation
+        def cache_before_next_tick(operation):
+            original(operation)
+            if operation["request"]["request_id"] == "finish" and operation["result"] is not None:
+                published.set()
+                if not release.wait(3):
+                    raise TimeoutError("Finish publication barrier was not released")
+        with patch.object(self.runtime, "_cache_operation", side_effect=cache_before_next_tick):
+            try:
+                yield published
+            finally:
+                release.set()
+
+    def assert_advisory_reopened(self, reflection, operation):
+        self.assertEqual(operation["state"], "completed", operation)
+        self.assertEqual(self.runtime.status()["phase"], "paused")
+        self.assertFalse(self.runtime._closed.is_set())
+        self.assertFalse(reflection.exchange._sealed)
+        self.assertEqual(reflection.summary()["phase"], "paused")
+        self.assertEqual(reflection.exchange.next_job(mission_id=self.a.mission_id,
+            reflector_id="reflector-a")["status"], "idle")
+
+    def test_finish_deadline_failure_after_advisory_seal_does_not_disable_learner(self):
+        self.a = replace(self.a, learning=LearningPolicy(procedure()["environment"], reflector_id="reflector-a"))
+        self.untouched_exit()
+        reflection = self.runtime._registered_reflection
+        original = self.runtime._finish_guard
+        def expire_after_seal(work):
+            if reflection.exchange._sealed:
+                raise BudgetError("Original finish/mission wall deadline expired")
+            return original(work)
+        with patch.object(self.runtime, "_finish_guard", side_effect=expire_after_seal), \
+                self.hold_after_finish_publication() as published:
+            operation = self.finish()
+            self.assertTrue(published.wait(3))
+            self.assert_advisory_reopened(reflection, operation)
+
+    def test_real_terminal_ledger_deadline_refusal_reopens_advisory_before_next_tick(self):
+        self.a = replace(self.a, learning=LearningPolicy(procedure()["environment"], reflector_id="reflector-a"))
+        self.untouched_exit()
+        reflection = self.runtime._registered_reflection
+        original, wall = self.runtime._ledger.finish_mission, self.runtime._wall
+        offset, refusals = [0], []
+        def expire_at_terminal_write(*args, **kwargs):
+            self.assertTrue(reflection.exchange._sealed)
+            offset[0] = self.runtime._ledger.request("finish")["deadline"] + 1 - wall()
+            try:
+                return original(*args, **{**kwargs, "now": self.runtime._wall()})
+            except BudgetError as exc:
+                refusals.append(str(exc))
+                raise
+        with patch.object(self.runtime, "_wall", side_effect=lambda: wall() + offset[0]), \
+                patch.object(self.runtime._ledger, "finish_mission", side_effect=expire_at_terminal_write), \
+                self.hold_after_finish_publication() as published:
+            operation = self.finish()
+            self.assertTrue(published.wait(3))
+            self.assertEqual(refusals, ["Original normal-finish deadline expired before terminal persistence"])
+            self.assert_advisory_reopened(reflection, operation)
+
+    def test_pause_during_advisory_seal_keeps_future_reflection_available(self):
+        self.a = replace(self.a, learning=LearningPolicy(procedure()["environment"], reflector_id="reflector-a"))
+        self.untouched_exit()
+        reflection = self.runtime._registered_reflection
+        original = reflection.finish
+        def pause_after_seal(*, permanent):
+            original(permanent=permanent)
+            self.runtime.pause()
+        with patch.object(reflection, "finish", side_effect=pause_after_seal), \
+                self.hold_after_finish_publication() as published:
+            operation = self.finish()
+            self.assertTrue(published.wait(3))
+            self.assert_advisory_reopened(reflection, operation)
+
+    def test_terminal_storage_fault_does_not_reopen_advisory_ingress(self):
+        self.a = replace(self.a, learning=LearningPolicy(procedure()["environment"], reflector_id="reflector-a"))
+        self.untouched_exit()
+        reflection = self.runtime._registered_reflection
+        with patch.object(self.runtime._ledger, "finish_mission", side_effect=OSError("Injected terminal storage failure")), \
+                patch.object(reflection, "cancel_finish", wraps=reflection.cancel_finish) as cancel:
+            self.assertEqual(self.runtime.command(self.lifecycle("finish", "finish"))["status"], "accepted")
+            self.assertTrue(self.runtime._closed.wait(3))
+            cancel.assert_not_called()
+        self.runtime.close()
+        self.assertTrue(reflection.exchange._sealed)
+        self.assertEqual(reflection.exchange.next_job(mission_id=self.a.mission_id,
+            reflector_id="reflector-a")["status"], "closed")
+        self.assertIn("Injected terminal storage failure", self.runtime.status()["diagnostic"])
+
+    def test_committed_terminal_state_is_never_reopened_after_late_refusal(self):
+        self.a = replace(self.a, learning=LearningPolicy(procedure()["environment"], reflector_id="reflector-a"))
+        self.untouched_exit()
+        reflection = self.runtime._registered_reflection
+        original = self.runtime._ledger.finish_mission
+        def refuse_after_terminal_commit(*args, **kwargs):
+            original(*args, **kwargs)
+            raise BudgetError("Injected refusal after terminal commit")
+        with patch.object(self.runtime._ledger, "finish_mission", side_effect=refuse_after_terminal_commit), \
+                self.hold_after_finish_publication() as published:
+            operation = self.finish()
+            self.assertTrue(published.wait(3))
+            self.assertEqual(operation["state"], "completed", operation)
+            self.assertEqual(self.runtime.status()["phase"], "stopped")
+            self.assertTrue(reflection.exchange._sealed)
+            self.assertEqual(reflection.summary()["phase"], "stopped")
+            self.assertEqual(reflection.exchange.next_job(mission_id=self.a.mission_id,
+                reflector_id="reflector-a")["status"], "closed")
+
     def remember_work(self, identity="objective", *, source=None, status="completed", intent=None):
         source = source or self.runtime._current
-        entry = dict(schema="campaign-memory/3", record_type="Work", id="objective-work", predecessor_work_id=None,
+        entry = dict(schema="campaign-memory/6", record_type="Work", id="objective-work", predecessor_work_id=None,
             intent=intent or self.a.objective, scope=dict(mission_id=self.a.mission_id, session=source.session,
                 coordinate_epoch=0), stage="verified" if status == "completed" else "pending",
             progress=100 if status == "completed" else 25, available=[], committed=[], predicted_output=[],
             observed_output=[], unresolved_effects=[], sources=[source.observation_id],
             next_verification="Independent acceptance assesses the actual objective evidence", status=status)
-        result = self.run_request(dict(schema="mission/8", kind="remember", request_id=identity,
+        result = self.run_request(dict(schema="mission/11", kind="remember", request_id=identity,
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], entry_type="work", entry=entry))
         self.assertEqual(result["state"], "completed", result)
         return entry
@@ -58,7 +173,8 @@ class MissionFinishTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(self.runtime.status()["phase"], "completed")
         self.assertEqual(self.runtime.status()["reason"], "Player-reported objective completion")
         self.assertEqual(len(self.bridge.requests), count)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
         self.runtime.close()
         self.runtime = MissionRuntime(self.controller)
         self.start()
@@ -70,7 +186,7 @@ class MissionFinishTests(MissionCreationFixture, unittest.TestCase):
         self.untouched_exit()
         self.assertEqual(self.finish()["state"], "completed")
         self.a = replace(self.a, mission_id="next-mission")
-        operation = self.run_request(dict(schema="mission/8", kind="start", request_id="next-start", admission=self.a.to_dict()))
+        operation = self.run_request(dict(schema="mission/11", kind="start", request_id="next-start", admission=self.a.to_dict()))
         self.assertEqual(operation["state"], "completed", operation)
         self.assertEqual(self.runtime.status()["mission_id"], "next-mission")
         self.assertIsNone(self.runtime._native)
@@ -177,7 +293,8 @@ class MissionFinishTests(MissionCreationFixture, unittest.TestCase):
             self.assertEqual(self.finish(work_id="objective-work")["state"], "completed")
         normal = [ref for ref in self.runtime._store.historical_references if ref.boundary_kind == "normal_play"][-1]
         self.remember_work("later-incomplete-report", source=normal, status="active")
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
         self.assertEqual(self.runtime._ledger.request("finish")["result"]["normal_finish"]["completed_work_event_id"], "objective")
         self.assertEqual(self.runtime.status()["phase"], "paused")
 

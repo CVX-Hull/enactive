@@ -14,11 +14,11 @@ from typing import Any, Callable
 
 from .contracts import ContractError, EvidenceRef, json_object
 from .evidence import CapacityError, EvidenceError, EvidenceStore
-from .mission_contracts import (
-    MAX_CONTEXT_BYTES, MAX_HANDOFF_CONTEXT_BYTES, MAX_HANDOFF_SOURCES,
-    MEMORY_VERSION, VERSION, canonical, validate_memory_entry, validate_work_view, validate_request,
-)
-from .mission_ledger import MissionLedger
+from .contracts import canonical
+from .mission_contracts import MAX_CONTEXT_BYTES, MAX_HANDOFF_CONTEXT_BYTES, MAX_HANDOFF_SOURCES, MEMORY_VERSION, VERSION, MemoryRequestRefusal, validate_memory_entry, validate_work_view, validate_request
+from .mission_ledger import MissionLedger, RequestNotFound
+from .procedure_library import ProcedureEpisodeRefusal
+from .procedures import MAX_PROCEDURE_RECORDS, project_procedures
 
 MAX_CLAIMS = 32
 MAX_WORK = 16
@@ -65,10 +65,107 @@ class CampaignMemory:
     after restart callers retrieve again. The durable Decision's frozen fields
     retain its exact version/query and selected IDs, without a second packet log.
     """
-    def __init__(self, ledger: MissionLedger, store: EvidenceStore):
+    def __init__(self, ledger: MissionLedger, store: EvidenceStore, library=None):
         self.ledger = ledger
         self.store = store
+        self.library = library
         self._packets: list[dict] = []
+        self._procedure_heads()
+
+    def _procedure_records(self) -> tuple[dict, ...]:
+        return (() if self.library is None else self.library.records()) + tuple(
+            row["entry"] for row in self.ledger.memory_records("procedure"))
+
+    def _procedure_heads(self) -> dict[str, dict]:
+        records = self._procedure_records()
+        policy = self.ledger.admission.learning
+        if (records and policy is None or policy is not None and policy.library_sources and self.library is None):
+            raise ContractError("Procedure retrieval requires its admitted library and environment")
+        if policy is not None and any(record["environment"] != dict(policy.environment) for record in records):
+            raise ContractError("Procedure history crosses its admitted environment")
+        return project_procedures(records)
+
+    @staticmethod
+    def _procedure_ref(entry: dict) -> dict:
+        return {"mission_id": entry["mission_id"], "revision_id": entry["id"]}
+
+    def procedure_source(self, mission_id: str, source_id: str) -> tuple[dict, bytes]:
+        if mission_id == self.ledger.admission.mission_id:
+            return self.store.export_source(source_id)
+        if self.library is None:
+            raise ContractError("Historical procedure evidence is not admitted")
+        return self.library.source(mission_id, source_id)
+
+    def _procedure_support(self, entry: dict, *, candidate=False) -> set[tuple[str, str]]:
+        """Validate complete ancestry and actual episode joins; never semantic truth."""
+        records = self._procedure_records()
+        by_id = {(record["mission_id"], record["id"]): record for record in records}
+        chain = [entry]
+        current = entry
+        while current["parent"] is not None:
+            parent = current["parent"]
+            current = by_id[(parent["mission_id"], parent["revision_id"])]
+            chain.append(current)
+        sources: set[tuple[str, str]] = set()
+        primitives = self.ledger.primitive_records()
+        # Retained ancestry stays strict even while validating a new revision.
+        for record in reversed(chain):
+            new = candidate and record is entry
+            refusal = MemoryRequestRefusal if new else ContractError
+            for episode in record["support"] + record["counterexamples"]:
+                mission = episode["mission_id"]
+                if mission == self.ledger.admission.mission_id:
+                    linked = set()
+                    for identity in episode["request_ids"]:
+                        try:
+                            request = self.ledger.request(identity)
+                        except RequestNotFound as exc:
+                            if not new:
+                                raise
+                            raise MemoryRequestRefusal("Procedure episode request is not retained") from exc
+                        if request["state"] in ("accepted", "running"):
+                            raise refusal("Procedure evidence requires a settled original request")
+                        linked.update(request["request"].get("sources", ()))
+                        linked.update((request["result"] or {}).get("source_ids", ()))
+                        for primitive in primitives:
+                            if primitive["request_id"] != identity:
+                                continue
+                            if (primitive["state"] in ("prepared", "published")
+                                    or primitive["state"] == "unknown" and primitive["effect"] is None):
+                                raise refusal("Procedure episode has unresolved original input effects")
+                            linked.update(primitive["intent"][key] for key in ("source_before", "preflight_source"))
+                            receipt = primitive["result"] or {}
+                            linked.update(receipt[key] for key in ("source_before", "preflight_source", "source_after")
+                                          if receipt.get(key) is not None)
+                    if not set(episode["source_ids"]) <= linked:
+                        raise refusal("Procedure evidence is unrelated to its cited requests")
+                else:
+                    if self.library is None:
+                        raise refusal("Procedure episode mission is not admitted")
+                    try:
+                        self.library.validate_episode(episode)
+                    except ProcedureEpisodeRefusal as exc:
+                        if not new:
+                            raise
+                        raise MemoryRequestRefusal(str(exc)) from exc
+                for source in episode["source_ids"]:
+                    qualified = (mission, source)
+                    if qualified in sources:
+                        continue
+                    metadata, _ = self.procedure_source(*qualified)
+                    if metadata["disposition"] != "retained":
+                        raise refusal("Disputed procedure evidence is ineligible")
+                    sources.add(qualified)
+        return sources
+
+    def select_procedure(self, selection: dict) -> dict:
+        heads = self._procedure_heads()
+        chosen = next((entry for entry in heads.values() if self._procedure_ref(entry) == {
+            key: selection[key] for key in ("mission_id", "revision_id")}), None)
+        if chosen is None or chosen["status"] not in ("candidate", "active"):
+            raise MemoryRequestRefusal("Select an eligible current procedure revision, with scoped applicability")
+        self._procedure_support(chosen)
+        return _copy(chosen)
 
     def _scope(self, scope: dict) -> dict:
         scope = validate_request({"schema": VERSION, "kind": "context", "handoff": None,
@@ -84,10 +181,13 @@ class CampaignMemory:
         result = []
         for identity in entry["sources"]:
             ref = refs.get(identity)
-            if ref is None or ref.session != entry["scope"]["session"]:
-                raise ContractError("Source identity/session differs from memory scope")
+            if ref is None:
+                raise MemoryRequestRefusal("Source identity/session differs from memory scope")
+            if ref.session != entry["scope"]["session"]:
+                raise MemoryRequestRefusal("Source identity/session differs from memory scope: every cited source "
+                    "must share the entry's grounding session. Cross-session sources need separately grounded entries.")
             if self.store.source_status(ref) != "retained":
-                raise ContractError("Disputed source cannot establish memory")
+                raise MemoryRequestRefusal("Disputed source cannot establish memory")
             result.append(ref)
         return result
 
@@ -99,27 +199,27 @@ class CampaignMemory:
         while pending:
             identity = pending.pop()
             if identity == entry["id"] or identity not in claims:
-                raise ContractError("Self, forward, missing or cyclic claim support")
+                raise MemoryRequestRefusal("Self, forward, missing or cyclic claim support")
             if identity in retired:
-                raise ContractError("A correction cannot derive from its retired premise")
+                raise MemoryRequestRefusal("A correction cannot derive from its retired premise")
             if identity in visited:
                 continue
             visited.add(identity)
             premise = claims[identity]
             if premise["scope"] != entry["scope"]:
-                raise ContractError("Claim supports cannot align another coordinate/session scope")
+                raise MemoryRequestRefusal("Claim supports cannot align another coordinate/session scope")
             pending.extend(c for group in premise["supports"] for c in group["claims"])
         # The observed order must name an actual source boundary, including its
         # absent native turn. Older premises may accompany that anchor.
         order = entry["observed_time"]
         if refs and not any(order == {"revision": ref.revision, "turn": ref.turn} for ref in refs):
-            raise ContractError("Observed order must match an actual retained source")
+            raise MemoryRequestRefusal("Observed order must match an actual retained source")
         if not refs and any(v is not None for v in order.values()):
-            raise ContractError("Source-free interpretation has no observed native order")
+            raise MemoryRequestRefusal("Source-free interpretation has no observed native order")
         if any(_later({"observed_time": {"revision": ref.revision, "turn": ref.turn}}, entry) for ref in refs):
-            raise ContractError("Claim order predates its source")
+            raise MemoryRequestRefusal("Claim order predates its source")
         if not entry["supports"] and entry["status"] not in ("unknown", "disputed", "retired"):
-            raise ContractError("A supported value requires explicit support groups")
+            raise MemoryRequestRefusal("A supported value requires explicit support groups")
 
     def apply(self, request: dict, *, now: float) -> dict:
         """Append admitted memory; `now` is the ledger's real wall time in seconds."""
@@ -131,32 +231,50 @@ class CampaignMemory:
             raise ContractError("Memory request differs from its durable admitted payload")
         entry, kind = data["entry"], data["entry_type"]
         if kind == "decision":
-            return self.record_decision(entry, now=now)
+            return self.record_decision(entry, now=now, event_id=data["request_id"])
+        if kind == "procedure":
+            if self.ledger.admission.learning is None:
+                raise MemoryRequestRefusal("Procedure adaptation is not admitted")
+            if entry["environment"] != dict(self.ledger.admission.learning.environment):
+                raise MemoryRequestRefusal("Procedure environment differs from frozen admission")
+            existing = self._procedure_records()
+            self._procedure_heads()  # Existing history is never a candidate refusal.
+            if len(existing) >= MAX_PROCEDURE_RECORDS:
+                raise CapacityError("Procedure projection exceeds 256 records")
+            try:
+                project_procedures((*existing, entry))
+            except ContractError as exc:
+                # Pure projection of a validated addition to a valid closure.
+                raise MemoryRequestRefusal(str(exc)) from exc
+            self._procedure_support(entry, candidate=True)
+            sequence = self.ledger.append_memory(data["request_id"], kind, entry, now=now, candidate=True)
+            return _copy({"memory_version": sequence, "entry": entry, "grants_authority": False})
         if kind == "claim":
             claims = {row["entry"]["id"]: row["entry"] for row in self.ledger.memory_records("claim")}
+            self._validate_claim_history(claims)
             retired = set(data.get("retired_ids", []))
             if data["kind"] == "correct":
                 if set(entry["supersedes"]) != retired:
-                    raise ContractError("Correction supersedes must exactly match durable retired_ids")
+                    raise MemoryRequestRefusal("Correction supersedes must exactly match durable retired_ids")
                 if any(identity not in claims or claims[identity]["scope"] != entry["scope"] for identity in retired):
-                    raise ContractError("Correction requires existing claims in its exact scope")
+                    raise MemoryRequestRefusal("Correction requires existing claims in its exact scope")
             elif entry["supersedes"]:
-                raise ContractError("Retirement requires an explicit durable correct request/reason")
+                raise MemoryRequestRefusal("Retirement requires an explicit durable correct request/reason")
             self._validate_claim(entry, claims, retired=retired)
             if entry["received_time"] > int(now * 1000):
-                raise ContractError("Claim receipt time is in the future")
+                raise MemoryRequestRefusal("Claim receipt time is in the future")
         else:
             self._sources(entry)
             old = [r["entry"] for r in self.ledger.memory_records("work") if r["entry"]["id"] == entry["id"]]
             if old and any(entry[k] != old[-1][k] for k in ("scope", "intent", "predecessor_work_id")):
-                raise ContractError("A work identity retains its scope, intent and predecessor")
+                raise MemoryRequestRefusal("A work identity retains its scope, intent and predecessor")
             if not entry["sources"] and (entry["available"] or entry["observed_output"] or entry["progress"] is not None or entry["status"] == "completed"):
-                raise ContractError("Observed work/available output requires retained evidence")
+                raise MemoryRequestRefusal("Observed work/available output requires retained evidence")
             primitives = {p["logical_id"]: p for p in self.ledger.primitive_records()}
             if any(identity not in primitives or primitives[identity]["intent"]["expected_session"] != entry["scope"]["session"]
                    for identity in entry["unresolved_effects"]):
-                raise ContractError("Work references an unknown or differently scoped primitive effect")
-        sequence = self.ledger.append_memory(data["request_id"], kind, entry, now=now)
+                raise MemoryRequestRefusal("Work references an unknown or differently scoped primitive effect")
+        sequence = self.ledger.append_memory(data["request_id"], kind, entry, now=now, candidate=True)
         return _copy({"memory_version": sequence, "entry": entry, "grants_authority": False})
 
     def capture_native(self, reference: EvidenceRef, scope: dict, *, now: float) -> dict:
@@ -169,7 +287,7 @@ class CampaignMemory:
         scene = observation["scene"]
         entries = []
         existing = {row["entry"]["id"]: row["entry"] for row in self.ledger.memory_records("claim")}
-        sequence = max((row["sequence"] for kind in ("claim", "work", "decision")
+        sequence = max((row["sequence"] for kind in ("claim", "work", "decision", "procedure")
                         for row in self.ledger.memory_records(kind)), default=0)
         if scene is not None:
             facts = [("player-position", "local-coordinate", {"quantity": None, "state": canonical({"position": scene["position"]})}),
@@ -188,24 +306,69 @@ class CampaignMemory:
                 entries.append(entry)
         return _copy({"memory_version": sequence, "entries": entries, "grants_authority": False})
 
-    def _frontier(self, claims: dict[str, dict]) -> tuple[list[list[str]], set[str]]:
+    @staticmethod
+    def _validate_claim_history(claims: dict[str, dict]) -> None:
+        """Check retained dependency order without computing pairwise frontiers."""
         seen = set()
         for identity, claim in claims.items():
             parents = set(claim["supersedes"]) | {c for group in claim["supports"] for c in group["claims"]}
             if not parents <= seen:
                 raise ContractError("Durable claims contain missing/forward/cyclic dependencies")
+            if any(claims[parent]["scope"] != claim["scope"] for parent in parents):
+                raise ContractError("Durable claim dependencies cross their exact scope")
             seen.add(identity)
+
+    @staticmethod
+    def _frontier(claims: dict[str, dict], *, selected_ids: set[str] | None = None) -> tuple[list[list[str]], set[str]]:
+        """Validate the full graph, then reduce complete groups containing selected IDs."""
+        CampaignMemory._validate_claim_history(claims)
         retired = {identity for claim in claims.values() for identity in claim["supersedes"]}
         ancestors: dict[str, set[str]] = {}
         for identity, claim in claims.items():
             ancestors[identity] = set(claim["supersedes"])
             for predecessor in claim["supersedes"]:
                 ancestors[identity].update(ancestors.get(predecessor, ()))
+        selected_groups = None if selected_ids is None else {_group(claims[identity]) for identity in selected_ids}
         groups: dict[str, list[str]] = {}
         for identity, claim in claims.items():
-            groups.setdefault(_group(claim), []).append(identity)
+            group = _group(claim)
+            if selected_groups is None or group in selected_groups:
+                groups.setdefault(group, []).append(identity)
         frontiers = []
         for ids in groups.values():
+            if not any(claims[identity]["supersedes"] for identity in ids):
+                # Missing clocks cannot align different masks. Within each
+                # mask, maxima preserve all equal-order claims and conflicts.
+                masks: dict[tuple[bool, bool], list[str]] = {}
+                for identity in ids:
+                    order = claims[identity]["observed_time"]
+                    mask = (order["revision"] is not None, order["turn"] is not None)
+                    masks.setdefault(mask, []).append(identity)
+                surviving: set[str] = set()
+                for mask, members in masks.items():
+                    if not any(mask):
+                        surviving.update(members)
+                    elif all(mask):
+                        pairs = {(claims[identity]["observed_time"]["revision"],
+                                  claims[identity]["observed_time"]["turn"]) for identity in members}
+                        maxima = set()
+                        max_turn = None
+                        # Descending pairs visit the highest turn first at
+                        # each revision; lower revisions must exceed it.
+                        for revision, turn in sorted(pairs, reverse=True):
+                            if max_turn is None or turn > max_turn:
+                                maxima.add((revision, turn))
+                                max_turn = turn
+                        surviving.update(identity for identity in members if
+                            (claims[identity]["observed_time"]["revision"],
+                             claims[identity]["observed_time"]["turn"]) in maxima)
+                    else:
+                        clock = "revision" if mask[0] else "turn"
+                        maximum = max(claims[identity]["observed_time"][clock] for identity in members)
+                        surviving.update(identity for identity in members
+                            if claims[identity]["observed_time"][clock] == maximum)
+                frontiers.append([identity for identity in ids if identity in surviving])
+                continue
             frontiers.append([identity for identity in ids if not any(
                 identity in ancestors[other] or (other not in ancestors[identity] and _later(claims[other], claims[identity]))
                 for other in ids if other != identity)])
@@ -305,14 +468,14 @@ class CampaignMemory:
                           "scope": scope, "query": query, "max_bytes": min(max_bytes, MAX_CONTEXT_BYTES)})
         _clock(now_monotonic)
         _wall_clock(now_timestamp_ms)
-        rows = {kind: self.ledger.memory_records(kind) for kind in ("claim", "work", "decision")}
+        rows = {kind: self.ledger.memory_records(kind) for kind in ("claim", "work", "decision", "procedure")}
         version = max((row["sequence"] for records in rows.values() for row in records), default=0)
         claims = {r["entry"]["id"]: r["entry"] for r in rows["claim"]}
         refs = self._references()
         work, work_reasons = self._work_views(rows["work"], refs)
         if complete and (len(required_work_ids) > MAX_WORK or not required_work_ids <= work.keys()):
             raise CapacityError("Complete handoff context requires every bounded Work identity")
-        frontiers, retired = self._frontier(claims)
+        frontiers, retired = CampaignMemory._frontier(claims)
         primitives = self.ledger.primitive_records()
         frontier_ids = {identity for ids in frontiers for identity in ids}
         disputed = set()
@@ -399,8 +562,8 @@ class CampaignMemory:
         packet: dict[str, Any] = {"schema": MEMORY_VERSION, "record_type": "Context", "packet_id": "",
             "scope": scope, "query": query, "memory_version": version,
             "as_of": {"timestamp_ms": now_timestamp_ms, "monotonic": now_monotonic},
-            "claims": [], "work": [], "sources": [], "lesson_ids": [], "dispositions": {},
-            "omitted": {"claims": len(claims), "work": len(work), "bounds": 0, "reasons": {}},
+            "claims": [], "work": [], "sources": [], "procedures": [], "procedure_refs": [], "procedure_sources": [], "dispositions": {},
+            "omitted": {"claims": len(claims), "work": len(work), "procedures": len(self._procedure_heads()), "bounds": 0, "reasons": {}},
             "reobservations": [], "grants_authority": False}
         selected: set[str] = set()
         selected_sources: set[str] = set(support_source_ids)
@@ -528,7 +691,36 @@ class CampaignMemory:
                 if complete:
                     raise CapacityError("Complete handoff packet byte limit; no omission")
                 omit("packet byte limit", 1)
-        if not packet["claims"] and not packet["work"]:
+        heads = list(self._procedure_heads().values())
+        heads.sort(key=lambda entry: (-sum(term in canonical(entry).lower() for term in terms), entry["procedure_id"]))
+        for entry in heads:
+            if not complete and terms and not any(term in canonical(entry).lower() for term in terms):
+                continue
+            try:
+                support = self._procedure_support(entry)
+            except (ContractError, OSError) as exc:
+                if complete:
+                    raise CapacityError("Complete procedure context has unavailable support: " + str(exc)) from exc
+                omit("procedure support unavailable: " + str(exc)[:256], 1)
+                continue
+            qualified = {(source["mission_id"], source["source_id"]) for source in packet["procedure_sources"]} | support
+            if len(packet["procedures"]) >= 16 or len(qualified) + len(selected_sources) > source_limit:
+                if complete:
+                    raise CapacityError("Complete handoff procedure/source bound exhausted; no omission")
+                omit("procedure/source limit", 1)
+                continue
+            candidate = _copy(packet)
+            candidate["procedures"].append(entry)
+            candidate["procedure_refs"].append(self._procedure_ref(entry))
+            candidate["procedure_sources"] = [{"mission_id": mission, "source_id": source} for mission, source in sorted(qualified)]
+            candidate["omitted"]["procedures"] = len(heads) - len(candidate["procedures"])
+            if fits(candidate):
+                packet = candidate
+            elif complete:
+                raise CapacityError("Complete handoff procedure packet byte limit; no omission")
+            else:
+                omit("procedure packet byte limit", 1)
+        if not packet["claims"] and not packet["work"] and not packet["procedures"]:
             packet["reobservations"] = [{"scope": scope, "reason": "No supported matching memory fits this packet",
                 "instruction": "Inspect current visible coverage for: " + query}]
         packet = finish(packet)
@@ -539,23 +731,31 @@ class CampaignMemory:
             self._packets = self._packets[-32:]
         return _copy(packet)
 
-    def record_decision(self, entry: dict, *, now: float) -> dict:
-        """Retain actual selected packet references; lessons remain frozen/empty."""
+    def record_decision(self, entry: dict, *, now: float, event_id: str | None = None) -> dict:
+        """Retain actual selected references and qualified procedure support."""
         _clock(now)
+        refusal = MemoryRequestRefusal if event_id is not None else ContractError
         entry = validate_memory_entry(entry, "decision", player=True)
         matches = [p for p in self._packets if all(entry[k] == p[k] for k in ("packet_id", "scope", "query", "memory_version"))
-                   and entry["omitted"] == p["omitted"]["claims"] + p["omitted"]["work"]]
+                   and entry["omitted"] == p["omitted"]["claims"] + p["omitted"]["work"] + p["omitted"]["procedures"]]
         for packet in matches:
             if (set(entry["claim_ids"]) <= {c["id"] for c in packet["claims"]}
                     and set(entry["work_ids"]) <= {w["id"] for w in packet["work"]}
                     and set(entry["source_ids"]) <= {s["id"] for s in packet["sources"]}
-                    and entry["lesson_ids"] == packet["lesson_ids"]):
+                    and all(ref in packet["procedure_refs"] for ref in entry["procedure_refs"])
+                    and all(source in packet["procedure_sources"] for source in entry["procedure_sources"])):
+                procedure_sources = set()
+                for procedure in packet["procedures"]:
+                    if self._procedure_ref(procedure) in entry["procedure_refs"]:
+                        procedure_sources.update(self._procedure_support(procedure))
+                if not procedure_sources <= {(source["mission_id"], source["source_id"]) for source in entry["procedure_sources"]}:
+                    raise refusal("Decision must retain its selected procedure dependency closure")
                 chosen = [c for c in packet["claims"] if c["id"] in entry["claim_ids"]]
                 chosen += [w for w in packet["work"] if w["id"] in entry["work_ids"]]
                 needed = {source for item in chosen for source in item["sources"]}
                 needed_claims = {c for item in chosen for g in item.get("supports", []) for c in g["claims"]}
                 if not needed <= set(entry["source_ids"]) or not needed_claims <= set(entry["claim_ids"]):
-                    raise ContractError("Decision must retain its selected dependency closure")
-                sequence = self.ledger.append_memory(_identity("decision-", {"id": entry["id"]}), "decision", entry, now=now)
+                    raise refusal("Decision must retain its selected dependency closure")
+                sequence = self.ledger.append_memory(event_id if event_id is not None else _identity("decision-", {"id": entry["id"]}), "decision", entry, now=now, candidate=event_id is not None)
                 return _copy({"memory_version": sequence, "entry": entry, "packet_id": packet["packet_id"], "grants_authority": False})
-        raise ContractError("Decision requires an exact issued packet/version and selected IDs")
+        raise refusal("Decision requires an exact issued packet/version and selected IDs")

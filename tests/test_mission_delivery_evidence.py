@@ -132,7 +132,7 @@ class MissionDeliveryEvidenceTests(unittest.TestCase):
 
     def test_dispatched_progress_is_not_terminal_delivery_proof(self):
         request = self.unknown(claimed=True)
-        self.terminal(request, status="dispatched", frame_ok=False, frame="")
+        self.terminal(request, status="dispatched", frame_ok=False, frame="", frame_geometry=None)
         self.assertIsNone(self.proof(request))
 
     def test_wrong_uuid_never_correlates_even_if_state_and_revision_match(self):
@@ -263,7 +263,7 @@ class MissionDeliveryEvidenceTests(unittest.TestCase):
             request = copy.deepcopy(bridge.requests[0])
         native = recovery_state("interrupt_confirmation", owner=request["id"],
                                 generation=1, revision=c.state["revision"] + 1)
-        terminal = {"protocol": 4, "id": request["id"], "status": "prompt_opened", "error": "", "state": native}
+        terminal = {"protocol": 6, "id": request["id"], "status": "prompt_opened", "error": "", "state": native}
         atomic_json(c.bridge / "control-response.json", terminal)
         original = copy.deepcopy(c.state)
         proof = self.proof(request)

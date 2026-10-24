@@ -11,6 +11,7 @@
     "src/action.cpp": "dad9b0a62e0f08aa2cdcf72d81f600a608ee248a6013c8c8ff974af0fbe14f99",
     "Makefile": "d6e2c585e55562e4a88fc7fbe7b4bdd55874c6844952c5e633815328971d50e6",
     "src/input_context.cpp": "b097561a600be533c16f298a87897962d14b13de3f9d87e0de47123a9739972a",
+    "src/input_popup.cpp": "7474b304fca9254731a61528b899585cdb2947dbdd672e20810d5746be210561",
     "src/main.cpp": "c7d35485c7c6a7b42d552485c7f82e66064e9b3014685711380a648c3c0f9454",
     "src/sdltiles.cpp": "22a75ef59b4bf193aef823ce768021356780897e64ab32882d1fbec25e173d7b",
     "src/handle_action.cpp": "7029642a12de41a46ea646b1f8007b13c9bb92490bd48ac0bf46adb4ce62f15e",
@@ -24,6 +25,7 @@
     "src/uilist.cpp": "32974a71c267151e62cc3b3440932bb9d99764cad5195fb2c071a0dc16b7e0cf",
     "src/inventory_ui.cpp": "56fa04a2196580ddb8bd1fb4834bdaaa58eb536e8ffdf2a2d5415ee4a9889aaf",
     "src/ui_manager.cpp": "b13ae76ea817a2bc2bf0d231517fe68f77de1f582923c1da004c88a214c90b02",
-    "src/cata_imgui.cpp": "1846dbce1559f854392f0aa0e631d64232b0503e34e55e0d7ebdbea97340d8b6"
+    "src/cata_imgui.cpp": "1846dbce1559f854392f0aa0e631d64232b0503e34e55e0d7ebdbea97340d8b6",
+    "src/third-party/imgui/imgui_impl_sdl2.cpp": "beb4ef8415e1e09df14df3f6d2c90dd90f292d3c2e64d0366fab2630ef76b2ed"
   }
 }

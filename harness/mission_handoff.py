@@ -121,10 +121,12 @@ class RegisteredHandoff:
                     "unknown reference: " + unknown + ". Refused before stopping input; no handoff issued. "
                     "Select actual retained source IDs and submit a NEW request if still eligible.")
             unfinished = self._unfinished(status)
-            r._memory.context(r._coordinate_scope(before), "Complete unfinished Work for successor",
+            packet = r._memory.context(r._coordinate_scope(before), "Complete unfinished Work for successor",
                 max_bytes=MAX_HANDOFF_CONTEXT_BYTES - HANDOFF_CONTEXT_RESERVE,
                 required_work_ids=frozenset(unfinished), support_source_ids=tuple(data["checkpoint_ids"]),
                 source_status=status, cache=False, **r._clocks())
+            if len(packet["sources"]) + len(packet["procedure_sources"]) >= MAX_HANDOFF_SOURCES:
+                raise CapacityError("Complete handoff must reserve support for its future post-Pause frame")
             if set(data["unfinished_work_ids"]) != unfinished:
                 raise HandoffEvidenceError(
                     "Handoff must identify every unfinished Work item, without extras or truncation. "
@@ -204,9 +206,17 @@ class RegisteredHandoff:
         self._empty(work, phase.operator_mark, dispatch=proposal is not None)
         state = r._ledger.snapshot(now=r._wall())
         live = r._live()
+        self.check_binding(phase, state, live, ledger_phase=ledger_phase)
+        if proposal is not None and (proposal.kind != "resume" or proposal.before != phase.checkpoint):
+            raise ControlError("Handoff permits only its separately charged exact Resume")
+
+    def check_binding(self, phase: HandoffPhase, state: dict, live: tuple, *, ledger_phase: str) -> None:
+        """Share the live private proof; presenting a sample never grants Resume."""
+        r = self.runtime
         expected = r._store.observation(phase.checkpoint)
         actual = live[0]
-        if (self.phase is not phase or state["epoch"] != phase.epoch or state["phase"] != ledger_phase
+        if (self.phase is not phase or r._operator_mark() != phase.operator_mark
+                or state["epoch"] != phase.epoch or state["phase"] != ledger_phase
                 or state["unreconciled"] or state["pause_cause"] != "internal_handoff"
                 or live[1] != phase.pause_generation or actual is None or not actual["paused"]
                 or any(actual[key] != expected[key] for key in
@@ -214,8 +224,6 @@ class RegisteredHandoff:
                 or actual["takeover_generation"] != phase.takeover_generation
                 or actual["pause_origin"] in ("human", "fault")):
             raise ControlError("Handoff lost its exact live epoch/source/controller/Pause binding")
-        if proposal is not None and (proposal.kind != "resume" or proposal.before != phase.checkpoint):
-            raise ControlError("Handoff permits only its separately charged exact Resume")
 
     def claim(self, work: _Work) -> tuple[str, dict]:
         r, data, phase = self.runtime, work.request, self.phase
@@ -265,6 +273,16 @@ class RegisteredHandoff:
             raise HandoffEvidenceError("Claim read declarations must cover checkpoints/retained Work support and refer to issued sources")
         for identity in data["read_source_ids"]:
             retained(identity)
+        required_procedures = {tuple(sorted(source.items())) for packet in packets for source in packet["procedure_sources"]}
+        declared_procedures = {tuple(sorted(source.items())) for source in data["read_procedure_sources"]}
+        if declared_procedures != required_procedures:
+            raise HandoffEvidenceError("Claim must declare exact complete procedure support from issued packets")
+        if len(data["read_source_ids"]) + len(declared_procedures) > MAX_HANDOFF_SOURCES:
+            raise HandoffEvidenceError("Claim aggregate current/historical source bound exceeded")
+        for source in data["read_procedure_sources"]:
+            metadata, _ = r._memory.procedure_source(source["mission_id"], source["source_id"])
+            if metadata["disposition"] != "retained":
+                raise HandoffEvidenceError("Claim procedure support is no longer retained")
         self.guard(work, phase, ledger_phase="handoff")
         result = r._ledger.consume_handoff(data["request_id"], actor_id=data["player_id"], actor_role=data["actor_role"], now=r._wall())
         with r._metadata:

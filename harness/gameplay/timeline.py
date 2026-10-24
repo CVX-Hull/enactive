@@ -17,7 +17,7 @@ MAX_TIMELINE_SEGMENTS = 17
 def _reference(reference: EvidenceRef) -> None:
     if type(reference) is not EvidenceRef:
         raise ContractError("Timeline endpoints require typed EvidenceRef values")
-    reference.to_dict()
+    reference.__post_init__()
 
 
 @dataclass(frozen=True)

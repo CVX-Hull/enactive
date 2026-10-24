@@ -25,8 +25,25 @@ replacement configuration and enforcement probes; the original
 historical. The [campaign path](work.md#campaign-delivery-path) links capability
 gates to owned Issues; this contract alone does not prove current settings.
 
+Keep summaries purpose-specific: the overview explains capabilities and limits;
+the work map links the delivery path and decisive evidence; a change brief records
+design/acceptance decisions. Do not copy Issue status, assignment, estimates,
+next-action queues or CI receipts into those pages. A concise evidence checkpoint
+may link a dated report, but detailed attempt chronology and exact costs belong
+in that report, and publication receipts in the PR. At integration review, remove
+mirrored fields, stale “current” claims and repeated narratives rather than append
+another checkpoint. Use the existing C-REVIEW/C-MAINTENANCE process; semantic
+duplication is a review judgment, not a new parser or per-action check.
+
 Use GitHub's issues, sub-issues, dependencies, milestones, pull requests, fields,
 saved views and built-in workflows. No custom tracker or background scheduler.
+Select work for the next independent-play outcome and the longer-term capabilities
+that enable future outcomes. Resolve demonstrated obstacles and make deliberate
+investments in useful accelerators. Apply P-CHANGE/S-CODE to available capabilities
+beyond this repository; adoption, integration and deletion can be more valuable
+than new implementation. Include setup, latency, review and ongoing operating cost
+in the choice. Do not turn a speculative framework, exhaustive defense or process
+improvement into a campaign prerequisite without a concrete outcome dependency.
 The Project README links this contract, the overview and these three saved views:
 
 | View | User question and contents |
@@ -68,10 +85,11 @@ S-WORK/S-EVIDENCE/S-DOCS. The full user outcome remains the definition of Done.
 | Integration checkpoint | A useful behavior composes end to end, or evidence identifies a concrete blocker; consolidate findings and current contracts | One cohesive independent review, full portable checks and PR validation; split ownership without fragmenting the outcome |
 | Formal acceptance and merge | Review the exact frozen candidate and retained run evidence; require passed exact PR `controller` check/full suite, required native/graphical outcomes and finding dispositions | Merge through existing main protection; Done/release waits for actual merged-main validation and applicable outcome evidence |
 
-The next integrated behavior is the complete supply-and-shelter mission: useful
+For example, the supply-and-shelter checkpoint required useful
 navigation/replanning, supplies/needs, shelter/rest, genuine memory correction and
 unfinished Work, actual fresh player context, normal same-character save/new-child
-reload and final normal ending. An early menu failure is development evidence,
+reload and final normal ending. The selected outcome belongs in its GitHub issue.
+An early menu failure is development evidence,
 not a reason to redefine success or publish a new acceptance package before trying
 again. Other iterations name their equivalent meaningful checkpoint in the issue.
 
@@ -104,6 +122,21 @@ Pause, project-local state and normal CDDA behavior apply in every checkpoint.
 Routine gameplay keeps zero human/automatic approval-review round trips. The lead
 owns engineering and observes; development labeling does not authorize tactical
 rescue or make assisted evidence independent.
+
+Separate **qualification** from **development continuation** in each prospective
+brief. A missed latency target or incomplete useful-decision cohort rejects the
+configuration's responsiveness claim; alone it need not end an explicitly finite
+development campaign. Within its original limits, the player can continue useful
+survival, acquisition, revision and memory succession to expose the next important
+failure. Do not manufacture samples, count filler as progress or deploy the slow
+configuration as qualified. Freeze an ending deadline and reassess the coupled
+forecast at meaningful boundaries. Pause/custody loss and uncertain delivery still
+stop dispatch; insufficient ending capacity, terminal failure or unresolved
+authority/source uncertainty require the declared quiescence/ending procedure.
+No automatic extension, revival or retrospective change to a failed run follows.
+This applies the [existing non-myopic development distinction](research-executable-policies.md#evidence-matrix-and-project-judgment),
+not a guarantee of convergence. C-REVIEW checks the two decisions in the brief and
+closed evidence; C-USABILITY keeps the original acceptance criteria.
 
 ### Efficient discovery
 
@@ -143,6 +176,11 @@ Update authoritative contracts when behavior changes; mark incomplete support an
 unrun checks plainly. Keep chat updates brief and the overview understandable.
 An issue/PR brief is enough for a routine fix. A consequential workflow/boundary
 change may need one short design rationale, not parallel plan/status systems.
+Apply S-CODE's platform-contract rule during that review: state which configured
+DB/OS/library behavior already supplies the guarantee and what project requirement
+remains. Simplification and removal of duplicate validation/recovery are valid work
+outcomes. Track evidence-backed gaps in existing issues; speculative hardening is
+not a new campaign gate or a reason to add another approval layer.
 
 Development episodes used to select repairs remain development data. Freeze source,
 objective, conditions and limits before every run. Formal acceptance is a decision

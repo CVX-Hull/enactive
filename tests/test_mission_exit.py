@@ -9,7 +9,7 @@ import unittest
 
 from harness.mission_runtime import MissionRuntime
 from harness.gameplay.contracts import ContractError
-from harness.gameplay.mission_contracts import canonical
+from harness.gameplay.contracts import canonical
 from harness.gameplay.mission_ledger import MissionLedger
 from tests import test_mission_launch as launch_fixtures
 from tests.test_mission_creation import expire_selected_at_dispatch
@@ -66,13 +66,13 @@ class MissionExitTests(unittest.TestCase):
     def confirmation(self, label="Yes", identity="confirmation", **changes):
         state = self.runtime._store.observation(self.runtime._current)
         reference = self.runtime._current
-        request = dict(schema="mission/8", kind="skill", request_id=identity, mission_id=self.a.mission_id,
+        request = dict(schema="mission/11", kind="skill", request_id=identity, mission_id=self.a.mission_id,
             epoch=self.runtime.status()["epoch"], skill_kind="menu", phase_id="exit", work_id=None,
             goal=dict(purpose="Answer owned Quit confirmation", label=label, outcome="activated"),
             sources=[reference.observation_id], expected_session=reference.session, expected_revision=reference.revision,
             expected_boundary_id=state["boundary"]["id"], limits=dict(primitives=1, wall_seconds=10, game_seconds=1),
             perception=dict(source_id=reference.observation_id, basis="player_interpretation", kind="confirmation",
-                question="Really quit?"))
+                question="Really quit?"), procedure=None)
         request.update(changes)
         return request
 
@@ -88,6 +88,26 @@ class MissionExitTests(unittest.TestCase):
         self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
         self.assertIsNone(self.runtime._map)
         self.assertEqual(self.runtime._ledger.memory_records("claim"), ())
+
+    def test_insufficient_immediate_exit_plan_refuses_before_resume_then_allows_new_choice(self):
+        self.ready()
+        current = self.runtime._current
+        before = list(self.bridge.delivered)
+        operation = self.begin_exit(limits=dict(primitives=1, wall_seconds=10, game_seconds=1))
+        self.assertEqual(operation["state"], "blocked", operation)
+        self.assertEqual(operation["result"]["required_primitives"], 2)
+        self.assertIn("No input was sent", operation["result"]["reason"])
+        self.assertEqual(self.bridge.delivered, before)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 0)
+        self.assertEqual(self.runtime._current, current)
+        self.assertIsNone(self.runtime._exit_phase)
+        self.assertIsNone(self.runtime._lease)
+        self.assertTrue(self.controller.pause_requested)
+        corrected = self.run_request(self.exit_request("sufficient-exit",
+            limits=dict(primitives=3, wall_seconds=10, game_seconds=1)))
+        self.assertEqual(corrected["state"], "partial", corrected)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertFalse(self.runtime.status()["lifecycle_phase"]["direct_interrupt_allowed"])
         self.assertEqual(self.controller._mission_lease.operation, "lifecycle")
 
     def test_published_yes_unknown_ack_and_owned_exit_are_distinct_retained_facts(self):
@@ -259,24 +279,29 @@ class MissionExitTests(unittest.TestCase):
 
     def test_new_root_cannot_adopt_operator_pause_since_launch(self):
         self.ready()
+        request = self.exit_request()
         self.runtime.pause()
         deadline = time.monotonic() + 2
         while self.runtime._ledger.snapshot(now=time.time())["pause_cause"] != "user" and time.monotonic() < deadline:
             time.sleep(0.005)
-        operation = self.begin_exit()
+        self.assertIsNone(self.runtime.status()["current_source"])
+        # Retain the old source while addressing the current epoch so this
+        # reaches the operator-origin guard rather than stale-epoch rejection.
+        request["epoch"] = self.runtime.status()["epoch"]
+        operation = self.run_request(request)
         self.assertEqual(operation["state"], "blocked", operation)
         self.assertIn("operator mark", operation["result"]["reason"])
         self.assertEqual(self.runtime.status()["spent_inputs"], 0)
 
-    def test_wrong_question_or_identity_never_publishes_confirmation(self):
+    def test_exit_effect_does_not_require_literal_interpreted_question_wording(self):
         self.ready()
         self.begin_exit()
         request = self.confirmation()
-        request["perception"]["question"] = "Delete world?"
+        request["perception"]["question"] = "Really quit? (Case Sensitive)"
         operation = self.run_request(request)
-        self.assertEqual(operation["state"], "blocked", operation)
-        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
-        self.assertFalse(any(r.get("action") == "YES" for r in self.bridge.delivered))
+        self.assertEqual(operation["state"], "completed", operation)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 3)
+        self.assertTrue(any(r.get("action") == "YES" for r in self.bridge.delivered))
 
     def test_nonzero_exit_keeps_unknown_cost_and_unresolved_custody(self):
         self.ready()
@@ -307,7 +332,7 @@ class MissionExitTests(unittest.TestCase):
         self.ready()
         self.begin_exit()
         self.bridge.value["actions"].append("CHANGED")
-        operation = self.run_request(dict(schema="mission/8", kind="observe", request_id="changed-observe",
+        operation = self.run_request(dict(schema="mission/11", kind="observe", request_id="changed-observe",
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
         self.assertEqual(operation["state"], "blocked", operation)
         self.assertIn("Contradictory", operation["result"]["reason"])
@@ -333,7 +358,7 @@ class MissionExitTests(unittest.TestCase):
     def test_routine_owned_menu_and_prompt_observe_preserve_exact_checkpoint_lineage(self):
         self.ready()
         before = self.runtime._owned_launch.checkpoint
-        observe = lambda identity: self.run_request(dict(schema="mission/8", kind="observe", request_id=identity,
+        observe = lambda identity: self.run_request(dict(schema="mission/11", kind="observe", request_id=identity,
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
         self.assertEqual(observe("owned-menu-observe")["state"], "completed")
         self.assertNotEqual(self.runtime._owned_launch.checkpoint, before)
@@ -347,8 +372,8 @@ class MissionExitTests(unittest.TestCase):
         root = self.begin_exit()
         root_deadline = root["deadline"]
         time.sleep(1.05)
-        self.run_request(dict(schema="mission/8", kind="observe", request_id="fresh-prompt",
-            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
+        # The confirmation itself must perform its guarded refresh; no caller
+        # Observe is needed to avoid charging pre-admission image age.
         operation = self.run_request(self.confirmation("No", limits=dict(primitives=1, wall_seconds=1, game_seconds=1)))
         self.assertEqual(operation["state"], "partial", operation)
         self.assertLess(operation["deadline"], root_deadline)
@@ -398,7 +423,12 @@ class MissionExitTests(unittest.TestCase):
             return original(bridge, request)
         self.bridge.behavior = unexpected_normal
         operation = self.begin_exit()
-        self.assertEqual(operation["state"], "unknown", operation)
+        # This synthetic same-session ready ACK proves delivery, not
+        # identity/adoption. The semantic lifecycle failure must not erase it.
+        self.assertEqual(operation["state"], "blocked", operation)
+        primitive = self.runtime._ledger.primitive_records()[-1]
+        self.assertEqual(primitive["state"], "returned")
+        self.assertIsNotNone(primitive["result"]["native_ack"])
         self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
         self.assertIsNone(self.runtime._map)
         self.assertEqual(self.runtime._bindings, {})
@@ -416,7 +446,7 @@ class MissionExitTests(unittest.TestCase):
         self.start()
         self.assertEqual(self.runtime.status()["native_process"]["unresolved_custody_requests"], ["launch"])
         self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
-        operation = self.run_request(dict(schema="mission/8", kind="observe", request_id="diagnostic-observe",
+        operation = self.run_request(dict(schema="mission/11", kind="observe", request_id="diagnostic-observe",
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
         self.assertEqual(operation["state"], "blocked", operation)
         self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
@@ -447,7 +477,7 @@ class MissionExitTests(unittest.TestCase):
         import json
         import sqlite3
         from contextlib import closing
-        from harness.gameplay.mission_contracts import canonical
+        from harness.gameplay.contracts import canonical
         from harness.gameplay.mission_ledger import LedgerError, MissionLedger
         self.ready()
         self.begin_exit()
@@ -500,7 +530,7 @@ class MissionExitTests(unittest.TestCase):
         self.assertEqual(response["status"], "accepted", response)
         end = time.monotonic() + 5
         while time.monotonic() < end:
-            result = self.runtime.command(dict(schema="mission/8", kind="result", mission_id=self.a.mission_id,
+            result = self.runtime.command(dict(schema="mission/11", kind="result", mission_id=self.a.mission_id,
                 operation_id=request["request_id"]))["operation"]
             if result["result"] is not None:
                 break

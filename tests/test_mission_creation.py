@@ -5,13 +5,19 @@ The fake bridge supplies controlled visible boundaries and expected session loss
 """
 import copy
 from contextlib import contextmanager
+from dataclasses import replace
+from pathlib import Path
 import threading
 import time
 import unittest
 from unittest.mock import patch
 
 from harness.mission_runtime import MissionRuntime
+from harness.gameplay.lifecycle import adopted_timeline
+from harness.gameplay.evidence import EvidenceError
+from harness.gameplay.mission_contracts import LearningPolicy, LibrarySource
 from tests import test_mission_launch as launch_fixtures
+from tests import test_procedure_library as library_fixtures
 from tests.test_gameplay_evidence import observation
 from tests.test_mission_contracts import claim
 
@@ -181,11 +187,11 @@ class MissionCreationFixture:
         else:
             perception.update(kind="menu", control="vertical", rows=[dict(label=label, enabled=True)], selected=0, question="")
             goal = dict(purpose=purpose or "Select visible setup option", label=label, outcome="activated")
-        return dict(schema="mission/8", kind="skill", request_id=identity, mission_id=self.a.mission_id,
+        return dict(schema="mission/11", kind="skill", request_id=identity, mission_id=self.a.mission_id,
             epoch=self.runtime.status()["epoch"], skill_kind=kind, phase_id=parent, work_id=None,
             sources=[ref.observation_id], expected_session=ref.session, expected_revision=ref.revision,
             expected_boundary_id=observed["boundary"]["id"], perception=perception, goal=goal,
-            limits=dict(primitives=8, wall_seconds=30, game_seconds=100))
+            limits=dict(primitives=8, wall_seconds=30, game_seconds=100), procedure=None)
 
     def remember_identity(self, identity, subject, ref, epoch, *, value=None):
         entry = claim(id=identity, key=dict(subject=subject, property="identity", unit="name",
@@ -194,20 +200,22 @@ class MissionCreationFixture:
             scope=dict(mission_id=self.a.mission_id, session=ref.session, coordinate_epoch=epoch),
             observed_time=dict(revision=ref.revision, turn=ref.turn), received_time=int(time.time() * 1000),
             sources=[ref.observation_id], supports=[dict(sources=[ref.observation_id], claims=[])])
-        operation = self.run_request(dict(schema="mission/8", kind="remember", request_id=f"remember-{identity}",
+        operation = self.run_request(dict(schema="mission/11", kind="remember", request_id=f"remember-{identity}",
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"], entry_type="claim", entry=entry))
         self.assertEqual(operation["state"], "completed", operation)
         return entry["id"]
 
     def finish_identity(self, root, world_source, epoch=0, *, diagnostic_observe=False):
-        operation = self.run_request(self.lifecycle(f"{root}-reconcile", "create" if epoch == 0 else "load", parent=root))
+        kind = "create" if epoch == 0 and self.a.scenario.mode == "fresh" else "load"
+        operation = self.run_request(self.lifecycle(f"{root}-reconcile", kind, parent=root))
         self.assertEqual(operation["state"], "completed", operation)
+        self.assertEqual(self.runtime.status()["lifecycle_phase"]["stage"], "awaiting_identity")
         self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
         self.assertIsNone(self.runtime._map)
         self.assertEqual(self.runtime._bindings, {})
         if diagnostic_observe:
             self.observe(f"{root}-identity-observe")
-        readmit = self.run_request(self.lifecycle(f"{root}-readmit", "create" if epoch == 0 else "load", parent=root))
+        readmit = self.run_request(self.lifecycle(f"{root}-readmit", kind, parent=root))
         self.assertEqual(readmit["state"], "completed", readmit)
         inspection = self.run_request(self.control(f"{root}-inspect", "Character", kind="inspect", parent=root))
         self.assertEqual(inspection["state"], "completed", inspection)
@@ -216,7 +224,7 @@ class MissionCreationFixture:
         character_id = self.remember_identity(f"{root}-character", "character", screen, epoch)
         returned = self.run_request(self.control(f"{root}-return", "Cancel", parent=root))
         self.assertEqual(returned["state"], "partial", returned)
-        adopted = self.run_request(self.lifecycle(f"{root}-adopt", "create" if epoch == 0 else "load", parent=root,
+        adopted = self.run_request(self.lifecycle(f"{root}-adopt", kind, parent=root,
             claims=[world_id, character_id]))
         self.assertEqual(adopted["state"], "completed", adopted)
         return adopted
@@ -239,13 +247,13 @@ class MissionCreationFixture:
         self.assertEqual(entered["state"], "unknown", entered)
         self.assertIsNone(self.runtime._registered_lifecycle.phase)
         self.assertIsNotNone(self.runtime._registered_lifecycle.candidate)
-        observed = self.run_request(dict(schema="mission/8", kind="observe", request_id="create-observe",
+        observed = self.run_request(dict(schema="mission/11", kind="observe", request_id="create-observe",
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
         self.assertEqual(observed["state"], "completed", observed)
         return self.finish_identity("create", world)
 
     def observe(self, identity):
-        operation = self.run_request(dict(schema="mission/8", kind="observe", request_id=identity,
+        operation = self.run_request(dict(schema="mission/11", kind="observe", request_id=identity,
             mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
         self.assertEqual(operation["state"], "completed", operation)
         return operation
@@ -274,6 +282,274 @@ class MissionCreationFixture:
 
 
 class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
+    def test_premature_stage_commit_preserves_create_for_player_control(self):
+        self.ready()
+        self.assertEqual(self.run_request(self.lifecycle("create"))["state"], "partial")
+        phase, lease = self.runtime._registered_lifecycle.phase, self.runtime._lease
+        deadline = self.runtime._ledger.request("create")["deadline"]
+        delivered = len(self.bridge.delivered)
+        refused = self.run_request(self.lifecycle("premature-create", parent="create"))
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIn("No input was sent", refused["result"]["reason"])
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertEqual(self.runtime._ledger.request("create")["deadline"], deadline)
+        self.assertEqual(self.run_request(self.control("world-form", "Create World"))["state"], "partial")
+        committed = self.run_request(self.lifecycle("world-finalize", parent="create"))
+        self.assertEqual(committed["state"], "partial", committed)
+        self.assertEqual(self.current()[1]["category"], "YESNO")
+
+    def unexpected_setup_input(self, *, changed_session=True, returned=False, root_primitives=32):
+        self.ready()
+        root = self.lifecycle("create")
+        root["limits"]["primitives"] = root_primitives
+        self.assertEqual(self.run_request(root)["state"], "partial")
+        original = self.behavior
+
+        def unexpected(bridge, request):
+            if request["kind"] == "observe" and bridge.value["paused"]:
+                bridge.value["pause_origin"] = "host"
+            if request.get("action") == "CONFIRM":
+                if changed_session or returned:
+                    self.normal("unregistered-normal" if changed_session else "menu-1", paused=True)
+                else:
+                    self.menu("WORLDGEN_CONFIRM_DIALOG", ["CONFIRM", "FINALIZE"])
+                return returned
+            return original(bridge, request)
+
+        self.bridge.behavior = unexpected
+        operation = self.run_request(self.control("unregistered-selection", "Explore an unfamiliar option"))
+        self.assertEqual(operation["state"], "blocked" if returned else "unknown", operation)
+        return operation
+
+    def test_unexpected_published_setup_transition_is_retained_only_as_diagnostic(self):
+        original = self.unexpected_setup_input()
+        primitive = self.runtime._ledger.primitive_records()[-1]
+        root = self.runtime._ledger.request("create")
+        deadline = self.runtime._mission_deadline
+        costs = self.runtime.status()["spent_inputs"]
+        epoch = self.runtime.status()["epoch"]
+        candidate = self.runtime._registered_lifecycle.candidate
+        self.assertIsNotNone(candidate)
+        self.assertTrue(candidate.diagnostic_only)
+        self.assertIsNone(self.runtime.status()["lifecycle_phase"])
+        self.assertNotIn("phase", original["result"])
+        self.assertEqual(candidate.logical_id, primitive["logical_id"])
+        self.assertEqual(candidate.phase.root_id, "create")
+        first = None
+        for identity in ("unexpected-first", "unexpected-second"):
+            observed = self.observe(identity)
+            reference = self.runtime._current
+            self.assertEqual(reference.session, "unregistered-normal")
+            self.assertEqual(Path(reference.frame_path).read_bytes(), self.bridge.visible_bytes(self.bridge.value))
+            self.assertIn(reference.observation_id, observed["result"]["source_ids"])
+            self.assertIn("diagnostic", observed["result"]["reason"].lower())
+            self.assertNotIn("phase", observed["result"])
+            self.assertFalse(observed["result"]["grants_authority"])
+            self.assertEqual(self.runtime._ledger.primitive(primitive["logical_id"]), primitive)
+            self.assertEqual(self.runtime._ledger.request("create"), root)
+            self.assertEqual(self.runtime._ledger.request("unregistered-selection"), original)
+            self.assertEqual(self.runtime.status()["epoch"], epoch)
+            self.assertEqual(self.runtime.status()["spent_inputs"], costs)
+            self.assertEqual(self.runtime._mission_deadline, deadline)
+            self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
+            self.assertIsNone(self.runtime._map)
+            self.assertEqual(self.runtime._bindings, {})
+            self.assertIsNone(self.runtime._lease)
+            self.assertEqual(self.runtime._ledger.memory_records("claim"), ())
+            self.assertIsNone(self.runtime.status()["lifecycle_phase"])
+            if first is None:
+                first = reference
+            else:
+                self.assertNotEqual(first, reference)
+                self.assertIn(first.observation_id, observed["result"]["source_ids"])
+                self.assertEqual(self.runtime._registered_lifecycle.candidate.first_after, first)
+        records = [event["outcome"] for event in self.controller.events
+            if event["request"]["kind"] == "mission_lifecycle_diagnostic"]
+        self.assertTrue(records)
+        self.assertTrue(all(record["origin_request_id"] == "create"
+            and record["logical_action_id"] == primitive["logical_id"]
+            and record["native_request_id"] == primitive["native_id"]
+            and record["source_before"] == primitive["intent"]["source_before"] for record in records))
+        self.assertIsNone(self.runtime._store._reservation)
+        self.assertEqual(sum(row.get("action") == "CONFIRM" for row in self.bridge.delivered), 1)
+        rejected = self.run_request(self.lifecycle("diagnostic-reconcile", parent="create"))
+        self.assertEqual(rejected["state"], "blocked", rejected)
+        self.assertNotIn("lifecycle_transition", rejected["result"])
+        self.assertIsNone(self.runtime._ledger.primitive(primitive["logical_id"])["effect"])
+
+    def test_unknown_same_session_setup_input_remains_explicitly_observable(self):
+        self.unexpected_setup_input(changed_session=False)
+        operation = self.observe("same-session-diagnostic")
+        self.assertEqual(self.runtime._current.session, "menu-1")
+        self.assertIn("Diagnostic-only", operation["result"]["reason"])
+        self.assertNotIn("phase", operation["result"])
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+
+    def test_unknown_same_session_editor_key_is_diagnostic_without_advancing_stage(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        self.run_request(self.control("world-form", "Create World"))
+        self.run_request(self.control("world-name-field", "World name"))
+        original = self.behavior
+
+        def missing_key_ack(bridge, request):
+            result = original(bridge, request)
+            if request["kind"] == "observe" and bridge.value["paused"]:
+                bridge.value["pause_origin"] = "host"
+            return False if request["kind"] == "key" else result
+
+        self.bridge.behavior = missing_key_ack
+        request = self.control("unknown-editor", "World name")
+        request.update(skill_kind="edit", goal=dict(purpose="world_name", text=self.a.scenario.world, commit=False),
+            perception=dict(kind="editor", source_id=self.runtime._current.observation_id,
+                basis="player_interpretation", purpose="world_name", label="World name",
+                visible_text="Old", whole_value=True, focused=True))
+        self.assertEqual(self.run_request(request)["state"], "unknown")
+        primitive = self.runtime._ledger.primitive_records()[-1]
+        self.assertEqual(primitive["intent"]["kind"], "key")
+        observed = self.observe("editor-diagnostic")
+        self.assertIn("Diagnostic-only", observed["result"]["reason"])
+        self.assertEqual(self.current()[1]["category"], "STRING_INPUT")
+        self.assertEqual(Path(self.runtime._current.frame_path).read_bytes(), self.bridge.visible_bytes(self.bridge.value))
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIsNone(self.runtime._ledger.primitive(primitive["logical_id"])["effect"])
+        self.assertEqual(sum(row["kind"] == "key" for row in self.bridge.delivered), 1)
+
+    def test_known_returned_unexpected_normal_remains_diagnostic(self):
+        self.unexpected_setup_input(changed_session=False, returned=True)
+        primitive = self.runtime._ledger.primitive_records()[-1]
+        self.assertEqual(primitive["state"], "returned")
+        self.assertIsNotNone(primitive["result"]["native_ack"])
+        self.observe("known-unexpected-observe")
+        self.assertEqual(self.runtime._ledger.primitive(primitive["logical_id"]), primitive)
+        self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
+
+    def test_known_returned_capture_failure_releases_reservation_once_and_retains_correlation(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        original = self.behavior
+
+        def unexpected(bridge, request):
+            if request.get("action") == "CONFIRM":
+                self.normal("menu-1", paused=True)
+                return True
+            return original(bridge, request)
+
+        self.bridge.behavior = unexpected
+        with patch.object(self.runtime._store, "retain_terminal", side_effect=EvidenceError("capture lost")), \
+                patch.object(self.runtime._store, "release", wraps=self.runtime._store.release) as released:
+            operation = self.run_request(self.control("known-capture-loss", "An unfamiliar option"))
+        self.assertEqual(operation["state"], "blocked", operation)
+        released.assert_called_once()
+        primitive = self.runtime._ledger.primitive_records()[-1]
+        self.assertEqual(primitive["state"], "returned")
+        self.assertIsNone(self.runtime._registered_lifecycle.candidate.reservation)
+        self.assertIsNone(self.runtime._store._reservation)
+        self.observe("known-capture-loss-observe")
+        self.assertEqual(self.runtime._ledger.primitive(primitive["logical_id"]), primitive)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+
+    def test_exhausted_original_primitive_allowance_still_permits_diagnostic_observe(self):
+        self.unexpected_setup_input(root_primitives=2)
+        root = self.runtime._ledger.request("create")
+        self.assertEqual(self.runtime._ledger._phase_primitive_count("create"), 2)
+        observed = self.observe("exhausted-input-diagnostic")
+        self.assertIn("Diagnostic-only", observed["result"]["reason"])
+        self.assertEqual(self.runtime._ledger.request("create"), root)
+        self.assertEqual(self.runtime.status()["spent_inputs"], 2)
+        self.assertIsNone(self.runtime._lease)
+
+    def reject_diagnostic_observation(self):
+        current = self.runtime._current
+        delivered = len(self.bridge.delivered)
+        response = self.runtime.command(dict(schema="mission/11", kind="observe", request_id="denied-diagnostic",
+            mission_id=self.a.mission_id, epoch=self.runtime.status()["epoch"]))
+        if response["status"] == "accepted":
+            operation = self.settled("denied-diagnostic")
+        else:
+            self.assertEqual(response["status"], "rejected", response)
+            operation = dict(state="blocked", result=response)
+        self.assertEqual(operation["state"], "blocked", operation)
+        self.assertEqual(self.runtime._current, current)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertIsNone(self.runtime._lease)
+        return operation
+
+    def test_diagnostic_observe_cannot_cross_foreign_owned_process(self):
+        self.unexpected_setup_input()
+        self.process_state["launch_id"] = "foreign-launch"
+        self.assertIn("child", self.reject_diagnostic_observation()["result"]["reason"])
+
+    def test_diagnostic_observe_cannot_cross_operator_pause(self):
+        self.unexpected_setup_input()
+        self.runtime.pause("Operator revokes diagnostic custody")
+        self.reject_diagnostic_observation()
+
+    def test_diagnostic_observe_cannot_cross_native_takeover(self):
+        self.unexpected_setup_input()
+        self.bridge.value["takeover_generation"] += 1
+        self.reject_diagnostic_observation()
+
+    def test_diagnostic_observe_cannot_cross_original_root_deadline(self):
+        self.unexpected_setup_input()
+        deadline = self.runtime._ledger.request("create")["deadline"]
+        with patch.object(self.runtime, "_wall", return_value=deadline + 0.01):
+            self.assertIn("deadline", self.reject_diagnostic_observation()["result"]["reason"])
+
+    def test_diagnostic_observe_cannot_consume_cleanup_frame_reserve(self):
+        self.unexpected_setup_input()
+        usage = self.runtime._store.usage()
+        admission = replace(self.runtime._admission, limits=replace(self.a.limits,
+            frames=usage["frames"] + self.a.cleanup_reserve.frames))
+        with patch.object(self.runtime, "_admission", admission):
+            self.assertIn("reserve", self.reject_diagnostic_observation()["result"]["reason"])
+
+    def test_diagnostic_observe_rejects_mismatched_private_dispatch(self):
+        self.unexpected_setup_input()
+        candidate = self.runtime._registered_lifecycle.candidate
+        self.runtime._registered_lifecycle.candidate = replace(candidate,
+            native_request={**candidate.native_request, "id": "foreign-dispatch"})
+        self.assertIn("dispatch", self.reject_diagnostic_observation()["result"]["reason"])
+
+    def test_diagnostic_observe_rejects_mismatched_private_reservation(self):
+        self.unexpected_setup_input()
+        candidate = self.runtime._registered_lifecycle.candidate
+        self.runtime._registered_lifecycle.candidate = replace(candidate,
+            reservation=replace(candidate.reservation, token="foreign-reservation"))
+        self.assertIn("reservation", self.reject_diagnostic_observation()["result"]["reason"])
+
+    def test_unpublished_setup_input_cannot_create_diagnostic_candidate(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        self.assertIsNone(self.runtime._registered_lifecycle.candidate)
+        self.bridge.value["actions"].append("CHANGED")
+        operation = self.run_request(self.control("unpublished-option", "An unfamiliar option"))
+        self.assertEqual(operation["state"], "blocked", operation)
+        self.assertIsNone(self.runtime._registered_lifecycle.candidate)
+        self.assertEqual(sum(row.get("action") == "CONFIRM" for row in self.bridge.delivered), 0)
+
+    def test_creation_adopts_and_retrieves_with_real_pinned_library(self):
+        archive = library_fixtures.ProcedureLibraryTests()
+        archive.root = self.controller.root
+        archive.environment = library_fixtures.procedure()["environment"]
+        _, _, record, pin = archive.archive()
+        self.a = replace(self.a, learning=LearningPolicy(archive.environment, (LibrarySource(**pin),)))
+        adopted = self.create()
+        self.assertEqual(adopted["result"]["normal_adoption"]["scope"]["coordinate_epoch"], 0)
+        timeline = adopted_timeline(self.runtime._ledger, self.runtime._store)
+        self.assertEqual((timeline.elapsed_seconds, timeline.coordinate_epoch), (0, 0))
+        self.assertEqual(len(timeline.segments), 1)
+        self.assertIsNotNone(self.runtime._map)
+        response = self.runtime.command(dict(schema="mission/11", kind="context", handoff=None,
+            mission_id=self.a.mission_id, scope=adopted["result"]["normal_adoption"]["scope"],
+            query="water", max_bytes=32768))
+        self.assertEqual(response["status"], "accepted", response)
+        self.assertEqual(response["context"]["packet"]["procedures"], [record])
+        self.assertFalse(response["context"]["grants_authority"])
+
     def test_world_finish_refusal_preserves_phase_for_registered_stage_commit(self):
         self.ready()
         self.run_request(self.lifecycle("create"))
@@ -439,7 +715,7 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual((primitive["intent"]["value"], primitive["state"]), ("save", "returned"))
         self.assertEqual(relation["original"]["source_id"], before.observation_id)
         self.assertEqual(relation["current"]["source_id"], primitive["intent"]["source_before"])
-        self.assertEqual(relation["rule"], "exact_png_bytes")
+        self.assertEqual(relation["rule"], "native_state")
         self.assertEqual(self.runtime._registered_lifecycle.phase.first_normal, before)
         self.assertEqual(sum(r.get("action") == "save" for r in self.bridge.delivered), 1)
 
@@ -541,6 +817,22 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
         self.assertLess(operation["deadline"], root_deadline)
         self.assertEqual(self.runtime._ledger.request("create")["deadline"], root_deadline)
 
+    def test_new_lifecycle_child_does_not_spend_wall_budget_before_admission(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        original = self.runtime._current
+        root_deadline = self.runtime._ledger.request("create")["deadline"]
+        time.sleep(1.05)
+        self.assertGreater(self.runtime._clock() - original.received_monotonic, 1)
+        child = self.control("new-child-old-image", "Create World")
+        child["limits"]["wall_seconds"] = 1
+        result = self.run_request(child)
+        self.assertEqual(result["state"], "partial", result)
+        self.assertAlmostEqual(result["deadline"] - result["admitted_at"], 1, places=5)
+        self.assertLess(result["deadline"], root_deadline)
+        self.assertEqual(self.runtime._ledger.request("create")["deadline"], root_deadline)
+        self.assertEqual(result["result"]["revalidation"]["original"]["source_id"], original.observation_id)
+
     def test_spare_points_is_separate_from_final_character_confirmation(self):
         self.spare_points = True
         self.create()
@@ -595,7 +887,9 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
         adopted = self.finish_identity("load", world, 1)
         self.assertEqual(adopted["result"]["normal_adoption"]["saved_checkpoint_request_id"], "save-reconcile")
         self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 0)
-        self.runtime._ledger._verify(self.a)
+        # Cached result settlement does not make the writer connection idle.
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
 
     def reload_picker(self):
         self.create()
@@ -685,7 +979,7 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
         self.create()
         self.runtime.close()
         self.runtime = MissionRuntime(self.controller)
-        self.runtime.command(dict(schema="mission/8", kind="start", request_id="reopened-start", admission=self.a.to_dict()))
+        self.runtime.command(dict(schema="mission/11", kind="start", request_id="reopened-start", admission=self.a.to_dict()))
         self.assertEqual(self.settled("reopened-start")["state"], "completed")
         self.assertEqual(self.runtime.status()["metrics"]["game_seconds"], 0)
         self.assertIsNone(self.runtime._registered_lifecycle.phase)

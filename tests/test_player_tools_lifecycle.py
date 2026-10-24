@@ -16,8 +16,10 @@ from unittest.mock import patch
 from harness.mission_client import MissionClient
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import EvidenceError
+from harness.gameplay.mission_ledger import LedgerError
 from harness.player_tools import PlayerTools
 from harness.server import Server
+from tests.test_gameplay_evidence import black_png, png
 from tests import test_mission_creation as creation
 from tests import test_mission_handoff as handoff
 from tests import test_mission_request_producer_integration as produced
@@ -83,12 +85,37 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
             for field in ("sources", "expected_session", "expected_revision", "expected_boundary_id"):
                 intent.pop(field)
             data["intent"] = intent
+        elif kind == "handoff":
+            intent["checkpoint_sources"] = intent.pop("checkpoint_ids")
+            for source_id in intent["checkpoint_sources"]:
+                self.player.call("enactive_source", dict(mission_id=self.a.mission_id, source_id=source_id))
+            data["intent"] = intent
         elif kind != "observe":
             data["intent"] = intent
         result, _ = self.player.call("enactive_" + kind, data)
         self.assertEqual(result["transport"], "delivered", result)
         self.assertTrue(result["settled"], result)
         return result["response"]["operation"]
+
+    def remember_identity(self, identity, subject, ref, epoch, *, value=None):
+        # This subclass exercises the semantic MCP contract; the parent fixture
+        # deliberately exercises the unchanged canonical runtime contract.
+        selected, _ = self.player.call("enactive_snapshot", {})
+        self.player.call("enactive_source", dict(mission_id=self.a.mission_id,
+            source_id=ref.observation_id))
+        entry = dict(key=dict(property="identity", subject=subject),
+            value=dict(quantity=None, state=value or getattr(self.a.scenario, subject)),
+            text=f"Visible {subject} identity", coverage="Visible identity evidence only",
+            status="last_seen", grounding=dict(kind="source", source_id=ref.observation_id,
+                coordinate_epoch=epoch), supports=[dict(primary=True, sources=[], claims=[])])
+        result, _ = self.player.call("enactive_remember", dict(snapshot_id=selected["snapshot_id"],
+            request_id=f"remember-{identity}", wait_seconds=3,
+            intent=dict(entry_type="claim", entry=entry)))
+        self.assertEqual(result["transport"], "delivered", result)
+        self.assertTrue(result["settled"], result)
+        operation = result["response"]["operation"]
+        self.assertEqual(operation["state"], "completed", operation)
+        return operation["result"]["entry"]["id"]
 
     def test_invalid_confirmation_label_is_local_and_correctable_in_same_phase(self):
         self.ready()
@@ -102,7 +129,7 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
             scope="lifecycle", source_id=selected["source"]["reference"]["observation_id"],
             supporting_source_ids=[], intent=dict(skill_kind="menu",
                 goal=dict(purpose="confirmation", label="YES", outcome="activated"),
-                perception=dict(kind="confirmation", question="Are you SURE you're finished?"), work_id=None),
+                perception=dict(kind="confirmation", question="Are you SURE you're finished?"), work_id=None, procedure=None),
             limits=dict(primitives=32, wall_seconds=900, game_seconds=3600), wait_seconds=15)
         with patch.object(self.player.client, "submit", wraps=self.player.client.submit) as submit:
             with self.assertRaisesRegex(ContractError, "typed direction/confirmation"):
@@ -115,6 +142,181 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         corrected = self.run_request(self.control("world-corrected-yes", "Yes",
             question="Are you SURE you're finished?"))
         self.assertEqual(corrected["state"], "partial", corrected)
+
+    def save_image_fixture(self):
+        """Actual008 PNG variants; synthetic native semantics, not native acceptance."""
+        self.a = replace(self.a, allowed_skills=(*self.a.allowed_skills, "direct"))
+        self.bridge.value["frame_geometry"] = dict(window_width=960, window_height=640,
+            output_width=960, output_height=640, viewport=[0, 0, 960, 640])
+        self.create()
+        ordinary = self.control("ordinary-before-save", "", parent=None, kind="direct")
+        ordinary.update(perception=None, goal=dict(input=dict(type="text", text="."),
+            intent="Ordinary input before selecting Save", expected="Returned input", interrupt_allowed=False))
+        self.assertEqual(self.run_request(ordinary)["state"], "partial")
+        self.assertEqual(self.runtime._lease.operation, "interaction")
+        assets = Path(__file__).resolve().parents[1] / "docs" / "assets"
+        self.save_images = tuple((assets / name).read_bytes() for name in (
+            "independent-seven-day008-last-normal.png", "independent-seven-day008-save-refresh.png"))
+        self.assertNotEqual(*self.save_images)
+        self.render_variant = 0
+        self.persistent_image_drift = False
+        original = self.bridge.visible_bytes
+
+        def rendered(value):
+            if value["category"] == "DEFAULTMODE":
+                if self.persistent_image_drift:
+                    self.render_variant ^= 1
+                return self.save_images[self.render_variant]
+            return original(value)
+
+        self.enterContext(patch.object(self.bridge, "visible_bytes", side_effect=rendered))
+        self.observe("save-original-image")
+        before = self.runtime._current
+        self.persistent_image_drift = True
+        return before
+
+    def test_save_persistent_pixel_drift_uses_original_intent_and_normal_lifecycle(self):
+        informing = self.save_image_fixture()
+        before = self.runtime.status()
+        lease = self.runtime._lease
+        delivered = deepcopy(self.bridge.delivered)
+        chosen = self.run_request(self.lifecycle("save", "save"))
+        self.assertEqual(chosen["state"], "partial", chosen)
+        after = self.runtime.status()
+        self.assertEqual(after["phase"], "active", after)
+        self.assertEqual(after["epoch"], before["epoch"])
+        self.assertEqual(after["spent_inputs"], before["spent_inputs"] + 1)
+        self.assertIsNot(self.runtime._lease, lease)
+        self.assertEqual(self.runtime._lease.operation, "lifecycle")
+        phase = self.runtime._registered_lifecycle.phase
+        self.assertEqual(phase.root_id, "save")
+        self.assertEqual(phase.stage, "save_confirmation")
+        self.assertEqual(phase.first_normal, informing)
+        self.assertEqual(phase.checkpoint, self.runtime._current)
+        self.assertEqual(chosen["result"]["phase"]["origin_request_id"], "save")
+        primitives = [p for p in self.runtime._ledger.primitive_records() if p["request_id"] == "save"]
+        self.assertEqual(len(primitives), 1)
+        self.assertEqual(primitives[0]["intent"]["revalidation"]["rule"], "native_state")
+        self.assertEqual(self.bridge.delivered[len(delivered)]["action"], "save")
+        self.assertEqual(len(self.bridge.delivered), len(delivered) + 1)
+
+        answered = self.run_request(self.control("save-yes", "Yes", parent="save", question="Save and quit?"))
+        self.assertEqual(answered["state"], "unknown", answered)
+        self.observe("save-transition-first")
+        first = self.runtime._current
+        self.observe("save-transition-second")
+        saved = self.run_request(self.lifecycle("save-reconcile", "save", parent="save",
+            supports=(first.observation_id,)))
+        self.assertEqual(saved["state"], "completed", saved)
+        endpoint = self.runtime._registered_lifecycle._source(
+            saved["result"]["saved_checkpoint"]["normal_endpoint_source_id"])
+        self.assertEqual(endpoint.turn, informing.turn)
+        self.exit()
+        self.assertEqual(self.launch(identity="launch-reload")["state"], "completed")
+        self.stage = "load-world"
+        self.assertEqual(self.run_request(self.lifecycle("load", "load"))["state"], "partial")
+        world = self.runtime._current
+        self.assertEqual(self.run_request(self.control("load-world", f"{self.a.scenario.world} (1)", parent="load"))["state"], "partial")
+        selection = self.control("load-character", self.a.scenario.character, parent="load")
+        selection["perception"] = None
+        entered = self.run_request(selection)
+        self.assertEqual(entered["state"], "unknown", entered)
+        self.observe("load-transition")
+        self.finish_identity("load", world, epoch=1)
+        self.save_final()
+        self.exit("final-exit")
+        finished = self.run_request(self.lifecycle("finish", "finish"))
+        self.assertEqual(finished["state"], "completed", finished)
+        self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
+
+    def test_save_image_change_cannot_reuse_the_old_informing_source(self):
+        informing = self.save_image_fixture()
+        chosen = self.run_request(self.lifecycle("save", "save"))
+        self.assertEqual(chosen["state"], "partial", chosen)
+        charged, delivered = self.runtime.status()["spent_inputs"], len(self.bridge.delivered)
+        stale = self.lifecycle("save-from-old-image", "save", parent="save")
+        stale["sources"] = [informing.observation_id]
+        phase, lease = self.runtime._registered_lifecycle.phase, self.runtime._lease
+        # Submit the adversarial raw caller through the real writer, since the
+        # structured producer may refuse a stale draft before HTTP submission.
+        response = self.runtime.command(stale)
+        self.assertEqual(response["status"], "accepted", response)
+        blocked = self.settled(stale["request_id"])
+        self.assertEqual(blocked["state"], "blocked", blocked)
+        self.assertIn("exact current informing source", blocked["result"]["reason"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], charged)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertIs(self.runtime._lease, lease)
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+
+    def test_save_image_change_does_not_conceal_fatal_faults(self):
+        for fault in ("native_state", "takeover", "process_lost", "published", "retention", "root_budget", "archive", "expiry", "pause"):
+            with self.subTest(fault=fault):
+                case = StructuredLifecycleTests("test_save_image_change_cannot_reuse_the_old_informing_source")
+                case.setUp()
+                try:
+                    case.save_image_fixture()
+                    request = case.lifecycle("save-fault", "save")
+                    charged, delivered = case.runtime.status()["spent_inputs"], len(case.bridge.delivered)
+                    with ExitStack() as faults:
+                        if fault == "native_state":
+                            case.bridge.value["scene"]["turn"] += 1
+                        elif fault == "takeover":
+                            with case.controller.data_lock:
+                                case.controller.state["takeover_generation"] += 1
+                        elif fault == "process_lost":
+                            case.process_state.update(running=False, returncode=1, outcome="exited")
+                        elif fault == "published":
+                            primitive = case.runtime._ledger.primitive_records()[-1]
+                            case.runtime._ledger._db.execute("UPDATE primitives SET state='published' WHERE id=?",
+                                (primitive["logical_id"],))
+                        elif fault == "retention":
+                            case.runtime._store.max_frames = case.runtime._store.usage()["frames"]
+                        elif fault == "root_budget":
+                            faults.enter_context(patch.object(case.runtime._ledger, "_phase_primitive_count", return_value=32))
+                        elif fault == "archive":
+                            faults.enter_context(patch.object(case.runtime._store, "ingest", side_effect=OSError("fixture archive failure")))
+                        else:
+                            observe = case.runtime._observe_native
+
+                            def lose_authority(*args, **kwargs):
+                                result = observe(*args, **kwargs)
+                                if fault == "expiry":
+                                    case.runtime._mission_deadline = case.runtime._wall() - 1
+                                else:
+                                    case.runtime.pause("User Pause during changed-image Save refresh")
+                                return result
+
+                            faults.enter_context(patch.object(case.runtime, "_observe_native", side_effect=lose_authority))
+                        response = case.runtime.command(request)
+                        self.assertEqual(response["status"], "accepted", response)
+                        blocked = case.settled(request["request_id"])
+                        self.assertEqual(blocked["state"], "paused" if fault == "pause" else "blocked", blocked)
+                        self.assertNotIn("Save image changed before input", blocked["result"]["reason"])
+                        self.assertEqual(case.runtime.status()["spent_inputs"], charged)
+                        self.assertEqual(len(case.bridge.delivered), delivered)
+                        self.assertIsNone(case.runtime._lease)
+                        self.assertIsNone(case.runtime._registered_lifecycle.phase)
+                finally:
+                    case.doCleanups()
+
+    def test_save_image_change_cannot_bypass_input_reserve(self):
+        # Configure the real admission before Start. This fixture requires ten
+        # creation inputs and one ordinary input. Mapping capacity must cover
+        # all admitted inputs, so it cannot exhaust independently first.
+        self.a = replace(self.a, limits=replace(self.a.limits, inputs=11 + self.a.cleanup_reserve.inputs))
+        self.save_image_fixture()
+        self.assertEqual(self.runtime.status()["spent_inputs"], 11)
+        delivered = len(self.bridge.delivered)
+        blocked = self.run_request(self.lifecycle("save-budget", "save"))
+        self.assertEqual(blocked["state"], "blocked", blocked)
+        self.assertIn("exhausted mission limits", blocked["result"]["reason"])
+        self.assertEqual(self.runtime.status()["spent_inputs"], 11)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.assertIsNone(self.runtime._lease)
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
 
     def test_creation_successor_readmission_save_new_child_reload_and_normal_finish(self):
         selected, _ = self.player.call("enactive_snapshot", {})
@@ -183,7 +385,85 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(finished["state"], "completed", finished)
         self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
         self.assertEqual(self.runtime._ledger.request("character-yes"), original_unknown)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
+
+    def test_save_root_draft_is_local_and_raw_rejection_preserves_explicit_normal_ending(self):
+        self.create()
+        selected, _ = self.player.call("enactive_snapshot", {})
+        source = selected["source"]["reference"]["observation_id"]
+        self.player.call("enactive_source", dict(mission_id=self.a.mission_id, source_id=source))
+        before, lease = self.runtime.status(), self.runtime._lease
+        checkpoint = self.runtime._current
+        delivered = deepcopy(self.bridge.delivered)
+        records = deepcopy(self.runtime._ledger.request_records())
+        for index, fields in enumerate((dict(work_id="pending"), dict(identity_claim_ids=["old-identity"]),
+                                       dict(work_id="pending", identity_claim_ids=["old-identity"]))):
+            raw = self.lifecycle(f"malformed-save-{index}", "save")
+            raw.update(fields)
+            arguments = dict(snapshot_id=selected["snapshot_id"], request_id=raw["request_id"],
+                scope="new_root", source_id=source, supporting_source_ids=[],
+                intent=dict(operation="save", world=self.a.scenario.world, character=self.a.scenario.character,
+                    work_id=raw["work_id"], identity_claim_ids=raw["identity_claim_ids"]),
+                limits=raw["limits"], wait_seconds=3)
+            with patch.object(self.player.client, "submit", wraps=self.player.client.submit) as submit:
+                with self.assertRaisesRegex(ContractError, "root cannot import"):
+                    self.player.call("enactive_lifecycle", arguments)
+                submit.assert_not_called()
+            # Raw callers cannot bypass the same pure receiver invariant.
+            refused = self.runtime.command(raw)
+            self.assertEqual(refused["status"], "rejected", refused)
+            self.assertIn("root cannot import", refused["reason"])
+            self.assertIs(self.runtime._lease, lease)
+            self.assertIs(self.runtime._current, checkpoint)
+            for field in ("epoch", "phase", "lifecycle_phase", "spent_inputs", "current_source", "lease_owner"):
+                self.assertEqual(self.runtime.status()[field], before[field], field)
+            self.assertEqual(self.runtime._ledger.request_records(), records)
+            self.assertEqual(self.bridge.delivered, delivered)
+        # A new, explicit corrected request follows all normal guards and the
+        # existing unknown-ACK reconciliation, with no restored authority.
+        self.save()
+        self.exit()
+        finished = self.run_request(self.lifecycle("finish", "finish"))
+        self.assertEqual(finished["state"], "completed", finished)
+        self.assertEqual(finished["result"]["normal_finish"]["disposition"], "stopped")
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)
+
+    def test_corrected_save_draft_cannot_restore_user_revoked_authority(self):
+        self.create()
+        bad = self.lifecycle("malformed-before-pause", "save")
+        bad.update(work_id="pending", identity_claim_ids=["old-identity"])
+        self.assertEqual(self.runtime.command(bad)["status"], "rejected")
+        delivered = deepcopy(self.bridge.delivered)
+        spent = self.runtime.status()["spent_inputs"]
+        self.runtime.pause("Fixture real user Pause")
+        corrected = self.lifecycle("corrected-after-pause", "save")
+        response = self.runtime.command(corrected)
+        if response["status"] == "accepted":
+            self.assertEqual(self.settled(corrected["request_id"])["state"], "blocked")
+        else:
+            self.assertEqual(response["status"], "rejected", response)
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertEqual(self.bridge.delivered, delivered)
+        self.assertIsNone(self.runtime._lease)
+
+    def test_corrected_save_draft_still_checks_expired_mission_deadline(self):
+        self.create()
+        bad = self.lifecycle("malformed-before-exhaustion", "save")
+        bad["work_id"] = "pending"
+        self.assertEqual(self.runtime.command(bad)["status"], "rejected")
+        delivered = deepcopy(self.bridge.delivered)
+        spent = self.runtime.status()["spent_inputs"]
+        # Expire the runtime's existing deadline; do not mock its guard or
+        # extend the ledger's original admission/cleanup allowances.
+        self.runtime._mission_deadline = self.runtime._wall() - 1
+        corrected = self.run_request(self.lifecycle("corrected-after-exhaustion", "save"))
+        self.assertEqual(corrected["state"], "blocked", corrected)
+        self.assertLess(self.runtime._mission_deadline, self.runtime._wall())
+        self.assertEqual(self.runtime.status()["spent_inputs"], spent)
+        self.assertEqual(self.bridge.delivered, delivered)
+        self.assertIsNone(self.runtime._lease)
 
     def test_unadopted_launch_has_no_coordinate_scope(self):
         self.ready()
@@ -212,6 +492,7 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         newer = selected["source"]["reference"]["observation_id"]
         self.assertNotEqual(newer, issued["post_pause_source_id"])
         phase = self.runtime._registered_handoff.phase
+        self.assertEqual(phase.checkpoint.observation_id, issued["post_pause_source_id"])
         before = self.runtime.status()
         delivered = deepcopy(self.bridge.delivered)
         arguments = dict(snapshot_id=selected["snapshot_id"], request_id="wrong-observe-source", wait_seconds=3,
@@ -248,10 +529,15 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         source = selected["source"]["reference"]["observation_id"]
         before, lease = self.runtime.status(), self.runtime._lease
         delivered = deepcopy(self.bridge.delivered)
-        for identity, checkpoints, unfinished in (("wrong-reference", ["pending"], ["pending"]),
-                                                  ("missing-work", [source], [])):
+        with self.assertRaisesRegex(ContractError, "Read the selected exact source"):
+            self.player.call("enactive_handoff", dict(snapshot_id=selected["snapshot_id"],
+                request_id="wrong-reference", wait_seconds=3, intent=dict(checkpoint_sources=["pending"],
+                    unfinished_work_ids=["pending"], successor_role="player")))
+        with self.assertRaises(LedgerError):
+            self.runtime._ledger.request("wrong-reference")
+        for identity, checkpoints, unfinished in (("missing-work", [None], []),):
             refused, _ = self.player.call("enactive_handoff", dict(snapshot_id=selected["snapshot_id"],
-                request_id=identity, wait_seconds=3, intent=dict(checkpoint_ids=checkpoints,
+                request_id=identity, wait_seconds=3, intent=dict(checkpoint_sources=checkpoints,
                     unfinished_work_ids=unfinished, successor_role="player")))
             operation = refused["response"]["operation"]
             self.assertEqual(operation["state"], "blocked", refused)
@@ -262,12 +548,49 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
             self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
             self.assertEqual(self.bridge.delivered, delivered)
         corrected, _ = self.player.call("enactive_handoff", dict(snapshot_id=selected["snapshot_id"],
-            request_id="corrected-handoff", wait_seconds=3, intent=dict(checkpoint_ids=[source],
+            request_id="corrected-handoff", wait_seconds=3, intent=dict(checkpoint_sources=[None],
                 unfinished_work_ids=["pending"], successor_role="player")))
         self.assertEqual(corrected["response"]["operation"]["state"], "completed", corrected)
+        self.assertEqual(corrected["response"]["operation"]["result"]["checkpoint_ids"], [source])
         self.assertEqual(self.runtime.status()["phase"], "handoff")
         self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"])
         self.assertIsNone(self.runtime._lease)
+
+    def test_handoff_source_binding_rejects_old_shape_duplicates_and_absent_source(self):
+        self.create()
+        selected, _ = self.player.call("enactive_snapshot", {})
+        source = selected["source"]["reference"]["observation_id"]
+        before = self.runtime.status()["spent_inputs"]
+        for identity, intent in (
+                ("old-handoff", dict(checkpoint_ids=[source], unfinished_work_ids=[], successor_role="player")),
+                ("duplicate-handoff", dict(checkpoint_sources=[None, source], unfinished_work_ids=[], successor_role="player")),
+                ("foreign-handoff", dict(checkpoint_sources=["foreign-source"], unfinished_work_ids=[], successor_role="player"))):
+            with self.assertRaises(ContractError):
+                self.player.call("enactive_handoff", dict(snapshot_id=selected["snapshot_id"],
+                    request_id=identity, wait_seconds=3, intent=intent))
+            with self.assertRaises(LedgerError):
+                self.runtime._ledger.request(identity)
+        self.player.snapshots[selected["snapshot_id"]]["source"] = None
+        with self.assertRaisesRegex(ContractError, "no checkpoint source"):
+            self.player.call("enactive_handoff", dict(snapshot_id=selected["snapshot_id"],
+                request_id="no-source", wait_seconds=3, intent=dict(checkpoint_sources=[None],
+                    unfinished_work_ids=[], successor_role="player")))
+        self.assertEqual(self.runtime.status()["spent_inputs"], before)
+
+    def test_handoff_explicit_historical_source_is_bound_without_refresh(self):
+        self.create()
+        selected, _ = self.player.call("enactive_snapshot", {})
+        source = selected["source"]["reference"]["observation_id"]
+        self.player.call("enactive_source", dict(mission_id=self.a.mission_id, source_id=source))
+        self.run_request(self.operation("observe", "later-observe"))
+        selected, _ = self.player.call("enactive_snapshot", {})
+        with patch.object(self.player.client, "submit", wraps=self.player.client.submit) as submit:
+            result, _ = self.player.call("enactive_handoff", dict(snapshot_id=selected["snapshot_id"],
+                request_id="historical-handoff", wait_seconds=3, intent=dict(checkpoint_sources=[source],
+                    unfinished_work_ids=[], successor_role="player")))
+        self.assertEqual(submit.call_args.args[0]["checkpoint_ids"], [source])
+        self.assertEqual(result["response"]["operation"]["state"], "completed", result)
+        self.assertEqual(result["response"]["operation"]["result"]["checkpoint_ids"], [source])
 
     def test_disputed_normal_source_cannot_publish_coordinate_scope(self):
         self.create()
@@ -341,7 +664,11 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
                         self.assertEqual(case.runtime.status()["spent_inputs"], before)
                         self.assertEqual(len(case.bridge.delivered), delivered)
                         self.assertIsNone(case.runtime._lease)
-                        self.assertIsNone(case.runtime._registered_lifecycle.phase)
+                        if fault == "wrong_source":
+                            self.assertIn("exact current informing source", blocked["result"]["reason"])
+                            self.assertIs(case.runtime._registered_lifecycle.phase, owner)
+                        else:
+                            self.assertIsNone(case.runtime._registered_lifecycle.phase)
                 finally:
                     case.doCleanups()
 
@@ -392,7 +719,7 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertIsNone(self.runtime._lease)
 
     def test_paused_identity_observation_still_rejects_real_scope_and_custody_faults(self):
-        for fault in ("uncommitted_transition", "wrong_actor", "wrong_epoch", "takeover", "changed_pixels",
+        for fault in ("uncommitted_transition", "wrong_actor", "wrong_epoch", "takeover",
                       "process_lost", "prepared", "published", "capacity"):
             with self.subTest(fault=fault):
                 case = StructuredLifecycleTests("test_observe_after_committed_transition_keeps_paused_identity_scope")
@@ -408,8 +735,6 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
                     elif fault == "takeover":
                         with case.controller.data_lock:
                             case.controller.state["takeover_generation"] += 1
-                    elif fault == "changed_pixels":
-                        case.bridge.editor_text = "Visible scene changed while paused"
                     elif fault == "process_lost":
                         case.process_state.update(running=False, returncode=1, outcome="exited")
                     elif fault in ("prepared", "published"):
@@ -423,7 +748,7 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
                         case.runtime._store.max_frames = case.runtime._store.usage()["frames"]
                     before = case.runtime.status()["spent_inputs"]
                     delivered = len(case.bridge.delivered)
-                    result = case.run_request(dict(schema="mission/8", kind="observe", request_id="bad-identity-observe",
+                    result = case.run_request(dict(schema="mission/11", kind="observe", request_id="bad-identity-observe",
                         mission_id=case.a.mission_id, epoch=case.runtime.status()["epoch"]))
                     self.assertEqual(result["state"], "blocked", result)
                     self.assertEqual(case.runtime.status()["spent_inputs"], before)
@@ -460,6 +785,9 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertIsNone(selected["mission"]["coordinate_scope"])
         self.assertEqual(len(self.bridge.delivered), delivered)
         self.assertEqual(selected["mission"]["spent_inputs"], before["spent_inputs"])
+        # Pixel-only drift in the owned normal context may refresh evidence;
+        # it cannot activate the paused actor or replace transition proof.
+        self.bridge.editor_text = "Visible scene changed while paused"
         self.observe("identity-observe")
         after = self.runtime.status()
         advanced = self.runtime._registered_lifecycle.phase
@@ -513,4 +841,5 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(inspected["state"], "completed", inspected)
         self.assertEqual(self.runtime.status()["spent_inputs"], before["spent_inputs"] + 2)
         self.assertEqual(self.runtime._ledger.request("character-yes"), original_unknown)
-        self.runtime._ledger._verify(self.a)
+        with self.runtime._ledger._mutex:
+            self.runtime._ledger._verify(self.a)

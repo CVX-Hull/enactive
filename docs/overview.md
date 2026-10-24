@@ -1,231 +1,141 @@
 ---
 owner: maintainer
-review_trigger: Capabilities, guarantees, architecture, priorities or decisions change
+review_trigger: Capabilities, guarantees, architecture or product direction change
 status: active
 ---
 
 # Project overview
 
-This is a versioned overview, not a live process-status page.
-
-**Enactive** is the canonical repository name. The [migration record](acceptance/2026-10-18-enactive-migration.md)
-explains preserved work, historical PR records and the limits of metadata removal.
-
 ## What we are building
 
-An agent plays real Cataclysm: Dark Days Ahead while you watch the graphical game
-and retain control. The harness makes observations, actions and uncertainty visible.
-It needs an active Codex player to choose plans and interpret scenes. A dedicated
-player sub-agent owns planning, memory use and typed semantic requests within a
-finite mission. The lead owns engineering, admission and acceptance. One local
-MissionRuntime serializes execution; the user retains Pause and native takeover.
+**Enactive** lets an agent play CDDA-class survival/roguelike games while you watch
+and retain control. Cataclysm: Dark Days Ahead is the first actual integration;
+other games are not yet qualified. The [charter](charter.md) owns the game-family
+constraint, purpose and principles.
 
-The [independent supply-and-shelter mission024](acceptance/2026-10-21-independent-supply-shelter.md)
-now demonstrates the integrated path: ordinary fresh creation,1L verified usable
-water, food acquisition and responsive consumption, six purposeful navigation
-steps with a genuine replan, thirty actual minutes of shelter waiting, source-linked
-correction/unfinished Work, actual fresh-context successor continuation, normal
-save/new-child exact reload and final normal shutdown. Its return route used one
-three-step target request. This is one bounded development result after23failed
-attempts, not a survival guarantee, measured speedup or causal memory-benefit claim.
-Source, native, graphical and protected publication/CI evidence remain separate.
+A dedicated active Codex player chooses plans, interprets visible scenes and uses
+memory. One local mission writer executes its requests through the native game.
+The engineering lead maintains the project and verifies outcomes; routine play
+must not depend on lead tactics, keys or memory curation. This is not yet an
+accepted unattended seven-day survival service.
 
-Durable Claims, corrections and unfinished Work retain source support and scope.
-The successor actually received all seven required retained images; their output
-hashes match the archive. Claim and separate charged readmission preserve original
-costs and limits. Retrieved memory never grants input authority. Actual image
-presentation and independent continuation do not prove mental attention or causal
-usefulness. Learned reusable procedures and background reflection remain proposed.
+Latest [Fresh023](acceptance/2026-10-24-independent-seven-day-twenty-third-attempt.md)
+reaches two days of independent survival with four revised/reused procedure
+families and limited supported advice adoption. A clean successor reads memory
+and images, but a source-cache/preflight defect prevents Claim. The run is closed
+failed, with original saves preserved. Reviewed repairs address that boundary,
+spent-root observation tests and costly memory retrieval, and allow closed paused
+archives to supply fallible historical procedures. Source checks and a new actual
+campaign remain separate: successor application, normal lifecycle, seven days and
+useful cadence are still unaccepted.
 
-The official MCP SDK adapter constructs and retains requests, collects original
-results and presents exact images over the existing mission ingress. Both024
-players used the fifteen project-preapproved tools without visible routine
-approval reviews. Hidden host review telemetry and complete model/token/quota
-accounting remain unavailable. [Operator permissions](operator-permissions.md)
-distinguishes setup/preapproval from runtime evidence and procedural roles from
-security isolation.
-
-The observer exposes objective/owner, historical memory/Work, cumulative requests,
-charged admissions and uncertainty. The actual completed/disconnected view retains
-an old unreconciled-frame heading alongside zero unresolved effects and no lease;
-#143/#164 own that terminal-clarity limitation. Historical Work uncertainty is not
-silently relabeled current progress. The [observer report](acceptance/2026-10-20-mission-observer.md)
-and actual mission screenshots distinguish synthetic layout tests from native
-usage. The unchanged real spectator Pause qualification remains scoped user-control
-evidence; no routine user tactical intervention was needed in024.
-
-Unknown native ACKs stay unknown even when separate observed lifecycle or exact
-owned-exit proofs settle their effects. Mission024 retained six such ACKs and zero
-unresolved effects, with no replay. Source/native capability qualifications and
-all failed independent attempts remain linked from [work](work.md); none becomes
-successful through a later repair or this later result. No live mission or stale
-allowance survives normal shutdown.
-
-Current movement uses strictly known non-HOSTILE evidence. Inventory projection
-omits only the engine's non-selecting cosmetic summary. Reload follows the actual
-world→character-list transition and checks the unique enabled selected admitted
-character before dispatch. A narrow Resume-only create/load abort exists in source;
-general setup cancellation remains unsupported and unqualified.
-
-Active observer polling now schedules250ms after each completed status response;
-actual presentation latency still needs native/browser measurement. Fast ordinary
-input samples do not measure player/model latency or accept independent play.
-Routine play should compose guarded skills without a model or approval per key;
-latency must be assessed at the whole-skill and displayed-frame boundaries too.
-[Latency budgets](evaluation.md#latency-budgets-for-interactive-play) separate native
-input, whole skills, model/tool delay, observer decode and loading.
-
-The [seven-day functional campaign](acceptance/2026-10-19-seven-day-survival.md)
-records the same normally created Ned Meyers / Belgium, ordinary supplies and
-water treatment, shelter/rest, midpoint save/restart/exact reload, a genuine
-player replacement and final normal shutdown. It reached168h02m54s, healthy and
-Comfortable with displayed needs clear. The owned runtime is closed; future play
-needs a new explicit admission.
-This is one supervised development campaign under revised finite admissions;
-earlier failures and uncertain acknowledgments remain. It establishes neither a
-general autonomous survival policy nor a controlled model-performance result.
-
-[#71](https://github.com/CVX-Hull/enactive/issues/71) owns evidence/memory readiness,
-[#40](https://github.com/CVX-Hull/enactive/issues/40) outcome monitoring and
-[#75](https://github.com/CVX-Hull/enactive/issues/75) workflow/control improvements.
-The [work map](work.md) links current priorities and the retained campaign lineage.
-[Operator permissions](operator-permissions.md) distinguishes tested literal CLI
-access from rule activation and actor instructions from security isolation.
-
-The [project goal](goal.md) records the original MVP and seven-day campaign
-requirements. The [MVP completion audit](acceptance/2026-10-17-completion.md) maps
-the original scope to implemented outcomes, independent review and dated gameplay
-evidence; the later campaign has its own evidence above.
-Direction and constraints live in the [charter](charter.md). This page summarizes
-current behavior; detailed promises live in [architecture](architecture.md).
-
-Changes migrate the system as a whole. We maintain one current version of each
-contract and remove old paths, including in tools and stored metadata. Unsupported
-state stops with evidence preserved until an explicit offline migration is complete.
-[S-MIGRATION](engineering.md#s-migration-one-current-contract-coordinated-migration)
-defines the rule and its enforcement.
+The browser spectator shows actual Tiles frames, ownership, progress and
+uncertainty. The game stays windowed and project-local. You can Pause or take
+over in the native window; Pause cannot undo a committed action or cancel an
+already running activity. Memory and advice help decisions but never authorize input.
 
 ## How it works
 
-Current system context: **who decides, what you see, and where you retain control**.
-
 ![One designated player uses memory and semantic skills through the mission writer; the user retains Pause.](diagrams/player.svg)
 
-Boxes show responsibilities, not separate model tiers. The player interprets
-visible evidence and requests semantic operations. The mission writer accounts
-for their original limits and checks live authority through the controller and
-native bridge. Historical memory supports decisions but cannot authorize input.
-The lead reviews engineering and admission; it is not the deciding player's
-ordinary gameplay fallback. Owned lifecycle and actual fresh-context continuity
-were exercised in the bounded024 mission; broader survival remains to assess. [Editable diagram](diagrams/player.mmd),
-[actor contract](protocol.md#designated-campaign-operator).
+Boxes show responsibilities, not mandatory separate model tiers. The player can
+use higher-level skills, visible-label shortcuts or ordinary keys/text/clicks,
+then inspect what actually happened. CDDA decides outcomes. The writer accounts
+for original resources and the controller/native bridge checks current ownership
+and delivery. A returned key alone does not establish success.
 
-CDDA decides game outcomes. The controller checks whether a requested input is
-allowed in the observed state. The viewer shows actual game frames and control
-state. [Architecture](architecture.md) explains these responsibilities; [decisions](decisions/001-native-platform.md)
-explain why native integration was selected and when we would reconsider it.
+The background adviser reads recorded trajectories and proposes fallible advice
+without pausing ordinary player reasoning. Software links selected procedures,
+actions and results; the player decides applicability and adoption. Historical
+facts, procedures and proposals retain their sources and limitations.
+
+[Editable diagram](diagrams/player.mmd) · [Architecture](architecture.md) ·
+[Player contract](protocol.md#designated-campaign-operator)
 
 ## What works and what the evidence means
 
-| Capability | Status and user consequence | Evidence |
-| --- | --- | --- |
-| Graphical local play | Verified in the dated MVP session; normal native window and browser spectator | [MVP acceptance](acceptance/2026-10-17-mvp.md) |
-| Observe, menus, individual inputs, supplies and save/reload | Demonstrated; results still require interpretation after each input | [Acceptance probes](acceptance/2026-10-17-mvp.md#real-game-acceptance-2026-10-17) |
-| Ordinary direction queries | Common chooser preserves CDDA bindings; real adjacent-pickup cancellation/selection and saved-character reload worked without user keys | [Direction-menu acceptance](acceptance/2026-10-18-native-direction-menu.md) |
-| Guarded short walks | Limited: cardinal directions, at most eight steps, conservative terrain and hostile/unknown creature stops | [Current contract](protocol.md#closed-loop-play-and-observations) |
-| Planner round trips | One real three-tile comparison used three individual decisions versus one guarded request, retaining per-step checks; not a general speed or safety result | [Timing trial](acceptance/2026-10-17-completion.md#fresh-real-game-timing-probe) |
-| Input authority and takeover | The accepted native-v3 baseline distinguishes ordinary play, menus, activity polls and debug prompts; revoked tokens and old worlds are rejected. Already-committed actions and activities cannot be undone by Pause | [Recovery acceptance](acceptance/2026-10-17-recovery-memory.md) |
-| Retained gameplay evidence and memory | First-campaign traces underpin current memory/navigation;024 demonstrates source-linked correction, unfinished Work and actual fresh-context continuation within one development mission | [Component probe](acceptance/2026-10-20-native-presentation.md), [current evidence contract](protocol.md#passive-gameplay-records-and-evidence) |
-| Mission skill composition | One writer composes navigation, interpreted menus/text, counted items, activity observation and normal lifecycle;024 exercises the integrated supply/shelter outcome with original limits and actual successor continuity | [Architecture](architecture.md), [mission design](design/player-owned-mission.md#integrated-runtime-and-admission-gate) |
-| Passive movement skills | One proposed step at a time with cumulative route history; version4 permits strictly known non-HOSTILE evidence and separates reached-target verification from another step | [Skill contract](protocol.md#passive-bounded-movement-skills) |
-| Mission input ownership | Nonterminal mission owns HTTP observation/input; exact controller lease gates dispatch; Pause remains available, with disk-stall limits | [Ownership contract](protocol.md#controller-run-ownership) |
-| Passive waypoint supervision | Retained offline library and historical probes; no live task endpoint | [Supervisor contract](protocol.md#passive-waypoint-supervision) |
-| Passive planner handoff | Candidate-only study component; current mission player chooses typed operations and interprets outcomes; chat usage remains unmeasured | [Planner contract](protocol.md#bounded-injected-planner) |
-| Dedicated gameplay operator | Bounded ordinary campaign play with lead admission, corrections and terminal handoffs; no general survival guarantee | [Campaign evidence](acceptance/2026-10-19-seven-day-survival.md) |
-| Evaluation records | Passive versioned outcome/cost recorder and offline summaries; external planning and future adapters are not automatically measured | [Evaluation guide](evaluation.md) |
-| Unattended survival service | Not implemented; an active Codex player remains the planner | [Current scope](architecture.md#scope-and-responsibilities) |
-| Reproducible installation | Fresh build demonstrated on this Mac; other hosts remain unverified | [Setup](setup.md), [historical provenance](acceptance/2026-10-17-mvp-manifest.json) |
-| Engineering assurance | Portable checks, source checks and review; native gameplay is a separate validation lane | [Control map](controls.md) |
+| Capability | Demonstrated scope and practical limit |
+| --- | --- |
+| Graphical play and user control | Actual native Tiles frames and browser spectator; Pause/takeover qualifications are scoped in the [architecture](architecture.md#action-and-recovery-views) and dated reports. |
+| Useful skill composition | [Independent mission024](acceptance/2026-10-21-independent-supply-shelter.md) combines supplies/care, purposeful navigation/replanning, shelter/rest, memory correction, successor continuity and normal lifecycle. This is a bounded mission. |
+| Organic ordinary interaction | [Learning006](acceptance/2026-10-22-discovery-learning-sixth-attempt.md) and [local-refusal001](acceptance/2026-10-22-native-local-refusal.md) exercise ordinary discovery/refusal/cancellation. Recent [Luna013](acceptance/2026-10-23-luna-responsiveness-thirteenth-attempt.md) independently loads/adopts identity, approaches a locker, picks up a ration and ends normally. Wider game-family behavior and full independent continuation remain unqualified. |
+| Procedure memory and background advice | [Learning009](acceptance/2026-10-23-discovery-learning-ninth-attempt.md) demonstrates independent executable authorship/reuse/revision, actual clean-successor application and useful play during claimed advice. Scope is short shelter movement; combined readiness fails cadence. No causal learning benefit is established. |
+| Save, reload and ending | [Capture001](acceptance/2026-10-22-native-capture-preconditions.md) qualifies ordinary input and normal same-character save/reload/ending on the rebuilt boundary; actual PNG drift remains unexercised there. [Fresh008](acceptance/2026-10-22-independent-seven-day-eighth-attempt.md) retains the motivating failure. [Native001](acceptance/2026-10-22-native-save-refresh.md) also qualifies one unit-geometry click; non-unit/wider mouse remains unqualified. |
+| Seven-day survival | The [first campaign](acceptance/2026-10-19-seven-day-survival.md) completed under supervision. The fresh independent outcome remains unaccepted; [#145](https://github.com/CVX-Hull/enactive/issues/145) owns follow-through. |
+| Watchable stopped history | The [local-refusal001 report](acceptance/2026-10-22-native-local-refusal.md) records actual STOPPED/HISTORY/DISCONNECTED presentation, no current mission decision and a timeout diagnostic explicitly labelled historical. |
+| Latency | Current play speed is unacceptable. [Fresh010](acceptance/2026-10-22-independent-seven-day-tenth-attempt.md) retains the motivating useful-play evidence. [Luna013](acceptance/2026-10-23-luna-responsiveness-thirteenth-attempt.md) verifies useful pickup and normal ending but advances two game seconds in596wall seconds; short tool execution and longer inter-call gaps do not isolate inference or qualify a routine cohort. [Evaluation](evaluation.md#latency-budgets-for-interactive-play) owns definitions; [#164](https://github.com/CVX-Hull/enactive/issues/164) owns delivery. |
 
-A dated demonstration supports the tested scenarios. It does not guarantee every
-future game state, host or version. The spectator, CLI and Python operator API can request an eligible activity interruption, answer its
-exact confirmation and continue a raw debug prompt once. Recovery stays paused;
-delivery is not task success. Native WAIT YES/NO, finished-activity races, lost
-results, revocation ordering, save/reload and raw-debug recovery have been exercised.
-[Round 008 evidence](acceptance/2026-10-17-native-recovery-planner.md) separates normal
-production gameplay from controlled fault probes and preserves unsuccessful attempts.
-Native keyboard control remains available. Tutorial save loading still has a
-[tracked content defect](https://github.com/CVX-Hull/enactive/issues/47).
-There is no structured trap/damage guarantee or general combat policy. The movement
-skill verifies the reached waypoint without requiring a further clear tile. Every
-remaining step and the actual return direction still require a visible,
-furniture-free allowlisted neighbor. Creature occupancy is not established;
-public `walk` remains conservative after each step.
-[Waypoint readiness](changes/014-waypoint-readiness.md) records this decision and
-the gates remaining before a comparative experiment. Its
-[acceptance](acceptance/2026-10-18-waypoint-readiness.md) records real completion,
-intermediate-obstacle stopping and Pause/continuation, including failures.
+The [responsive-player design](changes/060-responsive-player.md) and
+[decision-context follow-through](changes/062-player-decision-context.md) separate
+semantic judgment from mechanical SDK identities, staging, original collection
+and progressive detail. The player should decide intent, inspect relevant evidence
+and evaluate outcomes; software handles canonical metadata and provenance.
+
+The [executable-routine substrate](changes/061-player-program-execution.md) lets
+the player author observation-conditioned JavaScript procedures over ordinary
+inputs through the same writer. Host bounds and automatic action/result joins
+remain outside generated control flow. Its current view supplies structured
+visible state, without pixels; image-only conditions return to the player.
+Novel interfaces must remain discoverable through ordinary input, rather than
+requiring a hand-written semantic handler. Bounded organic learning is demonstrated;
+useful apparent cadence and the complete fresh campaign remain unqualified.
+
+[Work](work.md#current-integrated-checkpoint) links the decisive successful and
+failed evidence. Dated reports own attempt history, costs and interventions;
+this overview describes the product and its demonstrated limits.
+
+Source tests, native builds, real gameplay and protected publication are separate
+evidence lanes. A dated demonstration supports its tested scenario, source and
+host. Failures and unknown acknowledgments stay recorded even when separate
+effect evidence resolves what happened. A later repair cannot relabel a failed run.
+The [work map](work.md#current-integrated-checkpoint) links decisive reports; those
+reports own exact costs, turns, interventions and unexercised branches.
+
+There is no general combat, trap/damage or survival guarantee. Optional movement
+skills use conservative visible evidence. Current supported boundaries and known
+coupling belong in [architecture](architecture.md) and [protocol](protocol.md).
+[Operator permissions](operator-permissions.md) distinguishes project-preapproved
+play from deterministic input checks, and procedural roles from security isolation.
+No visible approval prompt is weaker evidence than complete host review telemetry,
+which remains unavailable.
 
 ## How development reaches acceptance
 
-We develop a useful behavior through targeted checks and finite real play, then
-qualify the coherent result. Fast commit checks and focused tests support development;
-full review, portable CI and native/graphical proof gate formal acceptance and merge.
-An early failure is retained with a short finding and used to improve the system;
-it does not require a fresh acceptance-report package before the next development
-attempt. Source, budgets, ownership and user Pause stay controlled in every run.
-The [checkpoint table](project-management.md#development-first-delivery) explains
-what is required when. Development progress never substitutes for the full mission
-outcome or silently becomes a held-out assessment.
+We develop a useful behavior through focused checks and finite real play, then
+qualify the coherent outcome. The [development-first workflow](project-management.md#development-first-delivery)
+owns the required checks, independent review and protected publication gates.
+Progress, a passing test or an investigated failure cannot substitute for the full
+requested outcome. The [control map](controls.md) records enforcement and gaps.
 
 ## Current direction and decisions
 
-The original MVP and campaign are scoped milestones, with dated evidence and
-limits. [Work](work.md) links accepted outcomes, failures and future decisions.
-The campaign-driven [improvement workflow](project-management.md#campaign-driven-improvement)
-routes observed pain points to owned work and later verification. It is manual
-engineering; continuous policy learning remains unimplemented.
+[Player-owned campaigns #136](https://github.com/CVX-Hull/enactive/issues/136) and
+[the independent seven-day outcome #145](https://github.com/CVX-Hull/enactive/issues/145)
+own delivery scope; the public Project owns priorities and execution status.
+The [discovery-and-learning brief](changes/057-discovery-learning-campaign.md)
+explains the integrated design and links earlier research. Broader training,
+model comparisons, paid providers and causal efficacy studies are separate choices.
+No paid provider is configured.
 
-The wider planned outcome is [player-owned campaigns (#136)](https://github.com/CVX-Hull/enactive/issues/136):
-the player handles planning, campaign memory, semantic skills, routine recovery
-and normal lifecycle while the user and engineering lead observe. [Design #137](https://github.com/CVX-Hull/enactive/issues/137)
-and the bounded trace/label pilot #71 underpin the completed functional supply-and-
-shelter mission. The [prospective readiness plan](acceptance/2026-10-21-independent-seven-day-readiness.md)
-prepares a fresh seven-day assessment, with protected closeout and current admission
-checks still required. This is a delivery roadmap, not a
-change to current runtime authority. An optional read-only curator and broader
-efficacy studies remain separate candidates; [work](work.md) links their owners.
-The [architecture assessment](research-memory-architecture.md) explains what to keep,
-what needs to change and which recent memory results transfer to this project.
-
-The next memory and [monitoring design](design/outcome-monitoring.md) must use
-actual trajectories while distinguishing observations, fallible judgments and
-unknowns. The [representation study](research-memory-representations.md) and
-[monitoring review](research-outcome-monitoring.md) provide research, not gameplay
-proof. Model-tier comparisons retain explicit data and measurement gates; no paid
-provider is configured. Prefer existing native activities, Git and GitHub over new
-simulators, history systems or trackers without a demonstrated gap.
-
-No platform migration or hosted service is proposed. Revisit choices when measured
-capability or maintenance cost justifies it; [ADRs](decisions/002-local-contract.md)
-record alternatives and reversal triggers. Research review remains October24,2026;
-control maintenance keeps its recorded dates and earlier event triggers.
+Prefer existing engine/platform capabilities and maintained tools when they advance
+the overall objective. Useful long-term accelerators can justify investment;
+choices and reversal conditions belong in [ADRs](decisions/002-local-contract.md).
+We keep one current contract and migrate all affected callers/state together under
+[S-MIGRATION](engineering.md#s-migration-one-current-contract-coordinated-migration).
 
 ## How you stay in control of the project
 
-Start here for direction, behavior, limitations and next decisions. Follow links
-for design and evidence; code-level detail is optional. Significant proposals
-state the problem, visible change, alternatives, maintenance cost, reversibility,
-evidence and uncertainties, and whether your decision is needed. Routine work
-continues under agreed direction. Changes to your constraints require your input.
+Use this page for capabilities and limits, [GitHub Project](https://github.com/users/CVX-Hull/projects/2)
+for live work and [work](work.md) for evidence navigation. Significant proposals
+explain user consequences, alternatives, maintenance cost and open decisions;
+implementation detail stays behind links. Routine work continues under the agreed
+constraints, while changes to those constraints require your input.
 
-For a first session, use the [spectator walkthrough](walkthrough.md). To review
-behavior, follow the [action and recovery views](architecture.md#action-and-recovery-views).
-For governance, the [maintenance table](controls.md#maintenance) separates last
-exercise, maintenance review, effectiveness and next review. These are recorded
-observations, not live badges. [Work](work.md) links open decisions and exceptions
-in the public GitHub Project. The [project workflow](project-management.md) explains
-ownership, planning, parallel implementation and acceptance.
+For a first session, use the [spectator walkthrough](walkthrough.md). For technical
+review, follow [architecture](architecture.md), [standards](engineering.md) and the
+[maintenance table](controls.md#maintenance). Their owners and review triggers
+support upkeep; a recent date is not proof of accuracy. Historical MVP and migration
+records remain in [acceptance](acceptance/), rather than being copied here.
 
-[Run and recover](runbook.md) · [Standards and workflow](engineering.md) ·
+[Run and recover](runbook.md) · [Project workflow](project-management.md) ·
 [Research basis](research.md) · [Environment history](environment.md)

@@ -157,10 +157,13 @@ class ConfirmationValidationTests(MissionCreationFixture, unittest.TestCase):
         bad["sources"] = ["foreign-source"]
         bad["perception"]["source_id"] = "foreign-source"
         delivered = copy.deepcopy(self.bridge.delivered)
+        phase, lease = self.runtime._registered_lifecycle.phase, self.runtime._lease
         operation = self.run_request(bad)
         self.assertEqual(operation["state"], "blocked", operation)
-        self.assertEqual(self.runtime.status()["phase"], "paused")
-        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertIn("exact current informing source", operation["result"]["reason"])
+        self.assertEqual(self.runtime.status()["phase"], "active")
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertIs(self.runtime._lease, lease)
         self.assertEqual(self.bridge.delivered, delivered)
         self.assertEqual(self.runtime._ledger.request(root)["request"]["request_id"], root)
 

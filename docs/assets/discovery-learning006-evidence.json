@@ -1,0 +1,3083 @@
+{
+  "scope": "Closed006 exact item event milliseconds; no inference/paint/attention/causal claims; raw host reasoning/account metadata omitted; actual clean-context graphical review supports scoped functional outcome, not unsafe-rule correction, attention or causal learning efficacy",
+  "source_commit": "1947b3af107fde4d5f6e87cd1cfcd3627990ef26",
+  "archive": {
+    "entries": 409,
+    "existing": 409,
+    "verified": 409,
+    "unique_hashes": 141
+  },
+  "discovery_player_six": {
+    "tool_seconds": {
+      "enactive_snapshot / completed": {
+        "n": 2,
+        "min": 0.004,
+        "median": 0.004,
+        "max": 0.004
+      },
+      "enactive_source / failed": {
+        "n": 1,
+        "min": 0.003,
+        "median": 0.003,
+        "max": 0.003
+      },
+      "enactive_result / completed": {
+        "n": 4,
+        "min": 0.005,
+        "median": 0.006,
+        "max": 0.008
+      },
+      "enactive_lifecycle / completed": {
+        "n": 7,
+        "min": 0.134,
+        "median": 0.25,
+        "max": 1.082
+      },
+      "enactive_skill / completed": {
+        "n": 66,
+        "min": 0.032,
+        "median": 0.7709999999999999,
+        "max": 15.009
+      },
+      "enactive_skill / failed": {
+        "n": 3,
+        "min": 0.002,
+        "median": 0.003,
+        "max": 0.005
+      },
+      "enactive_remember / failed": {
+        "n": 1,
+        "min": 0.002,
+        "median": 0.002,
+        "max": 0.002
+      },
+      "enactive_remember / completed": {
+        "n": 7,
+        "min": 0.134,
+        "median": 0.145,
+        "max": 0.154
+      },
+      "enactive_source / completed": {
+        "n": 2,
+        "min": 0.006,
+        "median": 0.006500000000000001,
+        "max": 0.007
+      },
+      "enactive_observe / completed": {
+        "n": 2,
+        "min": 0.244,
+        "median": 0.257,
+        "max": 0.27
+      },
+      "enactive_advice / completed": {
+        "n": 2,
+        "min": 0.002,
+        "median": 0.002,
+        "max": 0.002
+      },
+      "enactive_handoff / completed": {
+        "n": 2,
+        "min": 0.256,
+        "median": 0.453,
+        "max": 0.65
+      },
+      "enactive_context / completed": {
+        "n": 1,
+        "min": 0.055,
+        "median": 0.055,
+        "max": 0.055
+      }
+    },
+    "nonoverlap_inter_mcp_gap_seconds": {
+      "n": 98,
+      "min": 3.9,
+      "median": 8.146,
+      "max": 148.999
+    },
+    "overlap_pairs": 1,
+    "images": 75,
+    "unique_images": 58,
+    "image_payload_hash_matches": 75,
+    "terminal": [
+      "2026-10-22T05:29:05.089Z",
+      "2026-10-22T05:38:21.362Z",
+      "2026-10-22T05:52:29.807Z"
+    ],
+    "intervals": [
+      {
+        "tool": "enactive_snapshot",
+        "status": "completed",
+        "started_at_ms": 1792646920585,
+        "completed_at_ms": 1792646920589,
+        "duration_seconds": 0.004,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "failed",
+        "started_at_ms": 1792646925697,
+        "completed_at_ms": 1792646925700,
+        "duration_seconds": 0.003,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_result",
+        "status": "completed",
+        "started_at_ms": 1792646925697,
+        "completed_at_ms": 1792646925702,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_snapshot",
+        "status": "completed",
+        "started_at_ms": 1792647074701,
+        "completed_at_ms": 1792647074705,
+        "duration_seconds": 0.004,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792647078605,
+        "completed_at_ms": 1792647079687,
+        "duration_seconds": 1.082,
+        "request_id": "dl006-launch-001"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792647085226,
+        "completed_at_ms": 1792647085457,
+        "duration_seconds": 0.231,
+        "request_id": "dl006-create-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647112343,
+        "completed_at_ms": 1792647112469,
+        "duration_seconds": 0.126,
+        "request_id": "dl006-newtab-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647120353,
+        "completed_at_ms": 1792647120587,
+        "duration_seconds": 0.234,
+        "request_id": "dl006-newtab-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647127614,
+        "completed_at_ms": 1792647127841,
+        "duration_seconds": 0.227,
+        "request_id": "dl006-custom-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "failed",
+        "started_at_ms": 1792647136719,
+        "completed_at_ms": 1792647136721,
+        "duration_seconds": 0.002,
+        "request_id": "dl006-world-back-001"
+      },
+      {
+        "tool": "enactive_result",
+        "status": "completed",
+        "started_at_ms": 1792647141534,
+        "completed_at_ms": 1792647141542,
+        "duration_seconds": 0.008,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647151139,
+        "completed_at_ms": 1792647151370,
+        "duration_seconds": 0.231,
+        "request_id": "dl006-world-back-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647159672,
+        "completed_at_ms": 1792647160015,
+        "duration_seconds": 0.343,
+        "request_id": "dl006-world-tab-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647165615,
+        "completed_at_ms": 1792647165843,
+        "duration_seconds": 0.228,
+        "request_id": "dl006-world-create-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647176391,
+        "completed_at_ms": 1792647176512,
+        "duration_seconds": 0.121,
+        "request_id": "dl006-world-name-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647185564,
+        "completed_at_ms": 1792647185788,
+        "duration_seconds": 0.224,
+        "request_id": "dl006-world-name-focus-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647191790,
+        "completed_at_ms": 1792647191909,
+        "duration_seconds": 0.119,
+        "request_id": "dl006-world-name-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647197628,
+        "completed_at_ms": 1792647200128,
+        "duration_seconds": 2.5,
+        "request_id": "dl006-world-name-003"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647206256,
+        "completed_at_ms": 1792647206491,
+        "duration_seconds": 0.235,
+        "request_id": "dl006-world-name-commit-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647213433,
+        "completed_at_ms": 1792647214109,
+        "duration_seconds": 0.676,
+        "request_id": "dl006-world-finish-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647219943,
+        "completed_at_ms": 1792647220089,
+        "duration_seconds": 0.146,
+        "request_id": "dl006-world-finish-002"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792647226638,
+        "completed_at_ms": 1792647226869,
+        "duration_seconds": 0.231,
+        "request_id": "dl006-create-world-commit-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647232752,
+        "completed_at_ms": 1792647232876,
+        "duration_seconds": 0.124,
+        "request_id": "dl006-world-confirm-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647240682,
+        "completed_at_ms": 1792647240927,
+        "duration_seconds": 0.245,
+        "request_id": "dl006-world-confirm-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647250262,
+        "completed_at_ms": 1792647250717,
+        "duration_seconds": 0.455,
+        "request_id": "dl006-newtab-003"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647258788,
+        "completed_at_ms": 1792647259140,
+        "duration_seconds": 0.352,
+        "request_id": "dl006-custom-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647271209,
+        "completed_at_ms": 1792647272762,
+        "duration_seconds": 1.553,
+        "request_id": "dl006-world-select-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647282416,
+        "completed_at_ms": 1792647283889,
+        "duration_seconds": 1.473,
+        "request_id": "dl006-world-select-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647291649,
+        "completed_at_ms": 1792647293223,
+        "duration_seconds": 1.574,
+        "request_id": "dl006-world-select-003"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647299215,
+        "completed_at_ms": 1792647299792,
+        "duration_seconds": 0.577,
+        "request_id": "dl006-world-select-004"
+      },
+      {
+        "tool": "enactive_remember",
+        "status": "failed",
+        "started_at_ms": 1792647312967,
+        "completed_at_ms": 1792647312969,
+        "duration_seconds": 0.002,
+        "request_id": "dl006-world-memory-001"
+      },
+      {
+        "tool": "enactive_remember",
+        "status": "completed",
+        "started_at_ms": 1792647324261,
+        "completed_at_ms": 1792647324402,
+        "duration_seconds": 0.141,
+        "request_id": "dl006-world-memory-002"
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792647331201,
+        "completed_at_ms": 1792647331208,
+        "duration_seconds": 0.007,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_remember",
+        "status": "completed",
+        "started_at_ms": 1792647339429,
+        "completed_at_ms": 1792647339574,
+        "duration_seconds": 0.145,
+        "request_id": "dl006-world-memory-003"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "failed",
+        "started_at_ms": 1792647345988,
+        "completed_at_ms": 1792647345993,
+        "duration_seconds": 0.005,
+        "request_id": "dl006-world-enter-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647354233,
+        "completed_at_ms": 1792647362070,
+        "duration_seconds": 7.837,
+        "request_id": "dl006-world-enter-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647375207,
+        "completed_at_ms": 1792647375586,
+        "duration_seconds": 0.379,
+        "request_id": "dl006-scenario-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647384286,
+        "completed_at_ms": 1792647384640,
+        "duration_seconds": 0.354,
+        "request_id": "dl006-description-tab-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647392001,
+        "completed_at_ms": 1792647392575,
+        "duration_seconds": 0.574,
+        "request_id": "dl006-description-tab-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647399887,
+        "completed_at_ms": 1792647400239,
+        "duration_seconds": 0.352,
+        "request_id": "dl006-description-tab-003"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647406891,
+        "completed_at_ms": 1792647407246,
+        "duration_seconds": 0.355,
+        "request_id": "dl006-description-tab-004"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647414857,
+        "completed_at_ms": 1792647415216,
+        "duration_seconds": 0.359,
+        "request_id": "dl006-description-tab-005"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647423938,
+        "completed_at_ms": 1792647424292,
+        "duration_seconds": 0.354,
+        "request_id": "dl006-character-name-focus-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647430762,
+        "completed_at_ms": 1792647432257,
+        "duration_seconds": 1.495,
+        "request_id": "dl006-character-name-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647439337,
+        "completed_at_ms": 1792647439684,
+        "duration_seconds": 0.347,
+        "request_id": "dl006-character-name-commit-001"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792647445328,
+        "completed_at_ms": 1792647445686,
+        "duration_seconds": 0.358,
+        "request_id": "dl006-create-character-commit-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647453132,
+        "completed_at_ms": 1792647468141,
+        "duration_seconds": 15.009,
+        "request_id": "dl006-character-confirm-001"
+      },
+      {
+        "tool": "enactive_result",
+        "status": "completed",
+        "started_at_ms": 1792647473575,
+        "completed_at_ms": 1792647473580,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_observe",
+        "status": "completed",
+        "started_at_ms": 1792647571787,
+        "completed_at_ms": 1792647572031,
+        "duration_seconds": 0.244,
+        "request_id": "dl006-creation-diagnostic-001"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792647578672,
+        "completed_at_ms": 1792647578806,
+        "duration_seconds": 0.134,
+        "request_id": "dl006-create-transition-001"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792647585376,
+        "completed_at_ms": 1792647586095,
+        "duration_seconds": 0.719,
+        "request_id": "dl006-create-identity-readmit-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647592111,
+        "completed_at_ms": 1792647592603,
+        "duration_seconds": 0.492,
+        "request_id": "dl006-character-inspect-001"
+      },
+      {
+        "tool": "enactive_remember",
+        "status": "completed",
+        "started_at_ms": 1792647602313,
+        "completed_at_ms": 1792647602447,
+        "duration_seconds": 0.134,
+        "request_id": "dl006-character-memory-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647610039,
+        "completed_at_ms": 1792647610509,
+        "duration_seconds": 0.47,
+        "request_id": "dl006-identity-return-001"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792647618283,
+        "completed_at_ms": 1792647618533,
+        "duration_seconds": 0.25,
+        "request_id": "dl006-create-adopt-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647631950,
+        "completed_at_ms": 1792647632332,
+        "duration_seconds": 0.382,
+        "request_id": "dl006-inventory-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647639775,
+        "completed_at_ms": 1792647640491,
+        "duration_seconds": 0.716,
+        "request_id": "dl006-inventory-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647648490,
+        "completed_at_ms": 1792647649424,
+        "duration_seconds": 0.934,
+        "request_id": "dl006-inventory-return-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647656554,
+        "completed_at_ms": 1792647657383,
+        "duration_seconds": 0.829,
+        "request_id": "dl006-supplies-pickup-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "failed",
+        "started_at_ms": 1792647665055,
+        "completed_at_ms": 1792647665058,
+        "duration_seconds": 0.003,
+        "request_id": "dl006-locker-down-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647685584,
+        "completed_at_ms": 1792647686421,
+        "duration_seconds": 0.837,
+        "request_id": "dl006-locker-direction-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647716893,
+        "completed_at_ms": 1792647717734,
+        "duration_seconds": 0.841,
+        "request_id": "dl006-rations-select-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647725531,
+        "completed_at_ms": 1792647726357,
+        "duration_seconds": 0.826,
+        "request_id": "dl006-water-select-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647733625,
+        "completed_at_ms": 1792647734557,
+        "duration_seconds": 0.932,
+        "request_id": "dl006-supplies-confirm-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647749200,
+        "completed_at_ms": 1792647749497,
+        "duration_seconds": 0.297,
+        "request_id": "dl006-shelter-survey-east-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647760097,
+        "completed_at_ms": 1792647761001,
+        "duration_seconds": 0.904,
+        "request_id": "dl006-survey-east-step-001"
+      },
+      {
+        "tool": "enactive_advice",
+        "status": "completed",
+        "started_at_ms": 1792647777046,
+        "completed_at_ms": 1792647777048,
+        "duration_seconds": 0.002,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647808958,
+        "completed_at_ms": 1792647809881,
+        "duration_seconds": 0.923,
+        "request_id": "dl006-survey-east-step-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647816786,
+        "completed_at_ms": 1792647817723,
+        "duration_seconds": 0.937,
+        "request_id": "dl006-survey-south-step-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647826521,
+        "completed_at_ms": 1792647827491,
+        "duration_seconds": 0.97,
+        "request_id": "dl006-survey-south-step-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647836692,
+        "completed_at_ms": 1792647837546,
+        "duration_seconds": 0.854,
+        "request_id": "dl006-shelter-rest-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647848235,
+        "completed_at_ms": 1792647849169,
+        "duration_seconds": 0.934,
+        "request_id": "dl006-wait-menu-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647855781,
+        "completed_at_ms": 1792647858558,
+        "duration_seconds": 2.777,
+        "request_id": "dl006-wait-thirty-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647868363,
+        "completed_at_ms": 1792647868397,
+        "duration_seconds": 0.034,
+        "request_id": "dl006-rest-poll-001"
+      },
+      {
+        "tool": "enactive_result",
+        "status": "completed",
+        "started_at_ms": 1792647874728,
+        "completed_at_ms": 1792647874735,
+        "duration_seconds": 0.007,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647905710,
+        "completed_at_ms": 1792647906193,
+        "duration_seconds": 0.483,
+        "request_id": "dl006-rest-poll-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647913664,
+        "completed_at_ms": 1792647914620,
+        "duration_seconds": 0.956,
+        "request_id": "dl006-consume-inspect-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647928132,
+        "completed_at_ms": 1792647928164,
+        "duration_seconds": 0.032,
+        "request_id": "dl006-eat-ration-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792647940048,
+        "completed_at_ms": 1792647941106,
+        "duration_seconds": 1.058,
+        "request_id": "dl006-eat-ration-002"
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792647948620,
+        "completed_at_ms": 1792647948626,
+        "duration_seconds": 0.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_observe",
+        "status": "completed",
+        "started_at_ms": 1792647968899,
+        "completed_at_ms": 1792647969169,
+        "duration_seconds": 0.27,
+        "request_id": "dl006-consumption-observe-001"
+      },
+      {
+        "tool": "enactive_remember",
+        "status": "completed",
+        "started_at_ms": 1792648018991,
+        "completed_at_ms": 1792648019136,
+        "duration_seconds": 0.145,
+        "request_id": "dl006-procedure-derive-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648028890,
+        "completed_at_ms": 1792648030093,
+        "duration_seconds": 1.203,
+        "request_id": "dl006-consume-return-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648041733,
+        "completed_at_ms": 1792648042797,
+        "duration_seconds": 1.064,
+        "request_id": "dl006-locker-reuse-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648056701,
+        "completed_at_ms": 1792648057762,
+        "duration_seconds": 1.061,
+        "request_id": "dl006-blanket-select-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648065291,
+        "completed_at_ms": 1792648066469,
+        "duration_seconds": 1.178,
+        "request_id": "dl006-blanket-confirm-001"
+      },
+      {
+        "tool": "enactive_remember",
+        "status": "completed",
+        "started_at_ms": 1792648085667,
+        "completed_at_ms": 1792648085821,
+        "duration_seconds": 0.154,
+        "request_id": "dl006-procedure-revise-001"
+      },
+      {
+        "tool": "enactive_advice",
+        "status": "completed",
+        "started_at_ms": 1792648092825,
+        "completed_at_ms": 1792648092827,
+        "duration_seconds": 0.002,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648126211,
+        "completed_at_ms": 1792648127293,
+        "duration_seconds": 1.082,
+        "request_id": "dl006-inventory-retained-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648165537,
+        "completed_at_ms": 1792648166644,
+        "duration_seconds": 1.107,
+        "request_id": "dl006-water-inventory-filter-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648179408,
+        "completed_at_ms": 1792648184859,
+        "duration_seconds": 5.451,
+        "request_id": "dl006-water-filter-text-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648192368,
+        "completed_at_ms": 1792648193488,
+        "duration_seconds": 1.12,
+        "request_id": "dl006-water-filter-commit-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648201969,
+        "completed_at_ms": 1792648203031,
+        "duration_seconds": 1.062,
+        "request_id": "dl006-bottle-examine-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648216135,
+        "completed_at_ms": 1792648217309,
+        "duration_seconds": 1.174,
+        "request_id": "dl006-bottle-info-return-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648225925,
+        "completed_at_ms": 1792648227174,
+        "duration_seconds": 1.249,
+        "request_id": "dl006-inventory-final-return-001"
+      },
+      {
+        "tool": "enactive_remember",
+        "status": "completed",
+        "started_at_ms": 1792648249149,
+        "completed_at_ms": 1792648249299,
+        "duration_seconds": 0.15,
+        "request_id": "dl006-advice-disposition-memory-001"
+      },
+      {
+        "tool": "enactive_remember",
+        "status": "completed",
+        "started_at_ms": 1792648284654,
+        "completed_at_ms": 1792648284801,
+        "duration_seconds": 0.147,
+        "request_id": "dl006-continuation-memory-001"
+      },
+      {
+        "tool": "enactive_handoff",
+        "status": "completed",
+        "started_at_ms": 1792648304568,
+        "completed_at_ms": 1792648304824,
+        "duration_seconds": 0.256,
+        "request_id": "dl006-handoff-001"
+      },
+      {
+        "tool": "enactive_context",
+        "status": "completed",
+        "started_at_ms": 1792648312697,
+        "completed_at_ms": 1792648312752,
+        "duration_seconds": 0.055,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_handoff",
+        "status": "completed",
+        "started_at_ms": 1792648328570,
+        "completed_at_ms": 1792648329220,
+        "duration_seconds": 0.65,
+        "request_id": "dl006-handoff-002"
+      }
+    ]
+  },
+  "discovery_reflector_six": {
+    "tool_seconds": {
+      "enactive_reflect_next / completed": {
+        "n": 109,
+        "min": 0.112,
+        "median": 15.009,
+        "max": 15.023
+      },
+      "enactive_reflect_source / completed": {
+        "n": 19,
+        "min": 0.004,
+        "median": 0.006,
+        "max": 0.02
+      },
+      "enactive_reflect_submit / completed": {
+        "n": 20,
+        "min": 0.108,
+        "median": 0.1215,
+        "max": 2.409
+      }
+    },
+    "nonoverlap_inter_mcp_gap_seconds": {
+      "n": 147,
+      "min": 0.002,
+      "median": 3.616,
+      "max": 15.436
+    },
+    "overlap_pairs": 0,
+    "images": 19,
+    "unique_images": 18,
+    "image_payload_hash_matches": 19,
+    "terminal": [
+      "2026-10-22T05:28:57.962Z",
+      "2026-10-22T06:04:39.323Z"
+    ],
+    "intervals": [
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647077472,
+        "completed_at_ms": 1792647092479,
+        "duration_seconds": 15.007,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647096094,
+        "completed_at_ms": 1792647111103,
+        "duration_seconds": 15.009,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647114733,
+        "completed_at_ms": 1792647114850,
+        "duration_seconds": 0.117,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792647118782,
+        "completed_at_ms": 1792647118787,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792647127224,
+        "completed_at_ms": 1792647127334,
+        "duration_seconds": 0.11,
+        "request_id": "dl006-reflector-note-001"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647129971,
+        "completed_at_ms": 1792647144983,
+        "duration_seconds": 15.012,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647147599,
+        "completed_at_ms": 1792647162606,
+        "duration_seconds": 15.007,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647165464,
+        "completed_at_ms": 1792647176576,
+        "duration_seconds": 11.112,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792647181400,
+        "completed_at_ms": 1792647181405,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792647191099,
+        "completed_at_ms": 1792647191217,
+        "duration_seconds": 0.118,
+        "request_id": "dl006-reflector-note-002"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647194562,
+        "completed_at_ms": 1792647194674,
+        "duration_seconds": 0.112,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792647198713,
+        "completed_at_ms": 1792647198733,
+        "duration_seconds": 0.02,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792647206475,
+        "completed_at_ms": 1792647206583,
+        "duration_seconds": 0.108,
+        "request_id": "dl006-reflector-note-003"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647209177,
+        "completed_at_ms": 1792647220164,
+        "duration_seconds": 10.987,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792647225065,
+        "completed_at_ms": 1792647225070,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792647237436,
+        "completed_at_ms": 1792647237555,
+        "duration_seconds": 0.119,
+        "request_id": "dl006-reflector-note-004"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647240318,
+        "completed_at_ms": 1792647240435,
+        "duration_seconds": 0.117,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792647244051,
+        "completed_at_ms": 1792647244055,
+        "duration_seconds": 0.004,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792647252157,
+        "completed_at_ms": 1792647252268,
+        "duration_seconds": 0.111,
+        "request_id": "dl006-reflector-note-005"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647254850,
+        "completed_at_ms": 1792647269859,
+        "duration_seconds": 15.009,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647272916,
+        "completed_at_ms": 1792647287928,
+        "duration_seconds": 15.012,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647290599,
+        "completed_at_ms": 1792647305610,
+        "duration_seconds": 15.011,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647309471,
+        "completed_at_ms": 1792647324483,
+        "duration_seconds": 15.012,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647328997,
+        "completed_at_ms": 1792647344003,
+        "duration_seconds": 15.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647344006,
+        "completed_at_ms": 1792647359010,
+        "duration_seconds": 15.004,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647359013,
+        "completed_at_ms": 1792647374023,
+        "duration_seconds": 15.01,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647377011,
+        "completed_at_ms": 1792647392021,
+        "duration_seconds": 15.01,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647392024,
+        "completed_at_ms": 1792647407033,
+        "duration_seconds": 15.009,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647407035,
+        "completed_at_ms": 1792647422052,
+        "duration_seconds": 15.017,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647425507,
+        "completed_at_ms": 1792647440515,
+        "duration_seconds": 15.008,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647440523,
+        "completed_at_ms": 1792647455534,
+        "duration_seconds": 15.011,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647455537,
+        "completed_at_ms": 1792647468615,
+        "duration_seconds": 13.078,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792647475964,
+        "completed_at_ms": 1792647475969,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792647486953,
+        "completed_at_ms": 1792647487073,
+        "duration_seconds": 0.12,
+        "request_id": "dl006-reflector-note-006"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647492870,
+        "completed_at_ms": 1792647507876,
+        "duration_seconds": 15.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647512708,
+        "completed_at_ms": 1792647527714,
+        "duration_seconds": 15.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647527719,
+        "completed_at_ms": 1792647542729,
+        "duration_seconds": 15.01,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647542733,
+        "completed_at_ms": 1792647557742,
+        "duration_seconds": 15.009,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647564171,
+        "completed_at_ms": 1792647579182,
+        "duration_seconds": 15.011,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647579185,
+        "completed_at_ms": 1792647594192,
+        "duration_seconds": 15.007,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647594197,
+        "completed_at_ms": 1792647609205,
+        "duration_seconds": 15.008,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647614087,
+        "completed_at_ms": 1792647629093,
+        "duration_seconds": 15.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647629098,
+        "completed_at_ms": 1792647632418,
+        "duration_seconds": 3.32,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792647637366,
+        "completed_at_ms": 1792647637371,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792647649090,
+        "completed_at_ms": 1792647649426,
+        "duration_seconds": 0.336,
+        "request_id": "dl006-reflector-note-007"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647654024,
+        "completed_at_ms": 1792647669034,
+        "duration_seconds": 15.01,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647669037,
+        "completed_at_ms": 1792647684047,
+        "duration_seconds": 15.01,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647684052,
+        "completed_at_ms": 1792647699065,
+        "duration_seconds": 15.013,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647703830,
+        "completed_at_ms": 1792647718844,
+        "duration_seconds": 15.014,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647718848,
+        "completed_at_ms": 1792647733861,
+        "duration_seconds": 15.013,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647733863,
+        "completed_at_ms": 1792647748869,
+        "duration_seconds": 15.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647754477,
+        "completed_at_ms": 1792647754593,
+        "duration_seconds": 0.116,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792647758853,
+        "completed_at_ms": 1792647758859,
+        "duration_seconds": 0.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792647774040,
+        "completed_at_ms": 1792647774158,
+        "duration_seconds": 0.118,
+        "request_id": "dl006-reflector-note-008"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647778920,
+        "completed_at_ms": 1792647793924,
+        "duration_seconds": 15.004,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647793926,
+        "completed_at_ms": 1792647808933,
+        "duration_seconds": 15.007,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647808936,
+        "completed_at_ms": 1792647823945,
+        "duration_seconds": 15.009,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647828756,
+        "completed_at_ms": 1792647828876,
+        "duration_seconds": 0.12,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792647835683,
+        "completed_at_ms": 1792647835688,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792647845417,
+        "completed_at_ms": 1792647845544,
+        "duration_seconds": 0.127,
+        "request_id": "dl006-reflector-note-009"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647850041,
+        "completed_at_ms": 1792647865056,
+        "duration_seconds": 15.015,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647865062,
+        "completed_at_ms": 1792647880071,
+        "duration_seconds": 15.009,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647880073,
+        "completed_at_ms": 1792647895077,
+        "duration_seconds": 15.004,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647901143,
+        "completed_at_ms": 1792647916149,
+        "duration_seconds": 15.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647916153,
+        "completed_at_ms": 1792647931163,
+        "duration_seconds": 15.01,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647931165,
+        "completed_at_ms": 1792647946171,
+        "duration_seconds": 15.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647951777,
+        "completed_at_ms": 1792647966789,
+        "duration_seconds": 15.012,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647966791,
+        "completed_at_ms": 1792647981800,
+        "duration_seconds": 15.009,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792647981804,
+        "completed_at_ms": 1792647996818,
+        "duration_seconds": 15.014,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648002802,
+        "completed_at_ms": 1792648017809,
+        "duration_seconds": 15.007,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648017812,
+        "completed_at_ms": 1792648032822,
+        "duration_seconds": 15.01,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648032824,
+        "completed_at_ms": 1792648047836,
+        "duration_seconds": 15.012,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648052734,
+        "completed_at_ms": 1792648067745,
+        "duration_seconds": 15.011,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648067749,
+        "completed_at_ms": 1792648082756,
+        "duration_seconds": 15.007,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648082762,
+        "completed_at_ms": 1792648097766,
+        "duration_seconds": 15.004,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648102899,
+        "completed_at_ms": 1792648117906,
+        "duration_seconds": 15.007,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648117908,
+        "completed_at_ms": 1792648127438,
+        "duration_seconds": 9.53,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792648134479,
+        "completed_at_ms": 1792648134485,
+        "duration_seconds": 0.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792648134489,
+        "completed_at_ms": 1792648134495,
+        "duration_seconds": 0.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792648140232,
+        "completed_at_ms": 1792648140238,
+        "duration_seconds": 0.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792648155674,
+        "completed_at_ms": 1792648155794,
+        "duration_seconds": 0.12,
+        "request_id": "dl006-reflector-note-010"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648161668,
+        "completed_at_ms": 1792648176677,
+        "duration_seconds": 15.009,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648176681,
+        "completed_at_ms": 1792648191694,
+        "duration_seconds": 15.013,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648191699,
+        "completed_at_ms": 1792648206712,
+        "duration_seconds": 15.013,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648211543,
+        "completed_at_ms": 1792648226554,
+        "duration_seconds": 15.011,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648226556,
+        "completed_at_ms": 1792648241569,
+        "duration_seconds": 15.013,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648241571,
+        "completed_at_ms": 1792648256581,
+        "duration_seconds": 15.01,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648261670,
+        "completed_at_ms": 1792648276675,
+        "duration_seconds": 15.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648276680,
+        "completed_at_ms": 1792648291686,
+        "duration_seconds": 15.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648291691,
+        "completed_at_ms": 1792648304975,
+        "duration_seconds": 13.284,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792648311384,
+        "completed_at_ms": 1792648311390,
+        "duration_seconds": 0.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792648311394,
+        "completed_at_ms": 1792648311399,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792648324793,
+        "completed_at_ms": 1792648324918,
+        "duration_seconds": 0.125,
+        "request_id": "dl006-reflector-note-011"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648330309,
+        "completed_at_ms": 1792648330440,
+        "duration_seconds": 0.131,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792648337261,
+        "completed_at_ms": 1792648337381,
+        "duration_seconds": 0.12,
+        "request_id": "dl006-reflector-note-012"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648342617,
+        "completed_at_ms": 1792648357629,
+        "duration_seconds": 15.012,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648357635,
+        "completed_at_ms": 1792648372645,
+        "duration_seconds": 15.01,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648372650,
+        "completed_at_ms": 1792648387660,
+        "duration_seconds": 15.01,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648392660,
+        "completed_at_ms": 1792648407672,
+        "duration_seconds": 15.012,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648407676,
+        "completed_at_ms": 1792648422680,
+        "duration_seconds": 15.004,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648422683,
+        "completed_at_ms": 1792648437696,
+        "duration_seconds": 15.013,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648442989,
+        "completed_at_ms": 1792648456417,
+        "duration_seconds": 13.428,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792648463953,
+        "completed_at_ms": 1792648464073,
+        "duration_seconds": 0.12,
+        "request_id": "dl006-reflector-note-013"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648469289,
+        "completed_at_ms": 1792648472882,
+        "duration_seconds": 3.593,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792648479747,
+        "completed_at_ms": 1792648479870,
+        "duration_seconds": 0.123,
+        "request_id": "dl006-reflector-note-014"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648484803,
+        "completed_at_ms": 1792648484916,
+        "duration_seconds": 0.113,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792648494395,
+        "completed_at_ms": 1792648494531,
+        "duration_seconds": 0.136,
+        "request_id": "dl006-reflector-note-015"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648499603,
+        "completed_at_ms": 1792648514616,
+        "duration_seconds": 15.013,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648514622,
+        "completed_at_ms": 1792648529634,
+        "duration_seconds": 15.012,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648529639,
+        "completed_at_ms": 1792648544662,
+        "duration_seconds": 15.023,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648552414,
+        "completed_at_ms": 1792648567421,
+        "duration_seconds": 15.007,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648567425,
+        "completed_at_ms": 1792648582436,
+        "duration_seconds": 15.011,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648582448,
+        "completed_at_ms": 1792648597471,
+        "duration_seconds": 15.023,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648602889,
+        "completed_at_ms": 1792648606351,
+        "duration_seconds": 3.462,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792648613656,
+        "completed_at_ms": 1792648613662,
+        "duration_seconds": 0.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792648613667,
+        "completed_at_ms": 1792648613672,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792648628914,
+        "completed_at_ms": 1792648629045,
+        "duration_seconds": 0.131,
+        "request_id": "dl006-reflector-note-016"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648634145,
+        "completed_at_ms": 1792648634259,
+        "duration_seconds": 0.114,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792648642067,
+        "completed_at_ms": 1792648644476,
+        "duration_seconds": 2.409,
+        "request_id": "dl006-reflector-note-017"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648649732,
+        "completed_at_ms": 1792648664739,
+        "duration_seconds": 15.007,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648664743,
+        "completed_at_ms": 1792648679750,
+        "duration_seconds": 15.007,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648679753,
+        "completed_at_ms": 1792648694765,
+        "duration_seconds": 15.012,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648700404,
+        "completed_at_ms": 1792648715417,
+        "duration_seconds": 15.013,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648715422,
+        "completed_at_ms": 1792648730430,
+        "duration_seconds": 15.008,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648730435,
+        "completed_at_ms": 1792648745445,
+        "duration_seconds": 15.01,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648750384,
+        "completed_at_ms": 1792648765393,
+        "duration_seconds": 15.009,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648765397,
+        "completed_at_ms": 1792648780402,
+        "duration_seconds": 15.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648780406,
+        "completed_at_ms": 1792648789772,
+        "duration_seconds": 9.366,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792648796872,
+        "completed_at_ms": 1792648796891,
+        "duration_seconds": 0.019,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792648796895,
+        "completed_at_ms": 1792648796915,
+        "duration_seconds": 0.02,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_source",
+        "status": "completed",
+        "started_at_ms": 1792648802730,
+        "completed_at_ms": 1792648802742,
+        "duration_seconds": 0.012,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792648814382,
+        "completed_at_ms": 1792648814514,
+        "duration_seconds": 0.132,
+        "request_id": "dl006-reflector-note-018"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648820069,
+        "completed_at_ms": 1792648835079,
+        "duration_seconds": 15.01,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648835084,
+        "completed_at_ms": 1792648850089,
+        "duration_seconds": 15.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648850093,
+        "completed_at_ms": 1792648865105,
+        "duration_seconds": 15.012,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648872066,
+        "completed_at_ms": 1792648887079,
+        "duration_seconds": 15.013,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648887085,
+        "completed_at_ms": 1792648902097,
+        "duration_seconds": 15.012,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648902102,
+        "completed_at_ms": 1792648906191,
+        "duration_seconds": 4.089,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792648916556,
+        "completed_at_ms": 1792648916683,
+        "duration_seconds": 0.127,
+        "request_id": "dl006-reflector-note-019"
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648922191,
+        "completed_at_ms": 1792648937202,
+        "duration_seconds": 15.011,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648937207,
+        "completed_at_ms": 1792648952221,
+        "duration_seconds": 15.014,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648952226,
+        "completed_at_ms": 1792648967235,
+        "duration_seconds": 15.009,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648972777,
+        "completed_at_ms": 1792648987782,
+        "duration_seconds": 15.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792648987786,
+        "completed_at_ms": 1792649002799,
+        "duration_seconds": 15.013,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792649002803,
+        "completed_at_ms": 1792649017814,
+        "duration_seconds": 15.011,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792649025465,
+        "completed_at_ms": 1792649040477,
+        "duration_seconds": 15.012,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_next",
+        "status": "completed",
+        "started_at_ms": 1792649040482,
+        "completed_at_ms": 1792649053102,
+        "duration_seconds": 12.62,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_reflect_submit",
+        "status": "completed",
+        "started_at_ms": 1792649064787,
+        "completed_at_ms": 1792649064942,
+        "duration_seconds": 0.155,
+        "request_id": "dl006-reflector-note-020"
+      }
+    ]
+  },
+  "discovery_successor_six": {
+    "tool_seconds": {
+      "enactive_snapshot / completed": {
+        "n": 1,
+        "min": 0.006,
+        "median": 0.006,
+        "max": 0.006
+      },
+      "enactive_context / completed": {
+        "n": 1,
+        "min": 0.112,
+        "median": 0.112,
+        "max": 0.112
+      },
+      "enactive_source / completed": {
+        "n": 16,
+        "min": 0.004,
+        "median": 0.005,
+        "max": 0.006
+      },
+      "enactive_claim / completed": {
+        "n": 2,
+        "min": 0.189,
+        "median": 0.242,
+        "max": 0.295
+      },
+      "enactive_readmit / completed": {
+        "n": 1,
+        "min": 1.055,
+        "median": 1.055,
+        "max": 1.055
+      },
+      "enactive_skill / failed": {
+        "n": 4,
+        "min": 0.002,
+        "median": 0.002,
+        "max": 0.003
+      },
+      "enactive_result / completed": {
+        "n": 10,
+        "min": 0.006,
+        "median": 0.0085,
+        "max": 8.444
+      },
+      "enactive_skill / completed": {
+        "n": 22,
+        "min": 0.039,
+        "median": 1.2945,
+        "max": 15.017
+      },
+      "enactive_observe / completed": {
+        "n": 4,
+        "min": 0.302,
+        "median": 0.388,
+        "max": 0.503
+      },
+      "enactive_advice / completed": {
+        "n": 1,
+        "min": 0.003,
+        "median": 0.003,
+        "max": 0.003
+      },
+      "enactive_remember / completed": {
+        "n": 5,
+        "min": 0.152,
+        "median": 0.158,
+        "max": 0.158
+      },
+      "enactive_lifecycle / completed": {
+        "n": 12,
+        "min": 0.154,
+        "median": 0.912,
+        "max": 2.065
+      }
+    },
+    "nonoverlap_inter_mcp_gap_seconds": {
+      "n": 78,
+      "min": 0.003,
+      "median": 7.199,
+      "max": 32.226
+    },
+    "overlap_pairs": 0,
+    "images": 53,
+    "unique_images": 33,
+    "image_payload_hash_matches": 53,
+    "terminal": [
+      "2026-10-22T06:06:49.497Z"
+    ],
+    "intervals": [
+      {
+        "tool": "enactive_snapshot",
+        "status": "completed",
+        "started_at_ms": 1792648425906,
+        "completed_at_ms": 1792648425912,
+        "duration_seconds": 0.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_context",
+        "status": "completed",
+        "started_at_ms": 1792648430276,
+        "completed_at_ms": 1792648430388,
+        "duration_seconds": 0.112,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792648437215,
+        "completed_at_ms": 1792648437221,
+        "duration_seconds": 0.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792648441014,
+        "completed_at_ms": 1792648441019,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792648441022,
+        "completed_at_ms": 1792648441027,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792648441030,
+        "completed_at_ms": 1792648441034,
+        "duration_seconds": 0.004,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792648441038,
+        "completed_at_ms": 1792648441043,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792648444462,
+        "completed_at_ms": 1792648444468,
+        "duration_seconds": 0.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792648444472,
+        "completed_at_ms": 1792648444477,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792648444480,
+        "completed_at_ms": 1792648444485,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792648444489,
+        "completed_at_ms": 1792648444495,
+        "duration_seconds": 0.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792648444499,
+        "completed_at_ms": 1792648444504,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792648450842,
+        "completed_at_ms": 1792648450846,
+        "duration_seconds": 0.004,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792648450850,
+        "completed_at_ms": 1792648450854,
+        "duration_seconds": 0.004,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792648450857,
+        "completed_at_ms": 1792648450862,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792648450866,
+        "completed_at_ms": 1792648450871,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792648450874,
+        "completed_at_ms": 1792648450880,
+        "duration_seconds": 0.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_claim",
+        "status": "completed",
+        "started_at_ms": 1792648456093,
+        "completed_at_ms": 1792648456282,
+        "duration_seconds": 0.189,
+        "request_id": "dl006-successor-claim-001"
+      },
+      {
+        "tool": "enactive_claim",
+        "status": "completed",
+        "started_at_ms": 1792648472475,
+        "completed_at_ms": 1792648472770,
+        "duration_seconds": 0.295,
+        "request_id": "dl006-successor-claim-002"
+      },
+      {
+        "tool": "enactive_readmit",
+        "status": "completed",
+        "started_at_ms": 1792648477902,
+        "completed_at_ms": 1792648478957,
+        "duration_seconds": 1.055,
+        "request_id": "dl006-successor-readmit-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "failed",
+        "started_at_ms": 1792648505758,
+        "completed_at_ms": 1792648505760,
+        "duration_seconds": 0.002,
+        "request_id": "dl006-successor-pickup-001"
+      },
+      {
+        "tool": "enactive_result",
+        "status": "completed",
+        "started_at_ms": 1792648511780,
+        "completed_at_ms": 1792648511788,
+        "duration_seconds": 0.008,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648543645,
+        "completed_at_ms": 1792648545111,
+        "duration_seconds": 1.466,
+        "request_id": "dl006-successor-pickup-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648556047,
+        "completed_at_ms": 1792648557164,
+        "duration_seconds": 1.117,
+        "request_id": "dl006-successor-pickup-003"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648566247,
+        "completed_at_ms": 1792648567517,
+        "duration_seconds": 1.27,
+        "request_id": "dl006-successor-water-mark-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648574446,
+        "completed_at_ms": 1792648575712,
+        "duration_seconds": 1.266,
+        "request_id": "dl006-successor-water-confirm-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648581801,
+        "completed_at_ms": 1792648581840,
+        "duration_seconds": 0.039,
+        "request_id": "dl006-successor-water-poll-001"
+      },
+      {
+        "tool": "enactive_observe",
+        "status": "completed",
+        "started_at_ms": 1792648588735,
+        "completed_at_ms": 1792648589238,
+        "duration_seconds": 0.503,
+        "request_id": "dl006-successor-water-observe-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648596392,
+        "completed_at_ms": 1792648597649,
+        "duration_seconds": 1.257,
+        "request_id": "dl006-successor-inventory-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648605826,
+        "completed_at_ms": 1792648606091,
+        "duration_seconds": 0.265,
+        "request_id": "dl006-successor-water-info-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648618685,
+        "completed_at_ms": 1792648619256,
+        "duration_seconds": 0.571,
+        "request_id": "dl006-successor-water-info-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648626740,
+        "completed_at_ms": 1792648627230,
+        "duration_seconds": 0.49,
+        "request_id": "dl006-successor-water-info-003"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648637015,
+        "completed_at_ms": 1792648639041,
+        "duration_seconds": 2.026,
+        "request_id": "dl006-successor-water-focus-001"
+      },
+      {
+        "tool": "enactive_result",
+        "status": "completed",
+        "started_at_ms": 1792648644304,
+        "completed_at_ms": 1792648644554,
+        "duration_seconds": 0.25,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648651885,
+        "completed_at_ms": 1792648653228,
+        "duration_seconds": 1.343,
+        "request_id": "dl006-successor-water-focus-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648662411,
+        "completed_at_ms": 1792648663730,
+        "duration_seconds": 1.319,
+        "request_id": "dl006-successor-water-open-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648675025,
+        "completed_at_ms": 1792648676376,
+        "duration_seconds": 1.351,
+        "request_id": "dl006-successor-info-close-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648687345,
+        "completed_at_ms": 1792648688829,
+        "duration_seconds": 1.484,
+        "request_id": "dl006-successor-inventory-close-001"
+      },
+      {
+        "tool": "enactive_advice",
+        "status": "completed",
+        "started_at_ms": 1792648694927,
+        "completed_at_ms": 1792648694930,
+        "duration_seconds": 0.003,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_remember",
+        "status": "completed",
+        "started_at_ms": 1792648727156,
+        "completed_at_ms": 1792648727314,
+        "duration_seconds": 0.158,
+        "request_id": "dl006-successor-memory-001"
+      },
+      {
+        "tool": "enactive_remember",
+        "status": "completed",
+        "started_at_ms": 1792648745494,
+        "completed_at_ms": 1792648745652,
+        "duration_seconds": 0.158,
+        "request_id": "dl006-successor-memory-002"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792648754422,
+        "completed_at_ms": 1792648755309,
+        "duration_seconds": 0.887,
+        "request_id": "dl006-successor-save-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "failed",
+        "started_at_ms": 1792648762481,
+        "completed_at_ms": 1792648762483,
+        "duration_seconds": 0.002,
+        "request_id": "dl006-successor-save-confirm-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648773812,
+        "completed_at_ms": 1792648775837,
+        "duration_seconds": 2.025,
+        "request_id": "dl006-successor-save-confirm-002"
+      },
+      {
+        "tool": "enactive_result",
+        "status": "completed",
+        "started_at_ms": 1792648781511,
+        "completed_at_ms": 1792648783522,
+        "duration_seconds": 2.011,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_result",
+        "status": "completed",
+        "started_at_ms": 1792648790189,
+        "completed_at_ms": 1792648790195,
+        "duration_seconds": 0.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_observe",
+        "status": "completed",
+        "started_at_ms": 1792648796689,
+        "completed_at_ms": 1792648796991,
+        "duration_seconds": 0.302,
+        "request_id": "dl006-successor-save-diagnostic-001"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792648806639,
+        "completed_at_ms": 1792648806804,
+        "duration_seconds": 0.165,
+        "request_id": "dl006-successor-save-reconcile-001"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792648815588,
+        "completed_at_ms": 1792648817607,
+        "duration_seconds": 2.019,
+        "request_id": "dl006-successor-exit-001"
+      },
+      {
+        "tool": "enactive_result",
+        "status": "completed",
+        "started_at_ms": 1792648822755,
+        "completed_at_ms": 1792648822764,
+        "duration_seconds": 0.009,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648830217,
+        "completed_at_ms": 1792648832234,
+        "duration_seconds": 2.017,
+        "request_id": "dl006-successor-exit-confirm-001"
+      },
+      {
+        "tool": "enactive_result",
+        "status": "completed",
+        "started_at_ms": 1792648839383,
+        "completed_at_ms": 1792648846583,
+        "duration_seconds": 7.2,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792648854182,
+        "completed_at_ms": 1792648855119,
+        "duration_seconds": 0.937,
+        "request_id": "dl006-successor-launch-001"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792648861764,
+        "completed_at_ms": 1792648862783,
+        "duration_seconds": 1.019,
+        "request_id": "dl006-successor-load-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "failed",
+        "started_at_ms": 1792648874473,
+        "completed_at_ms": 1792648874475,
+        "duration_seconds": 0.002,
+        "request_id": "dl006-successor-load-world-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648882095,
+        "completed_at_ms": 1792648883011,
+        "duration_seconds": 0.916,
+        "request_id": "dl006-successor-load-world-002"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648890237,
+        "completed_at_ms": 1792648892257,
+        "duration_seconds": 2.02,
+        "request_id": "dl006-successor-load-casey-001"
+      },
+      {
+        "tool": "enactive_result",
+        "status": "completed",
+        "started_at_ms": 1792648897557,
+        "completed_at_ms": 1792648906001,
+        "duration_seconds": 8.444,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_observe",
+        "status": "completed",
+        "started_at_ms": 1792648912043,
+        "completed_at_ms": 1792648912441,
+        "duration_seconds": 0.398,
+        "request_id": "dl006-successor-load-diagnostic-001"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792648920985,
+        "completed_at_ms": 1792648921139,
+        "duration_seconds": 0.154,
+        "request_id": "dl006-successor-load-reconcile-001"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792648929279,
+        "completed_at_ms": 1792648930501,
+        "duration_seconds": 1.222,
+        "request_id": "dl006-successor-load-readmit-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792648938430,
+        "completed_at_ms": 1792648939302,
+        "duration_seconds": 0.872,
+        "request_id": "dl006-successor-reload-identity-001"
+      },
+      {
+        "tool": "enactive_remember",
+        "status": "completed",
+        "started_at_ms": 1792648965173,
+        "completed_at_ms": 1792648965331,
+        "duration_seconds": 0.158,
+        "request_id": "dl006-successor-character-claim-001"
+      },
+      {
+        "tool": "enactive_remember",
+        "status": "completed",
+        "started_at_ms": 1792648975506,
+        "completed_at_ms": 1792648975658,
+        "duration_seconds": 0.152,
+        "request_id": "dl006-successor-world-claim-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "failed",
+        "started_at_ms": 1792648983196,
+        "completed_at_ms": 1792648983199,
+        "duration_seconds": 0.003,
+        "request_id": "dl006-successor-identity-close-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792649003043,
+        "completed_at_ms": 1792649003946,
+        "duration_seconds": 0.903,
+        "request_id": "dl006-successor-identity-close-002"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792649012482,
+        "completed_at_ms": 1792649012978,
+        "duration_seconds": 0.496,
+        "request_id": "dl006-successor-load-adopt-001"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792649029133,
+        "completed_at_ms": 1792649030202,
+        "duration_seconds": 1.069,
+        "request_id": "dl006-successor-finalsave-001"
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792649037098,
+        "completed_at_ms": 1792649052112,
+        "duration_seconds": 15.014,
+        "request_id": "dl006-successor-finalsave-confirm-001"
+      },
+      {
+        "tool": "enactive_result",
+        "status": "completed",
+        "started_at_ms": 1792649057853,
+        "completed_at_ms": 1792649057859,
+        "duration_seconds": 0.006,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_observe",
+        "status": "completed",
+        "started_at_ms": 1792649063280,
+        "completed_at_ms": 1792649063658,
+        "duration_seconds": 0.378,
+        "request_id": "dl006-successor-finalsave-diagnostic-001"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792649071761,
+        "completed_at_ms": 1792649071921,
+        "duration_seconds": 0.16,
+        "request_id": "dl006-successor-finalsave-reconcile-001"
+      },
+      {
+        "tool": "enactive_remember",
+        "status": "completed",
+        "started_at_ms": 1792649088944,
+        "completed_at_ms": 1792649089097,
+        "duration_seconds": 0.153,
+        "request_id": "dl006-successor-final-memory-001"
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792649098482,
+        "completed_at_ms": 1792649100547,
+        "duration_seconds": 2.065,
+        "request_id": "dl006-successor-finalexit-001"
+      },
+      {
+        "tool": "enactive_result",
+        "status": "completed",
+        "started_at_ms": 1792649106993,
+        "completed_at_ms": 1792649107001,
+        "duration_seconds": 0.008,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_skill",
+        "status": "completed",
+        "started_at_ms": 1792649114737,
+        "completed_at_ms": 1792649129754,
+        "duration_seconds": 15.017,
+        "request_id": "dl006-successor-finalexit-confirm-001"
+      },
+      {
+        "tool": "enactive_result",
+        "status": "completed",
+        "started_at_ms": 1792649135736,
+        "completed_at_ms": 1792649135743,
+        "duration_seconds": 0.007,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_source",
+        "status": "completed",
+        "started_at_ms": 1792649166558,
+        "completed_at_ms": 1792649166563,
+        "duration_seconds": 0.005,
+        "request_id": null
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "status": "completed",
+        "started_at_ms": 1792649176320,
+        "completed_at_ms": 1792649176731,
+        "duration_seconds": 0.411,
+        "request_id": "dl006-successor-finish-001"
+      }
+    ]
+  },
+  "reflection": {
+    "states": {
+      "completed": 20
+    },
+    "charged_seconds": 3600.0,
+    "claim_elapsed_seconds": {
+      "n": 20,
+      "min": 6.901007890701294,
+      "median": 13.523480415344238,
+      "max": 28.36144709587097
+    },
+    "total_claim_elapsed_seconds": 296.29506492614746,
+    "late": 0,
+    "omissions": [
+      {
+        "sequence": 1,
+        "omitted_requests": 0,
+        "omitted_sources": 0,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 2,
+        "omitted_requests": 0,
+        "omitted_sources": 11,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 3,
+        "omitted_requests": 0,
+        "omitted_sources": 0,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 4,
+        "omitted_requests": 0,
+        "omitted_sources": 47,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 5,
+        "omitted_requests": 0,
+        "omitted_sources": 0,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 6,
+        "omitted_requests": 0,
+        "omitted_sources": 107,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 7,
+        "omitted_requests": 0,
+        "omitted_sources": 4,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 8,
+        "omitted_requests": 0,
+        "omitted_sources": 15,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 9,
+        "omitted_requests": 0,
+        "omitted_sources": 6,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 10,
+        "omitted_requests": 0,
+        "omitted_sources": 31,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 11,
+        "omitted_requests": 0,
+        "omitted_sources": 23,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 12,
+        "omitted_requests": 0,
+        "omitted_sources": 0,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 13,
+        "omitted_requests": 0,
+        "omitted_sources": 0,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 14,
+        "omitted_requests": 0,
+        "omitted_sources": 0,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 15,
+        "omitted_requests": 0,
+        "omitted_sources": 0,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 16,
+        "omitted_requests": 0,
+        "omitted_sources": 9,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 17,
+        "omitted_requests": 0,
+        "omitted_sources": 0,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 18,
+        "omitted_requests": 0,
+        "omitted_sources": 28,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 19,
+        "omitted_requests": 0,
+        "omitted_sources": 9,
+        "omitted_procedures": 0
+      },
+      {
+        "sequence": 20,
+        "omitted_requests": 0,
+        "omitted_sources": 7,
+        "omitted_procedures": 0
+      }
+    ]
+  },
+  "observer-setup-timing.json": {
+    "connection": "fresh",
+    "displayed_frame_fresh": true,
+    "paired_cycles": 3,
+    "scope": "Current006 native sessions filtered from reused-page buffers; separate distributions, not paired end-to-end cycles",
+    "status_ms": {
+      "n": 32,
+      "min": 2.0999999046325684,
+      "median": 4.400000095367432,
+      "max": 6.100000381469727
+    },
+    "decode_ms": {
+      "n": 10,
+      "min": 3,
+      "median": 5.0,
+      "max": 8.5
+    },
+    "status_to_dom_ms": {
+      "n": 10,
+      "min": 3.1999998092651367,
+      "median": 5.099999904632568,
+      "max": 8.699999809265137
+    },
+    "dom_to_next_callback_ms": {
+      "n": 10,
+      "min": 1.1999998092651367,
+      "median": 4.250000238418579,
+      "max": 7.5
+    }
+  },
+  "observer-terminal-timing.json": {
+    "connection": "disconnected",
+    "displayed_frame_fresh": false,
+    "paired_cycles": 0,
+    "scope": "Current006 native sessions filtered from reused-page buffers; separate distributions, not paired end-to-end cycles",
+    "status_ms": {
+      "n": 0
+    },
+    "decode_ms": {
+      "n": 32,
+      "min": 3.0999999046325684,
+      "median": 4.3500001430511475,
+      "max": 10.100000381469727
+    },
+    "status_to_dom_ms": {
+      "n": 32,
+      "min": 3.1999998092651367,
+      "median": 4.6499998569488525,
+      "max": 10.300000190734863
+    },
+    "dom_to_next_callback_ms": {
+      "n": 32,
+      "min": 1.3000001907348633,
+      "median": 4.799999952316284,
+      "max": 9.199999809265137
+    }
+  },
+  "screenshots": [
+    {
+      "file": "learning006-distinct-blanket.png",
+      "source_id": "7a7a1db3f6df23b081033ba44fa46997fda94605114a590ee2c1c746b329d2cd",
+      "sha256": "1dce56b616a7dbecc5b8a9e3510b4b19b9fce76c56ef2c36b4e3d10acdb77ec9",
+      "bytes": 115952
+    },
+    {
+      "file": "learning006-liquid-water.png",
+      "source_id": "7cf6c2ce31859b18e6eee701a584508c57fe125146b026d5a68e901996767345",
+      "sha256": "8d7638a2f6175a69f20b88f06e904d822afaab1e5349871789a7c8967b5243a1",
+      "bytes": 63167
+    },
+    {
+      "file": "learning006-reloaded-normal.png",
+      "source_id": "d9d6d5815864009f8b38f0b814368d4c2f8da35301749d79c7295af233a09c5f",
+      "sha256": "91b747d5a7851d9a11a99ed746150971bc31b1c489519eb3516940daedc22cc3",
+      "bytes": 116205
+    }
+  ],
+  "unknown_ack_count": 6,
+  "unresolved_effects": 0,
+  "realized_models": {
+    "original_player": "gpt-6.1-sol / medium",
+    "successor": "gpt-6.1-sol / medium",
+    "adviser": "gpt-6.1-sol / medium",
+    "scope": "Post-run actual host turn-context metadata; inference/token/quota/spend unavailable"
+  },
+  "counts": {
+    "requests": 128,
+    "primitive_returned": 149,
+    "primitive_unknown": 6,
+    "retained_frames": 409,
+    "retained_frame_bytes": 22190684,
+    "game_seconds": 1850
+  }
+}

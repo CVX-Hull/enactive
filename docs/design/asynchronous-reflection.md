@@ -13,7 +13,7 @@ semantic skills where useful and falls back to ordinary interface interaction.
 Reflection can improve future decisions without becoming an approval before each
 action. This is a proposed direction, not a deployed worker or input contract.
 
-![Proposed active-player and background-reflection paths with one input writer.](../diagrams/asynchronous-reflection.svg)
+![Active-player and background-reflection substrate with one input writer; real concurrent use remains pending.](../diagrams/asynchronous-reflection.svg)
 
 Text equivalent: one active player sends skills or direct interaction through the
 existing writer to windowed CDDA. Canonical visible evidence feeds background
@@ -26,7 +26,7 @@ User Pause remains independent. [Diagram source](../diagrams/asynchronous-reflec
 | Existing basis | Keep / explicit change |
 | --- | --- |
 | [Tiered research](../research-tiered-gameplay.md#concrete-delegation-and-feedback-contract), especially its asynchronous-candidate rules | One writer, current feedback, bounded skills and event-driven escalation. That proposal initially waits for planning; overlapping reflection is a proposed later capability, not evidence it already runs. A strategy or procedure can outlive a frame, but each input needs current authority. |
-| [Current architecture](../architecture.md), [mission design](player-owned-mission.md) and [campaign memory source](../../harness/gameplay/campaign_memory.py) | Current durable Claims, corrections, Work, contexts and handoff compose through MissionRuntime/SQLite/evidence. Earlier research descriptions of passive in-process TaskMemory are dated baselines, not today's campaign-memory implementation. A procedural library and background learner are still missing. |
+| [Current architecture](../architecture.md), [mission design](player-owned-mission.md) and [campaign memory source](../../harness/gameplay/campaign_memory.py) | Durable Claims, corrections, Work, contexts and handoff compose through MissionRuntime/SQLite/evidence. Delivery057 adds source for procedures, a pinned library, software reflection scheduling and structured advisory tools. Actual learned reuse and concurrent graphical play remain pending. Earlier passive TaskMemory descriptions are dated baselines. |
 | [Organic discovery](organic-discovery.md) and [#176](https://github.com/CVX-Hull/enactive/issues/176) / [#177](https://github.com/CVX-Hull/enactive/issues/177) | Mixed interaction enables exploration; procedure data captures abstractions the player develops. Background reflection is one way to help, not a requirement that every procedure be authored by another model. |
 | [Memory architecture assessment](../research-memory-architecture.md) / [optional curator #146](https://github.com/CVX-Hull/enactive/issues/146) | Curation advises, has no input authority and must earn its cost. The proposed exchange belongs to the player system, not a standing lead/engineer review service. Curator benefit comparison remains separate from functional procedure learning. |
 | [Representation study](../research-memory-representations.md) and [memory review](../research-memory-learning.md) | Keep evidence/interpretation/procedure distinctions and source-linked retirement. Earlier offline reviewed-promotion defaults conflict with autonomous procedure-data evolution: migrate the affected policy/contracts prospectively before implementation. Existing no-online-promotion admissions are unchanged. Code, prompt-template, weight and substrate edits remain versioned engineering work. |

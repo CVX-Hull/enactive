@@ -36,14 +36,16 @@ class MovementSkillTests(unittest.TestCase):
               timestamp=1_000_000, session="world", revision=None, change=None,
               reservation=None):
         self.number += 1
-        value = {"protocol": 4, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "native-observe-is-not-logical-action",
+        value = {"protocol": 6, "pause_origin": "none", "takeover_generation": 0, "ui": None, "id": "native-observe-is-not-logical-action",
                  "session": session, "revision": self.number if revision is None else revision,
                  "category": "DEFAULTMODE", "actions": ["UP", "DOWN", "LEFT", "RIGHT"],
                  "status": "ready", "error": "", "paused": False,
                  "timestamp_ms": timestamp, "frame_ok": True,
+                 "frame_geometry": {"window_width": 800, "window_height": 600,
+                    "output_width": 800, "output_height": 600, "viewport": [0, 0, 800, 600]},
                  "frame": f"frame-{session}-{self.number}.png", "in_game": True,
                  "boundary": {"kind": "normal_play", "id": "boundary", "control_generation": 0,
-                              "recovery_operations": [], "interrupt_request_id": None},
+                              "input_receiver": True, "recovery_operations": [], "interrupt_request_id": None},
                  "scene": {"provenance": "player-visible input boundary", "position": list(position),
                            "turn": turn, "visible_creatures": [],
                            "neighbors": [{"dx": dx, "dy": dy, "visible": True, "terrain": "t_floor",
@@ -477,7 +479,14 @@ class MovementSkillTests(unittest.TestCase):
             stage = self.stage(task=task)
             proposal = self.propose(stage, now_monotonic=101, now_timestamp_ms=1_001_000)
             self.assertEqual(proposal.wait_seconds, 1)
-            token = self.store.reserve_dispatch(proposal.before, now_monotonic=101, now_timestamp_ms=1_001_000)
+            self.number += 1
+            preflight_value = self.store.observation(proposal.before)
+            preflight_value.update(frame=f"frame-world-{self.number}.png", timestamp_ms=1_001_000)
+            (self.bridge / preflight_value["frame"]).write_bytes(Path(proposal.before.frame_path).read_bytes())
+            preflight = self.store.retain_preflight(preflight_value, rule="native_state",
+                received_monotonic=101, now_monotonic=101, now_timestamp_ms=1_001_000)
+            token = self.store.reserve_dispatch(proposal.before, preflight=preflight, rule="native_state",
+                now_monotonic=101, now_timestamp_ms=1_001_000)
             after = self.frame((1, 0, 0), turn=12, now=103, timestamp=1_003_000, reservation=token,
                                change=lambda v: self.obstruct_neighbor(v, 1, 0, "cupboard") if final else None)
             value = self.settle(stage, self.result(proposal, after), now_monotonic=103, now_timestamp_ms=1_003_000)

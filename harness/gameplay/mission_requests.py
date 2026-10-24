@@ -1,4 +1,4 @@
-"""Compose ordinary mission/8 requests from explicit passive context.
+"""Compose ordinary mission/11 requests from explicit passive context.
 
 No I/O, refresh, source selection or execution occurs here. Supplied dictionaries
 can establish metadata consistency, never archive membership, PNG integrity,
@@ -7,9 +7,11 @@ Memory, handoff and recovery readmission use their existing specialized ingress.
 """
 from __future__ import annotations
 
+import hashlib
+
 from .contracts import ContractError, EvidenceRef, json_object
 from .evidence import _identity, _validate_observation
-from .mission_contracts import VERSION, validate_request
+from .mission_contracts import VERSION, validate_submission
 
 _DERIVED = frozenset(("schema", "mission_id", "epoch", "request_id", "limits", "phase_id",
                       "sources", "expected_session", "expected_revision", "expected_boundary_id"))
@@ -56,7 +58,7 @@ def _selected_phase(snapshot: dict, scope: str, intent: dict, primary: str | Non
     if scope != "lifecycle":
         if intent["kind"] != "skill":
             raise ContractError("Prompt/activity scopes support skill children only")
-        supported = ("activity",) if scope == "activity" else ("menu", "edit", "inspect", "item", "activity")
+        supported = ("activity",) if scope == "activity" else ("menu", "edit", "inspect", "item", "activity", "direct")
         if intent.get("skill_kind") not in supported:
             raise ContractError("Selected scope does not support this skill child")
     else:
@@ -64,16 +66,43 @@ def _selected_phase(snapshot: dict, scope: str, intent: dict, primary: str | Non
         if intent["kind"] == "lifecycle":
             if operation not in ("create", "save", "load") or intent.get("operation") != operation:
                 raise ContractError("Lifecycle child requires the same create/save/load operation")
-        else:
-            skill = intent.get("skill_kind")
-            identity = (skill == "inspect" and type(intent.get("goal")) is dict
-                        and intent["goal"].get("purpose") == "character_identity")
-            if (intent.get("work_id") is not None
-                    or operation not in ("create", "save", "load", "exit")
-                    or (operation == "exit" and skill != "menu")
-                    or (skill not in ("menu", "edit") and not identity)):
-                raise ContractError("Lifecycle skill child requires its menu/editor/identity operation and no Work")
+        # Skill eligibility belongs to the receiver/ledger. Composition binds
+        # the explicitly selected root and source, without a second UI taxonomy.
     return summary["origin_request_id"]
+
+
+def _bind_skill_goal(snapshot: dict, data: dict, scope: str, source: dict) -> None:
+    """Fill mechanical fields in this private intent copy, never fetch context."""
+    kind = data.get("skill_kind")
+    if kind not in ("navigate", "activity"):
+        return
+    goal = data.get("goal")
+    if type(goal) is not dict:
+        raise ContractError("Skill goal must be an object")
+    if kind == "navigate":
+        if "scope" in goal:
+            raise ContractError("Navigation intent must omit its derived goal.scope")
+        published = snapshot.get("coordinate_scope")
+        reference = source["reference"]
+        if (type(published) is not dict or published.get("mission_id") != snapshot["mission_id"]
+                or published.get("session") != reference["session"] or reference["boundary_kind"] != "normal_play"):
+            raise ContractError("Selected navigation source has no matching published coordinate_scope")
+        goal["scope"] = json_object(published)
+    else:
+        if "interrupt_request_id" in goal:
+            raise ContractError("Activity intent must omit its derived interrupt_request_id")
+        owner = None
+        if goal.get("step") == "answer_interrupt":
+            phase = snapshot["activity_phase"]
+            boundary = source["observation"]["boundary"]
+            if (scope != "activity" or type(phase) is not dict
+                    or phase.get("stage") != "interrupt_confirmation" or phase.get("answered") is not False
+                    or type(phase.get("interrupt_request_id")) is not str
+                    or boundary["kind"] != "interrupt_confirmation"
+                    or boundary["interrupt_request_id"] != phase["interrupt_request_id"]):
+                raise ContractError("Selected activity phase/source has no matching unanswered interrupt owner")
+            owner = phase["interrupt_request_id"]
+        goal["interrupt_request_id"] = owner
 
 
 def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: dict,
@@ -85,15 +114,16 @@ def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: di
     Existing scopes bind their exact origin and selected primary checkpoint; no
     other summary or current_source is substituted. A new-root exit alongside
     create/load merely represents an explicit abort request; only the receiver
-    decides whether its narrow Resume-only path is eligible. Historical Finish
+    decides whether settled menu-only cleanup is eligible. Historical Finish
     and frameless activity checkpoints do not require current_source.
 
     Intent contains the existing skill/lifecycle semantic fields, including Work
     and perception choices, with every derived header omitted. Perception's
-    source_id is also derived. Limits and a new request ID are caller choices;
+    source_id, navigation goal.scope and activity interrupt owner are also derived
+    only from this selected context. Limits and a new request ID are caller choices;
     no deadline or budget is inferred or extended. Explicit support IDs supplement
     the chosen primary (for example, first/latest transition observations).
-    validate_request owns the final closed schema and cross-field constraints;
+    validate_submission owns the final closed schema and admission constraints;
     the ordinary canonical serializer remains the serialization path.
     """
     if type(snapshot) is not dict or not {"mission_id", "epoch", *_PHASES} <= snapshot.keys():
@@ -103,6 +133,10 @@ def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: di
     data = json_object(intent)
     if _DERIVED & data.keys():
         raise ContractError("Intent must omit derived request headers and limits")
+    if data.get("procedure") is not None:
+        if type(data["procedure"]) is not dict or "use_id" in data["procedure"]:
+            raise ContractError("Select a procedure revision/applicability; software derives its root use ID")
+        data["procedure"]["use_id"] = "use-" + hashlib.sha256(request_id.encode()).hexdigest()
     if data.get("kind") not in ("skill", "lifecycle"):
         raise ContractError("Producer supports skill and lifecycle intent only")
     view = data.get("perception")
@@ -120,8 +154,10 @@ def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: di
     else:
         primary, binding = _source_binding(source)
     parent = _selected_phase(snapshot, scope, data, primary)
+    if data["kind"] == "skill":
+        _bind_skill_goal(snapshot, data, scope, source)
     if view is not None:
         view["source_id"] = primary
-    return validate_request({**data, "schema": VERSION, "mission_id": snapshot["mission_id"],
+    return validate_submission({**data, "schema": VERSION, "mission_id": snapshot["mission_id"],
         "epoch": snapshot["epoch"], "request_id": request_id, "limits": limits, "phase_id": parent,
         "sources": ([] if primary is None else [primary]) + list(supporting_source_ids), **binding})

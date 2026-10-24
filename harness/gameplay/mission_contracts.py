@@ -1,4 +1,4 @@
-"""Strict mission/8 data. Parsing never grants a controller capability.
+"""Strict mission/11 data. Parsing never grants a controller capability.
 
 The existing JSON decoder/schema helpers own duplicate, finite-number and strict
 integer validation. Request dictionaries are decoded copies, not mutable aliases.
@@ -12,19 +12,33 @@ from typing import Any
 
 from .contracts import (
     ContractError, _array, _enum, _integer, _nullable, _number, _object, _text,
-    json_object, validate_json,
+    json_object, validate_json, canonical,
 )
+from .native_input import direct_goal_schema, validate_input
+from .procedures import procedure_schema, validate_procedure
 
-VERSION = "mission/8"
-MEMORY_VERSION = "campaign-memory/3"
+class MemoryRequestRefusal(ContractError):
+    """A positively identified validation failure of a new memory candidate.
+
+    This says nothing about retained evidence, storage health or input authority.
+    """
+
+
+VERSION = "mission/11"
+MEMORY_VERSION = "campaign-memory/6"
+IDENTITY_UNIT = "name"
+IDENTITY_COVERAGE = {"world": "visible-world-menu", "character": "visible-character-screen"}
 MAX_REQUEST_BYTES = 65_536
 MAX_CONTEXT_BYTES = 32_768
 MAX_HANDOFF_CONTEXT_BYTES = 131_072
 MAX_HANDOFF_SOURCES = 128
+# Explicit campaign retention ceilings; ordinary defaults remain smaller.
+MAX_RETAINED_FRAMES = 8192
+MAX_RETAINED_BYTES = 2 * 1024 * 1024 * 1024
 # Leave room for the bounded mission wrapper and the future post-Pause source.
 # The packet itself must fit the remaining 96KiB before authority is relinquished.
 HANDOFF_CONTEXT_RESERVE = 32_768
-SKILLS = ("navigate", "menu", "item", "activity", "inspect", "edit", "interact")
+SKILLS = ("navigate", "menu", "item", "activity", "inspect", "edit", "interact", "direct", "program")
 LIFECYCLE = ("launch", "create", "save", "exit", "load", "finish")
 INTERACTIONS = (
     "UP", "DOWN", "LEFT", "RIGHT", "open", "close", "smash", "examine", "examine_and_pickup",
@@ -46,12 +60,12 @@ _SHA = {"type": "string", "pattern": "^[a-f0-9]{64}$"}
 _LIMITS = _object({
     "inputs": _integer(8192, 1), "wall_seconds": _number(86_400),
     # Seven elapsed days is an objective, not a safe total cap for ending work.
-    "game_seconds": _integer(691_200, 1), "frames": _integer(4096, 1),
-    "frame_bytes": _integer(1_073_741_824, 1),
+    "game_seconds": _integer(691_200, 1), "frames": _integer(MAX_RETAINED_FRAMES, 1),
+    "frame_bytes": _integer(MAX_RETAINED_BYTES, 1),
     "requests": _integer(4096, 1), "primitive_mappings": _integer(8192, 1),
 })
 _RESERVE = _object({"inputs": _integer(8192, 1), "wall_seconds": _number(86_400),
-                    "frames": _integer(4096, 1), "frame_bytes": _integer(1_073_741_824, 1)})
+                    "frames": _integer(MAX_RETAINED_FRAMES, 1), "frame_bytes": _integer(MAX_RETAINED_BYTES, 1)})
 _SCENARIO = _object({"mode": _enum("fresh", "load"), "world": _text(80),
                      "character": _text(80)})
 _CONFIGURATION = _object({
@@ -59,13 +73,29 @@ _CONFIGURATION = _object({
     "native_sha256": _SHA, "skills": _text(128), "lessons": _text(128),
     "model": _text(128), "effort": _text(64),
 })
+_PROCEDURE_REF = _object({"mission_id": _ID, "revision_id": _ID})
+_QUALIFIED_SOURCE = _object({"mission_id": _ID, "source_id": _ID})
+_PROCEDURE_USE = _object({**_PROCEDURE_REF["properties"], "use_id": _ID, "applicability": _text(1024)})
+_LIBRARY_SOURCE = _object({"mission_id": _ID, "ledger_sha256": _SHA, "index_sha256": _SHA})
+_REFLECTION_LIMITS = _object({
+    "jobs": _integer(64, 1), "pending": _integer(2, 1),
+    "requests_per_job": _integer(32, 1), "sources_per_job": _integer(8, 1),
+    "context_bytes": _integer(65_536, 1024), "result_bytes": _integer(32_768, 512),
+    "job_seconds": _number(180), "total_seconds": _number(3600),
+})
+_LEARNING = _object({
+    "environment": procedure_schema()["properties"]["environment"],
+    "library_sources": _array(_LIBRARY_SOURCE, 4),
+    "reflector_id": _nullable(_ID), "reflection_limits": _REFLECTION_LIMITS,
+})
 _ADMISSION = _object({
     "schema": {"const": VERSION}, "record_type": {"const": "MissionAdmission"},
     "mission_id": _ID, "objective": _text(2000), "player_id": _ID,
     "scenario": _SCENARIO, "limits": _LIMITS, "cleanup_reserve": _RESERVE,
     "allowed_skills": {**_array(_enum(*SKILLS), len(SKILLS), 1), "uniqueItems": True},
     "allowed_lifecycle": {**_array(_enum(*LIFECYCLE), len(LIFECYCLE)), "uniqueItems": True},
-    "update_policy": {"const": "facts-and-provisional/1"}, "configuration": _CONFIGURATION,
+    "update_policy": {"const": "facts-procedures-reflection/3"}, "configuration": _CONFIGURATION,
+    "learning": _nullable(_LEARNING),
 })
 _SCOPE = _object({"mission_id": _ID, "session": _ID, "coordinate_epoch": _integer()})
 _SOURCE_BINDING = _object({
@@ -77,6 +107,11 @@ _REVALIDATION = _object({
     "schema": {"const": VERSION}, "record_type": {"const": "SourceRevalidation"},
     "original": _SOURCE_BINDING, "current": _SOURCE_BINDING,
     "rule": _enum("native_state", "exact_png_bytes"), "grants_authority": {"const": False},
+})
+_INPUT_OBSERVATION = _object({
+    "schema": {"const": VERSION}, "record_type": {"const": "InputObservation"},
+    "original": _SOURCE_BINDING, "current": _SOURCE_BINDING,
+    "grants_authority": {"const": False},
 })
 _SKILL_LIMITS = _object({"primitives": _integer(32, 1), "wall_seconds": _number(900),
                          "game_seconds": _integer(43_200, 1)})
@@ -113,7 +148,7 @@ _GOALS = {
                        "label": _text(1024), "quantity": _integer(9999, 1),
                        "quantity_unit": _ITEM_UNIT, "step": _enum("start", "select", "commit"),
                        "outcome": _enum("acquired", "consumed", "stored", "dropped")}),
-    "activity": _object({"operation": _enum("wait", "rest", "craft"),
+    "activity": _object({"operation": _enum("wait", "rest", "craft", "direct"),
                            "target": _text(1024), "game_seconds": _integer(43_200, 1),
                            "interrupt_allowed": {"type": "boolean"},
                            "step": _enum("start", "poll", "interrupt", "answer_interrupt", "resume"),
@@ -123,6 +158,9 @@ _GOALS = {
         "text": {**_text(24), "pattern": r"^[A-Za-z0-9 _-]+$"}, "commit": {"type": "boolean"}}),
     "interact": _object({"action": _enum(*INTERACTIONS), "intent": _text(1024),
         "desired_outcome": _text(1024)}),
+    "direct": direct_goal_schema(),
+    "program": _object({"state": {"type": "object"}, "intent": _text(1024),
+                         "expected": _text(1024), "interrupt_allowed": {"type": "boolean"}}),
 }
 _KEY = _object({"subject": _ID, "property": _enum("need", "supply", "place", "work", "identity"),
                 "unit": _text(32), "coverage_id": _ID})
@@ -162,10 +200,11 @@ _DECISION = _object({
     "claim_ids": {**_array(_ID, 32), "uniqueItems": True},
     "work_ids": {**_array(_ID, 16), "uniqueItems": True},
     "source_ids": {**_array(_ID, MAX_HANDOFF_SOURCES), "uniqueItems": True},
-    "lesson_ids": {**_array(_ID, 16), "uniqueItems": True},
+    "procedure_refs": {**_array(_PROCEDURE_REF, 16), "uniqueItems": True},
+    "procedure_sources": {**_array(_QUALIFIED_SOURCE, MAX_HANDOFF_SOURCES), "uniqueItems": True},
     "omitted": _integer(), "reason": _text(1024),
 })
-_ENTRIES = {"claim": _CLAIM, "work": _WORK, "decision": _DECISION}
+_ENTRIES = {"claim": _CLAIM, "work": _WORK, "decision": _DECISION, "procedure": procedure_schema()}
 _VISIBLE_UI = _object({
     "purpose": _text(128), "title": _text(1024, empty=True),
     "rows": _array(_object({"id": _ID, "text": _text(1024, empty=True),
@@ -195,6 +234,7 @@ _CLAIMED_HANDOFF = _object({
     "epoch": _integer(), "grants_authority": {"const": False},
     "packet_ids": {**_array(_ID, 4, 1), "uniqueItems": True},
     "read_source_ids": {**_array(_ID, 128), "uniqueItems": True},
+    "read_procedure_sources": {**_array(_QUALIFIED_SOURCE, MAX_HANDOFF_SOURCES), "uniqueItems": True},
 })
 _READMISSION = _object({
     "schema": {"const": VERSION}, "record_type": {"const": "Readmission"},
@@ -231,20 +271,20 @@ _DELIVERY_RESOLUTION = _object({
 _PROMPT_RECEIPT = _object({
     "schema": {"const": VERSION}, "record_type": {"const": "PhaseReceipt"},
     "origin_request_id": _ID, "phase_kind": {"const": "interact"}, "operation": _enum(*INTERACTIONS),
-    "stage": _enum("awaiting_control", "activity_poll", "complete", "unknown"),
+    "stage": _enum("awaiting_control", "awaiting_observation", "activity_poll", "complete", "unknown"),
     "epoch": _integer(), "actor_id": _ID, "controller_boot_id": _ID,
     "operator_pause_generation": _integer(), "takeover_generation": _integer(),
     "source_ids": {**_IDS, "minItems": 1}, "continuity": {"type": "null"},
     "grants_authority": {"const": False},
 })
 _SEMANTIC_PHASE_RECEIPT = _object({
-    **_PROMPT_RECEIPT["properties"], "phase_kind": _enum("item", "activity", "inspect"),
+    **_PROMPT_RECEIPT["properties"], "phase_kind": _enum("item", "activity", "inspect", "direct", "program"),
     "operation": _text(128),
-    "stage": _enum("awaiting_control", "activity_poll", "interrupt_confirmation", "awaiting_readmission", "complete", "unknown"),
+    "stage": _enum("awaiting_control", "awaiting_observation", "activity_poll", "interrupt_confirmation", "awaiting_readmission", "complete", "unknown"),
 })
 _NAVIGATION_PHASE_RECEIPT = _object({
     **_PROMPT_RECEIPT["properties"], "phase_kind": {"const": "navigate"},
-    "operation": {"const": "navigate"}, "stage": _enum("awaiting_control", "complete", "unknown"),
+    "operation": {"const": "navigate"}, "stage": _enum("awaiting_control", "awaiting_observation", "complete", "unknown"),
 })
 _EXIT_PHASE_RECEIPT = _object({
     **_PROMPT_RECEIPT["properties"], "phase_kind": {"const": "lifecycle"},
@@ -309,12 +349,6 @@ _NORMAL_FINISH = _object({
     "completed_work_event_id": _nullable(_ID), "disposition": _enum("stopped", "completed"),
     "grants_authority": {"const": False},
 })
-
-
-def canonical(value: dict[str, Any]) -> str:
-    """Canonical finite JSON for hashing, never shell quoting or game authority."""
-    return json.dumps(json_object(value), sort_keys=True, separators=(",", ":"), ensure_ascii=False,
-                      allow_nan=False)
 
 
 def _decode(value: dict | str | bytes, schema: dict, *, maximum=MAX_REQUEST_BYTES) -> dict:
@@ -387,7 +421,7 @@ def validate_prompt_result(value: dict, *, request: dict, root: dict, actor_id: 
     data = _decode(value, schema)
     valid_root = (root["kind"] == "lifecycle" and root["operation"] in ("exit", "create", "save", "load") if lifecycle else
                   root["kind"] == "skill" and root["skill_kind"] == data["phase_kind"])
-    operation = root.get("operation") if lifecycle else "navigate" if data["phase_kind"] == "navigate" else root.get("goal", {}).get(
+    operation = root.get("operation") if lifecycle else data["phase_kind"] if data["phase_kind"] in ("direct", "program", "navigate") else root.get("goal", {}).get(
         "action" if data["phase_kind"] == "interact" else "operation" if data["phase_kind"] == "activity" else "purpose")
     if (not valid_root or root["phase_id"] is not None
             or data["origin_request_id"] != root["request_id"] or data["operation"] != operation
@@ -396,9 +430,9 @@ def validate_prompt_result(value: dict, *, request: dict, root: dict, actor_id: 
         raise ContractError("Prompt receipt contradicts its immutable root, actor or epoch")
     if request["kind"] == "observe":
         activity_observation = (not lifecycle and (
-            data["phase_kind"] in ("activity", "item", "inspect", "interact")
+            data["phase_kind"] in ("activity", "item", "inspect", "interact", "direct", "program")
             and data["stage"] in ("activity_poll", "awaiting_control", "complete")
-            or data["phase_kind"] == "activity"
+            or data["phase_kind"] in ("activity", "direct", "program")
             and data["stage"] in ("interrupt_confirmation", "awaiting_readmission")))
         if (lifecycle and data["stage"] == "complete"
                 or not lifecycle and not activity_observation and data["stage"] != "complete"):
@@ -488,6 +522,42 @@ class SourceBinding:
         return cls(**_decode(value, _SOURCE_BINDING))
 
 
+def _source_transition(original: SourceBinding, current: SourceBinding) -> None:
+    if type(original) is not SourceBinding or type(current) is not SourceBinding:
+        raise ContractError("Observation transition requires immutable typed source bindings")
+    if original.source_id == current.source_id:
+        raise ContractError("An observation transition must identify a distinct current source")
+    unchanged = ("mission_id", "epoch", "actor_id", "controller_boot_id", "pause_generation", "takeover_generation")
+    if any(getattr(original, key) != getattr(current, key) for key in unchanged):
+        raise ContractError("Observation transition cannot cross actor/epoch/controller/Pause/takeover")
+    if current.store_generation != original.store_generation + 1:
+        raise ContractError("Observation transition permits exactly one deliberate source capture")
+
+
+@dataclass(frozen=True)
+class InputObservation:
+    """Ordinary entry observation; changed evidence is not an equivalence claim.
+
+    The explicit physical event remains the player's choice. Live receiver,
+    integrity, custody and dispatch checks belong to the writer, not this record.
+    """
+    original: SourceBinding
+    current: SourceBinding
+
+    def __post_init__(self):
+        _source_transition(self.original, self.current)
+        validate_json(self.to_dict(), _INPUT_OBSERVATION)
+
+    def to_dict(self) -> dict:
+        return {"schema": VERSION, "record_type": "InputObservation", "original": self.original.to_dict(),
+                "current": self.current.to_dict(), "grants_authority": False}
+
+    @classmethod
+    def from_dict(cls, value: dict) -> InputObservation:
+        data = _decode(value, _INPUT_OBSERVATION)
+        return cls(SourceBinding.from_dict(data["original"]), SourceBinding.from_dict(data["current"]))
+
+
 @dataclass(frozen=True)
 class SourceRevalidation:
     """One explicit refresh, preserving original model evidence and execution scope.
@@ -500,16 +570,8 @@ class SourceRevalidation:
     rule: str
 
     def __post_init__(self):
-        if type(self.original) is not SourceBinding or type(self.current) is not SourceBinding:
-            raise ContractError("Revalidation requires immutable typed source bindings")
+        _source_transition(self.original, self.current)
         validate_json(self.to_dict(), _REVALIDATION)
-        if self.original.source_id == self.current.source_id:
-            raise ContractError("A refresh must identify a distinct current source")
-        unchanged = ("mission_id", "epoch", "actor_id", "controller_boot_id", "pause_generation", "takeover_generation")
-        if any(getattr(self.original, key) != getattr(self.current, key) for key in unchanged):
-            raise ContractError("Revalidation cannot cross actor/epoch/controller/Pause/takeover")
-        if self.current.store_generation != self.original.store_generation + 1:
-            raise ContractError("Revalidation permits exactly one deliberate source refresh")
 
     def to_dict(self) -> dict:
         return {"schema": VERSION, "record_type": "SourceRevalidation", "original": self.original.to_dict(),
@@ -574,6 +636,62 @@ class Configuration:
 
 
 @dataclass(frozen=True)
+class LibrarySource:
+    mission_id: str
+    ledger_sha256: str
+    index_sha256: str
+
+    def __post_init__(self):
+        validate_json(json_object(asdict(self)), _LIBRARY_SOURCE)
+
+
+@dataclass(frozen=True)
+class ReflectionLimits:
+    jobs: int = 64
+    pending: int = 2
+    requests_per_job: int = 32
+    sources_per_job: int = 8
+    context_bytes: int = 65_536
+    result_bytes: int = 32_768
+    job_seconds: float = 180
+    total_seconds: float = 3600
+
+    def __post_init__(self):
+        validate_json(json_object(asdict(self)), _REFLECTION_LIMITS)
+        if self.job_seconds <= 0 or self.total_seconds < self.job_seconds:
+            raise ContractError("Reflection requires positive bounded job and aggregate time")
+
+
+@dataclass(frozen=True)
+class LearningPolicy:
+    environment: dict
+    library_sources: tuple[LibrarySource, ...] = ()
+    reflector_id: str | None = None
+    reflection_limits: ReflectionLimits = ReflectionLimits()
+
+    def __post_init__(self):
+        if (type(self.library_sources) is not tuple or any(type(value) is not LibrarySource for value in self.library_sources)
+                or type(self.reflection_limits) is not ReflectionLimits):
+            raise ContractError("Learning admission requires typed source pins and reflection limits")
+        # Retain immutable environment fields as a tuple, not a caller-owned dict.
+        environment = json_object(dict(self.environment))
+        object.__setattr__(self, "environment", tuple(sorted(environment.items())))
+        validate_json(self.to_dict(), _LEARNING)
+        if len({value.mission_id for value in self.library_sources}) != len(self.library_sources):
+            raise ContractError("Library mission pins must be distinct")
+
+    def to_dict(self) -> dict:
+        return {"environment": dict(self.environment), "library_sources": [asdict(value) for value in self.library_sources],
+                "reflector_id": self.reflector_id, "reflection_limits": asdict(self.reflection_limits)}
+
+    @classmethod
+    def from_dict(cls, value: dict) -> LearningPolicy:
+        data = _decode(value, _LEARNING)
+        return cls(data["environment"], tuple(LibrarySource(**source) for source in data["library_sources"]),
+                   data["reflector_id"], ReflectionLimits(**data["reflection_limits"]))
+
+
+@dataclass(frozen=True)
 class MissionAdmission:
     mission_id: str
     objective: str
@@ -585,6 +703,7 @@ class MissionAdmission:
     allowed_lifecycle: tuple[str, ...]
     update_policy: str
     configuration: Configuration
+    learning: LearningPolicy | None = None
 
     def __post_init__(self):
         for value, cls in ((self.scenario, Scenario), (self.limits, MissionLimits),
@@ -593,6 +712,10 @@ class MissionAdmission:
                 raise ContractError("Admission requires typed immutable nested values")
         if type(self.allowed_skills) is not tuple or type(self.allowed_lifecycle) is not tuple:
             raise ContractError("Capabilities must be immutable tuples")
+        if self.learning is not None and type(self.learning) is not LearningPolicy:
+            raise ContractError("Learning requires its frozen typed admission")
+        if self.learning is not None and any(source.mission_id == self.mission_id for source in self.learning.library_sources):
+            raise ContractError("A live mission cannot be its own historical library")
         validate_json(self.to_dict(), _ADMISSION)
         for field in ("inputs", "wall_seconds", "frames", "frame_bytes"):
             if getattr(self.cleanup_reserve, field) >= getattr(self.limits, field):
@@ -602,6 +725,7 @@ class MissionAdmission:
         value = asdict(self)
         value["allowed_skills"] = list(self.allowed_skills)
         value["allowed_lifecycle"] = list(self.allowed_lifecycle)
+        value["learning"] = None if self.learning is None else self.learning.to_dict()
         return {"schema": VERSION, "record_type": "MissionAdmission", **value}
 
     @classmethod
@@ -613,6 +737,7 @@ class MissionAdmission:
             data[field] = constructor(**data[field])
         data["allowed_skills"] = tuple(data["allowed_skills"])
         data["allowed_lifecycle"] = tuple(data["allowed_lifecycle"])
+        data["learning"] = None if data["learning"] is None else LearningPolicy.from_dict(data["learning"])
         return cls(**data)
 
 
@@ -639,7 +764,7 @@ def validate_work_view(value: dict | str | bytes) -> dict:
 def validate_memory_entry(value: dict | str | bytes, entry_type: str, *, player=False) -> dict:
     if not isinstance(entry_type, str) or entry_type not in _ENTRIES:
         raise ContractError("Unknown memory entry type")
-    result = _decode(value, _ENTRIES[entry_type])
+    result = (validate_procedure(value) if entry_type == "procedure" else _decode(value, _ENTRIES[entry_type]))
     if entry_type == "claim":
         if player and result["kind"] != "interpretation":
             raise ContractError("A player cannot assert a native fact")
@@ -650,9 +775,8 @@ def validate_memory_entry(value: dict | str | bytes, entry_type: str, *, player=
             raise ContractError("An unsupported value must remain unknown/disputed/retired")
         if result["key"]["property"] == "identity":
             key = result["key"]
-            coverage = {"world": "visible-world-menu", "character": "visible-character-screen"}
-            if (result["kind"] != "interpretation" or key["subject"] not in coverage
-                    or key["unit"] != "name" or key["coverage_id"] != coverage[key["subject"]]
+            if (result["kind"] != "interpretation" or key["subject"] not in IDENTITY_COVERAGE
+                    or key["unit"] != IDENTITY_UNIT or key["coverage_id"] != IDENTITY_COVERAGE[key["subject"]]
                     or content["quantity"] is not None):
                 raise ContractError("Identity is a fallible visible world/menu or character/screen name")
         for support in result["supports"]:
@@ -703,6 +827,7 @@ def _request_schema(kind: str, data: dict) -> dict:
             props.update(skill_kind={"const": skill_kind}, goal=_GOALS[skill_kind], sources=_IDS,
                          expected_session=_ID, expected_revision=_integer(), expected_boundary_id=_ID,
                          limits=_SKILL_LIMITS, work_id=_nullable(_ID), phase_id=_nullable(_ID),
+                         procedure=_nullable(_PROCEDURE_USE),
                          perception=_perception_schema(data))
         elif kind == "handoff":
             props.update(checkpoint_ids={**_array(_ID, 32), "uniqueItems": True}, successor_role=_ID,
@@ -713,6 +838,7 @@ def _request_schema(kind: str, data: dict) -> dict:
                          expected_boundary_id=_ID, expected_pause_origin=_enum(*PAUSE_ORIGINS), actor_role=_ID,
                          packet_ids={**_array(_ID, 4, 1), "uniqueItems": True},
                          read_source_ids={**_array(_ID, 128), "uniqueItems": True})
+            props["read_procedure_sources"] = {**_array(_QUALIFIED_SOURCE, MAX_HANDOFF_SOURCES), "uniqueItems": True}
         elif kind == "readmit":
             mode = data.get("mode")
             if mode not in ("handoff", "recovery"): raise ContractError("Readmission requires an explicit current mode")
@@ -763,7 +889,7 @@ def validate_request(value: dict | str | bytes) -> dict:
             raise ContractError("Context scope differs from mission")
     elif kind in ("remember", "correct"):
         entry = validate_memory_entry(result["entry"], result["entry_type"], player=True)
-        if entry["scope"]["mission_id"] != result["mission_id"]:
+        if (entry["mission_id"] if result["entry_type"] == "procedure" else entry["scope"]["mission_id"]) != result["mission_id"]:
             raise ContractError("Memory scope differs from mission")
         if kind == "correct":
             if result["entry_type"] != "claim" or entry["id"] in result["retired_ids"]:
@@ -774,6 +900,18 @@ def validate_request(value: dict | str | bytes) -> dict:
     elif kind == "skill":
         if not result["sources"]: raise ContractError("A skill requires informing evidence")
         if result["limits"]["wall_seconds"] <= 0: raise ContractError("Skill deadline must be positive")
+        if result["phase_id"] is not None and result["procedure"] is not None:
+            raise ContractError("A child inherits its root procedure use; it cannot replace that selection")
+        if result["skill_kind"] == "direct":
+            validate_input(result["goal"]["input"], text_limit=24)
+        if result["skill_kind"] == "program":
+            if result["phase_id"] is not None or result["procedure"] is None:
+                raise ContractError("A program invocation requires a selected procedure and its own root")
+            if len(canonical(result["goal"]["state"]).encode()) > 16_384:
+                raise ContractError("Program continuation exceeds 16 KiB")
+        if (result["skill_kind"] == "activity" and result["goal"]["operation"] == "direct"
+                and result["goal"]["step"] == "start"):
+            raise ContractError("Direct activity observation requires its actual existing root")
         if result["skill_kind"] == "navigate":
             scope = result["goal"]["scope"]
             if scope["mission_id"] != result["mission_id"] or scope["session"] != result["expected_session"]:
@@ -841,4 +979,18 @@ def validate_request(value: dict | str | bytes) -> dict:
         if result["limits"]["wall_seconds"] <= 0: raise ContractError("Lifecycle deadline must be positive")
         if result["phase_id"] == result["request_id"]:
             raise ContractError("A phase child cannot parent itself")
+    return result
+
+
+def validate_submission(value: dict | str | bytes) -> dict:
+    """Validate new intent before admission, without rewriting recorded failures.
+
+    validate_request also reads immutable rejected request evidence. Submission
+    checks cannot make those historical rows unreadable or grant live authority.
+    """
+    result = validate_request(value)
+    if (result["kind"] == "lifecycle" and result["operation"] in ("create", "save", "load")
+            and result["phase_id"] is None
+            and (result["work_id"] is not None or result["identity_claim_ids"])):
+        raise ContractError("Lifecycle root cannot import Work or old identity authority")
     return result

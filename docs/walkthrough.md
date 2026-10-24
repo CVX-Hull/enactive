@@ -31,6 +31,11 @@ and journals remain local as described in [acceptance](acceptance/2026-10-17-mvp
    Saving a goal does not launch an autonomous agent. The timeline helps explain
    recent requests; it is not proof that their objectives succeeded.
 
+Current sessions also show **Deciding host** and **Assigned successor**. These
+report observed launch/exit events separately from the mission actor and input
+lease. A successor can fail before adopting the mission. Launch alone does not
+prove it is still running; disconnected evidence is explicitly last reported.
+
 ## Learn one control cycle
 
 After following the launch procedure, **Observe** and compare the spectator with

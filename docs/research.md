@@ -41,6 +41,53 @@ maintenance question rather than expanding bibliography for its own sake.
 
 ## Embodied control / VLA
 
+The [October23 executable-policy review](research-executable-policies.md) starts
+with fresh recent searches and cross-checks player-authored scripts, branching
+strategies, online revision and their failure modes against current procedure
+memory. It recommends a bounded executable-artifact path alongside ordinary
+exploration; the current procedure/2 contract remains advisory and no learned
+program runner is implemented by that recommendation.
+
+The [October 22 responsive-gameplay update](research-responsive-gameplay.md)
+cross-checks recent roguelike skills, asynchronous VLA control, context/memory and
+tool ergonomics against prior design and closed host traces. It separates measured
+result/context waste from unknown inference latency, and supports configuration
+admission on useful progress rather than model capability alone. Its linked
+proposal is not implemented behavior or a passing responsiveness qualification.
+
+### Generality and the Bitter Lesson
+
+Targeted cross-check on 2026-10-21: Richard Sutton's 2019
+[The Bitter Lesson](http://www.incompleteideas.net/IncIdeas/BitterLesson.html),
+both pages read from the [university-hosted copy](https://www.cs.utexas.edu/~eunsol/courses/data/bitter_lesson.pdf)
+after the original site failed to load. Sutton argues from historical AI examples
+for methods that benefit from growing computation, especially search and learning,
+and cautions against substituting researchers' domain knowledge for discovery.
+This is an influential argument, not a CDDA experiment, a current model benchmark
+or proof that any proposed memory architecture learns effectively.
+
+Our application is P-GENERALITY, enforced through S-ARCH/S-CODE and the existing
+C-REVIEW/C-PORTABLE lanes. Preserve ordinary visible input as the foundation;
+semantic shortcuts and procedure memory remain scoped, revisable aids. A new or
+changed menu should not require adding a handler merely to let the player try a
+key. Separate transport/ownership/delivery invariants from fallible interpretations
+of game behavior. Evaluate unseen interface variants and behavior that changes
+after earlier success, without changing the player substrate for each variant.
+Retain attempts, current observations and explicit uncertainty automatically so
+the player and advisory path can revise their hypotheses. No additional model,
+training service or framework follows automatically from the essay.
+
+The [organic-discovery crosswalk](design/organic-discovery.md#cross-check-against-prior-work),
+[mixed-input design](design/mixed-input.md) and
+[procedure/reflection boundary](design/procedure-learning.md) already point in
+this direction. Actual campaign002 shows a gap between that intent and execution:
+a zero-input representation error revoked ordinary input. #190 fixes that known
+case; #176 owns the broader whole-loop qualification. Changed labels/layouts or
+behavior after an arbitrary f(T) are nonstationary conditions, not permission to
+reuse stale coordinates or silently replay an uncertain input. Neither passing
+finite perturbation tests nor one seven-day campaign guarantees success against
+an unrestricted adversary. Further concrete gaps belong in the existing backlog.
+
 The [October 19 architecture assessment](research-memory-architecture.md) checks the
 implemented paths against the actual seven-day run and revisits recent primary
 memory evidence. It proposes player-owned mission integration, durable campaign

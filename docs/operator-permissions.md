@@ -108,8 +108,13 @@ loading exercise or arbitrary repeated status calls. Confirm the live service is
 reachable through the ordinary tool path; first-use failures still stop new play.
 
 1. Use the reviewed structured Enactive MCP tools for the designated player.
-   Verify the exact project-only server command/cwd and fifteen named enabled
-   tools with `approve` behavior using the supported setup recipe. No arbitrary
+   Verify the exact project-only server command/cwd and the current generated named
+   tools with `approve` behavior using the supported setup recipe. A frozen dedicated
+   CLI profile may expose only its role's needed subset through the existing
+   `enabled_tools` filter; verify that actual subset and needed argument shapes,
+   rather than assuming the full engineering catalogue is the player working set.
+   The filter is context selection, not gameplay authority or a security boundary.
+   Preserve the same server/approval settings and all needed continuation tools. No arbitrary
    shell/Python allowance or per-action approval justification is the play loop.
 2. Verify that this exact checkout's project layer is enabled. Supported
    `config/read` with `cwd` and `includeLayers` can show loading and scope;
@@ -219,7 +224,8 @@ observations separate from engineering discussion. It does not require a weaker
 model tier or another paid API. It inherits parent permissions; role instructions
 do not create security isolation, and delegation alone cannot remove approvals.
 
-The current designated player uses typed mission requests for semantic skills,
+The current designated player uses typed mission requests for ordinary physical
+input, optional semantic skills,
 memory and registered lifecycle. The passive waypoint planner has no live ingress.
 The lead retains admission, source/game/service custody, escalation and acceptance;
 it supplies no ordinary gameplay rescue during the deciding mission. Historical
@@ -230,8 +236,9 @@ loading checks; no activation claim follows from a policy-file edit.
 ### Constructing player requests
 
 Use `enactive_snapshot` or an explicitly returned next snapshot, choose a source
-and semantic intent, then call the named skill/lifecycle/memory tool with finite
-limits and a stable request ID. The adapter uses the
+and physical or semantic intent, then call the named skill/lifecycle/memory tool with finite
+limits. MCP software assigns the stable request ID and bounded collection wait;
+the model does not supply `request_id` or `wait_seconds`. The adapter uses the
 [pure canonical producer](protocol.md#skill-request-binding-errors) internally;
 software owns serialization, durable staging, submission, bounded collection and
 actual-image presentation. The player does not write routine JSON files, private
@@ -243,15 +250,36 @@ it does not ask software to interpret another screen. Other supported menus need
 the player's explicit source-bound control interpretation. An eligible mismatch
 returns a zero-input draft refusal with the original phase intact, so the player
 can submit a new corrected request; software neither invents the view nor switches
-adapters automatically. Genuine authority/evidence/budget faults still stop.
+adapters automatically. The player may instead explicitly choose direct physical
+input under the same healthy scope. Keys/scalars allow visual drift without
+retargeting; clicks retain the original image geometry. The original informing
+source, entry observation, actual preflight and ACK after-source remain distinct.
+Semantic shortcuts keep their strict preconditions. Known delivery is separate
+from current input eligibility and any later processing/evidence-loss stop. See
+[ordinary input](protocol.md#ordinary-discovery-and-procedure-data). Genuine
+authority/evidence/global-budget faults still stop.
+
+Explicit Observe can close an exhausted ordinary macro with `macro_closure` before
+the player chooses a new direct root from the fresh owned menu. It renews no
+mission allowance or consent. Old-source/queued children refuse; user Pause and
+unsettled delivery still stop. Current source/help is native6/mission11. After a
+known direct ACK with stale/unavailable current evidence, explicit Observe can
+refresh a read-only scope across its exact authenticated operation rotation,
+without restoring failed custody or renewing limits. Actual native6 graphical
+qualification remains pending.
+Historical preapproval/gameplay reports below retain their original scopes.
 
 Choose a whole returned snapshot/source consistently after focus changes. For
-memory/context/navigation scope, use the returned mission `coordinate_scope`
+memory/context scope, use the returned mission `coordinate_scope`
 when present. Its coordinate epoch comes from adopted session continuity and is
 different from mission/actor `epoch`; never substitute one for the other. A fresh
 successor uses this passive scope for its bound context request and independently
 reads required sources before claim/readmission. Null scope grants no inferred
-index or authority. A retained `diagnostic` string can describe an earlier refused
+index or authority. Navigation intent instead omits nested scope; the
+current composer derives it from the selected matching published coordinate scope.
+Activity answers similarly omit the mechanically bound interrupt-owner ID. These
+changes neither infer targets/answers nor expand the existing preapproval. A retained
+`diagnostic` string can describe an earlier refused
 request after later success; current operation errors and ownership/provenance
 checks establish actionability, not the historical string alone.
 

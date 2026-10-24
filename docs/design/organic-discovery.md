@@ -14,9 +14,22 @@ game decisions, memory use, procedure proposals and ordinary correction.
 
 This is a direction and cross-check, not an implemented input/learning contract.
 Current [architecture](../architecture.md) and [protocol](../protocol.md) remain
-authoritative. General player keys/clicks ([#176](https://github.com/CVX-Hull/enactive/issues/176))
-and autonomous reusable-procedure promotion ([#177](https://github.com/CVX-Hull/enactive/issues/177))
-are not currently exposed. No failed admission resumes from this page.
+authoritative. [Delivery057](../changes/057-discovery-learning-campaign.md) now
+implements ordinary key/text/click transport, procedures and reflection; the
+[learning004 report](../acceptance/2026-10-21-discovery-learning-fourth-attempt.md)
+qualifies its bounded functional result and explicit learning/mouse limits.
+This proposal's earlier “current” crosswalk describes its October20 baseline,
+not absence of that later source. #190 repairs the failed002 prompt-loss case;
+[#191](https://github.com/CVX-Hull/enactive/issues/191) owns systemic organic-input
+and CDDA-class portability gaps. No failed admission resumes from this page.
+
+The [charter's P-GENERALITY](../charter.md#p-generality-build-the-capacity-to-discover)
+and game-family constraint now govern further design. Unseen or changing menus
+must not require a new engineered gameplay handler just to permit ordinary input.
+Procedures describe revisable hypotheses with game/configuration applicability;
+they do not define the action space. The [Bitter Lesson cross-check](../research.md#generality-and-the-bitter-lesson)
+records the primary argument, our application and limits. Preserve the existing
+research distinctions below rather than treating this essay as an efficacy result.
 
 ## Intended loop and boundaries
 
@@ -59,16 +72,17 @@ the current contracts and guidance together.
 
 ## Interaction implementation questions
 
-The [selected mixed-input design](mixed-input.md) resolves the proposed ingress,
+The [selected mixed-input design](mixed-input.md) resolves the selected ingress,
 root/activity ownership, native geometry/mouse handling and migration/validation
-lanes. It remains a proposal; the questions below describe why qualification is
-necessary rather than implying current support.
+lanes. Delivery057 implements that substrate. The questions below remain
+qualification obligations; source support does not qualify every native boundary.
 
 Reuse the existing key/action injection, mission writer, primitive ledger,
 controller and official MCP adapter. The native bridge already constructs engine
-keyboard events, but current mission/tool schemas restrict what a player may
-request. Mouse support needs an ordinary engine input event and in-process widget
-handling, not Mac pointer automation or another executor.
+keyboard events, and current mission/tool schemas now expose bounded ordinary
+input alongside semantic skills. Mouse handling uses an ordinary engine event
+and in-process widgets, not Mac pointer automation or another executor; its real
+qualification remains separate from source implementation.
 
 Before claiming clicks, prove capture-pixel to engine-window/widget coordinate
 mapping, including viewport/scale; preserve injected coordinates instead of the
@@ -95,8 +109,9 @@ supply/shelter/memory/handoff/normal-lifecycle acceptance is preserved.
 The [asynchronous-reflection proposal](asynchronous-reflection.md) develops the
 active-player/background-learning split, two-way signals, eventual revision,
 stale-advice and cost controls, and a focused primary-source cross-check. Software
-should own the exchange; the engineering lead is not the player's slow path.
-This does not deploy a reflector or change existing admissions.
+owns the implemented exchange; the engineering lead is not the player's slow path.
+Learning004 exercises actual concurrent player/adviser actors within its stated
+scope. This design page grants no actor assignment or admission authority.
 
 ## Development, evaluation and maintenance
 

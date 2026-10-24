@@ -6,16 +6,95 @@ status: active
 
 # Current architecture
 
-Current source contracts are native4, mission/8, campaign-memory/3, gameplay/2,
-evidence archive3 and mission ledger10. One MissionRuntime owns the live mission API.
-The wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
+Current source contracts are native6, mission/11, campaign-memory/6, procedure/3,
+reflection/2, gameplay/2, evidence archive5, mission ledger12 and MCP presentation
+`player-view/4`. One MissionRuntime
+owns the live mission API. The MCP adapter progressively reveals technical detail
+from its existing bounded snapshot cache; these passive reads neither refresh the
+selected evidence nor establish input authority. Default normal-play results omit
+repeated objective/configuration/clocks, advisory ID inventories, technical
+receipt bindings and general engine vocabulary. Complete selected mission detail
+remains available; read-only proof flags are not execution-readiness promises.
+Exactly shared native metadata lives in the returned source, with capture times,
+uncertainty and differing views retained. Discriminated malformed intents get
+bounded branch-specific schema errors before staging, with no repaired/defaulted input.
+One bounded producer-local fingerprint avoids identical implicit image parts in a
+known unchanged player/control context; explicit image reads remain complete.
+MCP server5.2.2 assigns request identities and bounded result waits before invoking
+the existing imperative SDK. Its public schemas reject caller-owned IDs/waits;
+snapshot/source, scope, execution limits and semantic decisions remain explicit.
+Positively pure new preparation/advisory validation failures before SDK submission
+return `not_submitted` without a collection handle. For ordinary mutations, an
+existing stage lookup on the refusal path prevents relabeling an already staged
+identity as unsubmitted; a corrupt or unavailable stage remains uncertain. Successful
+preparation adds no stage probe. Errors from staging onward preserve assigned
+original collection arguments through the presentation boundary. Durable staging/collection remain in MissionClient and the existing
+ledger; no extra history or executor is introduced. Lost settled identities after
+a producer restart remain a disclosed quiescence case, not permission to replay.
+The existing pure request composer also derives navigation coordinate scope and
+activity interrupt ownership from the explicitly selected matching snapshot/source.
+SDK and MCP intents omit those nested mechanical fields; supplied copies refuse.
+Targets, answers, outer scope, source selection and limits remain player choices.
+Handoff authoring similarly binds explicit `checkpoint_sources` (null means the
+exact selected snapshot source; explicit IDs require prior image reads) to
+canonical observation IDs. It cannot select evidence, refresh or deduplicate.
+Canonical receiver records and live guards are unchanged.
+Source metadata retains the contract's maximum 128 distinct handoff reads; snapshot
+and procedure-packet caches retain 32 entries each. Eviction only requires an
+explicit exact reread; it never substitutes evidence or erases durable images.
+This is bounded producer context, not a record of model attention or a new store.
+The optional outer [host driver](../tools/campaign_player.py) uses the existing
+CLI/SDK to activate at most one fresh successor after actual predecessor exit0
+and exact quiescent internal-handoff verification, including current controller/
+native Pause binding. It assigns identity separately from the issued role and
+performs no gameplay, memory adoption, Claim or readmission. Original finite
+resources stay in the runtime; the driver's terminal report is not acceptance.
+Current driver outputs live only at `.runtime/campaigns/<mission_id>`.
+The HTTP/spectator adapter reads those existing outputs to show original and
+assigned-successor host events separately from mission ownership, including a
+successor that exits before Claim. It performs no process discovery, heartbeat,
+actor activation or input. [Protocol](protocol.md#integrated-mission-lifecycle)
+owns the passive projection and uncertainty semantics; live graphical qualification
+is still required beyond its component/viewer tests.
+The driver supplies absolute frozen-context/index paths to both hosts. Lifecycle
+summaries describe their effective ordinary-child interruption consent. A known
+insufficient paused-menu exit allowance refuses before its fixed Resume/Quit plan
+starts; no input, phase installation or allowance renewal follows that refusal.
+Actual launch qualification remains open in [delivery062](changes/062-player-decision-context.md).
+The prior wire4 binary has a [windowed menu qualification](acceptance/2026-10-20-native-presentation.md);
 normal-game lifecycle and independent mission acceptance remain separate gates.
 Start is source-free and cannot adopt an unrelated already-running character. The
 registered lifecycle must verify owned launch and admitted world/character before
 normal-play authority or a game-time anchor can be established. This is not yet an
 accepted autonomous survival service. Earlier [foundation](acceptance/2026-10-17-foundation-implementation.md)
 and [MVP](acceptance/2026-10-17-mvp.md) reports retain their dated contract scopes.
-Protocol version: 4.
+An explicit initial-load admission can establish a new first normal segment through
+ordinary Load and current visible identity/adoption, with no inherited authority,
+world facts or elapsed game time. Subsequent reloads still require this mission's
+own Save checkpoint and no-rollback chronology. The
+[008 diagnostic](acceptance/2026-10-23-luna-responsiveness-eighth-attempt.md)
+qualifies initial Load, current identity/adoption and its own normal Save, then
+fails owned exit. Later [013](acceptance/2026-10-23-luna-responsiveness-thirteenth-attempt.md)
+adds a useful ration pickup and normal complete ending on its frozen source.
+Actual [015](changes/060-responsive-player.md#closed015-and-restart-checkpoint)
+exposes a premature Load continuation treated as a fatal Create-stage error.
+Current source instead refuses an inapplicable same-root stage commit without
+input, preserving a positively healthy phase after existing custody, lease and
+deadline checks. Source regression covers correction through identity adoption;
+actual new-player qualification is pending. The failed015 actor remains FINAL.
+Broader skill composition and responsiveness remain unqualified; fresh #145
+acceptance still requires actual creation. The [006 report](acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md)
+records its repeated-setup rationale.
+The [007 failure](acceptance/2026-10-23-luna-responsiveness-seventh-attempt.md)
+separates an ordinary recovery request from an expected lifecycle transition.
+Source now refuses that wrong-tool choice locally only after validating the
+existing expected transition's custody, clocks and original limits. The returned
+decision guidance names same-root lifecycle reconciliation, without input,
+automatic intent conversion or renewed authority. Diagnostic008 passes Load
+reconciliation/adoption but exposes the separate literal owned-exit restriction;
+ordinary owned-exit input now has source support through the existing writer,
+with scoped actual normal-ending evidence now in013, retaining all unknown ACKs.
+Protocol version: 6.
 
 The [independent024 result](acceptance/2026-10-21-independent-supply-shelter.md)
 exercises the integrated supply/shelter, durable memory, actual fresh successor and
@@ -23,6 +102,128 @@ normal same-character lifecycle path on deciding source502ca0f. It is bounded
 development evidence, not unattended seven-day survival or learned-procedure
 support. Final publication/CI and the [prospective seven-day assessment](acceptance/2026-10-21-independent-seven-day-readiness.md)
 have separate gates. Earlier qualifications below retain their historical scope.
+
+[Delivery057](changes/057-discovery-learning-campaign.md) now adds source for
+ordinary key/text/click discovery and source-linked procedural memory. It retains
+the existing mission writer, native input transport, SQLite history and image
+archive. A root's explicit procedure selection joins its actual child inputs and
+results automatically; adoption remains a player judgment over scoped data.
+The read-only library accepts pinned closed current-contract archives without
+restoring old-world facts or execution handles. New caller memory candidates have
+explicit refusable validation; retained-history, evidence and storage faults stay
+fatal. A memory write never restores input authority. Old native5 libraries remain
+immutable historical evidence and cannot be mounted under native6. See
+[the current contract](protocol.md#ordinary-discovery-and-procedure-data).
+The [executable-policy research](research-executable-policies.md) motivates
+player-authored observation-driven programs as a learning/latency path.
+Procedure/3 explicitly distinguishes advisory records (`program=null`) from
+JavaScript artifacts. The [execution boundary](changes/061-player-program-execution.md)
+uses a bounded V8 evaluator and the same ordinary-input writer. Each invocation
+pins a revision and original cumulative limits; source-linked evaluation and
+actual primitive receipts feed the existing trajectory/reflection path. It
+yields to the model for novel or unrepresented conditions. Program-view/1 supplies
+only current visible structured scene/UI data, not PNG perception or unseen game
+state. [Learning009](acceptance/2026-10-23-discovery-learning-ninth-attempt.md)
+qualifies narrow independent executable authorship/reuse/revision, clean-successor
+application, useful play during claimed advice and normal lifecycle. Useful
+apparent cadence and the full fresh campaign remain unqualified. Host prompt
+context is a fallible working cache: its automatic compaction neither changes
+campaign memory nor proves retrieval/application. Use the maintained host defaults
+unless a frozen measured override is justified; retain observed compaction costs.
+The rebuilt capture-precondition boundary has bounded ordinary-input and normal
+same-character lifecycle qualification in [capture001](acceptance/2026-10-22-native-capture-preconditions.md).
+Actual PNG drift and the retained-capture commit race remain unexercised there;
+the report owns exact source/native pins and limits. The earlier
+[normal sixth run](acceptance/2026-10-22-discovery-learning-sixth-attempt.md)
+qualifies bounded historical-contract discovery, procedure branch refinement/reuse,
+actual fresh-context application, same-proposal advisory overlap and exact normal
+lifecycle. Its Procedure/2 artifact cannot mount in the current Procedure/3 library.
+The disclosed
+technical creation-recovery pointer prevents a zero-assistance claim; no unsafe-rule
+correction, causal learning benefit or seven-day survival is established. Earlier learning failures retain
+their partial evidence. The [fourth run](acceptance/2026-10-21-discovery-learning-fourth-attempt.md)
+qualifies bounded native5 procedure reuse, fresh-context application, same-proposal
+graphical advisory overlap/disposition and normal save/reload/final shutdown.
+Its changed-condition refinement does not demonstrate correction of an erroneous
+rule or causal improvement; the fresh seven-day campaign remains separate. The pure submission boundary now rejects malformed
+create/save/load roots before queue admission while historical record validation
+retains original rejected evidence. Control policies now receive the original
+admission-based deadline before equivalent refresh, separating execution allowance
+from image age. Canonical compact UTF-8 HTTP responses match advisory byte sizing.
+#184/#185 and the failed003attempt retain the repair rationale;004provides
+scoped requalification, not authority from a failure. The subsequent#187repair
+distinguishes reversible advisory closing from permanent termination and rolls
+back a nonterminal Finish refusal; exact source checks remain a separate lane.
+The first fresh campaign exposed a library/lifecycle composition defect. Identity
+projection now calls the existing pure claim-frontier reducer directly rather
+than constructing procedure memory without its admitted library (#189). Actual
+memory construction still validates the mounted library and exact environment;
+identity/source/continuity checks are unchanged. Its source regressions are not
+new native survival evidence. The [second fresh campaign](acceptance/2026-10-21-independent-seven-day-second-attempt.md)
+actually passed adoption, then exposed zero-input item-draft revocation (#190).
+The reviewed source separates hard prompt/dispatch authority from incompatible
+control representation, preserving the original healthy scope for correction or
+ordinary Escape. Synthetic tests also continue through previously unknown menu
+categories changing after earlier inputs. These are bounded source checks, not
+proof of general player adaptation or cross-game portability; #191 tracks that
+broader boundary.
+
+Ordinary physical input now has a passive policy separate from semantic menu
+planning, through the same writer. Direct keys/scalars may reach changed visible
+evidence under uninterrupted owned custody; clicks keep the geometry of the
+player's selected image. Native6 attests an actual ordinary receiver independently
+of category names. Semantic shortcuts retain their stronger equivalence checks.
+Immutable informing source, entry observation, actual final preflight and terminal
+ACK capture remain separate. A known ACK records delivery before fallible storage
+or publication work; a separately validated current capture determines further
+input. A different current capture ends the operation partial for player review.
+Captured-source custody is independent of semantic applicability: an immutable
+as-of sample remains bindable while a healthy owned view advances. Semantic
+non-equivalence refuses input locally and returns actual evidence for a new player
+decision; clock/revision contradictions, lost custody and trace faults still stop.
+The [observation-boundary design](changes/059-observation-custody-and-applicability.md)
+explains the distinction and retained specialized proofs.
+See [ordinary input and receipt lineage](protocol.md#ordinary-discovery-and-procedure-data).
+
+Explicit Observe can advance a changed healthy prompt without renewing its root.
+If that ordinary macro exhausted its local input/wall/game cap, Observe records
+`macro_closure` in its own immutable result before clearing the private prompt.
+This reports local exhaustion, not task success or a new allowance. The player may
+explicitly choose a new direct root from the fresh owned menu; stale queued
+children refuse. Mission, custody, Pause, trace and unsettled-delivery faults
+retain their stops. After known direct input, an absent/aged current snapshot can
+retain a read-only scope across that exact authenticated operation rotation. Status
+requests explicit Observe and hides the old current source; further inputs refuse
+until a fresh capture publishes a new binding. The ACK stays historical. Known
+ordinary nonpublication uses the same scope after settlement, including a
+first refused prompt child whose operation already rotated the lease. Prepared
+costs remain spent; early unprepared refusal invents no charge. Only healthy
+custody survives, while processing faults stop. Old batches never resume and
+Observe cannot renew exhausted root limits. Local
+request/root exhaustion is a typed refusal, separate from loss of mission
+authority. The controller's existing unpublished-input path accepts a trusted
+read-only health classification before publication, preserving final fatal fences
+and any prepared charge. Entry and publication share the same custody/work
+checks; retained checkpoint and game-anchor integrity remain mandatory. Explicit
+Observe performs any subsequent fresh capture or macro closure. This adds no
+player tool, stored authority or automatic input. Passive skill verification may
+finish before another input is considered. Image-conditioned semantic/spatial capture churn
+uses that same known-unpublished path after
+fatal controller guards and an independent writer health/preflight proof.
+Navigation retains any verified prefix when a real refusal occurs. Non-image
+input retains its exact native-issued capture and original clock across later
+pixel/filename churn only under equal complete current metadata and custody.
+The existing bounded native retention owns this provenance; no filename is
+retargeted and no suffix replayed. Lifecycle uses the action-specific policy
+below; paused activity/recovery remains strict. Source regressions do not establish
+native recurrence or an accepted campaign. Local
+game-time overshoot ends a normal root partial or leaves an owned menu for Observe
+closure without pausing healthy mission ownership. Full shared
+game integration extraction, general setup/ending cancellation and a real second
+game qualification also remain open. [Delivery057](changes/057-discovery-learning-campaign.md#ordinary-input-foundation-and-artifact-impact)
+maps these limits to #191. Learning006 and exact1947b3aCI supply their own bounded
+evidence; subsequent source changes require their own applicable checks, and
+unexercised native/game-family behavior remains unqualified.
 
 The harness-enabled SDL ImGui context uses the library's steady text-caret setting.
 It preserves exact image validation without treating cosmetic blink as stable
@@ -44,11 +245,61 @@ All project-controlled boundaries follow
 [S-MIGRATION](engineering.md#s-migration-one-current-contract-coordinated-migration):
 one current contract, with producers, consumers, persisted formats and guidance
 migrated together. There is no runtime compatibility layer or downgrade. Current
-native wire v4, gameplay records `gameplay/2`, evidence store version 3 and build
+native wire v6, gameplay records `gameplay/2`, evidence store version 5 and build
 manifest version 1 name separate contracts, not alternate versions of one interface.
 Historical artifacts are retained as evidence without being accepted as runtime input.
 
+## Game-family portability
+
+The [charter](charter.md) requires designs applicable across CDDA-class games.
+This is the target separation, not a claim that the existing implementation is
+already portable or that a general plugin API has been delivered.
+
+| Shared responsibility | Game integration responsibility |
+| --- | --- |
+| Player plans, ordinary exploration and interpretation of current observations | Capture player-visible evidence and deliver ordinary inputs in the actual engine/UI |
+| Source-linked episodic memory, scoped revisable procedures and asynchronous reflection | Explicit game/version/configuration context and optional observed facts or semantic shortcuts |
+| Single-writer ownership, user Pause, finite costs, request/result correlation and uncertainty | Native boundary/custody/timing attestations supported by that integration |
+| Campaign objectives, evidence review and spectator presentation | Game-specific identity, persistence and outcome evidence; no invented universal save or inventory semantics |
+
+Ordinary input is the foundation. CDDA menu categories, item-count provenance,
+coordinate conventions, engine turn units and registered save/identity transitions
+are integration details, not a universal model of how games must behave. Shared
+memory cannot silently transfer a procedure or world fact to another game: actual
+game/configuration applicability and current evidence still determine use.
+
+Current coupling remains in MissionRuntime, gameplay contracts, native input
+classification, lifecycle proofs and preparation. The engine patch is deliberately
+CDDA-specific. These are migration gaps to assess and track before claiming
+cross-game support. Reuse the present writer, ledger, archive and ordinary input
+path while extracting only demonstrated seams; no second executor, duplicate
+history or speculative game framework. An independently shaped second-game
+fixture tests a seam; a separate real integration is needed to qualify actual
+portability. Neither finite tests nor a seven-day CDDA result prove every game in
+the family works. Future broader genres may revisit assumptions explicitly.
+
 ## Scope and responsibilities
+
+Platform assumptions follow [S-CODE](engineering.md#s-code-maintainable-implementation):
+this is a local single-host system using SQLite and ordinary OS file/process
+contracts. The application owns gameplay intent, custody and uncertain delivery;
+it does not supply a second database transaction or filesystem recovery layer.
+Additional resilience needs a demonstrated deployment gap and proportionate cost.
+Architectural investment also considers the longer project horizon: reusable
+capabilities, learning infrastructure and better evaluation can justify upfront
+effort before a campaign benefits. Record the expected benefit, uncertainty,
+upkeep and reassessment trigger in the existing issue or design decision under
+S-CODE; immediate payoff is not required.
+
+The observed navigation map is a lossy512-coordinate candidate cache, separate
+from retained evidence and player memory. Projection validates updates atomically,
+keeps the current position/cardinal footprint and evicts older cached coordinates
+using their existing source revisions. Forgotten routes become unavailable until
+reobserved; current movement guards still verify each dispatched step. Cache
+growth must not stop ordinary observation/input. The
+[failed third fresh campaign](acceptance/2026-10-22-independent-seven-day-third-attempt.md)
+records why the former lifetime bound was unsuitable. This uses existing Python
+containers; no new world store, recency journal, dependency or persisted format.
 
 The [overview](overview.md) provides the user-facing system picture. One local
 macOS game and one controller are supported. Prepared keyboard-driven launch
@@ -58,7 +309,8 @@ background startup without activating the shown window, so launch should leave
 the user's typing in their current app. These are child-process hints, not global
 Mac settings; direct OS focus telemetry is not exposed by the harness.
 The designated active Codex player
-chooses plans, interprets visible outcomes and requests bounded semantic operations.
+chooses plans, interprets visible outcomes and requests ordinary physical inputs
+or bounded semantic operations.
 It uses the single [mission ingress](protocol.md#integrated-mission-lifecycle).
 The lead owns admission, source integration and final verification. The user retains
 Pause and native takeover. Role assignment is procedural, not operating-system isolation.
@@ -73,8 +325,14 @@ The pure client producer combines selected retained context with semantic intent
 into that same contract. It owns no live state or source selection; receiver guards
 remain authoritative. A project-local stdio MCP adapter now exposes structured
 intent, bounded result collection and actual images over this same HTTP ingress.
-The official SDK owns MCP framing; no new executor, schema framework or history
-store is added. Current receiver schemas describe tool arguments. Disposable
+The official SDK owns MCP framing: one JSON text block and any typed image, with
+no duplicate structured payload. No new executor, schema framework or history
+store is added. Tool schemas derive semantic fields from current receiver schemas.
+Claim authoring separates the player's meaning, grounding and support choices from
+canonical metadata supplied by the adapter. Its exact cached source and existing
+immutable staged request bind provenance and original host assertion time; no new
+history store or automatic belief promotion is added. [Protocol](protocol.md#designated-campaign-operator)
+owns current authoring, source-free support and duplicate/conflict behavior. Disposable
 snapshot/source handles retain explicit choices; stable request files fence a
 second submission and the existing ledger owns results. Exact indexed archive
 readers keep historical images available after bridge eviction without observing
@@ -95,8 +353,8 @@ owns the exact source/byte bounds and later evidence-loss limits.
 | --- | --- | --- |
 | Lead / active Codex chat | Objective → frozen admission, reviewed source and acceptance | Owns shared runtime and integration; no ordinary gameplay rescue in the deciding mission |
 | Designated player / general-purpose agent | Visible evidence and memory → typed mission requests, plans and verification | One bounded actor; fresh-context handoff needs quiescence and one-use accounting; no authority from a summary |
-| Structured player adapter / harness maintainer | Explicit semantic arguments and returned handles → existing ingress, settled result and exact PNG | No capability, source refresh, replay, automatic Resume or new ledger; actual host review-free proof remains separate |
-| Mission runtime / harness maintainer | mission/8 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
+| Structured player adapter / harness maintainer | Explicit physical/semantic arguments and returned handles → existing ingress, settled result and exact PNG | No capability, source refresh, replay, automatic Resume or new ledger; actual host review-free proof remains separate |
+| Mission runtime / harness maintainer | mission/11 request → operation receipt and cached observer status | One writer and queue; exact lease, original root/child budgets, durable intent before publication; unsupported adapters block |
 | Controller / harness maintainer | State-bound command → native request and correlated receipt | Serialized ordinary/control writers, exact process-local lease, Pause revocation and native fences; never edits saves |
 | Native bridge / integration maintainer | Bounded request → actual input, visible metadata and rendered frame | Engine validates outcomes on its game thread; unsupported boundaries cannot claim success |
 | Spectator / viewer maintainer | Frame and mission snapshot → inspectable progress, uncertainty and Pause | Mission Observe uses typed ingress; raw input/Resume/recovery disabled while nonterminal; malformed state stays locked |
@@ -117,9 +375,10 @@ Implementation: [mission runtime](../harness/mission_runtime.py),
 Navigation, native-row focus and fallible image controls share the same mission
 writer. An ordinary interaction, item, activity, inspection or interrupted navigation root may own a returned prompt. Explicit control
 children retain its original scope, actor/epoch, deadlines and cumulative input
-ceiling. A settled owned menu may be refreshed only through retained exact-PNG
-source revalidation. Typed PhaseReceipt audit data restores no private phase on
-reopen. A normal return closes the prompt without proving the desired effect.
+ceiling. Semantic input entry refresh retains its equivalence policy; direct
+input records a non-equivalent ordinary entry observation. Explicit Observe may
+also advance a changed healthy prompt for a new player decision, as described
+above. Typed PhaseReceipt audit data restores no private phase on reopen. A normal return closes the prompt without proving the desired effect.
 Returned navigation into an ordinary same-session menu retains its verified route
 prefix and last verified position, with no movement credit for the menu-opening
 input. Explicit menu/editor children remain under the original root,
@@ -138,8 +397,20 @@ Typed item selection/count/commit and registered inspection have synthetic runti
 coverage. Quantity editing belongs only to the item phase whose returned
 MARK_WITH_COUNT opened it. Native007 qualified the selected counted drop/pickup
 path; other selector semantics require their own actual evidence.
+Semantic control-shape errors use the existing zero-input draft feedback only
+while prompt ownership, evidence, native pixels and original limits remain healthy.
+The same root permits player-chosen ordinary key/text/click children, including
+cancellation, without completing a semantic selection first. Ordinary exploration
+does not manufacture typed-count provenance or certify the intended effect.
+Real authority loss or uncertain delivery still stops; neither the lead nor a
+reflective actor supplies a rescue action. See the [draft contract](protocol.md#skill-request-binding-errors).
 An owned activity poll advances through one bounded observation, including native
 output menus or normal return; no poll sends input or certifies sleep/output.
+Plain Observe uses its own capture deadline within the mission/ending allowance,
+even after the ordinary root expires. It retains the spent root and costs as
+observation-only lineage; inputs and typed polls keep their original ceilings.
+Normal return closes the phase; an exhausted menu needs explicit durable closure
+before a new root. Global/custody/clock/delivery/integrity failures still stop.
 Activity control transport preserves terminal ACKs before persistence and sends no
 Resume. A registered private activity phase now composes internal stop, exact
 interruption/answer and separately charged Resume in source. Unknown delivery stops;
@@ -177,6 +448,29 @@ checkpoint advances during Observe, while first-normal
 provenance, original budgets and the separately charged explicit Resume remain.
 No phase is reconstructed from historical records on reopen.
 
+The same private publication record distinguishes registered expected transitions
+from diagnostic-only lifecycle inputs. Explicit Observe can retain an uncertain
+or unexpected same/changed-session image against its original dispatch reservation
+and owned custody. Diagnostic candidates supply no executable phase, reconciliation,
+adoption or input authority, and their images do not update the map, memory or
+game-time projection. Read-only observation keeps its wall/frame/request bounds
+without requiring unused gameplay inputs. Known supported same-session feedback clears the
+provisional record; no candidate is restored on reopen. This is host-side evidence
+retention, with normal cleanup of an unadopted/wrong-identity session still unsupported.
+
+Registered Save start and creation/load provisional normal readmission use
+`native_state` equivalence across refresh and dispatch. Incidental pixel drift
+does not invalidate those normal-context intents. Save keeps its interaction
+lease through refresh, then performs the existing checked lifecycle rotation;
+normal readmission still has no lease until its separately charged Resume.
+Committed transition/effect/owned-launch proof and subsequent visible identity
+Claims/adoption stay independent of pixels. Setup, character selection, identity
+screens, confirmations and recovery keep their stronger policies. The
+[capture/precondition design](changes/058-capture-provenance-action-preconditions.md)
+records the complete-loop regression and bounded reuse of native-issued captures.
+No old Save-image retry loop or compatibility mode remains. Actual native
+qualification and liveness under tested conditions remain separate from fixtures.
+
 The selected mission game-time cap gates every input dispatch lane, including
 lifecycle, exit and readmission. Rejection settles any reserved intent before
 revoking authority; controller preflight does not revoke while its lock is held.
@@ -206,15 +500,22 @@ and distinguishing cleanup from player-reported objective completion. Source cov
 mission. Registered launch now composes the fixed process adapter
 with original deadlines and fresh paused-menu readiness in portable fixtures.
 Launch sends no Resume/input and establishes no identity or game-time anchor.
-Registered untouched-menu exit composes charged Resume/QUIT with an explicit
-player-interpreted confirmation, original operator mark and shared root/child limits.
-Published Yes plus exact owned normal exit and narrow durable pending retirement
-can resolve process custody while retaining an unknown ACK and all charges. No
-normal save is claimed by that untouched-menu retest. The [bounded native retest](acceptance/2026-10-20-owned-launch.md#native-qualification002-accepted-owned-menu-component)
-qualified the Yes/normal-exit path while retaining its failed first attempt. It
-created, loaded and saved no character and did not exercise native No or user Pause.
-Registered creation, normal save, saved-menu exit and new-child exact reload passed
-the scoped [Native007 qualification](acceptance/2026-10-20-native-lifecycle-qualified.md).
+Registered owned-menu exit composes charged Resume/QUIT with ordinary key/text/click
+or optional menu controls, the original operator mark and shared root/child limits.
+Unknown or changing menu types need no question/YES whitelist. Known delivery with
+healthy current evidence remains available for another player decision even when
+an optional semantic policy is surprised; evidence/custody failure still revokes.
+Exact published input plus the owned child's normal exit and narrow durable pending
+retirement resolve custody while retaining unknown ACKs and all charges. Existing
+native admission validation is reused for terminal effects and history; notes and
+menu wording cannot substitute for that correlation. The source tests include
+changing menus, cancellation, text/clicks, Save/new-child reload and negative source/
+Pause/exit cases; this source repair awaits a new real player/native run.
+The [bounded native retest](acceptance/2026-10-20-owned-launch.md#native-qualification002-accepted-owned-menu-component)
+retains its earlier interpreted Yes/normal-exit qualification and failure, with no
+creation/load/save or native No/Pause evidence there. Registered creation, normal
+save, saved-menu exit and exact reload retain their scoped
+[Native007 qualification](acceptance/2026-10-20-native-lifecycle-qualified.md).
 The later [independent024 mission](acceptance/2026-10-21-independent-supply-shelter.md)
 exercises that lifecycle within the full supplies/shelter outcome; component
 qualification alone did not accept the mission.
@@ -228,28 +529,60 @@ can recover historical cost but no live phase, process or lease.
 Missing continuity makes cost unknown instead of silently resetting it.
 
 Lifecycle Resume, explicit creation-stage commit, normal save, identity inspection
-and owned exit confirmation refresh the selected checkpoint once at entry inside
-the operation, comparing exact retained native state and PNG bytes under the
-original actor/Pause and root/child deadlines. Resume journals source lineage before
-acquiring a lease; it cannot construct authority from an old binding. Exit's typed
-revalidation links the immutable interpretation to the actual dispatch source at
-write, orphan-proof validation and reopen. Save refresh precedes operation rotation
+and owned exit controls refresh the selected checkpoint once at entry inside
+the operation, using the checkpoint's declared native-state or exact-PNG rule under
+the original actor/Pause and root/child deadlines. Resume journals its actual rule
+and source lineage before
+acquiring a lease; it cannot construct authority from an old binding. Exit uses
+InputObservation for ordinary input or exact-PNG SourceRevalidation for optional
+menu interpretation, preserving the immutable selection at write and reopen. Save refresh precedes operation rotation
 and preserves the original normal-game time anchor. [Native qualification001](acceptance/2026-10-20-lifecycle-freshness.md)
 retains the timing failures and successful normal stopped cleanup; the source
 repair is not a character-lifecycle or independent-mission pass.
 
-Live native comparisons tolerate only capture/transport id, timestamp and filename
-churn, reusing EvidenceStore's state comparison without archiving passive polls.
-Observe keeps its exact response/original receipt; image and input-authority checks
-remain separate. A proven returned-Resume-only startup can adopt a fresh internally
-paused copy of the original menu for a separate normal cleanup root. Ledger audits
-its immutable input lineage; runtime/store verify pixels and live custody.
+Observe and source binding preserve the actual captured sample and original
+receipt across healthy later visual change under the same custody. Current-source
+availability describes that retained as-of sample, not equality with an instantaneous
+native frame. Semantic dispatch equivalence still compares complete native state
+(excluding capture/transport identity), with exact pixels when image-conditioned;
+the archive's clock/revision/immutable-source integrity checks remain mandatory.
+A proven returned Resume plus settled same-root menu exploration can establish a
+fresh internally paused owned main menu for a separate normal cleanup root.
+Ledger audits every delivery; runtime/store verify the same session, current
+authenticated revision, retained menu-only history and live custody. Launch pixel
+equality is not required. Ordinary setup uses the existing physical executor and
+InputObservation under lifecycle custody; creation route, identity and Save remain
+independent effect proofs. A stale selected lifecycle source/native tuple is a
+zero-input request refusal, preserving a healthy phase and original limits for a
+new explicit selection; actual custody/evidence/Pause faults still stop input.
+The [fourth Luna diagnostic](acceptance/2026-10-23-luna-responsiveness-fourth-attempt.md)
+exercises ordinary setup but fails on the old fatal stale-request handling. Source
+regressions cover the repair; native/player continuation remains unqualified.
+The [fifth diagnostic](acceptance/2026-10-23-luna-responsiveness-fifth-attempt.md)
+then exposes a distinct error: a known native rejection was treated as an uncertain
+game effect solely because transport publication occurred. The source repair
+retains its charge/authenticated receipt and healthy scope, without a candidate;
+explicit Observe/new selection and original limits remain. Creation chronology
+and menu-only cleanup audit the same nondelivery. Rejected stage requests leave
+the unchanged form awaiting control. The native Ctrl+named-key translation repair
+requires rebuilding and a new finite qualification; the installed binary is still
+unchanged. Ineffective semantic editor clearing remains an actual unresolved result.
+[Diagnostic006](acceptance/2026-10-23-luna-responsiveness-sixth-attempt.md)
+creates its world with90returned primitives, then expires its selected420s setup
+root before identity. Explicit pre-normal menu reads and zero-input abort now use
+their own original read/global deadlines and existing custody proof. Children keep
+the expired execution ceiling; no cancellation input, Resume or automatic retarget
+is added. The summary exposes as-of root headroom and the existing lifecycle stage.
+The player adapter distinguishes lifecycle continuation from recovery/handoff
+readmission in its descriptions and a no-submission wrong-tool refusal; it never
+routes the refused request into another operation. Real qualification is pending.
 [Native006](acceptance/2026-10-20-native-character-lifecycle.md) established
 ordinary creation/identity, counted dropping, native wait/poll and normal first
 save/exit, then stopped before reload and exceptionally closed its new child.
 Its actual blockers drive one repair batch: known non-HOSTILE movement,
 engine-scoped actionable inventory rows, actual MAIN_MENU→UILIST reload staging
-and narrow Resume-only create/load abort. The abort revokes authority without
+and the original narrow Resume-only create/load abort. That abort is now extended
+to settled menu-only exploration and still revokes authority without
 input or rebasing the launch; separate Observe/new exit verifies the paused menu.
 Unique enabled selected admitted-character evidence is checked before reload
 dispatch. No fictitious label, prior-child save or historical proof grants input.
@@ -297,7 +630,7 @@ and a fresh paused diagnostic source. Separate normal-play readmission charges
 one Resume. Navigation continuation retains the original goal, Work, game-time
 anchor and cumulative root limits; competing roots and handoff remain fenced.
 Reopen validates historical proof but restores no private phase or input consent.
-The single current effect envelope and ledger10 reject older shapes rather than
+The single current effect envelope and ledger12 reject older shapes rather than
 converting them. This source integration is not native recovery qualification or
 an additional executor/history store. Ambiguous delivery and unsupported semantic
 uncertainty remain stopped; a later expected-looking frame cannot supply proof.
@@ -368,13 +701,17 @@ flow, not a new API or fresh native verification.
 Read top to bottom: vertical columns identify responsibilities; solid arrows are
 requests/input and dashed arrows are observations/results. The two alternative
 outcomes are mutually exclusive paths for this request. The controller obtains
-current authority but rejects a stale planner choice instead of silently updating
-it. The native bridge validates again before delivery. A rejection dispatches no
-input. The eligible next boundary can be a prompt: `ready` does not prove success.
-After timeout, observe to reconcile and explicitly resume; never replay blindly.
-The spectator shows the returned frame/state. [Editable sequence](diagrams/action.mmd).
-The native commit check includes the positive boundary, matching rendered frame
-and durable host token; a later Pause cannot reverse that committed input.
+fresh dispatch evidence under the same custody. Semantic choices retain their
+equivalence policy; direct physical events can reach changed ordinary evidence
+without retargeting the player's event. The native bridge validates the actual
+receiver and authority again before delivery. A known pre-input rejection sends
+no input. A correlated `ready` records returned delivery even if its capture has
+already been superseded; the actual current source is checked separately before
+more input. Neither proves the objective succeeded. After uncertainty, collect
+the original result and reconcile without replay. [Editable sequence](diagrams/action.mmd).
+The result path includes separate historical ACK and actual current sources.
+The final commit includes a live eligible receiver, actual dispatch frame provenance
+and host token; a later Pause cannot reverse committed input.
 
 ### How do I recover control?
 

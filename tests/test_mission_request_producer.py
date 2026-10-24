@@ -4,7 +4,8 @@ import unittest
 
 from harness.gameplay.contracts import ContractError, EvidenceRef
 from harness.gameplay.evidence import _identity
-from harness.gameplay.mission_contracts import canonical, validate_request
+from harness.gameplay.contracts import canonical
+from harness.gameplay.mission_contracts import validate_request
 from harness.gameplay.mission_requests import compose_request
 from tests.test_gameplay_evidence import observation
 
@@ -14,7 +15,7 @@ def bundle(number=1, *, kind="normal_play"):
     value["boundary"]["id"] = f"boundary-{number}"
     if kind != "normal_play":
         value.update(scene=None, category="YESNO")
-        value["boundary"]["kind"] = kind
+        value["boundary"].update(kind=kind, input_receiver=kind == "menu")
     reference = EvidenceRef(_identity(value), value["session"], value["revision"],
         value["timestamp_ms"], 100.0, 4 if kind == "normal_play" else None,
         "/synthetic/retained.png", "a" * 64, kind)
@@ -30,7 +31,7 @@ def snapshot(**changes):
 
 def skill(kind="inspect", **changes):
     value = dict(kind="skill", skill_kind=kind, goal=dict(purpose="inventory"),
-                 work_id=None, perception=None)
+                 work_id=None, perception=None, procedure=None)
     value.update(changes)
     return value
 
@@ -64,7 +65,7 @@ class MissionRequestProducerTests(unittest.TestCase):
         supports = ["explicit-support"]
         before = deepcopy((self.status, self.source, self.limits, intent, supports))
         result = self.compose(intent, supporting_source_ids=supports)
-        expected = dict(schema="mission/8", mission_id="mission-test", epoch=3,
+        expected = dict(schema="mission/11", mission_id="mission-test", epoch=3,
             request_id="new-request", phase_id=None, sources=[self.source["reference"]["observation_id"],
             "explicit-support"], expected_session="synthetic-world", expected_revision=1,
             expected_boundary_id="boundary-1", limits=self.limits, **intent)
@@ -75,6 +76,50 @@ class MissionRequestProducerTests(unittest.TestCase):
         result["limits"]["primitives"] = 1
         result["sources"].append("mutated")
         self.assertEqual((self.status, self.source, self.limits, intent, supports), before)
+
+    def test_navigation_binds_only_selected_published_scope_and_preserves_target(self):
+        published = dict(mission_id=self.status["mission_id"], session=self.source["reference"]["session"], coordinate_epoch=4)
+        self.status["coordinate_scope"] = published
+        self.status["current_source"] = bundle(99)["reference"]
+        intent = skill("navigate", goal=dict(target=[1, 2, 0]))
+        before = deepcopy((self.status, self.source, intent))
+        result = self.compose(intent)
+        self.assertEqual(result["goal"], dict(scope=published, target=[1, 2, 0]))
+        self.assertEqual(result["expected_revision"], self.source["reference"]["revision"])
+        self.assertEqual(result["sources"], [self.source["reference"]["observation_id"]])
+        self.assertEqual((self.status, self.source, intent), before)
+        with self.assertRaisesRegex(ContractError, "scope"):
+            self.compose(skill("navigate", goal=dict(scope=published, target=[1, 2, 0])))
+        for invalid in (None, {**published, "mission_id": "other"}, {**published, "session": "other"},
+                        {**published, "coordinate_epoch": None}, {key: value for key, value in published.items() if key != "coordinate_epoch"}):
+            self.status["coordinate_scope"] = invalid
+            with self.subTest(invalid=invalid), self.assertRaises(ContractError):
+                self.compose(intent)
+
+    def test_activity_answer_binds_exact_selected_unanswered_owner(self):
+        self.source = bundle(kind="interrupt_confirmation")
+        self.source["observation"]["boundary"].update(recovery_operations=["answer_interrupt"], interrupt_request_id="interrupt-1")
+        selected = phase(self.source, stage="interrupt_confirmation", answered=False, interrupt_request_id="interrupt-1")
+        self.status["activity_phase"] = selected
+        goal = dict(operation="rest", target="Rest", game_seconds=60,
+            interrupt_allowed=True, step="answer_interrupt", answer="NO")
+        intent = skill("activity", goal=goal)
+        before = deepcopy((self.status, self.source, intent))
+        result = self.compose(intent, scope="activity")
+        self.assertEqual(result["goal"], {**goal, "interrupt_request_id": "interrupt-1"})
+        self.assertEqual(result["phase_id"], "original-root")
+        self.assertEqual((self.status, self.source, intent), before)
+        with self.assertRaisesRegex(ContractError, "interrupt_request_id"):
+            self.compose(skill("activity", goal={**goal, "interrupt_request_id": "interrupt-1"}), scope="activity")
+        for changes in (dict(answered=True), dict(stage="activity_poll"), dict(interrupt_request_id=None),
+                        dict(interrupt_request_id="other"), dict(checkpoint_id="other")):
+            self.status["activity_phase"] = {**selected, **changes}
+            with self.subTest(changes=changes), self.assertRaises(ContractError):
+                self.compose(intent, scope="activity")
+        self.status["activity_phase"] = selected
+        self.source["observation"]["boundary"]["interrupt_request_id"] = "other-owner"
+        with self.assertRaises(ContractError):
+            self.compose(intent, scope="activity")
 
     def test_opaque_headers_and_perception_source_cannot_be_overridden(self):
         for key in ("schema", "mission_id", "epoch", "request_id", "limits", "phase_id", "sources",
@@ -133,14 +178,34 @@ class MissionRequestProducerTests(unittest.TestCase):
         with self.assertRaises(ContractError):
             self.compose()
 
-    def test_lifecycle_identity_uses_direct_root_and_rejects_unrelated_children(self):
+    def test_lifecycle_binds_headers_and_leaves_skill_eligibility_to_receiver(self):
         self.status["lifecycle_phase"] = phase(self.source, operation="create")
         result = self.compose(skill(goal=dict(purpose="character_identity")), scope="lifecycle")
         self.assertEqual(result["phase_id"], "original-root")
         for intent in (skill(), skill(goal=dict(purpose="character_identity"), work_id="unrelated"),
                        skill("interact", goal=dict(action="inventory", intent="Open", desired_outcome="View"))):
-            with self.subTest(intent=intent), self.assertRaises(ContractError):
-                self.compose(intent, scope="lifecycle")
+            with self.subTest(intent=intent):
+                request = self.compose(intent, scope="lifecycle")
+                self.assertEqual(request["phase_id"], "original-root")
+                self.assertEqual(request["work_id"], intent["work_id"])
+                validate_request(request)
+
+    def test_lifecycle_direct_uses_the_selected_root_without_a_menu_taxonomy(self):
+        self.source = bundle(kind="menu")
+        intent = skill("direct", goal=dict(input=dict(type="key", key="n", modifiers=[]),
+            intent="Cancel the visible incidental dialog", expected="Dialog closes",
+            interrupt_allowed=False))
+        for operation in ("create", "load", "save", "exit"):
+            self.status["lifecycle_phase"] = phase(self.source, operation=operation)
+            with self.subTest(operation=operation):
+                request = self.compose(intent, scope="lifecycle")
+                self.assertEqual(request["phase_id"], "original-root")
+                self.assertEqual(request["goal"], intent["goal"])
+                self.assertEqual(request["sources"], [self.source["reference"]["observation_id"]])
+                validate_request(request)
+        self.status["lifecycle_phase"]["checkpoint_id"] = "different-checkpoint"
+        with self.assertRaises(ContractError):
+            self.compose(intent, scope="lifecycle")
 
     def test_existing_scope_rejects_unsupported_skill_without_dispatch(self):
         self.status["prompt_phase"] = phase(self.source)
@@ -163,8 +228,8 @@ class MissionRequestProducerTests(unittest.TestCase):
                 result = self.compose(intent, scope="lifecycle")
                 self.assertEqual(result["goal"], intent["goal"])
                 self.assertEqual(result["phase_id"], "original-root")
-                with self.assertRaises(ContractError):
-                    self.compose({**intent, "work_id": "unrelated-work"}, scope="lifecycle")
+                composed = self.compose({**intent, "work_id": "unrelated-work"}, scope="lifecycle")
+                self.assertEqual(composed["work_id"], "unrelated-work")
 
     def test_source_free_launch_is_explicit_new_root_only(self):
         result = self.compose(lifecycle("launch"), source=None)
@@ -214,8 +279,8 @@ class MissionRequestProducerTests(unittest.TestCase):
         intent = skill("menu", goal=dict(purpose="Quit", label="Yes", outcome="activated"),
             perception=dict(kind="confirmation", basis="player_interpretation", question="Really quit?"))
         self.assertEqual(self.compose(intent, scope="lifecycle")["phase_id"], "original-root")
-        with self.assertRaises(ContractError):
-            self.compose(skill(goal=dict(purpose="character_identity")), scope="lifecycle")
+        request = self.compose(skill(goal=dict(purpose="character_identity")), scope="lifecycle")
+        self.assertEqual(request["phase_id"], "original-root")
         self.status["lifecycle_phase"] = None
         self.status["current_source"] = bundle(99)["reference"]
         result = self.compose(lifecycle("finish"))
@@ -240,7 +305,7 @@ class MissionRequestProducerTests(unittest.TestCase):
                                                       interrupt_request_id="interrupt-1")
         self.status["activity_phase"] = phase(self.source, stage="awaiting_readmission")
         intent = skill("activity", goal=dict(operation="rest", target="Rest", game_seconds=60,
-            interrupt_allowed=True, step="resume", answer=None, interrupt_request_id=None), work_id="rest-work")
+            interrupt_allowed=True, step="resume", answer=None), work_id="rest-work")
         result = self.compose(intent, scope="activity")
         self.assertEqual(result["phase_id"], "original-root")
         self.assertEqual(result["work_id"], "rest-work")

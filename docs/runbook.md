@@ -25,12 +25,34 @@ a phase after user Pause or service restart. The
 [independent024 mission](acceptance/2026-10-21-independent-supply-shelter.md) exercises
 actual clean-context retrieval/claim/readmission and useful continuation; future
 admissions still require their own current readiness.
+
+An explicit mission Observe can look again at a changed healthy ordinary prompt.
+It returns a new source under the same root, deadlines and costs; inspect that
+source before making a new decision. Changed evidence clears quantity-editor
+proof. Observation sends no input, grants no new authority and never erases an
+unknown ACK or its costs. Prepared/published inputs and unresolved effects still
+stop advancement. Semantic preflight remains strict; direct physical events use
+their separate drift policy and never silently retarget an old label. See the
+[prompt observation contract](protocol.md#integrated-mission-lifecycle).
+If only the ordinary macro's local cap is spent, Observe can record `macro_closure`
+and clear that prompt under its own finite deadline. Inspect the fresh source and
+explicitly choose a new direct root; closure is neither success nor renewed mission
+budget. Stale children refuse. Global exhaustion/custody/storage faults still stop.
+After known returned direct input, stale/absent current evidence can leave a
+read-only scope across that exact authenticated lease rotation. Status requests
+explicit Observe and hides the old current source; further inputs refuse until
+fresh evidence publishes a new binding. The ACK remains historical, and genuine
+custody/storage/global faults still stop. Do not treat an old checkpoint as current.
+
 Eligible lifecycle Resume, stage commit, save, identity inspection and owned quit
 confirmation refresh the selected checkpoint once at operation entry
-inside the operation under exact-state/image and original authority/deadline
-checks. The player need not race a three-second window between model/tool calls.
-A changed image, Pause or expired root still stops input; do not retry an unknown
-delivery. [Native timing failure and retained cleanup](acceptance/2026-10-20-lifecycle-freshness.md).
+inside the operation under its [declared source policy](protocol.md#lifecycle-action-preconditions)
+and original authority/deadline checks. Save start and provisional normal
+readmission use native-state equivalence; setup, identity screens and explicit
+confirmations retain image conditioning. The player need not race a three-second
+window between model/tool calls. Changed required state/image, Pause or an expired
+root still stops input; do not retry unknown delivery.
+[Native timing failure and retained cleanup](acceptance/2026-10-20-lifecycle-freshness.md).
 Before admission, ordinary controller commands retain their documented guards.
 Registered launch verifies the retained child and paused main-menu readiness; it
 grants no character identity, Resume, lease or normal-game time. Scoped
@@ -41,7 +63,7 @@ the full bounded supplies/shelter outcome; portable fixtures alone cannot accept
 
 ## Permissions and player ownership
 
-The admitted player uses the fifteen project-preapproved
+The admitted player uses the project-preapproved
 [structured tools](setup.md#configure-the-structured-player-tools). Routine
 observation, actions, memory, handoff, lifecycle and result/image handling must have
 zero human or automatic approval-review round trips. Verify the actual designated
@@ -52,6 +74,15 @@ records verification and observability limits. Native freshness, ownership, budg
 and user Pause remain active. User keys/unlock/rescue are not a routine fallback.
 
 ## Start and observe
+
+The existing service option `serve --timeout SECONDS` sets the native exchange
+ceiling (default5, supported maximum15seconds). It returns as soon as a matching
+ACK arrives and remains bounded by the original operation/mission deadlines.
+Freeze the chosen value in the run configuration/argv; legitimate loading may
+need more than the default. This is separate from the routine2s/5s quality targets
+and cannot repair a lost request identity or authorize replay. The next fresh
+development experiment after [011](changes/062-player-decision-context.md#closed-fresh011-unknown-before-character-adoption)
+trials15 as an explicit loading hypothesis, without changing the protocol/native.
 
 For an admitted mission, start only the controller service below, then follow
 [typed mission requests](#typed-mission-requests-and-the-player). The designated
@@ -77,6 +108,11 @@ still return immediately. Record the chosen value in a mission's frozen setup;
 it cannot renew original root deadlines or repair an expired/unknown input.
 [Latency accounting and proposed targets](evaluation.md#latency-budgets-for-interactive-play)
 separate loading, skill execution, observer updates and model/tool overhead.
+The spectator's local timing disclosure can prepare fixed **Show export JSON**
+data for DOM collection, using the same bounded observer-timing/3 history as its
+download. Collect after the measured interval before reload; a later explicit click
+refreshes the export. This avoids a download-event wait without introducing another
+telemetry service. A status-only probe establishes no native/frame latency.
 
 Outside an admitted mission, `open .runtime/Cataclysm.app` launches the prepared
 app **bundle**, which executes that project's wrapper and
@@ -143,11 +179,14 @@ For a timeout or frozen viewer: preserve the error/journal and last frame; inspe
 the native window. Unsupported upstream error screens may need native dismissal.
 Observe to reconcile current state, then explicitly resume only when interpretable.
 Do not resend an uncertain action. New observations do not prove its old objective.
-The agent must handle routine prompts through verified engine input rather
-than requiring the user to press a key. At the explicitly instrumented common
-direction query, a fresh DEFAULTMODE/menu frame supports ordinary selection or
-cancel after explicit Resume; it has no gameplay scene. Unrelated DEFAULTMODE
-contexts remain unsupported. If using verified desktop automation for a different
+The player must handle routine prompts through the current ordinary-input path
+rather than requiring the user or lead to press a key. Native6 attests the actual
+ordinary receiver independently of menu category names; an unfamiliar category
+alone is not an unsupported-input judgment. The dated direction-query qualification
+below covers ordinary selection/cancellation, not every prompt. Current source,
+custody, Pause, receiver and delivery checks remain mandatory. If a required
+receiver is unavailable, retain the failed attempt rather than request tactical
+rescue. If using verified desktop automation for a different
 prompt, Pause remote control first, inspect the actual prompt, charge any native
 input to the same accounting, and retain its result separately from remote receipts.
 Never send a remote key at an
@@ -168,11 +207,17 @@ behavior without user keys. The reuse-first desktop-tool preflight failed before
 admission; this narrow support does not establish general native recovery.
 
 For service restart: stop that service normally, start one controller, observe
-and reconcile, then resume. For a game crash/restart: preserve diagnostics, follow
+and reconcile, then resume. An already-open spectator automatically refreshes its
+normal same-origin page credential after a service disconnect/reconnect. Explicit
+Pause sends immediately; only a403rejection before admission with a changed
+credential permits its one retry. Other commands, including Observe, Resume and
+recovery, are never replayed. Unknown network outcomes remain unknown. Credential
+refresh does not restore game authority; fresh observation/reconciliation is still
+required. A browser-code upgrade needs a normal page reload. For a game crash/restart: preserve diagnostics, follow
 the bundle-based [start procedure](#start-and-observe), use normal CDDA load UI,
 and acquire new session authority.
 Old-session commands must not be reused, including after normal save/reload in the
-same process. Native-v4 rejects older and mixed components; restart a
+same process. Native-v6 rejects older and mixed components; restart a
 matching controller and native build, then observe. No save-file repair/editing is prescribed.
 
 Input admissions are durably retained in `.runtime/bridge/admissions/` before
@@ -187,6 +232,29 @@ that has not crossed the final native commit check; it cannot undo a prior input
 Use CDDA's normal Save menu before quitting. Stop the controller with Ctrl-C; it
 leaves remote control paused. Saves are in `.runtime/user/`. Never treat a stale
 frame or old acceptance record as proof a current process is healthy.
+
+For an authorized failed-run cleanup after the player has permanently quiesced,
+preserve the final status, streams and save integrity manifest first. If normal
+ending is unsupported, verify the exact native PID, its live controller parent
+and prepared executable/userdir against that run's owned launch evidence. Send
+exceptional SIGTERM only to that verified child **while its controller is still
+alive**, and wait finitely for native exit (an OS zombie has exited but awaits
+parent reaping). Use the run's finite cleanup allowance; a still-running child
+needs explicit owned-process disposition, not a claim of success. For an authorized
+failed-run cleanup, a retained stack sample can distinguish a crash modal from
+healthy execution. After a finite SIGTERM wait, reverify the same owned PID,
+parent, executable and userdir before exceptional SIGKILL if it remains stuck.
+Record both intents, actual exit and unresolved effects; never close a crash
+dialog by replaying gameplay or assume an alive PID is responsive. Then stop the
+controller so its existing retained `Popen` handle can poll/reap and record the
+actual exit status. Check final owned-process/listener absence. Never target an
+unrelated process or use a source/signal repair to resume the failed player.
+
+Controller closure itself only records native status; it does not terminate the
+game. Cached `/api/status` is not a new child poll. If the parent exited first,
+later native PID absence cannot recover its exit code or cause. Retain that gap
+as unknown, as in fresh016; do not call signal cleanup a normal Save/exit or
+rewrite the earlier cleanup intent after discovering this limitation.
 
 ## Operator recovery
 
@@ -274,9 +342,16 @@ journals until resolved. Routine unreferenced journals/frames can be pruned afte
 This initial policy is manual; no scheduled deletion is installed. Native frame
 rotation within a live process remains the game's existing bounded behavior.
 
-Never delete saves as routine cleanup. Preserve manifests before removing owned
-build directories/downloads. Identify the exact path from the build manifest and
-verify its checkout ownership marker; never use broad /tmp or global-cache cleanup.
+Never delete saves as routine cleanup. For user-directed stale-world cleanup,
+stop the owned game/controller first, identify closed test/failed worlds and
+preserve accepted campaign saves and current reusable checkpoints. Prefer an
+ordinary project-local archive outside `.runtime/user/save/`; verify its contents
+before removing the selected active directories and record the archive location
+and retained worlds in the environment ledger. Keep campaign evidence separately;
+retiring a save does not renew a failed mission or establish a normal ending.
+Preserve manifests before removing owned build directories/downloads. Identify
+the exact path from the build manifest and verify its checkout ownership marker;
+never use broad /tmp or global-cache cleanup.
 For a lost temporary build, re-extract using setup. For an unreadable archive,
 remove only the named corrupt cache entry after preserving diagnostics.
 
@@ -299,7 +374,7 @@ an incident archive and document the explicit transition to a fresh bridge with
 unresolved work still tracked. No replay or save editing is permitted. Historical
 reports and journals stay immutable; they need no runtime reader.
 
-Build manifests require `schema_version: 1`; evidence stores require store version 3.
+Build manifests require `schema_version: 1`; current evidence stores require store version 5.
 Never just relabel an unknown file. A reviewed one-time build-manifest migration
 must first verify workspace ownership, pinned source/headers and binary hashes,
 then record before/after hashes. Alternatively preserve the old manifest/workspace
@@ -307,13 +382,29 @@ and use a fresh extraction. Permanent setup/startup paths only read current form
 Remove temporary converters after recording their operation. Roll back only as a
 coordinated system with a validated data transition, never by enabling a fallback.
 
-For the wire-v4 cutover, archive the stopped bridge with original hashes under
+The historical wire-v4 cutover archived the stopped bridge with original hashes under
 `.runtime/incidents/` and start a fresh bridge. Do not relabel old requests. Carry
 unresolved identities as verified `incident/1` references in
 `historical-incidents.json`; startup validates referenced bytes without parsing
 old protocol records. These remain visible historical unknowns and grant no
-execution permission. Evidence store format 3 accepts only current-v4 observations;
-archive earlier stores and start new task stores, preserving original metadata.
+execution permission. Its evidence format3 accepted native4 observations.
+For the current native6/mission11/ledger12/archive5/memory6 cutover, apply the same
+stopped, hash-inventoried incident archive procedure. Preserve prior mission
+ledgers/archives as historical evidence; do not relabel them as eligible procedure
+libraries or restore their execution authority. Current stores accept native6
+only. Procedure/3 and reflection/2 also reject older records. Historical
+learning004/006 libraries keep their original contracts and are not relabelled or
+mounted as current.
+
+For current-contract donors, the procedure library accepts completed, failed,
+stopped and paused archives only after physical and internal closure: both shared
+locks exclude runtime writers; exact ledger/index/dependency pins, settled
+requests/primitives/effects and closed reflective work must validate. Preserve the
+original phase and bytes. A failed or closed paused donor can supply historical
+fallible procedures, but cannot restore authority or satisfy the separate
+normally completed learning requirement for campaign acceptance. Complete and
+normally close that learning outcome before the subsequent fresh campaign.
+GitHub and the current delivery evidence own exact prospective identifiers.
 
 ## Passive skill acceptance
 
@@ -352,6 +443,11 @@ not standing admissions or a second runtime mode.
 
 ## Typed mission requests and the player
 
+Deciding players start with the [compact working guide](player-guide.md), their
+frozen brief and the selected current tool schema. This runbook is a focused
+reference; reading all engineering documents or recursively searching runtime
+artifacts during play is not required to use the interface.
+
 The current service has one mission runtime and `/api/mission`. The old waypoint
 Start/Continue/Abandon/planner inbox and `gameplay-*` CLI are removed, with no alias.
 The [mission contract](protocol.md#integrated-mission-lifecycle) and strict source
@@ -377,8 +473,12 @@ separates implemented components from remaining independent-play acceptance.
 2. Configure and verify the [structured player tools](setup.md#configure-the-structured-player-tools).
    The designated player uses `enactive_snapshot` and explicitly selects the
    returned snapshot/source IDs for `enactive_skill` or `enactive_lifecycle`.
-   Software constructs and retains the current mission/8 request before submission,
+   Software constructs and retains the current mission/11 request before submission,
    collects its bounded result and returns the actual retained PNG in the same call.
+   MCP software assigns request IDs and result waits; old caller-owned
+   `request_id`/`wait_seconds` arguments are rejected. Execution limits remain
+   explicit. An assigned-ID error carries `original_collection` so uncertain
+   dispatch can collect its actual operation; a new invocation is never a retry.
    The lead uses `enactive_start` for the explicit frozen source-free admission;
    it does not launch or adopt a character. Raw engineering contract diagnostics
    retain the validated `mission-request` CLI. They are not a second player or a
@@ -399,6 +499,17 @@ separates implemented components from remaining independent-play acceptance.
    Identical previously staged requests collect only; a changed body under that
    identity refuses. Descriptive handles expire with the adapter or bounded cache;
    explicitly read a new snapshot/source instead of reconstructing authority.
+   Known returned/rejected ACKs retain delivery even if capture storage or later
+   processing fails. Inspect separate evidence-loss/processing diagnostics. A
+   publication bookkeeping diagnostic alone permits continuation when mandatory
+   atomic settlement succeeds and custody/evidence remain healthy. The
+   ACK's historical after-source is separate from actual current evidence; a
+   different current source ends the operation partial for another player decision.
+   A healthy newer native view does not erase the actual captured source or ACK.
+   Semantic non-equivalence sends no input; inspect the returned fresh evidence.
+   If the result requests Observe, make that explicit observation before choosing
+   a distinct input. Old text batches never resume. Actual custody, clock/revision,
+   source-integrity and unresolved-delivery failures retain their stopping path.
 5. The player requests bounded context, reads needed retained sources, records
    fallible claims/corrections/Work and chooses semantic goals. The observer's last
    context packet is historical, query-specific and possibly incomplete. Its labels
@@ -407,7 +518,12 @@ separates implemented components from remaining independent-play acceptance.
    and truthful support/read declarations remain the player's responsibility.
    Handoff, claim and separately charged readmission are explicit tools. A client
    process replacement is not evidence that a fresh model context read the memory.
-6. Owned menus support bounded focusing, literal text and direction/confirmation
+6. Use `skill_kind=direct` for an explicitly chosen physical key, scalar/text batch
+   or click at a live ordinary receiver. Keys/scalars permit changed pixels under
+   the same custody; clicks retain the selected image's geometry. Inspect returned
+   evidence and choose again after a partial result. Semantic shortcuts retain
+   their strict source/control requirements. Owned menus support bounded focusing,
+   literal text and direction/confirmation
    handling. Dismissal uses its exact registered context action (TEXT.QUIT,
    UILIST.QUIT, WORLDGEN_CONFIRM.QUIT or ordinary QUIT). A rowless any-key
    POPUP_WAIT supports one SPACE acknowledgement under the exact signature in
@@ -431,13 +547,61 @@ use the existing32-primitive ceiling, with room for all child selections/editing
 verification and return; lifecycle setup uses its prospective whole-phase preset.
 One opening input is not the whole inspection. Limits spend only actual admitted
 primitives. Child limits can narrow their root, never enlarge it. Zero-input local
-budget refusals permit a new corrected request; exhausted live roots remain stopped.
+budget refusals permit a new corrected request. An exhausted ordinary macro can
+close only through explicit Observe as described above; other exhausted live
+roots retain their existing stops.
 
 The lead owns source/integration/admission and verification. The deciding player
 owns ordinary tactics and supported lifecycle; source faults or unsupported required
 capabilities stop the attempt with evidence instead of inviting engineering rescue.
 Role assignment is procedural, not filesystem isolation. Optional curation or
 additional model tiers do not gate this functional path. No paid API is implied.
+
+### Bounded player host activation
+
+After external mission admission, the lead may use the thin
+[campaign player driver](../tools/campaign_player.py) to run the frozen original
+and at most one clean successor through the maintained CLI. Prepare
+`frozen/player-host-configuration.json`, `frozen/original-player-prompt.txt` and
+`frozen/successor-player-brief.txt` inside that run. The current run directory must
+be exactly `.runtime/campaigns/<mission_id>`; arbitrary descendants or aliases
+are unsupported. Example (choose the actual
+frozen mission/model/effort/deadline, rather than copying a previous allowance):
+
+```sh
+.venv/bin/python -m tools.campaign_player \
+  --root "$PWD" --run-dir "$PWD/.runtime/campaigns/MISSION_ID" \
+  --mission-id MISSION_ID --model gpt-6-luna --effort low \
+  --timeout-seconds 900
+```
+
+`--original-thread` may resume the explicitly prepared original context; the
+successor is always fresh. The driver waits for actual host exit0, validates cached
+quiescence and current controller/native Pause binding, and collects the exact
+completed handoff. It records a distinct successor ID and preserves the issued role.
+The successor itself retrieves memory/evidence, Claims and readmits. Historical
+diagnostics remain visible; they do not replace current unresolved-effect and
+live-slot checks. Only the original admitted bootstrap can have the controller's
+expected initial freeze. User Pause, failed/uncertain hosts and unexpected state
+stop activation without fallback or budget renewal. Timeout cleanup signals only
+the exact owned host; it cannot claim native cleanup. All outputs are exclusive
+run-local files. A terminal report describes observed phase, never acceptance.
+The spectator's Deciding host and Assigned successor fields read these same
+receipts. A successor may launch or fail before mission adoption; inspect that
+separate row instead of inferring it from the mission actor. Launch evidence is
+not current liveness, and missing receipts remain unknown. These fields never
+activate an actor, change ownership or authorize another run.
+Source/fake-host checks qualify this implementation; actual fresh-host graphical
+activation remains separately required under#136/#164/#145.
+
+For a separate optional adviser, freeze the actual active stdin prompt with its
+current source, mission, actor and finite limits. State activation explicitly
+after external admission; do not send a standby-only brief and infer activation
+from process launch. Check that the launched argv and stdin match the frozen
+inputs. A passive capability check needs the current schema's required arguments;
+an argument error proves availability at most, not claimed computation. An exited
+standby actor with zero calls supplies no advice or overlap evidence, as in017.
+Use the existing host receipts/claimed jobs; no second approval gate is added.
 
 The [stopped functional continuation](acceptance/2026-10-18-seven-day-continuation-stop.md)
 and [ordinary menu repair](acceptance/2026-10-18-ordinary-menus.md) retain historical

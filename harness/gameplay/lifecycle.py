@@ -11,7 +11,7 @@ from .contracts import ContractError, EvidenceRef, json_object
 from .evidence import EvidenceError, EvidenceStore
 from .mission_contracts import (
     effect_reconciliation,
-    validate_lifecycle_transition, validate_memory_entry,
+    validate_lifecycle_transition,
     validate_normal_adoption, validate_prompt_result, validate_request, validate_saved_checkpoint,
 )
 from .mission_ledger import MissionLedger
@@ -90,9 +90,12 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
         for identity, claim in consumed.items())
     primitives = {p["logical_id"]: p for p in ledger.primitive_records()}
     claim_rows = {row["entry"]["id"]: row for row in ledger.memory_records("claim")}
-    claims = {identity: validate_memory_entry(row["entry"], "claim") for identity, row in claim_rows.items()}
+    # The ledger validates immutable entries on insertion/reopen and returns fresh copies.
+    claims = {identity: row["entry"] for identity, row in claim_rows.items()}
     # Identity selection shares the campaign reducer's correction/partial order.
-    frontiers, retired = CampaignMemory(ledger, store)._frontier(claims)
+    identity_ids = {identity for identity, claim in claims.items()
+                    if claim["key"]["property"] == "identity" and claim["key"]["unit"] == "name"}
+    frontiers, retired = CampaignMemory._frontier(claims, selected_ids=identity_ids)
     frontier_ids = {identity for group in frontiers for identity in group}
     proofs: dict[str, dict[str, dict]] = {}
     validators = {"lifecycle_transition": validate_lifecycle_transition,
@@ -188,20 +191,25 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
         intent, receipt = primitive["intent"], primitive["result"] or {}
         _require(primitive["request_id"] == terminal_id and primitive["state"] in ("returned", "unknown")
                  and primitive["native_id"] == proof["native_request_id"]
-                 and intent["kind"] == "action"
+                 and intent["kind"] in ("action", "direct")
                  and intent["source_before"] == before.observation_id
-                 and intent["expected_session"] == before.session
-                 and intent["expected_revision"] == before.revision
-                 and intent["expected_boundary_id"] == before_obs["boundary"]["id"]
                  and receipt.get("published") is True,
                  "Transition has no matching published terminal primitive")
         for key, value in {"logical_action_id": primitive["logical_id"], "native_request_id": primitive["native_id"],
                            "transport_disposition": primitive["state"], **{k: intent[k] for k in
                            ("kind", "value", "expected_session", "expected_revision", "expected_boundary_id", "source_before", "preflight_source")}}.items():
             _require(receipt.get(key) == value, "Transition primitive receipt contradicts its immutable intent")
-        preflight, _ = source(intent["preflight_source"])
+        preflight, preflight_obs = source(intent["preflight_source"])
         _require(positions[before.observation_id] <= positions[preflight.observation_id] < positions[after.observation_id]
-                 and preflight.session == before.session, "Transition preflight is outside its source interval")
+                 and preflight.session == before.session
+                 and (intent["expected_session"], intent["expected_revision"], intent["expected_boundary_id"]) ==
+                     (preflight.session, preflight.revision, preflight_obs["boundary"]["id"]),
+                 "Transition preflight is outside its source interval or differs from dispatch")
+        if proof["operation"] == "create":
+            from .creation_provenance import creation_input_chain, validate_creation_sources
+            chain = creation_input_chain(tuple(requests.values()), tuple(primitives.values()),
+                root_id=root_id, terminal_request_id=terminal_id, terminal_logical_id=proof["terminal_logical_id"])
+            validate_creation_sources(chain, store, terminal_before=before)
         if primitive["state"] == "unknown":
             effect = primitive["effect"] or {}
             _require(effect == effect_reconciliation(proof, sources=(before.observation_id, after.observation_id),
@@ -293,7 +301,8 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
         proof = transition(adoption["transition_result_request_id"])
         root_id = adoption["origin_request_id"]
         expected_scope = dict(mission_id=ledger.admission.mission_id, session=first.session, coordinate_epoch=index)
-        _require(proof["origin_request_id"] == root_id and proof["operation"] == ("create" if index == 0 else "load")
+        initial_operation = "load" if ledger.admission.scenario.mode == "load" else "create"
+        _require(proof["origin_request_id"] == root_id and proof["operation"] == (initial_operation if index == 0 else "load")
                  and phase_member(result_id, root_id)
                  and order[adoption["transition_result_request_id"]] <= order[result_id]
                  and adoption["scope"] == expected_scope
@@ -320,7 +329,9 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
                          for sid in row["request"].get("sources", []) + (row["result"] or {}).get("source_ids", [])}
         for sid in world["sources"]:
             ref, obs = source(sid)
-            _require(ref.boundary_kind == "menu" and obs["category"] in ("WORLDGEN_CONFIRM_DIALOG", "PICK_WORLD_DIALOG", "MAIN_MENU")
+            # The player interprets the visible name; menu taxonomy is not proof
+            # of identity. Owned phase provenance and source order apply below.
+            _require(ref.boundary_kind == "menu"
                      and obs["takeover_generation"] == proof["before_takeover_generation"]
                      and sid in phase_sources
                      and max(positions[s] for s in launch["source_ids"]) <= positions[sid] < positions[first.observation_id],
@@ -361,7 +372,7 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
                                "expected_boundary_id", "source_before", "preflight_source")}}.items():
             _require(inspected_receipt.get(key) == value, "Identity inspection receipt contradicts its primitive")
         if index == 0:
-            _require(adoption["saved_checkpoint_request_id"] is None, "Initial creation cannot borrow a saved checkpoint")
+            _require(adoption["saved_checkpoint_request_id"] is None, "Initial entry cannot borrow a saved checkpoint")
         else:
             saved_id = adoption["saved_checkpoint_request_id"]
             _require(saved_id in proofs["saved_checkpoint"], "Reload lacks its exact preceding saved checkpoint")
@@ -422,6 +433,10 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
                  and positions[save_before.observation_id] <= positions[endpoint.observation_id]
                  < positions[save_after_id] <= positions[proof["before_source_id"]],
                  "Saved endpoint is outside the returned normal save-action interval")
+        _require(all(ref.session == endpoint.session and ref.boundary_kind == "menu"
+            and source(ref.observation_id)[1]["in_game"]
+            for ref in references[positions[save_after_id]:positions[proof["before_source_id"]] + 1]),
+            "Save confirmation left its original adopted session before completion")
     links = tuple(SessionContinuity(segments[i - 1][1], segments[i][0]) for i in range(1, len(segments)))
     return game_timeline(store, links)
 
