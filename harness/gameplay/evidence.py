@@ -262,6 +262,9 @@ class EvidenceStore:
         self._retired_sessions: list[str] = []
         self._blocked: list[str] = []
         self._disputed: list[str] = []
+        # Derived canonical length only; never cache source bytes or authority.
+        # Reopen must measure the validated in-memory manifest, not file spacing.
+        self._metadata_bytes: int | None = None
         self._reservation: CapacityReservation | None = None
         # Only the latest final capture under this exact entry/rule/generation
         # may reserve dispatch. Historical metadata never restores this binding.
@@ -298,19 +301,20 @@ class EvidenceStore:
         # additional slots rather than substituting for those missing sources.
         count, size = len(self._entries), 0
         indexed_names = {identity + ".png" for identity in self._entries}
-        for path in self.frames.iterdir():
-            try:
-                metadata = path.lstat()
-            except FileNotFoundError:
-                # A source may disappear after listing. Indexed slots already
-                # remain counted above; integrity checks retain the loss, not an
-                # older source or permission to dispatch. Other I/O errors stop.
-                continue
-            if not stat.S_ISREG(metadata.st_mode):
-                raise EvidenceError("Unexpected non-file in retained evidence")
-            if path.name not in indexed_names:
-                count += 1
-            size += metadata.st_size
+        with os.scandir(self.frames) as entries:
+            for entry in entries:
+                try:
+                    metadata = entry.stat(follow_symlinks=False)
+                except FileNotFoundError:
+                    # A source may disappear after listing. Indexed slots already
+                    # remain counted above; integrity checks retain the loss, not an
+                    # older source or permission to dispatch. Other I/O errors stop.
+                    continue
+                if not stat.S_ISREG(metadata.st_mode):
+                    raise EvidenceError("Unexpected non-file in retained evidence")
+                if entry.name not in indexed_names:
+                    count += 1
+                size += metadata.st_size
         if count > self.max_frames or size > self.max_bytes:
             raise CapacityError("Existing retention exceeds cap; no evidence was deleted")
         return count, size
@@ -380,7 +384,14 @@ class EvidenceStore:
                               "initial_lag_seconds": item.initial_lag_seconds,
                               "retention": item.retention} for item in self._entries.values()]}
 
+    def _metadata_size(self) -> int:
+        if self._metadata_bytes is None:
+            self._metadata_bytes = len(_canonical(self._manifest()))
+        return self._metadata_bytes
+
     def _save(self) -> None:
+        # A failed publication must not preserve any pre-mutation measurement.
+        self._metadata_bytes = None
         encoded = _canonical(self._manifest())
         if len(encoded) > MAX_METADATA_BYTES:
             raise CapacityError("Metadata retention cap reached; existing evidence preserved")
@@ -391,6 +402,7 @@ class EvidenceStore:
                 stream.flush()
                 os.fsync(stream.fileno())
             os.replace(temporary, self.directory / "evidence.json")
+            self._metadata_bytes = len(encoded)
         except OSError as exc:
             raise EvidenceError(f"Cannot persist evidence metadata: {exc}") from exc
         finally:
@@ -407,10 +419,12 @@ class EvidenceStore:
         self._authority_generation += 1
         for identity in disputed:
             if identity in self._entries and identity not in self._disputed:
+                self._metadata_bytes = None
                 self._disputed.append(identity)
         identities = disputed + (() if self._current is None else (self._current.observation_id,))
         for identity in identities:
             if identity in self._entries and identity not in self._blocked:
+                self._metadata_bytes = None
                 self._blocked.append(identity)
         self._current = None
         self.invalid_reason = reason
@@ -621,8 +635,10 @@ class EvidenceStore:
                 self._invalidate("World session changed")
                 if len(self._retired_sessions) >= MAX_FRAMES:
                     raise CapacityError("Too many world transitions for one task/run store")
+                self._metadata_bytes = None
                 self._retired_sessions.append(self._session)
-            if not historical:
+            if not historical and self._session != session:
+                self._metadata_bytes = None
                 self._session = session
             observation = _validate_observation(observation)
             if retention == "preflight" and (observation["status"] != "ready" or observation["error"] != ""):
@@ -703,6 +719,7 @@ class EvidenceStore:
                     stream.flush()
                     os.fsync(stream.fileno())
                 destination.chmod(0o444)
+                self._metadata_bytes = None
                 self._entries[identity] = entry
             if retention == "preflight":
                 if rule == "ordinary_input":
@@ -711,6 +728,7 @@ class EvidenceStore:
                     raise EvidenceError("Final preflight is not equivalent to current retained evidence")
             if not historical and entry.retention == "terminal":
                 entry = _Entry(entry.reference, entry.observation, entry.initial_lag_seconds, retention)
+                self._metadata_bytes = None
                 self._entries[identity] = entry
             if reservation is not None:
                 self._check_reservation(reservation)
@@ -795,7 +813,7 @@ class EvidenceStore:
             reserved_frames = self._reservation.frame_slots
             reserved_bytes = self._reservation.bytes_reserved
             reserved_metadata = self._reservation.metadata_reserved
-        if len(_canonical(self._manifest())) + reserved_metadata + metadata_bytes + METADATA_HEADROOM > MAX_METADATA_BYTES:
+        if self._metadata_size() + reserved_metadata + metadata_bytes + METADATA_HEADROOM > MAX_METADATA_BYTES:
             raise CapacityError("Metadata capacity/reserve exhausted before dispatch")
         if count + reserved_frames + 1 > self.max_frames or used + reserved_bytes + size > self.max_bytes:
             raise CapacityError("Retention cap reached; existing evidence was preserved")
@@ -805,7 +823,7 @@ class EvidenceStore:
         """Measured archive usage; mission admission owns stricter cleanup reserves."""
         self._open()
         count, size = self._usage()
-        return {"frames": count, "bytes": size, "metadata_bytes": len(_canonical(self._manifest())),
+        return {"frames": count, "bytes": size, "metadata_bytes": self._metadata_size(),
                 "max_frames": self.max_frames, "max_bytes": self.max_bytes,
                 "max_metadata_bytes": MAX_METADATA_BYTES}
 
