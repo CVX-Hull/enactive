@@ -153,6 +153,29 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(runtime.calls[-1][0], "pause")
         self.assertTrue(self.controller.pause_requested)
 
+    def test_status_projects_host_receipts_without_mutating_mission_or_exposing_process_details(self):
+        runtime = self.server.mission
+        runtime.snapshot = dict(mission_id="mission-test", actor_id="player-test", phase="active", epoch=0,
+            lease_owner=None)
+        preparation = self.root / ".runtime/campaigns/mission-test/preparation"
+        preparation.mkdir(parents=True)
+        def write(name, value):
+            (preparation / f"driver-{name}.json").write_text(json.dumps(value))
+        write("initial-status", dict(mission=runtime.snapshot, token="private-token"))
+        write("original-process", dict(start=100, pid=123, argv=["private-command", "/private/path"]))
+        code, body, _ = self.request()
+        self.assertEqual(code, 200)
+        decoded = json.loads(body)
+        self.assertEqual(decoded["mission"], runtime.snapshot)
+        self.assertEqual(decoded["deciding_host"]["current"]["state"], "launch_reported")
+        write("original-receipt", dict(start=100, end=120, returncode=7, timed_out=False, interrupted=False))
+        decoded = json.loads(self.request()[1])
+        self.assertEqual(decoded["deciding_host"]["current"]["state"], "exited")
+        self.assertFalse(decoded["deciding_host"]["driver"]["no_continuing_host_reported"])
+        self.assertEqual(decoded["mission"], runtime.snapshot)
+        self.assertNotRegex(json.dumps(decoded["deciding_host"]), "private-|/private|pid|argv|token")
+        self.assertEqual(runtime.calls, [], "passive evidence cannot command, pause or readmit")
+
     def test_mission_validates_exact_fields_types_and_current_version(self):
         observe = mission_record()
         invalid = [dict(observe, schema="mission/1"), dict(observe, extra=1), dict(observe, epoch=True),

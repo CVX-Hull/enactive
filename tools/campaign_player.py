@@ -251,9 +251,10 @@ def run_campaign(*, root: Path, run_dir: Path, mission_id: str, model: str,
         raise DriverError("timeout_seconds must be positive and finite")
     deadline = time.monotonic() + timeout_seconds
     root, run = root.resolve(strict=True), run_dir.resolve(strict=True)
-    campaigns = (root / ".runtime" / "campaigns").resolve(strict=True)
-    if not root.is_dir() or not run.is_dir() or run == campaigns or not run.is_relative_to(campaigns):
-        raise DriverError("run-dir must be an existing run under root/.runtime/campaigns")
+    if (re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", mission_id) is None
+            or not root.is_dir() or not run.is_dir()
+            or run != root / ".runtime" / "campaigns" / mission_id):
+        raise DriverError("run-dir must be the existing root/.runtime/campaigns/<mission_id>")
     preparation = run / "preparation"
     if not preparation.is_dir():
         raise DriverError("Run preparation directory does not exist")

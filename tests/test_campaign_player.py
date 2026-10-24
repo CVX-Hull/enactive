@@ -109,7 +109,8 @@ class CampaignPlayerTests(unittest.TestCase):
 
     def make_run(self):
         self.counter += 1
-        self.run = self.root / ".runtime" / "campaigns" / str(self.counter)
+        self.root = Path(self.temporary.name).resolve() / str(self.counter)
+        self.run = self.root / ".runtime" / "campaigns" / "mission"
         (self.run / "frozen").mkdir(parents=True)
         (self.run / "preparation").mkdir()
         (self.run / "frozen" / "player-host-configuration.json").write_text(json.dumps(self.configuration))
@@ -467,6 +468,17 @@ class CampaignPlayerTests(unittest.TestCase):
         with self.assertRaises(driver.DriverError):
             driver.run_campaign(root=self.root, run_dir=self.root, mission_id="mission", model="model",
                 effort="low", timeout_seconds=60)
+
+    def test_noncanonical_run_refuses_before_reserving_outputs_or_launch(self):
+        run = self.make_run()
+        for location, mission_id in ((run, "different-mission"), (run / "nested", "mission")):
+            location.mkdir(exist_ok=True)
+            with self.subTest(location=location), patch.object(driver.subprocess, "Popen") as popen, \
+                    self.assertRaisesRegex(driver.DriverError, "mission_id"):
+                driver.run_campaign(root=self.root, run_dir=location, mission_id=mission_id,
+                    model="model", effort="low", timeout_seconds=60)
+            popen.assert_not_called()
+            self.assertEqual(list((run / "preparation").iterdir()), [])
 
     def test_cli_requires_frozen_launch_parameters_and_default_codex(self):
         argv = ["campaign_player", "--root", str(self.root), "--run-dir", "/run", "--mission-id", "mission",

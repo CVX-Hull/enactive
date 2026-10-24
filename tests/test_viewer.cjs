@@ -678,6 +678,56 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.equal(requests.length, countBeforeMission);
   mission.memory_context = savedMemory;
 
+  // Deciding-host receipts describe events separately from phase, lease and native custody.
+  const deciding = {grants_authority: false, mission_id: mission.mission_id, actor_id: mission.actor_id,
+    current: {role: 'original', actor_id: mission.actor_id, state: 'launch_reported', returncode: null},
+    original: null, driver: {outcome: 'unreported', no_continuing_host_reported: false}};
+  const ownerBeforeHost = element('mission-owner').textContent;
+  for (const state of ['launch_reported', 'exited', 'timed_out', 'interrupted', 'exit_unresolved', 'unreported']) {
+    context.input.deciding_host = {...deciding, current: {...deciding.current, state,
+      returncode: ['exited', 'timed_out', 'interrupted'].includes(state) ? 7 : null}};
+    run('render(input)');
+    assert.match(element('mission-host').textContent, /current liveness unknown/);
+    assert.match(element('mission-host').textContent, /completion unreported; continuation unknown/);
+    assert.doesNotMatch(element('mission-host').textContent, /no continuing host reported|host (alive|running)/i);
+    assert.equal(element('mission-state').textContent, 'ACTIVE');
+    assert.equal(element('mission-owner').textContent, ownerBeforeHost);
+    assert.ok(sendButtons.every(button => button.disabled));
+    assert.equal(element('resume').disabled, true);
+    assert.equal(element('pause').disabled, false);
+  }
+  const original = {...deciding.current, state: 'exited', returncode: 0};
+  mission.phase = 'handoff';
+  context.input.deciding_host = {...deciding, current: original, original};
+  run('render(input)');
+  assert.match(element('mission-host').textContent, /Original host observed exit.*continuation unknown/);
+  assert.equal(element('mission-state').textContent, 'HANDOFF');
+  mission.actor_id = 'successor-host-test';
+  context.input.deciding_host = {...deciding, actor_id: mission.actor_id, original,
+    current: {role: 'successor', actor_id: mission.actor_id, state: 'launch_reported', returncode: null}};
+  run('render(input)');
+  assert.match(element('mission-host').textContent, /Successor host launch reported.*liveness unknown.*Historical original host observed exit/);
+  context.input.deciding_host.current = {...context.input.deciding_host.current, state: 'exited', returncode: 9};
+  context.input.deciding_host.driver = {outcome: 'incomplete', no_continuing_host_reported: true};
+  run('render(input)');
+  assert.match(element('mission-host').textContent, /Successor host observed exit.*Driver ended incomplete; no continuing host reported/);
+  assert.equal(element('mission-state').textContent, 'HANDOFF', 'driver termination cannot end the mission');
+  context.input.deciding_host.current.state = 'exit_unresolved';
+  run('render(input)');
+  assert.match(element('mission-host').textContent, /exit unresolved.*continuing host unknown/);
+  assert.doesNotMatch(element('mission-host').textContent, /no continuing host reported/);
+  for (const broken of [undefined, null, [], {}, {...deciding, mission_id: 'wrong'},
+    {...deciding, actor_id: 'wrong'}, {...deciding, grants_authority: true}]) {
+    context.input.deciding_host = broken;
+    run('render(input)');
+    assert.match(element('mission-host').textContent, /Host evidence unreported.*current liveness unknown/);
+  }
+  mission.actor_id = deciding.actor_id;
+  mission.phase = 'active';
+  context.input.deciding_host = deciding;
+  run('render(input)');
+  assert.equal(requests.length, countBeforeMission, 'host evidence rendering cannot launch or send input');
+
   // Lifecycle checkpoints remain visible between operations, without inventing a prompt.
   mission.active_operation = null;
   mission.lifecycle_phase = {origin_request_id: 'exit-root', operation: 'exit',
@@ -714,6 +764,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   request('/api/status').reject(new Error('Service unavailable'));
   await tick();
   assert.match(element('mission-process').textContent, /service disconnected.*current liveness unknown/i);
+  assert.match(element('mission-host').textContent, /Last reported evidence.*current liveness unknown/i);
   assert.match(element('mission-exit').textContent, /No verified normal exit/);
   assert.ok(sendButtons.every(button => button.disabled));
   context.input.connection = 'disconnected';
@@ -1390,7 +1441,7 @@ async function decode() { pending.shift().resolve(); await new Promise(setImmedi
   assert.match(html, /Historical, query-specific/);
   assert.match(html, /cannot undo a committed input or cancel an activity/);
   assert.match(html, /<summary>Memory context/);
-  for (const id of ['mission-lifecycle', 'mission-process', 'mission-exit']) {
+  for (const id of ['mission-host', 'mission-lifecycle', 'mission-process', 'mission-exit']) {
     assert.ok(html.includes(`<dd id="${id}">`), `${id} must exist in the mission facts`);
   }
   assert.doesNotMatch(html + app, /api\/gameplay|task-form|task-start|task-continue|task-abandon|goal-form|mission_lease|renderGameplay/);

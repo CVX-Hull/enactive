@@ -15,6 +15,7 @@ from .gameplay.contracts import json_object
 from .gameplay.mission_contracts import MAX_REQUEST_BYTES, validate_request
 from .gameplay.mission_ledger import TERMINAL
 from .gameplay.reflection import MAX_COMMAND_BYTES, validate_command as validate_reflection_command
+from .host_status import deciding_host_status
 
 
 def validate_recovery(body: dict[str, Any]) -> None:
@@ -150,7 +151,9 @@ class Handler(BaseHTTPRequestHandler):
                 self._json(409, {"error": str(exc)[:1024]})
             return
         if path == "/api/status":
-            self._json(200, {**controller.status(), "mission": self.server.mission.status()})
+            mission = self.server.mission.status()
+            self._json(200, {**controller.status(), "mission": mission,
+                "deciding_host": deciding_host_status(controller.root, mission)})
             return
         if path == "/frame.png":
             try:

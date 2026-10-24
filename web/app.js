@@ -399,6 +399,34 @@ function record(value) {
 function recordedId(value) {
   return typeof value === 'string' && value.trim().length > 0;
 }
+function renderDecidingHost(mission) {
+  const host = latest?.deciding_host;
+  const bound = record(host) && host.grants_authority === false && mission &&
+    recordedId(mission.mission_id) && recordedId(mission.actor_id) &&
+    host.mission_id === mission.mission_id && host.actor_id === mission.actor_id;
+  const describe = (value) => {
+    if (!record(value) || !['original', 'successor'].includes(value.role) || !recordedId(value.actor_id)) return null;
+    const label = value.role === 'original' ? 'Original host' : 'Successor host';
+    if (value.state === 'launch_reported') return `${label} launch reported; no verified exit receipt`;
+    if (value.state === 'exit_unresolved') return `${label} exit unresolved`;
+    const event = {exited: 'exit', timed_out: 'timeout and exit', interrupted: 'interruption and exit'}[value.state];
+    return typeof event === 'string' && Number.isSafeInteger(value.returncode) ? `${label} observed ${event} · code ${value.returncode}` : null;
+  };
+  const current = bound && record(host.current) && host.current.actor_id === mission.actor_id ? host.current : null;
+  const parts = [describe(current) || 'Host evidence unreported', 'current liveness unknown'];
+  if (bound && host.original?.actor_id !== mission.actor_id) {
+    const original = describe(host.original);
+    if (original) parts.push(`Historical ${original.toLowerCase()}`);
+  }
+  const driver = bound && record(host.driver) ? host.driver : null;
+  if (driver && ['incomplete', 'terminal'].includes(driver.outcome)) {
+    const allExited = driver.no_continuing_host_reported === true &&
+      !['launch_reported', 'exit_unresolved'].includes(current?.state) && host.original?.state !== 'exit_unresolved';
+    parts.push(`Driver ended ${driver.outcome}; ${allExited ? 'no continuing host reported' : 'continuing host unknown'}`);
+  } else parts.push('Driver completion unreported; continuation unknown');
+  parts.push('host evidence grants no game authority');
+  $('mission-host').textContent = `${statusTransportFailed ? 'Last reported evidence · ' : ''}${parts.join(' · ')}`;
+}
 function renderLifecycle(mission) {
   const phase = mission?.lifecycle_phase;
   const checkpoint = record(phase) && phase.grants_authority === false &&
@@ -566,6 +594,7 @@ function renderMission() {
   $('mission-summary').textContent = available && typeof mission.objective === 'string' ? mission.objective : 'No mission objective recorded.';
   const configuration = available ? mission.configuration : null;
   $('mission-player').textContent = available ? `${known(mission.actor_id)} · model ${known(configuration?.model)} · effort ${known(configuration?.effort)}` : 'No player admitted';
+  renderDecidingHost(available ? mission : null);
   $('mission-identity').textContent = available ? `${known(mission.mission_id)} · epoch ${known(mission.epoch)}` : 'No mission identity';
   const snapshotLabel = latest?.connection === 'fresh' ? 'reported snapshot' : 'last reported snapshot; current status unavailable';
   $('mission-owner').textContent = !available ? 'Input lease unknown; no mission snapshot' :
