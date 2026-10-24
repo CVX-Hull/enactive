@@ -1846,7 +1846,8 @@ class MissionLedger:
             if old:
                 if old[1:] != (entry_type, encoded): raise LedgerError("Memory event identity reused")
                 return old[0]
-            maximum = {"claim": 2048, "work": 256, "decision": 2048, "procedure": 256}[entry_type]
+            # Three native Claims per retained frame share this ceiling with authored Claims.
+            maximum = {"claim": 2048 + 3 * self.admission.limits.frames, "work": 256, "decision": 2048, "procedure": 256}[entry_type]
             if self._db.execute("SELECT count(*) FROM memory WHERE entry_type=?", (entry_type,)).fetchone()[0] >= maximum:
                 raise BudgetError("Memory event retention limit reached")
             if entry_type != "work" and self._db.execute("SELECT 1 FROM memory WHERE entry_type=? AND record_id=?", (entry_type, data["id"])).fetchone():

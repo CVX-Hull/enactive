@@ -131,6 +131,15 @@ production database-recovery problem. The169affected fixture tests subsequently
 pass;276combined projection/diagnostic/integration tests also pass (overlap).
 Current source and real gameplay remain separate qualification lanes.
 
+The scoped repair `18113ea` subsequently passes exact
+[CI40067282568](https://github.com/CVX-Hull/enactive/actions/runs/40067282568):
+1,906tests in904.838s plus viewer regressions. A later prospective launch review
+finds the omitted Claim-storage lane before any019admission: the same rate proxy
+projects about3,176Claims, beyond the old2,048ceiling. Its frame-derived capacity
+repair and synthetic retrieval-cost profile belong in
+[062](../changes/062-player-decision-context.md#closed018-preserve-organic-correction-and-measure-the-real-hot-path).
+No subsequent source pass or preflight finding changes this frozen failed result.
+
 S-CODE now explicitly requires fixture helpers to respect component synchronization;
 C-PORTABLE/C-REVIEW enforce it through existing tests/review. C-MAINTENANCE retains
 the failed result, ordered cleanup and ownership of follow-through. No new lint

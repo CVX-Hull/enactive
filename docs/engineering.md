@@ -501,6 +501,11 @@ Update affected principles, standards, controls and authoritative guidance when
 the finding changes their meaning or implementation. A chat promise or proposal
 is not a delivered control. C-REVIEW checks this reconciliation; no separate action
 tracker or automatic semantic-completeness claim is added.
+Prospective campaign forecasts include automatic record expansion and storage/
+context limits as well as visible input/frame/time allowances. Check rates and
+units against real retained counts; packet output bounds do not bound retrieval
+work. A contradicted capacity lane needs an owned repair or an explicit incomplete
+outcome before admission, rather than a hidden limit increase during play.
 Before publishing commits, verify the intended public author/committer identity
 and full messages, including co-author trailers. Use explicit repository-local Git
 configuration as described in [setup](setup.md#choose-an-explicit-git-identity);

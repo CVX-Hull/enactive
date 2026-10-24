@@ -1019,6 +1019,109 @@ class LedgerTests(unittest.TestCase):
         self.assertEqual(self.ledger.primitive("logical-1")["state"], "unknown")
         self.assertEqual(self.ledger.snapshot(now=1010)["spent_inputs"], 1)
 
+    def seed_memory_history(self, entry_type, entry, count):
+        """Compact valid history; boundary appends still use the public ledger API."""
+        from harness.gameplay.mission_contracts import validate_memory_entry
+        entry = validate_memory_entry(entry, entry_type)
+        rows = []
+        for index in range(count):
+            identity = f"{entry_type}-seed-{index}"
+            body = {**entry, "id": identity}
+            if entry_type == "procedure": body["procedure_id"] = identity
+            rows.append((identity, entry_type, identity, canonical(body)))
+        with self.ledger._transaction():
+            self.ledger._db.executemany("INSERT INTO memory(event_id,entry_type,record_id,body) VALUES (?,?,?,?)", rows)
+
+    def test_claim_retention_scales_with_original_admitted_frames(self):
+        for frames in (2, 8192):
+            with self.subTest(frames=frames):
+                self.ledger.close()
+                self.directory = Path(self.tmp.name) / f"claims-{frames}"
+                self.a = admission(limits=MissionLimits(frames=frames), cleanup_reserve=CleanupReserve(frames=1))
+                self.ledger = MissionLedger(self.directory, admission=self.a, now=1000)
+                maximum = 2048 + 3 * frames
+                self.seed_memory_history("claim", claim(), maximum - 1)
+                entry = claim(id="last-claim")
+                sequence = self.ledger.append_memory("last-event", "claim", entry, now=1001)
+                self.assertEqual(sequence, maximum)
+                self.assertEqual(self.ledger.append_memory("last-event", "claim", entry, now=1002), sequence)
+                with self.assertRaisesRegex(BudgetError, "Memory event retention limit reached"):
+                    self.ledger.append_memory("overflow", "claim", claim(id="overflow"), now=1002)
+                with self.assertRaisesRegex(LedgerError, "Memory event identity reused"):
+                    self.ledger.append_memory("last-event", "claim", claim(id="last-claim", text="Changed"), now=1002)
+                self.assertEqual(len(self.ledger.memory_records("claim")), maximum)
+                if frames == 2:
+                    self.ledger.close()
+                    self.ledger = MissionLedger(self.directory, now=1003)
+                    self.assertEqual(self.ledger.admission.limits.frames, frames)
+                    self.assertEqual(self.ledger.append_memory("last-event", "claim", entry, now=1003), sequence)
+                    with self.assertRaisesRegex(BudgetError, "Memory event retention limit reached"):
+                        self.ledger.append_memory("reopened-overflow", "claim", claim(id="reopened-overflow"), now=1003)
+                    self.ledger.close()
+                    before = (self.directory / "mission.sqlite3").read_bytes()
+                    with self.assertRaisesRegex(LedgerError, "Original admission/configuration cannot be replaced"):
+                        MissionLedger(self.directory, admission=replace(self.a, limits=MissionLimits(frames=3)), now=1004)
+                    self.assertEqual((self.directory / "mission.sqlite3").read_bytes(), before)
+
+    def test_native_capture_and_authored_claims_share_retention_ceiling(self):
+        from harness.gameplay.campaign_memory import CampaignMemory
+        from harness.gameplay.evidence import EvidenceStore
+        from tests.test_gameplay_evidence import observation, png
+        from tests.test_mission_contracts import scope
+        self.ledger.close()
+        self.directory = Path(self.tmp.name) / "native-claims"
+        self.a = admission(limits=MissionLimits(frames=2), cleanup_reserve=CleanupReserve(frames=1))
+        self.ledger = MissionLedger(self.directory, admission=self.a, now=1000)
+        maximum = 2048 + 3 * self.a.limits.frames
+        self.seed_memory_history("claim", claim(), maximum - 4)
+        bridge = Path(self.tmp.name) / "bridge"
+        bridge.mkdir()
+        native = observation(30, session="native-session")
+        (bridge / native["frame"]).write_bytes(png())
+        with EvidenceStore(bridge, Path(self.tmp.name) / "sources", max_frames=2) as store:
+            ref = store.ingest(native, received_monotonic=100, now_monotonic=100, now_timestamp_ms=1_000_000)
+            memory = CampaignMemory(self.ledger, store)
+            captured = memory.capture_native(ref, scope(), now=1001)
+            self.assertEqual(len(captured["entries"]), 3)
+            self.assertEqual(captured["memory_version"], maximum - 1)
+            authored = claim(id="last-authored", sources=[ref.observation_id],
+                supports=[{"sources": [ref.observation_id], "claims": []}])
+            self.assertEqual(self.ledger.append_memory("authored", "claim", authored, now=1002), maximum)
+            again = memory.capture_native(ref, scope(), now=1003)
+            self.assertEqual(again["entries"], captured["entries"])
+            self.assertEqual(again["memory_version"], maximum)
+            with self.assertRaisesRegex(BudgetError, "Memory event retention limit reached"):
+                self.ledger.append_memory("extra-authored", "claim", claim(id="extra-authored"), now=1003)
+            other_scope = {**scope(), "coordinate_epoch": 1}
+            with self.assertRaisesRegex(BudgetError, "Memory event retention limit reached"):
+                memory.capture_native(ref, other_scope, now=1003)
+            self.assertEqual(len(self.ledger.memory_records("claim")), maximum)
+
+    def test_other_memory_retention_ceilings_remain_unchanged(self):
+        from harness.gameplay.mission_contracts import LearningPolicy, MEMORY_VERSION
+        from tests.test_mission_contracts import scope
+        from tests.test_procedures import procedure
+        work = dict(schema=MEMORY_VERSION, record_type="Work", id="last-work", predecessor_work_id=None,
+            intent="Verify supplies", scope=scope(), stage="inspect", progress=None, available=[], committed=[],
+            predicted_output=[], observed_output=[], unresolved_effects=[], sources=["source-1"],
+            next_verification="Inspect visible supplies", status="planned")
+        decision = dict(schema=MEMORY_VERSION, record_type="Decision", id="last-decision", packet_id="packet-1",
+            scope=scope(), query="water", memory_version=0, claim_ids=[], work_ids=[], source_ids=[],
+            procedure_refs=[], procedure_sources=[], omitted=0, reason="Inspect visible supplies")
+        candidate = procedure(id="last-procedure", mission_id=self.a.mission_id)
+        for kind, maximum, entry in (("work", 256, work), ("decision", 2048, decision), ("procedure", 256, candidate)):
+            with self.subTest(kind=kind):
+                self.ledger.close()
+                self.directory = Path(self.tmp.name) / kind
+                self.a = admission(learning=LearningPolicy(candidate["environment"]))
+                self.ledger = MissionLedger(self.directory, admission=self.a, now=1000)
+                self.seed_memory_history(kind, entry, maximum - 1)
+                self.assertEqual(self.ledger.append_memory("last-event", kind, entry, now=1001), maximum)
+                with self.assertRaisesRegex(BudgetError, "Memory event retention limit reached"):
+                    self.ledger.append_memory("overflow", kind, {**entry, "id": "overflow"}, now=1002)
+                self.assertEqual(self.ledger.append_memory("last-event", kind, entry, now=1002), maximum)
+                self.assertEqual(len(self.ledger.memory_records(kind)), maximum)
+
     def test_retention_and_corrupt_cost_reject_without_repair(self):
         self.ledger.append_memory("event-1", "claim", claim(), now=1001)
         self.assertEqual(self.ledger.append_memory("event-1", "claim", claim(), now=1002), 1)

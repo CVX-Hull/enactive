@@ -236,6 +236,17 @@ refuse, and uncertain publication permits only collection of the original operat
 Concurrent first creators may safely lose the exclusive-stage race and refuse;
 there is no transparent retry or second request history store.
 
+Claim history has a shared event ceiling of `2048 + 3 * admitted_frames`, up to
+26624Claims for8192frames. Each distinct normal source can produce three automatic
+native facts; deterministic IDs make repeated capture idempotent. The2048baseline
+is not a separately reserved authored-Claim allowance. Work/Decision/Procedure
+ceilings remain256/2048/256 and the SQLite database remains capped at64MiB.
+Original admission and cumulative rows never reset at handoff/reload. This changes
+no record/storage format and supplies no live authority or budget extension.
+Context output remains selective and explicitly bounded; reducing the full stored
+frontier can still cost more as history grows. Forecast row/byte fan-out and
+retrieval work alongside frames, requests, inputs, wall time and ending reserves.
+
 The current MCP server is5.2.2; its presentation remains `player-view/4`, marked by `presentation_schema`.
 Its tool arguments omit `request_id` and `wait_seconds`; old MCP payloads are
 rejected, not translated. The adapter assigns one UUID to each invocation whose

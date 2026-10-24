@@ -654,3 +654,29 @@ S-CODE and existing C-PORTABLE/C-REVIEW/C-MAINTENANCE cover this lesson. No new
 framework, per-action review, duplicate backlog or menu-specific tactic is needed.
 Current source/native/graphical/exact-CI/protected publication remain separate
 evidence lanes. GitHub owns remaining actions and the complete outcome.
+
+Subsequent prospective019review finds another coupled-capacity mismatch before
+Start:018's612Claims over116554game seconds imply about3176for seven days, beyond
+the fixed2048Claim ceiling. This is a rate proxy, not inevitable failure, but it
+contradicts the omitted storage lane. The small repair uses the existing SQLite
+history and derives the shared ceiling from2048plus three times the original
+admitted frame bound. It preserves context limits,64MiB DB limit, other record
+caps, immutable provenance and idempotence. No admission/record format changes,
+new store, eviction or failed-run extension. Full-context computation remains a
+scaling risk despite compact output; profile the newly reachable workload and
+retain the uncertainty. S-WORK/C-REVIEW now explicitly require this fan-out check;
+existing #136/#145/#177 own repair, prospective fit and real qualification.
+
+
+The capacity repair passes171integrated ledger/memory/procedure/budget/identity
+cases, including the real append boundary beyond2048 and exact derived ceilings.
+A synthetic real-component profile retains612–621 and3201–3210Claim histories.
+Ordinary context takes44.224–45.438ms versus1101.847–1254.564ms; complete context
+with an **empty required Work set** takes44.278–45.859ms versus1140.359–1248.460ms.
+Capture-native takes9.114–12.016ms versus58.236–64.990ms. The larger ordinary reply
+still contains three Claims and3521–3522UTF-8 bytes; the complete empty-Work reply
+contains zero Claims and832bytes. Output compactness does not imply cheap full
+frontier reduction. Setup is excluded, some engineering load overlaps, samples
+are local wall proxies and no native/model/display/whole-loop qualification or
+populated handoff success is claimed. Retain this scalability action in#177/#164;
+no cache, schema or broader memory redesign is a blanket next-campaign gate.
