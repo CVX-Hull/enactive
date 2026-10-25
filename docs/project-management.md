@@ -391,19 +391,53 @@ During triage, the lead adds selected issues to the linked Project and assigns
 Backlog, owner, Horizon, Priority, Size and Confidence. A newly opened issue is
 not automatically Ready; unset planning fields are resolved before commitment.
 
-An issue represents one independently reviewable outcome. A milestone groups
-issues into a useful capability or learning result with explicit acceptance and
-limitations; a batch of files or number of agent sessions is not a milestone.
+An issue represents one independently reviewable outcome. Use the following scales
+without another tracker or a mandatory record for each scale:
 
-Choose delivery rounds around a complete user-visible behavior when the interfaces
-and acceptance are understood. Related bounded issues can share one integrated PR
-and native acceptance session; an internal adapter or handoff need not become a
-separate delivery round. Split implementation ownership for safe parallel work,
-while retaining the shared end-to-end acceptance. Keep a smaller round when an
-unresolved experiment or interface decision would otherwise create speculative
-work. The lead checks this tradeoff at Ready review under C-REVIEW; file counts or
-agent count do not enforce it. Large aggregate issues still require bounded children
-before execution, and the two-writer/shared-runtime limits below remain unchanged.
+| Scale | Purpose and existing home |
+| --- | --- |
+| Product milestone | A useful capability or learning result spanning iterations; GitHub milestone/aggregate Issue owns acceptance and limitations |
+| Delivery iteration / round | One coherent capability, qualification/repair or discovery/enabler outcome; an existing Issue owns its core, optional scope and decision |
+| Integration batch | A safely reviewable integrated change; commits/PRs own implementation and review evidence |
+| Feedback checkpoint | Focused tests, design review, prototype or observation resolving a relevant uncertainty; retain results in the owning Issue/PR or consolidated report |
+| Runtime attempt | Separately frozen finite execution with original costs, failures and stop conditions; the existing run record owns evidence, not future authority |
+
+### Outcome-focused iterations
+
+Choose a valuable inspectable outcome, rather than a target number of cards, files,
+PRs, agent sessions or game attempts. A substantial outcome can contain several
+small integration batches and frequent inexpensive feedback. Related bounded
+issues may share an integrated PR and relevant acceptance setup; an internal
+adapter or handoff need not become a separate delivery round. Coordinated
+S-MIGRATION changes may need an atomic batch; do not create a second active
+contract simply to make the diff smaller.
+
+Shape a required core and explicitly optional scope. Include work only when it
+contributes to the goal, resolves a concrete risk/dependency, or economically
+shares setup without displacing the core. Being small or easy to close is not
+sufficient. Fund applicable reuse research, architecture/design, implementation,
+integration, regression checks, native/usefulness evidence, proportionate review,
+current documentation, publication and owned cleanup within the iteration.
+Link existing artifacts; this is not a document, full-suite or review quota per task.
+
+Capability iterations finish with the promised behavior and required evidence.
+Qualification/repair iterations establish a named important boundary. Discovery
+or accelerator iterations resolve a named decision or enable a specified later
+outcome, with evidence and a stop/revisit condition. A negative investigation may
+complete its declared research goal; it cannot satisfy failed feature acceptance.
+Use a bounded investigation when uncertainty prevents shaping a credible core;
+discovery can continue alongside independent understood delivery work.
+
+Choose an effort appetite and a reviewable horizon that include integration,
+rework, review and the scarce validation lane. If the core cannot fit, rescope or
+split it; reduce optional scope before weakening required quality or evidence.
+At a material forecast/risk change, explicitly decide to continue within the
+appetite, reshape, stop or propose a new iteration. Do not silently extend forever.
+No fixed sprint duration, story-point target, maintenance percentage or AI capacity
+multiplier is prescribed. Start with a cohesive M-or-smaller scoped outcome and
+adjust from comparable local evidence; large aggregates need bounded children.
+The lead checks goal, fit and completion capacity at Ready and integration review
+under C-REVIEW, retaining the two-writer/shared-runtime limits below.
 
 | Status | Entry/exit policy |
 | --- | --- |
@@ -445,10 +479,14 @@ across views. Use assignees for accountable owners and linked PRs for implementa
 
 ## Ready brief and execution capacity
 
-Each Ready issue links its relevant contracts and records: problem/user outcome;
-scope and exclusions; owner; acceptance/failure conditions and validation lanes;
-dependencies and agreed interfaces; risks/unknowns; size, effort range, confidence
-and assumptions; evidence expected; and any user decision required. Consequential
+Each Ready issue links its relevant contracts and records: problem/user outcome or
+discovery decision; required core, optional scope and exclusions; owner;
+acceptance/failure conditions and applicable validation lanes; dependencies and
+agreed interfaces; risks/unknowns and stop/rescope conditions; effort appetite,
+size, effort range, confidence and assumptions; evidence and completion work
+expected; and any user decision required. For children, link the parent iteration's
+appetite and shared integration/validation instead of allocating duplicate budgets.
+An appetite, assignment or forecast grants no runtime/API resources. Consequential
 changes link a [review brief](engineering.md#s-work-reviewable-and-proportionate-changes).
 A worker handoff additionally names base revision, worktree, owned paths, fixed
 decisions, exact checks and return evidence, as required by S-AGENT.
@@ -469,16 +507,23 @@ stops and hands evidence to the lead, who takes the work back and replans.
 
 ## Estimates and forecasts
 
-Estimate a range of effort for the whole outcome, including investigation,
-implementation, review, integration, rework and validation; name units and major
-assumptions. Separate this from elapsed delivery time, which includes queues and
-blocked time, and from token/API or financial budgets, which cap resources.
+An appetite states how much effort the outcome merits; an estimate predicts the
+effort needed. A forecast predicts completion under stated capacity and queue
+assumptions. Authorized run/input/token/API/financial allowances separately cap
+execution; none of these planning values grants or renews them.
+Estimate a range for the whole outcome, including investigation/reuse, design,
+implementation, review, integration, rework, applicable validation, documentation,
+publication and cleanup; name units and major assumptions. Separate this from
+elapsed delivery time, which includes queues and blocked time.
 Record actual effort when known, elapsed start/finish dates, waiting causes and
 budget use without inventing unavailable measurements. Re-estimate openly when
 scope, dependencies or evidence changes; retain the original estimate for learning.
 
 Track WIP, item age, completed outcomes per interval and elapsed cycle time from
-In progress to Done. Keep cancelled work separate. Compare similar item sizes,
+In progress to Done. Distinguish aggregate outcomes from leaf work; do not count
+them as independent jobs or invent unknown historical start dates. LOC, commits,
+PR count, tests added and agent utilization are activity, not success targets.
+Keep cancelled work separate. Compare similar item sizes,
 validation lanes and model/tool versions. Forecast from this project's history,
 recording sample size, period, exclusions and assumptions. With sparse history,
 give an explicitly provisional range and confidence; do not invent probability

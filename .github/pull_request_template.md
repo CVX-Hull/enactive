@@ -2,6 +2,11 @@
 
 <!-- Explain the user-visible problem and resulting behavior. Keep one reviewable outcome. -->
 
+<!-- Link the owning iteration's required core and optional scope. A PR is an integration
+batch, not necessarily the whole iteration. Note material scope/forecast changes and
+remaining review/validation/docs/cleanup; do not close the outcome on code alone.
+No new iteration document, full-suite rerun or report per task is required. -->
+
 <!-- Scope from the highest changed responsibility down to components, contracts/state/callers,
 implementation and procedures. Link the parent/component design; explain unchanged boundaries.
 Select applicable risk-based assurance from docs/project-management.md; no duplicate plan needed. -->
