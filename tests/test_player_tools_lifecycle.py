@@ -683,7 +683,7 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(self.runtime._store.observation(self.runtime._current)["category"], "PLAYER_INFO")
         return world, self.runtime._current, original_unknown
 
-    def assert_adoption_refusal_preserves_phase(self, identity, claims):
+    def assert_adoption_refusal_preserves_phase(self, identity, claims, *, receipt_stage=None):
         phase, lease = self.runtime._registered_lifecycle.phase, self.runtime._lease
         root = deepcopy(self.runtime._ledger.request(phase.root_id))
         before, delivered = self.runtime.status(), deepcopy(self.bridge.delivered)
@@ -693,7 +693,8 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(refused["state"], "blocked", refused)
         self.assertIn("No input was sent", refused["result"]["reason"])
         self.assertFalse(refused["result"]["grants_authority"])
-        self.assertEqual(refused["result"]["phase"], self.runtime._registered_lifecycle.receipt(phase, phase.stage))
+        self.assertEqual(refused["result"]["phase"], self.runtime._registered_lifecycle.receipt(
+            phase, phase.stage if receipt_stage is None else receipt_stage))
         self.assertIs(self.runtime._registered_lifecycle.phase, phase)
         self.assertIs(self.runtime._current, phase.checkpoint)
         self.assertIs(self.runtime._lease, lease)
@@ -704,6 +705,19 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         for field in ("epoch", "phase", "spent_inputs", "current_source", "lease_owner"):
             self.assertEqual(self.runtime.status()[field], before[field], field)
         return refused
+
+    def test_premature_adoption_preserves_private_confirmation_stage_with_public_receipt(self):
+        self.ready()
+        self.run_request(self.lifecycle("create"))
+        self.run_request(self.control("world-form", "Create World"))
+        self.run_request(self.lifecycle("world-finalize", parent="create"))
+        phase = self.runtime._registered_lifecycle.phase
+        self.assertEqual(phase.stage, "world_confirmation")
+        self.assert_adoption_refusal_preserves_phase("early-adoption", ["unknown-claim"],
+            receipt_stage="awaiting_control")
+        corrected = self.run_request(self.control("world-yes", "Yes", question="Are you SURE you're finished?"))
+        self.assertEqual(corrected["state"], "partial", corrected)
+        self.assertNotEqual(self.runtime._registered_lifecycle.phase.stage, "world_confirmation")
 
     def test_premature_adoption_preserves_open_identity_for_explicit_return_and_correction(self):
         world, screen, original_unknown = self.inspected_identity()

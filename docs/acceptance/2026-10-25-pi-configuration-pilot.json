@@ -1,0 +1,200 @@
+{
+  "status": "closed-failed-pilot; reject exact configuration for adoption, defer comparative model selection",
+  "date": "2026-10-25",
+  "scope": "historical unmatched whole-configuration comparison; no causal harness/model claim",
+  "source": "6c73a2b86f3fd00cfc2a538643d910077d8712be",
+  "native_sha256": "96e58aa08e7f8dd74c42f1bd30bc48a11ebd0eca16deac4cd810e1e843b6fe70",
+  "pi_packages": "1.4.0",
+  "requested_model": "deepseek-ai/DeepSeek-V4.1-Flash-1017:zRTkTPfs",
+  "reported_backend": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+  "immutable_serving_revision_attested": false,
+  "effort": "low",
+  "max_output_tokens": 8192,
+  "provider_retries": 0,
+  "compatibility": {
+    "requests": 4,
+    "usage": {
+      "input": 1180,
+      "output": 1203,
+      "cacheRead": 640,
+      "cacheWrite": 0,
+      "reasoning": 1038,
+      "totalTokens": 3023
+    },
+    "configured_base_rate_estimate_usd": "0.00096164",
+    "game_inputs": 0,
+    "null_assistant_content_accepted": true,
+    "reasoning_replay_characters": 2975,
+    "limits": "synthetic image/tool continuation; not gameplay competence"
+  },
+  "native_pilot": {
+    "mission_id": "pi-configuration-001",
+    "original_hosts": 1,
+    "successor_hosts": 0,
+    "event_counts": {
+      "host-start": 1,
+      "mcp-connected": 1,
+      "request-start": 20,
+      "response-headers": 20,
+      "response-first-chunk": 20,
+      "response-backend": 20,
+      "response-complete": 20,
+      "tool-start": 18,
+      "tool-result": 18,
+      "abort": 1,
+      "settled": 1
+    },
+    "settled": {
+      "type": "settled",
+      "wall_time": "2026-10-25T21:17:44.963Z",
+      "monotonic_ms": 256093.87045800002,
+      "ok": false,
+      "reason": "request-limit",
+      "requests": 20,
+      "native_cleanup_claimed": false
+    },
+    "usage": {
+      "input": 55700,
+      "output": 14259,
+      "cacheRead": 850560,
+      "cacheWrite": 0,
+      "reasoning": 10216,
+      "totalTokens": 920519
+    },
+    "configured_base_rate_estimate_usd": "0.02479876",
+    "request_content_totals": {
+      "text_parts": 543,
+      "text_bytes": 1571190,
+      "image_parts": 104,
+      "image_bytes": 6817056,
+      "payload_bytes": 12107069
+    },
+    "compact_payload_json_bytes": 12107069,
+    "timing": {
+      "response-headers": {
+        "n": 20,
+        "minimum": 517.3577499999994,
+        "median": 920.6668539999882,
+        "mean": 943.7175188000006,
+        "maximum": 1420.7376250000088
+      },
+      "response-first-chunk": {
+        "n": 20,
+        "minimum": 1042.2593329999997,
+        "median": 1555.9377079999995,
+        "mean": 1515.2059061500004,
+        "maximum": 2265.3544160000165
+      },
+      "response-complete": {
+        "n": 20,
+        "minimum": 1298.98375,
+        "median": 6499.237958500001,
+        "mean": 11880.833593750001,
+        "maximum": 41681.804625000004
+      },
+      "host_trace_span_ms": 256092.817875,
+      "driver_host_span_seconds": 256.57248401641846
+    },
+    "mission_counts": {
+      "requests": {
+        "blocked": 3,
+        "completed": 8,
+        "partial": 2,
+        "unknown": 1
+      },
+      "primitives": {
+        "returned": 4,
+        "unknown": 1
+      },
+      "memory": {
+        "claim": 1
+      },
+      "sqlite_bytes": 393216,
+      "frames": 18,
+      "frame_bytes": 1313961
+    },
+    "useful_ordinary_play_established": false,
+    "normal_ending_established": false,
+    "procedure_application_established": false,
+    "qualified_useful_goal_cohort": false,
+    "game_seconds": "unknown; no adopted normal timeline",
+    "closure": "supported Stop then exceptional native TERM and controller SIGINT; original unresolved cleanup flag retained, later exact five recorded PIDs absent and port8766 closed",
+    "save_file_identity": {
+      "before_files": 242,
+      "after_files": 242,
+      "added": [],
+      "deleted": [],
+      "changed": []
+    }
+  },
+  "total_provider_accounting": {
+    "requests": 24,
+    "usage": {
+      "input": 56880,
+      "output": 15462,
+      "cacheRead": 851200,
+      "cacheWrite": 0,
+      "reasoning": 11254,
+      "totalTokens": 923542
+    },
+    "configured_base_rate_estimate_usd": "0.0257604",
+    "reasoning_already_within_output": true,
+    "provider_billed_total": "unknown",
+    "original_approved_usd": "10.00",
+    "original_max_requests": 44,
+    "per_request_conservative_reservation_usd": "0.2146304",
+    "reservation_consumed_for_24_requests_usd": "5.1511296",
+    "full_44_request_reservation_usd": "9.4437376",
+    "further_requests_selected": false
+  },
+  "baseline": {
+    "mission_id": "useful-learning-007",
+    "source": "00de5b6bcfc30efffbe294e56ceb0dfd7adb0a02",
+    "disposition": "Stopped normally with useful progress; objective completion and whole-player cadence unclaimed;217specific recovery hint unexercised",
+    "requests": 85,
+    "request_states": {
+      "completed": 25,
+      "partial": 53,
+      "unknown": 2,
+      "blocked": 5
+    },
+    "primitive_count": 84,
+    "primitive_states": {
+      "returned": 81,
+      "unknown": 3
+    },
+    "frames": 232,
+    "frame_bytes": 25180553,
+    "game_seconds": 51,
+    "memory_events": 208,
+    "memory_types": {
+      "claim": 205,
+      "procedure": 2,
+      "work": 1
+    },
+    "sqlite_bytes": 1372160
+  },
+  "private_evidence_hashes": {
+    ".runtime/campaigns/pi-configuration-001/driver-original.jsonl": "8b1c0e07c7a9a1ddad75d163be08059b91f38dcd377a83a9ac135771ab05bef4",
+    ".runtime/missions/pi-configuration-001/mission.sqlite3": "4b199e3b6832ee8e18b88a222891fca4898d8ac1cb2308843a84351c9d3042b5",
+    ".runtime/missions/pi-configuration-001/evidence/evidence.json": "5517e0ac6cfd9fe3f8677f60aa7c8767ef520008a4d0893dd774886caecd325e",
+    ".runtime/campaigns/pi-configuration-001/preparation/actual-freeze.json": "30bfccb6ab7980ccd5117554996aa1f1fff07a7f63c0fefe2e96e10f18ae5d19",
+    ".runtime/campaigns/pi-configuration-001/preparation/supervisor-receipt.json": "dc08d1903593a61297dab3208a8682445d9a0e7faa53faf0b0c359bf2b3e3eee",
+    ".runtime/campaigns/pi-configuration-001/preparation/post-controller-closure.json": "801b707070bec21f2309a306be1b3b2bcc5340fb60a8c07621ab679c67507703",
+    ".runtime/campaigns/pi-configuration-001/preparation/pre-run-save-manifest.json": "2ea6bd1ca16fd4acd669762b1539712e66ceba51f2aa81663af5c91c52fc95b5",
+    ".runtime/campaigns/pi-configuration-001/preparation/post-run-save-manifest.json": "a6b825006d49cee8c3a5c9683d8dfcf60961f52e466c76192edc903130da8fae",
+    ".runtime/host-model236/compatibility001/summary.json": "7a72033348ada0d1cfe0f1c2c1716bfd4f103ef545eb6cc2ad86a1c607464b23"
+  },
+  "limits": [
+    "timings are provider request/host boundaries, not inference or decision-to-useful-visible-effect",
+    "no physical display clock or paid provider invoice",
+    "last response content not fully retained unless forwarded to subsequent request; do not infer final intent",
+    "all-role lead/reviewer token, monetary and active effort totals unavailable",
+    "source repair cannot relabel failed native outcome"
+  ],
+  "source_repair_scope": {
+    "new_paths": "premature stage; empty/incomplete/unknown/wrong-subject Claim selection; current healthy phase only",
+    "native_correction_qualified": false,
+    "pre_existing_gap": "Later candidate-proof ContractError catch can preserve phase/lease after historical PNG corruption; adoption still blocked; #176 owns classification/retirement repair"
+  }
+}

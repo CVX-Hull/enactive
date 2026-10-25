@@ -1004,10 +1004,11 @@ class RegisteredLifecycle:
         r._capacity(frames=2, byte_count=2 * MAX_FRAME_BYTES)
         r._store.preflight_retention()
         r._check_cancelled(work)
+        stage = phase.stage if phase.stage in ("awaiting_identity", "awaiting_adoption") else "awaiting_control"
         return "blocked", {"reason": reason + " No input was sent; the original phase and limits remain. "
             "Submit a NEW explicit request after correcting the selection.",
             "source_ids": [phase.checkpoint.observation_id],
-            "phase": self.receipt(phase, phase.stage), "grants_authority": False}
+            "phase": self.receipt(phase, stage), "grants_authority": False}
 
     def _adopt(self, work: _Work, phase: NormalPhase) -> tuple[str, dict]:
         r, data = self.runtime, work.request

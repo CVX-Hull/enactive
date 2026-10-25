@@ -46,6 +46,7 @@ actual timing and menu-only cleanup do not qualify the player or full campaign.
 | [Architecture/governance assessment](acceptance/2026-10-24-architecture-governance-audit.md) | Artifact coverage, findings/dispositions and failed024 context; no new gameplay acceptance |
 | [Verification pilots](acceptance/2026-10-25-verification-pilots.md) | Small assurance trace; measured impact-selector misses and default-backend incompatibility; CI routing unchanged |
 | [Pi host offline qualification](acceptance/2026-10-25-pi-host-offline.md) | Pinned provider/MCP serialization, restricted loadout, finite host/process control and fixture-only event costs; no inference, graphical play or speed comparison |
+| [Pi/DeepInfra configuration pilot](acceptance/2026-10-25-pi-configuration-pilot.md) | Four-call basic compatibility, failed twenty-request native pilot, caller error and runtime recovery defect, exceptional closure and cost/timing limits; reject this gameplay configuration and defer model selection |
 
 The [acceptance directory](acceptance/) retains other successes, intermediate
 failures and their costs. Original unknown acknowledgments remain distinct from
