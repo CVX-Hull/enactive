@@ -127,7 +127,8 @@ reflection-job and advice replies have explicit output limits to preserve bounde
 records. Direct input is an intent on `enactive_skill`, not a new input tool;
 Observe macro closure likewise uses `enactive_observe`. These project settings
 do not prove the running host loaded the current schemas/help or grant authority.
-Current MCP server5.3.0 generates request IDs and collection waits; its model
+The current [MCP implementation](../harness/player_mcp.py) generates request IDs
+and collection waits; its model
 arguments reject caller-supplied `request_id`/`wait_seconds`. Focused help exports
 this same current model schema. The imperative Python SDK's explicit-ID surface
 serves engineering and duplicate collection, not a compatibility mode for MCP.
@@ -150,7 +151,7 @@ for the adviser host, preserving its configured tool filters/timeout. It enables
 only reflection next/submit/source/result; the default player profile stays60s.
 Software waits through empty polls; a non-idle claim/refusal/unknown/closed result
 still returns immediately. This export is not installation, host launch or actual
-profile qualification. Re-export current selected schema cards for MCP5.3.0;
+profile qualification. Re-export current selected schema cards from the implementation;
 old full-canonical candidate authoring and mission/proposal-ID advice calls reject.
 
 For a dedicated CLI player, a frozen run profile may narrow `enabled_tools` to the
