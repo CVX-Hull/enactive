@@ -676,6 +676,120 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         self.assertEqual(selected["mission"]["spent_inputs"], before)
         self.assertEqual(self.bridge.delivered, delivered)
 
+    def inspected_identity(self):
+        world, original_unknown = self.paused_identity()
+        self.assertEqual(self.run_request(self.lifecycle("identity-readmit", parent="create"))["state"], "completed")
+        self.assertEqual(self.run_request(self.control("identity-inspect", "Character", kind="inspect"))["state"], "completed")
+        self.assertEqual(self.runtime._store.observation(self.runtime._current)["category"], "PLAYER_INFO")
+        return world, self.runtime._current, original_unknown
+
+    def assert_adoption_refusal_preserves_phase(self, identity, claims):
+        phase, lease = self.runtime._registered_lifecycle.phase, self.runtime._lease
+        root = deepcopy(self.runtime._ledger.request(phase.root_id))
+        before, delivered = self.runtime.status(), deepcopy(self.bridge.delivered)
+        memory = self.runtime._ledger.memory_records("claim")
+        deadline = self.runtime._mission_deadline
+        refused = self.run_request(self.lifecycle(identity, parent=phase.root_id, claims=claims))
+        self.assertEqual(refused["state"], "blocked", refused)
+        self.assertIn("No input was sent", refused["result"]["reason"])
+        self.assertFalse(refused["result"]["grants_authority"])
+        self.assertEqual(refused["result"]["phase"], self.runtime._registered_lifecycle.receipt(phase, phase.stage))
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertIs(self.runtime._current, phase.checkpoint)
+        self.assertIs(self.runtime._lease, lease)
+        self.assertEqual(self.runtime._ledger.request(phase.root_id), root)
+        self.assertEqual(self.runtime._mission_deadline, deadline)
+        self.assertEqual(self.runtime._ledger.memory_records("claim"), memory)
+        self.assertEqual(self.bridge.delivered, delivered)
+        for field in ("epoch", "phase", "spent_inputs", "current_source", "lease_owner"):
+            self.assertEqual(self.runtime.status()[field], before[field], field)
+        return refused
+
+    def test_premature_adoption_preserves_open_identity_for_explicit_return_and_correction(self):
+        world, screen, original_unknown = self.inspected_identity()
+        character = self.remember_identity("character", "character", screen, 0)
+        for identity, claims in (("adopt-without-claims", []), ("adopt-only-character", [character])):
+            refused = self.assert_adoption_refusal_preserves_phase(identity, claims)
+            self.assertIn("dismiss", refused["result"]["reason"])
+        world_claim = self.remember_identity("world", "world", world, 0)
+        self.assertEqual(self.run_request(self.control("identity-return", "Cancel"))["state"], "partial")
+        adopted = self.run_request(self.lifecycle("corrected-adoption", parent="create", claims=[world_claim, character]))
+        self.assertEqual(adopted["state"], "completed", adopted)
+        self.assertIsNone(self.runtime._registered_lifecycle.phase)
+        self.assertEqual(self.runtime._ledger.request("character-yes"), original_unknown)
+
+    def test_adoption_claim_selection_is_correctable_after_explicit_return(self):
+        world, screen, _ = self.inspected_identity()
+        character = self.remember_identity("character", "character", screen, 0)
+        other = self.remember_identity("other-character", "character", screen, 0)
+        self.assertEqual(self.run_request(self.control("identity-return", "Cancel"))["state"], "partial")
+        for identity, claims in (("adopt-empty", []), ("adopt-incomplete", [character]),
+                ("adopt-unknown", [character, "unknown-claim"]), ("adopt-wrong-subject", [character, other])):
+            refused = self.assert_adoption_refusal_preserves_phase(identity, claims)
+            self.assertIn("world", refused["result"]["reason"])
+            self.assertIn("character", refused["result"]["reason"])
+        world_claim = self.remember_identity("world", "world", world, 0)
+        adopted = self.run_request(self.lifecycle("corrected-adoption", parent="create", claims=[world_claim, character]))
+        self.assertEqual(adopted["state"], "completed", adopted)
+
+    def test_adoption_refusal_does_not_conceal_fatal_faults(self):
+        for fault in ("wrong_actor", "takeover", "process_lost", "lease", "published", "changed_pixels",
+                "archive", "retention", "root_budget", "deadline", "input_budget", "memory_corruption"):
+            with self.subTest(fault=fault):
+                case = StructuredLifecycleTests("test_adoption_claim_selection_is_correctable_after_explicit_return")
+                case.setUp()
+                try:
+                    if fault == "input_budget":
+                        case.a = replace(case.a, limits=replace(case.a.limits, inputs=9 + case.a.cleanup_reserve.inputs))
+                    _, screen, _ = case.inspected_identity()
+                    character = case.remember_identity("character", "character", screen, 0)
+                    if fault == "memory_corruption":
+                        case.run_request(case.control("identity-return", "Cancel"))
+                    owner = case.runtime._registered_lifecycle.phase
+                    request = case.lifecycle("faulted-adoption", parent="create", claims=[character])
+                    with ExitStack() as faults:
+                        if fault == "wrong_actor":
+                            case.runtime._registered_lifecycle.phase = replace(owner, actor_id="another-player")
+                        elif fault == "takeover":
+                            with case.controller.data_lock:
+                                case.controller.state["takeover_generation"] += 1
+                        elif fault == "process_lost":
+                            case.process_state.update(running=False, returncode=1, outcome="exited")
+                        elif fault == "lease":
+                            case.runtime._lease = None
+                        elif fault == "published":
+                            primitive = case.runtime._ledger.primitive_records()[-1]
+                            case.runtime._ledger._db.execute("UPDATE primitives SET state='published' WHERE id=?",
+                                (primitive["logical_id"],))
+                        elif fault == "changed_pixels":
+                            state = case.runtime._live()[0]
+                            Path(case.controller.bridge / state["frame"]).write_bytes(b"\x89PNG\r\n\x1a\nchanged live pixels")
+                        elif fault == "archive":
+                            faults.enter_context(patch.object(case.runtime._store, "inspect_current_boundary",
+                                side_effect=EvidenceError("fixture archive failure")))
+                        elif fault == "retention":
+                            case.runtime._store.max_frames = case.runtime._store.usage()["frames"]
+                        elif fault == "root_budget":
+                            limit = case.runtime._ledger.request("create")["request"]["limits"]["primitives"]
+                            faults.enter_context(patch.object(case.runtime._ledger, "_phase_primitive_count", return_value=limit))
+                        elif fault == "deadline":
+                            case.runtime._mission_deadline = case.runtime._wall() - 1
+                        elif fault == "memory_corruption":
+                            # Corrupt only this disposable fixture's retained Claim JSON.
+                            case.runtime._ledger._db.execute("UPDATE memory SET body='{' WHERE record_id=?", (character,))
+                        charged, delivered = case.runtime.status()["spent_inputs"], len(case.bridge.delivered)
+                        response = case.runtime.command(request)
+                        self.assertEqual(response["status"], "accepted", response)
+                        blocked = case.settled(request["request_id"])
+                        self.assertEqual(blocked["state"], "blocked", blocked)
+                        self.assertNotIn("No input was sent", blocked["result"]["reason"])
+                        self.assertEqual(case.runtime.status()["spent_inputs"], charged)
+                        self.assertEqual(len(case.bridge.delivered), delivered)
+                        self.assertIsNone(case.runtime._lease)
+                        self.assertIsNone(case.runtime._registered_lifecycle.phase)
+                finally:
+                    case.doCleanups()
+
     def test_premature_identity_refusal_does_not_conceal_integrity_or_budget_faults(self):
         for fault in ("uncommitted_transition", "wrong_actor", "takeover", "changed_pixels",
                       "wrong_source", "process_lost", "published", "retention", "active_ledger", "root_budget"):
