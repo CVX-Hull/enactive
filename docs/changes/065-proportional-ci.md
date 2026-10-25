@@ -25,8 +25,8 @@ GitHub owns PR/run/job state and required status, unittest owns discovery/durati
 reporting, and Mermaid owns rendering. Current source/evidence integrity, ordinary
 human-visible CDDA behavior and gameplay acceptance are unaffected.
 
-Retained PR202/main measurements show 2,044 tests taking1191.477s and1134.402s.
-Their sum38m45.879s excludes other checks. Buffered log gaps are not individual
+Retained PR202/main measurements show 2,044 tests taking 1191.477s and 1134.402s.
+Their sum 38m45.879s excludes other checks. Buffered log gaps are not individual
 test durations or causal attribution. Add standard unittest `--durations 20` and
 command elapsed times to existing logs, not another metrics service. Optimize
 observed expensive or redundant fixtures only when their actual failure coverage
@@ -40,7 +40,7 @@ checkpoint, including its existing calendar-only warnings. A mutually exclusive
 strict profile runs syntax/Ruff/import/JavaScript checks, document metadata/links,
 current-date governance without `--development`, whitespace and diagram rendering.
 
-Full additionally runs complete unittest discovery with20 slowest durations and
+Full additionally runs complete unittest discovery with 20 slowest durations and
 the Node viewer suite. Editorial runs no runtime tests or viewer suite and says
 so explicitly. Main-smoke runs the viewer suite plus these existing cases:
 
@@ -109,7 +109,7 @@ merged_at; equality, malformed times or a later same-head run choose full. This
 binds the main-only run to a base no later than the actual merged parent. GitHub
 reruns retain the original SHA/ref, so the original creation timestamp is used.
 A passing name or merely associated PR is insufficient. API
-run.pull_requests may be empty after merge, as observed on202; head/workflow/event,
+run.pull_requests may be empty after merge, as observed on PR #202; head/workflow/event,
 PR metadata and Git relationships establish the connection. Do not search past a
 newer failed/cancelled/incomplete run for an older green one.
 
