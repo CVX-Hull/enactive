@@ -114,7 +114,7 @@ def make_server(player: PlayerTools, *, advisory_idle_seconds: float = 0) -> Ser
             player.invalidate_image_presentation()
             raise
 
-    server = Server("enactive-player", version="5.4.0",
+    server = Server("enactive-player", version="6.0.0",
         instructions="Use only your designated role and admitted mission. Choose gameplay intent, exact returned snapshot/source and finite execution limits. Snapshots and proof receipts are read-only: grants_authority=false is not a failed adoption or an execution refusal. Follow the actual result, next_needed_decision and active phase; the writer checks each request. Software assigns request IDs and bounded collection waits; do not supply request_id or wait_seconds. Pending/uncertain delivery requires original result collection, never resubmission. User Pause remains independent. An adviser uses only enactive_reflect_next/submit/source/result, computes only after a durable claim and submits candidate data without input or memory adoption. The player reads advice and owns adoption. Roles are procedural, not security isolation.",
         on_list_tools=list_tools, on_call_tool=call_tool,
         get_tool_input_schema=lambda name: player.model_specs[name].schema if name in player.model_specs else None)

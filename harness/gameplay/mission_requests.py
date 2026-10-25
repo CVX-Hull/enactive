@@ -9,9 +9,9 @@ from __future__ import annotations
 
 import hashlib
 
-from .contracts import ContractError, EvidenceRef, json_object
+from .contracts import ContractError, EvidenceRef, json_object, validate_json
 from .evidence import _identity, _validate_observation
-from .mission_contracts import VERSION, validate_submission
+from .mission_contracts import VERSION, request_schema, validate_request, validate_submission
 
 _DERIVED = frozenset(("schema", "mission_id", "epoch", "request_id", "limits", "phase_id",
                       "sources", "expected_session", "expected_revision", "expected_boundary_id"))
@@ -71,7 +71,8 @@ def _selected_phase(snapshot: dict, scope: str, intent: dict, primary: str | Non
     return summary["origin_request_id"]
 
 
-def _bind_skill_goal(snapshot: dict, data: dict, scope: str, source: dict) -> None:
+def _bind_skill_goal(snapshot: dict, data: dict, scope: str, source: dict,
+                     original_root: dict | None, limits: dict) -> None:
     """Fill mechanical fields in this private intent copy, never fetch context."""
     kind = data.get("skill_kind")
     if kind not in ("navigate", "activity"):
@@ -91,6 +92,33 @@ def _bind_skill_goal(snapshot: dict, data: dict, scope: str, source: dict) -> No
     else:
         if "interrupt_request_id" in goal:
             raise ContractError("Activity intent must omit its derived interrupt_request_id")
+        stable = ("operation", "target", "game_seconds", "interrupt_allowed")
+        if scope == "new_root":
+            if set(goal) != {"step", *stable} or goal.get("step") != "start":
+                raise ContractError("Activity root requires start and its semantic fields; omit answer and owner")
+        else:
+            fields = {"step", "answer"} if goal.get("step") == "answer_interrupt" else {"step"}
+            if (scope not in ("prompt", "activity") or set(goal) != fields
+                    or goal.get("step") not in ("poll", "interrupt", "resume", "answer_interrupt")):
+                raise ContractError("Activity child requires only its step and explicit interrupt answer")
+            root = validate_request(original_root)
+            if (root.get("mission_id") != snapshot["mission_id"]
+                    or root.get("request_id") != snapshot[scope + "_phase"]["origin_request_id"]
+                    or root.get("phase_id") is not None or root["kind"] != "skill"
+                    or root["skill_kind"] not in ("activity", "direct", "program")):
+                raise ContractError("Activity child requires its exact canonical original root")
+            if root["skill_kind"] == "activity":
+                goal.update({key: root["goal"][key] for key in stable})
+            else:
+                # Ordinary roots declare a ceiling, not a semantic duration.
+                # Keep this child within each explicit ceiling and wire bound.
+                activity_fields = request_schema("skill", skill_kind="activity")["properties"]
+                validate_json(limits, activity_fields["limits"])
+                maximum = activity_fields["goal"]["properties"]["game_seconds"]["maximum"]
+                goal.update(operation="direct", target=root["goal"]["expected"],
+                    game_seconds=min(root["limits"]["game_seconds"], limits["game_seconds"], maximum),
+                    interrupt_allowed=root["goal"]["interrupt_allowed"])
+        goal.setdefault("answer", None)
         owner = None
         if goal.get("step") == "answer_interrupt":
             phase = snapshot["activity_phase"]
@@ -107,7 +135,8 @@ def _bind_skill_goal(snapshot: dict, data: dict, scope: str, source: dict) -> No
 
 def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: dict,
                     scope: str, source: dict | None = None,
-                    supporting_source_ids: tuple[str, ...] = ()) -> dict:
+                    supporting_source_ids: tuple[str, ...] = (),
+                    original_root: dict | None = None) -> dict:
     """Copy chosen semantics into one validated current request, without authority.
 
     All three public phase summaries must be present, including explicit nulls.
@@ -120,7 +149,9 @@ def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: di
     Intent contains the existing skill/lifecycle semantic fields, including Work
     and perception choices, with every derived header omitted. Perception's
     source_id, navigation goal.scope and activity interrupt owner are also derived
-    only from this selected context. Limits and a new request ID are caller choices;
+    only from this selected context. Activity children choose only step/answer;
+    their explicit canonical original_root supplies the immutable semantics.
+    Limits and a new request ID are caller choices;
     no deadline or budget is inferred or extended. Explicit support IDs supplement
     the chosen primary (for example, first/latest transition observations).
     validate_submission owns the final closed schema and admission constraints;
@@ -155,7 +186,7 @@ def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: di
         primary, binding = _source_binding(source)
     parent = _selected_phase(snapshot, scope, data, primary)
     if data["kind"] == "skill":
-        _bind_skill_goal(snapshot, data, scope, source)
+        _bind_skill_goal(snapshot, data, scope, source, original_root, limits)
     if view is not None:
         view["source_id"] = primary
     return validate_submission({**data, "schema": VERSION, "mission_id": snapshot["mission_id"],

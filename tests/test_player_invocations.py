@@ -18,7 +18,7 @@ from harness.gameplay.mission_contracts import MAX_HANDOFF_SOURCES
 from harness.player_mcp import make_server
 from harness.player_tools import PlayerTools, tool_specs, _validate_arguments
 from tests.test_player_claims import StagingClient
-from tests.test_mission_request_producer import bundle, snapshot
+from tests.test_mission_request_producer import activity_root, bundle, snapshot
 from tests.test_reflection_tools import AdvisoryClient, SCOPE, submit_args
 
 
@@ -266,31 +266,97 @@ class InvocationTests(unittest.TestCase):
         self.run_client(exercise)
         self.assertEqual(args, before)
 
-    def test_model_activity_derives_selected_owner_and_rejects_old_nested_copy(self):
+    def activity_arguments(self, *, scope="activity", step="answer_interrupt"):
         source = bundle(kind='interrupt_confirmation')
         source['observation']['boundary'].update(interrupt_request_id='owned-interrupt', recovery_operations=['answer_interrupt'])
-        phase = dict(origin_request_id='activity-root', checkpoint_id=source['reference']['observation_id'],
+        phase = dict(origin_request_id='original-root', checkpoint_id=source['reference']['observation_id'],
             stage='interrupt_confirmation', answered=False, interrupt_request_id='owned-interrupt')
         self.player.snapshots['chosen'] = dict(snapshot_id='chosen',
-            mission=snapshot(phase='paused', activity_phase=phase), source=source, native={})
-        args = dict(snapshot_id='chosen', scope='activity', source_id=None, supporting_source_ids=[],
+            mission=snapshot(phase='paused', **{scope + '_phase': phase}), source=source, native={})
+        return dict(snapshot_id='chosen', scope=scope, source_id=None, supporting_source_ids=[],
             limits=dict(primitives=1, wall_seconds=7, game_seconds=60), intent=dict(skill_kind='activity',
-                goal=dict(operation='rest', target='Rest', game_seconds=60, interrupt_allowed=True,
-                    step='answer_interrupt', answer='NO'), work_id=None, perception=None, procedure=None))
+                goal=dict(step=step, **(dict(answer='NO') if step == 'answer_interrupt' else {})),
+                work_id=None, perception=None, procedure=None))
+
+    def root_collection(self, root):
+        original_json = self.backend._json
+        def collect(path, *, data=None, **options):
+            body = json.loads(data)
+            if body['kind'] == 'result':
+                self.backend.reads.append(body)
+                return dict(status='accepted', operation=dict(request=deepcopy(root), state='partial', result={}))
+            return original_json(path, data=data, **options)
+        return collect
+
+    def test_model_activity_derives_selected_root_and_owner_and_rejects_copied_fields(self):
+        root = activity_root()
+        args = self.activity_arguments()
+        self.backend._json = self.root_collection(root)
         async def exercise(client):
             reply = await client.call_tool('enactive_skill', args)
             self.assertFalse(reply.is_error, reply)
             request = self.backend.writes[-1]
-            self.assertEqual(request['goal'], {**args['intent']['goal'], 'interrupt_request_id': 'owned-interrupt'})
-            self.assertEqual(request['phase_id'], 'activity-root')
-            old = deepcopy(args)
-            old['intent']['goal']['interrupt_request_id'] = None
-            self.assertTrue((await client.call_tool('enactive_skill', old)).is_error)
+            self.assertEqual(request['goal'], {**root['goal'], **args['intent']['goal'],
+                'interrupt_request_id': 'owned-interrupt'})
+            self.assertEqual(request['phase_id'], 'original-root')
+            self.assertEqual(self.backend.reads, [dict(schema='mission/11', kind='result',
+                mission_id='mission-test', operation_id='original-root')])
+            for key, value in root['goal'].items():
+                if key == 'step' or key == 'answer':
+                    continue
+                old = deepcopy(args)
+                old['intent']['goal'][key] = value
+                self.assertTrue((await client.call_tool('enactive_skill', old)).is_error)
             self.assertEqual(len(self.backend.writes), 1)
+            self.assertEqual(len(self.backend.reads), 1)
             self.player.snapshots['chosen']['mission']['activity_phase']['answered'] = True
-            events = deepcopy(self.backend.events)
-            self.assertTrue((await client.call_tool('enactive_skill', args)).is_error)
-            self.assertEqual(self.backend.events, events)
+            with patch.object(self.backend, '_stage', wraps=self.backend._stage) as stage:
+                reply = await client.call_tool('enactive_skill', args)
+                self.assertTrue(reply.is_error)
+                self.assertEqual(self.value(reply)['submission'], 'not_submitted')
+                stage.assert_not_called()
+            self.assertEqual(len(self.backend.writes), 1)
+        self.run_client(exercise)
+
+    def test_model_activity_prompt_and_activity_children_collect_the_exact_original(self):
+        async def exercise(client):
+            for kind in ('activity', 'direct', 'program'):
+                root = activity_root(kind)
+                self.backend._json = self.root_collection(root)
+                for scope, steps in (('prompt', ('poll', 'interrupt')), ('activity', ('resume', 'answer_interrupt'))):
+                    for step in steps:
+                        with self.subTest(kind=kind, scope=scope, step=step):
+                            args = self.activity_arguments(scope=scope, step=step)
+                            reply = await client.call_tool('enactive_skill', args)
+                            self.assertFalse(reply.is_error, reply)
+                            request = self.backend.writes[-1]
+                            self.assertEqual(request['phase_id'], root['request_id'])
+                            self.assertEqual(request['limits'], args['limits'])
+                            self.assertEqual(request['goal']['target'], root['goal'].get('target', root['goal'].get('expected')))
+                            self.assertEqual(request['goal']['interrupt_request_id'],
+                                'owned-interrupt' if step == 'answer_interrupt' else None)
+            self.assertEqual(len(self.backend.writes), 12)
+            self.assertEqual(len(self.backend.reads), 12)
+        self.run_client(exercise)
+
+    def test_missing_mismatched_or_noncanonical_original_never_stages_or_submits_child(self):
+        root = activity_root()
+        invalid_roots = (None, {}, {**root, 'mission_id': 'other'}, {**root, 'request_id': 'other'},
+            {**root, 'schema': 'mission/10'}, {**root, 'phase_id': 'ancestor'},
+            {**root, 'skill_kind': 'inspect', 'goal': dict(purpose='needs')})
+        async def exercise(client):
+            for root_result in invalid_roots:
+                self.backend._json = self.root_collection(root_result)
+                args = self.activity_arguments(scope='prompt', step='interrupt')
+                with self.subTest(root=root_result), patch.object(self.backend, '_stage', wraps=self.backend._stage) as stage:
+                    reply = await client.call_tool('enactive_skill', args)
+                    self.assertTrue(reply.is_error)
+                    value = self.value(reply)
+                    self.assertEqual(value['submission'], 'not_submitted')
+                    self.assertNotIn('original_collection', value)
+                    stage.assert_not_called()
+            self.assertEqual(self.backend.writes, [])
+            self.assertEqual(list((self.root / '.runtime' / 'mission-requests').glob('*')), [])
         self.run_client(exercise)
 
     def test_lost_submission_returns_original_id_and_fresh_adapter_only_collects_it(self):

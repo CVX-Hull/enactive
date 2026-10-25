@@ -48,6 +48,24 @@ def phase(source, **changes):
                 grants_authority=False, **changes)
 
 
+def activity_root(kind="activity", *, consent=True, game_seconds=60):
+    """Canonical immutable original, independent of the selected child epoch."""
+    goal = dict(operation="rest", target="Exact original rest description", game_seconds=game_seconds,
+        interrupt_allowed=consent, step="start")
+    procedure = None
+    if kind in ("direct", "program"):
+        goal = dict(expected="Exact original ordinary description", interrupt_allowed=consent)
+        if kind == "direct":
+            goal.update(input=dict(type="key", key="s", modifiers=[]), intent="Rest")
+        else:
+            goal.update(state={}, intent="Rest")
+            procedure = dict(mission_id="mission-test", revision_id="routine-1", applicability="Visible rest")
+    return compose_request(snapshot(epoch=1), request_id="original-root",
+        intent=skill(kind, goal=goal, procedure=procedure),
+        limits=dict(primitives=8, wall_seconds=45, game_seconds=game_seconds),
+        scope="new_root", source=bundle())
+
+
 class MissionRequestProducerTests(unittest.TestCase):
     def setUp(self):
         self.source = bundle()
@@ -101,25 +119,92 @@ class MissionRequestProducerTests(unittest.TestCase):
         self.source["observation"]["boundary"].update(recovery_operations=["answer_interrupt"], interrupt_request_id="interrupt-1")
         selected = phase(self.source, stage="interrupt_confirmation", answered=False, interrupt_request_id="interrupt-1")
         self.status["activity_phase"] = selected
-        goal = dict(operation="rest", target="Rest", game_seconds=60,
-            interrupt_allowed=True, step="answer_interrupt", answer="NO")
+        root = activity_root()
+        goal = dict(step="answer_interrupt", answer="NO")
         intent = skill("activity", goal=goal)
         before = deepcopy((self.status, self.source, intent))
-        result = self.compose(intent, scope="activity")
-        self.assertEqual(result["goal"], {**goal, "interrupt_request_id": "interrupt-1"})
+        result = self.compose(intent, scope="activity", original_root=root)
+        self.assertEqual(result["goal"], {**root["goal"], **goal, "interrupt_request_id": "interrupt-1"})
         self.assertEqual(result["phase_id"], "original-root")
         self.assertEqual((self.status, self.source, intent), before)
         with self.assertRaisesRegex(ContractError, "interrupt_request_id"):
-            self.compose(skill("activity", goal={**goal, "interrupt_request_id": "interrupt-1"}), scope="activity")
+            self.compose(skill("activity", goal={**root["goal"], **goal, "interrupt_request_id": "interrupt-1"}), scope="activity", original_root=root)
         for changes in (dict(answered=True), dict(stage="activity_poll"), dict(interrupt_request_id=None),
                         dict(interrupt_request_id="other"), dict(checkpoint_id="other")):
             self.status["activity_phase"] = {**selected, **changes}
             with self.subTest(changes=changes), self.assertRaises(ContractError):
-                self.compose(intent, scope="activity")
+                self.compose(intent, scope="activity", original_root=root)
         self.status["activity_phase"] = selected
         self.source["observation"]["boundary"]["interrupt_request_id"] = "other-owner"
         with self.assertRaises(ContractError):
-            self.compose(intent, scope="activity")
+            self.compose(intent, scope="activity", original_root=root)
+
+    def test_activity_start_preserves_semantics_and_rejects_old_fields(self):
+        goal = dict(step="start", operation="craft", target="Exact recipe", game_seconds=60,
+            interrupt_allowed=False)
+        result = self.compose(skill("activity", goal=goal))
+        self.assertEqual(result["goal"], {**goal, "answer": None, "interrupt_request_id": None})
+        for changes in (dict(answer=None), dict(interrupt_request_id=None), dict(operation="direct")):
+            with self.subTest(changes=changes), self.assertRaises(ContractError):
+                self.compose(skill("activity", goal={**goal, **changes}))
+
+    def test_activity_children_inherit_exact_semantic_or_ordinary_root(self):
+        for kind in ("activity", "direct", "program"):
+            for scope in ("prompt", "activity"):
+                for step in ("poll", "interrupt", "resume"):
+                    with self.subTest(kind=kind, scope=scope, step=step):
+                        self.status = snapshot(**{scope + "_phase": phase(self.source)})
+                        root = activity_root(kind, consent=False)
+                        before = deepcopy(root)
+                        result = self.compose(skill("activity", goal=dict(step=step)),
+                            scope=scope, original_root=root)
+                        stable = {key: root["goal"][key] for key in
+                            ("operation", "target", "game_seconds", "interrupt_allowed")} if kind == "activity" else dict(
+                                operation="direct", target=root["goal"]["expected"],
+                                game_seconds=60, interrupt_allowed=False)
+                        self.assertEqual(result["goal"], {**stable, "step": step,
+                            "answer": None, "interrupt_request_id": None})
+                        self.assertEqual(result["limits"], self.limits)
+                        self.assertEqual(result["phase_id"], root["request_id"])
+                        self.assertEqual(root, before)
+                        self.assertEqual(result["epoch"], 3)
+
+    def test_ordinary_activity_duration_uses_explicit_ceilings_without_renewing_limits(self):
+        self.status["prompt_phase"] = phase(self.source)
+        for kind in ("direct", "program"):
+            root = activity_root(kind, game_seconds=43_200)
+            for child_seconds, expected in ((10, 10), (43_200, 43_200), (0, None), (43_201, None), (True, None), (None, None)):
+                limits = {**self.limits, "game_seconds": child_seconds}
+                with self.subTest(kind=kind, child_seconds=child_seconds):
+                    if expected is None:
+                        with self.assertRaises(ContractError):
+                            self.compose(skill("activity", goal=dict(step="poll")), scope="prompt",
+                                original_root=root, limits=limits)
+                    else:
+                        child = self.compose(skill("activity", goal=dict(step="poll")), scope="prompt",
+                            original_root=root, limits=limits)
+                        self.assertEqual(child["goal"]["game_seconds"], expected)
+                        self.assertEqual(child["limits"], limits)
+            root["limits"]["game_seconds"] = 0
+            with self.subTest(kind=kind, root_seconds=0), self.assertRaises(ContractError):
+                self.compose(skill("activity", goal=dict(step="poll")), scope="prompt", original_root=root)
+
+    def test_activity_child_requires_exact_canonical_original_root_and_minimal_goal(self):
+        self.status["prompt_phase"] = phase(self.source)
+        root = activity_root()
+        intent = skill("activity", goal=dict(step="poll"))
+        for invalid in (None, {}, {**root, "mission_id": "other"}, {**root, "request_id": "other"},
+                        {**root, "schema": "mission/10"}, {**root, "phase_id": "ancestor"},
+                        {**root, "skill_kind": "inspect", "goal": dict(purpose="needs")}):
+            with self.subTest(invalid=invalid), self.assertRaises(ContractError):
+                self.compose(intent, scope="prompt", original_root=invalid)
+        for key in ("operation", "target", "game_seconds", "interrupt_allowed", "answer", "interrupt_request_id"):
+            with self.subTest(key=key), self.assertRaises(ContractError):
+                self.compose(skill("activity", goal=dict(step="poll", **{key: root["goal"][key]})),
+                    scope="prompt", original_root=root)
+        with self.assertRaises(ContractError):
+            self.compose(intent, scope="prompt", original_root=root,
+                limits={**self.limits, "game_seconds": 59})
 
     def test_opaque_headers_and_perception_source_cannot_be_overridden(self):
         for key in ("schema", "mission_id", "epoch", "request_id", "limits", "phase_id", "sources",
@@ -304,9 +389,8 @@ class MissionRequestProducerTests(unittest.TestCase):
         self.source["observation"]["boundary"].update(recovery_operations=["answer_interrupt"],
                                                       interrupt_request_id="interrupt-1")
         self.status["activity_phase"] = phase(self.source, stage="awaiting_readmission")
-        intent = skill("activity", goal=dict(operation="rest", target="Rest", game_seconds=60,
-            interrupt_allowed=True, step="resume", answer=None), work_id="rest-work")
-        result = self.compose(intent, scope="activity")
+        intent = skill("activity", goal=dict(step="resume"), work_id="rest-work")
+        result = self.compose(intent, scope="activity", original_root=activity_root())
         self.assertEqual(result["phase_id"], "original-root")
         self.assertEqual(result["work_id"], "rest-work")
         for selected in ("activity", "prompt"):

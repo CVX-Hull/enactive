@@ -816,14 +816,33 @@ mission/epoch and selected phase's direct origin together; opaque headers and
 wire shape and bounds; `canonical` remains the serializer. It performs no I/O,
 source selection, refresh, clock checks, dispatch or authority grant.
 
+An activity child additionally supplies the exact canonical `original_root` to
+this pure producer. Player tools obtain it using the existing read-only original
+result collection, selected by this phase's origin request ID, before staging the
+new child. The producer validates its current request schema, same mission and
+exact phase origin, root shape and permitted activity/direct/program kind. It
+does not require the original root to have the child's current epoch. Missing,
+unavailable or mismatched roots refuse before a new child is staged or submitted;
+no new endpoint, store, replay or authority follows from collection.
+
 Current SDK/MCP skill intents also omit navigation `goal.scope` and activity
 `goal.interrupt_request_id`; supplied copies reject, even when null or correct.
 Navigation copies only a published coordinate scope matching this snapshot's
 mission and selected normal source session. It never substitutes mission epoch
-or zero for a coordinate epoch. An explicit activity answer binds only an
+or zero for a coordinate epoch. Activity start chooses `step=start`, operation
+(wait/rest/craft), target, game_seconds and interrupt_allowed, without answer or
+owner. An activity child supplies only poll/interrupt/resume, or answer_interrupt
+with explicit YES/NO. Copied stable fields reject. A semantic activity root's
+operation, target, duration and consent are copied exactly; an insufficient child
+limit rejects rather than changing that duration. Direct/program roots instead
+derive operation=direct, target from the original expected outcome and original
+interrupt consent; their activity duration is the minimum of the original game
+ceiling, explicit child game ceiling and activity wire maximum. This bound does
+not modify either request's limits or the original cumulative accounting.
+An explicit activity answer binds only an
 unanswered `interrupt_confirmation` phase with the selected primary checkpoint
 and the same nonnull owner in the selected native boundary. Other activity steps
-generate null ownership. The caller still chooses target, answer, outer scope,
+generate null ownership. The caller still chooses the step/answer, outer scope,
 source and finite limits. Missing/inconsistent selected metadata refuses before
 submission; final canonical validation and live runtime guards remain unchanged.
 

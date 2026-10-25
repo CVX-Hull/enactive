@@ -154,7 +154,10 @@ class ControllerSemanticCaptureRefusalTests(unittest.TestCase):
                         elif fault == "recovery": self.controller.control_pending = {"id": "other"}
                         elif fault == "command": self.controller._command_work += 1
                         elif fault == "monotonic_age": clock.mono += 3.01
-                        elif fault == "wall_age": clock.wall += 3.01
+                        elif fault == "wall_age":
+                            # Age the actual prepared frame, not an earlier
+                            # sample taken before the bridge thread captured it.
+                            clock.wall = observation["timestamp_ms"] / 1000 + 3.01
                         elif fault == "deadline": clock.mono += 1
                         elif fault == "storage": raise OSError("preparation storage failed")
 
