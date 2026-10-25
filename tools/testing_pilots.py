@@ -174,7 +174,8 @@ def clean_environment(root: Path, backend: str) -> dict[str, str]:
     return env
 
 
-def command(command: list[str], cwd: Path, directory: Path, env: dict[str, str], timeout: float) -> dict:
+def command(command: list[str], cwd: Path, directory: Path, env: dict[str, str], timeout: float,
+            *, expect_pytest: bool = True) -> dict:
     directory.mkdir()
     started = time.perf_counter()
     timed_out = False
@@ -212,7 +213,8 @@ def command(command: list[str], cwd: Path, directory: Path, env: dict[str, str],
     # provide exact node IDs, including setup failures reported above.
     data["selected"] = sorted(set(data["selected"]) | set(data["call_failed"]) | set(data["call_passed"]) |
                               set(data["skipped"]) | {error["nodeid"] for error in data["errors"] if error["phase"] != "collection"})
-    data["status"] = status(data)
+    data["status"] = (status(data) if expect_pytest else
+                      "timeout" if timed_out else "completed" if code == 0 else "execution-error")
     write_json(directory / "result.json", data)
     return data
 
@@ -358,7 +360,7 @@ entries = [entry.value for entry in dist.entry_points if entry.group == "pytest1
 assert len(entries) == 1, entries
 print(json.dumps({"entrypoint": entries[0], "python": sys.version, "platform": platform.platform(),
 "packages": {name: m.version(name) for name in ("pytest", "pytest-testmon", "coverage")}}))
-'''], work, output / "environment", clean_environment(work, args.backend), args.timeout)
+'''], work, output / "environment", clean_environment(work, args.backend), args.timeout, expect_pytest=False)
     if probe["returncode"] != 0 or probe["timeout"]:
         report["error"] = "isolated pytest-testmon environment probe failed; original output retained"
         write_json(output / "report.json", report)
@@ -409,6 +411,7 @@ print(json.dumps({"entrypoint": entries[0], "python": sys.version, "platform": p
     verdicts = [item["verdict"] for item in report["seeds"]]
     report["counts"] = {key: verdicts.count(key) for key in ("detected", "miss", "unqualified", "unconfirmed", "inapplicable")}
     report["valid_comparisons"] = verdicts.count("detected") + verdicts.count("miss")
+    report["attempted_comparisons"] = len(verdicts)
     report["planned_comparisons"] = len(SEEDS)
     report["full_seconds"] = time.perf_counter() - started
     report["retained_bytes"] = sum(path.stat().st_size for path in output.rglob("*") if path.is_file())

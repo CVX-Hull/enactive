@@ -23,6 +23,12 @@ class TestingPilotTests(unittest.TestCase):
         self.assertEqual(recorder.data["deselected"], ["real.py::test_real"])
         self.assertEqual(recorder.data["unidentified_deselections"], 2)
 
+    def test_environment_probe_needs_no_pytest_reports(self):
+        result = pilot.command([sys.executable, "-c", "print('probe')"], self.root,
+            self.root / "probe", pilot.clean_environment(self.root, "default"), 10, expect_pytest=False)
+        self.assertEqual(result["status"], "completed")
+        self.assertEqual(result["records"], [])
+
     def test_unsupported_dynamic_context_warning_never_qualifies_a_green_map(self):
         result = self.result()
         result["mapping_warnings"] = [{"category": "coverage.exceptions.CoverageWarning",
