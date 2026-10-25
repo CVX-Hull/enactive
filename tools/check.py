@@ -20,15 +20,9 @@ REQUIRED_DOCS = ("README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECU
                  "docs/engineering.md", "docs/architecture.md", "docs/protocol.md",
                  "docs/controls.md", "docs/runbook.md", "docs/work.md",
                  "docs/environment.md", "docs/research.md", "docs/setup.md")
-MAIN_SMOKE_TESTS = (
-    "tests.test_gameplay_contracts",
-    "tests.test_gameplay_evidence",
-    "tests.test_mission_request_producer",
-    "tests.test_mission_ledger.LedgerTests.test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen",
-    "tests.test_mission_ledger.LedgerTests.test_read_only_or_unadmitted_request_cannot_become_input",
-    "tests.test_mission_ledger.LedgerTests.test_terminal_mission_cannot_restart_or_overwrite_result",
-    "tests.test_mission_http.MissionHTTPTests.test_semantic_navigation_context_memory_and_single_ingress",
-)
+if __package__ in (None, ""):
+    sys.path.insert(0, str(ROOT))
+from tools.ci import COMPONENT_TESTS, SMOKE_TESTS
 
 
 def check_documents(root: Path) -> list[str]:
@@ -76,7 +70,7 @@ def _check(argv: list[str] | None = None) -> int:
     scope = parser.add_mutually_exclusive_group()
     scope.add_argument("--fast", action="store_true",
                        help="Checkpoint structure/lint checks only; no behavioral tests or diagram rendering")
-    scope.add_argument("--profile", choices=("full", "editorial", "main-smoke"), default="full",
+    scope.add_argument("--profile", choices=("full", "editorial", "main-smoke", *COMPONENT_TESTS), default="full",
                        help="Strict validation profile (default: full)")
     args = parser.parse_args(argv)
     import_linter = Path(sys.executable).parent / "lint-imports"
@@ -102,11 +96,12 @@ def _check(argv: list[str] | None = None) -> int:
     run([sys.executable, "tools/governance.py"] + (["--development"] if args.fast else []))
     if not args.fast:
         run([sys.executable, "tools/diagrams.py"])
-    if not args.fast and args.profile == "full":
-        run([sys.executable, "-m", "unittest", "discover", "-s", "tests", "-v", "--durations", "20"])
-    elif not args.fast and args.profile == "main-smoke":
-        run([sys.executable, "-m", "unittest", "-v", "--durations", "20", *MAIN_SMOKE_TESTS])
-    if not args.fast and args.profile in {"full", "main-smoke"}:
+    if not args.fast and args.profile != "editorial":
+        targets = ("tests",) if args.profile == "full" else (
+            SMOKE_TESTS if args.profile == "main-smoke" else COMPONENT_TESTS[args.profile])
+        workers = "0" if args.profile == "main-smoke" else "4"
+        run([sys.executable, "-m", "pytest", "-q", "-n", workers, "--dist", "loadfile",
+             "--max-worker-restart=0", "--durations=20", *targets])
         run([node, "tests/test_viewer.cjs"])
     run(["git", "diff", "--check"])
     run(["git", "diff", "--cached", "--check"])
@@ -116,6 +111,8 @@ def _check(argv: list[str] | None = None) -> int:
         print("Editorial checks passed. Runtime tests, viewer tests, full regression, native build and real gameplay were not run.")
     elif args.profile == "main-smoke":
         print("Selected smoke and viewer tests passed. Full regression, native build and real gameplay were not run.")
+    elif args.profile in COMPONENT_TESTS:
+        print(f"{args.profile.capitalize()} component and boundary smoke tests passed. Full regression, native build and real gameplay were not run.")
     else:
         print("Portable checks passed. Native build and real gameplay were not tested.")
     return 0

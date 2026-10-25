@@ -274,25 +274,46 @@ and diagram rendering. It is not a hosted profile.
 
 | Profile | Additional executed checks | Supported claim |
 | --- | --- | --- |
-| Full (also the default local command) | Complete unittest discovery with the 20 slowest durations, plus viewer regressions | Full portable regression; native build/gameplay remain separate |
+| Full (also the default local command) | Complete pytest collection of existing unittest cases, four xdist processes grouped by file and 20 slowest durations, plus viewer regressions | Full portable regression; native build/gameplay remain separate |
 | Editorial | No runtime tests or viewer regressions | Strict document/structural validation only |
-| Main-smoke | The fixed existing selected gameplay/evidence/request, ledger and HTTP cases in `tools/check.py`, plus viewer regressions | Bounded smoke on main with linked qualifying full PR coverage; full regression was not rerun on main |
+| Movement | Explicit policy and all four direct consumer suites, plus fixed boundary smoke and viewer regressions | Contained movement-policy regression; full regression was not run |
+| Viewer | Server and fixed boundary smoke, plus production viewer logic with a synthetic DOM | Contained viewer/boundary regression; no browser layout or full regression claim |
+| Main-smoke | Fixed gameplay/evidence/request, ledger and HTTP cases, plus viewer regressions; serial pytest | Bounded smoke on main with linked qualifying full PR coverage; full regression was not rerun on main |
 
-PR source, mixed, control and unknown changes require full. Editorial eligibility
-requires a complete nonempty native Git diff, using the event's original PR base/head
-via merge base or main before/after, with `--no-renames` and NUL-separated paths.
-Both sides of renames/deletions participate. Every changed object must be regular.
-Eligible paths are README.md; `docs/research*.md`; Markdown under `docs/changes/`
-and `docs/acceptance/`; diagrams (`.mmd`, `.svg`, `rendered.json`) directly under
-`docs/diagrams/`; and report assets (`.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`,
-`.mp4`, `.webm`) under `docs/assets/` or `docs/acceptance/`, plus acceptance JSON.
-All other paths initially require full PR validation, including executable code,
-current policy/contracts, player/prompt guides, setup/runbook, configuration,
-dependencies, schemas, tools and tests. Eligibility does not certify prose truth;
-the lead still reviews behavioral impact and evidence. Expand it only through
-reviewed coverage and demonstrated need.
+The [testing guide](testing.md) maps test responsibilities, overlap and upkeep.
+`tools/ci.py` owns the exact source allowlists and test targets; the checker consumes
+that same manifest. Full and component scopes use four pytest-xdist processes,
+grouped by file to keep module/class fixtures together; main-smoke is serial.
+Worker crashes fail the run without restart or silent serial fallback. The pinned
+pytest version supports existing unittest assertions, setup/cleanup and subtests.
+Collection identity and representative negative matrices are checked when changing
+the runner; counts alone do not establish semantic coverage.
 
-A main editorial diff can independently use editorial. Otherwise main-smoke is
+Editorial eligibility requires a complete nonempty native Git diff, using the
+event's original PR base/head via merge base or main before/after, with
+`--no-renames` and NUL-separated paths. Both sides of renames/deletions participate;
+every changed object must be regular. The five root documents inspected by the
+checker and all `docs/**/*.md` qualify, including current guidance and contracts.
+Report assets/JSON under acceptance, assets under docs/assets, and Mermaid source,
+SVG and rendered.json directly under docs/diagrams also qualify. Ancillary Markdown
+outside the checked set, executable assets, configuration, schemas and registry
+JSON do not qualify. Structural consistency cannot prove prose or prompt semantics:
+C-REVIEW still checks changed guidance against contracts/source and selects any
+needed native/player evidence; running unchanged Python code cannot establish that
+new instructions are effective.
+
+A regular diff confined to the explicit movement or viewer allowlist, optionally
+with eligible documents, runs that component profile on both PR and main. Movement
+includes controller, navigation, skills and supervisor consumers; viewer includes
+server/boundary smoke and the Node viewer suite. Changes to both components,
+additional source/test helpers, state/persistence/authority, native code, schemas,
+dependencies, validation machinery or unknown paths require full PR regression.
+Do not infer transitive impact or use manual labels to widen an allowlist. Extending
+a boundary requires reviewed consumer coverage and measured benefit. Browser layout
+changes retain proportionate rendered review; a synthetic DOM cannot qualify them.
+
+A main editorial or component diff independently executes its selected scope;
+it does not borrow a PR pass or claim full coverage. Otherwise main-smoke is
 eligible only for an ordinary single-parent squash push adding exactly one commit:
 the event's before SHA equals its parent P; exactly one actual merged PR has that
 merge SHA, a main base P and head H; P is an ancestor of H; and H's tree equals
@@ -311,10 +332,10 @@ use actual PR/run/Git relationships without fabricating an association.
 
 Changes to validation machinery/context force full on main too: `.github/`, all
 engineering `tools/` initially (including checker, selector and package bootstrap),
-tests package bootstrap,
-dependency manifests/locks, renderer
-configuration, schemas, AGENTS and current control/engineering/project-management/
-documentation policy. This coarse tools boundary avoids maintaining a checker-helper
+tests package bootstrap, dependency manifests/locks, renderer
+configuration, schemas and control-registry JSON. Covered Markdown alone uses
+editorial regardless of whether it describes policy; source changes to implement
+that policy are classified separately. This coarse tools boundary avoids maintaining a checker-helper
 dependency graph; narrower reuse needs a demonstrated benefit. Normal feature regression tests still receive full PR coverage
 but do not alone change validation context. Unknown main paths, nonstandard pushes,
 nonregular objects, tree mismatch or unavailable proof select full. Existing pinned

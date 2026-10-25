@@ -79,6 +79,14 @@ This repository does not vendor or relicense the wheel. Review and preserve the
 upstream V8/component notices before distributing a bundled binary. Runtime selection, limits
 and rejected alternatives are in [the execution brief](docs/changes/061-player-program-execution.md).
 
+## Test runner
+
+pytest, pytest-xdist, execnet, pluggy and iniconfig use MIT licenses. Packaging
+uses Apache-2.0 OR BSD-2-Clause. Exact versions and hashes are in the development
+lock; their original notices remain with the project-local installed packages.
+The maintained runner replaces serial unittest discovery without changing the
+unittest assertions; [testing](docs/testing.md) describes selection and limits.
+
 ## Documentation assets and tools
 
 python-frontmatter and PyYAML are MIT licensed; their exact versions and hashes

@@ -49,3 +49,6 @@ forbidden_modules = [
     "harness.controller", "harness.gameplay", "harness.server", "harness.__main__",
     "http", "urllib", "socket", "subprocess", "tools", "time", "pathlib", "os",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

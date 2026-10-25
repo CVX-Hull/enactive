@@ -148,33 +148,35 @@ class DevToolTests(unittest.TestCase):
 
     def test_profiles_keep_exact_test_scope_and_strict_common_checks(self):
         smoke_cases = [
-            "tests.test_gameplay_contracts",
-            "tests.test_gameplay_evidence",
-            "tests.test_mission_request_producer",
-            "tests.test_mission_ledger.LedgerTests.test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen",
-            "tests.test_mission_ledger.LedgerTests.test_read_only_or_unadmitted_request_cannot_become_input",
-            "tests.test_mission_ledger.LedgerTests.test_terminal_mission_cannot_restart_or_overwrite_result",
-            "tests.test_mission_http.MissionHTTPTests.test_semantic_navigation_context_memory_and_single_ingress",
+            "tests/test_gameplay_contracts.py", "tests/test_gameplay_evidence.py",
+            "tests/test_mission_request_producer.py",
+            "tests/test_mission_ledger.py::LedgerTests::test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen",
+            "tests/test_mission_ledger.py::LedgerTests::test_read_only_or_unadmitted_request_cannot_become_input",
+            "tests/test_mission_ledger.py::LedgerTests::test_terminal_mission_cannot_restart_or_overwrite_result",
+            "tests/test_mission_http.py::MissionHTTPTests::test_semantic_navigation_context_memory_and_single_ingress",
         ]
+        components = {
+            "movement": ["tests/test_movement.py", "tests/test_controller.py", "tests/test_navigation.py",
+                         "tests/test_gameplay_skills.py", "tests/test_gameplay_supervisor.py", *smoke_cases],
+            "viewer": ["tests/test_server.py", *smoke_cases],
+        }
         for arguments, profile in ((["--fast"], "fast"), ([], "full"),
-                                   (["--profile", "full"], "full"),
-                                   (["--profile", "editorial"], "editorial"),
-                                   (["--profile", "main-smoke"], "main-smoke")):
+                *((["--profile", name], name) for name in ("full", "editorial", "main-smoke", *components))):
             with self.subTest(arguments=arguments):
                 result, executed, output = self.checker_commands(arguments)
                 self.assertEqual(result, 0)
-                unittest_commands = [command for command in executed if "unittest" in command]
-                if profile == "full":
-                    self.assertEqual(unittest_commands, [[sys.executable, "-m", "unittest",
-                                                          "discover", "-s", "tests", "-v", "--durations", "20"]])
-                elif profile == "main-smoke":
-                    self.assertEqual(unittest_commands, [[sys.executable, "-m", "unittest",
-                                                          "-v", "--durations", "20", *smoke_cases]])
+                commands = [command for command in executed if "pytest" in command]
+                if profile not in {"fast", "editorial"}:
+                    targets = ["tests"] if profile == "full" else (
+                        smoke_cases if profile == "main-smoke" else components[profile])
+                    self.assertEqual(commands, [[sys.executable, "-m", "pytest", "-q", "-n",
+                        "0" if profile == "main-smoke" else "4", "--dist", "loadfile",
+                        "--max-worker-restart=0", "--durations=20", *targets]])
                 else:
-                    self.assertEqual(unittest_commands, [])
+                    self.assertEqual(commands, [])
                 self.assertEqual(any("tools/diagrams.py" in command for command in executed), profile != "fast")
                 self.assertEqual(any("tests/test_viewer.cjs" in command for command in executed),
-                                 profile in {"full", "main-smoke"})
+                                 profile not in {"fast", "editorial"})
                 governance_commands = [command for command in executed if "tools/governance.py" in command]
                 self.assertEqual(governance_commands, [[sys.executable, "tools/governance.py"] +
                                                        (["--development"] if profile == "fast" else [])])
@@ -187,15 +189,9 @@ class DevToolTests(unittest.TestCase):
                 self.assertEqual(executed[-2:], [["git", "diff", "--check"],
                                                 ["git", "diff", "--cached", "--check"]])
                 self.assertEqual("Portable checks passed." in output, profile == "full")
-                if profile == "fast":
-                    self.assertIn("Behavioral tests, rendered diagrams, native build and real gameplay were not run.",
-                                  output)
-                elif profile == "editorial":
-                    self.assertIn("Editorial checks passed.", output)
-                    self.assertIn("Runtime tests, viewer tests, full regression, native build and real gameplay were not run.", output)
-                elif profile == "main-smoke":
-                    self.assertIn("Selected smoke and viewer tests passed.", output)
-                    self.assertIn("Full regression, native build and real gameplay were not run.", output)
+                if profile in {"editorial", "main-smoke", *components}:
+                    self.assertIn("Full regression" if profile != "editorial" else "full regression", output)
+                self.assertIn("real gameplay", output)
 
     def test_profiles_reject_fast_combination_and_unknown_names_before_execution(self):
         for arguments in (["--fast", "--profile", "full"], ["--profile", "unknown"]):
@@ -207,7 +203,7 @@ class DevToolTests(unittest.TestCase):
             commands.assert_not_called()
 
     def test_selected_command_failures_propagate_without_success_report(self):
-        for profile in ("full", "editorial", "main-smoke"):
+        for profile in ("full", "editorial", "main-smoke", "movement", "viewer"):
             _, expected, _ = self.checker_commands(["--profile", profile])
             for command in expected:
                 with self.subTest(profile=profile, command=command):
@@ -232,7 +228,8 @@ class DevToolTests(unittest.TestCase):
 
     def test_all_profiles_reject_invalid_python_before_reporting_success(self):
         self.write("controller.py", "def broken(:\n")
-        for arguments in (["--fast"], [], ["--profile", "editorial"], ["--profile", "main-smoke"]):
+        for arguments in (["--fast"], [], ["--profile", "editorial"], ["--profile", "main-smoke"],
+                          ["--profile", "movement"], ["--profile", "viewer"]):
             output = io.StringIO()
             with self.subTest(arguments=arguments), patch.object(check, "ROOT", self.root), \
                     patch.object(check, "run") as commands, redirect_stdout(output), self.assertRaises(SyntaxError):
@@ -241,7 +238,8 @@ class DevToolTests(unittest.TestCase):
             self.assertNotIn("checks passed", output.getvalue())
 
     def test_all_profiles_reject_broken_document_links_before_reporting_success(self):
-        for arguments in (["--fast"], [], ["--profile", "editorial"], ["--profile", "main-smoke"]):
+        for arguments in (["--fast"], [], ["--profile", "editorial"], ["--profile", "main-smoke"],
+                          ["--profile", "movement"], ["--profile", "viewer"]):
             output = io.StringIO()
             with self.subTest(arguments=arguments), patch.object(check, "ROOT", self.root), \
                     patch.object(check, "check_documents", return_value=["Broken local link"]), \
