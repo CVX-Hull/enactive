@@ -74,10 +74,12 @@ and evaluate outcomes; software handles canonical metadata and provenance.
 
 The [useful-bootstrap trials](acceptance/2026-10-24-useful-bootstrap-trials.md)
 failed before fresh character creation. Their local settlement clocks and one
-independent menu-only normal ending do not qualify useful play. The current
-Luna/low configuration needs truthful evidence reading and organic discovery
-qualification before another full campaign; no memory-architecture conclusion
-follows from runs that never reached memory use.
+independent menu-only normal ending do not qualify useful play. Those early failures
+do not establish a memory-architecture conclusion. Later independent Sol/low
+assessments demonstrate scoped program revision, successor memory application and
+useful play during advice. Whole-player cadence and a coherent normal ending still
+need qualification before another full campaign; GitHub owns the next selected
+configuration and finite assessment.
 
 The [executable-routine substrate](components/memory-learning.md) lets
 the player author observation-conditioned JavaScript procedures over ordinary

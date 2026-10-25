@@ -38,10 +38,13 @@ denial or stop solely because a successful tool ran from a read-only host.
 - `enactive_snapshot` gives a descriptive snapshot handle and the selected source
   image. Select those exact handles for a new intent. Software supplies mission,
   epoch, source bindings and stable child lineage. A snapshot never Resumes.
-- Default `player-view/4` keeps current decision state and advertises `detail_sections`.
+- Default `player-view/5` keeps current decision state and advertises `detail_sections`.
   Use `enactive_detail(snapshot_id, section)` for the complete exact as-of mission, configuration,
   metrics, receipt, progress, native or source metadata when needed. It never refreshes or
   grants authority. Use `enactive_source` when you need the actual retained image.
+  Historical source/context replies omit technical binding hashes; images, source
+  IDs and semantic evidence remain. Exact detail describes its selected snapshot,
+  not an arbitrary historical source. Software retains the full machine evidence.
   Software verifies hashes and binds requests; do not reconstruct omitted audit data.
   The producer retains metadata for up to 128 distinct source reads. If metadata
   is unavailable, explicitly reread the exact selected image; do not substitute
@@ -106,8 +109,11 @@ denial or stop solely because a successful tool ran from a read-only host.
   through `enactive_detail(next_snapshot.snapshot_id, progress)`.
 - MCP assigns each new request ID and waits up to15 seconds for its original
   result; do not supply `request_id` or `wait_seconds`. A positively new preparation refusal explicitly
-  marked `submission=not_submitted` has no original operation to collect. Correct
-  the selected arguments for a new decision under the original limits. Errors
+  marked `submission=not_submitted` has no original operation to collect. Follow
+  its supported next step or correct the selected arguments under original limits.
+  An open, idle prompt can require explicit Observe before a new root: inspect
+  the returned phase or `macro_closure`, then choose the next bounded input.
+  Whole-mission remaining capacity is not the local root's remaining allowance. Errors
   during staging, dispatch or presentation retain uncertain collection unless an
   actually validated `not_admitted` refusal is preserved. A new invocation is a new
   intent, never a retry. Pending/uncertain results require `enactive_result` with

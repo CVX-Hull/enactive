@@ -91,7 +91,7 @@ class DecisionViewTests(unittest.TestCase):
     def test_snapshot_keeps_decisions_unknowns_and_visible_source_with_detail_addresses(self):
         original = snapshot()
         expected = expected_snapshot(original)
-        expected["presentation_schema"] = "player-view/4"
+        expected["presentation_schema"] = "player-view/5"
         view = decision_view("enactive_snapshot", original)
         self.assertEqual(view, expected)
         self.assertEqual(view["source"]["observation"], original["source"]["observation"])
@@ -129,7 +129,7 @@ class DecisionViewTests(unittest.TestCase):
                         proposal=deepcopy(payload)), next_snapshot=snapshot(), diagnostic="retained")
                 expected = deepcopy(original)
                 expected["next_snapshot"] = expected_snapshot(original["next_snapshot"])
-                expected["presentation_schema"] = "player-view/4"
+                expected["presentation_schema"] = "player-view/5"
                 for tool in ("start", "result", "skill", "lifecycle", "observe", "remember", "correct",
                              "handoff", "stop", "reconcile", "claim", "readmit", "context"):
                     with self.subTest(tool=tool):
@@ -226,17 +226,46 @@ class DecisionViewTests(unittest.TestCase):
         original = snapshot()
         original.update(next_snapshot=snapshot(), progress=["keep"], last_receipt={"keep": True})
         expected = deepcopy(original)
-        expected["presentation_schema"] = "player-view/4"
-        for tool in ("source", "detail", "advice", "reflect_next", "reflect_submit", "reflect_source", "reflect_result"):
+        expected["presentation_schema"] = "player-view/5"
+        for tool in ("detail", "advice", "reflect_next", "reflect_submit", "reflect_source", "reflect_result"):
             with self.subTest(tool=tool):
                 self.assertEqual(decision_view("enactive_" + tool, original), expected)
+
+    def test_historical_source_projects_only_typed_reference_and_keeps_raw_evidence(self):
+        original = snapshot()["source"]
+        original["observation"]["scene"]["frame_sha256"] = "authored-coincident-name"
+        before = deepcopy(original)
+        view = decision_view("enactive_source", original)
+        self.assertEqual(view["reference"], dict(observation_id="source", session="session", revision=8))
+        self.assertEqual(view["observation"], original["observation"])
+        self.assertEqual(view["disposition"], "retained")
+        self.assertFalse(view["grants_authority"])
+        self.assertEqual(original, before)
+
+    def test_context_projects_only_binding_slots_not_claims_procedures_or_other_tools(self):
+        source = snapshot()["source"]
+        authored = dict(reference=dict(frame_sha256="authored-value"), native_sha256="authored-native")
+        context = dict(configuration=dict(native_sha256="binding", model="chosen"),
+            packet=dict(sources=[source], claims=[authored], procedures=[authored]),
+            future_field=authored)
+        original = dict(response=dict(context=context))
+        before = deepcopy(original)
+        view = decision_view("enactive_context", original)
+        projected = view["response"]["context"]
+        self.assertEqual(projected["configuration"], dict(model="chosen"))
+        self.assertNotIn("frame_sha256", projected["packet"]["sources"][0]["reference"])
+        for name in ("claims", "procedures"):
+            self.assertEqual(projected["packet"][name], context["packet"][name])
+        self.assertEqual(projected["future_field"], authored)
+        self.assertEqual(original, before)
+        self.assertEqual(decision_view("enactive_detail", original)["response"], original["response"])
 
     def test_no_mission_or_native_state_and_snapshot_errors_remain_explicit(self):
         for current in (dict(snapshot_id=None, mission=None, native={"state": None}, source=None,
                              grants_authority=False, source_error="Original image unavailable"),
                         dict(snapshot_id="s", mission={"phase": "admitted"}, native={}, source=None)):
             with self.subTest(current=current):
-                expected = dict(deepcopy(current), presentation_schema="player-view/4", read_only=True)
+                expected = dict(deepcopy(current), presentation_schema="player-view/5", read_only=True)
                 expected.pop("grants_authority", None)
                 if current["snapshot_id"] is not None:
                     expected["detail_sections"] = list(DETAIL_SECTIONS)
@@ -244,7 +273,7 @@ class DecisionViewTests(unittest.TestCase):
         error = dict(transport="uncertain", settled=False, operation_id="original",
                      response=None, snapshot_error="Status unavailable")
         self.assertEqual(decision_view("enactive_result", error),
-                         dict(error, presentation_schema="player-view/4"))
+                         dict(error, presentation_schema="player-view/5"))
 
     def test_reflection_inventory_and_mechanical_clocks_move_to_exact_mission_detail(self):
         current = snapshot()

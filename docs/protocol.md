@@ -265,7 +265,10 @@ frontier can still cost more as history grows. Forecast row/byte fan-out and
 retrieval work alongside frames, requests, inputs, wall time and ending reserves.
 
 The [MCP server](../harness/player_mcp.py) reports its implementation version at
-SDK initialization; its presentation is `player-view/4`, marked by `presentation_schema`.
+SDK initialization; its presentation is `player-view/5`, marked by `presentation_schema`.
+Only typed historical-source/context reference fields and the context native hash
+join the existing snapshot projection. Raw SDK/evidence is complete; opaque authored
+data is not recursively filtered. Snapshot detail stays exact to its selected read.
 Its tool arguments omit `request_id` and `wait_seconds`; old MCP payloads are
 rejected, not translated. The adapter assigns one UUID to each invocation whose
 imperative SDK request needs an ID, then uses existing immutable staging and

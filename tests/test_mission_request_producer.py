@@ -78,6 +78,26 @@ class MissionRequestProducerTests(unittest.TestCase):
         args.update(changes)
         return compose_request(self.status, **args)
 
+    def test_observe_guidance_is_only_for_idle_active_prompt_not_pause_or_other_scopes(self):
+        self.status.update(phase="active", active_operation=None,
+            prompt_phase=phase(self.source), remaining_limits=dict(inputs=1896))
+        for intent in (skill(), lifecycle("save")):
+            with self.subTest(intent=intent):
+                with self.assertRaisesRegex(ContractError, "enactive_observe"):
+                    self.compose(intent)
+        for changed in (dict(phase="paused"), dict(active_operation="unsettled"),
+                        dict(activity_phase=phase(self.source)),
+                        dict(lifecycle_phase=phase(self.source, operation="save"))):
+            with self.subTest(changed=changed):
+                original = deepcopy(self.status)
+                self.status.update(changed)
+                try:
+                    with self.assertRaises(ContractError) as raised:
+                        self.compose(lifecycle("save"))
+                    self.assertNotIn("enactive_observe", str(raised.exception))
+                finally:
+                    self.status = original
+
     def test_root_preserves_semantics_and_copies_every_input(self):
         intent = skill(work_id="chosen-work")
         supports = ["explicit-support"]

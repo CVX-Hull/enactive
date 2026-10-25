@@ -134,7 +134,7 @@ this same current model schema. The imperative Python SDK's explicit-ID surface
 serves engineering and duplicate collection, not a compatibility mode for MCP.
 Both SDK and MCP intents omit navigation `goal.scope` and activity
 `goal.interrupt_request_id`: the existing composer binds them from the selected
-matching snapshot/source. MCP 6.0.0 activity starts supply step=start, operation,
+matching snapshot/source. MCP 6.1.0 activity starts supply step=start, operation,
 target, game_seconds and interrupt_allowed without answer/owner. Activity children
 supply only step=poll/interrupt/resume, or step=answer_interrupt with answer=YES/NO.
 The SDK collects the selected canonical original root before staging and derives

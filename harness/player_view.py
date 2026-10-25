@@ -7,7 +7,7 @@ from .gameplay.contracts import canonical
 from .player_tools import DETAIL_SECTIONS
 
 
-PRESENTATION_SCHEMA = "player-view/4"
+PRESENTATION_SCHEMA = "player-view/5"
 
 _REFERENCE_FIELDS = ("schema", "record_type", "frame_path", "frame_sha256",
                      "received_monotonic", "visibility_version")
@@ -27,8 +27,8 @@ def _omit(value: dict | None, fields: tuple[str, ...]) -> None:
         for field in fields:
             value.pop(field, None)
 
-# These PlayerTools paths return _finish's operation envelope. Sources and
-# advisory payloads are opaque evidence, even if they contain similar names.
+# These PlayerTools paths return _finish's operation envelope. Only explicitly
+# typed source/context slots are projected; authored/advisory data stays opaque.
 _NEXT_SNAPSHOT_TOOLS = frozenset({
     "enactive_start", "enactive_result", "enactive_skill", "enactive_lifecycle",
     "enactive_observe", "enactive_remember", "enactive_correct", "enactive_handoff",
@@ -110,8 +110,17 @@ def snapshot_view(snapshot: dict) -> dict:
 
 
 def decision_view(tool_name: str, value: dict) -> dict:
-    """Copy a successful tool result and project only its explicit snapshot slot."""
+    """Copy a result and project only its explicit snapshot/source/context slots."""
     view = deepcopy(value)
+    if tool_name == "enactive_source":
+        _omit(view.get("reference"), _REFERENCE_FIELDS)
+    elif tool_name == "enactive_context":
+        context = (view.get("response") or {}).get("context")
+        if isinstance(context, dict):
+            _omit(context.get("configuration"), ("native_sha256",))
+            for source in (context.get("packet") or {}).get("sources", ()):
+                if isinstance(source, dict):
+                    _omit(source.get("reference"), _REFERENCE_FIELDS)
     if tool_name in _NEXT_SNAPSHOT_TOOLS:
         _omit(view.get("response"), ("admission_refusal",))
     if tool_name == "enactive_snapshot":
