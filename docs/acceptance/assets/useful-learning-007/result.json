@@ -1,0 +1,138 @@
+{
+  "mission_id": "useful-learning-007",
+  "source": "00de5b6bcfc30efffbe294e56ceb0dfd7adb0a02",
+  "disposition": "Stopped normally with useful progress; objective completion and whole-player cadence unclaimed;217specific recovery hint unexercised",
+  "requests": 85,
+  "request_states": {
+    "completed": 25,
+    "partial": 53,
+    "unknown": 2,
+    "blocked": 5
+  },
+  "request_kinds": {
+    "start": 1,
+    "lifecycle": 9,
+    "skill": 57,
+    "observe": 3,
+    "remember": 10,
+    "correct": 1,
+    "handoff": 1,
+    "claim": 2,
+    "readmit": 1
+  },
+  "primitive_count": 84,
+  "primitive_states": {
+    "returned": 81,
+    "unknown": 3
+  },
+  "frames": 232,
+  "frame_bytes": 25180553,
+  "game_seconds": 51,
+  "memory_events": 208,
+  "memory_types": {
+    "claim": 205,
+    "procedure": 2,
+    "work": 1
+  },
+  "sqlite_bytes": 1372160,
+  "normal_ending_proofs": {
+    "saved_checkpoint": [
+      "op-33802cf8b9e24da88afe60c11e4f9abc"
+    ],
+    "normal_exit": [
+      "op-c2812a543e75416cb4d0a322812cfa1d"
+    ],
+    "normal_finish": [
+      "op-f47169206dc3458f8e2c48a127a60f6c"
+    ]
+  },
+  "normal_finish_disposition": "stopped",
+  "normal_exit_verified": true,
+  "reported_host_usage": {
+    "original": {
+      "input_tokens": 10735590,
+      "cached_input_tokens": 10495232,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 17926,
+      "reasoning_output_tokens": 2670
+    },
+    "successor": {
+      "input_tokens": 3313232,
+      "cached_input_tokens": 3177088,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 7982,
+      "reasoning_output_tokens": 490
+    },
+    "adviser-active": {
+      "input_tokens": 1382599,
+      "cached_input_tokens": 1294592,
+      "cache_write_input_tokens": 0,
+      "output_tokens": 4348,
+      "reasoning_output_tokens": 599
+    }
+  },
+  "completed_mcp_mix": {
+    "original": {
+      "enactive_snapshot": 1,
+      "enactive_lifecycle": 5,
+      "enactive_skill": 45,
+      "enactive_result": 1,
+      "enactive_observe": 1,
+      "enactive_source": 5,
+      "enactive_remember": 9,
+      "enactive_advice": 2,
+      "enactive_context": 1,
+      "enactive_correct": 1,
+      "enactive_handoff": 1
+    },
+    "successor": {
+      "enactive_snapshot": 1,
+      "enactive_context": 1,
+      "enactive_source": 12,
+      "enactive_claim": 2,
+      "enactive_readmit": 1,
+      "enactive_skill": 12,
+      "enactive_advice": 2,
+      "enactive_remember": 1,
+      "enactive_lifecycle": 5,
+      "enactive_result": 2,
+      "enactive_observe": 2
+    },
+    "adviser-active": {
+      "enactive_reflect_next": 4,
+      "enactive_reflect_source": 4,
+      "enactive_reflect_submit": 3
+    }
+  },
+  "shell_calls": {
+    "original": 13,
+    "successor": 14,
+    "adviser-active": 0
+  },
+  "save_difference_counts": {
+    "changed": 13,
+    "added": 0,
+    "removed": 0
+  },
+  "images": [
+    {
+      "path": "shelter-closure.png",
+      "source_id": "83d29411b0a168c80712a3f43ae43cf29ccb2ed5f40057d4820bb116ee0e258a",
+      "sha256": "2c131bc23efc9226b6e3ddc1b7cb51048417900609a36418bb966e170efe4ed6",
+      "unchanged_native_png": true,
+      "session": "1792936734684-46529-1",
+      "revision": 124,
+      "capture_timestamp_ms": 1792937446940
+    },
+    {
+      "path": "sleeping-bench.png",
+      "source_id": "d04c5aca283d0e1fe00020bf861b5235490458cd360fd7cf076674b737c5b21a",
+      "sha256": "d00d889ea6d717d95bd5328c78147077efa92e6aec55af0cf8553d9f890905ec",
+      "unchanged_native_png": true,
+      "session": "1792936734684-46529-1",
+      "revision": 153,
+      "capture_timestamp_ms": 1792937877986
+    }
+  ],
+  "scope": "Bounded loaded-state development assessment; no20-goal/model-ready cadence, full objective, source217cue usability or seven-day acceptance."
+}
