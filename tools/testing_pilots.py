@@ -111,7 +111,13 @@ class Recorder:
 
     def __init__(self, directory: Path):
         self.directory = directory
-        self.data = {"selected": [], "deselected": [], "calls": [], "skips": [], "errors": [], "inventory": []}
+        self.data = {"selected": [], "deselected": [], "unidentified_deselections": 0,
+                     "calls": [], "skips": [], "errors": [], "warnings": [], "inventory": []}
+
+    def pytest_warning_recorded(self, warning_message, when, nodeid, location):
+        category = warning_message.category
+        self.data["warnings"].append({"category": category.__module__ + "." + category.__qualname__,
+            "message": str(warning_message.message), "when": when, "nodeid": nodeid})
 
     def pytest_collection_finish(self, session):
         self.data["selected"] = sorted(item.nodeid for item in session.items)
@@ -123,7 +129,14 @@ class Recorder:
                     "markers": {name: descriptions.get(name, "").strip() for name in markers}})
 
     def pytest_deselected(self, items):
-        self.data["deselected"].extend(item.nodeid for item in items)
+        # testmon 2.2.0 reports database-only deselections as synthetic objects
+        # without nodeid. Preserve their count; do not invent test identities.
+        for item in items:
+            nodeid = getattr(item, "nodeid", None)
+            if nodeid is None:
+                self.data["unidentified_deselections"] += 1
+            else:
+                self.data["deselected"].append(nodeid)
 
     def pytest_collectreport(self, report):
         if report.failed:
@@ -190,6 +203,11 @@ def command(command: list[str], cwd: Path, directory: Path, env: dict[str, str],
             "call_passed": sorted({call["nodeid"] for record in records for call in record["calls"] if call["outcome"] == "passed"}),
             "skipped": sorted({skip["nodeid"] for record in records for skip in record["skips"]}),
             "errors": [error for record in records for error in record["errors"]]}
+    data["warnings"] = [warning for record in records for warning in record["warnings"]]
+    # Coverage.py documents that sysmon cannot provide testmon's dynamic contexts.
+    # Preserve the warning and refuse to qualify that map, even if tests passed.
+    data["mapping_warnings"] = [warning for warning in data["warnings"]
+        if warning["category"].startswith("coverage.") and "(no-sysmon-context)" in warning["message"]]
     # xdist's coordinator does not own collected items; actual call reports also
     # provide exact node IDs, including setup failures reported above.
     data["selected"] = sorted(set(data["selected"]) | set(data["call_failed"]) | set(data["call_passed"]) |
@@ -204,6 +222,8 @@ def status(result: dict) -> str:
         return "timeout"
     if result["errors"]:
         return result["errors"][0]["phase"] + "-error"
+    if result.get("mapping_warnings"):
+        return "mapping-unqualified"
     if result["returncode"] not in (0, 1, 5) or not result["records"]:
         return "execution-error"
     if result["call_failed"]:

@@ -5,6 +5,7 @@ import shutil
 import sqlite3
 import sys
 import tempfile
+from types import SimpleNamespace
 import unittest
 
 from tools import testing_pilots as pilot
@@ -15,6 +16,21 @@ class TestingPilotTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
+
+    def test_testmon_synthetic_deselections_keep_count_without_inventing_ids(self):
+        recorder = pilot.Recorder(self.root)
+        recorder.pytest_deselected([SimpleNamespace(nodeid="real.py::test_real"), object(), object()])
+        self.assertEqual(recorder.data["deselected"], ["real.py::test_real"])
+        self.assertEqual(recorder.data["unidentified_deselections"], 2)
+
+    def test_unsupported_dynamic_context_warning_never_qualifies_a_green_map(self):
+        result = self.result()
+        result["mapping_warnings"] = [{"category": "coverage.exceptions.CoverageWarning",
+                                      "message": "Dynamic contexts unsupported (no-sysmon-context)"}]
+        result["status"] = pilot.status(result)
+        self.assertEqual(result["status"], "mapping-unqualified")
+        target = "test.py::target"
+        self.assertEqual(pilot.judge(self.result(1, (target,)), result, target), "unqualified")
 
     def result(self, code=0, failed=(), selected=("test.py::target",), errors=(), timeout=False):
         result = {"returncode": code, "call_failed": list(failed), "selected": list(selected),
