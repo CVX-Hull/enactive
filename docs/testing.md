@@ -72,6 +72,40 @@ remains visible. The viewer command remains a separate Node check. Native build
 and real gameplay are outside these profiles. Exact commands and worker settings
 belong in the runner, and hosted qualification requires actual candidate results.
 
+## Advisory assurance trace pilot
+
+Three registered pytest markers link a small source-test sample to existing
+[C-RUNTIME](controls.md#c-runtime--live-authority-and-input-guards-runtime)
+obligations. [C-PORTABLE](controls.md#c-portable--portable-regression-lane-automatic)
+remains the regression executor. These markers support review navigation and
+opt-in selection; they do not change production CI routing or define whole-source
+coverage. The table follows risk → invariant → control → verification marker.
+
+| Product risk | Invariant and parent contract | Control → marker |
+| --- | --- | --- |
+| Context projection erases authored evidence or mutates retained detail | Project only known binding slots; preserve authored values and isolate copies. [Player interface](components/player-interface.md#context-and-failure-boundaries). | C-RUNTIME → `assurance_context` |
+| Invalid durable support or lost evidence revives an old possession claim | Reject forward/cyclic dependencies; unavailable newest evidence stays unknown after SQLite reopen. [Memory/learning](components/memory-learning.md#failure-bounds-and-ownership), [memory contract](protocol.md#ordinary-discovery-and-procedure-data). | C-RUNTIME → `assurance_memory` |
+| A refreshed render retargets input, or changed authority permits dispatch | Keep the original non-image capture; reject changed session, revision or boundary at preflight. [Native control](components/native-control.md#internal-responsibilities), [ownership contract](protocol.md#controller-run-ownership). | C-RUNTIME → `assurance_freshness` |
+
+The six existing cases retain their original assertions. Context cases use
+synthetic records and a controlled client; memory cases exercise real SQLite and
+retained files with synthetic observations; controller cases use a fake native
+bridge. These assumptions bound the claim to those host-side contracts. Passing
+them establishes no actual-game outcome, loaded host schema, native capture or
+whole-repository semantic coverage. The component contracts own the detailed rules.
+
+Use pytest's registered metadata and strict marker validation directly:
+
+```sh
+.venv/bin/python -m pytest --markers
+.venv/bin/python -m pytest --strict-markers --collect-only -q tests/test_player_view.py tests/test_campaign_memory.py tests/test_controller.py -m 'assurance_context or assurance_memory or assurance_freshness'
+.venv/bin/python -m pytest --strict-markers -q tests/test_player_view.py tests/test_campaign_memory.py tests/test_controller.py -m 'assurance_context or assurance_memory or assurance_freshness'
+```
+
+Collection lists actual node identities; it does not prove an invariant was
+exercised. Review marker membership against assertions when these contracts or
+fixtures change under existing [C-REVIEW/C-MAINTENANCE](controls.md) ownership.
+
 ## Review overlap by failure responsibility
 
 “No duplicate test IDs” means discovery found distinct identities. It says nothing

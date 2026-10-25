@@ -3,6 +3,8 @@ from copy import deepcopy
 import unittest
 from unittest.mock import Mock
 
+import pytest
+
 from harness.player_tools import DETAIL_SECTIONS, PlayerTools
 from harness.player_view import decision_view
 
@@ -98,6 +100,7 @@ class DecisionViewTests(unittest.TestCase):
         self.assertNotIn("presentation_schema", view["source"])
         self.assertEqual(view["mission"]["progress"], original["mission"]["progress"])
 
+    @pytest.mark.assurance_context
     def test_projection_never_mutates_or_aliases_full_result_or_handle_cache(self):
         original = snapshot()
         client = Mock()
@@ -242,6 +245,7 @@ class DecisionViewTests(unittest.TestCase):
         self.assertFalse(view["grants_authority"])
         self.assertEqual(original, before)
 
+    @pytest.mark.assurance_context
     def test_context_projects_only_binding_slots_not_claims_procedures_or_other_tools(self):
         source = snapshot()["source"]
         authored = dict(reference=dict(frame_sha256="authored-value"), native_sha256="authored-native")

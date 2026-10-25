@@ -52,3 +52,8 @@ forbidden_modules = [
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    "assurance_context: advisory C-RUNTIME context projection and copy isolation; docs/components/player-interface.md#context-and-failure-boundaries",
+    "assurance_memory: advisory C-RUNTIME durable memory provenance and source loss; docs/components/memory-learning.md#failure-bounds-and-ownership",
+    "assurance_freshness: advisory C-RUNTIME original capture and current input authority; docs/components/native-control.md#internal-responsibilities",
+]
