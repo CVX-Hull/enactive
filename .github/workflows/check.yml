@@ -33,6 +33,7 @@ jobs:
       - run: python -m venv .venv
       - run: .venv/bin/python -m pip install --cache-dir .cache/pip --require-hashes -r requirements-dev.lock
       - run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" ci --ignore-scripts --no-audit --no-fund
+      - run: npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci --ignore-scripts --no-audit --no-fund
       - run: .venv/bin/python tools/diagrams.py --install-browser
       - name: Allow the project Chrome sandbox on this disposable runner
         run: |

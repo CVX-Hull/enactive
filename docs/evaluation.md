@@ -26,6 +26,35 @@ budgets and pilot decision thresholds for #24. No live model comparison is claim
 by this tooling. Change that protocol before collecting affected outcomes, with a
 recorded reason; do not tune thresholds after seeing results.
 
+## Pi host events
+
+The optional [Pi host](components/player-interface.md) writes JSONL into the
+driver's existing `driver-<role>.jsonl`. Each event has `wall_time` and
+`monotonic_ms`; request and tool IDs correlate host phases, while complete tool
+results retain the existing mission operation/source references. The host does
+not create another mission ledger or treat a JSON-RPC ID as durable operation
+identity. Missing clock joins remain unknown.
+
+| Event | Observation and limit |
+| --- | --- |
+| `host-start`, `mcp-connected` | Frozen route/effort, unsupported features, missing endpoints and owned MCP PID; not actual provider/model competence or game authority. |
+| `request-start` | Constructed provider payload sizes, text/image counts and host request identity; begins at the selected SDK request boundary, not the user's decision or server inference. |
+| `response-headers`, `response-first-chunk` | HTTP status and first received response-body chunk observed locally; either can precede useful content and neither timestamp isolates queue/inference time. |
+| `response-backend` | Model identifier reported by a parsed provider event; an absent or alias-only identifier does not establish an immutable backend version. |
+| `response-complete` | Completed SDK response's stop reason and returned usage/model metadata; successful response receipt is not successful gameplay. Missing input/output counts mean `usage_available:false`, `usage:null` and unknown cost. Reported counts enable normalized usage; `cost_source` distinguishes provider totals from configured-rate estimates. |
+| `tool-start`, `tool-result` | Actual MCP call arguments and complete returned text/image/error envelope; retain original collection on uncertainty. This is tool service/transport evidence, not native effect or physical display. |
+| `tool-refused` | A zero-dispatch argument-normalization refusal; the model may make an explicit corrected call, without software repairing its original selection. |
+| `abort`, `settled` | Host stop reason, request count and cleanup disposition. `native_cleanup_claimed:false` remains explicit; prompt resolution or an event alone does not qualify normal game ending. |
+
+The raw provider headers, keys and arbitrary provider error text are not retained.
+There is no automatic compaction in this core host; its absence is disclosed at
+startup rather than measured as a hidden model service. Finite request/host bounds
+and context/provider errors stop without pruning or fallback. Offline synthetic
+SSE/MCP probes exercise the real SDK and serialization but perform no inference
+or gameplay. Their elapsed/instrumentation measurements are fixture-only costs.
+Live useful-effect/cadence criteria and all-role costs remain unchanged below;
+[#236](https://github.com/CVX-Hull/enactive/issues/236) owns any matched comparison.
+
 ## Latency budgets for interactive play
 
 The [responsive-player brief](changes/060-responsive-player.md) records the latest

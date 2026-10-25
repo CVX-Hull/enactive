@@ -119,6 +119,12 @@ class CampaignPlayerTests(unittest.TestCase):
         (self.run / "frozen" / "successor-player-brief.txt").write_text("generic frozen successor brief\n")
         return self.run
 
+    def prepare_pi(self):
+        run = self.make_run()
+        (run / "frozen" / "player-pi-configuration.json").write_text('{"schema":"pi-player-host/1"}')
+        (run / "frozen" / "pi-player-context.txt").write_text("Frozen guide, not ambient instructions.\n")
+        return run
+
     def invoke(self, *, statuses=None, collected=None, outcomes=None, run=None, **options):
         self.run = run or self.make_run()
         self.events, self.processes = [], []
@@ -232,6 +238,52 @@ class CampaignPlayerTests(unittest.TestCase):
         self.assertEqual(self.processes[0].kwargs["cwd"], self.root)
         self.assertEqual(self.processes[0].kwargs["stdin"], subprocess.PIPE)
         self.assertTrue(self.processes[0].kwargs["text"])
+
+    def test_pi_hosts_reuse_exit_before_successor_and_original_collection(self):
+        run = self.prepare_pi()
+        report = self.invoke(run=run, host="pi", node="/project/node",
+            statuses=[status(), status("handoff"), status("handoff"),
+                status("stopped", actor_id="successor", player_id="successor")])
+        self.assertEqual(report["exit_code"], 0)
+        self.assertEqual(self.launch_count, 2)
+        for role, process in zip(("original", "successor"), self.processes):
+            self.assertEqual(process.args, ["/project/node",
+                str(self.root / "tools" / "player_host" / "run.mjs"),
+                "--config", str(run / "frozen" / "player-pi-configuration.json"),
+                "--mcp-config", str(run / "frozen" / "player-host-configuration.json"),
+                "--context", str(run / "frozen" / "pi-player-context.txt"),
+                "--model", "frozen-model", "--effort", "low",
+                "--timeout-seconds", "60.0", "-o", str(run / f"driver-{role}-final.txt")])
+            self.assertNotIn("resume", process.args)
+            self.assertTrue(process.prompt.startswith(
+                "Frozen player context and current MCP schemas are supplied by the host.\n\n"))
+        self.assertEqual([event[0] for event in self.events], ["status", "launch", "communicate", "exit",
+            "status", "collect", "status", "launch", "communicate", "exit", "status"])
+        self.client.submit.assert_not_called()
+
+    def test_pi_host_failure_prevents_successor_and_does_not_claim_native_cleanup(self):
+        run = self.prepare_pi()
+        report = self.invoke(run=run, host="pi", outcomes=[1], statuses=[status()])
+        self.assertEqual(self.launch_count, 1)
+        self.assertEqual(report["exit_code"], 1)
+        self.assertFalse(report["native_cleanup_claimed"])
+        self.client.collect.assert_not_called()
+        self.assertEqual([event[0] for event in self.events], ["status", "launch", "communicate", "exit"])
+
+    def test_pi_missing_explicit_context_and_resume_refuse_before_host_launch(self):
+        for missing in ("player-pi-configuration.json", "pi-player-context.txt"):
+            with self.subTest(missing=missing):
+                run = self.prepare_pi()
+                (run / "frozen" / missing).unlink()
+                with self.assertRaises(OSError), patch.object(driver.subprocess, "Popen") as launch:
+                    driver.run_campaign(root=self.root, run_dir=run, mission_id="mission",
+                        model="frozen-model", effort="low", timeout_seconds=60, host="pi")
+                launch.assert_not_called()
+                self.assertFalse((run / "preparation" / "driver-report.json").exists())
+        with self.assertRaises(driver.DriverError), patch.object(driver.subprocess, "Popen") as launch:
+            driver.run_campaign(root=self.root, run_dir=run, mission_id="mission",
+                model="frozen-model", effort="low", timeout_seconds=60, host="pi", original_thread="old")
+        launch.assert_not_called()
 
     def test_original_nonzero_never_reads_post_status_or_launches_successor(self):
         report = self.invoke(statuses=[status()], outcomes=[7])
@@ -519,7 +571,7 @@ class CampaignPlayerTests(unittest.TestCase):
             driver.main()
         self.assertEqual(stopped.exception.code, 0)
         self.assertEqual(run.call_args.kwargs, dict(root=self.root, run_dir=Path("/run"), mission_id="mission",
-            model="chosen", effort="medium", timeout_seconds=12, original_thread=None, codex=driver.DEFAULT_CODEX))
+            model="chosen", effort="medium", timeout_seconds=12, original_thread=None, codex=driver.DEFAULT_CODEX, host="codex", node="node"))
 
 
 if __name__ == "__main__":

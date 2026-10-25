@@ -600,6 +600,41 @@ activate an actor, change ownership or authorize another run.
 Source/fake-host checks qualify this implementation; actual fresh-host graphical
 activation remains separately required under#136/#164/#145.
 
+The optional Pi host uses the same driver and mission ingress. Its supported lane
+is currently offline conformance; a live provider/game run requires the separate
+prospective selection, spending and finite admission in
+[#236](https://github.com/CVX-Hull/enactive/issues/236). Install the
+[locked host package](setup.md#install-the-optional-pi-player-host) first. In addition
+to the three common frozen files, prepare:
+
+- `frozen/pi-player-context.txt`: the actual frozen guide/context content to load
+  into both fresh hosts. The Pi player has no file-reading or shell tools; paths
+  to undeclared files are not supplied context. Current tools and server instructions
+  are discovered from the selected MCP process, restricted to `enabled_tools`.
+- `frozen/player-pi-configuration.json`: closed `pi-player-host/1` route with
+  `model`, `api_key_env`, `max_requests` and `request_timeout_seconds`. The model
+  is explicit Pi `openai-completions` metadata with text and image inputs,
+  context/output capacity, cost metadata and supported reasoning settings.
+  Its ID must match `--model`; `--effort` must be supported rather than silently
+  clamped. Endpoint capabilities and cost metadata require provider verification;
+  declaring image support does not prove actual image understanding.
+
+Pass `--host pi --node /absolute/path/to/node` with the same frozen mission/model/
+effort/deadline arguments above. Supply only the selected credential-environment
+name in configuration; inject the value securely for an authorized live request.
+No Keychain lookup, global credential/profile discovery or transfer of subscription
+access is automatic. The MCP child receives a minimal environment rather than
+the provider secret. Never put keys in model headers, URLs, files or argv.
+
+Pi always starts fresh; `--original-thread` is unsupported. There is no automatic
+compaction, pruning, session restore, model fallback or transport reconnect/replay.
+Context/provider errors, request limits and transport uncertainty stop the host
+nonzero. Known tool errors still present complete original-collection guidance
+for an explicit next decision. A transport failure with no result proves neither
+delivery nor nondelivery; do not retry the action. The normal runtime/driver
+checks still govern any later continuation. Owned MCP cleanup cannot establish
+native cleanup or authorize another actor. See [host-event interpretation](evaluation.md#pi-host-events).
+
 For a separate optional adviser, freeze the actual active stdin prompt with its
 current source, mission, actor and finite limits. State activation explicitly
 after external admission; do not send a standby-only brief and infer activation

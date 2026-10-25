@@ -1,0 +1,262 @@
+{
+  "scope": "12 synthetic SSE + official Python MCP fixture hosts; no inference or native game",
+  "node": "v26.9.0",
+  "pi": "1.4.0",
+  "samples": [
+    {
+      "sample": 0,
+      "host_ms": 377.14308299999993,
+      "sink_ms": 0.32283399999997187,
+      "event_count": 15,
+      "request_count": 2,
+      "second_request": {
+        "type": "request-start",
+        "wall_time": "2026-10-25T19:20:30.212Z",
+        "monotonic_ms": 314.877333,
+        "request_id": "request-2",
+        "model": "offline-conformance",
+        "provider": "fixture",
+        "text_parts": 5,
+        "text_bytes": 30270,
+        "image_parts": 1,
+        "image_bytes": 68,
+        "payload_bytes": 31114
+      }
+    },
+    {
+      "sample": 1,
+      "host_ms": 358.20574999999997,
+      "sink_ms": 0.23720900000006395,
+      "event_count": 15,
+      "request_count": 2,
+      "second_request": {
+        "type": "request-start",
+        "wall_time": "2026-10-25T19:20:30.572Z",
+        "monotonic_ms": 297.620083,
+        "request_id": "request-2",
+        "model": "offline-conformance",
+        "provider": "fixture",
+        "text_parts": 5,
+        "text_bytes": 30270,
+        "image_parts": 1,
+        "image_bytes": 68,
+        "payload_bytes": 31114
+      }
+    },
+    {
+      "sample": 2,
+      "host_ms": 382.01645800000006,
+      "sink_ms": 0.33450399999969704,
+      "event_count": 15,
+      "request_count": 2,
+      "second_request": {
+        "type": "request-start",
+        "wall_time": "2026-10-25T19:20:30.955Z",
+        "monotonic_ms": 321.56495799999993,
+        "request_id": "request-2",
+        "model": "offline-conformance",
+        "provider": "fixture",
+        "text_parts": 5,
+        "text_bytes": 30270,
+        "image_parts": 1,
+        "image_bytes": 68,
+        "payload_bytes": 31114
+      }
+    },
+    {
+      "sample": 3,
+      "host_ms": 369.38099999999986,
+      "sink_ms": 0.2919160000001284,
+      "event_count": 15,
+      "request_count": 2,
+      "second_request": {
+        "type": "request-start",
+        "wall_time": "2026-10-25T19:20:31.325Z",
+        "monotonic_ms": 309.88758299999995,
+        "request_id": "request-2",
+        "model": "offline-conformance",
+        "provider": "fixture",
+        "text_parts": 5,
+        "text_bytes": 30270,
+        "image_parts": 1,
+        "image_bytes": 68,
+        "payload_bytes": 31114
+      }
+    },
+    {
+      "sample": 4,
+      "host_ms": 380.41391699999986,
+      "sink_ms": 0.25516700000002857,
+      "event_count": 15,
+      "request_count": 2,
+      "second_request": {
+        "type": "request-start",
+        "wall_time": "2026-10-25T19:20:31.706Z",
+        "monotonic_ms": 321.258333,
+        "request_id": "request-2",
+        "model": "offline-conformance",
+        "provider": "fixture",
+        "text_parts": 5,
+        "text_bytes": 30270,
+        "image_parts": 1,
+        "image_bytes": 68,
+        "payload_bytes": 31114
+      }
+    },
+    {
+      "sample": 5,
+      "host_ms": 365.94312500000024,
+      "sink_ms": 0.2262500000001637,
+      "event_count": 15,
+      "request_count": 2,
+      "second_request": {
+        "type": "request-start",
+        "wall_time": "2026-10-25T19:20:32.073Z",
+        "monotonic_ms": 307.385166,
+        "request_id": "request-2",
+        "model": "offline-conformance",
+        "provider": "fixture",
+        "text_parts": 5,
+        "text_bytes": 30270,
+        "image_parts": 1,
+        "image_bytes": 68,
+        "payload_bytes": 31114
+      }
+    },
+    {
+      "sample": 6,
+      "host_ms": 369.679709,
+      "sink_ms": 0.22525199999972756,
+      "event_count": 15,
+      "request_count": 2,
+      "second_request": {
+        "type": "request-start",
+        "wall_time": "2026-10-25T19:20:32.441Z",
+        "monotonic_ms": 309.1020840000001,
+        "request_id": "request-2",
+        "model": "offline-conformance",
+        "provider": "fixture",
+        "text_parts": 5,
+        "text_bytes": 30270,
+        "image_parts": 1,
+        "image_bytes": 68,
+        "payload_bytes": 31114
+      }
+    },
+    {
+      "sample": 7,
+      "host_ms": 357.599792,
+      "sink_ms": 0.18966400000044814,
+      "event_count": 15,
+      "request_count": 2,
+      "second_request": {
+        "type": "request-start",
+        "wall_time": "2026-10-25T19:20:32.800Z",
+        "monotonic_ms": 297.47874999999976,
+        "request_id": "request-2",
+        "model": "offline-conformance",
+        "provider": "fixture",
+        "text_parts": 5,
+        "text_bytes": 30270,
+        "image_parts": 1,
+        "image_bytes": 68,
+        "payload_bytes": 31114
+      }
+    },
+    {
+      "sample": 8,
+      "host_ms": 379.5262090000001,
+      "sink_ms": 0.25079300000061266,
+      "event_count": 15,
+      "request_count": 2,
+      "second_request": {
+        "type": "request-start",
+        "wall_time": "2026-10-25T19:20:33.178Z",
+        "monotonic_ms": 318.056834,
+        "request_id": "request-2",
+        "model": "offline-conformance",
+        "provider": "fixture",
+        "text_parts": 5,
+        "text_bytes": 30270,
+        "image_parts": 1,
+        "image_bytes": 68,
+        "payload_bytes": 31114
+      }
+    },
+    {
+      "sample": 9,
+      "host_ms": 391.7739590000001,
+      "sink_ms": 0.2507480000012947,
+      "event_count": 15,
+      "request_count": 2,
+      "second_request": {
+        "type": "request-start",
+        "wall_time": "2026-10-25T19:20:33.563Z",
+        "monotonic_ms": 323.003917,
+        "request_id": "request-2",
+        "model": "offline-conformance",
+        "provider": "fixture",
+        "text_parts": 5,
+        "text_bytes": 30270,
+        "image_parts": 1,
+        "image_bytes": 68,
+        "payload_bytes": 31114
+      }
+    },
+    {
+      "sample": 10,
+      "host_ms": 385.115417,
+      "sink_ms": 0.23625100000163002,
+      "event_count": 15,
+      "request_count": 2,
+      "second_request": {
+        "type": "request-start",
+        "wall_time": "2026-10-25T19:20:33.943Z",
+        "monotonic_ms": 310.7938750000003,
+        "request_id": "request-2",
+        "model": "offline-conformance",
+        "provider": "fixture",
+        "text_parts": 5,
+        "text_bytes": 30270,
+        "image_parts": 1,
+        "image_bytes": 68,
+        "payload_bytes": 31114
+      }
+    },
+    {
+      "sample": 11,
+      "host_ms": 394.1893749999999,
+      "sink_ms": 0.29875300000276184,
+      "event_count": 15,
+      "request_count": 2,
+      "second_request": {
+        "type": "request-start",
+        "wall_time": "2026-10-25T19:20:34.356Z",
+        "monotonic_ms": 338.4136669999998,
+        "request_id": "request-2",
+        "model": "offline-conformance",
+        "provider": "fixture",
+        "text_parts": 5,
+        "text_bytes": 30270,
+        "image_parts": 1,
+        "image_bytes": 68,
+        "payload_bytes": 31114
+      }
+    }
+  ],
+  "summary": {
+    "host_median_ms": 378.334646,
+    "host_max_ms": 394.1893749999999,
+    "sink_median_ms": 0.2507705000009537,
+    "sink_max_ms": 0.33450399999969704
+  },
+  "limits": [
+    "sink clock covers JSON serialization and synchronous append only, not fsync or full instrumentation cost",
+    "host includes fixture process startup/cleanup and provider construction, not inference or gameplay",
+    "single host and fixture cohort; no general performance claim"
+  ],
+  "measurement": "event-sink JSON serialization + synchronous append; full host fixture times",
+  "no_live_inference": true,
+  "no_native_game": true,
+  "credential_accessed": false
+}

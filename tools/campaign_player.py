@@ -78,7 +78,23 @@ def _flags(values: dict, prefix: str = "mcp_servers.enactive_player"):
 
 
 def _argv(root: Path, run: Path, role: str, configuration: dict, *, model: str,
-          effort: str, codex: str, thread: str | None = None) -> list[str]:
+          effort: str, codex: str, thread: str | None = None, host: str = "codex",
+          node: str = "node", timeout_seconds: float | None = None) -> list[str]:
+    if host == "pi":
+        if thread is not None:
+            raise DriverError("Pi hosts require a fresh context; original-thread is unsupported")
+        if timeout_seconds is None or not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
+            raise DriverError("Pi host requires a finite remaining deadline")
+        frozen = run / "frozen"
+        return [node, str(root / "tools" / "player_host" / "run.mjs"),
+            "--config", str(frozen / "player-pi-configuration.json"),
+            "--mcp-config", str(frozen / "player-host-configuration.json"),
+            "--context", str(frozen / "pi-player-context.txt"),
+            "--model", model, "--effort", effort,
+            "--timeout-seconds", str(timeout_seconds),
+            "-o", str(run / f"driver-{role}-final.txt")]
+    if host != "codex":
+        raise DriverError("Unsupported player host")
     args = [codex, "exec", "--json", "--ignore-user-config", "--sandbox", "read-only",
         "-C", str(root), "-m", model, "-c", "model_reasoning_effort=" + json.dumps(effort)]
     for flag in _flags(configuration):
@@ -245,10 +261,12 @@ def _issuance(client: MissionClient, issued: dict, deadline: float) -> dict:
 
 def run_campaign(*, root: Path, run_dir: Path, mission_id: str, model: str,
                  effort: str, timeout_seconds: float, original_thread: str | None = None,
-                 codex: str = DEFAULT_CODEX) -> dict:
+                 codex: str = DEFAULT_CODEX, host: str = "codex", node: str = "node") -> dict:
     """Run frozen hosts; return observed terminal phase or an incomplete report."""
     if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
         raise DriverError("timeout_seconds must be positive and finite")
+    if host not in ("codex", "pi") or host == "pi" and original_thread is not None:
+        raise DriverError("Unsupported player host or resumed Pi context")
     deadline = time.monotonic() + timeout_seconds
     root, run = root.resolve(strict=True), run_dir.resolve(strict=True)
     if (re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,127}", mission_id) is None
@@ -264,8 +282,15 @@ def run_campaign(*, root: Path, run_dir: Path, mission_id: str, model: str,
         raise DriverError("Frozen configuration must contain only known player MCP settings")
     # Validate/flatten before reserving any output or launching a process.
     list(_flags(configuration))
-    context_location = (f"Frozen context directory: {frozen}\n"
-        f"Focused current-schema index: {frozen / 'interface' / 'index.json'}\n\n")
+    if host == "pi":
+        # The Pi core has no file tools: its explicit context is loaded by the
+        # host, never reconstructed from file paths by a deciding player.
+        _read(frozen / "player-pi-configuration.json")
+        _read(frozen / "pi-player-context.txt")
+        context_location = "Frozen player context and current MCP schemas are supplied by the host.\n\n"
+    else:
+        context_location = (f"Frozen context directory: {frozen}\n"
+            f"Focused current-schema index: {frozen / 'interface' / 'index.json'}\n\n")
     original_prompt = context_location + _read(frozen / "original-player-prompt.txt")
     successor_brief = context_location + _read(frozen / "successor-player-brief.txt")
     paths = {"driver-report.json": preparation / "driver-report.json",
@@ -305,7 +330,8 @@ def run_campaign(*, root: Path, run_dir: Path, mission_id: str, model: str,
             prompt = original_prompt
             for role in ("original", "successor"):
                 args = _argv(root, run, role, configuration, model=model, effort=effort,
-                    codex=codex, thread=original_thread if role == "original" else None)
+                    codex=codex, thread=original_thread if role == "original" else None,
+                    host=host, node=node, timeout_seconds=_remaining(deadline))
                 receipt = _host(role, args, prompt, root, streams, deadline)
                 report["hosts"].append(dict(role=role, **receipt))
                 if receipt["returncode"] != 0 or receipt["timed_out"] or receipt["interrupted"] or "error_type" in receipt:
@@ -364,6 +390,8 @@ def main() -> None:
     parser.add_argument("--timeout-seconds", type=float, required=True)
     parser.add_argument("--original-thread")
     parser.add_argument("--codex", default=DEFAULT_CODEX)
+    parser.add_argument("--host", choices=("codex", "pi"), default="codex")
+    parser.add_argument("--node", default="node")
     args = parser.parse_args()
     try:
         report = run_campaign(**vars(args))

@@ -21,6 +21,7 @@ for the lead. The adviser proposes data without input authority.
 | Decision projection | Small current decision view; exact retained detail available on demand | [player_view.py](../../harness/player_view.py) |
 | Imperative client | Immutable staged requests, HTTP ingress and original result collection | [mission_client.py](../../harness/mission_client.py) |
 | Host driver | Finite host activation and at most the admitted successor after real quiescent handoff | [campaign_player.py](../../tools/campaign_player.py) |
+| Optional Pi host | Explicit model/context/tool loadout, complete MCP presentation and finite timestamped provider loop; offline support only | [host package](../../tools/player_host/package.json) |
 
 The flow is selected snapshot + explicit player intent → request composition →
 durable SDK stage → existing mission ingress → original collection → decision
@@ -96,6 +97,16 @@ qualification; SDK tests alone do not establish those properties. Routine player
 work starts with the compact [guide](../player-guide.md), frozen mission and
 selected tool schema, without source archaeology or the engineering corpus.
 
+The optional Pi core host uses the same MCP server and driver handoff/custody
+guards, with explicit frozen context instead of file-reading tools. It keeps
+returned text/images complete and carries MCP error status into provider-visible
+content. It refuses SDK-coerced arguments before dispatch and stops on transport
+uncertainty rather than reconnecting/replaying. The package has no ambient tool
+discovery, automatic compaction or host-session restoration. Provider-request
+construction and process cleanup can be qualified offline; actual perception,
+play and cadence remain separate. [Preparation and limits](../runbook.md#bounded-player-host-activation)
+and [measurement meaning](../evaluation.md#pi-host-events) own those details.
+
 ## Assurance and evidence
 
 Review mechanical vs semantic responsibilities first, then ingress/staging failure
@@ -111,6 +122,7 @@ from instantiating an executor.
 | A lost response or repeated call sends another action | Staged intent stays immutable; uncertainty requires original collection. [Original submission contract](../protocol.md#integrated-mission-lifecycle). | MissionClient staging: [client](../../tests/test_mission_client.py) `test_duplicate_only_collects_same_operation_and_changed_payload_refuses` asserts one submission followed by result collection and rejects changed payload. [Player tools](../../tests/test_player_tools.py) `test_unknown_delivery_is_preserved_without_retry_or_implicit_input` asserts one ambiguous submission, unchanged delivered inputs and retained uncertainty. These `assurance_ingress` fixtures do not prove real host delivery. |
 | Compact context erases the player's evidence or changes retained detail | Project only known binding fields, preserve authored content and isolate copies. [Context boundary](#context-and-failure-boundaries). | Decision projection: [view tests](../../tests/test_player_view.py), selected by `assurance_context`, assert authored claim/procedure preservation and no cache mutation/aliasing. Synthetic records and a controlled client do not prove sufficient context or actual image presentation. |
 | A mechanically valid response still leaves the player unable to continue | The actual host must load the schema, show relevant evidence and support a useful next decision. [Operator contract](../protocol.md#designated-campaign-operator). | [C-USABILITY](../controls.md#c-usability--operator-understanding-review-manual) requires observed use and reader judgment. The retained [useful-play assessment](../acceptance/2026-10-25-useful-play-readiness.md) demonstrates bounded continuation but records failed normal ending and rejected whole-player readiness. Tags and SDK passes cannot qualify this outcome. |
+| Host defaults truncate evidence, hide an error or replay after uncertain transport | Current MCP text/image/error and original-collection contract; sequential mutations and no semantic argument repair. | [Pi conformance](../../tests/test_pi_player_host.py) exercises the pinned SDK's constructed next request, restricted tools, error marker, full content, coercion refusal, transport stop and owned-child closure with synthetic responses. It does not establish actual provider semantics, image comprehension or game outcomes. |
 
 The [evaluation](../evaluation.md#latency-budgets-for-interactive-play) owns useful
 latency definitions; short calls or token-cache rates do not qualify play cadence.

@@ -67,6 +67,20 @@ offers Apache-2.0 OR BSD-3-Clause. The local adapter installs no telemetry expor
 and disables the SDK's optional telemetry middleware. The existing dependency
 pins were retained; the SDK's transitive packages stay in the project `.venv`.
 
+## Optional Pi deciding host
+
+The project-local host uses [Pi](https://github.com/earendil-works/pi) agent-core,
+AI and MCP packages 1.4.0 under MIT. Published package metadata and exports were
+inspected on 2026-10-25. Its separate
+[package](tools/player_host/package.json) and [lock](tools/player_host/package-lock.json)
+record exact direct/transitive versions, integrity and license metadata. Original
+notices remain in those installed distributions; no upstream code or binary is
+vendored in Git. Pi MCP includes notices for its SDK-derived OAuth code, which
+this stdio-only integration does not invoke. Preserve upstream notices before
+redistributing a bundled installation. This runtime does not replace MiniRacer
+for player-authored programs or the Python MCP server. Selection and upkeep
+conditions are in the [host brief](docs/changes/069-controllable-player-host.md).
+
 ## Player program runtime
 
 Player-authored routines use [MiniRacer](https://bpcreech.com/PyMiniRacer/)
