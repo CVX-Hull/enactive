@@ -159,3 +159,5 @@ printing it to model context. Opening the 32-sample timing disclosure did return
 large UI snapshot; neither that acquisition cost nor the truncation is a game
 stall or a change to the measured interval. No download wait or new export service
 was required.
+
+The subsequent [grounded selection and integrated004 assessment](2026-10-24-player-readiness.md) uses new finite freezes. Its useful-play progress and remaining qualification gaps do not relabel either closed bootstrap failure.

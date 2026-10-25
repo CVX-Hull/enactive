@@ -1,0 +1,314 @@
+{
+  "scope": "Closed004 mechanical accounting, not semantic usefulness, isolated inference or whole-player/physical-paint timing",
+  "mission_id": "useful-learning-004",
+  "source": "7f5b70c58000bc965cd236df618a448f9f10cc45",
+  "phase": "stopped",
+  "mission_wall_seconds": 859.9022452831268,
+  "game_seconds": 35,
+  "requests": 109,
+  "by_kind": {
+    "start": 1,
+    "lifecycle": 19,
+    "skill": 69,
+    "observe": 6,
+    "remember": 10,
+    "correct": 1,
+    "handoff": 1,
+    "claim": 1,
+    "readmit": 1
+  },
+  "primitives": {
+    "rejected": 1,
+    "returned": 103,
+    "unknown": 6
+  },
+  "memory": [
+    {
+      "entry_type": "claim",
+      "records": 160,
+      "body_bytes": 125029
+    },
+    {
+      "entry_type": "procedure",
+      "records": 1,
+      "body_bytes": 3312
+    },
+    {
+      "entry_type": "work",
+      "records": 2,
+      "body_bytes": 3165
+    }
+  ],
+  "database_bytes": 1454080,
+  "reflection_jobs": [
+    {
+      "state": "completed",
+      "claimed_at": 1792897948.891243,
+      "charged_window_seconds": 90.0
+    },
+    {
+      "state": "completed",
+      "claimed_at": 1792897962.390631,
+      "charged_window_seconds": 90.0
+    }
+  ],
+  "metrics": {
+    "api_quota": null,
+    "archive": {
+      "bytes": 20923826,
+      "frames": 304,
+      "max_bytes": 2147483648,
+      "max_frames": 8192,
+      "max_metadata_bytes": 35651584,
+      "metadata_bytes": 766295
+    },
+    "external_tokens": null,
+    "game_seconds": 35,
+    "harness_api_spend": 0,
+    "interventions": null,
+    "model_requests": null,
+    "model_time_seconds": null,
+    "operations": {
+      "by_kind": {
+        "claim": 1,
+        "correct": 1,
+        "handoff": 1,
+        "lifecycle": 19,
+        "observe": 6,
+        "readmit": 1,
+        "remember": 10,
+        "skill": 69,
+        "start": 1
+      },
+      "by_skill": {
+        "direct": 48,
+        "edit": 6,
+        "inspect": 5,
+        "interact": 7,
+        "program": 3
+      },
+      "by_state": {
+        "blocked": 5,
+        "completed": 35,
+        "partial": 65,
+        "unknown": 4
+      },
+      "total": 109
+    },
+    "primitives": {
+      "by_state": {
+        "rejected": 1,
+        "returned": 103,
+        "unknown": 6
+      },
+      "charged": 110
+    },
+    "tool_calls": null
+  },
+  "remaining_limits": {
+    "frame_bytes": 2126559822,
+    "frames": 7888,
+    "game_seconds": 86365,
+    "inputs": 1938,
+    "primitive_mappings": 1938,
+    "wall_seconds": 6333.237336874008
+  },
+  "protected_reserve": {
+    "frame_bytes": 268435456,
+    "frames": 768,
+    "inputs": 256,
+    "wall_seconds": 900
+  },
+  "unresolved_effects": [],
+  "roles": {
+    "driver-adviser-active": {
+      "reported_completed_usage": {
+        "input_tokens": 1275856,
+        "cached_input_tokens": 1219840,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 4200,
+        "reasoning_output_tokens": 467
+      },
+      "tool_calls": {
+        "enactive_reflect_next": 3,
+        "enactive_reflect_source": 2,
+        "enactive_reflect_submit": 4
+      },
+      "text_bytes": 28003,
+      "response_text_distribution": {
+        "n": 9,
+        "median": 533.0,
+        "p95": 12060,
+        "max": 12060
+      },
+      "typed_images": {
+        "count": 2,
+        "encoded_bytes": 39212
+      },
+      "submission_feedback": {
+        "not_submitted": 2
+      },
+      "shell_completed": 0
+    },
+    "driver-original": {
+      "reported_completed_usage": {
+        "input_tokens": 10297666,
+        "cached_input_tokens": 10080896,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 14257,
+        "reasoning_output_tokens": 1179
+      },
+      "tool_calls": {
+        "enactive_snapshot": 2,
+        "enactive_lifecycle": 7,
+        "enactive_skill": 45,
+        "enactive_result": 1,
+        "enactive_observe": 3,
+        "enactive_source": 3,
+        "enactive_remember": 6,
+        "enactive_advice": 1,
+        "enactive_correct": 1,
+        "enactive_handoff": 1
+      },
+      "text_bytes": 424258,
+      "response_text_distribution": {
+        "n": 70,
+        "median": 6237.5,
+        "p95": 7380,
+        "max": 9031
+      },
+      "typed_images": {
+        "count": 57,
+        "encoded_bytes": 4972156
+      },
+      "submission_feedback": {},
+      "shell_completed": 10
+    },
+    "driver-successor": {
+      "reported_completed_usage": {
+        "input_tokens": 7402162,
+        "cached_input_tokens": 7223808,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 11670,
+        "reasoning_output_tokens": 594
+      },
+      "tool_calls": {
+        "enactive_snapshot": 1,
+        "enactive_context": 1,
+        "enactive_source": 9,
+        "enactive_claim": 1,
+        "enactive_readmit": 1,
+        "enactive_skill": 24,
+        "enactive_lifecycle": 13,
+        "enactive_result": 5,
+        "enactive_observe": 3,
+        "enactive_remember": 5,
+        "enactive_advice": 1
+      },
+      "text_bytes": 354921,
+      "response_text_distribution": {
+        "n": 64,
+        "median": 5857.0,
+        "p95": 7433,
+        "max": 16042
+      },
+      "typed_images": {
+        "count": 43,
+        "encoded_bytes": 5823568
+      },
+      "submission_feedback": {
+        "not_submitted": 2
+      },
+      "shell_completed": 10
+    }
+  },
+  "reported_completed_usage": {
+    "input_tokens": 18975684,
+    "cached_input_tokens": 18524544,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 30127,
+    "reasoning_output_tokens": 2240
+  },
+  "request_settlement": {
+    "samples": 109,
+    "missing": 0,
+    "duplicates": 0,
+    "runtime_ms": {
+      "n": 109,
+      "median": 335.34300047904253,
+      "p95": 15120.438042096794,
+      "max": 16056.76691699773
+    },
+    "service_ms": {
+      "n": 109,
+      "median": 333.07554107159376,
+      "p95": 15119.23270765692,
+      "max": 16053.750041872263
+    },
+    "censored": {}
+  },
+  "save_counts": {
+    "before": 191,
+    "after": 242,
+    "unchanged": 191,
+    "changed": 0,
+    "removed": 0,
+    "added": 51
+  },
+  "limits": "Counters include repeated/cached context; not unique tokens or billing. Request timing is runtime receipt to writer finalization, not model decision readiness/useful display latency.",
+  "program_executions": [
+    {
+      "request_id": "op-331ed2f46976498fbe6b05f0505b9306",
+      "runtime_ms": 1134.0976245701313,
+      "program": {
+        "evaluations": 4,
+        "status": "yield",
+        "reason": "East tile is not observed clear floor",
+        "task_success_verified": false,
+        "returned_inputs": 3,
+        "evaluation_seconds_sum": 0.07090083416551352
+      },
+      "reason": "Program yield: East tile is not observed clear floor"
+    },
+    {
+      "request_id": "op-587b5fcd1ceb4697b611bd6eef39a0ae",
+      "runtime_ms": 882.4509587138891,
+      "program": {
+        "evaluations": 3,
+        "status": "done",
+        "reason": "Requested east segment ended; inspect image",
+        "task_success_verified": false,
+        "returned_inputs": 2,
+        "evaluation_seconds_sum": 0.003262416459619999
+      },
+      "reason": "Program done: Requested east segment ended; inspect image"
+    },
+    {
+      "request_id": "op-4e99942ba1c1406d950e46a68c1d971a",
+      "runtime_ms": 1515.9629993140697,
+      "program": {
+        "evaluations": 3,
+        "status": "done",
+        "reason": "Requested east segment ended; inspect image",
+        "task_success_verified": false,
+        "returned_inputs": 2,
+        "evaluation_seconds_sum": 0.004178251139819622
+      },
+      "reason": "Program done: Requested east segment ended; inspect image"
+    }
+  ],
+  "owned_normal_exits": [
+    {
+      "result_request_id": "op-4eb6e6c1124c467aa8b733c0cf9a839b",
+      "launch_id": "e86ed1bc8b8147dbb4ff12982906c131",
+      "returncode": 0,
+      "saved_checkpoint_request_id": "op-17f9a8efe3de43c4b1b9ba44bf34c542"
+    },
+    {
+      "result_request_id": "op-2aa89c35264f4b67ab3b644ed2ecf6e6",
+      "launch_id": "dbe16e085451421f85ec463d5e6d5342",
+      "returncode": 0,
+      "saved_checkpoint_request_id": "op-82e4658220514f51b427bcc58bd8fb38"
+    }
+  ]
+}
