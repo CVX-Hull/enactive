@@ -19,6 +19,12 @@ The engineering lead maintains the project and verifies outcomes; routine play
 must not depend on lead tactics, keys or memory curation. This is not yet an
 accepted unattended seven-day survival service.
 
+An optional [Pi host](components/player-interface.md) uses that same player/MCP
+boundary with explicit tools/context and timestamped provider events. Its current
+qualification is offline request construction and process control; actual Pi-model
+play, image understanding and speed remain unqualified. Codex remains the existing
+gameplay baseline.
+
 Bounded independent play has demonstrated supplies/travel, procedure revision/reuse
 and limited supported advice adoption. Complete independent seven-day survival,
 normal lifecycle and useful apparent cadence remain unaccepted. The

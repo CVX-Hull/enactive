@@ -14,7 +14,7 @@ player tool process uses the official MCP Python SDK; it does not instantiate a
 controller or game. Runtime requirements are in [requirements.in](../requirements.in)
 and the shared hashed [lock](../requirements-dev.lock).
 Use Python 3.12 or newer and an
-existing Node.js 22.13+ runtime for JavaScript and diagram checks. Native builds require
+existing Node.js 22.19+ runtime for JavaScript, Pi host and diagram checks. Native builds require
 macOS, existing Xcode command-line tools (`clang++`, `make`, `hdiutil`, `ditto`,
 `otool`, `install_name_tool`, `codesign`), and enough disk space for roughly 1 GB
 of unpacked game source plus several GB of compiler output. Setup never installs
@@ -106,6 +106,38 @@ Python 3.14 and Node 22 on Ubuntu 24.04; its first run exposed a Chrome sandbox
 startup failure, repaired and verified in [public workflow acceptance](acceptance/2026-10-17-public-workflow.md).
 Required checks must pass before integration. Other interpreter/host combinations
 require their own validation before a support claim.
+
+### Install the optional Pi player host
+
+The separate [host package](../tools/player_host/package.json) pins Pi agent-core,
+AI and MCP to 1.4.0 with transitive integrity in its own npm lock. It does not use
+the coding-agent application's shell/file tools, personal configuration or resource
+discovery. Install only inside this project, without package lifecycle scripts:
+
+```sh
+npm --userconfig /dev/null --cache "$PWD/.cache/npm" --prefix tools/player_host ci --ignore-scripts --no-audit --no-fund
+.venv/bin/python -m pytest -q tests/test_pi_player_host.py tests/test_campaign_player.py
+```
+
+The conformance suite uses actual Pi/MCP code with synthetic provider responses;
+it calls no inference provider and launches no game. It includes current production
+MCP discovery and owned test-child cleanup. These checks are in the full portable
+lane; the hosted workflow installs the same lock. The
+[host brief](changes/069-controllable-player-host.md) explains reuse and limits.
+No credential is needed for these checks. A later authorized live configuration
+must supply its explicitly named environment key through the operator's credential
+manager without recording the value. The host does not discover Keychain items,
+load global credentials or infer another application's subscription entitlement.
+The installed OpenAI-compatible client also reads `OPENAI_LOG`,
+`OPENAI_CUSTOM_HEADERS`, `OPENAI_ORG_ID` and `OPENAI_PROJECT_ID` from its process
+environment. The Pi host refuses those ambient configuration values rather than
+silently applying them. Clear them only for the dedicated child invocation if
+needed; do not change the operator's global profile or print their values.
+
+This is bounded offline host support. Live model/image understanding, native play,
+whole-player speed and normal lifecycle require separate frozen qualification under
+[#236](https://github.com/CVX-Hull/enactive/issues/236). Frozen preparation and
+supported lifecycle are in the [runbook](runbook.md#bounded-player-host-activation).
 
 The current source uses native6/mission11/ledger12/archive5 with procedure/3,
 campaign-memory/6 and reflection/2; gameplay/2 is unchanged. Build and qualify the

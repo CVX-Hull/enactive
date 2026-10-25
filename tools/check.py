@@ -88,6 +88,9 @@ def _check(argv: list[str] | None = None) -> int:
         raise ValueError("Node.js is required for JavaScript syntax checks; use an existing/local runtime")
     for path in sorted((ROOT / "web").rglob("*.js")):
         run([node, "--check", "--input-type=module"], input=path.read_bytes())
+    host = ROOT / "tools" / "player_host"
+    for path in sorted((*host.glob("*.mjs"), *host.glob("test/*.mjs"))):
+        run([node, "--check", str(path)])
     errors = check_documents(ROOT)
     if errors:
         raise ValueError("\n".join(errors))
