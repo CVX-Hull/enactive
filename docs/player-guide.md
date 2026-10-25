@@ -220,7 +220,13 @@ quiesce; a new child or Claim cannot repair expired input authority.
 Let software form wire records. Choose the goal, selected evidence, interpretation,
 target or answer, and finite limits. Do not supply navigation `goal.scope` or an
 activity `interrupt_request_id`; software binds them from the selected matching
-snapshot/source. Missing context requires an explicit read/new decision, never
+snapshot/source. An activity start chooses `step=start`, operation, target,
+game_seconds and interrupt_allowed. Its prompt/activity children choose only
+`step=poll`, `interrupt` or `resume`, or `step=answer_interrupt` with an explicit
+`answer=YES` or `NO`. Software reads the selected original root and copies its
+stable semantics; do not repeat those fields or supply null answer/owner fields.
+Keep choosing explicit outer scope, evidence and finite limits. Missing context
+requires an explicit read/new decision, never
 guessing IDs, epochs or silently selecting newer evidence. The lifecycle summary's
 remaining wall/primitives are software-derived as-of values; use them to choose
 timely closure, not as a renewed allowance. Do not write request

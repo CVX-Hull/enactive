@@ -114,9 +114,18 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
     skill_intents = []
     for kind in SKILLS:
         schema = _without(request_schema("skill", skill_kind=kind), *ordinary_headers)
-        if kind in ("navigate", "activity"):
-            schema["properties"]["goal"] = _without(schema["properties"]["goal"],
-                "scope" if kind == "navigate" else "interrupt_request_id")
+        if kind == "navigate":
+            schema["properties"]["goal"] = _without(schema["properties"]["goal"], "scope")
+        elif kind == "activity":
+            fields = schema["properties"]["goal"]["properties"]
+            start = {name: deepcopy(fields[name]) for name in
+                ("step", "operation", "target", "game_seconds", "interrupt_allowed")}
+            start["step"] = {"const": "start"}
+            start["operation"]["enum"].remove("direct")
+            schema["properties"]["goal"] = {"anyOf": [_object(start),
+                _object({"step": {"enum": ["poll", "interrupt", "resume"]}}),
+                _object({"step": {"const": "answer_interrupt"},
+                    "answer": deepcopy(fields["answer"]["anyOf"][0])})]}
         if kind in ("menu", "edit", "item"):
             schema["properties"]["perception"] = {"$ref": "#/$defs/perception"}
         schema["properties"]["procedure"]["anyOf"] = [value if value.get("type") == "null" else
@@ -139,7 +148,7 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
             _object(dict(snapshot_id=identity, section={"enum": list(DETAIL_SECTIONS)})), True),
         ToolSpec("enactive_source", "Read one explicitly selected historical source and its actual image; grants no input authority.", _object(dict(mission_id=identity, source_id=identity)), True),
         ToolSpec("enactive_result", "Collect only the original operation ID, including after interrupted submission. Never replays input.", _object(dict(mission_id=identity, operation_id=identity, wait_seconds=wait)), True),
-        ToolSpec("enactive_skill", "Choose ordinary input (direct), a semantic skill, or a selected executable procedure (program) with an explicit returned snapshot/source and finite limits. source_id=null selects that exact cached source. Direct uses perception=null; clicks keep informing geometry. Program requires its own new_root, selected current procedure revision and initial state, perception=null; software supplies each current visible program-view/1 and click geometry through the same writer and original cumulative limits. Its act/yield/done is fallible program behavior, never verified task success; unknown delivery stops evaluation. Semantic preconditions remain strict. Software retains lineage and collects delivery and current evidence separately.", skill),
+        ToolSpec("enactive_skill", "Choose ordinary input (direct), a semantic skill, or a selected executable procedure (program) with an explicit returned snapshot/source and finite limits. source_id=null selects that exact cached source. Direct uses perception=null; clicks keep informing geometry. Program requires its own new_root, selected current procedure revision and initial state, perception=null; software supplies each current visible program-view/1 and click geometry through the same writer and original cumulative limits. Its act/yield/done is fallible program behavior, never verified task success; unknown delivery stops evaluation. Activity start chooses operation/target/game_seconds/interrupt_allowed; prompt/activity children choose only step (poll/interrupt/resume) or step=answer_interrupt with answer=YES/NO. Software collects the selected immutable original root and derives stable fields and answer owner. Semantic preconditions remain strict. Software retains lineage and collects delivery and current evidence separately.", skill),
         ToolSpec("enactive_lifecycle", "Explicit registered launch/create/save/exit/load/finish. First obtain enactive_snapshot. With no owned child, launch using scope=new_root and source_id=null; then begin create/load with scope=new_root from its returned menu. For other operations, source_id=null selects that exact cached snapshot source. Continue an existing lifecycle phase with scope=lifecycle and the same operation, including transition reconciliation, identity readmission and adoption. Lifecycle direct children require interrupt_allowed=false. Owned paused-menu exit charges Resume plus Quit (at least2 primitives before any confirmation); a separate menu-only setup abort sends no input. No implicit save or restart.", lifecycle),
         ToolSpec("enactive_observe", "Request one typed native observation using the chosen snapshot epoch. A healthy ordinary prompt may advance or record local macro_closure without task success or renewed mission allowance; explicitly choose any next root from fresh evidence. Does not Resume or reconcile unknown delivery. After known direct input with absent/aged current evidence, explicit Observe can refresh its read-only scope across the exact authenticated operation rotation; input requires the fresh binding. It never restores failed custody or renews limits.", _object(common)),
     ]
@@ -785,7 +794,8 @@ class PlayerTools:
         """Bind one explicit intent; no staging, submit or response presentation.
 
         Claim preparation may read an immutable local stage or collect the
-        selected old handoff issuance. Neither creates the new request.
+        selected original activity root or old handoff issuance. These reads
+        never stage or submit the new request.
         """
         if name == "enactive_start":
             return validate_request(dict(schema=VERSION, kind="start", request_id=data["request_id"], admission=data["admission"]))
@@ -823,8 +833,19 @@ class PlayerTools:
                         "that cached snapshot source. If an Observe/lifecycle result returned diagnostic "
                         "source_ids, read the chosen exact image with enactive_source and explicitly select "
                         "its source_id. No request was submitted; no refresh, retarget or authority renewal.")
+            original_root = None
+            if kind == "skill" and intent["skill_kind"] == "activity" and data["scope"] in ("prompt", "activity"):
+                phase = snapshot.get(data["scope"] + "_phase")
+                if type(phase) is not dict or not phase.get("origin_request_id"):
+                    raise ContractError("Selected activity scope has no original root to collect")
+                collected = self.client.collect(snapshot["mission_id"], phase["origin_request_id"], wait_seconds=0)
+                operation = (collected.get("response") or {}).get("operation")
+                if collected.get("transport") != "delivered" or type(operation) is not dict:
+                    raise ContractError("Selected original activity root unavailable; no child was submitted")
+                original_root = operation.get("request")
             request = compose_request(snapshot, request_id=identity, intent=intent, limits=data["limits"],
-                scope=data["scope"], source=source, supporting_source_ids=data["supporting_source_ids"])
+                scope=data["scope"], source=source, supporting_source_ids=data["supporting_source_ids"],
+                original_root=original_root)
         else:
             if kind == "handoff":
                 checkpoints = []

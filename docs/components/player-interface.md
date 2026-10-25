@@ -28,6 +28,16 @@ view and image. Mechanical IDs, waits, canonical metadata and joins belong to
 software. It must not guess intent, choose supporting evidence, repair malformed
 arguments, replay input or turn a detail read into a new observation.
 
+For an activity child, the player chooses only the step and any explicit YES/NO
+answer. Before staging, player tools collect the exact original request selected
+by the published phase through the existing read-only result interface. The pure
+composer inherits immutable activity semantics and binds the answer owner from
+the selected checkpoint. Missing or inconsistent context refuses before a new
+child is staged; this read neither refreshes authority nor extends limits.
+Activity start still requires the player's operation, target, duration and
+interrupt consent. The [protocol](../protocol.md#skill-request-binding-errors)
+owns the distinction between semantic duration and an ordinary root's ceiling.
+
 ## Context and failure boundaries
 
 Default responses expose the next decision, relevant visible state, active scope,

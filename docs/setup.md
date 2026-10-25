@@ -134,9 +134,15 @@ this same current model schema. The imperative Python SDK's explicit-ID surface
 serves engineering and duplicate collection, not a compatibility mode for MCP.
 Both SDK and MCP intents omit navigation `goal.scope` and activity
 `goal.interrupt_request_id`: the existing composer binds them from the selected
-matching snapshot/source. Old supplied copies refuse; target, answer, outer scope,
-source and finite limits remain explicit. Canonical mission/11 records retain the
-generated fields.
+matching snapshot/source. MCP 6.0.0 activity starts supply step=start, operation,
+target, game_seconds and interrupt_allowed without answer/owner. Activity children
+supply only step=poll/interrupt/resume, or step=answer_interrupt with answer=YES/NO.
+The SDK collects the selected canonical original root before staging and derives
+stable fields; old copied child fields refuse. Outer scope, source and finite
+limits remain explicit. Canonical mission/11 records retain all generated fields;
+the wire version and native protocol are unchanged. Re-export focused help and
+start fresh producer hosts together; a running host's old catalog is not current
+and must not continue authoring gameplay. No old-shape compatibility path exists.
 
 Handoff authoring uses `checkpoint_sources`: null selects the exact cached
 snapshot source, and explicit IDs require a prior source read. Software supplies

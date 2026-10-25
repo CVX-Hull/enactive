@@ -426,6 +426,37 @@ class ProjectConfigurationTests(unittest.TestCase):
         self.assertIn("$defs", describe("enactive_skill")["input_schema"])
         self.assertEqual(len(describe("enactive_skill")["input_schema"]["properties"]["intent"]["anyOf"]), 9)
 
+    def test_focused_activity_help_exposes_minimal_current_goal_variants(self):
+        schema = describe("enactive_skill", "activity")["input_schema"]
+        args = dict(snapshot_id="snapshot", scope="new_root", source_id=None, supporting_source_ids=[],
+            limits=dict(primitives=1, wall_seconds=10, game_seconds=60),
+            intent=dict(skill_kind="activity", work_id=None, perception=None, procedure=None,
+                goal=dict(step="start", operation="rest", target="Exact rest", game_seconds=60,
+                    interrupt_allowed=True)))
+        validate_json(args, schema)
+        start = deepcopy(args["intent"]["goal"])
+        for key in ("answer", "interrupt_request_id"):
+            args["intent"]["goal"] = {**start, key: None}
+            with self.subTest(key=key), self.assertRaises(ContractError):
+                validate_json(args, schema)
+        for step in ("poll", "interrupt", "resume", "answer_interrupt"):
+            args["scope"] = "activity"
+            goal = dict(step=step, **(dict(answer="YES") if step == "answer_interrupt" else {}))
+            args["intent"]["goal"] = goal
+            validate_json(args, schema)
+            for key, value in start.items():
+                if key == "step":
+                    continue
+                args["intent"]["goal"] = {**goal, key: value}
+                with self.subTest(step=step, key=key), self.assertRaises(ContractError):
+                    validate_json(args, schema)
+            args["intent"]["goal"] = {**goal, "interrupt_request_id": None}
+            with self.assertRaises(ContractError):
+                validate_json(args, schema)
+        args["intent"]["goal"] = dict(step="answer_interrupt", answer=None)
+        with self.assertRaises(ContractError):
+            validate_json(args, schema)
+
     def test_focused_help_selects_memory_and_rejects_unknown_variants(self):
         schema = describe("enactive_remember", "claim")["input_schema"]
         self.assertEqual(schema["properties"]["intent"]["properties"]["entry_type"]["const"], "claim")
@@ -498,7 +529,7 @@ class SDKTransportTests(unittest.TestCase):
             parameters = StdioServerParameters(command=sys.executable,
                 args=["-m", "tests.test_player_tools", "--stdio-fixture"], cwd=str(Path(__file__).resolve().parents[1]))
             async with Client(parameters) as client:
-                self.assertEqual(client.server_info.version, "5.4.0")
+                self.assertEqual(client.server_info.version, "6.0.0")
                 tools = await client.list_tools()
                 self.assertEqual({t.name for t in tools.tools}, {s.name for s in tool_specs()})
                 self.assertEqual(len(tools.tools), 21)

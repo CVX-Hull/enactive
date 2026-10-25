@@ -21,15 +21,25 @@ def compose(case, raw, scope, *, source=None, supports=()):
          "character", "identity_claim_ids") if key in raw}
     if intent.get("perception") is not None:
         intent["perception"].pop("source_id", None)
+    original_root = None
     if intent.get("skill_kind") == "navigate":
         intent["goal"].pop("scope")
     elif intent.get("skill_kind") == "activity":
-        intent["goal"].pop("interrupt_request_id")
+        if scope == "new_root":
+            intent["goal"].pop("interrupt_request_id")
+            intent["goal"].pop("answer")
+        else:
+            wire_goal = intent["goal"]
+            intent["goal"] = dict(step=wire_goal["step"])
+            if wire_goal["step"] == "answer_interrupt":
+                intent["goal"]["answer"] = wire_goal["answer"]
+            original_root = case.runtime._ledger.request(raw["phase_id"])["request"]
     if source is None and intent.get("operation") != "launch":
         ref = case.runtime._current
         source = dict(reference=ref.to_dict(), observation=case.runtime._store.observation(ref))
     return compose_request(case.runtime.status(), request_id=raw["request_id"], intent=intent,
-        limits=raw["limits"], scope=scope, source=source, supporting_source_ids=supports)
+        limits=raw["limits"], scope=scope, source=source, supporting_source_ids=supports,
+        original_root=original_root)
 
 
 class ProducedCreationFixture(MissionCreationFixture):
@@ -260,16 +270,19 @@ class ProducerActivityIntegrationTests(unittest.TestCase):
     def test_frameless_answer_retains_receipt_and_separate_resume_charge(self):
         self.prepare()
         original = deepcopy(self.runtime._ledger.request("rest-root"))
-        for step in ("interrupt", "answer_interrupt", "resume"):
+        for step in ("poll", "interrupt", "answer_interrupt", "resume"):
             goal = {**self.goal, "step": step}
             if step == "answer_interrupt":
                 goal.update(answer="YES")
             raw = self.control("activity", goal, phase_id="rest-root", request_id=step)
-            scope = "prompt" if step == "interrupt" else "activity"
+            scope = "prompt" if step in ("poll", "interrupt") else "activity"
             checkpoint = self.runtime.status()[scope + "_phase"]["checkpoint_id"]
             ref = next(ref for ref in self.runtime._store.historical_references if ref.observation_id == checkpoint)
             source = dict(reference=ref.to_dict(), observation=self.runtime._store.observation(ref))
             request = compose(self, raw, scope, source=source)
+            self.assertEqual(request["limits"], raw["limits"])
+            for key in ("operation", "target", "game_seconds", "interrupt_allowed"):
+                self.assertEqual(request["goal"][key], original["request"]["goal"][key])
             if step == "answer_interrupt":
                 self.assertEqual(request["goal"]["interrupt_request_id"],
                     self.runtime.status()["activity_phase"]["interrupt_request_id"])
