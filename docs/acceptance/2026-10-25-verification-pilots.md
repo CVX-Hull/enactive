@@ -148,6 +148,12 @@ deprecation warnings. Independent review approved the fix; subsequent
 protected PR/main receipts remain in the PR. No runtime limit or latency standard
 was relaxed, and no pilot detection result was relabelled.
 
+Final ownership review also replaced SQLite transaction contexts around map
+backups with standard `contextlib.closing`: transaction contexts alone do not
+close connections. The backup API retains transaction ownership. All 11 focused
+pilot-tool tests and 11 subtests passed afterward; the measured trial commits
+remain explicit rather than claiming these timings describe a later source tree.
+
 Private original commands, hook reports, failures, maps and source copies remain
 project-local in `.runtime/iterations/verification-pilots/`; the public payload
 retains exact seed recipes, selected/failing identities, environment, costs and

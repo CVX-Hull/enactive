@@ -7,6 +7,7 @@ Selection is observed through public pytest hooks, never inferred from stdout.
 from __future__ import annotations
 
 import argparse
+from contextlib import closing
 from dataclasses import asdict, dataclass
 import hashlib
 import json
@@ -265,7 +266,8 @@ def restore_source(pristine: Path, work: Path) -> None:
 def backup_map(source: Path, destination: Path) -> None:
     for suffix in ("", "-wal", "-shm", "-journal"):
         destination.with_name(destination.name + suffix).unlink(missing_ok=True)
-    with sqlite3.connect(source.as_uri() + "?mode=ro", uri=True) as original, sqlite3.connect(destination) as copy:
+    with closing(sqlite3.connect(source.as_uri() + "?mode=ro", uri=True)) as original, \
+            closing(sqlite3.connect(destination)) as copy:
         original.backup(copy)
 
 
