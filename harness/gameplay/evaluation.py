@@ -515,3 +515,70 @@ def summarize_runs(runs: Iterable[dict[str, Any] | str | bytes]) -> dict[str, An
         groups[key][1].append(run)
     return {"schema": "evaluation-summary/1", "groups":
             [_summarize(identity, members) for identity, members in groups.values()]}
+
+
+def request_timing_summary(events: Iterable[dict], *, mission_id: str,
+                           request_ids: Iterable[str] = ()) -> dict:
+    """Project existing journal events; never infer model time or useful effect.
+
+    Durations use only one operation's boot-scoped monotonic clocks. Wall
+    correspondence remains unassessed unless an explicit defect is observed.
+    Missing and duplicate samples stay visible instead of entering percentiles.
+    """
+    rows: dict[str, dict] = {}
+    duplicates = 0
+
+    def clock(value):
+        return type(value) in (int, float) and math.isfinite(value) and value >= 0
+
+    for event in events:
+        request, value = event.get("request", {}), event.get("outcome", {})
+        if request.get("kind") != "mission_request_settled" or request.get("mission_id") != mission_id:
+            continue
+        identity = value.get("request_id")
+        if type(identity) is not str or not identity:
+            raise ContractError("Timing event lacks its request identity")
+        if identity in rows:
+            duplicates += 1
+            rows[identity].update(runtime_ms=None, queue_ms=None, admission_ms=None,
+                                  service_ms=None, censored_reason="duplicate_settlement")
+            continue
+        if len(rows) >= MAX_EVENTS:
+            raise ContractError("Timing summary exceeds 4096 requests")
+        received, started, admitted, settled = (value.get(k) for k in (
+            "received_monotonic", "admission_started_monotonic", "admitted_monotonic", "settled_monotonic"))
+        reason = value.get("censored_reason")
+        boot = value.get("controller_boot_id")
+        valid = (value.get("schema") == "mission-timing/1" and type(boot) is str and bool(boot)
+                 and clock(received) and clock(settled) and received <= settled)
+        runtime = (settled - received) * 1000 if valid else None
+        queue = (started - received) * 1000 if valid and clock(started) and received <= started <= settled else None
+        admission = (admitted - started) * 1000 if (queue is not None and clock(admitted)
+                     and started <= admitted <= settled) else None
+        known_refusal = value.get("admission") == "not_admitted"
+        if not valid or not known_refusal and admission is None:
+            reason = reason or "missing_or_invalid_monotonic_endpoint"
+        if value.get("writer_finalized") is not True:
+            reason = reason or "writer_finalization_failed"
+        if not known_refusal and value.get("row_state") not in ("completed", "partial", "blocked", "unknown", "paused"):
+            reason = reason or "unsettled_request"
+        service = (settled - admitted) * 1000 if admission is not None and not reason else None
+        anchor = value.get("clock_anchor") or {}
+        before, after, wall = (anchor.get(k) for k in ("monotonic_before", "monotonic_after", "wall_seconds"))
+        correspondence = "unassessed"
+        if not (all(clock(v) for v in (before, after, wall)) and before <= after):
+            correspondence = "missing_or_invalid_anchor"
+        elif clock(event.get("timestamp_ms")) and event["timestamp_ms"] < int(wall * 1000):
+            correspondence = "observed_wall_regression"
+        rows[identity] = {"request_id": identity, "controller_boot_id": boot,
+            "request_kind": value.get("request_kind"), "row_state": value.get("row_state"),
+            "admission": value.get("admission"), "mission_phase": value.get("mission_phase"),
+            "writer_finalized": value.get("writer_finalized"), "censored_reason": reason,
+            "runtime_ms": runtime, "queue_ms": queue, "admission_ms": admission, "service_ms": service,
+            "wall_correspondence": correspondence,
+            "source_id": (value.get("source") or {}).get("observation_id")}
+    expected = set(request_ids)
+    return {"schema": "request-timing-summary/1", "mission_id": mission_id,
+            "scope": "runtime receipt through writer finalization; not model/useful-effect/display latency",
+            "rows": list(rows.values()), "duplicate_events": duplicates,
+            "missing_request_ids": sorted(expected - rows.keys())}

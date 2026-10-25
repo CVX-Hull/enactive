@@ -6,6 +6,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
+from harness.gameplay.mission_contracts import validate_admission_refusal, validate_submission
 from tests import test_mission_prompt_observation as fixtures
 
 
@@ -221,10 +222,12 @@ class PendingObservationTests(unittest.TestCase):
         self.pending()
         from harness.mission_runtime import _Work
         current = self.runtime._current
-        request = self.request("lifecycle", operation="save", sources=[current.observation_id],
+        request = validate_submission(self.request("lifecycle", operation="save",
+            world=self.a.scenario.world, character=self.a.scenario.character,
+            sources=[current.observation_id],
             expected_session=current.session, expected_revision=current.revision,
             expected_boundary_id=self.runtime._store.observation(current)["boundary"]["id"],
-            limits=dict(primitives=8, wall_seconds=120, game_seconds=1200))
+            limits=dict(primitives=8, wall_seconds=120, game_seconds=1200)))
         lease = self.runtime._lease
         receipts = self.runtime._ledger.primitive_records()
         queued = _Work(request)
@@ -232,6 +235,7 @@ class PendingObservationTests(unittest.TestCase):
         self.wait(queued.ready.is_set)
         self.assertEqual(queued.response["status"], "rejected")
         self.assertIn("Observe", queued.response["reason"])
+        validate_admission_refusal(queued.response["admission_refusal"], request)
         self.assertIs(self.runtime._lease, lease)
         self.assertEqual(self.runtime._ledger.primitive_records(), receipts)
         self.assertFalse(any(row["request"]["request_id"] == request["request_id"]

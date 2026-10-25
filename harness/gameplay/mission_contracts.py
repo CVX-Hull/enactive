@@ -6,6 +6,7 @@ integer validation. Request dictionaries are decoded copies, not mutable aliases
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+import hashlib
 import json
 import re
 from typing import Any
@@ -25,6 +26,7 @@ class MemoryRequestRefusal(ContractError):
 
 
 VERSION = "mission/11"
+ADMISSION_REFUSAL_VERSION = "mission-refusal/1"
 MEMORY_VERSION = "campaign-memory/6"
 IDENTITY_UNIT = "name"
 IDENTITY_COVERAGE = {"world": "visible-world-menu", "character": "visible-character-screen"}
@@ -994,4 +996,33 @@ def validate_submission(value: dict | str | bytes) -> dict:
             and result["phase_id"] is None
             and (result["work_id"] is not None or result["identity_claim_ids"])):
         raise ContractError("Lifecycle root cannot import Work or old identity authority")
+    return result
+
+
+def make_admission_refusal(request: dict | str | bytes) -> dict:
+    """Bind a writer-certified refusal, never infer that admission was absent.
+
+    Only the receiver's audited no-admission branches may issue this record.
+    Authentication belongs to the existing transport, not this digest.
+    """
+    data = validate_request(request)
+    if data["kind"] in ("status", "result", "context"):
+        raise ContractError("Read-only requests have no admission refusal")
+    mission = data["admission"]["mission_id"] if data["kind"] == "start" else data["mission_id"]
+    return {"schema": ADMISSION_REFUSAL_VERSION, "mission_id": mission,
+            "request_id": data["request_id"],
+            "request_sha256": hashlib.sha256(canonical(data).encode()).hexdigest(),
+            "admitted": False, "grants_authority": False}
+
+
+def validate_admission_refusal(value: dict | str | bytes, request: dict | str | bytes) -> dict:
+    """Validate the one current receipt against an explicitly selected request."""
+    result = json_object(value)
+    validate_json(result, _object({
+        "schema": {"const": ADMISSION_REFUSAL_VERSION}, "mission_id": _ID, "request_id": _ID,
+        "request_sha256": _SHA, "admitted": {"type": "boolean", "const": False},
+        "grants_authority": {"type": "boolean", "const": False},
+    }))
+    if result != make_admission_refusal(request):
+        raise ContractError("Admission refusal differs from the exact staged request")
     return result

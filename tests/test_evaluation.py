@@ -9,7 +9,7 @@ import tempfile
 import unittest
 
 from harness.gameplay.contracts import ContractError
-from harness.gameplay.evaluation import MAX_JSON_BYTES, RunRecorder, summarize_runs, validate_run
+from harness.gameplay.evaluation import MAX_JSON_BYTES, RunRecorder, request_timing_summary, summarize_runs, validate_run
 
 
 def manifest(**changes):
@@ -372,3 +372,69 @@ class EvaluationTests(unittest.TestCase):
             self.assertNotEqual(invoke("validate").returncode, 0)
             bad.write_bytes(b" " * (MAX_JSON_BYTES + 1))
             self.assertNotEqual(invoke("validate", bad).returncode, 0)
+
+
+class RequestTimingSummaryTests(unittest.TestCase):
+    def event(self, **changes):
+        value = dict(schema="mission-timing/1", request_id="request-1", request_kind="skill",
+            controller_boot_id="boot-1", received_monotonic=1., admission_started_monotonic=2.,
+            admitted_monotonic=3., settled_monotonic=5., admission="created", row_state="completed",
+            writer_finalized=True, mission_phase="active", censored_reason=None,
+            clock_anchor=dict(monotonic_before=5., monotonic_after=5.001, wall_seconds=1005.),
+            source=dict(observation_id="source-1"))
+        value.update(changes)
+        return dict(timestamp_ms=1005001, request=dict(kind="mission_request_settled", mission_id="mission"),
+                    outcome=value)
+
+    def test_only_boot_scoped_runtime_intervals_are_measured(self):
+        event = self.event()
+        original = deepcopy(event)
+        out = request_timing_summary([event], mission_id="mission", request_ids=["request-1", "missing"])
+        row = out["rows"][0]
+        self.assertEqual((row["queue_ms"], row["admission_ms"], row["service_ms"], row["runtime_ms"]),
+                         (1000., 1000., 2000., 4000.))
+        self.assertEqual(row["controller_boot_id"], "boot-1")
+        self.assertEqual(row["source_id"], "source-1")
+        self.assertEqual(row["wall_correspondence"], "unassessed")
+        self.assertEqual(out["missing_request_ids"], ["missing"])
+        self.assertIn("not model/useful-effect/display", out["scope"])
+        self.assertEqual(event, original)
+
+    def test_duplicate_unknown_and_censored_rows_never_become_success(self):
+        duplicate = self.event(row_state="unknown", mission_phase="paused")
+        out = request_timing_summary([self.event(), duplicate], mission_id="mission")
+        self.assertEqual(out["duplicate_events"], 1)
+        self.assertIsNone(out["rows"][0]["runtime_ms"])
+        self.assertIsNone(out["rows"][0]["service_ms"])
+        self.assertEqual(out["rows"][0]["censored_reason"], "duplicate_settlement")
+        out = request_timing_summary([self.event(writer_finalized=False, row_state="accepted")], mission_id="mission")
+        self.assertEqual(out["rows"][0]["runtime_ms"], 4000.)
+        self.assertIsNone(out["rows"][0]["service_ms"])
+        self.assertEqual(out["rows"][0]["censored_reason"], "writer_finalization_failed")
+        # Completed request result and a withheld Finish transition stay distinct.
+        out = request_timing_summary([self.event(mission_phase="paused")], mission_id="mission")
+        self.assertEqual(out["rows"][0]["row_state"], "completed")
+        self.assertEqual(out["rows"][0]["mission_phase"], "paused")
+
+    def test_missing_clocks_and_observed_wall_regression_are_explicit(self):
+        for change in (dict(received_monotonic=None), dict(admitted_monotonic=True),
+                       dict(admitted_monotonic=6.), dict(controller_boot_id=""), dict(schema="mission-timing/0")):
+            with self.subTest(change=change):
+                row = request_timing_summary([self.event(**change)], mission_id="mission")["rows"][0]
+                self.assertIsNone(row["service_ms"])
+                self.assertIsNotNone(row["censored_reason"])
+        event = self.event()
+        event["timestamp_ms"] = 1004000
+        row = request_timing_summary([event], mission_id="mission")["rows"][0]
+        self.assertEqual(row["wall_correspondence"], "observed_wall_regression")
+        self.assertEqual(row["service_ms"], 2000.)
+
+    def test_certified_refusal_has_no_admission_or_service_endpoint(self):
+        event = self.event(admission="not_admitted", admitted_monotonic=None,
+                           admission_started_monotonic=None, row_state=None)
+        row = request_timing_summary([event], mission_id="mission")["rows"][0]
+        self.assertEqual(row["runtime_ms"], 4000.)
+        self.assertIsNone(row["admission_ms"])
+        self.assertIsNone(row["service_ms"])
+        self.assertIsNone(row["censored_reason"])
+        self.assertEqual(request_timing_summary([event], mission_id="other")["rows"], [])

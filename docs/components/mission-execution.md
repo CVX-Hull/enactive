@@ -80,6 +80,21 @@ This is a derived scalar, not cached authority or a second evidence store.
 The [offline measurement](../acceptance/2026-10-24-execution-first-offline.md)
 separates retained-scale dispatch improvement from unqualified graphical cadence.
 
+Each original admitted semantic work item now has a machine-only settlement event
+in the existing controller journal. It brackets durable admission and ends after
+the writer's post-commit/finally publication and handle cleanup. Row state, writer
+finalization and mission phase are distinct; a completed Finish report can coexist
+with a withheld terminal transition. Cached result reads do not create another
+sample, and program primitives retain their existing separate lane.
+
+The event carries existing operation/boot/source identities and labelled process
+monotonic clocks with a wall-anchor sampling bracket. It does not infer model
+time, useful effect or physical display, nor enter default model/recent UI context.
+Missing/censored telemetry stays explicit; failure of this new append alone cannot
+rewrite a committed result or pause healthy play. Required domain persistence
+faults retain their existing behavior. [Evaluation](../evaluation.md#request-settlement-clocks)
+defines interpretation and limits.
+
 ## Lifecycle and change review
 
 Start cannot adopt an unrelated running game. First normal identity/adoption

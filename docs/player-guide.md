@@ -15,6 +15,11 @@ saves or the engine to learn how to call tools. They are not a player knowledge
 base. A missing usable contract is an ergonomics defect to report, rather than a
 reason to read the entire repository during every game.
 
+A filesystem sandbox label does not establish which admitted service tools work.
+Use actual tool results and the frozen role: a read-only local filesystem can
+coexist with authorized MCP gameplay and memory effects. Never bypass an actual
+denial or stop solely because a successful tool ran from a read-only host.
+
 ## Calls and returned evidence
 
 - After admission, first call `enactive_snapshot` in this player context and use
@@ -26,6 +31,10 @@ reason to read the entire repository during every game.
   handle and valid finite limits. Select create/load from its returned menu.
   Source-free means no informing image is required; it does not mean an empty
   snapshot handle is accepted. Keep this entry point in initial player context.
+  The admitted scenario is a setup target, not an observed world/character fact.
+  An absent fresh name does not establish that creation is unsupported. Ground
+  screen claims in the actual view and explore ordinary alternatives before
+  declaring a capability gap; never select a different identity as a substitute.
 - `enactive_snapshot` gives a descriptive snapshot handle and the selected source
   image. Select those exact handles for a new intent. Software supplies mission,
   epoch, source bindings and stable child lineage. A snapshot never Resumes.
@@ -61,6 +70,10 @@ reason to read the entire repository during every game.
   is not the completed text or a cue to confirm. After collection, inspect and
   explicitly select current evidence. An obsolete selection can be refused
   without destroying healthy custody; no key is retargeted or replayed for you.
+- An explicit `submission=not_admitted` resolves a receiver-certified refusal.
+  Inspect its reason/current context and choose a new corrected decision; software
+  assigns the identity. Do not collect or repeat that refused invocation. Generic
+  errors or uncertain delivery still require the original collection path.
 - An eligible Procedure/3 can contain `program={language:javascript/1, source:...}`
   or null for advice. In `enactive_remember` choose the content, evidence,
   counterexamples/status and `parent=null` for a new family or an explicit
@@ -95,7 +108,8 @@ reason to read the entire repository during every game.
   result; do not supply `request_id` or `wait_seconds`. A positively new preparation refusal explicitly
   marked `submission=not_submitted` has no original operation to collect. Correct
   the selected arguments for a new decision under the original limits. Errors
-  during staging, dispatch or presentation retain uncertain collection instead. A new invocation is a new
+  during staging, dispatch or presentation retain uncertain collection unless an
+  actually validated `not_admitted` refusal is preserved. A new invocation is a new
   intent, never a retry. Pending/uncertain results require `enactive_result` with
   the returned original ID. If an error includes `original_collection`, use those
   exact collection arguments when dispatch is uncertain. Validation can fail

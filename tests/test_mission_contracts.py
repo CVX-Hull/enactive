@@ -6,7 +6,8 @@ import unittest
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.mission_contracts import (
     CleanupReserve, Configuration, InputObservation, MissionAdmission, MissionLimits, Scenario, SourceBinding, SourceRevalidation,
-    LearningPolicy, LibrarySource, MAX_REQUEST_BYTES, validate_memory_entry, validate_request, validate_submission, validate_visible_ui,
+    LearningPolicy, LibrarySource, MAX_REQUEST_BYTES, make_admission_refusal, validate_admission_refusal,
+    validate_memory_entry, validate_request, validate_submission, validate_visible_ui,
 )
 
 
@@ -363,6 +364,41 @@ class MissionContractTests(unittest.TestCase):
         original = skill(); parsed = validate_request(original)
         original["goal"]["target"][0] = 99
         self.assertEqual(parsed["goal"]["target"][0], 2)
+
+
+class AdmissionRefusalTests(unittest.TestCase):
+    def test_binds_complete_canonical_intent_and_retains_original(self):
+        value = skill()
+        receipt = make_admission_refusal(value)
+        encoded = json.dumps(receipt)
+        self.assertEqual(validate_admission_refusal(encoded, value), receipt)
+        for changed in (skill(request_id="other"), skill(epoch=1),
+                        skill(goal={"scope": scope(), "target": [3, -3, 0]})):
+            with self.subTest(changed=changed), self.assertRaisesRegex(ContractError, "exact staged"):
+                validate_admission_refusal(receipt, changed)
+        parsed = validate_admission_refusal(encoded, value)
+        parsed["mission_id"] = "changed"
+        self.assertEqual(receipt["mission_id"], "mission-test")
+
+    def test_closed_current_receipt_never_promotes_admission_or_authority(self):
+        value = skill()
+        receipt = make_admission_refusal(value)
+        for field, bad in (("schema", "mission-refusal/0"), ("mission_id", "other"),
+                           ("request_id", "other"), ("request_sha256", "a" * 64),
+                           ("admitted", True), ("admitted", 0), ("grants_authority", True),
+                           ("grants_authority", 0), ("extra", "unsupported")):
+            with self.subTest(field=field, bad=bad), self.assertRaises(ContractError):
+                validate_admission_refusal({**receipt, field: bad}, value)
+        for field in receipt:
+            with self.subTest(missing=field), self.assertRaises(ContractError):
+                validate_admission_refusal({k: v for k, v in receipt.items() if k != field}, value)
+
+    def test_read_only_and_invalid_requests_cannot_gain_certificate(self):
+        for value in (dict(schema="mission/11", kind="status"),
+                      dict(schema="mission/11", kind="result", mission_id="mission-test", operation_id="id"),
+                      {**skill(), "epoch": True}):
+            with self.subTest(value=value), self.assertRaises(ContractError):
+                make_admission_refusal(value)
 
 
 if __name__ == "__main__": unittest.main()

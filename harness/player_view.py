@@ -102,9 +102,18 @@ def _project_snapshot(snapshot: dict, operation: dict | None = None, operation_i
             _omit(visible, ("actions",))
 
 
+def snapshot_view(snapshot: dict) -> dict:
+    """Project current context even when an operation's formatting has failed."""
+    view = deepcopy(snapshot)
+    _project_snapshot(view)
+    return view
+
+
 def decision_view(tool_name: str, value: dict) -> dict:
     """Copy a successful tool result and project only its explicit snapshot slot."""
     view = deepcopy(value)
+    if tool_name in _NEXT_SNAPSHOT_TOOLS:
+        _omit(view.get("response"), ("admission_refusal",))
     if tool_name == "enactive_snapshot":
         _project_snapshot(view)
     elif tool_name in _NEXT_SNAPSHOT_TOOLS and "next_snapshot" in view:

@@ -1,0 +1,284 @@
+{
+  "schema": "useful-trials-accounting/1",
+  "scope": "Closed failed bootstrap trials; no routine useful-play/inference/physical-paint qualification",
+  "trials": [
+    {
+      "mission_id": "useful-learning-001",
+      "source": "038d5ddb643e99a189f15b765be203a257c0ad80",
+      "driver": {
+        "mission_id": "useful-learning-001",
+        "outcome": "incomplete",
+        "phase": "admitted",
+        "exit_code": 1,
+        "hosts": [
+          {
+            "role": "original",
+            "start": 1792891821.75748,
+            "end": 1792891834.1182039,
+            "returncode": 0,
+            "timed_out": false,
+            "interrupted": false,
+            "signals": [],
+            "native_cleanup_claimed": false
+          }
+        ],
+        "native_cleanup_claimed": false,
+        "acceptance_claimed": false,
+        "reason": "Mission is not in an internal handoff"
+      },
+      "operations": 3,
+      "by_kind": {
+        "start": 1,
+        "lifecycle": 1,
+        "stop": 1
+      },
+      "primitives": {},
+      "memory_records": 0,
+      "reflection_jobs": [
+        {
+          "state": "completed",
+          "claimed_at": 1792891894.8462799,
+          "charged_seconds": 90.0
+        }
+      ],
+      "model_usage_reported": {
+        "input_tokens": 286234,
+        "cached_input_tokens": 217856,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 828,
+        "reasoning_output_tokens": 0
+      },
+      "role_usage": {
+        "driver-active-adviser": {},
+        "driver-adviser-preflight": {
+          "input_tokens": 34394,
+          "cached_input_tokens": 24192,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 160,
+          "reasoning_output_tokens": 0
+        },
+        "driver-original": {
+          "input_tokens": 201691,
+          "cached_input_tokens": 153728,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 529,
+          "reasoning_output_tokens": 0
+        },
+        "driver-player-preflight": {
+          "input_tokens": 50149,
+          "cached_input_tokens": 39936,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 139,
+          "reasoning_output_tokens": 0
+        },
+        "driver-successor": {}
+      },
+      "all_role_tool_calls": {
+        "enactive_reflect_next": 2,
+        "enactive_reflect_submit": 1,
+        "enactive_snapshot": 2,
+        "enactive_lifecycle": 1
+      },
+      "result_text_bytes": {
+        "n": 6,
+        "median": 1850.0,
+        "p95": 3961,
+        "maximum": 3961
+      },
+      "submission_feedback": {},
+      "settlement": {
+        "samples": 3,
+        "missing": 0,
+        "duplicates": 0,
+        "censored": {},
+        "runtime_ms": {
+          "n": 3,
+          "median": 9.607207961380482,
+          "p95": 831.2282506376505,
+          "maximum": 831.2282506376505
+        },
+        "service_ms": {
+          "n": 3,
+          "median": 7.171874865889549,
+          "p95": 830.3862921893597,
+          "maximum": 830.3862921893597
+        }
+      },
+      "preserved_save_files": 191,
+      "saves_unchanged": true,
+      "database_unchanged": true,
+      "useful_routine_decisions": 0,
+      "adopted_normal_session": false,
+      "cadence_qualified": false,
+      "independent_learning_qualified": false,
+      "normal_menu_ending": false
+    },
+    {
+      "mission_id": "useful-learning-002",
+      "source": "038d5ddb643e99a189f15b765be203a257c0ad80",
+      "driver": {
+        "mission_id": "useful-learning-002",
+        "outcome": "terminal",
+        "phase": "stopped",
+        "exit_code": 0,
+        "hosts": [
+          {
+            "role": "original",
+            "start": 1792892082.173802,
+            "end": 1792892191.327997,
+            "returncode": 0,
+            "timed_out": false,
+            "interrupted": false,
+            "signals": [],
+            "native_cleanup_claimed": false
+          }
+        ],
+        "native_cleanup_claimed": false,
+        "acceptance_claimed": false
+      },
+      "operations": 22,
+      "by_kind": {
+        "start": 1,
+        "lifecycle": 7,
+        "skill": 11,
+        "observe": 3
+      },
+      "primitives": {
+        "returned": 11,
+        "unknown": 1
+      },
+      "memory_records": 0,
+      "reflection_jobs": [
+        {
+          "state": "completed",
+          "claimed_at": 1792892103.463032,
+          "charged_seconds": 90.0
+        },
+        {
+          "state": "completed",
+          "claimed_at": 1792892112.6764119,
+          "charged_seconds": 90.0
+        }
+      ],
+      "model_usage_reported": {
+        "input_tokens": 2655733,
+        "cached_input_tokens": 2484608,
+        "cache_write_input_tokens": 0,
+        "output_tokens": 8002,
+        "reasoning_output_tokens": 69
+      },
+      "role_usage": {
+        "driver-active-adviser": {
+          "input_tokens": 242194,
+          "cached_input_tokens": 221056,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 1093,
+          "reasoning_output_tokens": 69
+        },
+        "driver-adviser-preflight": {
+          "input_tokens": 32693,
+          "cached_input_tokens": 16256,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 172,
+          "reasoning_output_tokens": 0
+        },
+        "driver-original": {
+          "input_tokens": 2329823,
+          "cached_input_tokens": 2214016,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 6582,
+          "reasoning_output_tokens": 0
+        },
+        "driver-player-preflight": {
+          "input_tokens": 51023,
+          "cached_input_tokens": 33280,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 155,
+          "reasoning_output_tokens": 0
+        },
+        "driver-successor": {}
+      },
+      "all_role_tool_calls": {
+        "enactive_reflect_next": 4,
+        "enactive_reflect_submit": 2,
+        "enactive_snapshot": 4,
+        "enactive_lifecycle": 11,
+        "enactive_skill": 12,
+        "enactive_detail": 1,
+        "enactive_observe": 3,
+        "enactive_source": 3,
+        "enactive_result": 1
+      },
+      "result_text_bytes": {
+        "n": 41,
+        "median": 4652.0,
+        "p95": 6303,
+        "maximum": 7169
+      },
+      "submission_feedback": {
+        "not_submitted": 5
+      },
+      "settlement": {
+        "samples": 22,
+        "missing": 0,
+        "duplicates": 0,
+        "censored": {},
+        "runtime_ms": {
+          "n": 22,
+          "median": 114.18193718418479,
+          "p95": 327.2196250036359,
+          "maximum": 15196.961499750614
+        },
+        "service_ms": {
+          "n": 22,
+          "median": 113.33149950951338,
+          "p95": 326.3973332941532,
+          "maximum": 15195.048875175416
+        }
+      },
+      "preserved_save_files": 191,
+      "saves_unchanged": true,
+      "database_unchanged": true,
+      "useful_routine_decisions": 0,
+      "adopted_normal_session": false,
+      "cadence_qualified": false,
+      "independent_learning_qualified": false,
+      "normal_menu_ending": true
+    }
+  ],
+  "completed_turn_usage_lower_bound": {
+    "input_tokens": 2941967,
+    "cached_input_tokens": 2702464,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 8830,
+    "reasoning_output_tokens": 69
+  },
+  "missing_usage": [
+    "001 active adviser has no completed turn usage after exceptional SIGINT"
+  ],
+  "observer": {
+    "source": "observer-timing/3 fixed DOM export",
+    "scope": "002 native-capture to matched browser DOM replacement; shared-host wall assumption, not physical paint",
+    "proxies_ms": {
+      "n": 31,
+      "median": 153.0,
+      "p95": 337,
+      "maximum": 417
+    },
+    "negative_samples": 0,
+    "retention_dropped": {
+      "status": 0,
+      "frames": 0
+    },
+    "selected_session_only": true,
+    "routine_useful_effect": false
+  },
+  "known_limitations": [
+    "No adopted character/normal gameplay; game duration unmeasured",
+    "No claimed useful routine-decision latency cohort",
+    "No per-item host model inference clocks",
+    "No procedure authorship/reuse/revision, substantive memory, successor application or useful-play advice disposition",
+    "No complete approval-review telemetry; actual calls show no human confirmation event",
+    "Input usage includes cached repeated context; it is not unique retained context or money"
+  ]
+}

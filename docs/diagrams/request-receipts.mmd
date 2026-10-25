@@ -1,0 +1,14 @@
+flowchart TD
+  accTitle: Request admission, correction and original collection
+  accDescr: The player selects intent. Software stages the request. A certified no-admission refusal permits a new explicit decision. Admitted or uncertain work retains original collection. Machine timing is separate evidence.
+  P[Player chooses intent and evidence] --> S[SDK retains immutable request]
+  S --> W[One mission writer]
+  W -->|Typed and request-bound refusal| N[Known not admitted]
+  N -->|Inspect reason and current context| P
+  W -->|Durable operation| C[Collect original result]
+  S -->|Lost or unproved response| U[Uncertain original delivery]
+  U --> C
+  C --> E[Inspect visible effect and choose next goal]
+  E --> P
+  W -. After writer finalization .-> J[Existing machine timing journal]
+  J -. Offline evidence only .-> A[Service clocks and missing samples]

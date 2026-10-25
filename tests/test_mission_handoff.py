@@ -9,6 +9,7 @@ from unittest.mock import patch
 from harness.mission_runtime import MissionRuntime
 from tests.test_mission_creation import MissionCreationFixture
 from tests.test_mission_contracts import claim
+from tests.test_request_receipts import settled_timing
 
 
 class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
@@ -86,6 +87,14 @@ class MissionHandoffTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(self.runtime._lease.actor_id, "successor")
         self.assertEqual(self.runtime._ledger.request("handoff")["result"], issued["result"])
         self.assertEqual(self.runtime._ledger.request("claim")["result"], claim["result"])
+        issued_timing = settled_timing(self.runtime, "handoff")
+        claimed_timing = settled_timing(self.runtime, "claim")
+        self.assertEqual(issued_timing["row_state"], "completed")
+        self.assertEqual(issued_timing["mission_phase"], "handoff")
+        self.assertEqual(claimed_timing["row_state"], "completed")
+        self.assertEqual(claimed_timing["mission_phase"], "paused")
+        self.assertTrue(issued_timing["writer_finalized"])
+        self.assertTrue(claimed_timing["writer_finalized"])
         self.assertEqual(self.run_request(data), result)
         self.remember_work(status="completed", event="pending-completed")
         self.remember_work(status="completed", identity="objective", event="objective", intent=self.a.objective)

@@ -36,6 +36,26 @@ class UnsubmittedRequest(ContractError):
     """Pure request validation/composition refused before calling SDK submission."""
 
 
+def admission_refusal_feedback(envelope: dict) -> dict | None:
+    """Copy only the SDK's validated outcome, never infer it from a reason/proof."""
+    if (envelope.get("submission") != "not_admitted" or envelope.get("settled") is not True
+            or envelope.get("transport") != "delivered"):
+        return None
+    response = envelope.get("response") or {}
+    return dict(transport="delivered", settled=True, submission="not_admitted",
+        operation_id=envelope["operation_id"], response=dict(status="rejected", reason=response.get("reason")),
+        next_step="This request was not admitted. Inspect current context and explicitly choose a new corrected "
+            "decision under the original limits. Do not collect or resubmit this refused request; "
+            "software assigns a new identity. No authority is granted.")
+
+
+class AdmissionRefusalPresentationError(ValueError):
+    """Formatting failed after an SDK-validated refusal; no receipt/context copy."""
+    def __init__(self, feedback: dict):
+        super().__init__("Admission refusal presentation failed")
+        self.feedback = feedback
+
+
 @dataclass(frozen=True)
 class ToolSpec:
     name: str
@@ -378,7 +398,10 @@ class PlayerTools:
         request = operation.get("request") if isinstance(operation, dict) else None
         delivered = envelope.get("transport") == "delivered" and envelope.get("reason") is None
         collection = None
-        if (delivered and request is not None and request["request_id"] == envelope.get("operation_id")
+        refusal = admission_refusal_feedback(envelope)
+        if refusal is not None:
+            output["next_step"] = refusal["next_step"]
+        elif (delivered and request is not None and request["request_id"] == envelope.get("operation_id")
                 and operation["state"] in ("accepted", "running")
                 and request["kind"] in ("skill", "lifecycle")):
             collection = dict(mission_id=request["mission_id"], operation_id=request["request_id"])
@@ -749,7 +772,14 @@ class PlayerTools:
             request = self._prepare_mutation(name, data)
         except ContractError as exc:
             self._preparation_refusal(name, data, exc)
-        return self._finish(self.client.submit(request, wait_seconds=data["wait_seconds"]))
+        envelope = self.client.submit(request, wait_seconds=data["wait_seconds"])
+        try:
+            return self._finish(envelope)
+        except Exception as exc:
+            feedback = admission_refusal_feedback(envelope)
+            if feedback is not None:
+                raise AdmissionRefusalPresentationError(feedback) from exc
+            raise
 
     def _prepare_mutation(self, name: str, data: dict) -> dict:
         """Bind one explicit intent; no staging, submit or response presentation.
