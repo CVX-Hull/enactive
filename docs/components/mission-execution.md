@@ -115,7 +115,22 @@ Review a change from the owner/phase and flow down to shared limits, publication
 receipt/reopen readers and tests. The large runtime and ledger remain concentrated
 implementation seams; this map does not claim they have been refactored. Extract
 only a demonstrated responsibility with one retained writer/store, after scoped
-design review. Focused runtime/lifecycle/handoff/activity/recovery/ledger tests
-exercise source behavior; actual Save/reload, succession and independent survival
-need their separate native/outcome evidence. [#136](https://github.com/CVX-Hull/enactive/issues/136)
+design review.
+
+## Assurance and evidence
+
+These selected risks follow the writer's responsibilities, rather than listing
+every phase test. [C-RUNTIME](../controls.md#c-runtime--live-authority-and-input-guards-runtime)
+is the admission/accounting mechanism; [C-PORTABLE](../controls.md#c-portable--portable-regression-lane-automatic)
+executes its fixture regressions.
+
+| User consequence | Invariant and contract | Mechanism, representative assertion and limit |
+| --- | --- | --- |
+| A recent status view hides spent inputs or uncertain effects | Original cumulative charges and unknowns survive reopening. [Mission lifecycle](../protocol.md#integrated-mission-lifecycle). | MissionLedger counters: [ledger tests](../../tests/test_mission_ledger.py) `test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen` asserts counts beyond recent history, preserved unknowns and isolated returned copies. Real SQLite/filesystem evidence does not prove native input or useful effect. |
+| A crash resumes an unfinished phase with fresh authority | Reopen preserves history and charge, pauses the mission and restores no private phase/lease. [Ownership](../protocol.md#controller-run-ownership) and [lifecycle](../protocol.md#integrated-mission-lifecycle). | Ledger crash transition: [ledger tests](../../tests/test_mission_ledger.py) `test_phase_crash_preserves_unknown_cost_and_does_not_restore_authority` asserts paused/unknown state, retained costs, no authority and refused activation. Together these two cases form `assurance_execution`; simulated reopening does not exercise a native crash. |
+| Successful phase bookkeeping is mistaken for a successful campaign or ending | Save/reload, identity continuity and succession need their actual proofs; ACK and task success remain distinct. [Lifecycle preconditions](../protocol.md#lifecycle-action-preconditions) and [handoff](../protocol.md#quiescent-player-replacement). | Registered composition: [handoff tests](../../tests/test_mission_handoff.py) `test_quiescent_bound_context_claim_and_separately_charged_resume` asserts no lease after Claim and a separately charged readmission, using a fake bridge. [C-NATIVE](../controls.md#c-native--native-build-and-real-game-acceptance-manual)'s [capture qualification](../acceptance/2026-10-22-native-capture-preconditions.md) demonstrates scoped same-character Save/reload/ending; [useful-play readiness](../acceptance/2026-10-25-useful-play-readiness.md) retains an incomplete ending. Neither qualifies independent seven days. |
+
+Focused runtime/lifecycle/handoff/activity/recovery tests add boundary cases;
+source tests, compiled components, actual native qualification and campaign
+outcomes remain separate lanes. [#136](https://github.com/CVX-Hull/enactive/issues/136)
 and [#145](https://github.com/CVX-Hull/enactive/issues/145) own the full outcome.
