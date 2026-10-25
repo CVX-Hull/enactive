@@ -1,0 +1,1352 @@
+{
+  "kind": "advisory-verification-pilot-evidence",
+  "date": "2026-10-25",
+  "trace": {
+    "private_report_sha256": "effbc22ff731dbf53a100fd1e6abdbc83ff3267c00138e9fcc10432137488177",
+    "inventory": [
+      {
+        "controls": [
+          "C-RUNTIME"
+        ],
+        "markers": {
+          "assurance_memory": "advisory C-RUNTIME durable memory provenance and source loss; docs/components/memory-learning.md#failure-bounds-and-ownership"
+        },
+        "nodeid": "tests/test_campaign_memory.py::CampaignMemoryTests::test_durable_forward_or_cyclic_support_is_rejected_without_projection",
+        "unknown_controls": []
+      },
+      {
+        "controls": [
+          "C-RUNTIME"
+        ],
+        "markers": {
+          "assurance_memory": "advisory C-RUNTIME durable memory provenance and source loss; docs/components/memory-learning.md#failure-bounds-and-ownership"
+        },
+        "nodeid": "tests/test_campaign_memory.py::CampaignMemoryTests::test_newest_loss_never_resurrects_old_stock_after_sqlite_reopen",
+        "unknown_controls": []
+      },
+      {
+        "controls": [
+          "C-RUNTIME"
+        ],
+        "markers": {
+          "assurance_freshness": "advisory C-RUNTIME original capture and current input authority; docs/components/native-control.md#internal-responsibilities"
+        },
+        "nodeid": "tests/test_controller.py::ControllerTests::test_leased_preflight_rejects_changed_session_revision_or_boundary",
+        "unknown_controls": []
+      },
+      {
+        "controls": [
+          "C-RUNTIME"
+        ],
+        "markers": {
+          "assurance_freshness": "advisory C-RUNTIME original capture and current input authority; docs/components/native-control.md#internal-responsibilities"
+        },
+        "nodeid": "tests/test_controller.py::ControllerTests::test_nonimage_mission_resume_preserves_original_capture_across_render_churn",
+        "unknown_controls": []
+      },
+      {
+        "controls": [
+          "C-RUNTIME"
+        ],
+        "markers": {
+          "assurance_context": "advisory C-RUNTIME context projection and copy isolation; docs/components/player-interface.md#context-and-failure-boundaries"
+        },
+        "nodeid": "tests/test_player_view.py::DecisionViewTests::test_context_projects_only_binding_slots_not_claims_procedures_or_other_tools",
+        "unknown_controls": []
+      },
+      {
+        "controls": [
+          "C-RUNTIME"
+        ],
+        "markers": {
+          "assurance_context": "advisory C-RUNTIME context projection and copy isolation; docs/components/player-interface.md#context-and-failure-boundaries"
+        },
+        "nodeid": "tests/test_player_view.py::DecisionViewTests::test_projection_never_mutates_or_aliases_full_result_or_handle_cache",
+        "unknown_controls": []
+      }
+    ],
+    "collection_status": "passed"
+  },
+  "trials": [
+    {
+      "label": "default",
+      "private_report_sha256": "0c3da9eed88ed3646aa5aabb1c6018450ef130a49dec62a06c916e664b95943d",
+      "source_commit": "b18eaa61ced625a70d1d8f58a25795df710ff48b",
+      "backend": "default",
+      "workers": 0,
+      "environment": {
+        "entrypoint": "testmon.pytest_testmon",
+        "packages": {
+          "coverage": "7.17.0",
+          "pytest": "9.1.1",
+          "pytest-testmon": "2.2.0"
+        },
+        "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+        "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]"
+      },
+      "error": null,
+      "planned_comparisons": 8,
+      "attempted_comparisons": 8,
+      "valid_comparisons": 0,
+      "counts": {
+        "detected": 0,
+        "inapplicable": 0,
+        "miss": 0,
+        "unconfirmed": 1,
+        "unqualified": 7
+      },
+      "map_bytes": 69632,
+      "retained_bytes": 89238772,
+      "full_seconds": 18.179271125234663,
+      "command_seconds": 14.911546000279486,
+      "unattributed_setup_reset_reporting_seconds": 3.2677251249551773,
+      "phases": {
+        "plain": {
+          "status": "passed",
+          "returncode": 0,
+          "timeout": false,
+          "seconds": 2.2387487925589085,
+          "call_failed": [],
+          "mapping_warnings": null,
+          "selected_count": 11,
+          "call_passed_count": 11,
+          "skipped_count": 0
+        },
+        "cold": {
+          "status": "passed",
+          "returncode": 0,
+          "timeout": false,
+          "seconds": 2.4038663329556584,
+          "call_failed": [],
+          "mapping_warnings": null,
+          "selected_count": 11,
+          "call_passed_count": 11,
+          "skipped_count": 0
+        },
+        "warm": {
+          "status": "execution-error",
+          "returncode": 3,
+          "timeout": false,
+          "seconds": 0.7222327077761292,
+          "call_failed": [],
+          "mapping_warnings": null,
+          "selected_count": 0,
+          "call_passed_count": 0,
+          "skipped_count": 0
+        }
+      },
+      "seeds": [
+        {
+          "name": "context-copy",
+          "mutation": {
+            "after_sha256": "c790153b5d1a142c215879a0573d9c40ce3c9d9a76f3b74688e99485185f56c1",
+            "before_sha256": "36865bdf4e3703106a8396d5674485d07cc24df6e10684d2d846b0a6fd12cc8b",
+            "path": "harness/player_view.py"
+          },
+          "verdict": "unqualified",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.45794429164379835,
+            "call_failed": [
+              "tests/test_player_view.py::DecisionViewTests::test_projection_never_mutates_or_aliases_full_result_or_handle_cache"
+            ],
+            "mapping_warnings": null,
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "execution-error",
+            "returncode": 3,
+            "timeout": false,
+            "seconds": 0.7231816668063402,
+            "call_failed": [],
+            "mapping_warnings": null,
+            "selected_count": 2,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": [
+              "tests/test_player_view.py::DecisionViewTests::test_context_projects_only_binding_slots_not_claims_procedures_or_other_tools",
+              "tests/test_player_view.py::DecisionViewTests::test_projection_never_mutates_or_aliases_full_result_or_handle_cache"
+            ]
+          }
+        },
+        {
+          "name": "memory-forward",
+          "mutation": {
+            "after_sha256": "79be26ee0114779ee78b650e407ea46fcdc3a6360c50e767dfdbfc723dfbc3a1",
+            "before_sha256": "806bfded114c6eff6874e4140e591f8aa2b0005bad37aa2087b2c80d4382e7c0",
+            "path": "harness/gameplay/campaign_memory.py"
+          },
+          "verdict": "unconfirmed",
+          "confirmation": {
+            "status": "passed",
+            "returncode": 0,
+            "timeout": false,
+            "seconds": 0.5011632908135653,
+            "call_failed": [],
+            "mapping_warnings": null,
+            "selected_count": 1,
+            "call_passed_count": 1,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "execution-error",
+            "returncode": 3,
+            "timeout": false,
+            "seconds": 0.6726266257464886,
+            "call_failed": [],
+            "mapping_warnings": null,
+            "selected_count": 2,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": [
+              "tests/test_campaign_memory.py::CampaignMemoryTests::test_durable_forward_or_cyclic_support_is_rejected_without_projection",
+              "tests/test_campaign_memory.py::CampaignMemoryTests::test_newest_loss_never_resurrects_old_stock_after_sqlite_reopen"
+            ]
+          }
+        },
+        {
+          "name": "capture-binding",
+          "mutation": {
+            "after_sha256": "212bf996cfcdc4fe06320332433ed8945d84028954a657576175a0e3c6dd1fa5",
+            "before_sha256": "2818783e72e95a33b1b5d4a75d12e36227b5666c0e37689b441da8f044326faa",
+            "path": "harness/controller.py"
+          },
+          "verdict": "unqualified",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.5037508746609092,
+            "call_failed": [
+              "tests/test_controller.py::ControllerTests::test_nonimage_mission_resume_preserves_original_capture_across_render_churn"
+            ],
+            "mapping_warnings": null,
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "execution-error",
+            "returncode": 3,
+            "timeout": false,
+            "seconds": 0.7239572908729315,
+            "call_failed": [],
+            "mapping_warnings": null,
+            "selected_count": 2,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": [
+              "tests/test_controller.py::ControllerTests::test_leased_preflight_rejects_changed_session_revision_or_boundary",
+              "tests/test_controller.py::ControllerTests::test_nonimage_mission_resume_preserves_original_capture_across_render_churn"
+            ]
+          }
+        },
+        {
+          "name": "registry-owner",
+          "mutation": {
+            "after_sha256": "5419a898f20a12abbcecf32275116174faba80d07446869ba95466aaaf16e141",
+            "before_sha256": "9cfc89404b2cf7f41e3a1d71de62ee776a0c07439e9e08496041d40deac16bce",
+            "path": "docs/control-registry.json"
+          },
+          "verdict": "unqualified",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.44957483280450106,
+            "call_failed": [
+              "tests/test_governance.py::GovernanceTests::test_registry_fixture_is_valid_at_record_date"
+            ],
+            "mapping_warnings": null,
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "execution-error",
+            "returncode": 3,
+            "timeout": false,
+            "seconds": 0.6608270406723022,
+            "call_failed": [],
+            "mapping_warnings": null,
+            "selected_count": 0,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": []
+          }
+        },
+        {
+          "name": "native-wire",
+          "mutation": {
+            "after_sha256": "6f01117adee3be84d827fc63b78817bc54ce4927897ff4da34ec87a20f10bfb9",
+            "before_sha256": "09842218c07da747e020f41b7616ff2c8ce8de1f4a9cb683900e19da4789bafc",
+            "path": "native/cdda_harness.cpp"
+          },
+          "verdict": "unqualified",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.8322092918679118,
+            "call_failed": [
+              "tests/test_native_receiver.py::NativeReceiverTests::test_wire_and_live_publication_contract"
+            ],
+            "mapping_warnings": null,
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "execution-error",
+            "returncode": 3,
+            "timeout": false,
+            "seconds": 0.6698697097599506,
+            "call_failed": [],
+            "mapping_warnings": null,
+            "selected_count": 0,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": []
+          }
+        },
+        {
+          "name": "viewer-protocol",
+          "mutation": {
+            "after_sha256": "11157435aa05805ced41a74f0dc3b4de44a1fc020abeb13d0e32922204de80ca",
+            "before_sha256": "907d1974a304a79b944fe35b59332bdc0e07b701cd4cfa3e86ce056ee85eb8f2",
+            "path": "web/app.js"
+          },
+          "verdict": "unqualified",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.39746700040996075,
+            "call_failed": [
+              "tests/_verification_boundaries.py::BoundaryTests::test_viewer"
+            ],
+            "mapping_warnings": null,
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "execution-error",
+            "returncode": 3,
+            "timeout": false,
+            "seconds": 0.6638663755729795,
+            "call_failed": [],
+            "mapping_warnings": null,
+            "selected_count": 0,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": []
+          }
+        },
+        {
+          "name": "package-reexport",
+          "mutation": {
+            "after_sha256": "76d87564029d881bae299fa608b637aae26c2f1f0b208c56f02cc4d17f4dd2bb",
+            "before_sha256": "5611f5b25e5dd400bf4089f52a8f0f76d92be77740a713bf343fe4b9031a3887",
+            "path": "pilot_subject/__init__.py"
+          },
+          "verdict": "unqualified",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.2948303334414959,
+            "call_failed": [
+              "tests/_verification_boundaries.py::BoundaryTests::test_exports"
+            ],
+            "mapping_warnings": null,
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "execution-error",
+            "returncode": 3,
+            "timeout": false,
+            "seconds": 0.7023098329082131,
+            "call_failed": [],
+            "mapping_warnings": null,
+            "selected_count": 0,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": []
+          }
+        },
+        {
+          "name": "subprocess-helper",
+          "mutation": {
+            "after_sha256": "88adf8543ae8adb7ad806a3b9b6a9df3317513b3c5472a3698b1f54936a2b21a",
+            "before_sha256": "3a66aebdedbad3cf107d24e72a07d4b735819b1cf4020fdd922f63c064708172",
+            "path": "pilot_subject/helper.py"
+          },
+          "verdict": "unqualified",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.3949916251003742,
+            "call_failed": [
+              "tests/_verification_boundaries.py::BoundaryTests::test_subprocess"
+            ],
+            "mapping_warnings": null,
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "execution-error",
+            "returncode": 3,
+            "timeout": false,
+            "seconds": 0.82247762568295,
+            "call_failed": [],
+            "mapping_warnings": null,
+            "selected_count": 0,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": []
+          }
+        }
+      ]
+    },
+    {
+      "label": "default-fixed",
+      "private_report_sha256": "a0a40baf269af8f3e3269aa669e97b734e6c5a062803162d714e29856c79b208",
+      "source_commit": "12c479ce93ddd9d8f0cb1716754ef1b0d455ad6f",
+      "backend": "default",
+      "workers": 0,
+      "environment": {
+        "entrypoint": "testmon.pytest_testmon",
+        "packages": {
+          "coverage": "7.17.0",
+          "pytest": "9.1.1",
+          "pytest-testmon": "2.2.0"
+        },
+        "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+        "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]"
+      },
+      "error": "plain/cold cohort or pristine map unqualified; no seed comparisons claimed",
+      "planned_comparisons": 8,
+      "attempted_comparisons": 0,
+      "valid_comparisons": 0,
+      "counts": {
+        "detected": 0,
+        "inapplicable": 0,
+        "miss": 0,
+        "unconfirmed": 0,
+        "unqualified": 0
+      },
+      "map_bytes": null,
+      "retained_bytes": 88637550,
+      "full_seconds": 4.168287625536323,
+      "command_seconds": 3.7375956661999226,
+      "unattributed_setup_reset_reporting_seconds": 0.43069195933640003,
+      "phases": {
+        "plain": {
+          "status": "passed",
+          "returncode": 0,
+          "timeout": false,
+          "seconds": 1.6448927912861109,
+          "call_failed": [],
+          "mapping_warnings": [],
+          "selected_count": 11,
+          "call_passed_count": 11,
+          "skipped_count": 0
+        },
+        "cold": {
+          "status": "mapping-unqualified",
+          "returncode": 0,
+          "timeout": false,
+          "seconds": 2.0151415411382914,
+          "call_failed": [],
+          "mapping_warnings": [
+            {
+              "category": "coverage.exceptions.CoverageWarning",
+              "message": "Dynamic contexts aren't supported with core=sysmon; context data may be incomplete (no-sysmon-context); see https://coverage.readthedocs.io/en/7.17.0/messages.html#warning-no-sysmon-context",
+              "nodeid": "tests/test_player_view.py::DecisionViewTests::test_context_projects_only_binding_slots_not_claims_procedures_or_other_tools",
+              "when": "runtest"
+            }
+          ],
+          "selected_count": 11,
+          "call_passed_count": 11,
+          "skipped_count": 0
+        },
+        "warm": null
+      },
+      "seeds": []
+    },
+    {
+      "label": "ctrace",
+      "private_report_sha256": "446d16401cffbf57ca95e56f7cda588462fef4074113bd35fe6684ae5f00bd7a",
+      "source_commit": "12c479ce93ddd9d8f0cb1716754ef1b0d455ad6f",
+      "backend": "ctrace",
+      "workers": 0,
+      "environment": {
+        "entrypoint": "testmon.pytest_testmon",
+        "packages": {
+          "coverage": "7.17.0",
+          "pytest": "9.1.1",
+          "pytest-testmon": "2.2.0"
+        },
+        "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+        "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]"
+      },
+      "error": null,
+      "planned_comparisons": 8,
+      "attempted_comparisons": 8,
+      "valid_comparisons": 7,
+      "counts": {
+        "detected": 2,
+        "inapplicable": 0,
+        "miss": 5,
+        "unconfirmed": 1,
+        "unqualified": 0
+      },
+      "map_bytes": 69632,
+      "retained_bytes": 89193976,
+      "full_seconds": 17.981415583752096,
+      "command_seconds": 15.052050208672881,
+      "unattributed_setup_reset_reporting_seconds": 2.9293653750792146,
+      "phases": {
+        "plain": {
+          "status": "passed",
+          "returncode": 0,
+          "timeout": false,
+          "seconds": 1.9026078330352902,
+          "call_failed": [],
+          "mapping_warnings": [],
+          "selected_count": 11,
+          "call_passed_count": 11,
+          "skipped_count": 0
+        },
+        "cold": {
+          "status": "passed",
+          "returncode": 0,
+          "timeout": false,
+          "seconds": 2.5470524998381734,
+          "call_failed": [],
+          "mapping_warnings": [],
+          "selected_count": 11,
+          "call_passed_count": 11,
+          "skipped_count": 0
+        },
+        "warm": {
+          "status": "passed",
+          "returncode": 0,
+          "timeout": false,
+          "seconds": 0.6748295417055488,
+          "call_failed": [],
+          "mapping_warnings": [],
+          "selected_count": 0,
+          "call_passed_count": 0,
+          "skipped_count": 0
+        }
+      },
+      "seeds": [
+        {
+          "name": "context-copy",
+          "mutation": {
+            "after_sha256": "c790153b5d1a142c215879a0573d9c40ce3c9d9a76f3b74688e99485185f56c1",
+            "before_sha256": "36865bdf4e3703106a8396d5674485d07cc24df6e10684d2d846b0a6fd12cc8b",
+            "path": "harness/player_view.py"
+          },
+          "verdict": "detected",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.40351291559636593,
+            "call_failed": [
+              "tests/test_player_view.py::DecisionViewTests::test_projection_never_mutates_or_aliases_full_result_or_handle_cache"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.832776041701436,
+            "call_failed": [
+              "tests/test_player_view.py::DecisionViewTests::test_context_projects_only_binding_slots_not_claims_procedures_or_other_tools",
+              "tests/test_player_view.py::DecisionViewTests::test_projection_never_mutates_or_aliases_full_result_or_handle_cache"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 2,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": [
+              "tests/test_player_view.py::DecisionViewTests::test_context_projects_only_binding_slots_not_claims_procedures_or_other_tools",
+              "tests/test_player_view.py::DecisionViewTests::test_projection_never_mutates_or_aliases_full_result_or_handle_cache"
+            ]
+          }
+        },
+        {
+          "name": "memory-forward",
+          "mutation": {
+            "after_sha256": "79be26ee0114779ee78b650e407ea46fcdc3a6360c50e767dfdbfc723dfbc3a1",
+            "before_sha256": "806bfded114c6eff6874e4140e591f8aa2b0005bad37aa2087b2c80d4382e7c0",
+            "path": "harness/gameplay/campaign_memory.py"
+          },
+          "verdict": "unconfirmed",
+          "confirmation": {
+            "status": "passed",
+            "returncode": 0,
+            "timeout": false,
+            "seconds": 0.4523252919316292,
+            "call_failed": [],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 1,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "passed",
+            "returncode": 0,
+            "timeout": false,
+            "seconds": 0.987098541110754,
+            "call_failed": [],
+            "mapping_warnings": [],
+            "selected_count": 2,
+            "call_passed_count": 2,
+            "skipped_count": 0,
+            "selected": [
+              "tests/test_campaign_memory.py::CampaignMemoryTests::test_durable_forward_or_cyclic_support_is_rejected_without_projection",
+              "tests/test_campaign_memory.py::CampaignMemoryTests::test_newest_loss_never_resurrects_old_stock_after_sqlite_reopen"
+            ]
+          }
+        },
+        {
+          "name": "capture-binding",
+          "mutation": {
+            "after_sha256": "212bf996cfcdc4fe06320332433ed8945d84028954a657576175a0e3c6dd1fa5",
+            "before_sha256": "2818783e72e95a33b1b5d4a75d12e36227b5666c0e37689b441da8f044326faa",
+            "path": "harness/controller.py"
+          },
+          "verdict": "detected",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.5636143749579787,
+            "call_failed": [
+              "tests/test_controller.py::ControllerTests::test_nonimage_mission_resume_preserves_original_capture_across_render_churn"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 1.365728291682899,
+            "call_failed": [
+              "tests/test_controller.py::ControllerTests::test_nonimage_mission_resume_preserves_original_capture_across_render_churn"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 2,
+            "call_passed_count": 1,
+            "skipped_count": 0,
+            "selected": [
+              "tests/test_controller.py::ControllerTests::test_leased_preflight_rejects_changed_session_revision_or_boundary",
+              "tests/test_controller.py::ControllerTests::test_nonimage_mission_resume_preserves_original_capture_across_render_churn"
+            ]
+          }
+        },
+        {
+          "name": "registry-owner",
+          "mutation": {
+            "after_sha256": "5419a898f20a12abbcecf32275116174faba80d07446869ba95466aaaf16e141",
+            "before_sha256": "9cfc89404b2cf7f41e3a1d71de62ee776a0c07439e9e08496041d40deac16bce",
+            "path": "docs/control-registry.json"
+          },
+          "verdict": "miss",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.4586412915959954,
+            "call_failed": [
+              "tests/test_governance.py::GovernanceTests::test_registry_fixture_is_valid_at_record_date"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "passed",
+            "returncode": 0,
+            "timeout": false,
+            "seconds": 0.6105234595015645,
+            "call_failed": [],
+            "mapping_warnings": [],
+            "selected_count": 0,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": []
+          }
+        },
+        {
+          "name": "native-wire",
+          "mutation": {
+            "after_sha256": "6f01117adee3be84d827fc63b78817bc54ce4927897ff4da34ec87a20f10bfb9",
+            "before_sha256": "09842218c07da747e020f41b7616ff2c8ce8de1f4a9cb683900e19da4789bafc",
+            "path": "native/cdda_harness.cpp"
+          },
+          "verdict": "miss",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.7827434167265892,
+            "call_failed": [
+              "tests/test_native_receiver.py::NativeReceiverTests::test_wire_and_live_publication_contract"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "passed",
+            "returncode": 0,
+            "timeout": false,
+            "seconds": 0.6163751669228077,
+            "call_failed": [],
+            "mapping_warnings": [],
+            "selected_count": 0,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": []
+          }
+        },
+        {
+          "name": "viewer-protocol",
+          "mutation": {
+            "after_sha256": "11157435aa05805ced41a74f0dc3b4de44a1fc020abeb13d0e32922204de80ca",
+            "before_sha256": "907d1974a304a79b944fe35b59332bdc0e07b701cd4cfa3e86ce056ee85eb8f2",
+            "path": "web/app.js"
+          },
+          "verdict": "miss",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.3441657079383731,
+            "call_failed": [
+              "tests/_verification_boundaries.py::BoundaryTests::test_viewer"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "passed",
+            "returncode": 0,
+            "timeout": false,
+            "seconds": 0.6157251251861453,
+            "call_failed": [],
+            "mapping_warnings": [],
+            "selected_count": 0,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": []
+          }
+        },
+        {
+          "name": "package-reexport",
+          "mutation": {
+            "after_sha256": "76d87564029d881bae299fa608b637aae26c2f1f0b208c56f02cc4d17f4dd2bb",
+            "before_sha256": "5611f5b25e5dd400bf4089f52a8f0f76d92be77740a713bf343fe4b9031a3887",
+            "path": "pilot_subject/__init__.py"
+          },
+          "verdict": "miss",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.28813662473112345,
+            "call_failed": [
+              "tests/_verification_boundaries.py::BoundaryTests::test_exports"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "passed",
+            "returncode": 0,
+            "timeout": false,
+            "seconds": 0.6155109163373709,
+            "call_failed": [],
+            "mapping_warnings": [],
+            "selected_count": 0,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": []
+          }
+        },
+        {
+          "name": "subprocess-helper",
+          "mutation": {
+            "after_sha256": "88adf8543ae8adb7ad806a3b9b6a9df3317513b3c5472a3698b1f54936a2b21a",
+            "before_sha256": "3a66aebdedbad3cf107d24e72a07d4b735819b1cf4020fdd922f63c064708172",
+            "path": "pilot_subject/helper.py"
+          },
+          "verdict": "miss",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.29767758399248123,
+            "call_failed": [
+              "tests/_verification_boundaries.py::BoundaryTests::test_subprocess"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "passed",
+            "returncode": 0,
+            "timeout": false,
+            "seconds": 0.6221976671367884,
+            "call_failed": [],
+            "mapping_warnings": [],
+            "selected_count": 0,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": []
+          }
+        }
+      ]
+    },
+    {
+      "label": "ctrace-repeat",
+      "private_report_sha256": "028b717d7c7fac312ac32fa824c7b39560b3aa70cd502b7f419a281339cce684",
+      "source_commit": "cbaeb6519927a68222a6276ef6e9e11057a6860f",
+      "backend": "ctrace",
+      "workers": 0,
+      "environment": {
+        "entrypoint": "testmon.pytest_testmon",
+        "packages": {
+          "coverage": "7.17.0",
+          "pytest": "9.1.1",
+          "pytest-testmon": "2.2.0"
+        },
+        "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+        "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]"
+      },
+      "error": null,
+      "planned_comparisons": 8,
+      "attempted_comparisons": 8,
+      "valid_comparisons": 7,
+      "counts": {
+        "detected": 2,
+        "inapplicable": 0,
+        "miss": 5,
+        "unconfirmed": 1,
+        "unqualified": 0
+      },
+      "map_bytes": 69632,
+      "retained_bytes": 89195782,
+      "full_seconds": 17.880205875262618,
+      "command_seconds": 14.906120832078159,
+      "unattributed_setup_reset_reporting_seconds": 2.974085043184459,
+      "phases": {
+        "plain": {
+          "status": "passed",
+          "returncode": 0,
+          "timeout": false,
+          "seconds": 1.6440142495557666,
+          "call_failed": [],
+          "mapping_warnings": [],
+          "selected_count": 11,
+          "call_passed_count": 11,
+          "skipped_count": 0
+        },
+        "cold": {
+          "status": "passed",
+          "returncode": 0,
+          "timeout": false,
+          "seconds": 2.280914207920432,
+          "call_failed": [],
+          "mapping_warnings": [],
+          "selected_count": 11,
+          "call_passed_count": 11,
+          "skipped_count": 0
+        },
+        "warm": {
+          "status": "passed",
+          "returncode": 0,
+          "timeout": false,
+          "seconds": 0.5664596250280738,
+          "call_failed": [],
+          "mapping_warnings": [],
+          "selected_count": 0,
+          "call_passed_count": 0,
+          "skipped_count": 0
+        }
+      },
+      "seeds": [
+        {
+          "name": "context-copy",
+          "mutation": {
+            "after_sha256": "c790153b5d1a142c215879a0573d9c40ce3c9d9a76f3b74688e99485185f56c1",
+            "before_sha256": "36865bdf4e3703106a8396d5674485d07cc24df6e10684d2d846b0a6fd12cc8b",
+            "path": "harness/player_view.py"
+          },
+          "verdict": "detected",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.4067397080361843,
+            "call_failed": [
+              "tests/test_player_view.py::DecisionViewTests::test_projection_never_mutates_or_aliases_full_result_or_handle_cache"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.7304403744637966,
+            "call_failed": [
+              "tests/test_player_view.py::DecisionViewTests::test_context_projects_only_binding_slots_not_claims_procedures_or_other_tools",
+              "tests/test_player_view.py::DecisionViewTests::test_projection_never_mutates_or_aliases_full_result_or_handle_cache"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 2,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": [
+              "tests/test_player_view.py::DecisionViewTests::test_context_projects_only_binding_slots_not_claims_procedures_or_other_tools",
+              "tests/test_player_view.py::DecisionViewTests::test_projection_never_mutates_or_aliases_full_result_or_handle_cache"
+            ]
+          }
+        },
+        {
+          "name": "memory-forward",
+          "mutation": {
+            "after_sha256": "79be26ee0114779ee78b650e407ea46fcdc3a6360c50e767dfdbfc723dfbc3a1",
+            "before_sha256": "806bfded114c6eff6874e4140e591f8aa2b0005bad37aa2087b2c80d4382e7c0",
+            "path": "harness/gameplay/campaign_memory.py"
+          },
+          "verdict": "unconfirmed",
+          "confirmation": {
+            "status": "passed",
+            "returncode": 0,
+            "timeout": false,
+            "seconds": 0.40378937497735023,
+            "call_failed": [],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 1,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "passed",
+            "returncode": 0,
+            "timeout": false,
+            "seconds": 0.9911026246845722,
+            "call_failed": [],
+            "mapping_warnings": [],
+            "selected_count": 2,
+            "call_passed_count": 2,
+            "skipped_count": 0,
+            "selected": [
+              "tests/test_campaign_memory.py::CampaignMemoryTests::test_durable_forward_or_cyclic_support_is_rejected_without_projection",
+              "tests/test_campaign_memory.py::CampaignMemoryTests::test_newest_loss_never_resurrects_old_stock_after_sqlite_reopen"
+            ]
+          }
+        },
+        {
+          "name": "capture-binding",
+          "mutation": {
+            "after_sha256": "212bf996cfcdc4fe06320332433ed8945d84028954a657576175a0e3c6dd1fa5",
+            "before_sha256": "2818783e72e95a33b1b5d4a75d12e36227b5666c0e37689b441da8f044326faa",
+            "path": "harness/controller.py"
+          },
+          "verdict": "detected",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.5674215843901038,
+            "call_failed": [
+              "tests/test_controller.py::ControllerTests::test_nonimage_mission_resume_preserves_original_capture_across_render_churn"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 1.358073708601296,
+            "call_failed": [
+              "tests/test_controller.py::ControllerTests::test_nonimage_mission_resume_preserves_original_capture_across_render_churn"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 2,
+            "call_passed_count": 1,
+            "skipped_count": 0,
+            "selected": [
+              "tests/test_controller.py::ControllerTests::test_leased_preflight_rejects_changed_session_revision_or_boundary",
+              "tests/test_controller.py::ControllerTests::test_nonimage_mission_resume_preserves_original_capture_across_render_churn"
+            ]
+          }
+        },
+        {
+          "name": "registry-owner",
+          "mutation": {
+            "after_sha256": "5419a898f20a12abbcecf32275116174faba80d07446869ba95466aaaf16e141",
+            "before_sha256": "9cfc89404b2cf7f41e3a1d71de62ee776a0c07439e9e08496041d40deac16bce",
+            "path": "docs/control-registry.json"
+          },
+          "verdict": "miss",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.5062849996611476,
+            "call_failed": [
+              "tests/test_governance.py::GovernanceTests::test_registry_fixture_is_valid_at_record_date"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "passed",
+            "returncode": 0,
+            "timeout": false,
+            "seconds": 0.8641006657853723,
+            "call_failed": [],
+            "mapping_warnings": [],
+            "selected_count": 0,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": []
+          }
+        },
+        {
+          "name": "native-wire",
+          "mutation": {
+            "after_sha256": "6f01117adee3be84d827fc63b78817bc54ce4927897ff4da34ec87a20f10bfb9",
+            "before_sha256": "09842218c07da747e020f41b7616ff2c8ce8de1f4a9cb683900e19da4789bafc",
+            "path": "native/cdda_harness.cpp"
+          },
+          "verdict": "miss",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 1.088697667233646,
+            "call_failed": [
+              "tests/test_native_receiver.py::NativeReceiverTests::test_wire_and_live_publication_contract"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "passed",
+            "returncode": 0,
+            "timeout": false,
+            "seconds": 0.6689972495660186,
+            "call_failed": [],
+            "mapping_warnings": [],
+            "selected_count": 0,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": []
+          }
+        },
+        {
+          "name": "viewer-protocol",
+          "mutation": {
+            "after_sha256": "11157435aa05805ced41a74f0dc3b4de44a1fc020abeb13d0e32922204de80ca",
+            "before_sha256": "907d1974a304a79b944fe35b59332bdc0e07b701cd4cfa3e86ce056ee85eb8f2",
+            "path": "web/app.js"
+          },
+          "verdict": "miss",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.34946929197758436,
+            "call_failed": [
+              "tests/_verification_boundaries.py::BoundaryTests::test_viewer"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "passed",
+            "returncode": 0,
+            "timeout": false,
+            "seconds": 0.6156475003808737,
+            "call_failed": [],
+            "mapping_warnings": [],
+            "selected_count": 0,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": []
+          }
+        },
+        {
+          "name": "package-reexport",
+          "mutation": {
+            "after_sha256": "76d87564029d881bae299fa608b637aae26c2f1f0b208c56f02cc4d17f4dd2bb",
+            "before_sha256": "5611f5b25e5dd400bf4089f52a8f0f76d92be77740a713bf343fe4b9031a3887",
+            "path": "pilot_subject/__init__.py"
+          },
+          "verdict": "miss",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.2975385831668973,
+            "call_failed": [
+              "tests/_verification_boundaries.py::BoundaryTests::test_exports"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "passed",
+            "returncode": 0,
+            "timeout": false,
+            "seconds": 0.6276044584810734,
+            "call_failed": [],
+            "mapping_warnings": [],
+            "selected_count": 0,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": []
+          }
+        },
+        {
+          "name": "subprocess-helper",
+          "mutation": {
+            "after_sha256": "88adf8543ae8adb7ad806a3b9b6a9df3317513b3c5472a3698b1f54936a2b21a",
+            "before_sha256": "3a66aebdedbad3cf107d24e72a07d4b735819b1cf4020fdd922f63c064708172",
+            "path": "pilot_subject/helper.py"
+          },
+          "verdict": "miss",
+          "confirmation": {
+            "status": "test-failure",
+            "returncode": 1,
+            "timeout": false,
+            "seconds": 0.29398804157972336,
+            "call_failed": [
+              "tests/_verification_boundaries.py::BoundaryTests::test_subprocess"
+            ],
+            "mapping_warnings": [],
+            "selected_count": 1,
+            "call_passed_count": 0,
+            "skipped_count": 0
+          },
+          "selected": {
+            "status": "passed",
+            "returncode": 0,
+            "timeout": false,
+            "seconds": 0.5727217085659504,
+            "call_failed": [],
+            "mapping_warnings": [],
+            "selected_count": 0,
+            "call_passed_count": 0,
+            "skipped_count": 0,
+            "selected": []
+          }
+        }
+      ]
+    },
+    {
+      "label": "default-final",
+      "private_report_sha256": "a07674f2f4059d5a2ff2c810045cfbc599c0c587fbb357e301f5832873dee750",
+      "source_commit": "cbaeb6519927a68222a6276ef6e9e11057a6860f",
+      "backend": "default",
+      "workers": 0,
+      "environment": {
+        "entrypoint": "testmon.pytest_testmon",
+        "packages": {
+          "coverage": "7.17.0",
+          "pytest": "9.1.1",
+          "pytest-testmon": "2.2.0"
+        },
+        "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+        "python": "3.14.7 (main, Aug  5 2026, 10:29:49) [Clang 21.0.0 (clang-2100.1.1.101)]"
+      },
+      "error": "plain/cold cohort or pristine map unqualified; no seed comparisons claimed",
+      "planned_comparisons": 8,
+      "attempted_comparisons": 0,
+      "valid_comparisons": 0,
+      "counts": {
+        "detected": 0,
+        "inapplicable": 0,
+        "miss": 0,
+        "unconfirmed": 0,
+        "unqualified": 0
+      },
+      "map_bytes": null,
+      "retained_bytes": 88638732,
+      "full_seconds": 4.631011040881276,
+      "command_seconds": 3.999135416932404,
+      "unattributed_setup_reset_reporting_seconds": 0.6318756239488721,
+      "phases": {
+        "plain": {
+          "status": "passed",
+          "returncode": 0,
+          "timeout": false,
+          "seconds": 1.8499065833166242,
+          "call_failed": [],
+          "mapping_warnings": [],
+          "selected_count": 11,
+          "call_passed_count": 11,
+          "skipped_count": 0
+        },
+        "cold": {
+          "status": "mapping-unqualified",
+          "returncode": 0,
+          "timeout": false,
+          "seconds": 2.0242492919787765,
+          "call_failed": [],
+          "mapping_warnings": [
+            {
+              "category": "coverage.exceptions.CoverageWarning",
+              "message": "Dynamic contexts aren't supported with core=sysmon; context data may be incomplete (no-sysmon-context); see https://coverage.readthedocs.io/en/7.17.0/messages.html#warning-no-sysmon-context",
+              "nodeid": "tests/test_player_view.py::DecisionViewTests::test_context_projects_only_binding_slots_not_claims_procedures_or_other_tools",
+              "when": "runtest"
+            }
+          ],
+          "selected_count": 11,
+          "call_passed_count": 11,
+          "skipped_count": 0
+        },
+        "warm": null
+      },
+      "seeds": []
+    }
+  ],
+  "cohort": [
+    "tests/test_player_view.py::DecisionViewTests::test_context_projects_only_binding_slots_not_claims_procedures_or_other_tools",
+    "tests/test_player_view.py::DecisionViewTests::test_projection_never_mutates_or_aliases_full_result_or_handle_cache",
+    "tests/test_campaign_memory.py::CampaignMemoryTests::test_durable_forward_or_cyclic_support_is_rejected_without_projection",
+    "tests/test_campaign_memory.py::CampaignMemoryTests::test_newest_loss_never_resurrects_old_stock_after_sqlite_reopen",
+    "tests/test_controller.py::ControllerTests::test_nonimage_mission_resume_preserves_original_capture_across_render_churn",
+    "tests/test_controller.py::ControllerTests::test_leased_preflight_rejects_changed_session_revision_or_boundary",
+    "tests/test_governance.py::GovernanceTests::test_registry_fixture_is_valid_at_record_date",
+    "tests/test_native_receiver.py::NativeReceiverTests::test_wire_and_live_publication_contract",
+    "tests/_verification_boundaries.py::BoundaryTests::test_viewer",
+    "tests/_verification_boundaries.py::BoundaryTests::test_exports",
+    "tests/_verification_boundaries.py::BoundaryTests::test_subprocess"
+  ],
+  "recipes": [
+    {
+      "after": "view = value",
+      "before": "view = deepcopy(value)",
+      "fidelity": "real Python defensive-copy function; no game",
+      "name": "context-copy",
+      "path": "harness/player_view.py",
+      "target": "tests/test_player_view.py::DecisionViewTests::test_projection_never_mutates_or_aliases_full_result_or_handle_cache"
+    },
+    {
+      "after": "if False:",
+      "before": "if not parents <= seen:",
+      "fidelity": "real Python durable-dependency function; fixture ledger",
+      "name": "memory-forward",
+      "path": "harness/gameplay/campaign_memory.py",
+      "target": "tests/test_campaign_memory.py::CampaignMemoryTests::test_durable_forward_or_cyclic_support_is_rejected_without_projection"
+    },
+    {
+      "after": "frame=self.state[\"frame\"], require_exact_frame=kind !=",
+      "before": "frame=observed[\"frame\"], require_exact_frame=kind !=",
+      "fidelity": "real Python input metadata; no game",
+      "name": "capture-binding",
+      "path": "harness/controller.py",
+      "target": "tests/test_controller.py::ControllerTests::test_nonimage_mission_resume_preserves_original_capture_across_render_churn"
+    },
+    {
+      "after": "",
+      "before": "",
+      "fidelity": "real schema/governance non-Python input",
+      "name": "registry-owner",
+      "path": "docs/control-registry.json",
+      "target": "tests/test_governance.py::GovernanceTests::test_registry_fixture_is_valid_at_record_date"
+    },
+    {
+      "after": "out.member( \"protocol\", 5 );",
+      "before": "out.member( \"protocol\", 6 );",
+      "fidelity": "real C++ source-reading oracle with compiled fixture; no native app",
+      "name": "native-wire",
+      "path": "native/cdda_harness.cpp",
+      "target": "tests/test_native_receiver.py::NativeReceiverTests::test_wire_and_live_publication_contract"
+    },
+    {
+      "after": "state?.protocol !== 7",
+      "before": "state?.protocol !== 6",
+      "fidelity": "pytest subprocess wrapper around actual Node oracle; wrapper selection only",
+      "name": "viewer-protocol",
+      "path": "web/app.js",
+      "target": "tests/_verification_boundaries.py::BoundaryTests::test_viewer"
+    },
+    {
+      "after": "__all__ = []",
+      "before": "__all__ = [\"available\"]",
+      "fidelity": "constructed module/import/re-export fixture",
+      "name": "package-reexport",
+      "path": "pilot_subject/__init__.py",
+      "target": "tests/_verification_boundaries.py::BoundaryTests::test_exports"
+    },
+    {
+      "after": "print(\"wrong\")",
+      "before": "print(\"ok\")",
+      "fidelity": "constructed Python subprocess dependency; no package upgrade",
+      "name": "subprocess-helper",
+      "path": "pilot_subject/helper.py",
+      "target": "tests/_verification_boundaries.py::BoundaryTests::test_subprocess"
+    }
+  ],
+  "additional_host_tools": {
+    "node": "26.9.0",
+    "cxx": "Apple clang 21.0.0 (clang-2100.3.34.2)"
+  },
+  "limits": [
+    "Local single-cohort samples, not statistical latency distributions or whole-repository recall.",
+    "Default and CTracer are separate trials; original failed adapter trial retained.",
+    "Unconfirmed memory mutation has no recall credit; later cycle rejection still preserves its observed contract.",
+    "Non-Python/source-read/subprocess and re-export boundary misses are this cohort's observations.",
+    "Residual setup/reset/reporting time is aggregate, not an isolated SQLite/map-maintenance benchmark.",
+    "No real game, full native app, package upgrade, xdist compatibility or full-repository instrumentation trial."
+  ]
+}

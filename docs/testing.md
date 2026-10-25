@@ -152,6 +152,11 @@ existing C-REVIEW/C-MAINTENANCE; reassess on tool/dependency/contract changes or
 cost regressions and retire uneconomic glue. Production CI still uses its existing
 explicit scopes; any adoption needs a separate evidence-supported decision.
 
+The [2026-10-25 pilot assessment](acceptance/2026-10-25-verification-pilots.md)
+adopts the small assurance trace and defers testmon routing after observed misses.
+The CLI exits unsuccessfully on unsupported maps or unconfirmed cases even when
+other comparisons are valid; inspect the retained denominators and results.
+
 ## Review overlap by failure responsibility
 
 “No duplicate test IDs” means discovery found distinct identities. It says nothing
