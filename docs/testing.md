@@ -72,51 +72,63 @@ remains visible. The viewer command remains a separate Node check. Native build
 and real gameplay are outside these profiles. Exact commands and worker settings
 belong in the runner, and hosted qualification requires actual candidate results.
 
-## Advisory assurance trace pilot
+## Responsibility assurance
 
-Three registered pytest markers link a small source-test sample to existing
-[C-RUNTIME](controls.md#c-runtime--live-authority-and-input-guards-runtime)
-obligations. [C-PORTABLE](controls.md#c-portable--portable-regression-lane-automatic)
-remains the regression executor. These markers support review navigation and
-opt-in selection; they do not change production CI routing or define whole-source
-coverage. The table follows risk → invariant → control → verification marker.
+Start with [system responsibility assurance](architecture.md#responsibility-assurance),
+then the affected component's assurance view. Follow consequence → invariant/current
+contract → existing mechanism → representative assertion/evidence and gap. Component
+views own this explanation; exact contracts/assertions remain authoritative. Review
+both sides of a changed producer/consumer boundary before choosing focused checks.
+The existing CI manifest/profile policy above remains the production selector.
 
-| Product risk | Invariant and parent contract | Control → marker |
-| --- | --- | --- |
-| Context projection erases authored evidence or mutates retained detail | Project only known binding slots; preserve authored values and isolate copies. [Player interface](components/player-interface.md#context-and-failure-boundaries). | C-RUNTIME → `assurance_context` |
-| Invalid durable support or lost evidence revives an old possession claim | Reject forward/cyclic dependencies; unavailable newest evidence stays unknown after SQLite reopen. [Memory/learning](components/memory-learning.md#failure-bounds-and-ownership), [memory contract](protocol.md#ordinary-discovery-and-procedure-data). | C-RUNTIME → `assurance_memory` |
-| A refreshed render retargets input, or changed authority permits dispatch | Keep the original non-image capture; reject changed session, revision or boundary at preflight. [Native control](components/native-control.md#internal-responsibilities), [ownership contract](protocol.md#controller-run-ownership). | C-RUNTIME → `assurance_freshness` |
-
-The six existing cases retain their original assertions. Context cases use
-synthetic records and a controlled client; memory cases exercise real SQLite and
-retained files with synthetic observations; controller cases use a fake native
-bridge. These assumptions bound the claim to those host-side contracts. Passing
-them establishes no actual-game outcome, loaded host schema, native capture or
-whole-repository semantic coverage. The component contracts own the detailed rules.
-
-Use pytest's registered metadata and strict marker validation directly:
+Registered native pytest markers provide a small executable sample of these
+obligations. They support navigation and opt-in development selection; they are
+neither an exhaustive test inventory nor semantic coverage. Registration and actual
+membership live in [pyproject.toml](../pyproject.toml) and test decorators. Inspect
+those through pytest or the existing public-hook collector rather than copying all
+node IDs into documentation:
 
 ```sh
 .venv/bin/python -m pytest --markers
-.venv/bin/python -m pytest --strict-markers --collect-only -q tests/test_player_view.py tests/test_campaign_memory.py tests/test_controller.py -m 'assurance_context or assurance_memory or assurance_freshness'
-.venv/bin/python -m pytest --strict-markers -q tests/test_player_view.py tests/test_campaign_memory.py tests/test_controller.py -m 'assurance_context or assurance_memory or assurance_freshness'
+.venv/bin/python tools/testing_pilots.py trace --out .runtime/iterations/assurance-navigation
+.venv/bin/python -m pytest -q -m assurance_execution tests/test_mission_ledger.py
 ```
 
-Collection lists actual node identities; it does not prove an invariant was
-exercised. Review marker membership against assertions when these contracts or
-fixtures change under existing [C-REVIEW/C-MAINTENANCE](controls.md) ownership.
+Use a fresh output directory for each retained trace. `trace.json` joins actual
+collected membership/registered descriptions with known control references; it does
+not infer meaning or supply an independent oracle. Native `--strict-markers` is
+configured for normal pytest invocations, rejecting unregistered decorators.
+C-REVIEW checks the semantic association, actual assertions and evidence limits;
+registration cannot establish them. A subclass may inherit a marked test, yielding
+several collected cases from one method. Neither count is a coverage score or quota.
 
-For a machine-readable inventory of actual node identities, registered marker
-descriptions and known control references, use the opt-in adapter:
+C-RUNTIME names live mechanisms; C-PORTABLE executes their source/real-component
+fixtures. Compiled receiver scenarios remain a component fixture lane. The existing
+Node viewer command, actual native probes, campaigns and manual understanding/release
+review are outside this pytest inventory. C-NATIVE and C-USABILITY retain their
+separate acceptance roles. Read the component limits before treating a passing group
+as evidence for a broader outcome.
 
-```sh
-.venv/bin/python tools/testing_pilots.py trace --out .runtime/iterations/verification-pilots/trace
-```
+When a contract, representative assertion, ownership, evidence lane or dependency
+changes, the component maintainer and lead update affected associations in the same
+change under C-REVIEW/C-MAINTENANCE. Known unqualified outcomes keep their existing
+owned Issues; lack of inspection alone does not establish a missing test. Review
+whether navigation, selection and upkeep earn their cost at existing meaningful
+checkpoints, using available observations and explicit unknowns. Simplify low-value
+metadata or retire collector glue if maintained capabilities replace it; do not add
+another risk database, per-PR benchmark or automatic dependency selector.
 
-`trace.json` joins existing pytest metadata with the existing control registry.
-It does not infer semantic coverage or supply an independent test oracle. The
-maintainer owns marker membership; reassess on changed contracts/assertions and
-retire this glue if a maintained tool supplies the same useful navigation.
+## Engineering assurance
+
+Engineering/delivery has its own failure responsibilities. The system map points
+here because it is a cross-cutting development concern, not another game executor.
+These are representative evidence paths, not proof that every control is effective.
+
+| Consequence to challenge | Invariant / existing mechanism | Representative evidence and limit |
+| --- | --- | --- |
+| Unknown control references or stale structural guidance are accepted | C-GOVERNANCE validates registry/schema/references and generated-map freshness. [Documentation](documentation.md) owns artifact roles. | [Governance assertions](../tests/test_governance.py), including valid records and unknown/duplicate/missing-field refusal, are selected by `assurance_governance`. C-PORTABLE also runs metadata/link/diagram checks. Structure and registered markers do not prove prose truth, semantic completeness or successful review. |
+| A passing fixture or wrong candidate is treated as release acceptance | C-RELEASE/C-REVIEW verify exact candidate, appropriate lanes and original failure dispositions under [protected publication](project-management.md#protected-ci-profiles). | [CI selection assertions](../tests/test_ci.py) exercise evidence eligibility and failure handling; actual PR/main jobs and C-RELEASE's [dated publication receipt](https://github.com/CVX-Hull/enactive/pull/230#issuecomment-6401079659) establish only the exercised hosted configuration. [C-RELEASE](controls.md#c-release--exact-candidate-and-evidence-review-manual) still requires current publication verification; source tests alone do not prove current GitHub settings, real game behavior or maintainer approval. |
+| Mapping and controls drift or cost more than the decisions they support | Component owners and lead use C-REVIEW/C-MAINTENANCE at changed-contract/assertion, failure and meaningful integration triggers. | Inspect a responsibility map against actual assertions and ask whether a reader can find the rule, lane and gap. Retain findings/costs in the existing Issue/PR; simplify or retire poor-value detail. A parser, tag count or agent reader challenge does not establish human comprehension or reduced delivery time. |
 
 ## Advisory test-impact experiment
 

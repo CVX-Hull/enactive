@@ -28,6 +28,7 @@ constraints or drill-down, not separate processes or approvals at every level.
 | How do I operate it? | [Setup](setup.md), [runbook](runbook.md), [walkthrough](walkthrough.md) | Exact CLI/tool reference; [player guide](player-guide.md) for deciding players |
 | What is next, blocked or being delivered? | [GitHub Project](https://github.com/users/CVX-Hull/projects/2) and linked Issues | Implementation PR and actual verification results |
 | What do the tests cover, and which should run? | [Testing guide](testing.md): layer responsibilities and selection | Shared CI manifest and relevant assertions |
+| What could go wrong, and what supports the guarantee? | [Responsibility assurance](architecture.md#responsibility-assurance): system-level review navigation | Component assurance, exact contract, existing control and representative evidence/gap |
 | What evidence supports the claim? | [Work evidence index](work.md), dated acceptance report or CI receipt | Original retained artifacts under their declared scope |
 
 Each architecture view explains a boundary from the outside before exposing its
@@ -46,13 +47,14 @@ to finish all design before feedback or to mirror directories mechanically.
 | --- | --- | --- |
 | Charter | Product intent, constraints and principles | Current implementation or work stage |
 | Engineering / project-management policy | Required properties; workflow decision and trigger rules | Duplicate wire contracts or run history |
-| Architecture / component explanation | Current responsibilities, state ownership, relationships, rationale links and known gaps | Per-attempt chronology or a second schema definition |
+| Architecture / component explanation | Current responsibilities, state ownership, relationships, responsibility-level assurance, rationale links and known gaps | Per-attempt chronology, a complete risk database or a second schema definition |
 | Protocol / schema / generated reference | Exact current interfaces and invariants in their stated scope | Product direction or evidence that a run passed |
 | Proposed design brief | Change scope, alternatives, selected design, questions and acceptance | Implemented support until incorporated into current contracts |
 | ADR / historical brief | Decision context, alternatives and consequences at the stated date | Live implementation, task status or remaining-action queue |
 | Research | Primary evidence, reading scope, uncertainty and transfer judgment | Mandatory requirements without an adopted standard/design |
 | Procedure / tutorial | Supported steps for an operating task / learning task | Duplicate architecture or historical checkpoint narrative |
 | Control registry → generated map | Mechanism, owner, trigger, evidence, failure response and coverage limits | Repeated standard text or chronological incident inventory |
+| Native test metadata | Registered concern families and executable test membership | Semantic completeness, CI routing, native/campaign qualification or another control registry |
 | Dated acceptance/audit report | Candidate, observations, checks, costs, limits and finding dispositions | Current authority, future permission or live issue fields |
 | GitHub Issue / Project / PR | Outcome and acceptance / stage and sequencing / implementation and review evidence | A second durable architecture reference |
 
@@ -87,6 +89,13 @@ guides as applicable. On an outcome claim, update the overview's capability/limi
 and link the dated evidence. A new attempt alone needs no overview paragraph.
 Update current bodies instead of appending another checkpoint. Remove redundant
 summaries and retire obsolete guidance through Git.
+
+Keep the component assurance view aligned when its invariant, contract, control,
+representative assertion or evidence boundary changes. Link the actual assertion
+and its limitations; native pytest metadata owns executable family membership.
+Do not copy a full test inventory or all historical results into architecture.
+An unexercised lane is an explicit gap, with existing owned work where known; an
+inventory count or fresh link cannot turn it into qualified behavior.
 
 The existing [controls](controls.md) enforce metadata, links, generated-map
 freshness, diagram rendering and selected dependency/protocol relationships.

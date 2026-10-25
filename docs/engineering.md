@@ -330,6 +330,15 @@ synchronization. A collected result does not establish writer quiescence; preser
 the integrity assertions instead of adding sleeps or weakening them.
 Review these choices through C-REVIEW; C-PORTABLE executes the resulting regressions.
 The [testing guide](testing.md) maps each layer's distinct failure responsibility.
+Maintain risk-to-evidence navigation for major component responsibilities: product
+consequence, required invariant/current contract, existing control mechanism,
+representative assertions/evidence and their limits. Exact contracts and assertions
+remain authoritative. Review the association when those facts change, across
+affected producers and consumers. Distinguish the runtime mechanism from the
+portable executor, compiled fixture and actual native/campaign/manual-review lane.
+Use registered native test metadata selectively for consequential obligations;
+do not annotate every test or infer semantic completeness from tags or counts.
+Unknown registration is rejected by native pytest; C-REVIEW owns semantic fit.
 Before adding expensive integration permutations, identify the invariant and lowest
 sufficient boundary; keep representative composition/transport cases where they add
 coverage. Similar names and equal counts do not establish redundant or adequate
@@ -504,6 +513,13 @@ contracts and walkthroughs for learning. Add these when a real reader need exist
 do not create empty categories. Significant change briefs show before/after user
 consequences, affected boundaries, alternatives and evidence. Use capability tables,
 dated screenshots or demonstrations when they convey more than additional prose.
+
+Component assurance explanations follow the same review hierarchy. Keep one current
+home for responsibility-level risks/evidence links; refer to contracts, control
+definitions and native test metadata rather than mirror them. Maintain links and
+limits with changed behavior/assertions, and simplify low-value mapping detail.
+The [documentation map](documentation.md) and [testing guide](testing.md) own the
+navigation and selection method, not a second live backlog or coverage database.
 
 Development notes reference existing admissions, ledgers and artifacts. Consolidate
 acceptance reports and selected public evidence at meaningful integration/acceptance

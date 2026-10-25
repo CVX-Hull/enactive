@@ -72,6 +72,11 @@ actual-game qualification.
 | An input commits to the wrong receiver or after user revocation | Native checks receiver/custody and Pause/takeover again at commit. [Ownership contract](../protocol.md#controller-run-ownership). | Native poll/dispatch gates: [receiver tests](../../tests/test_native_receiver.py) `test_production_receiver_and_dispatch` (`assurance_native`) executes extracted production C++ with explicit doubles. Its [comparison-fence scenarios](../../tests/native_receiver_fixture.cpp) assert refusal/fault and zero input feeds after changed receiver, Pause or takeover. This compiled component is not a patched CDDA build or graphical acceptance. |
 | A passing fixture is mistaken for safe input across every native condition | New support needs matching built source and actual affected native qualification. [Recovery contract](../protocol.md#explicit-operator-recovery). | C-NATIVE's [capture report](../acceptance/2026-10-22-native-capture-preconditions.md) demonstrates scoped ordinary input and normal same-character lifecycle; persistent pixel drift and retained-A/newer-B timing remain unexercised there. [Local refusal](../acceptance/2026-10-22-native-local-refusal.md) demonstrates a separate ordinary refusal/cancellation path, not wider mouse, takeover or interruption coverage. |
 
+Host-side queue and Pause coverage also includes [controller](../../tests/test_controller.py)
+`test_walk_stop_revokes_queued_generation_and_pause_race`, which asserts the queued
+action returns `pause_requested` and no action requests are sent. This remains
+fake-bridge host evidence.
+
 A full native build and actual gameplay are further separate lanes. The retained
 reports qualify only their stated source/build/scenario; portability to another
 real game remains with [#191](https://github.com/CVX-Hull/enactive/issues/191).

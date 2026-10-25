@@ -362,12 +362,27 @@ from a single run. Simplify or retire a step whose cost is not justified by defe
 it catches; strengthen a targeted check when evidence warrants it. The lead owns
 this review under existing event/date triggers, without another scheduler or tracker.
 
+For assurance navigation, sample whether the affected component map helps a reader
+find the invariant, actual assertion, evidence lane and remaining gap. Record
+available navigation/selection effort, upkeep, escaped failures and total feedback
+cost in the existing Issue/PR. Missing human-comprehension or timing evidence stays
+unknown; an agent reader challenge is not a user study. Repair or simplify maps
+that obscure decisions. No tag-count target, per-PR benchmark or extra full-suite
+shadow job is required.
+
 ## Review by decision and risk
 
 Name the decision and uncertainty a review should resolve, then choose the smallest
 useful set of perspectives and an inspectable artifact. A review should enable the
 next safe experiment or expose a concrete blocker. Do not ask every role to review
 every change, require consensus, or repeat a full review of unchanged material.
+
+On a consequential contract, assertion or evidence-boundary change, follow the
+[responsibility assurance map](architecture.md#responsibility-assurance) through
+the affected producer/consumer components. Check the actual representative
+assertions and their limits; update those associations or identify an owned gap.
+Native pytest registration checks metadata, not semantic fit. This is part of the
+existing scoped review, not another approval stage or authority to reduce CI.
 
 | Trigger / artifact | Useful review and timing |
 | --- | --- |

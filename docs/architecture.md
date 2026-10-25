@@ -156,6 +156,30 @@ remain evidence, not supported runtime input.
 
 ## Change boundaries and verification
 
+### Responsibility assurance
+
+Use this map to ask what could go wrong, which responsibility must prevent or
+expose it, and what evidence is worth inspecting. Each component's assurance view
+links current invariants/contracts, existing controls and representative evidence
+with its limits. It is a review path, not a complete risk inventory or a statement
+that every possible failure has been tested.
+
+| Consequence to challenge | Responsible view and evidence path |
+| --- | --- |
+| The player acts on the wrong source, or uncertain input is replayed | [Player interface](components/player-interface.md#assurance-and-evidence): selected intent, context and original collection |
+| Costs or consent are renewed, or history becomes live authority | [Mission execution](components/mission-execution.md#assurance-and-evidence): one writer, original accounting, phase and lifecycle ownership |
+| Pause/takeover fails to fence input, or a capture is mistaken for eligibility | [Native control](components/native-control.md#assurance-and-evidence): host/receiver fences and separate native qualification |
+| Unsupported memory or learned procedures become trusted facts or another executor | [Memory/learning](components/memory-learning.md#assurance-and-evidence): support, bounded programs and advisory lineage |
+| A historical frame/receipt looks current, or host/build evidence overstates an outcome | [Observer/operations](components/observer-operations.md#assurance-and-evidence): passive projections, owned resources and outcome limits |
+| Incorrect guidance or a passing source check is treated as acceptance | [Engineering assurance](testing.md#engineering-assurance): structural checks, semantic review and exact protected publication |
+
+The [testing guide](testing.md#responsibility-assurance) explains native test
+metadata and focused selection. Component maintainers own these associations with
+the lead under C-REVIEW/C-MAINTENANCE; exact rules remain in their contracts and
+assertions. Compiled fixtures, actual native behavior, campaigns and manual review
+are different evidence lanes. Follow their stated scope rather than treating a
+pytest group as proof of the whole responsibility.
+
 Scope work from the affected system responsibility down to components, contracts,
 state/callers, code, tests and procedures. Review the highest changed boundary
 before committing its implementation. An unchanged parent needs a link and impact
