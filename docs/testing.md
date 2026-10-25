@@ -63,9 +63,11 @@ this guide deliberately does not copy their exact test target lists.
 
 The portable runner uses the existing `unittest` cases through pytest **9.1.1**
 and pytest-xdist **3.8.0**, pinned in [requirements-dev.lock](../requirements-dev.lock).
-Full/component profiles use four workers and `loadfile` scheduling; main-smoke
-uses zero workers. File grouping preserves within-file execution locality, not
-isolation of shared runtime resources. Worker restart is disabled, so a crash
+Full/component profiles use four workers: full uses built-in `worksteal` to
+balance heterogeneous cases, while components use `loadfile`. Main-smoke uses
+zero workers. Work stealing can repeat class setup on different workers; the
+compiled native fixtures allocate unique temporary builds. File grouping preserves
+within-file locality, not isolation of shared runtime resources. Worker restart is disabled, so a crash
 remains visible. The viewer command remains a separate Node check. Native build
 and real gameplay are outside these profiles. Exact commands and worker settings
 belong in the runner, and hosted qualification requires actual candidate results.

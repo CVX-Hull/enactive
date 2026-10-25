@@ -357,7 +357,7 @@ checks Import Linter dependency contracts, checks browser JavaScript syntax with
 Node.js, validates required documents and local Markdown file/image targets using
 markdown-it-py, and checks staged/unstaged Git diff whitespace. Full additionally
 runs existing unittest cases through pinned pytest/pytest-xdist, including real
-loopback HTTP tests, using four processes grouped by file and reporting the 20
+loopback HTTP tests, using four processes with work stealing and reporting the 20
 slowest durations. Every behavioral profile also runs delayed-image viewer
 regressions. Editorial omits behavioral/viewer tests; movement/viewer run explicit
 consumer/boundary targets; main-smoke runs its fixed targets serially. The shared

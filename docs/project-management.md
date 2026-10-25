@@ -274,7 +274,7 @@ and diagram rendering. It is not a hosted profile.
 
 | Profile | Additional executed checks | Supported claim |
 | --- | --- | --- |
-| Full (also the default local command) | Complete pytest collection of existing unittest cases, four xdist processes grouped by file and 20 slowest durations, plus viewer regressions | Full portable regression; native build/gameplay remain separate |
+| Full (also the default local command) | Complete pytest collection of existing unittest cases, four xdist processes with work stealing and 20 slowest durations, plus viewer regressions | Full portable regression; native build/gameplay remain separate |
 | Editorial | No runtime tests or viewer regressions | Strict document/structural validation only |
 | Movement | Explicit policy and all four direct consumer suites, plus fixed boundary smoke and viewer regressions | Contained movement-policy regression; full regression was not run |
 | Viewer | Server and fixed boundary smoke, plus production viewer logic with a synthetic DOM | Contained viewer/boundary regression; no browser layout or full regression claim |
@@ -282,8 +282,9 @@ and diagram rendering. It is not a hosted profile.
 
 The [testing guide](testing.md) maps test responsibilities, overlap and upkeep.
 `tools/ci.py` owns the exact source allowlists and test targets; the checker consumes
-that same manifest. Full and component scopes use four pytest-xdist processes,
-grouped by file to keep module/class fixtures together; main-smoke is serial.
+that same manifest. Full and component scopes use four pytest-xdist processes. Full uses built-in
+work stealing to balance heterogeneous case durations; component scopes group by
+file to keep module/class fixtures together. Main-smoke is serial.
 Worker crashes fail the run without restart or silent serial fallback. The pinned
 pytest version supports existing unittest assertions, setup/cleanup and subtests.
 Collection identity and representative negative matrices are checked when changing

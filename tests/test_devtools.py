@@ -170,7 +170,8 @@ class DevToolTests(unittest.TestCase):
                     targets = ["tests"] if profile == "full" else (
                         smoke_cases if profile == "main-smoke" else components[profile])
                     self.assertEqual(commands, [[sys.executable, "-m", "pytest", "-q", "-n",
-                        "0" if profile == "main-smoke" else "4", "--dist", "loadfile",
+                        "0" if profile == "main-smoke" else "4", "--dist",
+                        "worksteal" if profile == "full" else "loadfile",
                         "--max-worker-restart=0", "--durations=20", *targets]])
                 else:
                     self.assertEqual(commands, [])

@@ -100,7 +100,7 @@ def _check(argv: list[str] | None = None) -> int:
         targets = ("tests",) if args.profile == "full" else (
             SMOKE_TESTS if args.profile == "main-smoke" else COMPONENT_TESTS[args.profile])
         workers = "0" if args.profile == "main-smoke" else "4"
-        run([sys.executable, "-m", "pytest", "-q", "-n", workers, "--dist", "loadfile",
+        run([sys.executable, "-m", "pytest", "-q", "-n", workers, "--dist", "worksteal" if args.profile == "full" else "loadfile",
              "--max-worker-restart=0", "--durations=20", *targets])
         run([node, "tests/test_viewer.cjs"])
     run(["git", "diff", "--check"])
