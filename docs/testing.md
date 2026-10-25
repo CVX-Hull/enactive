@@ -206,6 +206,13 @@ sleep, or relax a deadline merely to hide contention under parallel execution.
 Real elapsed-time performance measurements need their declared host, load,
 cohort, conditions and retained failures; a fake-clock pass is not a latency result.
 
+An asynchronous SDK's initial wait is a convenience, not a settlement guarantee.
+Functional fixtures must collect the same original operation through its supported
+bounded API before asserting its terminal state; never resubmit input to finish
+it. Exercise an intentionally pending writer with causal synchronization. Keep
+explicit latency acceptance separate from fixture polling allowances, and retain
+real watchdog failures for diagnosis instead of increasing them without evidence.
+
 Review slow setup, repeated unchanged archive validation, excessive sleeps and
 repeated high-level fault matrices against the value they add. Measure the bounded
 cohort before/after; retain failure assertions and identify omitted coverage.

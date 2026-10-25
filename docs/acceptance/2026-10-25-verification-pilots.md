@@ -131,6 +131,23 @@ from planned comparisons. Protected full PR/main validation is required for thes
 tooling/dependency changes; the linked implementation PR owns actual final check,
 integration and cleanup receipts rather than predicting them here.
 
+The first required full candidate run
+[40214564731](https://github.com/CVX-Hull/enactive/actions/runs/40214564731)
+failed an existing lifecycle fixture at final-exit: the accepted original operation
+remained running after its three-second client wait. It passed 2,114 other tests
+and 4,004 subtests in 340.20s; the checker took 376.56s. That is a failed gate,
+not successful validation. Inspection found no established runtime defect or
+explanation for this runner's timing. The fixture correction collects the original
+identity through the existing bounded SDK API, with all lifecycle assertions
+retained. An event-held writer regression requires original collection without
+resubmission; it and the exact failed case passed locally. The initial local
+loopback bind denial and a regression-helper mistake requiring `next_call` on
+observe were retained and corrected. The full changed lifecycle fixture module
+then passed 22 tests and 29 subtests in 149.46s, with two existing MiniRacer
+deprecation warnings. Independent review approved the fix; subsequent
+protected PR/main receipts remain in the PR. No runtime limit or latency standard
+was relaxed, and no pilot detection result was relabelled.
+
 Private original commands, hook reports, failures, maps and source copies remain
 project-local in `.runtime/iterations/verification-pilots/`; the public payload
 retains exact seed recipes, selected/failing identities, environment, costs and
