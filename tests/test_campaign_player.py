@@ -183,6 +183,48 @@ class CampaignPlayerTests(unittest.TestCase):
                 self.client.collect.assert_not_called()
                 self.assertEqual(self.events[:4], [("status",), ("launch", 1234), ("communicate", 60.0), ("exit", 0)])
 
+    def test_single_host_can_report_a_normal_terminal_mission(self):
+        for phase in ("completed", "failed", "stopped"):
+            with self.subTest(phase=phase):
+                report = self.invoke(statuses=[status(), status(phase)], max_hosts=1)
+                self.assertEqual((report["outcome"], report["phase"], report["exit_code"]), ("terminal", phase, 0))
+                self.assertEqual(self.launch_count, 1)
+                self.assertEqual(len(report["hosts"]), 1)
+                self.client.collect.assert_not_called()
+
+    def test_single_host_refuses_nonterminal_continuation_before_handoff_collection(self):
+        for phase in ("handoff", "active", "paused"):
+            with self.subTest(phase=phase):
+                after = status(phase)
+                report = self.invoke(statuses=[status(), after], max_hosts=1)
+                self.assertEqual((report["outcome"], report["phase"], report["exit_code"]), ("incomplete", phase, 1))
+                self.assertIn("no successor", report["reason"])
+                self.assertEqual(self.launch_count, 1)
+                self.assertEqual(len(report["hosts"]), 1)
+                self.assertEqual(self.client.status.call_count, 2)
+                self.client.collect.assert_not_called()
+                self.client.submit.assert_not_called()
+                self.assertEqual(self.receipt("driver-original-status.json")["mission"], after)
+                for name in ("driver-handoff-issuance.json", "driver-successor-assignment.json",
+                        "driver-successor-admission-status.json", "driver-successor-argv.json",
+                        "driver-successor-process.json", "driver-successor-receipt.json"):
+                    self.assertEqual((self.run / "preparation" / name).read_text(), "")
+                self.assertEqual([event[0] for event in self.events],
+                    ["status", "launch", "communicate", "exit", "status"])
+
+    def test_invalid_host_limits_refuse_before_outputs_status_or_launch(self):
+        for max_hosts in (True, False, 0, 3, -1, 1.0, 2.0, "1", None):
+            with self.subTest(max_hosts=max_hosts):
+                run = self.make_run()
+                with patch.object(driver, "_DeadlineClient") as client, \
+                        patch.object(driver.subprocess, "Popen") as launch, \
+                        self.assertRaisesRegex(driver.DriverError, "max_hosts"):
+                    driver.run_campaign(root=self.root, run_dir=run, mission_id="mission",
+                        model="frozen-model", effort="low", timeout_seconds=60, max_hosts=max_hosts)
+                client.assert_not_called()
+                launch.assert_not_called()
+                self.assertEqual(list((run / "preparation").iterdir()), [])
+
     def test_one_fresh_successor_uses_only_frozen_brief_and_exact_assignment(self):
         report = self.invoke(statuses=[status(), status("handoff"), status("handoff"),
             status("stopped", actor_id="successor", player_id="successor")])
@@ -602,7 +644,7 @@ class CampaignPlayerTests(unittest.TestCase):
             driver.main()
         self.assertEqual(stopped.exception.code, 0)
         self.assertEqual(run.call_args.kwargs, dict(root=self.root, run_dir=Path("/run"), mission_id="mission",
-            model="chosen", effort="medium", timeout_seconds=12, node="node"))
+            model="chosen", effort="medium", timeout_seconds=12, node="node", max_hosts=2))
 
     def test_cli_rejects_removed_host_and_resume_flags_without_dispatch(self):
         base = ["campaign_player", "--root", str(self.root), "--run-dir", "/run", "--mission-id", "mission",
@@ -628,6 +670,31 @@ class CampaignPlayerTests(unittest.TestCase):
                 driver.main()
             self.assertEqual(stopped.exception.code, 2)
             run.assert_not_called()
+
+    def test_cli_forwards_explicit_host_limit(self):
+        base = ["campaign_player", "--root", str(self.root), "--run-dir", "/run", "--mission-id", "mission",
+            "--model", "chosen", "--effort", "medium", "--timeout-seconds", "12"]
+        for max_hosts in (1, 2):
+            with self.subTest(max_hosts=max_hosts):
+                with patch("sys.argv", base + ["--max-hosts", str(max_hosts)]), \
+                        patch.object(driver, "run_campaign", return_value={"exit_code": 0}) as run, \
+                        patch("builtins.print"), self.assertRaises(SystemExit) as stopped:
+                    driver.main()
+                self.assertEqual(stopped.exception.code, 0)
+                self.assertEqual(run.call_args.kwargs["max_hosts"], max_hosts)
+                self.assertIs(type(run.call_args.kwargs["max_hosts"]), int)
+
+    def test_cli_rejects_invalid_host_limits_without_dispatch(self):
+        base = ["campaign_player", "--root", str(self.root), "--run-dir", "/run", "--mission-id", "mission",
+            "--model", "chosen", "--effort", "medium", "--timeout-seconds", "12"]
+        for max_hosts in ("0", "3", "-1", "1.0", "true"):
+            with self.subTest(max_hosts=max_hosts):
+                with patch("sys.argv", base + ["--max-hosts", max_hosts]), \
+                        patch.object(driver, "run_campaign") as run, patch("sys.stderr", new_callable=io.StringIO), \
+                        self.assertRaises(SystemExit) as stopped:
+                    driver.main()
+                self.assertEqual(stopped.exception.code, 2)
+                run.assert_not_called()
 
     def test_cli_preserves_explicit_node_executable(self):
         argv = ["campaign_player", "--root", str(self.root), "--run-dir", "/run", "--mission-id", "mission",

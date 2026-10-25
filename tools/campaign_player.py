@@ -233,8 +233,10 @@ def _issuance(client: MissionClient, issued: dict, deadline: float) -> dict:
 
 
 def run_campaign(*, root: Path, run_dir: Path, mission_id: str, model: str,
-                 effort: str, timeout_seconds: float, node: str = "node") -> dict:
+                 effort: str, timeout_seconds: float, node: str = "node", max_hosts: int = 2) -> dict:
     """Run frozen hosts; return observed terminal phase or an incomplete report."""
+    if type(max_hosts) is not int or max_hosts not in (1, 2):
+        raise DriverError("max_hosts must be the integer 1 or 2")
     if not math.isfinite(timeout_seconds) or timeout_seconds <= 0:
         raise DriverError("timeout_seconds must be positive and finite")
     deadline = time.monotonic() + timeout_seconds
@@ -308,6 +310,8 @@ def run_campaign(*, root: Path, run_dir: Path, mission_id: str, model: str,
                 if status.get("phase") in TERMINAL:
                     report.update(outcome="terminal", exit_code=0)
                     break
+                if max_hosts == 1:
+                    raise DriverError("Original host left a nonterminal mission; no successor is permitted")
                 if role == "successor":
                     raise DriverError("Successor left a nonterminal mission; no further host is permitted")
                 canonical = _handoff_status(status)
@@ -353,6 +357,7 @@ def main() -> None:
     parser.add_argument("--effort", required=True)
     parser.add_argument("--timeout-seconds", type=float, required=True)
     parser.add_argument("--node", default="node")
+    parser.add_argument("--max-hosts", type=int, choices=(1, 2), default=2)
     args = parser.parse_args()
     try:
         report = run_campaign(**vars(args))
