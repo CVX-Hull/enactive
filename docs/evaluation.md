@@ -38,7 +38,7 @@ identity. Missing clock joins remain unknown.
 | Event | Observation and limit |
 | --- | --- |
 | `host-start`, `mcp-connected` | Frozen route/effort, unsupported features, missing endpoints and owned MCP PID; not actual provider/model competence or game authority. |
-| `request-start` | Constructed provider payload sizes, text/image counts and host request identity; begins at the selected SDK request boundary, not the user's decision or server inference. |
+| `request-start` | Constructed provider payload sizes, text/image counts, host request identity and the complete JSON request body in `payload`, including schemas and forwarded assistant/tool history and images. Begins at the selected SDK request boundary, not the user's decision or server inference. |
 | `response-headers`, `response-first-chunk` | HTTP status and first received response-body chunk observed locally; either can precede useful content and neither timestamp isolates queue/inference time. |
 | `response-backend` | Model identifier reported by a parsed provider event; an absent or alias-only identifier does not establish an immutable backend version. |
 | `response-complete` | Completed SDK response's stop reason and returned usage/model metadata; successful response receipt is not successful gameplay. Missing input/output counts mean `usage_available:false`, `usage:null` and unknown cost. Reported counts enable normalized usage; `cost_source` distinguishes provider totals from configured-rate estimates. |
@@ -47,6 +47,11 @@ identity. Missing clock joins remain unknown.
 | `abort`, `settled` | Host stop reason, request count and cleanup disposition. `native_cleanup_claimed:false` remains explicit; prompt resolution or an event alone does not qualify normal game ending. |
 
 The raw provider headers, keys and arbitrary provider error text are not retained.
+Request bodies contain the actual frozen context, visible images and forwarded
+reasoning history; keep these traces private with the run evidence. Unforwarded
+intermediate assistant content and failed final text are not retained. Complete
+body retention adds serialization and disk cost; earlier fixture-only event-sink
+measurements do not establish its overhead. Include this cost in live timings.
 There is no automatic compaction in this core host; its absence is disclosed at
 startup rather than measured as a hidden model service. Finite request/host bounds
 and context/provider errors stop without pruning or fallback. Offline synthetic

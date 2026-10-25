@@ -95,6 +95,12 @@ Events carry UTC `wall_time`, host-relative `monotonic_ms`, request IDs and tool
 call IDs where applicable. `request-start` reports message text parts/UTF-8 bytes,
 image parts/decoded bytes and complete serialized payload bytes. Text counts
 include tool-call argument strings; schema bytes are included in payload bytes.
+Its `payload` field retains the complete JSON body actually prepared for the
+provider, including schemas, context, images and forwarded reasoning/tool history.
+These private run traces contain model context; headers and API keys are excluded.
+Unforwarded assistant content and failed final text are not retained. Body
+serialization and disk writes add cost, which must remain in live measurements;
+the earlier metadata-only fixture measurement does not qualify that overhead.
 `response-first-chunk` is the first raw HTTP response-body chunk, including an
 error body, before Pi parses it. `response-backend` reports the backend model ID
 from parsed provider chunks. `response-complete` reports the Pi model/provider,

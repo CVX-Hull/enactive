@@ -224,7 +224,9 @@ export async function runHost(options) {
           requestInFlight = true;
           return stream(model, context, {...streamOptions, apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort, onPayload:payload => {
             if (fatal) throw new HostError(fatal);
-            emit('request-start', {request_id:requestId, model:model.id, provider:model.provider, ...payloadSize(payload)});
+            // Retain the actual JSON body in the existing private trace. Headers
+            // and the API key are transport options, never part of this payload.
+            emit('request-start', {request_id:requestId, model:model.id, provider:model.provider, ...payloadSize(payload), payload:JSON.parse(JSON.stringify(payload))});
           }, onProviderStreamEvent:chunk => {
             const usage = chunk?.usage ?? chunk?.choices?.[0]?.usage;
             // Pi initializes absent usage to zero. Only publish normalized totals
