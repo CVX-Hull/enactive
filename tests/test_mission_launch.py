@@ -1,5 +1,6 @@
 """Registered launch composition with a fake process; never native/game acceptance."""
 import copy
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 from pathlib import Path
 import tempfile
@@ -7,6 +8,7 @@ import threading
 import time
 import unittest
 from unittest.mock import Mock, patch
+import warnings
 
 from harness.controller import Controller
 from harness.mission_runtime import MissionRuntime
@@ -37,6 +39,7 @@ class MissionLaunchTests(unittest.TestCase):
         self.factory = self.enterContext(patch("harness.mission_runtime.NativeProcess", return_value=self.process))
         self.runtime = MissionRuntime(self.controller)
         self.addCleanup(lambda: self.runtime.close())
+        self.collection_checkpoints = {}
         self.a = admission()
 
     def fake_launch(self, *, deadline_monotonic, cancelled):
@@ -46,16 +49,44 @@ class MissionLaunchTests(unittest.TestCase):
         self.process_state.update(launch_id="owned-launch", pid=1234, running=True, outcome="running")
         return copy.deepcopy(self.process_state)
 
+    def collection_checkpoint(self, identity, response):
+        """Nonblocking ledger-lock sampling; never wait for writer ownership."""
+        ledger, row = self.runtime._ledger, "unavailable"
+        if ledger is not None:
+            row = "busy"
+            if ledger._mutex.acquire(blocking=False):
+                try:
+                    row = ledger.request_timing_state(identity)
+                except Exception as error:
+                    row = {"error_type": type(error).__name__}
+                finally:
+                    ledger._mutex.release()
+        status = self.runtime.status()
+        receipt = status.get("last_receipt") or {}
+        operation = response.get("operation") or {}
+        return dict(cached_state=operation.get("state"), cached_result=operation.get("result") is not None,
+            ledger=row, active_operation=status.get("active_operation"),
+            last_ack={key: receipt.get(key) for key in ("kind", "transport_disposition", "native_request_id")})
+
     def settled(self, identity):
-        deadline = time.monotonic() + 3
+        started = time.monotonic()
+        # Functional collection has the supported 15-second read policy, not a
+        # three-second execution SLA. This never changes an operation's deadline.
+        deadline = started + 15
         while time.monotonic() < deadline:
             response = self.runtime.command(dict(schema="mission/11", kind="result",
                 mission_id=self.a.mission_id, operation_id=identity))
             operation = response.get("operation")
             if operation is not None and operation["result"] is not None:
                 return operation
+            if time.monotonic() - started >= 3 and identity not in self.collection_checkpoints:
+                checkpoint = self.collection_checkpoint(identity, response)
+                self.collection_checkpoints[identity] = checkpoint
+                warnings.warn(f"Functional collection exceeded 3 seconds for {identity}: {checkpoint}",
+                    RuntimeWarning, stacklevel=2)
             threading.Event().wait(0.005)
-        self.fail(f"Unsettled {identity}: {self.runtime.status()}")
+        self.fail(f"Unsettled {identity}: checkpoint={self.collection_checkpoints.get(identity)}; "
+            f"status={self.runtime.status()}")
 
     def start(self):
         response = self.runtime.command(dict(schema="mission/11", kind="start", request_id="start",
@@ -86,6 +117,60 @@ class MissionLaunchTests(unittest.TestCase):
         self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
         self.assertEqual(self.runtime._bindings, {})
         self.assertIsNone(self.runtime._map)
+
+    def test_functional_collection_waits_for_original_cache_publication_without_renewing_execution(self):
+        self.start()
+        entered, release, sampled, writer_released = (threading.Event() for _ in range(4))
+        self.addCleanup(release.set)
+        cache, sample = self.runtime._cache_operation, self.collection_checkpoint
+        record = self.runtime._record_settlement_timing
+
+        def held_terminal(operation):
+            if operation["request"]["request_id"] == "launch" and operation["result"] is not None:
+                entered.set()
+                if not release.wait(10):
+                    raise AssertionError("Fixture did not release completed operation publication")
+            cache(operation)
+
+        def sampled_pending(identity, response):
+            value = sample(identity, response)
+            sampled.set()
+            return value
+
+        def recorded(work, *, finalized):
+            record(work, finalized=finalized)
+            if work.request.get("request_id") == "launch":
+                writer_released.set()
+
+        try:
+            with patch.object(self.runtime, "_cache_operation", side_effect=held_terminal), \
+                    patch.object(self, "collection_checkpoint", side_effect=sampled_pending), \
+                    patch.object(self.runtime, "_record_settlement_timing", side_effect=recorded):
+                response = self.runtime.command(self.request())
+                self.assertEqual(response["status"], "accepted", response)
+                self.assertTrue(entered.wait(5))
+                original = self.runtime._ledger.request("launch")
+                self.assertEqual(original["state"], "completed")
+                inputs = self.runtime.status()["spent_inputs"]
+                with ThreadPoolExecutor(max_workers=1) as pool:
+                    future = pool.submit(self.settled, "launch")
+                    try:
+                        self.assertTrue(sampled.wait(8), "Original collection must survive the former 3s watchdog")
+                        self.assertFalse(future.done())
+                    finally:
+                        release.set()
+                    collected = future.result(timeout=5)
+                self.assertTrue(writer_released.wait(5))
+                self.assertIsNone(self.runtime._active)
+        finally:
+            release.set()
+        self.assertEqual(collected, original)
+        self.assertEqual(self.runtime._ledger.request("launch"), original)
+        self.assertEqual(self.runtime.status()["spent_inputs"], inputs)
+        self.assertEqual(self.collection_checkpoints["launch"]["ledger"]["state"], "completed")
+        self.assertFalse(self.collection_checkpoints["launch"]["cached_result"])
+        self.process.launch.assert_called_once()
+        self.assert_read_only()
 
     def test_registered_launch_verifies_only_owned_process_and_paused_menu(self):
         self.start()

@@ -565,78 +565,98 @@ additional model tiers do not gate this functional path. No paid API is implied.
 
 ### Bounded player host activation
 
-After external mission admission, the lead may use the thin
+After external mission admission, use the
 [campaign player driver](../tools/campaign_player.py) to run the frozen original
-and at most one clean successor through the maintained CLI. Prepare
-`frozen/player-host-configuration.json`, `frozen/original-player-prompt.txt` and
-`frozen/successor-player-brief.txt` inside that run. The current run directory must
-be exactly `.runtime/campaigns/<mission_id>`; arbitrary descendants or aliases
-are unsupported. Example (choose the actual
-frozen mission/model/effort/deadline, rather than copying a previous allowance):
+and at most one clean successor. The generic Pi core host is the sole current
+campaign execution path. Install the [locked host package](setup.md#install-the-generic-gameplay-host)
+first. The current run directory must be exactly `.runtime/campaigns/<mission_id>`;
+arbitrary descendants or aliases are unsupported. Prepare these run-local files:
+
+- `frozen/player-host-configuration.json`: the explicit selected MCP server command,
+  args, cwd, `enabled_tools` and finite startup/tool timeouts. The host discovers
+  current schemas and server instructions from this process; it loads no ambient
+  tool registry or personal coding-agent configuration.
+- `frozen/original-player-prompt.txt` and `frozen/successor-player-brief.txt`: the
+  distinct prospective assignments under the same original finite allowance.
+- `frozen/pi-player-context.txt`: the actual frozen guide/context content supplied
+  to both fresh hosts. The player has no shell or file-reading tools; paths to
+  undeclared files are not supplied context.
+- `frozen/player-pi-configuration.json`: closed `pi-player-host/1` route with
+  `model`, `api_key_env`, `max_requests` and `request_timeout_seconds`. The current
+  supported provider contract is explicit Pi `openai-completions` metadata with
+  text/image inputs, context/output capacities, cost and reasoning settings.
+  Its ID must match `--model`; effort must be explicitly supported rather than
+  silently clamped. Declared capabilities and prices require provider verification;
+  metadata does not prove actual image understanding, quality or billing.
+
+Choose the actual frozen model/effort/deadline and existing Node binary:
 
 ```sh
 .venv/bin/python -m tools.campaign_player \
   --root "$PWD" --run-dir "$PWD/.runtime/campaigns/MISSION_ID" \
-  --mission-id MISSION_ID --model gpt-6-luna --effort low \
-  --timeout-seconds 900
+  --mission-id MISSION_ID --model MODEL --effort EFFORT \
+  --timeout-seconds SECONDS --max-hosts HOST_COUNT --node /absolute/path/to/node
 ```
 
-`--original-thread` may resume the explicitly prepared original context; the
-successor is always fresh. The driver waits for actual host exit0, validates cached
-quiescence and current controller/native Pause binding, and collects the exact
-completed handoff. It records a distinct successor ID and preserves the issued role.
-The successor itself retrieves memory/evidence, Claims and readmits. Historical
-diagnostics remain visible; they do not replace current unresolved-effect and
-live-slot checks. Only the original admitted bootstrap can have the controller's
-expected initial freeze. User Pause, failed/uncertain hosts and unexpected state
-stop activation without fallback or budget renewal. Timeout cleanup signals only
-the exact owned host; it cannot claim native cleanup. All outputs are exclusive
-run-local files. A terminal report describes observed phase, never acceptance.
+Both hosts always start fresh. The removed `--host`, `--codex` and
+`--original-thread` options are rejected, including the old `--host pi` spelling;
+prepare new current-source invocations rather than replaying historical frozen
+argv. The driver requires all frozen inputs, exclusively reserves evidence and
+uses the same Pi runner for original and successor. No coding-agent execution or
+resumed conversation is a gameplay fallback.
+
+`--max-hosts` is exactly1 or2, default2 (original plus at most one successor).
+Select1 when only one actor is admitted: after that host ends, a nonterminal
+mission is reported incomplete before handoff collection or successor assignment.
+The per-host route request cap times this host-count bound must fit the total
+approved provider allowance, including prior calls and failures; a prompt alone
+is not a global request cap.
+
+Supply only the selected credential-environment name in configuration; inject
+its value securely into the dedicated process for an authorized live request.
+No Keychain lookup, global credential/profile discovery or transfer of subscription
+access is automatic. The MCP child receives only the minimal environment, without
+the provider secret. Never put keys in model headers, URLs, files or argv.
+
+The driver waits for actual host exit0, validates cached quiescence and current
+controller/native Pause binding, and collects the exact completed handoff. It
+records a distinct successor ID and preserves the issued role. The successor
+retrieves memory/evidence, Claims and readmits itself. Historical diagnostics do
+not replace current unresolved-effect and live-slot checks. Only the original
+admitted bootstrap can use the controller's expected initial freeze. User Pause,
+failed/uncertain hosts and unexpected state stop activation without fallback or
+budget renewal. Timeout cleanup signals only the exact owned host and cannot
+claim native cleanup. Outputs remain exclusive run-local files; a terminal report
+describes observed phase, never acceptance.
+
 The spectator's Deciding host and Assigned successor fields read these same
 receipts. A successor may launch or fail before mission adoption; inspect that
 separate row instead of inferring it from the mission actor. Launch evidence is
 not current liveness, and missing receipts remain unknown. These fields never
 activate an actor, change ownership or authorize another run.
-Source/fake-host checks qualify this implementation; actual fresh-host graphical
-activation remains separately required under#136/#164/#145.
 
-The optional Pi host uses the same driver and mission ingress. Its supported lane
-is currently offline conformance; a live provider/game run requires the separate
-prospective selection, spending and finite admission in
-[#236](https://github.com/CVX-Hull/enactive/issues/236). Install the
-[locked host package](setup.md#install-the-optional-pi-player-host) first. In addition
-to the three common frozen files, prepare:
+There is no automatic compaction, pruning, session restore, model fallback or
+transport reconnect/replay. Context/provider errors, request limits and transport
+uncertainty stop the host nonzero. Known tool errors retain complete original
+collection guidance for a deliberate next decision. A transport failure with no
+result proves neither delivery nor nondelivery; never retry the action. Runtime
+and driver guards still govern later continuation. Owned MCP closure cannot
+establish native cleanup or authorize another actor. See
+[host-event interpretation](evaluation.md#pi-host-events).
 
-- `frozen/pi-player-context.txt`: the actual frozen guide/context content to load
-  into both fresh hosts. The Pi player has no file-reading or shell tools; paths
-  to undeclared files are not supplied context. Current tools and server instructions
-  are discovered from the selected MCP process, restricted to `enabled_tools`.
-- `frozen/player-pi-configuration.json`: closed `pi-player-host/1` route with
-  `model`, `api_key_env`, `max_requests` and `request_timeout_seconds`. The model
-  is explicit Pi `openai-completions` metadata with text and image inputs,
-  context/output capacity, cost metadata and supported reasoning settings.
-  Its ID must match `--model`; `--effort` must be supported rather than silently
-  clamped. Endpoint capabilities and cost metadata require provider verification;
-  declaring image support does not prove actual image understanding.
+Host migration is mandatory under [#240](https://github.com/CVX-Hull/enactive/issues/240);
+model qualification is separate. The [first configuration pilot](acceptance/2026-10-25-pi-configuration-pilot.md)
+passed basic API compatibility and failed useful play/normal ending. Its failure
+does not restore a Codex gameplay path. Any fresh provider/native check needs its
+own prospective purpose, source, cumulative spending/execution limits and ending
+reserve; source fixtures cannot qualify graphical outcomes or #145 readiness.
 
-Pass `--host pi --node /absolute/path/to/node` with the same frozen mission/model/
-effort/deadline arguments above. Supply only the selected credential-environment
-name in configuration; inject the value securely for an authorized live request.
-No Keychain lookup, global credential/profile discovery or transfer of subscription
-access is automatic. The MCP child receives a minimal environment rather than
-the provider secret. Never put keys in model headers, URLs, files or argv.
-
-Pi always starts fresh; `--original-thread` is unsupported. There is no automatic
-compaction, pruning, session restore, model fallback or transport reconnect/replay.
-Context/provider errors, request limits and transport uncertainty stop the host
-nonzero. Known tool errors still present complete original-collection guidance
-for an explicit next decision. A transport failure with no result proves neither
-delivery nor nondelivery; do not retry the action. The normal runtime/driver
-checks still govern any later continuation. Owned MCP cleanup cannot establish
-native cleanup or authorize another actor. See [host-event interpretation](evaluation.md#pi-host-events).
-
-For a separate optional adviser, freeze the actual active stdin prompt with its
-current source, mission, actor and finite limits. State activation explicitly
+For a separately admitted adviser, freeze its actual active stdin prompt,
+current source, mission, actor, role-specific generic-host configuration,
+allowlisted MCP tools and finite request/time/spending limits. Use the same Pi
+core runner; the mandatory gameplay host also covers advisory model roles. No
+adviser is automatically created by the campaign driver or covered by a
+player-only paid allowance. State activation explicitly
 after external admission; do not send a standby-only brief and infer activation
 from process launch. Check that the launched argv and stdin match the frozen
 inputs. A passive capability check needs the current schema's required arguments;

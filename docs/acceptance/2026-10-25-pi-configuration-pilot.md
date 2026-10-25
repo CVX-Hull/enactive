@@ -225,6 +225,13 @@ and observed lifecycle fallback/qualification. #145 remains no-go with its actua
 #164 readiness gate. Any future native correction check or provider comparison
 needs its own prospective purpose and finite admission, preserving these costs.
 
+Subsequent user direction on25October makes switching to the generic gameplay
+harness mandatory under [#240](https://github.com/CVX-Hull/enactive/issues/240).
+That requirement supersedes this report's earlier optional-host wording and
+immediate #222 sequencing recommendation. The negative model/configuration result
+cannot veto the required host cutover. Current contracts and Issues own activation
+and subsequent selection; the failed pilot and its costs above remain unchanged.
+
 Private originals, frozen manifest and one-off reducer remain under project
 `.runtime/host-model236/`, `.runtime/campaigns/pi-configuration-001/` and
 `.runtime/missions/pi-configuration-001/`. The JSON publishes derived receipts and

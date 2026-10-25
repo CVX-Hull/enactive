@@ -149,8 +149,10 @@ Temporary sealing suppresses jobs but preserves bounded waiting/`idle`; only a
 terminal phase or permanent writer shutdown reports `closed`. Actual host-actor
 quiescence needs separate evidence, not an expired clock or a DB label.
 
-At admission assign one general-purpose advisory Codex agent, with no game-input
-role, and freeze finite job/pending/context/source/output/time limits. The lead may
+At admission, if an advisory role is selected, assign one model in the mandatory
+generic gameplay host with no game-input role, and freeze its explicit provider,
+context/tool profile and finite job/pending/source/output/request/time/spending
+limits. The lead may
 provide only its role/interface/references and initial assignment. Subsequent work
 comes from software over retained data, without lead wakeups, transcript curation
 or tactical messages. No paid API or permanently running daemon is assumed.

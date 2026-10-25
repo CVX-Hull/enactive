@@ -11,6 +11,10 @@ the player decide, and what should software handle?” One designated player pla
 interprets visible evidence, chooses intent/sources/limits and judges outcomes.
 The lead owns engineering and verification; routine play and curation do not wait
 for the lead. The adviser proposes data without input authority.
+Gameplay model roles use the generic host, including a separately admitted
+adviser/reflector. Engineering/review agents remain outside deciding gameplay.
+The campaign driver manages original/successor activation; no extra advisory
+role, orchestration or paid allowance is activated by this host requirement.
 
 ## Internal responsibilities
 
@@ -20,8 +24,8 @@ for the lead. The adviser proposes data without input authority.
 | Player tools | Current semantic schemas, bounded selected snapshot/source/procedure caches, mechanical request metadata | [player_tools.py](../../harness/player_tools.py) |
 | Decision projection | Small current decision view; exact retained detail available on demand | [player_view.py](../../harness/player_view.py) |
 | Imperative client | Immutable staged requests, HTTP ingress and original result collection | [mission_client.py](../../harness/mission_client.py) |
-| Host driver | Finite host activation and at most the admitted successor after real quiescent handoff | [campaign_player.py](../../tools/campaign_player.py) |
-| Optional Pi host | Explicit model/context/tool loadout, complete MCP presentation and finite timestamped provider loop; offline conformance and scoped live compatibility | [host package](../../tools/player_host/package.json) |
+| Host driver | Mandatory generic-runner activation and at most the admitted fresh successor after real quiescent handoff | [campaign_player.py](../../tools/campaign_player.py) |
+| Generic gameplay host, Pi core | Explicit model/context/tool loadout, complete MCP presentation and finite timestamped provider loop; offline conformance and scoped live compatibility | [host package](../../tools/player_host/package.json) |
 
 The flow is selected snapshot + explicit player intent → request composition →
 durable SDK stage → existing mission ingress → original collection → decision
@@ -97,8 +101,10 @@ qualification; SDK tests alone do not establish those properties. Routine player
 work starts with the compact [guide](../player-guide.md), frozen mission and
 selected tool schema, without source archaeology or the engineering corpus.
 
-The optional Pi core host uses the same MCP server and driver handoff/custody
-guards, with explicit frozen context instead of file-reading tools. It keeps
+The campaign driver always uses the generic Pi core host with the same MCP server
+and handoff/custody guards. Both original and successor start fresh, with explicit
+frozen context instead of file-reading tools. Removed Codex launch/resume/host
+selector options are rejected. The host keeps
 returned text/images complete and carries MCP error status into provider-visible
 content. It refuses SDK-coerced arguments before dispatch and stops on transport
 uncertainty rather than reconnecting/replaying. The package has no ambient tool
@@ -106,10 +112,16 @@ discovery, automatic compaction or host-session restoration. Provider-request
 JSON bodies are retained in the existing private host trace so actual forwarded
 context, schemas, images and reasoning history can be inspected without another
 store. Transport headers, API keys and arbitrary provider errors are excluded.
+The driver admits exactly one or two hosts through its selected `max_hosts`
+bound; a one-host nonterminal result cannot collect a handoff or assign another
+actor. This bounds participating hosts separately from each host's request cap
+and the mission's original input/time/cleanup limits.
 Request construction and process cleanup can be qualified offline; actual perception,
 play and cadence remain separate. The [first live configuration pilot](../acceptance/2026-10-25-pi-configuration-pilot.md)
 passed basic image/tool/history compatibility but failed useful play and normal
 ending. It does not qualify gameplay adoption or comparative speed.
+The mandatory host requirement stands independently of that model decision;
+historical Codex trajectories remain comparator evidence, not an execution option.
 [Preparation and limits](../runbook.md#bounded-player-host-activation)
 and [measurement meaning](../evaluation.md#pi-host-events) own those details.
 

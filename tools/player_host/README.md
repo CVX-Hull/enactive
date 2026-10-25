@@ -1,10 +1,18 @@
 # Bounded Pi player host
 
-This private package implements the offline conformance seam described in
-[`069-controllable-player-host.md`](../../docs/changes/069-controllable-player-host.md).
+This private package is the mandatory generic campaign-player host. The
+[current component](../../docs/components/player-interface.md) owns its contract;
+[`069-controllable-player-host.md`](../../docs/changes/069-controllable-player-host.md)
+retains the original offline adoption decision.
 It uses Pi agent-core, AI serialization and MCP 1.4.0 directly. It loads no coding
 agent application, personal settings, sessions, shell/file tools or resources.
 Host maintenance belongs to the engineering lead.
+The campaign driver always invokes this runner with frozen provider/MCP/context
+inputs; no coding-agent launch or resumed-host fallback is supported. Host choice
+is independent of whether a particular model passes gameplay qualification.
+Separately admitted gameplay advisers/reflectors use this same core with their
+own explicit context, tool profile and budget; the campaign driver does not
+automatically activate those roles.
 
 From this directory, install and test with project-local dependencies:
 

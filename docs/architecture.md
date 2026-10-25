@@ -24,7 +24,7 @@ advice. [Editable source](diagrams/player.mmd).
 | Responsibility | What it owns | Zoom into the component |
 | --- | --- | --- |
 | User / engineering lead | Product constraints / design, admission, integration and verification | [Charter](charter.md), [workflow](project-management.md); no routine lead tactics or curation |
-| Deciding player and ingress | Plans, visible interpretation, selected intent and limits; software composes canonical requests and bounded context | [Player interface](components/player-interface.md) |
+| Deciding player and ingress | Generic Pi host with explicit model/context/tools; player owns plans, visible interpretation and intent, software composes canonical requests and bounded context | [Player interface](components/player-interface.md) |
 | Mission execution | One writer/queue, original scope and accounting, phases, feedback and lifecycle | [Mission execution](components/mission-execution.md) |
 | Evidence, memory and learning | Retained sources, fallible claims/Work/procedures and asynchronous proposals | [Memory and learning](components/memory-learning.md) |
 | Controller and native integration | Exact input custody, receiver/deadline fences, visible captures, Pause and takeover | [Native control](components/native-control.md) |

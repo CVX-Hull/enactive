@@ -38,11 +38,12 @@ prove it is still running; disconnected evidence is explicitly last reported.
 
 ## Learn one control cycle
 
-After following the launch procedure, **Observe** and compare the spectator with
-the native window. Read control ownership and freshness. Give Codex a small goal
-in the active chat; explicitly **Resume** when ready. After one bounded action,
-inspect the new frame for the actual result or a prompt. Choose the next action
-from that observation rather than assuming the previous intent was achieved.
+Choose a small goal when the finite mission is prepared. After admission and
+generic-host activation, compare the spectator with the native window and read
+control ownership and freshness. The designated player chooses bounded actions
+from current visible evidence and continues under the admitted limits. Watch each
+new frame for the actual result or a prompt; a returned input alone does not prove
+the intended outcome. Resume follows the current registered ownership and phase.
 
 Use **Pause control**, or native keyboard/button input to take over. New remote
 inputs stop; an existing native activity may still need interruption in the game

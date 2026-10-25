@@ -1,7 +1,7 @@
 ---
 owner: lead
 status: active
-review_trigger: Codex permission support, CLI entry point, executor ownership or campaign admission changes
+review_trigger: Host/launcher permission support, CLI entry point, executor ownership or campaign admission changes
 ---
 
 # Gameplay permissions and player ownership
@@ -11,8 +11,10 @@ approval/guardrail-review round trips, including observation, memory, lifecycle,
 handoff and supporting request/result plumbing. The user's standing gameplay
 delegation does not need to be requested again for each action or successor.
 User Pause/takeover remains available. There are three separate boundaries:
-Codex controls process/network permission; the harness validates current input
-authority; the player judges the visible game outcome. An allow rule changes
+The engineering launcher controls process/network permission; the harness validates
+current input authority; the player judges the visible game outcome. Codex-specific
+rules apply to engineering launch operations, while the generic gameplay host
+loads only its explicit frozen configuration. An allow rule changes
 only the first boundary. It cannot grant a lease, make stale input current,
 replay an unknown request or override CDDA.
 
@@ -112,25 +114,27 @@ complete-outcome feasibility assessment, not a policy-file edit.
 The lead owns permission readiness before ordinary input. A recorder that requires
 admitted metadata must receive only a bounded passive preflight assignment first;
 that setup assignment authorizes no keys, actions or Resume. Repeat this check when
-the checkout location, command/tool entry point, recorder, player, Codex version
-or permission configuration changes; reuse the verified setup otherwise. A new
+the checkout location, command/tool entry point, recorder, player, generic-host
+version or effective launcher permissions change; reuse the verified setup otherwise. A new
 attempt on the unchanged verified actor/tool setup does not require another policy
 loading exercise or arbitrary repeated status calls. Confirm the live service is
 reachable through the ordinary tool path; first-use failures still stop new play.
 
 1. Use the reviewed structured Enactive MCP tools for the designated player.
-   Verify the exact project-only server command/cwd and the current generated named
-   tools with `approve` behavior using the supported setup recipe. A frozen dedicated
-   CLI profile may expose only its role's needed subset through the existing
+   Verify the frozen generic host's exact server command/cwd, explicit route,
+   context and current named tools using the supported setup/runbook recipe.
+   Its role-specific profile exposes only needed tools through the existing
    `enabled_tools` filter; verify that actual subset and needed argument shapes,
    rather than assuming the full engineering catalogue is the player working set.
    The filter is context selection, not gameplay authority or a security boundary.
-   Preserve the same server/approval settings and all needed continuation tools. No arbitrary
+   Preserve the selected server settings and all needed continuation tools. No arbitrary
    shell/Python allowance or per-action approval justification is the play loop.
-2. Verify that this exact checkout's project layer is enabled. Supported
-   `config/read` with `cwd` and `includeLayers` can show loading and scope;
-   absent project trust or ancestor trust alone is not activation evidence.
-   Keep changes narrow and project-scoped; preserve unrelated/global settings.
+2. Verify the actual generic runner's frozen files/model/effort, finite request/
+   host/time limits and loaded MCP schemas. It does not load a Codex project layer.
+   Codex `config/read` with `cwd`/`includeLayers` and exact-project trust checks
+   apply only when diagnosing the engineering launcher's Codex permissions, not
+   as a universal gameplay gate. Keep any such changes narrow and project-scoped;
+   preserve unrelated/global settings.
 3. Inspect the actual host catalogue, then have the actual designated actor make
    a harmless live snapshot call for a new/changed actor or setup. Verify semantic,
    result/image, memory and lifecycle access at their natural first use in the

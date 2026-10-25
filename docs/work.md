@@ -23,6 +23,13 @@ for the independent-play outcome and [maintenance #75](https://github.com/CVX-Hu
 for architecture/workflow upkeep. A source repair, bounded demo or successful CI
 does not replace independent seven-day acceptance.
 
+The generic gameplay host is mandatory under
+[#240](https://github.com/CVX-Hull/enactive/issues/240), independently of provider/model
+selection. The failed Pi/DeepInfra configuration below cannot veto that cutover.
+Current activation and actual qualification limits live in the
+[player component](components/player-interface.md) and [runbook](runbook.md#bounded-player-host-activation);
+historical host comparisons remain evidence rather than current execution options.
+
 The [execution-first boundary](changes/064-execution-first-learning.md) connects
 #164/#177/#178 to the [offline local-execution measurement](acceptance/2026-10-24-execution-first-offline.md).
 These source improvements leave graphical, learning-benefit and campaign gates open.

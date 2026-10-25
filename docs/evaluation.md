@@ -28,7 +28,7 @@ recorded reason; do not tune thresholds after seeing results.
 
 ## Pi host events
 
-The optional [Pi host](components/player-interface.md) writes JSONL into the
+The mandatory [generic Pi host](components/player-interface.md) writes JSONL into the
 driver's existing `driver-<role>.jsonl`. Each event has `wall_time` and
 `monotonic_ms`; request and tool IDs correlate host phases, while complete tool
 results retain the existing mission operation/source references. The host does
@@ -58,7 +58,10 @@ and context/provider errors stop without pruning or fallback. Offline synthetic
 SSE/MCP probes exercise the real SDK and serialization but perform no inference
 or gameplay. Their elapsed/instrumentation measurements are fixture-only costs.
 Live useful-effect/cadence criteria and all-role costs remain unchanged below;
-[#236](https://github.com/CVX-Hull/enactive/issues/236) owns any matched comparison.
+[#164](https://github.com/CVX-Hull/enactive/issues/164) owns future configuration
+selection through a separately scoped prospective experiment. The closed #236
+pilot retains its actual negative result; mandatory host delivery belongs to
+[#240](https://github.com/CVX-Hull/enactive/issues/240), independently of model selection.
 
 ## Latency budgets for interactive play
 
