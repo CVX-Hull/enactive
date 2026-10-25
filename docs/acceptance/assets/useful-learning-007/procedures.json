@@ -1,0 +1,163 @@
+{
+  "scope": "Two exact current Procedure/3 records from closed007; historical data, not current authority or a full public replay corpus",
+  "records": [
+    {
+      "applicability": [
+        "Normal play with published scene and no visible creatures",
+        "Only immediate visible empty white linoleum steps; cardinal movement"
+      ],
+      "counterexamples": [],
+      "environment": {
+        "configuration": "prepared-English-default-Evacuee-Survivor-native6",
+        "engine_commit": "7b2efa5cea38e4d4d97dd0e63b28b9148623da59",
+        "mission_schema": "mission/11",
+        "native_protocol": 6
+      },
+      "goal": "Bounded travel along visible empty shelter linoleum toward a player-selected same-level target",
+      "id": "revision-c1a4f457ef0e2e12616bbbb7d40a952d9ebdeceebb83a498cf80b975cc0070a0",
+      "invalidators": [
+        "Furniture, unfamiliar terrain, level changes, threats, missing scene or no position change"
+      ],
+      "limits": [
+        "Does not find doors/stairs or assess pixels; player must inspect each resulting boundary"
+      ],
+      "mission_id": "useful-learning-007",
+      "parameters": [
+        {
+          "description": "Observed local coordinate target [x,y,z]; choose a purposeful short leg",
+          "name": "target"
+        }
+      ],
+      "parent": null,
+      "procedure_id": "procedure-c1a4f457ef0e2e12616bbbb7d40a952d9ebdeceebb83a498cf80b975cc0070a0",
+      "program": {
+        "language": "javascript/1",
+        "source": "function step(view,state){const s=view.scene; if(view.category!=='DEFAULTMODE'||!view.in_game||!s||!Array.isArray(s.position)||!Array.isArray(s.neighbors)||!Array.isArray(s.visible_creatures))return {status:'yield',state,input:null,reason:'Need image-informed normal scene'}; if(s.visible_creatures.length)return {status:'yield',state,input:null,reason:'Creature requires player judgement'}; const p=s.position,t=state.target; if(!Array.isArray(t)||t.length!==3||p[2]!==t[2])return {status:'yield',state,input:null,reason:'Invalid target or level change'}; if(p.every((v,i)=>v===t[i]))return {status:'done',state,input:null,reason:'Target reached; inspect image'}; if(state.previous&&p.every((v,i)=>v===state.previous[i]))return {status:'yield',state,input:null,reason:'No movement after input'}; if((state.steps||0)>=8)return {status:'yield',state,input:null,reason:'Bounded leg complete'}; const dx=p[0]===t[0]?0:Math.sign(t[0]-p[0]),dy=dx?0:Math.sign(t[1]-p[1]); const n=s.neighbors.find(n=>n.dx===dx&&n.dy===dy); if(!n||!n.visible||n.furniture!=='f_null'||n.terrain!=='t_linoleum_white')return {status:'yield',state,input:null,reason:'Only observed empty linoleum is supported'}; const key=dx>0?'RIGHT':dx<0?'LEFT':dy>0?'DOWN':'UP'; return {status:'act',state:{target:t,previous:p,steps:(state.steps||0)+1},input:{type:'key',key,modifiers:[]},reason:'Walk one visible empty linoleum tile toward selected target'};}"
+      },
+      "progress": [
+        "Position changes toward chosen target"
+      ],
+      "reason": "Replace repeated safe aisle key decisions with a conservative visible-scene program; broader navigation was blocked by unknown connecting terrain.",
+      "record_type": "Procedure",
+      "revision": 1,
+      "schema": "procedure/3",
+      "status": "active",
+      "steps": [
+        {
+          "expected": "Same-level route on observed empty linoleum",
+          "intent": "Choose a short purposeful target from the image",
+          "on_unexpected": "Yield to player"
+        },
+        {
+          "expected": "Position advances; repeat at most eight times",
+          "intent": "Move one cardinal tile and compare position",
+          "on_unexpected": "Yield without replay"
+        }
+      ],
+      "stop_conditions": [
+        "Target reached",
+        "Any unsupported neighbor or creature",
+        "Eight steps or no movement"
+      ],
+      "support": [
+        {
+          "interpretation": "DOWN advanced from [0,0,0] to [0,1,0] on empty visible linoleum. Generalization to other cardinal directions remains bounded and checked.",
+          "mission_id": "useful-learning-007",
+          "request_ids": [
+            "op-f0b8f4ce4b874706a44240c4090221c8"
+          ],
+          "source_ids": [
+            "d8e99998ce353fa544377a5a3d87358f09d9ed8a0144f0248e46a8c80852d62c"
+          ]
+        }
+      ]
+    },
+    {
+      "applicability": [
+        "Normal scene with no visible creatures",
+        "Immediate visible empty linoleum, ordinary floor or open wood door"
+      ],
+      "counterexamples": [
+        {
+          "interpretation": "The initial rule yielded before a visible open door; a subsequent ordinary step crossed it. The old applicability was too narrow for this shelter route, not unsafe or falsely successful.",
+          "mission_id": "useful-learning-007",
+          "request_ids": [
+            "op-8b7a10535bef4da3812be90116777a1d"
+          ],
+          "source_ids": [
+            "4607e290e57673b68a5e0ff8ddb8acaf4b0ecd722f0ff5642d492453d9242ac6"
+          ]
+        }
+      ],
+      "environment": {
+        "configuration": "prepared-English-default-Evacuee-Survivor-native6",
+        "engine_commit": "7b2efa5cea38e4d4d97dd0e63b28b9148623da59",
+        "mission_schema": "mission/11",
+        "native_protocol": 6
+      },
+      "goal": "Bounded travel on observed empty shelter floor and open doors",
+      "id": "revision-d3119a7af81c8ef5ccc44ae394758b4e306560dd41c0484e1b653dbe7e7616d0",
+      "invalidators": [
+        "Unknown terrain, furniture, stairs, threats, missing scene, blocked movement"
+      ],
+      "limits": [
+        "No pixel perception, obstacle detours, level changes or darkness assessment; choose target from actual image"
+      ],
+      "mission_id": "useful-learning-007",
+      "parameters": [
+        {
+          "description": "Short image-selected same-level coordinate target [x,y,z]",
+          "name": "target"
+        }
+      ],
+      "parent": {
+        "mission_id": "useful-learning-007",
+        "revision_id": "revision-c1a4f457ef0e2e12616bbbb7d40a952d9ebdeceebb83a498cf80b975cc0070a0"
+      },
+      "procedure_id": "procedure-c1a4f457ef0e2e12616bbbb7d40a952d9ebdeceebb83a498cf80b975cc0070a0",
+      "program": {
+        "language": "javascript/1",
+        "source": "function step(view,state){const s=view.scene; if(view.category!=='DEFAULTMODE'||!view.in_game||!s||!Array.isArray(s.position)||!Array.isArray(s.neighbors)||!Array.isArray(s.visible_creatures))return {status:'yield',state,input:null,reason:'Need image-informed normal scene'}; if(s.visible_creatures.length)return {status:'yield',state,input:null,reason:'Creature requires player judgement'}; const p=s.position,t=state.target; if(!Array.isArray(t)||t.length!==3||p[2]!==t[2])return {status:'yield',state,input:null,reason:'Invalid target or level change'}; if(p.every((v,i)=>v===t[i]))return {status:'done',state,input:null,reason:'Target reached; inspect image'}; if(state.previous&&p.every((v,i)=>v===state.previous[i]))return {status:'yield',state,input:null,reason:'No movement after input'}; if((state.steps||0)>=8)return {status:'yield',state,input:null,reason:'Bounded leg complete'}; const dx=p[0]===t[0]?0:Math.sign(t[0]-p[0]),dy=dx?0:Math.sign(t[1]-p[1]); const n=s.neighbors.find(n=>n.dx===dx&&n.dy===dy); if(!n||!n.visible||n.furniture!=='f_null'||!['t_linoleum_white','t_floor','t_door_o'].includes(n.terrain))return {status:'yield',state,input:null,reason:'Only observed empty floor or open door is supported'}; const key=dx>0?'RIGHT':dx<0?'LEFT':dy>0?'DOWN':'UP'; return {status:'act',state:{target:t,previous:p,steps:(state.steps||0)+1},input:{type:'key',key,modifiers:[]},reason:'Walk one visible supported empty tile toward selected target'};}"
+      },
+      "progress": [
+        "Position approaches chosen target"
+      ],
+      "reason": "Actual upstairs change from linoleum to ordinary floor and observed door crossing justify expanding terrain coverage, retaining stair and threat stops.",
+      "record_type": "Procedure",
+      "revision": 2,
+      "schema": "procedure/3",
+      "status": "active",
+      "steps": [
+        {
+          "expected": "Visible supported empty terrain",
+          "intent": "Check each next cardinal neighbor toward chosen target",
+          "on_unexpected": "Yield to image-informed player"
+        },
+        {
+          "expected": "Progress toward target",
+          "intent": "Move and compare position, at most eight steps",
+          "on_unexpected": "Yield without replay"
+        }
+      ],
+      "stop_conditions": [
+        "Target reached",
+        "Unsupported next tile or threat",
+        "No movement or eight steps"
+      ],
+      "support": [
+        {
+          "interpretation": "Ordinary RIGHT crossed an open wood door. Upstairs LEFT moved onto ordinary floor. These newly encountered terrain types are useful traversable extensions of the linoleum-only rule.",
+          "mission_id": "useful-learning-007",
+          "request_ids": [
+            "op-a63389588af149f2886584b921c0b872",
+            "op-8d6305993ee641e48a3f957cac6303f4"
+          ],
+          "source_ids": [
+            "8d7d63b40fe68448259aff9ef3decb20b1436db56c446cd57b8e553c70a4ddd8",
+            "bb00891a7fab328698b58731af10364654cd6c3caf2c4328386b0d897dcbce1c"
+          ]
+        }
+      ]
+    }
+  ]
+}
