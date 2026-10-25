@@ -13,6 +13,8 @@ import threading
 import time
 import unittest
 
+import pytest
+
 from harness.controller import Controller, read_json, validate_state
 from harness.gameplay.contracts import MAX_JSON_BYTES
 from tests.test_mission_contracts import admission, claim, request as mission_record
@@ -153,6 +155,7 @@ class ServerTests(unittest.TestCase):
         self.assertEqual(runtime.calls[-1][0], "pause")
         self.assertTrue(self.controller.pause_requested)
 
+    @pytest.mark.assurance_observer
     def test_status_projects_host_receipts_without_mutating_mission_or_exposing_process_details(self):
         runtime = self.server.mission
         runtime.snapshot = dict(mission_id="mission-test", actor_id="player-test", phase="active", epoch=0,

@@ -6,6 +6,8 @@ import sqlite3
 import tempfile
 import unittest
 
+import pytest
+
 from harness.gameplay.contracts import ContractError, canonical
 from harness.gameplay.mission_contracts import LearningPolicy, ReflectionLimits
 from harness.gameplay.mission_ledger import (BudgetError, LedgerError, MissionLedger,
@@ -100,6 +102,7 @@ class ReflectionLedgerTests(unittest.TestCase):
                 self.ledger.append_reflection_job(original | changes, now=1001)
         self.assertEqual(len(self.ledger.reflection_records()[0]), 1)
 
+    @pytest.mark.assurance_advice
     def test_conflicting_command_and_proposal_cutoff_refuse_without_adoption(self):
         self.offer()
         self.ledger.apply_reflection(command(), now=1001)
