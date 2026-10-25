@@ -205,6 +205,7 @@ class ProgramUIExecutionTests(unittest.TestCase):
             self.assertEqual(f.runtime.command(child)['status'], 'accepted')
             refused = f.settled('over-budget')
             self.assertEqual(refused['state'], 'blocked', refused)
+            self.assertIn('Original local macro allowance exhausted', refused['result']['reason'])
             self.assertEqual(effects['keys'], ['i', 'DOWN', 'UP'])
             self.assertEqual(effects['activated'], [])
             self.assertEqual(f.runtime.status()['spent_inputs'], 3)
