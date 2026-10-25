@@ -103,7 +103,10 @@ returned text/images complete and carries MCP error status into provider-visible
 content. It refuses SDK-coerced arguments before dispatch and stops on transport
 uncertainty rather than reconnecting/replaying. The package has no ambient tool
 discovery, automatic compaction or host-session restoration. Provider-request
-construction and process cleanup can be qualified offline; actual perception,
+JSON bodies are retained in the existing private host trace so actual forwarded
+context, schemas, images and reasoning history can be inspected without another
+store. Transport headers, API keys and arbitrary provider errors are excluded.
+Request construction and process cleanup can be qualified offline; actual perception,
 play and cadence remain separate. [Preparation and limits](../runbook.md#bounded-player-host-activation)
 and [measurement meaning](../evaluation.md#pi-host-events) own those details.
 

@@ -13,8 +13,8 @@ const fixture = fileURLToPath(new URL('server.py', import.meta.url));
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
 const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
 const route = () => ({schema:'pi-player-host/1', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, request_timeout_seconds:2});
-function reply(content = 'finished', calls = [], withUsage = true) {
-  const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`call-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
+function reply(content = 'finished', calls = [], withUsage = true, reasoning) {
+  const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`call-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
   const chunks = [{id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta,finish_reason:null}]},
     {id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta:{},finish_reason:calls.length?'tool_calls':'stop'}],...(withUsage ? {usage:{prompt_tokens:11,completion_tokens:5,total_tokens:16}} : {})}];
   return new Response(chunks.map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n', {headers:{'content-type':'text/event-stream'}});
@@ -69,10 +69,13 @@ for (const fail of [false,true]) test(`actual provider payload preserves full te
   assert.equal(text.split('original_collection').length,2, 'structured content must not duplicate text');
   assert.equal(events.find(e=>e.type==='tool-result').result.isError,fail);
   assert.equal(events.filter(e=>e.type==='request-start').length,2);
+  assert.deepEqual(events.filter(e=>e.type==='request-start').map(e=>e.payload),payloads,
+    'retained request JSON must match actual provider bodies, including schemas, history and images');
   assert.ok(events.every(e=>typeof e.monotonic_ms==='number' && typeof e.wall_time==='string'));
   assert.ok(!JSON.stringify(events).includes('fixture-key'));
   assert.equal(events.find(event=>event.type==='response-backend').backend_model,'fixture-backend');
-  t.diagnostic(JSON.stringify({sample:'offline-synthetic-SSE+official-MCP',requests:result.requests,host_ms:events.at(-1).monotonic_ms,second_request_content:events.filter(event=>event.type==='request-start')[1]}));
+  const {payload,...secondRequest}=events.filter(event=>event.type==='request-start')[1];
+  t.diagnostic(JSON.stringify({sample:'offline-synthetic-SSE+official-MCP',requests:result.requests,host_ms:events.at(-1).monotonic_ms,second_request_content:secondRequest}));
 });
 test('coerced arguments are refused with zero dispatch, then deliberate correction succeeds',async t=>{
   const {result,calls,payloads,events}=await scenario(t,[reply(null,[['integer',{value:'3'}]]),reply(null,[['integer',{value:3}]]),reply()]);
@@ -80,6 +83,16 @@ test('coerced arguments are refused with zero dispatch, then deliberate correcti
   assert.deepEqual(calls,[{tool:'integer',value:3}]);
   assert.ok(JSON.stringify(payloads[1]).includes('MCP input not sent'));
   assert.equal(events.filter(event=>event.type==='tool-refused').length,1);
+});
+test('request trace retains actual forwarded assistant reasoning without transport secrets',async t=>{
+  const reasoning='Retained synthetic reasoning before an observation.';
+  const {result,payloads,events}=await scenario(t,[reply(null,[['observe',{fail:false}]],true,reasoning),reply()]);
+  assert.equal(result.ok,true);
+  const trace=events.filter(e=>e.type==='request-start');
+  assert.deepEqual(trace.map(e=>e.payload),payloads);
+  assert.equal(trace[1].payload.messages.find(m=>m.role==='assistant').reasoning_content,reasoning);
+  assert.ok(!JSON.stringify(trace).includes('fixture-key'));
+  assert.ok(!JSON.stringify(trace).includes('UNRELATED_HOST_SECRET'));
 });
 test('optional null normalization is refused without dispatch',async t=>{
   const {result,calls,events}=await scenario(t,[reply(null,[['mutate',{mode:'ok',index:null}]]),reply()]);
