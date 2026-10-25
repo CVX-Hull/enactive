@@ -39,6 +39,17 @@ def _selected_phase(snapshot: dict, scope: str, intent: dict, primary: str | Non
     phases = {key: snapshot[key] for key in _PHASES}
     if scope == "new_root":
         occupied = any(value is not None for value in phases.values())
+        if (occupied and snapshot.get("phase") == "active"
+                and phases["prompt_phase"] is not None
+                and phases["lifecycle_phase"] is None and phases["activity_phase"] is None
+                and snapshot.get("active_operation") is None):
+            raise ContractError("The selected snapshot still has an open prompt. "
+                "Explicitly call enactive_observe with this snapshot before choosing another root. "
+                "Observe may report macro_closure for an exhausted ordinary prompt; inspect its returned "
+                "phase and visible state, then deliberately choose a continuation or a new bounded root. "
+                "Mission remaining_limits describe the whole mission, not the local root's remaining allowance. "
+                "This as-of guidance neither closes a phase nor resumes Pause, resolves unknown delivery "
+                "or grants input authority.")
         if intent["kind"] == "skill":
             if occupied or intent.get("skill_kind") in ("menu", "edit"):
                 raise ContractError("A new skill root requires no phase and cannot be menu/edit")

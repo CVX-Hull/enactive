@@ -461,6 +461,31 @@ class InvocationTests(unittest.TestCase):
                     self.run_client(exercise)
         self.assertEqual(len(self.backend.writes), 3)
 
+    def test_open_prompt_refusal_exposes_observe_without_staging_or_claiming_closure(self):
+        self.selected['mission'].update(phase='active', active_operation=None,
+            prompt_phase=dict(origin_request_id='spent-root',
+                checkpoint_id=self.source['reference']['observation_id']),
+            remaining_limits=dict(inputs=1896))
+        self.player.snapshots['chosen'] = deepcopy(self.selected)
+        args = dict(snapshot_id='chosen', scope='new_root', source_id=None, supporting_source_ids=[],
+            limits=dict(primitives=32, wall_seconds=180, game_seconds=120),
+            intent=dict(operation='save', world='test-world', character='test-character',
+                identity_claim_ids=[], work_id=None))
+        before = deepcopy(self.player.snapshots)
+        async def exercise(client):
+            result = await client.call_tool('enactive_lifecycle', args)
+            self.assertTrue(result.is_error)
+            value = self.value(result)
+            self.assertEqual(value['submission'], 'not_submitted')
+            self.assertIn('enactive_observe', value['error'])
+            self.assertIn('may report macro_closure', value['error'])
+            self.assertIn('not the local root', value['error'])
+            self.assertNotIn('original_collection', value)
+            self.assertEqual(self.backend.writes, [])
+            self.assertEqual(self.player.snapshots, before)
+            self.assertFalse((self.root / '.runtime/mission-requests').exists())
+        self.run_client(exercise)
+
     def test_proven_composition_refusals_do_not_send_player_to_nonexistent_collection(self):
         args = dict(snapshot_id='chosen', scope='lifecycle', source_id=None, supporting_source_ids=[],
             limits=dict(primitives=4, wall_seconds=7, game_seconds=10),

@@ -131,6 +131,21 @@ class PlayerHTTPTests(unittest.TestCase):
         self.assertIn(replacement["id"], json.dumps(packet))
         self.assertIn(ref["observation_id"], json.dumps(packet))
         self.assertFalse(packet["grants_authority"])
+        before = deepcopy(result)
+        projected = decision_view("enactive_context", result)["response"]["context"]
+        self.assertNotIn("native_sha256", projected["configuration"])
+        for source in projected["packet"]["sources"]:
+            self.assertNotIn("frame_sha256", source["reference"])
+        self.assertEqual(projected["packet"]["claims"], packet["claims"])
+        self.assertEqual(result, before)
+        raw_source, raw_image = player.source(self.a.mission_id, ref["observation_id"])
+        original_source = deepcopy(raw_source)
+        self.assertIn("frame_sha256", raw_source["reference"])
+        source_view = decision_view("enactive_source", raw_source)
+        self.assertNotIn("frame_sha256", source_view["reference"])
+        self.assertEqual(source_view["observation"], raw_source["observation"])
+        self.assertEqual(raw_source, original_source)
+        self.assertIsInstance(raw_image, bytes)
 
     def test_unknown_delivery_is_preserved_without_retry_or_implicit_input(self):
         player = self.player()
@@ -529,7 +544,7 @@ class SDKTransportTests(unittest.TestCase):
             parameters = StdioServerParameters(command=sys.executable,
                 args=["-m", "tests.test_player_tools", "--stdio-fixture"], cwd=str(Path(__file__).resolve().parents[1]))
             async with Client(parameters) as client:
-                self.assertEqual(client.server_info.version, "6.0.0")
+                self.assertEqual(client.server_info.version, "6.1.0")
                 tools = await client.list_tools()
                 self.assertEqual({t.name for t in tools.tools}, {s.name for s in tool_specs()})
                 self.assertEqual(len(tools.tools), 21)
@@ -545,7 +560,7 @@ class SDKTransportTests(unittest.TestCase):
                 self.assertIsNone(result.structured_content)
                 view = json.loads(result.content[0].text)
                 self.assertEqual(view["mission"]["mission_id"], "sdk-fixture")
-                self.assertEqual(view["presentation_schema"], "player-view/4")
+                self.assertEqual(view["presentation_schema"], "player-view/5")
                 self.assertEqual(view["detail_sections"], list(DETAIL_SECTIONS))
                 self.assertEqual(view["mission"]["progress"],
                                  _FixtureClient().status()["mission"]["progress"])
@@ -586,7 +601,7 @@ class SDKTransportTests(unittest.TestCase):
                 self.assertIsNone(detailed.structured_content)
                 detail_view = json.loads(detailed.content[0].text)
                 self.assertEqual(detail_view["detail"], _FixtureClient().status()["mission"]["last_receipt"])
-                self.assertEqual(detail_view["presentation_schema"], "player-view/4")
+                self.assertEqual(detail_view["presentation_schema"], "player-view/5")
                 self.assertFalse(detail_view["grants_authority"])
                 self.assertEqual(len(detailed.content), 1)
                 collected = await client.call_tool("enactive_result", dict(mission_id="sdk-fixture",
@@ -594,7 +609,7 @@ class SDKTransportTests(unittest.TestCase):
                 self.assertFalse(collected.is_error)
                 self.assertIsNone(collected.structured_content)
                 projected = json.loads(collected.content[0].text)
-                self.assertEqual(projected["presentation_schema"], "player-view/4")
+                self.assertEqual(projected["presentation_schema"], "player-view/5")
                 self.assertEqual(projected["transport"], "uncertain")
                 self.assertFalse(projected["settled"])
                 self.assertEqual(projected["operation_id"], "original-operation")

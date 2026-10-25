@@ -46,6 +46,16 @@ source images are progressively available. Source metadata fits the permitted
 handoff working set; eviction requires an explicit exact reread, not authority
 restoration. A cache is neither durable history nor proof of model attention.
 
+The current `player-view/5` projects known technical fields from historical-source
+references and memory packet source references, plus the context configuration's
+native binary hash. It preserves source IDs, visible state, uncertainty, authored
+claims/procedures and images. This is typed projection, never recursive deletion
+of similarly named authored fields. Raw SDK source/context responses and retained
+evidence remain complete. `enactive_detail` returns exact sections of its selected
+cached snapshot; it does not turn that snapshot into a different historical source.
+Historical machine bindings remain available through `MissionClient.source` and
+the original context response, rather than another model-facing audit endpoint.
+
 ![Known refusal, admitted work and uncertainty have different next decisions.](../diagrams/request-receipts.svg)
 
 The [editable view](../diagrams/request-receipts.mmd) answers when the player can
@@ -57,6 +67,13 @@ arguments. A transport or presentation error proves neither delivery nor
 nondelivery. Restart cannot reconstruct missing settled identities or permission
 to replay. The [binding contract](../protocol.md#skill-request-binding-errors)
 and [operator contract](../protocol.md#designated-campaign-operator) own exact rules.
+
+For a selected active, idle prompt with no activity/lifecycle phase, a refused new
+root points to explicit Observe. Observe may close a locally exhausted ordinary
+macro; the player inspects its returned phase and chooses a continuation or a new
+bounded root. The composer neither performs that read nor promises closure. Whole
+mission capacity is not local root capacity. Pause, pending operations and other
+phases retain their distinct rules; the original root and all costs remain intact.
 
 A narrowly certified receiver refusal is `submission=not_admitted`: the SDK has
 validated an authenticated `mission-refusal/1` against its immutable staged
