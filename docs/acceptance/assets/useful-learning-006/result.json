@@ -1,0 +1,119 @@
+{
+  "mission_id": "useful-learning-006",
+  "source": "9dbd1de9e367e3a545ab6f47ca686a91aece2591",
+  "disposition": "Rejected combined readiness; useful program/memory evidence retained, no20-goal cadence or normal ending",
+  "requests": 101,
+  "request_states": {
+    "completed": 23,
+    "partial": 72,
+    "unknown": 1,
+    "blocked": 5
+  },
+  "request_kinds": {
+    "start": 1,
+    "lifecycle": 5,
+    "skill": 75,
+    "observe": 1,
+    "remember": 13,
+    "correct": 2,
+    "handoff": 1,
+    "claim": 1,
+    "readmit": 1,
+    "stop": 1
+  },
+  "charged_inputs": 152,
+  "primitive_states": {
+    "returned": 151,
+    "unknown": 1
+  },
+  "frames": 384,
+  "frame_bytes": 39373941,
+  "game_seconds": 105,
+  "memory_events": 273,
+  "memory_types": {
+    "claim": 266,
+    "procedure": 3,
+    "work": 4
+  },
+  "reported_deciding_tokens": {
+    "input_tokens": 15585073,
+    "cached_input_tokens": 15277184,
+    "cache_write_input_tokens": 0,
+    "output_tokens": 31158,
+    "reasoning_output_tokens": 3271
+  },
+  "completed_mcp_mix": {
+    "original": {
+      "enactive_snapshot": 1,
+      "enactive_lifecycle": 5,
+      "enactive_skill": 61,
+      "enactive_result": 1,
+      "enactive_observe": 1,
+      "enactive_source": 2,
+      "enactive_remember": 12,
+      "enactive_advice": 4,
+      "enactive_context": 5,
+      "enactive_correct": 2,
+      "enactive_handoff": 1
+    },
+    "successor": {
+      "enactive_snapshot": 1,
+      "enactive_context": 1,
+      "enactive_source": 7,
+      "enactive_claim": 1,
+      "enactive_readmit": 1,
+      "enactive_skill": 14,
+      "enactive_detail": 1,
+      "enactive_advice": 1,
+      "enactive_lifecycle": 1,
+      "enactive_remember": 2,
+      "enactive_stop": 1
+    }
+  },
+  "normal_exit_verified": false,
+  "native_sha256": "96e58aa08e7f8dd74c42f1bd30bc48a11ebd0eca16deac4cd810e1e843b6fe70",
+  "successor_program_travel": [
+    {
+      "request_id": "op-aca0814ceb0f41a987e5156cac376539",
+      "returned_steps": 3,
+      "verified_displacements": 3
+    },
+    {
+      "request_id": "op-096c7c29b66649ddb886ea2089cec3a5",
+      "returned_steps": 5,
+      "verified_displacements": 5
+    },
+    {
+      "request_id": "op-2209c010f09b4e3481db18ae85194516",
+      "returned_steps": 4,
+      "verified_displacements": 4
+    }
+  ],
+  "images": [
+    {
+      "file": "successor-travel.png",
+      "source_id": "b6867df543dd9c2c47150cfde8cdf242213f2fd0976895ff7ad80610e33dfac3",
+      "session": "1792914774674-10460-1",
+      "revision": 284,
+      "sha256": "ce25bc7c94d3d466d1503a5d08857a0ff240ba97a28341719cfe48e9dcba78cd",
+      "unaltered_native_frame": true
+    },
+    {
+      "file": "unclosed-map.png",
+      "source_id": "e8acff9654fd2084a4ebdcd240646c4fcfae84b0c3581182fa158caffdb91df5",
+      "session": "1792914774674-10460-1",
+      "revision": 312,
+      "sha256": "57fbab6e77cb9e27c47b7a6c67b3d9778cb40a643b0b12140c53464022a0ae30",
+      "unaltered_native_frame": true
+    }
+  ],
+  "save_changes": {
+    "existing_files": 242,
+    "changed_inside_selected_world": 13,
+    "changed_elsewhere": 0,
+    "created": 0,
+    "deleted": 0,
+    "normal_saved_checkpoint_verified": false
+  },
+  "scope": "Passive closed-run analysis; no input authority, held-out learning, model inference or physical paint claim. Raw host traces/saves remain project-local."
+}
