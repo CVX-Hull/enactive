@@ -8,6 +8,8 @@ import sqlite3
 import tempfile
 import unittest
 
+import pytest
+
 from harness.gameplay.contracts import ContractError, EvidenceRef
 from harness.gameplay.evidence import EvidenceStore, MAX_FRAMES, _identity
 from harness.gameplay.mission_contracts import LearningPolicy
@@ -143,6 +145,7 @@ class ProcedureLibraryTests(unittest.TestCase):
         with self.assertRaises(ContractError):
             self.library(pin)
 
+    @pytest.mark.assurance_advice
     def test_closed_campaign_outcomes_preserve_procedure_data_without_authority(self):
         for phase in ("completed", "failed", "stopped", "paused"):
             with self.subTest(phase=phase):

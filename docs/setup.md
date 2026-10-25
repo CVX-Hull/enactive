@@ -81,7 +81,7 @@ explains reuse, scope and limitations. Direct requirements and all transitive
 versions/hashes are in [requirements-dev.in](../requirements-dev.in) and
 [requirements-dev.lock](../requirements-dev.lock).
 
-The optional [verification pilots](testing.md#advisory-assurance-trace-pilot) use
+The optional [verification pilots](testing.md#responsibility-assurance) use
 a separate environment so testmon's pytest plugin cannot alter normal checks:
 
 ```sh

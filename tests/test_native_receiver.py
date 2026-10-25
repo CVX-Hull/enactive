@@ -5,6 +5,8 @@ import subprocess
 import tempfile
 import unittest
 
+import pytest
+
 
 class NativeReceiverTests(unittest.TestCase):
     @classmethod
@@ -42,6 +44,7 @@ class NativeReceiverTests(unittest.TestCase):
         if result.returncode:
             raise AssertionError(result.stderr)
 
+    @pytest.mark.assurance_native
     def test_production_receiver_and_dispatch(self):
         for scenario in ('unfamiliar', 'identity', 'timeouts', 'normal-owner', 'unsupported-owner',
                          'debug', 'activity', 'interrupt', 'outside', 'direct-key-resize',

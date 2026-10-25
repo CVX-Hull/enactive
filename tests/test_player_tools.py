@@ -9,6 +9,8 @@ import tempfile
 import unittest
 from unittest.mock import Mock
 
+import pytest
+
 from harness.gameplay.contracts import ContractError, validate_json
 from harness.gameplay.mission_contracts import MAX_HANDOFF_SOURCES
 from harness.gameplay.mission_requests import compose_request
@@ -147,6 +149,7 @@ class PlayerHTTPTests(unittest.TestCase):
         self.assertEqual(raw_source, original_source)
         self.assertIsInstance(raw_image, bytes)
 
+    @pytest.mark.assurance_ingress
     def test_unknown_delivery_is_preserved_without_retry_or_implicit_input(self):
         player = self.player()
         selected, _ = player.call("enactive_snapshot", {})

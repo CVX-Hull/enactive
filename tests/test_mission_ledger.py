@@ -10,6 +10,8 @@ import threading
 import unittest
 from unittest.mock import patch
 
+import pytest
+
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.contracts import canonical
 from harness.gameplay.mission_contracts import VERSION, CleanupReserve, MissionLimits, SourceRevalidation
@@ -189,6 +191,7 @@ class LedgerTests(unittest.TestCase):
             (rejected["request_id"],)).fetchone(), payload)
         self.assertEqual(self.ledger.primitive_records(), ())
 
+    @pytest.mark.assurance_execution
     def test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen(self):
         empty = self.ledger.measured_counts()
         self.assertEqual(empty, {"operations": {"total": 0, "by_kind": {}, "by_skill": {}, "by_state": {}},
@@ -523,6 +526,7 @@ class LedgerTests(unittest.TestCase):
         with self.assertRaises(LedgerError): self.ledger.prepare_primitive("stale", "stale-input", intent(), now=1004)
         self.assertEqual(self.reopen().snapshot(now=1010)["spent_inputs"], 1)
 
+    @pytest.mark.assurance_execution
     def test_phase_crash_preserves_unknown_cost_and_does_not_restore_authority(self):
         self.active_request(phase_lifecycle())
         self.phase_input("request-1", "direct")

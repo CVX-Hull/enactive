@@ -14,6 +14,8 @@ import unittest
 from unittest.mock import patch
 from urllib.parse import parse_qs, urlsplit
 
+import pytest
+
 from harness.gameplay.contracts import ContractError, MAX_JSON_BYTES
 from harness.gameplay.contracts import canonical
 from harness.gameplay.mission_contracts import make_admission_refusal
@@ -176,6 +178,7 @@ class MissionClientTests(unittest.TestCase):
         self.assertEqual(len(self.server.calls), 1)
         self.assertEqual(self.server.calls[0][4], canonical(value).encode())
 
+    @pytest.mark.assurance_ingress
     def test_duplicate_only_collects_same_operation_and_changed_payload_refuses(self):
         expected = self.respond_operation(result=dict(outcome="blocked"), state="blocked")
         first = self.client.submit(request(), wait_seconds=0)

@@ -5,6 +5,8 @@ import threading
 import unittest
 from unittest.mock import patch
 
+import pytest
+
 from harness.gameplay.contracts import ContractError, canonical
 from harness.gameplay.mission_contracts import LearningPolicy, validate_request
 from harness.gameplay.program_input import program_view
@@ -83,6 +85,7 @@ class ProgramExecutionTests(unittest.TestCase):
         self.assertEqual(result['result']['program']['trace']['omitted_events'], 0)
         self.assertEqual(self.f.runtime.status()['phase'], 'active')
 
+    @pytest.mark.assurance_program
     def test_original_input_limit_stops_without_new_request_or_allowance(self):
         result = self.invoke(10, limits=dict(primitives=2, wall_seconds=10, game_seconds=20))
         self.assertEqual(self.deliveries, 2)
@@ -128,6 +131,7 @@ class ProgramExecutionTests(unittest.TestCase):
         self.assertEqual(self.deliveries, 1)
         self.assertEqual(self.f.runtime.status()['phase'], 'active')
 
+    @pytest.mark.assurance_program
     def test_program_fault_is_zero_input_and_preserves_ordinary_fallback(self):
         newer = successor(self.entry, support=self.entry['support'], program={'language':'javascript/1', 'source':'function step(){while(true){}}'})
         self.remember(newer)

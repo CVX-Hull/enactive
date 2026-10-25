@@ -96,13 +96,23 @@ qualification; SDK tests alone do not establish those properties. Routine player
 work starts with the compact [guide](../player-guide.md), frozen mission and
 selected tool schema, without source archaeology or the engineering corpus.
 
-## Review and evidence
+## Assurance and evidence
 
 Review mechanical vs semantic responsibilities first, then ingress/staging failure
-boundaries, then projection/cache code. Focused tool/client/view/MCP tests live in
-[tests](../../tests/); import contracts prohibit these adapters from instantiating
-an executor. Changed presentation also needs actual host usability evidence before
-claiming independent continuation. The [evaluation](../evaluation.md) owns useful
+boundaries, then projection/cache code. These are representative risks, not a
+complete test inventory. The staging and projection mechanisms below implement
+[C-RUNTIME](../controls.md#c-runtime--live-authority-and-input-guards-runtime);
+[C-PORTABLE](../controls.md#c-portable--portable-regression-lane-automatic) executes
+their source regressions. Import contracts separately prohibit these adapters
+from instantiating an executor.
+
+| User consequence | Invariant and contract | Mechanism, representative assertion and limit |
+| --- | --- | --- |
+| A lost response or repeated call sends another action | Staged intent stays immutable; uncertainty requires original collection. [Original submission contract](../protocol.md#integrated-mission-lifecycle). | MissionClient staging: [client](../../tests/test_mission_client.py) `test_duplicate_only_collects_same_operation_and_changed_payload_refuses` asserts one submission followed by result collection and rejects changed payload. [Player tools](../../tests/test_player_tools.py) `test_unknown_delivery_is_preserved_without_retry_or_implicit_input` asserts one ambiguous submission, unchanged delivered inputs and retained uncertainty. These `assurance_ingress` fixtures do not prove real host delivery. |
+| Compact context erases the player's evidence or changes retained detail | Project only known binding fields, preserve authored content and isolate copies. [Context boundary](#context-and-failure-boundaries). | Decision projection: [view tests](../../tests/test_player_view.py), selected by `assurance_context`, assert authored claim/procedure preservation and no cache mutation/aliasing. Synthetic records and a controlled client do not prove sufficient context or actual image presentation. |
+| A mechanically valid response still leaves the player unable to continue | The actual host must load the schema, show relevant evidence and support a useful next decision. [Operator contract](../protocol.md#designated-campaign-operator). | [C-USABILITY](../controls.md#c-usability--operator-understanding-review-manual) requires observed use and reader judgment. The retained [useful-play assessment](../acceptance/2026-10-25-useful-play-readiness.md) demonstrates bounded continuation but records failed normal ending and rejected whole-player readiness. Tags and SDK passes cannot qualify this outcome. |
+
+The [evaluation](../evaluation.md#latency-budgets-for-interactive-play) owns useful
 latency definitions; short calls or token-cache rates do not qualify play cadence.
 
 Current limitations and actions belong to [#164](https://github.com/CVX-Hull/enactive/issues/164)

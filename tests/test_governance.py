@@ -10,6 +10,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import pytest
+
 from tools import governance
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -68,6 +70,7 @@ class GovernanceTests(unittest.TestCase):
         self.registry["controls"].append(control)
         return control
 
+    @pytest.mark.assurance_governance
     def test_registry_fixture_is_valid_at_record_date(self):
         self.assertEqual(self.registry_errors(), "")
 
@@ -265,6 +268,7 @@ class GovernanceTests(unittest.TestCase):
         self.registry["standards"].pop()
         self.assertIn("S-EVIDENCE", self.registry_errors())
 
+    @pytest.mark.assurance_governance
     def test_unknown_references_duplicates_and_missing_fields_are_rejected(self):
         cases = [
             (lambda r: r["standards"][0]["principles"].append("P-INVENTED"), "P-INVENTED"),

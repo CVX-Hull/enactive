@@ -5,6 +5,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import pytest
+
 from harness.host_status import deciding_host_status
 
 
@@ -159,6 +161,7 @@ class HostStatusTests(unittest.TestCase):
         (self.preparation / "driver-successor-process.json").write_text("{")
         self.assertFalse(self.projection()["driver"]["no_continuing_host_reported"])
 
+    @pytest.mark.assurance_observer
     def test_unresolved_exit_stays_unknown_even_when_driver_ended(self):
         self.initial()
         host = self.host(returncode=None, timed_out=True, host_exit_unresolved=True)
