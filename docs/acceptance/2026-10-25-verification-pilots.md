@@ -154,6 +154,26 @@ close connections. The backup API retains transaction ownership. All 11 focused
 pilot-tool tests and 11 subtests passed afterward; the measured trial commits
 remain explicit rather than claiming these timings describe a later source tree.
 
+Final candidate `833e5f6` passed full PR run
+[40215977477](https://github.com/CVX-Hull/enactive/actions/runs/40215977477):
+2,116 tests and 4,004 subtests in 346.12s, checker 383.00s. Its identical-tree merge
+`ee8834a` then failed main run
+[40216755266](https://github.com/CVX-Hull/enactive/actions/runs/40216755266):
+the same lifecycle scenario received an uncertain initial collection response for
+`final-exit-yes`. Other 2,115 tests and 4,004 subtests passed; tests took 342.69s,
+checker 379.50s. This is another failed gate, with no proven cause for the response
+unavailability. The initial correction handled running delivery but still wrongly
+required initial transport delivery before original collection.
+
+The focused follow-up retains the original operation ID through initial uncertainty
+and requires final delivered settlement through the same bounded API. A real-server
+regression loses the accepted reply while causally holding the writer and proves
+one submission plus exact original collection. The pending-response case, lost-reply
+case and exact lifecycle scenario passed three focused tests in 14.43s; independent
+review approved the correction. No request was replayed, uncertainty counted as
+success, runtime behavior changed or failed run relabelled. Follow-up protected
+publication receipts remain with the linked implementation PRs and #225.
+
 Private original commands, hook reports, failures, maps and source copies remain
 project-local in `.runtime/iterations/verification-pilots/`; the public payload
 retains exact seed recipes, selected/failing identities, environment, costs and
