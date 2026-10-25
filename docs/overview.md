@@ -109,8 +109,9 @@ which remains unavailable.
 
 ## How development reaches acceptance
 
-We develop a useful behavior through focused checks and finite real play, then
-qualify the coherent outcome. The [development-first workflow](project-management.md#development-first-delivery)
+We plan [iterations around a useful outcome or explicit learning decision](project-management.md#outcome-focused-iterations),
+including its relevant review, validation and completion work. Small integrated
+changes and focused feedback build toward that outcome. The [development-first workflow](project-management.md#development-first-delivery)
 owns the required checks, independent review and protected publication gates.
 Progress, a passing test or an investigated failure cannot substitute for the full
 requested outcome. The [control map](controls.md) records enforcement and gaps.

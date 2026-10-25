@@ -59,6 +59,11 @@ Summaries may state a scoped conclusion and link evidence. They must not require
 synchronized copies of changing fields or exact contracts. Current architecture
 must be understandable without reading old proposals. Git owns previous source
 versions; historical records preserve original observations, including failures.
+An iteration's core, optional scope, appetite and decision belong in its existing
+Issue, with stage/sequence in the Project. Link component designs and consolidated
+evidence; do not add a local iteration backlog, a document per task or a report per
+attempt. [Work scales](project-management.md#work-items-and-flow) distinguish the
+iteration from commits, feedback checkpoints and finite runtime attempts.
 
 ## Lifecycle and maintenance
 

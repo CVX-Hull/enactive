@@ -543,6 +543,14 @@ Controls: C-GOVERNANCE, C-USABILITY, C-REVIEW, C-MAINTENANCE, C-VISUAL.
 
 Principles: P-REVIEW, P-CHANGE, P-KNOWLEDGE.
 Keep one integration queue and a bounded number of active outcomes in GitHub.
+Shape [outcome-focused iterations](project-management.md#outcome-focused-iterations)
+with a required core, optional scope, effort appetite and explicit completion or
+stop/rescope conditions. Include relevant research/reuse, design, integration,
+verification/validation, review, current docs and cleanup in the scope and forecast.
+Use small integrated changes and inexpensive feedback within the larger outcome;
+neither a task nor a runtime attempt automatically defines an iteration. Required
+quality/evidence cannot become optional scope; a successful investigation is not
+delivery of a capability it found unsuccessful. C-REVIEW checks selection and fit.
 Before assigning implementation, record the outcome and highest changed boundary,
 then affected components, interfaces/state/callers, code/tests and operating docs.
 Review from that boundary down, using the [risk-based assurance policy](project-management.md#risk-based-assurance).

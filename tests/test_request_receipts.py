@@ -187,18 +187,26 @@ class SettlementTimingTests(unittest.TestCase):
     def test_new_timing_append_failure_does_not_rewrite_or_pause_committed_work(self):
         self.start()
         original = self.controller._record
-        attempted = threading.Event()
+        original_timing = self.runtime._record_settlement_timing
+        timing_finished = threading.Event()
+        data = self.navigation(target=(0, 0, 0))
         def fail_only_timing(request, outcome, **options):
-            if request["kind"] == "mission_request_settled":
-                attempted.set()
+            if (request["kind"] == "mission_request_settled"
+                    and outcome["request_id"] == data["request_id"]):
                 raise OSError("Timing-only append unavailable")
             return original(request, outcome, **options)
-        data = self.navigation(target=(0, 0, 0))
+        def record_timing(work, *, finalized):
+            original_timing(work, finalized=finalized)
+            if work.request["request_id"] == data["request_id"]:
+                timing_finished.set()
         with patch.object(self.controller, "_record", side_effect=fail_only_timing), \
+                patch.object(self.runtime, "_record_settlement_timing", side_effect=record_timing), \
                 self.assertLogs("harness.mission_runtime", level="WARNING"):
             self.runtime.command(data)
             operation = self.settled(data["request_id"])
-            self.assertTrue(attempted.wait(2))
+            # Queue completion precedes timing publication; keep log capture
+            # installed until this request's entire measurement attempt returns.
+            self.assertTrue(timing_finished.wait(2))
             self.runtime._queue.join()
         self.assertEqual(operation["state"], "completed")
         self.assertEqual(self.runtime.status()["phase"], "active")

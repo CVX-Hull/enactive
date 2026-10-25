@@ -138,3 +138,44 @@ checks cannot prove comprehension. The October24 audit tests navigation and
 authority consistency; longitudinal effectiveness and review effort remain only
 partly observed. No new documentation platform, tracker or metrics service is
 justified by these sources.
+
+## Iteration scope and completion capacity — 2026-10-25
+
+This targeted primary-source review extends the October17 project-management and
+October24 assurance basis. Five read-only lenses covered Agile/XP, flow/Lean,
+risk-driven engineering, shaping/discovery and recent AI-development evidence;
+the lead checked central sources and an independent reviewer checked the synthesis.
+It is not an exhaustive systematic review or proof of a locally optimal cadence.
+The user adopted the recommendations on October25. The current policy is
+[outcome-focused iterations](project-management.md#outcome-focused-iterations),
+not this research history or a claim of Scrum/Kanban conformance.
+
+| Primary source and scope read | Support | Transfer limit / local consequence |
+| --- | --- | --- |
+| [Agile principles](https://agilemanifesto.org/principles.html), full page; [Scrum Guide 2020](https://scrumguides.org/scrum-guide.html), Sprint Goal, planning, Increment and Done | Valuable working outcomes, adaptive scope, retained quality; multiple usable increments and release before review | Normative guidance, not evidence for a universal two-week cycle. One goal can contain multiple integration batches |
+| [Kanban Guide, May 2025](https://kanbanguides.org/the-kanban-guide), workflow, WIP, SLE, active management and flow metrics | Pull with capacity; inspect work age and completion; continuous or periodic improvement | No prescribed numerical WIP cap. Sparse local history supports provisional ranges, not calibrated probability; retain unknown starts |
+| [Fowler CI, January 2024 revision](https://martinfowler.com/articles/continuousIntegration.html), practices and integration/release distinction; [DORA small batches](https://dora.dev/capabilities/working-in-small-batches/), rationale/how-to | Small integrated changes and fast feedback within useful delivery | Practitioner/research-informed guidance, not a measured local optimum. Feature-flag/branch examples do not authorize compatibility paths contrary to S-MIGRATION |
+| [Shape Up, boundaries](https://basecamp.com/shapeup/1.2-chapter-03) and [responsibility/QA](https://basecamp.com/shapeup/3.1-chapter-10), 2019 | Appetite differs from estimate; scope can vary; QA belongs inside the bet | Basecamp experience does not mandate six weeks, no backlog or deferred required docs. Give bounded workers goal context while retaining S-AGENT ownership |
+| [Boehm spiral model, 1988](https://www.cs.hmc.edu/~markk/SWE_copies/boehmspiral.pdf), risk-driven cycle, alternatives, prototype/durable base and limitations; [Patton dual-track discovery](https://jpattonassociates.com/dual-track-development/), 2017/updated 2023 | Resolve consequential uncertainty; consider reuse/buy alternatives; discovery and delivery can overlap | Conceptual/practitioner guidance. A negative probe can finish a research decision, not a failed feature. No separate endless discovery phase or enterprise review ritual |
+| [METR early-2025 RCT](https://metr.org/Early_2025_AI_Experienced_OS_Devs_Study-paper.pdf), methods/results/limitations; [February 2026 study-design update](https://metr.org/blog/2026-02-24-uplift-update/), selection and concurrent-agent measurement | Experienced-repository human assistance can differ from expectations; later raw estimates have major measurement limits | Narrow RCT and later design report do not predict our agent capacity. No constant AI productivity multiplier; measure verified outcomes and bottleneck costs |
+
+Additional checks included [NASA handbook §2.4](https://www.nasa.gov/reference/2-0-fundamentals-of-systems-engineering/)
+on verification versus intended-environment validation; the
+[2021 hybrid-method survey](https://arxiv.org/pdf/2109.11435), whose self-reported
+agility is not causal delivery evidence; the [official DORA 2025 summary](https://cloud.google.com/blog/products/ai-machine-learning/announcing-the-2025-dora-report),
+whose positive throughput/product and negative stability associations are not a
+randomized cadence test (full gated methods not read); and
+[ESEM 2026 developer-behavior research](https://drops.dagstuhl.de/entities/document/10.4230/LIPIcs.ESEM.2026.67),
+whose observational review/test activity measures do not establish test effectiveness
+or useful delivery. [Anthropic's June 2026 report](https://www.anthropic.com/research/claude-code-expertise)
+excludes headless sessions and does not observe downstream code use, limiting
+transfer to this agent team. Abstract-only iteration-length and Little's-law
+readings were not used to derive duration or numerical WIP rules.
+
+Selected source texts, download/extraction manifests and the longer synthesis are
+retained privately in `.runtime/research/iteration-design-2026-10-25/` in the primary
+project checkout. PDF layout text/HTML extraction supports the prose used here;
+no equation/table calculation or complete third-party text is republished. Current
+standards/templates apply the adopted decision; Issues own its execution. Revisit
+through the existing #26/#75 triggers on material capacity, queue, model/tool or
+validation-cost evidence, without automatically renewing unrelated review dates.

@@ -11,14 +11,14 @@ body:
     id: outcome
     attributes:
       label: Problem and intended outcome
-      description: Who benefits, what should change, and why does it matter?
+      description: Who benefits and why? Name one capability, qualification/repair outcome or discovery/enabler decision. A proposal need not resolve every Ready decision yet.
     validations:
       required: true
   - type: textarea
     id: scope
     attributes:
       label: Scope
-      description: Start at the highest affected outcome/architecture boundary, then name components, interfaces/state/callers, code/tests and operating docs. Link unchanged parent context; no duplicate plan is required.
+      description: Separate required core from optional scope. Start at the highest affected architecture boundary, then name components, interfaces/state/callers, code/tests and operating docs. Link parent context and shared acceptance; no duplicate plan is required.
     validations:
       required: true
   - type: textarea
@@ -32,7 +32,7 @@ body:
     id: acceptance
     attributes:
       label: Acceptance and evidence
-      description: Give observable success/failure conditions. Select assurance by impact, uncertainty, reversibility and reach; name focused checks, needed design/code/outcome reviews and any native/held-out evidence. Do not require every lane for every change.
+      description: Give observable success/failure and stop/rescope conditions. Select checks and design/code/outcome reviews by risk. Include needed validation, current documentation and cleanup; do not require every lane or a report per attempt. A negative investigation does not accept a failed capability.
     validations:
       required: true
   - type: textarea
@@ -61,6 +61,13 @@ body:
         - High; comparable local evidence
         - Medium; understood with material assumptions
         - Low; major unknowns
+    validations:
+      required: true
+  - type: textarea
+    id: effort
+    attributes:
+      label: Appetite and forecast
+      description: Before Ready, state what effort this outcome merits, estimated whole-outcome range/units and assumptions (including review, integration, rework and completion). Link parent values for shared work; unknowns are valid during proposal. Planning does not authorize or renew game/API resources.
     validations:
       required: true
   - type: textarea
