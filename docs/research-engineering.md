@@ -179,3 +179,90 @@ no equation/table calculation or complete third-party text is republished. Curre
 standards/templates apply the adopted decision; Issues own its execution. Revisit
 through the existing #26/#75 triggers on material capacity, queue, model/tool or
 validation-cost evidence, without automatically renewing unrelated review dates.
+
+## Risk, assurance and precise test selection — 2026-10-25
+
+Research cutoff: October 25, 2026. Three independent read-only lenses examined
+recent academic selection, production CI and assurance/traceability; the lead
+checked central methods, results and limitations. Searches began with 2026/2025,
+then 2024 and foundations. This is a targeted review, not an exhaustive systematic
+review or a claim that any selector is state of the art for this project.
+The current [assurance policy](project-management.md#risk-based-assurance),
+[CI profiles](project-management.md#protected-ci-profiles) and
+[test responsibility guide](testing.md) remain authoritative. The
+[proposed pilot #225](https://github.com/CVX-Hull/enactive/issues/225) owns action
+items; this research does not adopt a new selection mechanism or gameplay review.
+
+### What the evidence supports
+
+Risk-informed assurance determines which properties and failure consequences need
+evidence. Change-impact analysis determines which of those obligations a change
+could affect. Selection chooses a subset, prioritization orders execution, and
+minimization removes maintained tests. These are different decisions. A smaller
+selection does not show that omitted tests can be deleted; a control mechanism
+and a test of that mechanism are also distinct.
+
+| Primary source and reading scope | Finding | Applicability and limit |
+| --- | --- | --- |
+| [ISTQB CTFL v4.0.1](https://istqb.org/wp-content/uploads/2024/11/ISTQB_CTFL_Syllabus_v4.0.1.pdf), 2024, §5.2 pp. 51–53; [Felderer/Schieferdecker taxonomy](https://arxiv.org/html/1912.11519v1), 2019 arXiv version, §§2–3 | Risk assessment guides scope, techniques, effort, priority and non-test responses; monitoring revisits effectiveness | Normative/conceptual guidance, not proof of an optimal formula. Use consequence and uncertainty with explicit judgment; numerical likelihood requires credible data. No invented probability or ordinal-score multiplication |
+| [Smith/Lin assurance cases](https://arxiv.org/html/2411.03291), 2024, §§II–IV | Claims decompose into evidence obligations, including implementation correctness and operational assumptions; tests are one evidence kind | One research-software medical-imaging case. Use scoped claims, rationale and assumptions for reviewability; no clinical controls, GSN tooling or certification process is required here |
+| [Ruiz/Hu/Dalpiaz traceability study](https://link.springer.com/article/10.1007/s00766-023-00408-9), 2023, methods, results and §6 | A survey of 55 practitioners and 14 interviews identify manual upkeep costs, role-dependent value and reuse of existing work tools; respondents still perceive benefits | Self-reported, predominantly European sample; no causal estimate of productivity or required link density. Keep authoritative links near existing work and measure upkeep |
+| [Zhang et al., hybrid RTS/JcgEks](https://zbchen.github.io/files/ase2024.pdf), ASE 2024, §§3–5 | File/method dependency combinations trade precision, runtime and safety; studied selectors missed affected classes through reflection, instrumentation and external callbacks. Extra analysis can exceed saved work on some revisions | Twenty Java projects. JcgEks addresses several failures of comparison variants; this is not proof that every selector misses the same cases, or a ready Python solution. Preserve assumptions and account for non-source boundaries |
+| [Jin/Servant CI comparison](https://jxianhao.github.io/files/ICSE21.pdf), ICSE 2021, metrics and missed-failure discussion; agent methods/validity sweep | Ten techniques/four families across 100 Java/Ruby projects expose saved-cost versus missed/delayed-failure tradeoffs. Apparently safe skips still missed configuration/compilation failures | Historical Travis context, not a measured local miss rate. Keep build/structural checks and non-code impact; counting skipped tests alone misstates benefit |
+| [Plyusnin et al., T-TS](https://arxiv.org/html/2509.10279v1), ICSME 2025/preprint, §§III–VII, deployment TableVI | Reported deployment: selecting 0.8% of tests detects 26% of failed tests; selecting 15% detects 95%. Offline curves differ. Module/stability filtering, nightly runs and retraining affect the delivered system | Large private UI suite; budget and denominator matter. Learned scores are not locally calibrated risk probabilities; richer code analysis missed their deployment cost requirement. Do not import its ML/data platform or unstable-test exclusion policy |
+| [Speculative Testing at Google with Transition Prediction](https://hackthology.com/pdfs/icst-2025.pdf), ICST 2025, system, budget/recall and production evaluation | Selective postsubmit cycles complement comprehensive cycles; the goal includes earlier discovery of novel breakages under resource limits | Huge historical dataset and infrastructure. Selection/failure recall, latency and full-baseline scheduling must be judged together; its results do not prescribe our cadence or authorize moving existing PR checks postsubmit |
+| [Charoosaei et al., risks of LLM-generated regression tests](https://arxiv.org/html/2610.11835v1), October 8, 2026 preprint, §§3–7 | Coverage-guided tests can accept injected faults and reject reference behavior; weak tests can cover code without detecting those faults | One model/configuration, three Python libraries and empirically killable mutants; not a frequency estimate for our tests. Review expected outcomes against intended contracts and independent evidence; a linked passing test is insufficient assurance |
+| [Microsoft TIA documentation](https://learn.microsoft.com/en-us/azure/devops/pipelines/test/test-impact-analysis?view=azure-devops), supported scenarios, fallbacks and selected/full comparison | Impacted/new/previously failing tests, fallback for unrecognized changes and comparison with full execution are documented safeguards | The page has legacy .NET/VSTest restrictions and is not a Python recommendation. Reuse the evaluation pattern rather than its platform or blanket settings |
+| [remote-store testmon PoC](https://docs.remotestore.dev/latest/explanation/design/research/research-bk-403-testmon-poc/), October 3, 2026, method, seed table and limits | This project's authors defer adoption: leaf edits benefit, while core/config/environment/source-read cases reduce savings or escape the map | Single-run, single-project report; linked driver retrieval failed here and results were not reproduced. It challenges automatic adoption, not all selective testing. Compatibility and coverage must be tested on our actual stack |
+
+### Project judgment and candidate model
+
+The useful next abstraction is a small, many-to-many assurance trace:
+product consequence → required property/invariant → prevention/detection/recovery
+control → verification obligation → exact tests, review or native/gameplay evidence.
+A separate impact view links changed source, dependencies and non-code inputs to
+those obligations. Keep human-readable project/component summaries above technical
+selectors. `C-PORTABLE` executes a lane; it is too coarse to represent every
+property a selected suite must verify. Do not create one new control per test.
+
+The pilot should reuse component explanations, the existing registry, GitHub
+work and registered pytest metadata or a single explicit selection manifest.
+Keep one authoritative home for each relationship. Mature
+[pytest markers](https://docs.pytest.org/en/stable/how-to/mark.html),
+[Coverage.py contexts](https://coverage.readthedocs.io/en/latest/contexts.html)
+and [testmon](https://www.testmon.org/) are candidate capabilities; none supplies
+our domain meaning automatically. Official PyPI metadata currently lists
+[testmon 2.2.0](https://pypi.org/project/pytest-testmon/) with pytest >=5,<10 and coverage >=6,<8. This review downloaded and
+statically inspected its wheel without installation/execution; exact compatibility
+with our Python 3.14/pytest 9/xdist and mixed-language/resource tests remains unqualified.
+
+Evaluate a few context-projection, memory-provenance and lifecycle/input-freshness
+obligations before bulk annotation. Include source-as-text tests, import/re-export
+changes, JSON/configuration/prompts, subprocesses and native/JS boundaries in impact
+reasoning. Ordinary Python execution coverage cannot represent all of them.
+Collected test methods also bound selection granularity: a `unittest.subTest` fault
+matrix is not a set of independently selectable collected test methods.
+
+First compare proposed selections against already-required broad execution where
+possible. Include independently understood negative changes and relevant historical
+failures; agreement on all-green changes cannot establish failure-detection recall.
+Distinguish failing test cases, faulty changes and newly discovered breakages.
+Track selection/instrumentation/setup/runtime, map rebuilds, upkeep and escaped
+failure/rework cost; retaining uncertain evidence is preferable to an invented
+confidence score. Narrow CI only after the intended scope and tradeoff are supported.
+
+At our measured full-checker scale of 268.11 s and 285.63 s, a comprehensive graph or
+learned selector may cost more than it saves. A negative pilot is a useful result.
+Actual useful play, responsiveness, learning validity and user reviewability remain
+important risks; they need evidence beyond source tests. This engineering model
+adds no per-action player approval or reflective-path dependency.
+
+Eight public source PDFs, extraction manifests, scoped notes and the evidence
+matrix are retained privately under `.runtime/research/risk-test-selection/` in
+the lead checkout. Layout text was used for qualitative PDF reading; the T-TS
+deployment table was checked against the arXiv HTML. No full
+third-party text is republished. Google 2026 core-library selection was abstract-only;
+GSN/IEEE scope pages were not full-standard readings; inaccessible 2026 optimization
+papers were screened without using them to set policy. Revisit through #26 when
+measured cost, missed failures, architecture or tools change; no unrelated review
+date is renewed by this research.
