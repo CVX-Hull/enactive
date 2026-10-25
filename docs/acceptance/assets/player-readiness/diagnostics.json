@@ -1,0 +1,144 @@
+{
+  "scope": "Used offline development cases, not held-out/model ranking/inference/useful responsiveness. Paths/credentials/raw private host context excluded. Original supplied JSON/PNGs remain private retained byte evidence.",
+  "source": "7f5b70c58000bc965cd236df618a448f9f10cc45",
+  "common_context": "This is a fresh read-only diagnostic context, not a live game/player or authority to execute anything. Use only the supplied historical JSON and attached original PNG. Do not call tools, read files, run commands, modify anything, contact a controller or launch a game. Return a concise semantic decision assessment, not request JSON or a key/menu-action recipe.\n\nThe historical authorized player is responsible for interpreting visible evidence and selecting intent. Local filesystem read-only status prevents local editing; it does not itself establish which separately authorized service tools work. Actual returned refusal/phase and the finite contract govern. Scenario names/objectives are intended targets, not observed facts. Ground visible labels in the image, preserve uncertainty, and do not infer an unavailable capability solely from a missing target. A returned key or launched process is not creation/adoption success. grants_authority=false/read-only descriptors describe evidence; they do not alone prove failed adoption or prohibit the next registered operation. Do not bypass a real denial or replay uncertain input.\n\nFor the historical player at this exact decision point, report: (1) relevant directly visible facts, with literal labels where applicable, separated from intended identity; (2) whether this record actually establishes a capability denial or impossibility, and what remains unknown; (3) the next kind of decision consistent with the contract, including whether further ordinary discovery/observation is justified. Do not invent observations or promise task success. This evaluates interpretation on used development evidence, not live gameplay, held-out accuracy or model speed.\n",
+  "selected": {
+    "model": "gpt-6.1-sol",
+    "effort": "low",
+    "basis": "Both cases passed; independent review approves one bounded live assessment. Luna readonly-launch has missing model evidence after CLI setup failure."
+  },
+  "original_case_payloads": [
+    {
+      "path": "cases/readonly-launch.json",
+      "bytes": 3962,
+      "sha256": "71597ad0b3df4545666cb1a0d119457cf70b22d435958f67a514a44b52e8188b"
+    },
+    {
+      "path": "cases/readonly-launch.png",
+      "bytes": 33273,
+      "sha256": "498237e268e59128c0b83d4c91151911c8a5ab1fac4e8e85eb6e94c4fd8627c1"
+    },
+    {
+      "path": "cases/target-vs-picker.json",
+      "bytes": 6147,
+      "sha256": "dd9ef3681debf5b72be27d30e75b93555bb1a82f29c7531c49d44e3ee659a465"
+    },
+    {
+      "path": "cases/target-vs-picker.png",
+      "bytes": 11495,
+      "sha256": "d6d437e4f3c989e31a9ec684be2702ecd47492b16b2143f4af972d3aec10c4d4"
+    }
+  ],
+  "attempts": [
+    {
+      "attempt": "luna-low-readonly-launch",
+      "host_wall_seconds": 0.020550251007080078,
+      "returncode": 1,
+      "timed_out": false,
+      "signals": [],
+      "final": null,
+      "reported_completed_usage": [],
+      "item_types": [],
+      "setup_error": "Error loading config.toml: invalid transport\nin `mcp_servers.enactive_player`"
+    },
+    {
+      "attempt": "luna-low-target-vs-picker",
+      "host_wall_seconds": 5.167201042175293,
+      "returncode": 0,
+      "timed_out": false,
+      "signals": [],
+      "final": "1. **Visible facts:** The image shows a \u201cWorld selection\u201d dialog titled \u201cPick a world to enter game.\u201d The listed worlds are \u201cBelgium (1),\u201d \u201cEnactive Twenty Four (1),\u201d and \u201cEnactiveLearningSix (1),\u201d with \u201cBelgium (1)\u201d highlighted. The intended target is **EnactiveLearning02 / Blair**; that identity is supplied by the historical task context, not shown in the image.\n\n2. **Capability status:** This record does not establish a denial or impossibility. It shows an active create phase awaiting control, an accepted ordinary-input operation whose returned `ENTER` still requires semantic interpretation, and a fresh ready observation at a menu boundary. The picker does not visibly list the intended world, but it is unknown whether further ordinary discovery would reveal it or whether another registered capability is available. No character has been created or adopted.\n\n3. **Next decision:** Continue with a player-level semantic decision under the active contract. Further ordinary discovery or observation is justified to clarify world availability and picker state; the evidence does not support concluding that the target is unavailable or that creation succeeded.",
+      "reported_completed_usage": [
+        {
+          "input_tokens": 19333,
+          "cached_input_tokens": 7168,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 233,
+          "reasoning_output_tokens": 0
+        }
+      ],
+      "item_types": [
+        "agent_message"
+      ],
+      "setup_error": null
+    },
+    {
+      "attempt": "sol-low-readonly-launch",
+      "host_wall_seconds": 10.676905870437622,
+      "returncode": 0,
+      "timed_out": false,
+      "signals": [],
+      "final": "1. **Visible facts:** The PNG shows the main menu with **Load** selected and entries **\u201cBelgium (1)\u201d**, **\u201cEnactive Twenty Four (1)\u201d**, and **\u201cEnactiveLearningSix (1)\u201d**; \u201cBelgium (1)\u201d is highlighted. **EnactiveLearning01 / Avery** is the intended identity, not a visibly verified world or character. The record reports a running process and fresh, paused main menu; no character has been adopted.\n\n2. **Denial or impossibility:** Neither is established. The lifecycle operation was accepted and completed, but explicitly leaves creation, identity verification, and Resume pending. The current phase is **\u201cadmitted\u201d**, with **\u201cExplicit admission; no input authority\u201d** and **\u201cRegistered lifecycle/readmission needed.\u201d** That limits current authority; it does not establish that the registered continuation is unavailable. Host filesystem restrictions and read-only evidence descriptors do not establish service capability failure. Whether the target can be created and adopted remains unknown.\n\n3. **Next decision:** Determine the contract-permitted registered lifecycle/readmission continuation before ordinary game input. Further ordinary discovery and observation are justified once authorized, to establish available creation paths and verify identity. The target\u2019s absence from this visible Load list is insufficient evidence of impossibility. Do not bypass a denial, replay uncertain input, or count process launch as creation or adoption success.",
+      "reported_completed_usage": [
+        {
+          "input_tokens": 19253,
+          "cached_input_tokens": 7168,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 284,
+          "reasoning_output_tokens": 0
+        }
+      ],
+      "item_types": [
+        "agent_message"
+      ],
+      "setup_error": null
+    },
+    {
+      "attempt": "sol-low-target-vs-picker",
+      "host_wall_seconds": 11.13465690612793,
+      "returncode": 0,
+      "timed_out": false,
+      "signals": [],
+      "final": "1. **Visible evidence:** The image shows \u201cWorld selection,\u201d \u201cPick a world to enter game,\u201d and \u201c[Page 1].\u201d The listed worlds are \u201cBelgium (1)\u201d (highlighted), \u201cEnactive Twenty Four (1),\u201d and \u201cEnactiveLearningSix (1).\u201d The intended target, **EnactiveLearning02 / Blair**, is supplied by the task context; neither identity is visibly established here. No character creation or adoption is shown.\n\n2. **Capability assessment:** This record establishes neither a capability denial nor impossibility. The operation was accepted but returned a partial result requiring interpretation and verification; the create phase remains `awaiting_control`. The returned input and running process do not establish creation success. The read-only and `grants_authority=false` descriptors do not independently establish refusal. Whether the target exists elsewhere or an ordinary creation route is available remains unknown.\n\n3. **Next decision:** The historical player should recognize that this picker has not established the intended target and decide how to discover the appropriate creation path within the active finite contract. Further ordinary discovery and observation are justified, subject to the registered operation\u2019s actual eligibility and remaining limits. Selecting a different visible world as the intended identity, declaring success or impossibility, or replaying input without interpreting its effect would be unsupported.",
+      "reported_completed_usage": [
+        {
+          "input_tokens": 20025,
+          "cached_input_tokens": 0,
+          "cache_write_input_tokens": 0,
+          "output_tokens": 267,
+          "reasoning_output_tokens": 0
+        }
+      ],
+      "item_types": [
+        "agent_message"
+      ],
+      "setup_error": null
+    }
+  ],
+  "existing_limit_checks": {
+    "scope": "existing schema checks only; no game/controller or new profile validator",
+    "rows": [
+      {
+        "tool": "enactive_skill",
+        "maxima": {
+          "primitives": 32,
+          "wall_seconds": 900,
+          "game_seconds": 43200
+        }
+      },
+      {
+        "tool": "enactive_lifecycle",
+        "maxima": {
+          "primitives": 256,
+          "wall_seconds": 1800,
+          "game_seconds": 43200
+        }
+      }
+    ],
+    "smaller_submitted_examples": [
+      120,
+      600,
+      900
+    ],
+    "unsupported_600_profile_claim": "900 is schema-valid lifecycle;600 can only be a smaller selected request limit or planning target, not an extra controller profile cap",
+    "lifecycle_operations": [
+      "launch",
+      "create",
+      "save",
+      "exit",
+      "load",
+      "finish"
+    ],
+    "source_unchanged": true
+  }
+}
