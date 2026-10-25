@@ -1,0 +1,188 @@
+{
+  "date": "2026-10-25",
+  "disposition": "mandatory generic-host cutover delivered; fresh native qualification failed; exact model configuration remains unqualified",
+  "source": "44fa4ba725dd7b2f6e90db09eced4c4cc6f61424",
+  "reviewed_head": "41ccef7b3e56dbf96dbc893cf6dc4b54e60bdbb6",
+  "equal_tree": "0bf4437ccf8dbf29d22faef9b2538674d0500e91",
+  "full_ci": {
+    "pr_run": 40239114066,
+    "main_run": 40240480587,
+    "attempt": 1,
+    "cases": 2137,
+    "subtests": 4057,
+    "outcome": "success"
+  },
+  "native_sha256": "96e58aa08e7f8dd74c42f1bd30bc48a11ebd0eca16deac4cd810e1e843b6fe70",
+  "pi_version": "1.4.0",
+  "requested_model": "deepseek-ai/DeepSeek-V4.1-Flash-1017:zRTkTPfs",
+  "effort": "low",
+  "max_output_tokens": 8192,
+  "retries": 0,
+  "mission_id": "generic-host-001",
+  "original_hosts": 1,
+  "successor_hosts": 0,
+  "event_counts": {
+    "host-start": 1,
+    "mcp-connected": 1,
+    "request-start": 20,
+    "response-headers": 20,
+    "response-first-chunk": 20,
+    "response-backend": 20,
+    "response-complete": 20,
+    "tool-start": 21,
+    "tool-result": 21,
+    "abort": 1,
+    "settled": 1
+  },
+  "settled": {
+    "type": "settled",
+    "wall_time": "2026-10-25T22:53:40.337Z",
+    "monotonic_ms": 211022.40325,
+    "ok": false,
+    "reason": "request-limit",
+    "requests": 20,
+    "native_cleanup_claimed": false
+  },
+  "driver_report": {
+    "mission_id": "generic-host-001",
+    "outcome": "incomplete",
+    "phase": "admitted",
+    "exit_code": 1,
+    "hosts": [
+      {
+        "role": "original",
+        "start": 1792968609.140047,
+        "end": 1792968820.455132,
+        "returncode": 1,
+        "timed_out": false,
+        "interrupted": false,
+        "signals": [],
+        "native_cleanup_claimed": false
+      }
+    ],
+    "native_cleanup_claimed": false,
+    "acceptance_claimed": false,
+    "reason": "Player host did not exit normally with code zero"
+  },
+  "usage": {
+    "input": 63466,
+    "output": 9635,
+    "cacheRead": 863104,
+    "cacheWrite": 0,
+    "reasoning": 4939,
+    "totalTokens": 936205
+  },
+  "configured_base_rate_estimate_usd": "0.023652824",
+  "request_content_totals": {
+    "text_parts": 734,
+    "text_bytes": 1682322,
+    "image_parts": 112,
+    "image_bytes": 7562178,
+    "payload_bytes": 13114801
+  },
+  "timing": {
+    "response-headers": {
+      "n": 20,
+      "median_ms": 885.6893334999986,
+      "maximum_ms": 1561.430416999996
+    },
+    "response-first-chunk": {
+      "n": 20,
+      "median_ms": 1506.070687500001,
+      "maximum_ms": 4059.367916999996
+    },
+    "response-complete": {
+      "n": 20,
+      "median_ms": 7553.362728999986,
+      "maximum_ms": 39039.498125
+    },
+    "driver_host_seconds": 211.31508493423462
+  },
+  "mission_counts": {
+    "requests": {
+      "blocked": 2,
+      "completed": 10,
+      "partial": 5,
+      "unknown": 1
+    },
+    "primitives": {
+      "returned": 7,
+      "unknown": 1
+    },
+    "memory": {
+      "claim": 5
+    },
+    "sqlite_bytes": 438272,
+    "frames": 26,
+    "frame_bytes": 2249222
+  },
+  "outcomes": {
+    "normal_adoption": true,
+    "healthy_adoption_refusal_correction_exercised": false,
+    "useful_ordinary_goal_established": false,
+    "normal_save_exit_finish": false,
+    "procedure_application": false,
+    "game_seconds": 0,
+    "ending_started_provider_request": 17,
+    "prospective_ending_start_latest_request": 14,
+    "qualified_twenty_goal_cohort": false
+  },
+  "closure": {
+    "exceptional_native_cleanup": true,
+    "original_native_cleanup_unresolved": true,
+    "later_exact_five_pids_absent": true,
+    "later_port8766_open": false,
+    "normal_ending": false
+  },
+  "save_file_identity": {
+    "before_files": 242,
+    "after_files": 242,
+    "added": [],
+    "deleted": [],
+    "changed": []
+  },
+  "cumulative_provider_accounting": {
+    "calls": 44,
+    "breakdown": {
+      "compatibility": 4,
+      "old_failed_native": 20,
+      "fresh_failed_native": 20
+    },
+    "usage": {
+      "input": 120346,
+      "output": 25097,
+      "cacheRead": 1714304,
+      "cacheWrite": 0,
+      "reasoning": 16193,
+      "totalTokens": 1859747
+    },
+    "configured_base_rate_estimate_usd": "0.049413224",
+    "reasoning_already_within_output": true,
+    "invoice_total": "unknown",
+    "approved_max_calls": 44,
+    "approved_max_usd": "10.00",
+    "consumed_conservative_reservation_usd": "9.4437376",
+    "further_calls_authorized": false
+  },
+  "private_evidence_sha256": {
+    ".runtime/campaigns/generic-host-001/driver-original.jsonl": "861f0c00c86dfec994f4cab8340d1429df005bd98ff2fe41b901c6b524d1e675",
+    ".runtime/missions/generic-host-001/mission.sqlite3": "02a6cdea8b5a654e23892feef6a4be013a2ce3c3f321761b6bd77d22b775305c",
+    ".runtime/missions/generic-host-001/evidence/evidence.json": "a90681f2bc6ecd38e7dfb307a46f74866829d4d92017baa712bdb70c1b7ef147",
+    ".runtime/campaigns/generic-host-001/frozen/evaluation-profile.md": "fea77098f8969374f515ea3b7063eb7a0704381c69f56ac4ac4e2bcbb95edcb3",
+    ".runtime/campaigns/generic-host-001/frozen/supervise.py": "7fd64fc03aa405209b1be068db8d7bc39def5fb21cea1a82ad78a030f0547e49",
+    ".runtime/campaigns/generic-host-001/preparation/actual-freeze.json": "2f2969d329b5dffb448f0bd3dd911653aa5ae36796d66b0edfe598659923ce4a",
+    ".runtime/campaigns/generic-host-001/preparation/supervisor-receipt.json": "e4396f5b52a1e5c1977aa1bf0970362898ef353e8f97d5aec123d68ea787b618",
+    ".runtime/campaigns/generic-host-001/preparation/driver-report.json": "8566718933d9cada7b8abcca7f14918fbcd153fa924aaf0aa9cabcaffc422911",
+    ".runtime/campaigns/generic-host-001/preparation/post-controller-closure.json": "1090ee3b2220b47e46170f12c314eb2aede4693e82d0a884854595c1f60ef9c0",
+    ".runtime/campaigns/generic-host-001/preparation/final-os-closure.json": "67736f23df3c3daf15a27af4a40613b1ea0892458807058daadf013852d08967",
+    ".runtime/campaigns/generic-host-001/preparation/pre-run-save-manifest.json": "2ea6bd1ca16fd4acd669762b1539712e66ceba51f2aa81663af5c91c52fc95b5",
+    ".runtime/campaigns/generic-host-001/preparation/post-run-save-manifest.json": "5e025e71ada22302a35fd7e772522f9e758e8d6707aaf20c69b58e0fe473a039"
+  },
+  "limits": [
+    "No matched control or isolated harness/model causal ranking",
+    "Provider timings are not inference clocks or useful visible-effect cadence",
+    "No physical display timing, billed provider cost or complete all-role cost/active-effort total",
+    "Last unforwarded response intent is not inferred",
+    "Source/full CI, real native outcome and later process absence are separate evidence lanes"
+  ]
+}
