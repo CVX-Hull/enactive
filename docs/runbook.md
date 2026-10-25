@@ -650,6 +650,10 @@ passed basic API compatibility and failed useful play/normal ending. Its failure
 does not restore a Codex gameplay path. Any fresh provider/native check needs its
 own prospective purpose, source, cumulative spending/execution limits and ending
 reserve; source fixtures cannot qualify graphical outcomes or #145 readiness.
+The [fresh generic-host qualification](acceptance/2026-10-25-generic-host-qualification.md)
+completed identity adoption but failed useful play and normal ending. All44 calls
+in that allocation are consumed; another paid/live check needs a fresh concrete
+allocation. The generic-only host remains mandatory.
 
 For a separately admitted adviser, freeze its actual active stdin prompt,
 current source, mission, actor, role-specific generic-host configuration,
