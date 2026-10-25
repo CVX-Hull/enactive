@@ -107,9 +107,9 @@ startup failure, repaired and verified in [public workflow acceptance](acceptanc
 Required checks must pass before integration. Other interpreter/host combinations
 require their own validation before a support claim.
 
-### Install the optional Pi player host
+### Install the generic gameplay host
 
-The separate [host package](../tools/player_host/package.json) pins Pi agent-core,
+The mandatory [gameplay host package](../tools/player_host/package.json) pins Pi agent-core,
 AI and MCP to 1.4.0 with transitive integrity in its own npm lock. It does not use
 the coding-agent application's shell/file tools, personal configuration or resource
 discovery. Install only inside this project, without package lifecycle scripts:
@@ -134,9 +134,12 @@ environment. The Pi host refuses those ambient configuration values rather than
 silently applying them. Clear them only for the dedicated child invocation if
 needed; do not change the operator's global profile or print their values.
 
-This is bounded offline host support. Live model/image understanding, native play,
-whole-player speed and normal lifecycle require separate frozen qualification under
-[#236](https://github.com/CVX-Hull/enactive/issues/236). Frozen preparation and
+Every campaign player uses this generic host. Basic live image/tool/history
+compatibility is scoped in the [failed configuration pilot](acceptance/2026-10-25-pi-configuration-pilot.md);
+useful native play, whole-player speed and normal lifecycle remain unqualified
+for that configuration. Mandatory host activation and any fresh finite qualification
+are tracked under [#240](https://github.com/CVX-Hull/enactive/issues/240), independently
+of model selection and campaign readiness. Frozen preparation and
 supported lifecycle are in the [runbook](runbook.md#bounded-player-host-activation).
 
 The current source uses native6/mission11/ledger12/archive5 with procedure/3,
@@ -148,7 +151,8 @@ runtime state; old libraries are not current-contract inputs.
 
 ## Configure the structured player tools
 
-After installing the lock, inspect then write only this trusted checkout's MCP table:
+The generic player reads its explicit frozen MCP table directly. For the
+engineering Codex tools, inspect then write only this trusted checkout's MCP table:
 
 ```sh
 .venv/bin/python -m tools.configure_player_tools

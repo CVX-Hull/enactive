@@ -117,13 +117,16 @@ class CampaignPlayerTests(unittest.TestCase):
         (self.run / "frozen" / "player-host-configuration.json").write_text(json.dumps(self.configuration))
         (self.run / "frozen" / "original-player-prompt.txt").write_text("original frozen prompt\n")
         (self.run / "frozen" / "successor-player-brief.txt").write_text("generic frozen successor brief\n")
+        self.pi_configuration = dict(schema="pi-player-host/1", model=dict(
+            id="frozen-model", name="Offline fixture", api="openai-completions", provider="fixture",
+            baseUrl="https://fixture.invalid/v1", reasoning=False, input=["text", "image"],
+            cost=dict(input=0, output=0, cacheRead=0, cacheWrite=0), contextWindow=100000,
+            maxTokens=1024), api_key_env="OFFLINE_TEST_KEY", max_requests=20,
+            request_timeout_seconds=2)
+        self.context = "Frozen player guide, mission brief and complete current interface schemas.\n"
+        (self.run / "frozen" / "player-pi-configuration.json").write_text(json.dumps(self.pi_configuration))
+        (self.run / "frozen" / "pi-player-context.txt").write_text(self.context)
         return self.run
-
-    def prepare_pi(self):
-        run = self.make_run()
-        (run / "frozen" / "player-pi-configuration.json").write_text('{"schema":"pi-player-host/1"}')
-        (run / "frozen" / "pi-player-context.txt").write_text("Frozen guide, not ambient instructions.\n")
-        return run
 
     def invoke(self, *, statuses=None, collected=None, outcomes=None, run=None, **options):
         self.run = run or self.make_run()
@@ -180,17 +183,57 @@ class CampaignPlayerTests(unittest.TestCase):
                 self.client.collect.assert_not_called()
                 self.assertEqual(self.events[:4], [("status",), ("launch", 1234), ("communicate", 60.0), ("exit", 0)])
 
+    def test_single_host_can_report_a_normal_terminal_mission(self):
+        for phase in ("completed", "failed", "stopped"):
+            with self.subTest(phase=phase):
+                report = self.invoke(statuses=[status(), status(phase)], max_hosts=1)
+                self.assertEqual((report["outcome"], report["phase"], report["exit_code"]), ("terminal", phase, 0))
+                self.assertEqual(self.launch_count, 1)
+                self.assertEqual(len(report["hosts"]), 1)
+                self.client.collect.assert_not_called()
+
+    def test_single_host_refuses_nonterminal_continuation_before_handoff_collection(self):
+        for phase in ("handoff", "active", "paused"):
+            with self.subTest(phase=phase):
+                after = status(phase)
+                report = self.invoke(statuses=[status(), after], max_hosts=1)
+                self.assertEqual((report["outcome"], report["phase"], report["exit_code"]), ("incomplete", phase, 1))
+                self.assertIn("no successor", report["reason"])
+                self.assertEqual(self.launch_count, 1)
+                self.assertEqual(len(report["hosts"]), 1)
+                self.assertEqual(self.client.status.call_count, 2)
+                self.client.collect.assert_not_called()
+                self.client.submit.assert_not_called()
+                self.assertEqual(self.receipt("driver-original-status.json")["mission"], after)
+                for name in ("driver-handoff-issuance.json", "driver-successor-assignment.json",
+                        "driver-successor-admission-status.json", "driver-successor-argv.json",
+                        "driver-successor-process.json", "driver-successor-receipt.json"):
+                    self.assertEqual((self.run / "preparation" / name).read_text(), "")
+                self.assertEqual([event[0] for event in self.events],
+                    ["status", "launch", "communicate", "exit", "status"])
+
+    def test_invalid_host_limits_refuse_before_outputs_status_or_launch(self):
+        for max_hosts in (True, False, 0, 3, -1, 1.0, 2.0, "1", None):
+            with self.subTest(max_hosts=max_hosts):
+                run = self.make_run()
+                with patch.object(driver, "_DeadlineClient") as client, \
+                        patch.object(driver.subprocess, "Popen") as launch, \
+                        self.assertRaisesRegex(driver.DriverError, "max_hosts"):
+                    driver.run_campaign(root=self.root, run_dir=run, mission_id="mission",
+                        model="frozen-model", effort="low", timeout_seconds=60, max_hosts=max_hosts)
+                client.assert_not_called()
+                launch.assert_not_called()
+                self.assertEqual(list((run / "preparation").iterdir()), [])
+
     def test_one_fresh_successor_uses_only_frozen_brief_and_exact_assignment(self):
         report = self.invoke(statuses=[status(), status("handoff"), status("handoff"),
-            status("stopped", actor_id="successor", player_id="successor")], original_thread="old-thread")
+            status("stopped", actor_id="successor", player_id="successor")])
         self.assertEqual(report["exit_code"], 0)
         self.assertEqual(self.launch_count, 2)
         original, successor = self.processes
-        self.assertIn("resume", original.args)
-        self.assertEqual(original.args[original.args.index("resume") + 1], "old-thread")
+        self.assertNotIn("resume", original.args)
         self.assertNotIn("resume", successor.args)
-        location = (f"Frozen context directory: {self.run / 'frozen'}\n"
-            f"Focused current-schema index: {self.run / 'frozen' / 'interface' / 'index.json'}\n\n")
+        location = "Frozen player context and current MCP schemas are supplied by the host.\n\n"
         self.assertEqual(original.prompt, location + "original frozen prompt\n")
         generic, assignment = successor.prompt.split("\n\nMechanical player assignment:\n")
         self.assertEqual(generic, location + "generic frozen successor brief\n")
@@ -209,20 +252,12 @@ class CampaignPlayerTests(unittest.TestCase):
     def test_exact_argv_and_retained_receipts(self):
         self.invoke()
         args = self.processes[0].args
-        self.assertEqual(args, ["/opt/homebrew/bin/codex", "exec", "--json", "--ignore-user-config",
-            "--sandbox", "read-only", "-C", str(self.root), "-m", "frozen-model",
-            "-c", 'model_reasoning_effort="low"',
-            "-c", 'mcp_servers.enactive_player.command="/project/python"',
-            "-c", 'mcp_servers.enactive_player.args=["-m", "harness.player_mcp"]',
-            "-c", 'mcp_servers.enactive_player.cwd="/project"',
-            "-c", "mcp_servers.enactive_player.enabled=true",
-            "-c", "mcp_servers.enactive_player.required=true",
-            "-c", 'mcp_servers.enactive_player.enabled_tools=["enactive_context"]',
-            "-c", 'mcp_servers.enactive_player.default_tools_approval_mode="approve"',
-            "-c", "mcp_servers.enactive_player.startup_timeout_sec=10",
-            "-c", "mcp_servers.enactive_player.tool_timeout_sec=60",
-            "-c", "mcp_servers.enactive_player.tools.enactive_context.output_token_limit=131072",
-            "-o", str(self.run / "driver-original-final.txt"), "-"])
+        self.assertEqual(args, ["node", str(self.root / "tools" / "player_host" / "run.mjs"),
+            "--config", str(self.run / "frozen" / "player-pi-configuration.json"),
+            "--mcp-config", str(self.run / "frozen" / "player-host-configuration.json"),
+            "--context", str(self.run / "frozen" / "pi-player-context.txt"),
+            "--model", "frozen-model", "--effort", "low", "--timeout-seconds", "60.0",
+            "-o", str(self.run / "driver-original-final.txt")])
         self.assertEqual(self.receipt("driver-original-argv.json"), args)
         process = self.receipt("driver-original-process.json")
         receipt = self.receipt("driver-original-receipt.json")
@@ -240,8 +275,8 @@ class CampaignPlayerTests(unittest.TestCase):
         self.assertTrue(self.processes[0].kwargs["text"])
 
     def test_pi_hosts_reuse_exit_before_successor_and_original_collection(self):
-        run = self.prepare_pi()
-        report = self.invoke(run=run, host="pi", node="/project/node",
+        run = self.make_run()
+        report = self.invoke(run=run, node="/project/node",
             statuses=[status(), status("handoff"), status("handoff"),
                 status("stopped", actor_id="successor", player_id="successor")])
         self.assertEqual(report["exit_code"], 0)
@@ -262,28 +297,66 @@ class CampaignPlayerTests(unittest.TestCase):
         self.client.submit.assert_not_called()
 
     def test_pi_host_failure_prevents_successor_and_does_not_claim_native_cleanup(self):
-        run = self.prepare_pi()
-        report = self.invoke(run=run, host="pi", outcomes=[1], statuses=[status()])
+        run = self.make_run()
+        report = self.invoke(run=run, outcomes=[1], statuses=[status()])
         self.assertEqual(self.launch_count, 1)
         self.assertEqual(report["exit_code"], 1)
         self.assertFalse(report["native_cleanup_claimed"])
         self.client.collect.assert_not_called()
         self.assertEqual([event[0] for event in self.events], ["status", "launch", "communicate", "exit"])
 
-    def test_pi_missing_explicit_context_and_resume_refuse_before_host_launch(self):
-        for missing in ("player-pi-configuration.json", "pi-player-context.txt"):
+    def test_all_frozen_inputs_are_read_before_output_reservation_and_launch(self):
+        run = self.make_run()
+        names = ("player-host-configuration.json", "player-pi-configuration.json", "pi-player-context.txt",
+            "original-player-prompt.txt", "successor-player-brief.txt")
+        contents = {}
+        read = driver._read
+
+        def frozen_read(path):
+            self.assertEqual(list((run / "preparation").iterdir()), [])
+            contents[path.name] = read(path)
+            return contents[path.name]
+
+        with patch.object(driver, "_read", side_effect=frozen_read) as reads:
+            self.invoke(run=run)
+        self.assertEqual([call.args[0] for call in reads.call_args_list],
+            [run / "frozen" / name for name in names])
+        self.assertEqual(json.loads(contents["player-host-configuration.json"]), self.configuration)
+        self.assertEqual(json.loads(contents["player-pi-configuration.json"]), self.pi_configuration)
+        self.assertEqual(contents["pi-player-context.txt"], self.context)
+
+    def test_missing_frozen_inputs_refuse_before_host_launch_or_output_reservation(self):
+        for missing in ("player-host-configuration.json", "player-pi-configuration.json", "pi-player-context.txt",
+                "original-player-prompt.txt", "successor-player-brief.txt"):
             with self.subTest(missing=missing):
-                run = self.prepare_pi()
+                run = self.make_run()
                 (run / "frozen" / missing).unlink()
                 with self.assertRaises(OSError), patch.object(driver.subprocess, "Popen") as launch:
                     driver.run_campaign(root=self.root, run_dir=run, mission_id="mission",
-                        model="frozen-model", effort="low", timeout_seconds=60, host="pi")
+                        model="frozen-model", effort="low", timeout_seconds=60)
                 launch.assert_not_called()
-                self.assertFalse((run / "preparation" / "driver-report.json").exists())
-        with self.assertRaises(driver.DriverError), patch.object(driver.subprocess, "Popen") as launch:
-            driver.run_campaign(root=self.root, run_dir=run, mission_id="mission",
-                model="frozen-model", effort="low", timeout_seconds=60, host="pi", original_thread="old")
-        launch.assert_not_called()
+                self.assertEqual(list((run / "preparation").iterdir()), [])
+
+    def test_invalid_mcp_configuration_refuses_before_output_reservation_or_launch(self):
+        for configuration in ("[]", "{", '{"command":"python","unknown":true}'):
+            with self.subTest(configuration=configuration):
+                run = self.make_run()
+                (run / "frozen" / "player-host-configuration.json").write_text(configuration)
+                with self.assertRaises(ValueError), patch.object(driver.subprocess, "Popen") as launch:
+                    driver.run_campaign(root=self.root, run_dir=run, mission_id="mission",
+                        model="frozen-model", effort="low", timeout_seconds=60)
+                launch.assert_not_called()
+                self.assertEqual(list((run / "preparation").iterdir()), [])
+
+    def test_removed_host_and_resume_api_arguments_refuse_before_launch(self):
+        run = self.make_run()
+        for removed in (dict(host="pi"), dict(host="codex"), dict(codex="codex"), dict(original_thread="old")):
+            with self.subTest(removed=removed), self.assertRaises(TypeError), \
+                    patch.object(driver.subprocess, "Popen") as launch:
+                driver.run_campaign(root=self.root, run_dir=run, mission_id="mission",
+                    model="frozen-model", effort="low", timeout_seconds=60, **removed)
+            launch.assert_not_called()
+        self.assertEqual(list((run / "preparation").iterdir()), [])
 
     def test_original_nonzero_never_reads_post_status_or_launches_successor(self):
         report = self.invoke(statuses=[status()], outcomes=[7])
@@ -563,7 +636,7 @@ class CampaignPlayerTests(unittest.TestCase):
             popen.assert_not_called()
             self.assertEqual(list((run / "preparation").iterdir()), [])
 
-    def test_cli_requires_frozen_launch_parameters_and_default_codex(self):
+    def test_cli_requires_frozen_launch_parameters_and_uses_generic_host(self):
         argv = ["campaign_player", "--root", str(self.root), "--run-dir", "/run", "--mission-id", "mission",
             "--model", "chosen", "--effort", "medium", "--timeout-seconds", "12"]
         with patch("sys.argv", argv), patch.object(driver, "run_campaign", return_value={"exit_code": 0}) as run, \
@@ -571,7 +644,66 @@ class CampaignPlayerTests(unittest.TestCase):
             driver.main()
         self.assertEqual(stopped.exception.code, 0)
         self.assertEqual(run.call_args.kwargs, dict(root=self.root, run_dir=Path("/run"), mission_id="mission",
-            model="chosen", effort="medium", timeout_seconds=12, original_thread=None, codex=driver.DEFAULT_CODEX, host="codex", node="node"))
+            model="chosen", effort="medium", timeout_seconds=12, node="node", max_hosts=2))
+
+    def test_cli_rejects_removed_host_and_resume_flags_without_dispatch(self):
+        base = ["campaign_player", "--root", str(self.root), "--run-dir", "/run", "--mission-id", "mission",
+            "--model", "chosen", "--effort", "medium", "--timeout-seconds", "12"]
+        for removed in (["--host", "pi"], ["--host", "codex"], ["--codex", "codex"],
+                ["--original-thread", "old-thread"]):
+            with self.subTest(removed=removed), patch("sys.argv", base + removed), \
+                    patch.object(driver, "run_campaign") as run, patch("sys.stderr", new_callable=io.StringIO), \
+                    self.assertRaises(SystemExit) as stopped:
+                driver.main()
+            self.assertEqual(stopped.exception.code, 2)
+            run.assert_not_called()
+
+    def test_cli_requires_model_effort_and_finite_timeout_arguments(self):
+        base = ["campaign_player", "--root", str(self.root), "--run-dir", "/run", "--mission-id", "mission",
+            "--model", "chosen", "--effort", "medium", "--timeout-seconds", "12"]
+        for flag in ("--model", "--effort", "--timeout-seconds"):
+            argv = base.copy()
+            index = argv.index(flag)
+            del argv[index:index + 2]
+            with self.subTest(flag=flag), patch("sys.argv", argv), patch.object(driver, "run_campaign") as run, \
+                    patch("sys.stderr", new_callable=io.StringIO), self.assertRaises(SystemExit) as stopped:
+                driver.main()
+            self.assertEqual(stopped.exception.code, 2)
+            run.assert_not_called()
+
+    def test_cli_forwards_explicit_host_limit(self):
+        base = ["campaign_player", "--root", str(self.root), "--run-dir", "/run", "--mission-id", "mission",
+            "--model", "chosen", "--effort", "medium", "--timeout-seconds", "12"]
+        for max_hosts in (1, 2):
+            with self.subTest(max_hosts=max_hosts):
+                with patch("sys.argv", base + ["--max-hosts", str(max_hosts)]), \
+                        patch.object(driver, "run_campaign", return_value={"exit_code": 0}) as run, \
+                        patch("builtins.print"), self.assertRaises(SystemExit) as stopped:
+                    driver.main()
+                self.assertEqual(stopped.exception.code, 0)
+                self.assertEqual(run.call_args.kwargs["max_hosts"], max_hosts)
+                self.assertIs(type(run.call_args.kwargs["max_hosts"]), int)
+
+    def test_cli_rejects_invalid_host_limits_without_dispatch(self):
+        base = ["campaign_player", "--root", str(self.root), "--run-dir", "/run", "--mission-id", "mission",
+            "--model", "chosen", "--effort", "medium", "--timeout-seconds", "12"]
+        for max_hosts in ("0", "3", "-1", "1.0", "true"):
+            with self.subTest(max_hosts=max_hosts):
+                with patch("sys.argv", base + ["--max-hosts", max_hosts]), \
+                        patch.object(driver, "run_campaign") as run, patch("sys.stderr", new_callable=io.StringIO), \
+                        self.assertRaises(SystemExit) as stopped:
+                    driver.main()
+                self.assertEqual(stopped.exception.code, 2)
+                run.assert_not_called()
+
+    def test_cli_preserves_explicit_node_executable(self):
+        argv = ["campaign_player", "--root", str(self.root), "--run-dir", "/run", "--mission-id", "mission",
+            "--model", "chosen", "--effort", "medium", "--timeout-seconds", "12", "--node", "/project/node"]
+        with patch("sys.argv", argv), patch.object(driver, "run_campaign", return_value={"exit_code": 0}) as run, \
+                patch("builtins.print"), self.assertRaises(SystemExit) as stopped:
+            driver.main()
+        self.assertEqual(stopped.exception.code, 0)
+        self.assertEqual(run.call_args.kwargs["node"], "/project/node")
 
 
 if __name__ == "__main__":

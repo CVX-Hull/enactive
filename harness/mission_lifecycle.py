@@ -399,7 +399,7 @@ class RegisteredLifecycle:
             return self._readmit(work, phase)
         self.guard(work, phase)
         self._binding_request(work, phase.checkpoint)
-        if data["identity_claim_ids"]:
+        if data["identity_claim_ids"] or phase.operation in ("create", "load") and phase.identity_screen is not None:
             return self._adopt(work, phase)
         if phase.operation == "save" and phase.stage == "save_start":
             return self._save(work, phase)
@@ -976,19 +976,61 @@ class RegisteredLifecycle:
             "source_ids": list(dict.fromkeys([proposal.before.observation_id, feedback.after.observation_id, checkpoint.observation_id])),
             "phase": self.receipt(phase, "awaiting_identity"), "grants_authority": False}
 
+    def _adoption_refusal(self, work: _Work, phase: NormalPhase, reason: str) -> tuple[str, dict]:
+        """Retain a correctable selection only after proving healthy ownership."""
+        r = self.runtime
+        self.guard(work, phase)
+        r._check_lease()
+        if r._lease.operation != "lifecycle":
+            raise ControlError("Adoption refusal requires its exact lifecycle lease")
+        live = r.controller.check_mission_refusal(r._lease, r._lease.pause_generation, command_work=0)
+        current, _ = r._store.inspect_current_boundary(**r._clocks())
+        r._capture_custody(r._store.observation(phase.checkpoint), live)
+        if (current != phase.checkpoint or not same_native_state(live, r._store.observation(phase.checkpoint))
+                or r.controller._frame_sha256(live) != phase.checkpoint.frame_sha256):
+            raise EvidenceError("Adoption refusal lost its exact current checkpoint or native pixels")
+        r._deadline(work, phase.checkpoint)
+        ledger = r._ledger.snapshot(now=r._wall())
+        counts = r._ledger.measured_counts()["primitives"]
+        if any(counts["by_state"].get(state, 0) for state in ("prepared", "published")):
+            raise LedgerError("Unsettled input cannot preserve an adoption refusal")
+        if (ledger["remaining_inputs"] <= r._admission.cleanup_reserve.inputs
+                or counts["charged"] >= r._admission.limits.primitive_mappings
+                or r._game_cost is not None and r._game_cost >= r._admission.limits.game_seconds):
+            raise BudgetError("Adoption refusal cannot bypass exhausted mission limits")
+        root = r._ledger.request(phase.root_id)
+        if r._ledger._phase_primitive_count(phase.root_id) >= root["request"]["limits"]["primitives"]:
+            raise BudgetError("Original lifecycle phase primitive limit exhausted")
+        r._capacity(frames=2, byte_count=2 * MAX_FRAME_BYTES)
+        r._store.preflight_retention()
+        r._check_cancelled(work)
+        stage = phase.stage if phase.stage in ("awaiting_identity", "awaiting_adoption") else "awaiting_control"
+        return "blocked", {"reason": reason + " No input was sent; the original phase and limits remain. "
+            "Submit a NEW explicit request after correcting the selection.",
+            "source_ids": [phase.checkpoint.observation_id],
+            "phase": self.receipt(phase, stage), "grants_authority": False}
+
     def _adopt(self, work: _Work, phase: NormalPhase) -> tuple[str, dict]:
         r, data = self.runtime, work.request
-        if (phase.stage != "awaiting_adoption" or phase.first_normal is None or phase.transition_request is None
+        if phase.stage != "awaiting_adoption":
+            return self._adoption_refusal(work, phase,
+                "Normal adoption needs completed owned transition and visible identity inspection/return. "
+                "If the identity screen is open, explicitly dismiss it with enactive_skill under the same lifecycle root; "
+                "then select the retained world and character identity Claims for adoption.")
+        if (phase.first_normal is None or phase.transition_request is None
                 or phase.identity_inspect is None or phase.identity_screen is None
                 or phase.checkpoint.boundary_kind != "normal_play"):
             raise ControlError("Normal adoption needs completed owned transition and visible identity inspection/return")
         claims = {row["entry"]["id"]: row["entry"] for row in r._ledger.memory_records("claim")}
         selected = [claims.get(identity) for identity in data["identity_claim_ids"]]
         if len(selected) != 2 or any(entry is None for entry in selected):
-            raise ContractError("Adoption requires the exact two retained identity Claims")
+            return self._adoption_refusal(work, phase,
+                "Adoption requires exactly two retained identity Claims: one world and one character. "
+                "Select their exact Claim IDs; unknown or incomplete selections cannot be adopted.")
         subjects = {entry["key"]["subject"]: entry["id"] for entry in selected}
         if set(subjects) != {"world", "character"}:
-            raise ContractError("Adoption identity subjects must be world and character")
+            return self._adoption_refusal(work, phase,
+                "Adoption identity subjects must be world and character. Select one retained identity Claim for each.")
         sessions = []
         for ref in r._store.historical_references:
             if ref.boundary_kind == "normal_play" and ref.session not in sessions:

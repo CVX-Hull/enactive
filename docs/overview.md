@@ -13,17 +13,23 @@ and retain control. Cataclysm: Dark Days Ahead is the first actual integration;
 other games are not yet qualified. The [charter](charter.md) owns the game-family
 constraint, purpose and principles.
 
-A dedicated active Codex player chooses plans, interprets visible scenes and uses
-memory. One local mission writer executes its requests through the native game.
+A designated model in the generic Pi gameplay host chooses plans, interprets
+visible scenes and uses memory. One local mission writer executes its requests through the native game.
 The engineering lead maintains the project and verifies outcomes; routine play
 must not depend on lead tactics, keys or memory curation. This is not yet an
 accepted unattended seven-day survival service.
 
-An optional [Pi host](components/player-interface.md) uses that same player/MCP
-boundary with explicit tools/context and timestamped provider events. Its current
-qualification is offline request construction and process control; actual Pi-model
-play, image understanding and speed remain unqualified. Codex remains the existing
-gameplay baseline.
+The [generic gameplay host](components/player-interface.md) is mandatory and uses
+pinned Pi core/MCP libraries with explicit tools, context, provider route and
+timestamped events. The campaign driver has one execution path; choosing a model
+is a separate decision. Engineering Codex owns development and verification.
+Current host evidence includes offline request/process control and basic
+image/tool continuation with one explicit DeepInfra configuration. Its first
+bounded native pilot failed before useful ordinary play and normal ending;
+gameplay quality and speed remain unqualified. The
+[pilot report](acceptance/2026-10-25-pi-configuration-pilot.md) separates model errors
+from a runtime recovery defect. That failed model/configuration does not cancel
+the required host migration.
 
 Bounded independent play has demonstrated supplies/travel, procedure revision/reuse
 and limited supported advice adoption. Complete independent seven-day survival,
@@ -132,7 +138,8 @@ own delivery scope; the public Project owns priorities and execution status.
 The [discovery-and-learning brief](changes/057-discovery-learning-campaign.md)
 explains the integrated design and links earlier research. Broader training,
 model comparisons, paid providers and causal efficacy studies are separate choices.
-No paid provider is configured.
+One explicitly approved bounded DeepInfra comparison is closed with a negative
+selection decision; its project-local configuration is not a default gameplay service.
 
 Prefer existing engine/platform capabilities and maintained tools when they advance
 the overall objective. Useful long-term accelerators can justify investment;

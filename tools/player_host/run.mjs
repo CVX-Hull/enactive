@@ -55,8 +55,8 @@ try {
   const remaining = seconds - (performance.now() - started) / 1000;
   if (remaining <= 0) throw new HostError('host-timeout');
   const result = await runHost({configuration:JSON.parse(route), mcpConfig:JSON.parse(mcp), context, prompt, model:args['--model'], effort:args['--effort'], timeoutSeconds:remaining, signal:controller.signal, onEvent:output});
-  // campaign_player owns exclusive reservation of this exact final path. Like
-  // its Codex subprocess, this runner writes the already reserved file.
+  // campaign_player owns exclusive reservation of this exact final path;
+  // this runner writes the already reserved file.
   if (result.ok) await writeFile(args['-o'], result.finalText + '\n', {encoding:'utf8', signal:controller.signal});
   process.exitCode = result.ok ? 0 : 1;
 } catch (error) {

@@ -7,7 +7,8 @@ status: active
 # Enactive
 
 A local harness for real **Cataclysm: Dark Days Ahead** with a normal graphical
-game window and browser spectator console. Codex chooses goals and interprets
+game window and browser spectator console. A designated model in the generic
+Pi gameplay host chooses goals and interprets
 screens; the harness supplies ordinary physical input, optional semantic skills,
 retained observations and bounded movement.
 Designs must apply across **CDDA-class survival/roguelike games**; CDDA is the first
@@ -16,7 +17,8 @@ must remain separate from shared player, memory and learning responsibilities.
 The native integration has a matching local build in the isolated project app;
 graphical evidence is scoped to its tested boundaries. [Architecture](docs/architecture.md) separates
 implemented contracts from the remaining integration limits.
-General survival planning requires an active Codex player. An unattended survival
+General survival planning requires an admitted player with an explicit frozen
+model/provider configuration. An unattended survival
 service is not implemented.
 
 **Start with the [project overview](docs/overview.md)** for what works, limitations,
