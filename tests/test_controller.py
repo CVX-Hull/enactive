@@ -16,6 +16,8 @@ import unittest
 from unittest.mock import patch
 from types import SimpleNamespace
 
+import pytest
+
 from harness.controller import Controller, ControlError, atomic_json, read_json, validate_state, validate_control_request, validate_control_response
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import CapacityError, EvidenceError
@@ -1443,6 +1445,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertIsNone(self.controller.status()["mission_lease"])
             self.assertEqual([r["kind"] for r in fake.delivered], ["resume"])
 
+    @pytest.mark.assurance_freshness
     def test_nonimage_mission_resume_preserves_original_capture_across_render_churn(self):
         with FakeBridge(self.controller) as fake:
             self.controller.execute("observe")
@@ -2012,6 +2015,7 @@ c._exchange("action", 15, generation=c.pause_generation, action="UP")
             self.assertIsNone(self.controller.status()["mission_lease"])
             self.assertEqual(self.run_action(lease, action="UP", **self.expect())["status"], "controller_error")
 
+    @pytest.mark.assurance_freshness
     def test_leased_preflight_rejects_changed_session_revision_or_boundary(self):
         for change in ("session", "revision", "menu", "future"):
             with self.subTest(change=change), FakeBridge(self.controller) as fake:

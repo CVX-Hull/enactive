@@ -44,6 +44,7 @@ actual timing and menu-only cleanup do not qualify the player or full campaign.
 | [Useful-learning006](acceptance/2026-10-25-useful-play-readiness.md) | Grounded procedure revision, fresh memory/advice use and fast local program effects; incomplete ending and rejected whole-player readiness |
 | [Native capture boundary](acceptance/2026-10-22-native-capture-preconditions.md) and [local refusal](acceptance/2026-10-22-native-local-refusal.md) | Scoped ordinary input/lifecycle/refusal evidence; wider conditions remain unqualified |
 | [Architecture/governance assessment](acceptance/2026-10-24-architecture-governance-audit.md) | Artifact coverage, findings/dispositions and failed024 context; no new gameplay acceptance |
+| [Verification pilots](acceptance/2026-10-25-verification-pilots.md) | Small assurance trace; measured impact-selector misses and default-backend incompatibility; CI routing unchanged |
 
 The [acceptance directory](acceptance/) retains other successes, intermediate
 failures and their costs. Original unknown acknowledgments remain distinct from

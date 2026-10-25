@@ -93,7 +93,19 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         elif kind != "observe":
             data["intent"] = intent
         result, _ = self.player.call("enactive_" + kind, data)
+        return self.collected_operation(result, raw["request_id"])
+
+    def collected_operation(self, result, identity):
+        # The initial wait is a client convenience, not a settlement guarantee
+        # or a latency oracle. Collect the original once through the real SDK's
+        # bounded polling contract; never submit another input to finish it.
         self.assertEqual(result["transport"], "delivered", result)
+        self.assertEqual(result["operation_id"], identity, result)
+        if not result["settled"]:
+            original = dict(mission_id=self.a.mission_id, operation_id=identity)
+            result, _ = self.player.call("enactive_result", dict(**original, wait_seconds=15))
+            self.assertEqual(result["transport"], "delivered", result)
+            self.assertEqual(result["operation_id"], identity, result)
         self.assertTrue(result["settled"], result)
         return result["response"]["operation"]
 
@@ -111,11 +123,45 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         result, _ = self.player.call("enactive_remember", dict(snapshot_id=selected["snapshot_id"],
             request_id=f"remember-{identity}", wait_seconds=3,
             intent=dict(entry_type="claim", entry=entry)))
-        self.assertEqual(result["transport"], "delivered", result)
-        self.assertTrue(result["settled"], result)
-        operation = result["response"]["operation"]
+        operation = self.collected_operation(result, f"remember-{identity}")
         self.assertEqual(operation["state"], "completed", operation)
         return operation["result"]["entry"]["id"]
+
+    def test_pending_submission_collects_original_without_resubmission(self):
+        self.ready()
+        entered, release = threading.Event(), threading.Event()
+        self.addCleanup(release.set)
+        execute, call = self.runtime._execute_work, self.player.call
+        calls = []
+
+        def blocked(work, **kwargs):
+            entered.set()
+            if not release.wait(10):
+                raise AssertionError("Fixture writer was not released by original collection")
+            return execute(work, **kwargs)
+
+        def controlled(name, arguments):
+            calls.append((name, deepcopy(arguments)))
+            if name == "enactive_observe":
+                result = call(name, dict(arguments, wait_seconds=0))
+                self.assertTrue(entered.wait(5), "Fixture writer did not start")
+                self.assertFalse(result[0]["settled"], result[0])
+                return result
+            if name == "enactive_result":
+                release.set()
+            return call(name, arguments)
+
+        try:
+            with patch.object(self.runtime, "_execute_work", side_effect=blocked), \
+                    patch.object(self.player, "call", side_effect=controlled):
+                self.observe("pending-original")
+        finally:
+            release.set()
+        submitted = [arguments for name, arguments in calls if name == "enactive_observe"]
+        collected = [arguments for name, arguments in calls if name == "enactive_result"]
+        self.assertEqual(len(submitted), 1)
+        self.assertEqual(collected, [dict(mission_id=self.a.mission_id,
+            operation_id="pending-original", wait_seconds=15)])
 
     def test_invalid_confirmation_label_is_local_and_correctable_in_same_phase(self):
         self.ready()

@@ -72,6 +72,91 @@ remains visible. The viewer command remains a separate Node check. Native build
 and real gameplay are outside these profiles. Exact commands and worker settings
 belong in the runner, and hosted qualification requires actual candidate results.
 
+## Advisory assurance trace pilot
+
+Three registered pytest markers link a small source-test sample to existing
+[C-RUNTIME](controls.md#c-runtime--live-authority-and-input-guards-runtime)
+obligations. [C-PORTABLE](controls.md#c-portable--portable-regression-lane-automatic)
+remains the regression executor. These markers support review navigation and
+opt-in selection; they do not change production CI routing or define whole-source
+coverage. The table follows risk → invariant → control → verification marker.
+
+| Product risk | Invariant and parent contract | Control → marker |
+| --- | --- | --- |
+| Context projection erases authored evidence or mutates retained detail | Project only known binding slots; preserve authored values and isolate copies. [Player interface](components/player-interface.md#context-and-failure-boundaries). | C-RUNTIME → `assurance_context` |
+| Invalid durable support or lost evidence revives an old possession claim | Reject forward/cyclic dependencies; unavailable newest evidence stays unknown after SQLite reopen. [Memory/learning](components/memory-learning.md#failure-bounds-and-ownership), [memory contract](protocol.md#ordinary-discovery-and-procedure-data). | C-RUNTIME → `assurance_memory` |
+| A refreshed render retargets input, or changed authority permits dispatch | Keep the original non-image capture; reject changed session, revision or boundary at preflight. [Native control](components/native-control.md#internal-responsibilities), [ownership contract](protocol.md#controller-run-ownership). | C-RUNTIME → `assurance_freshness` |
+
+The six existing cases retain their original assertions. Context cases use
+synthetic records and a controlled client; memory cases exercise real SQLite and
+retained files with synthetic observations; controller cases use a fake native
+bridge. These assumptions bound the claim to those host-side contracts. Passing
+them establishes no actual-game outcome, loaded host schema, native capture or
+whole-repository semantic coverage. The component contracts own the detailed rules.
+
+Use pytest's registered metadata and strict marker validation directly:
+
+```sh
+.venv/bin/python -m pytest --markers
+.venv/bin/python -m pytest --strict-markers --collect-only -q tests/test_player_view.py tests/test_campaign_memory.py tests/test_controller.py -m 'assurance_context or assurance_memory or assurance_freshness'
+.venv/bin/python -m pytest --strict-markers -q tests/test_player_view.py tests/test_campaign_memory.py tests/test_controller.py -m 'assurance_context or assurance_memory or assurance_freshness'
+```
+
+Collection lists actual node identities; it does not prove an invariant was
+exercised. Review marker membership against assertions when these contracts or
+fixtures change under existing [C-REVIEW/C-MAINTENANCE](controls.md) ownership.
+
+For a machine-readable inventory of actual node identities, registered marker
+descriptions and known control references, use the opt-in adapter:
+
+```sh
+.venv/bin/python tools/testing_pilots.py trace --out .runtime/iterations/verification-pilots/trace
+```
+
+`trace.json` joins existing pytest metadata with the existing control registry.
+It does not infer semantic coverage or supply an independent test oracle. The
+maintainer owns marker membership; reassess on changed contracts/assertions and
+retire this glue if a maintained tool supplies the same useful navigation.
+
+## Advisory test-impact experiment
+
+[The research synthesis](research-engineering.md#risk-assurance-and-precise-test-selection--2026-10-25)
+separates assurance traceability from dependency selection. The opt-in
+[pilot recipe](../tools/testing_pilots.py) freezes a clean committed tree through
+Git archive. Its fixed cohort combines original Python, governance and compiled
+native-component tests with labelled module/re-export, subprocess and viewer
+wrappers. The actual Node viewer oracle runs through a supplemental pytest
+wrapper; this does not qualify real rendering or whole-repository selection.
+
+Install the [separate locked environment](setup.md), then run each backend as an
+independent trial with a fresh output directory:
+
+```sh
+.venv/bin/python tools/testing_pilots.py evaluate --python .runtime/tooling/verification-pilots-venv/bin/python --backend default --out .runtime/iterations/verification-pilots/default
+.venv/bin/python tools/testing_pilots.py evaluate --python .runtime/tooling/verification-pilots-venv/bin/python --backend ctrace --out .runtime/iterations/verification-pilots/ctrace
+```
+
+The recipe retains commands, environment, exact faults/expected targets, public
+pytest hook reports, plain/cold/warm costs, map size and per-fault results. It
+restores source, generated state and a pristine SQLite map at the same path before
+each independent fault. Ordinary execution must first confirm the expected
+test-call failure; setup/collection errors, skips and timeouts remain unqualified.
+An omitted confirmed failing target is a miss, even when nothing is selected.
+Do not credit unrelated failures or all-green agreement as detection recall.
+
+These are single, cohort-only measurements. Full-source instrumentation,
+dependency upgrades and actual gameplay remain outside their claim. Preserve
+backend failures without silently changing coverage mode or third-party code.
+Maintainer/lead reviews misses and total setup/execution/map-upkeep cost under
+existing C-REVIEW/C-MAINTENANCE; reassess on tool/dependency/contract changes or
+cost regressions and retire uneconomic glue. Production CI still uses its existing
+explicit scopes; any adoption needs a separate evidence-supported decision.
+
+The [2026-10-25 pilot assessment](acceptance/2026-10-25-verification-pilots.md)
+adopts the small assurance trace and defers testmon routing after observed misses.
+The CLI exits unsuccessfully on unsupported maps or unconfirmed cases even when
+other comparisons are valid; inspect the retained denominators and results.
+
 ## Review overlap by failure responsibility
 
 “No duplicate test IDs” means discovery found distinct identities. It says nothing
@@ -120,6 +205,13 @@ setup consume the deadline being tested, replace a concurrency guarantee with a
 sleep, or relax a deadline merely to hide contention under parallel execution.
 Real elapsed-time performance measurements need their declared host, load,
 cohort, conditions and retained failures; a fake-clock pass is not a latency result.
+
+An asynchronous SDK's initial wait is a convenience, not a settlement guarantee.
+Functional fixtures must collect the same original operation through its supported
+bounded API before asserting its terminal state; never resubmit input to finish
+it. Exercise an intentionally pending writer with causal synchronization. Keep
+explicit latency acceptance separate from fixture polling allowances, and retain
+real watchdog failures for diagnosis instead of increasing them without evidence.
 
 Review slow setup, repeated unchanged archive validation, excessive sleeps and
 repeated high-level fault matrices against the value they add. Measure the bounded

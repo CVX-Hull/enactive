@@ -15,6 +15,8 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
+import pytest
+
 from harness.gameplay.campaign_memory import CampaignMemory
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import CapacityError, EvidenceStore
@@ -200,6 +202,7 @@ class CampaignMemoryTests(unittest.TestCase):
         self.remember(self.assertion("incomparable", later, value={"quantity": 3, "state": None}))
         self.assertEqual({c["status"] for c in self.context()["claims"]}, {"disputed"})
 
+    @pytest.mark.assurance_memory
     def test_newest_loss_never_resurrects_old_stock_after_sqlite_reopen(self):
         old, new = self.source(30), self.source(31)
         self.remember(self.assertion("old", old))
@@ -258,6 +261,7 @@ class CampaignMemoryTests(unittest.TestCase):
         with self.assertRaises(ContractError):
             self.remember(self.assertion("c", ref, supersedes=["a"], supports=[{"sources": [], "claims": ["b"]}]), correction=["a"])
 
+    @pytest.mark.assurance_memory
     def test_durable_forward_or_cyclic_support_is_rejected_without_projection(self):
         ref = self.source()
         first = self.assertion("cycle-a", ref, supports=[{"sources": [], "claims": ["cycle-b"]}])

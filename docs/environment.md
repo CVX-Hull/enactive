@@ -23,6 +23,7 @@ this is not a process dashboard or attempt log.
 | `.runtime/missions/`, `.runtime/campaigns/` | Private ledgers, frames, host traces, frozen admissions and evidence. Closing a host or removing an active world does not erase a failure or qualify a donor. |
 | `.runtime/save-retirement/` and per-campaign `closed-evidence/` | Existing archives and adjacent manifests own exact member hashes and restoration instructions. Restoration still requires a new admission and ordinary Load. |
 | `.runtime/research/` | Owned experiments, including the executable-policy spike environment. Retain required evidence; remove superseded local tooling only after preservation. |
+| `.runtime/tooling/verification-pilots-venv/`, `.runtime/iterations/verification-pilots/` | Optional locked testmon environment and isolated source/map experiments. [Setup](setup.md) owns installation; [testing](testing.md#advisory-assurance-trace-pilot) owns use and limitations. Preserve result receipts before retiring generated copies; no real saves are included. |
 | `.codex/`, repository-local Git configuration/hooks | Reviewed project tool/permission configuration and public identity. [Operator permissions](operator-permissions.md) separates rule matching, host activation and gameplay authority. |
 
 Existing Python, Node, Xcode/Clang, uv and ffmpeg may be reused without modifying
