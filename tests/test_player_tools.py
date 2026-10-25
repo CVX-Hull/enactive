@@ -234,6 +234,28 @@ class SnapshotDetailTests(unittest.TestCase):
         client.submit.assert_not_called()
         client.collect.assert_not_called()
 
+    def test_certified_refusal_keeps_raw_proof_current_context_and_new_decision_guidance(self):
+        client = Mock()
+        client.status.return_value = dict(mission=dict(mission_id="current", current_source=None, phase="paused"))
+        player = PlayerTools(client)
+        envelope = dict(transport="delivered", settled=True, submission="not_admitted", operation_id="refused",
+            response=dict(status="rejected", reason="Choose current epoch", admission_refusal=dict(
+                schema="mission-refusal/1", request_sha256="raw-sdk-proof"),
+                input_owner_operation_id="distinct-busy-owner", mission=dict(mission_id="original")))
+        before = deepcopy(envelope)
+        result, image = player._finish(envelope)
+        self.assertEqual(result["response"]["admission_refusal"], envelope["response"]["admission_refusal"])
+        self.assertEqual(result["next_snapshot"]["mission"]["phase"], "paused")
+        self.assertIn("new corrected decision", result["next_step"])
+        self.assertNotIn("next_call", result)
+        self.assertNotIn("input_admission", result)
+        self.assertIsNone(image)
+        self.assertEqual(envelope, before)
+        client.collect.assert_not_called()
+        projected = decision_view("enactive_observe", result)
+        self.assertNotIn("admission_refusal", projected["response"])
+        self.assertEqual(projected["response"]["reason"], "Choose current epoch")
+
     def test_old_admission_with_explicit_new_menu_source_still_composes(self):
         from tests.test_mission_request_producer import bundle, lifecycle, snapshot
         admission = snapshot(phase="admitted", native_process=dict(last_sample=None))
@@ -476,6 +498,7 @@ class SDKTransportTests(unittest.TestCase):
             parameters = StdioServerParameters(command=sys.executable,
                 args=["-m", "tests.test_player_tools", "--stdio-fixture"], cwd=str(Path(__file__).resolve().parents[1]))
             async with Client(parameters) as client:
+                self.assertEqual(client.server_info.version, "5.4.0")
                 tools = await client.list_tools()
                 self.assertEqual({t.name for t in tools.tools}, {s.name for s in tool_specs()})
                 self.assertEqual(len(tools.tools), 21)

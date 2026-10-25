@@ -16,7 +16,7 @@ from urllib.request import HTTPRedirectHandler, ProxyHandler, Request, build_ope
 
 from .gameplay.contracts import MAX_JSON_BYTES, json_object
 from .gameplay.contracts import canonical
-from .gameplay.mission_contracts import MAX_REQUEST_BYTES, VERSION, validate_request
+from .gameplay.mission_contracts import MAX_REQUEST_BYTES, VERSION, validate_admission_refusal, validate_request
 from .gameplay.mission_requests import _source_binding
 from .gameplay.reflection import (
     MAX_COMMAND_BYTES, MAX_JOB_BYTES, MAX_PROPOSAL_BYTES, MAX_RESULT_BYTES,
@@ -253,6 +253,17 @@ class MissionClient:
             response = self._json("/api/mission", data=payload)
         except MissionClientError:
             return _envelope(None, operation_id, reason="Submission response unavailable; collect the original operation")
+        if "admission_refusal" in response:
+            try:
+                validate_admission_refusal(response["admission_refusal"], data)
+                if response.get("status") != "rejected" or response.get("operation") is not None:
+                    raise ValueError("Admission refusal conflicts with response")
+            except (ValueError, TypeError):
+                return _envelope(response, operation_id,
+                    reason="Admission refusal unavailable or mismatched; collect the original operation")
+            # This synchronous, authenticated response alone establishes refusal.
+            # The immutable stage remains a collection-only fence after restart.
+            return dict(_envelope(response, operation_id), submission="not_admitted", settled=True)
         if response.get("operation") is not None and not _matches(response["operation"], mission_id, operation_id):
             return _envelope(response, operation_id, reason="Original operation unavailable or mismatched")
         result = _envelope(response, operation_id)

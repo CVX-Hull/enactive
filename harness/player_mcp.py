@@ -16,8 +16,10 @@ from .gameplay.contracts import canonical
 from .gameplay.contracts import ContractError
 from .gameplay.reflection import MAX_REFLECTION_READ_WAIT_SECONDS
 from .mission_client import MissionClient
-from .player_tools import PlayerTools, UnsubmittedRequest
-from .player_view import decision_view
+from .player_tools import (
+    AdmissionRefusalPresentationError, PlayerTools, UnsubmittedRequest, admission_refusal_feedback,
+)
+from .player_view import decision_view, snapshot_view
 
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -58,11 +60,14 @@ def make_server(player: PlayerTools, *, advisory_idle_seconds: float = 0) -> Ser
 
     async def call_tool(context, params):
         collection = None
+        refusal = None
+        value = None
         try:
             arguments, collection = player.model_arguments(params.name, params.arguments or {})
             # The thread runs to its own finite transport deadline. Cancellation
             # never creates a new request ID or replays an admitted operation.
             value, png = await call_player(player, params.name, arguments, advisory_idle_seconds=advisory_idle_seconds)
+            refusal = admission_refusal_feedback(value)
             # A cancelled worker may still finish later. It cannot establish
             # presentation; only this synchronous response-building path can.
             value, png = player.present_image(params.name, value, png)
@@ -80,6 +85,19 @@ def make_server(player: PlayerTools, *, advisory_idle_seconds: float = 0) -> Ser
             return types.CallToolResult(is_error=True, content=[types.TextContent(type="text", text=canonical(value))])
         except Exception as exc:
             player.invalidate_image_presentation()
+            if isinstance(exc, AdmissionRefusalPresentationError):
+                refusal = exc.feedback
+            if refusal is not None:
+                feedback = dict(refusal, error="Admission refusal presentation failed")
+                try:
+                    current = value.get("next_snapshot") if isinstance(value, dict) else None
+                    if current is None:
+                        current, _ = await anyio.to_thread.run_sync(player.snapshot)
+                    feedback["next_snapshot"] = snapshot_view(current)
+                except Exception as snapshot_error:
+                    feedback["snapshot_error"] = str(snapshot_error)[:1024]
+                return types.CallToolResult(is_error=True,
+                    content=[types.TextContent(type="text", text=canonical(feedback))])
             # This is the outer invocation boundary: even an unexpected Python
             # formatting error after staging must retain the assigned identity.
             # Cancellation/BaseException still propagates without another call.
@@ -96,7 +114,7 @@ def make_server(player: PlayerTools, *, advisory_idle_seconds: float = 0) -> Ser
             player.invalidate_image_presentation()
             raise
 
-    server = Server("enactive-player", version="5.3.0",
+    server = Server("enactive-player", version="5.4.0",
         instructions="Use only your designated role and admitted mission. Choose gameplay intent, exact returned snapshot/source and finite execution limits. Snapshots and proof receipts are read-only: grants_authority=false is not a failed adoption or an execution refusal. Follow the actual result, next_needed_decision and active phase; the writer checks each request. Software assigns request IDs and bounded collection waits; do not supply request_id or wait_seconds. Pending/uncertain delivery requires original result collection, never resubmission. User Pause remains independent. An adviser uses only enactive_reflect_next/submit/source/result, computes only after a durable claim and submits candidate data without input or memory adoption. The player reads advice and owns adoption. Roles are procedural, not security isolation.",
         on_list_tools=list_tools, on_call_tool=call_tool,
         get_tool_input_schema=lambda name: player.model_specs[name].schema if name in player.model_specs else None)

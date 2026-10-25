@@ -172,6 +172,25 @@ class DecisionViewTests(unittest.TestCase):
                     response={"operation": {"result": result}}, next_snapshot=current))
                 self.assertEqual(view["next_snapshot"]["mission"]["progress"], progress)
 
+    def test_refusal_machine_proof_is_hidden_without_mutating_sdk_or_context(self):
+        original = dict(transport="delivered", submission="not_admitted", settled=True,
+            operation_id="refused-original", response=dict(status="rejected", reason="Wrong epoch",
+                admission_refusal=dict(schema="mission-refusal/1", request_sha256="private-digest")),
+            next_snapshot=dict(snapshot_id="current", mission=dict(mission_id="current-mission", phase="paused"),
+                               native={}, source=None), next_step="Choose a new decision")
+        before = deepcopy(original)
+        for tool in ("enactive_observe", "enactive_lifecycle", "enactive_result"):
+            view = decision_view(tool, original)
+            self.assertNotIn("admission_refusal", view["response"])
+            self.assertNotIn("private-digest", str(view))
+            self.assertEqual(view["response"]["reason"], "Wrong epoch")
+            self.assertEqual(view["next_snapshot"]["mission"]["phase"], "paused")
+            self.assertEqual(view["submission"], "not_admitted")
+        self.assertEqual(original, before)
+        no_snapshot = deepcopy(original)
+        no_snapshot.pop("next_snapshot")
+        self.assertNotIn("admission_refusal", decision_view("enactive_observe", no_snapshot)["response"])
+
     def test_equal_progress_without_operation_identity_is_retained(self):
         for identity in ({}, {"operation_id": None}):
             current = snapshot()

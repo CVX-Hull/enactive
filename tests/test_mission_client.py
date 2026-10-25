@@ -16,6 +16,7 @@ from urllib.parse import parse_qs, urlsplit
 
 from harness.gameplay.contracts import ContractError, MAX_JSON_BYTES
 from harness.gameplay.contracts import canonical
+from harness.gameplay.mission_contracts import make_admission_refusal
 from harness.mission_client import MissionClient, MissionClientError
 from tests.test_gameplay_evidence import png
 from tests.test_mission_contracts import admission, request
@@ -210,6 +211,75 @@ class MissionClientTests(unittest.TestCase):
         self.assertEqual(result["response"], rejected)
         self.assertIsNone(result["reason"])
         self.assertEqual(len(self.server.calls), 1)
+
+    def test_exact_refusal_settles_once_without_collection_and_retains_stage(self):
+        for value in (request(), dict(schema="mission/11", kind="start", request_id="start-refused",
+                                     admission=admission().to_dict())):
+            with self.subTest(kind=value["kind"]):
+                refused = dict(status="rejected", reason="Choose a current admitted operation",
+                               admission_refusal=make_admission_refusal(value))
+                self.server.callback = lambda handler, body: handler.reply(refused, code=409)
+                result = self.client.submit(value, wait_seconds=1)
+                self.assertEqual(result["transport"], "delivered")
+                self.assertEqual(result["submission"], "not_admitted")
+                self.assertTrue(result["settled"])
+                self.assertEqual(result["operation_id"], value["request_id"])
+                self.assertEqual(result["response"], refused)
+                stage = self.stage_path(value)
+                before = stage.stat()
+                self.assertEqual(stage.read_bytes(), canonical(value).encode())
+                mission = refused["admission_refusal"]["mission_id"]
+                self.server.callback = lambda handler, body: handler.reply(dict(status="rejected", reason="Missing"))
+                repeated = MissionClient(self.root).submit(value, wait_seconds=0)
+                self.assertEqual(repeated["transport"], "uncertain")
+                self.assertFalse(repeated["settled"])
+                self.assertNotIn("submission", repeated)
+                self.assertEqual(stage.stat().st_mtime_ns, before.st_mtime_ns)
+                self.assertEqual(self.server.calls[-1][3], dict(schema="mission/11", kind="result",
+                    mission_id=mission, operation_id=value["request_id"]))
+        self.assertEqual([call[3]["kind"] for call in self.server.calls], ["observe", "result", "start", "result"])
+        self.assertTrue(all(call[0] == "POST" and call[1] == "/api/mission" for call in self.server.calls))
+
+    def test_invalid_or_inconsistent_refusal_never_certifies_nondelivery(self):
+        changes = [dict(schema="mission-refusal/0"), dict(mission_id="other"), dict(request_id="other"),
+                   dict(request_sha256="0" * 64), dict(admitted=True), dict(grants_authority=True),
+                   dict(extra=False)]
+        cases = []
+        for change in changes:
+            cases.append(dict(status="rejected", admission_refusal={**make_admission_refusal(request()), **change}))
+        cases.extend((dict(status="rejected", admission_refusal=None),
+                      dict(status="accepted", admission_refusal=make_admission_refusal(request())),
+                      dict(status="rejected", admission_refusal=make_admission_refusal(request()),
+                           operation=operation(result=dict(done=True)))))
+        for index, response in enumerate(cases):
+            with self.subTest(index=index):
+                value = request(request_id=f"invalid-{index}")
+                if isinstance(response["admission_refusal"], dict):
+                    proof = response["admission_refusal"]
+                    if proof.get("request_id") == "request-1":
+                        proof["request_id"] = value["request_id"]
+                    if proof.get("request_sha256") != "0" * 64:
+                        proof["request_sha256"] = make_admission_refusal(value)["request_sha256"]
+                self.server.callback = lambda handler, body: handler.reply(response)
+                result = self.client.submit(value, wait_seconds=1)
+                self.assertEqual(result["transport"], "uncertain")
+                self.assertFalse(result["settled"])
+                self.assertNotIn("submission", result)
+                self.assertEqual(result["operation_id"], value["request_id"])
+                self.assertIn("collect", result["reason"])
+                self.assertTrue(self.stage_path(value).is_file())
+        self.assertEqual(len(self.server.calls), len(cases))
+
+    def test_collection_cannot_certify_even_an_exact_original_refusal(self):
+        value = request()
+        self.client._stage(value, canonical(value).encode())
+        response = dict(status="rejected", admission_refusal=make_admission_refusal(value))
+        self.server.callback = lambda handler, body: handler.reply(response)
+        result = MissionClient(self.root).submit(value, wait_seconds=0)
+        self.assertFalse(result["settled"])
+        self.assertEqual(result["transport"], "uncertain")
+        self.assertNotIn("submission", result)
+        self.assertEqual([call[3]["kind"] for call in self.server.calls], ["result"])
 
     def test_staging_failure_or_partial_file_never_dispatches(self):
         with patch("harness.mission_client.os.fsync", side_effect=OSError("sensitive details")):
