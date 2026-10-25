@@ -106,6 +106,52 @@ Collection lists actual node identities; it does not prove an invariant was
 exercised. Review marker membership against assertions when these contracts or
 fixtures change under existing [C-REVIEW/C-MAINTENANCE](controls.md) ownership.
 
+For a machine-readable inventory of actual node identities, registered marker
+descriptions and known control references, use the opt-in adapter:
+
+```sh
+.venv/bin/python tools/testing_pilots.py trace --out .runtime/iterations/verification-pilots/trace
+```
+
+`trace.json` joins existing pytest metadata with the existing control registry.
+It does not infer semantic coverage or supply an independent test oracle. The
+maintainer owns marker membership; reassess on changed contracts/assertions and
+retire this glue if a maintained tool supplies the same useful navigation.
+
+## Advisory test-impact experiment
+
+[The research synthesis](research-engineering.md#risk-assurance-and-precise-test-selection--2026-10-25)
+separates assurance traceability from dependency selection. The opt-in
+[pilot recipe](../tools/testing_pilots.py) freezes a clean committed tree through
+Git archive. Its fixed cohort combines original Python, governance and compiled
+native-component tests with labelled module/re-export, subprocess and viewer
+wrappers. The actual Node viewer oracle runs through a supplemental pytest
+wrapper; this does not qualify real rendering or whole-repository selection.
+
+Install the [separate locked environment](setup.md), then run each backend as an
+independent trial with a fresh output directory:
+
+```sh
+.venv/bin/python tools/testing_pilots.py evaluate --python .runtime/tooling/verification-pilots-venv/bin/python --backend default --out .runtime/iterations/verification-pilots/default
+.venv/bin/python tools/testing_pilots.py evaluate --python .runtime/tooling/verification-pilots-venv/bin/python --backend ctrace --out .runtime/iterations/verification-pilots/ctrace
+```
+
+The recipe retains commands, environment, exact faults/expected targets, public
+pytest hook reports, plain/cold/warm costs, map size and per-fault results. It
+restores source, generated state and a pristine SQLite map at the same path before
+each independent fault. Ordinary execution must first confirm the expected
+test-call failure; setup/collection errors, skips and timeouts remain unqualified.
+An omitted confirmed failing target is a miss, even when nothing is selected.
+Do not credit unrelated failures or all-green agreement as detection recall.
+
+These are single, cohort-only measurements. Full-source instrumentation,
+dependency upgrades and actual gameplay remain outside their claim. Preserve
+backend failures without silently changing coverage mode or third-party code.
+Maintainer/lead reviews misses and total setup/execution/map-upkeep cost under
+existing C-REVIEW/C-MAINTENANCE; reassess on tool/dependency/contract changes or
+cost regressions and retire uneconomic glue. Production CI still uses its existing
+explicit scopes; any adoption needs a separate evidence-supported decision.
+
 ## Review overlap by failure responsibility
 
 “No duplicate test IDs” means discovery found distinct identities. It says nothing

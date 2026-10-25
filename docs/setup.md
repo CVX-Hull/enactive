@@ -81,6 +81,19 @@ explains reuse, scope and limitations. Direct requirements and all transitive
 versions/hashes are in [requirements-dev.in](../requirements-dev.in) and
 [requirements-dev.lock](../requirements-dev.lock).
 
+The optional [verification pilots](testing.md#advisory-assurance-trace-pilot) use
+a separate environment so testmon's pytest plugin cannot alter normal checks:
+
+```sh
+UV_CACHE_DIR="$PWD/.cache/uv" UV_PYTHON_DOWNLOADS=never uv venv --python .venv/bin/python .runtime/tooling/verification-pilots-venv
+UV_CACHE_DIR="$PWD/.cache/uv" UV_PYTHON_DOWNLOADS=never uv pip install --no-config --default-index https://pypi.org/simple --python .runtime/tooling/verification-pilots-venv/bin/python --require-hashes -r requirements-pilots.lock
+```
+
+[requirements-pilots.in](../requirements-pilots.in) includes the development lock
+and pins only the optional measurement additions. Recompile its hashed lock after
+changing the development lock; do not install it into the ordinary `.venv`.
+Outputs belong under `.runtime/`; no live game or saved world is part of a pilot.
+
 For deliberate upgrades, review tool changelogs and regenerate the lock with the
 same project cache, then install and run the full lane including negative fixtures:
 

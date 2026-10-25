@@ -1,0 +1,4 @@
+# Optional #225 assurance/impact experiment. Never installed by normal CI.
+-r requirements-dev.lock
+pytest-testmon==2.2.0
+coverage==7.17.0
