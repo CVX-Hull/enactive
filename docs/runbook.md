@@ -459,6 +459,11 @@ separates implemented components from remaining independent-play acceptance.
    review and successful exact-candidate CI under the
    [profile policy](project-management.md#protected-ci-profiles), including full
    regression for broad source changes; this may follow the unchanged run.
+   Before admission, query GitHub for the selected candidate's current required
+   check status and retain the lookup time; use the existing CLI/API rather than
+   hand-copying a previous poll as a freeze-time fact. Pending development checks
+   remain explicit; adjudicate an applicable failed check before affected input.
+   This is setup work, not a player task or a per-action CI/approval round trip.
    Freeze the exact source commit,
    finite objective/scenario/limits/reserve,
    actor, native build and permission preflight before gameplay. The initial
