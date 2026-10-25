@@ -13,7 +13,7 @@ import threading
 import unittest
 from unittest.mock import patch
 
-from harness.mission_client import MissionClient
+from harness.mission_client import MissionClient, MissionClientError
 from harness.gameplay.contracts import ContractError
 from harness.gameplay.evidence import EvidenceError
 from harness.gameplay.mission_ledger import LedgerError
@@ -99,13 +99,12 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         # The initial wait is a client convenience, not a settlement guarantee
         # or a latency oracle. Collect the original once through the real SDK's
         # bounded polling contract; never submit another input to finish it.
-        self.assertEqual(result["transport"], "delivered", result)
         self.assertEqual(result["operation_id"], identity, result)
         if not result["settled"]:
             original = dict(mission_id=self.a.mission_id, operation_id=identity)
             result, _ = self.player.call("enactive_result", dict(**original, wait_seconds=15))
-            self.assertEqual(result["transport"], "delivered", result)
             self.assertEqual(result["operation_id"], identity, result)
+        self.assertEqual(result["transport"], "delivered", result)
         self.assertTrue(result["settled"], result)
         return result["response"]["operation"]
 
@@ -128,11 +127,25 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
         return operation["result"]["entry"]["id"]
 
     def test_pending_submission_collects_original_without_resubmission(self):
+        self.pending_original_collection(uncertain=False)
+
+    def test_uncertain_submission_collects_original_without_resubmission(self):
+        self.pending_original_collection(uncertain=True)
+
+    def pending_original_collection(self, *, uncertain):
         self.ready()
         entered, release = threading.Event(), threading.Event()
         self.addCleanup(release.set)
-        execute, call = self.runtime._execute_work, self.player.call
+        execute, call, json_call = self.runtime._execute_work, self.player.call, self.player.client._json
         calls = []
+
+        def reply(path, **kwargs):
+            response = json_call(path, **kwargs)
+            request = json.loads(kwargs["data"]) if kwargs.get("data") else {}
+            if uncertain and request.get("kind") == "observe":
+                # The real server accepted this original; only its reply is lost.
+                raise MissionClientError("Fixture lost accepted response")
+            return response
 
         def blocked(work, **kwargs):
             entered.set()
@@ -146,6 +159,7 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
                 result = call(name, dict(arguments, wait_seconds=0))
                 self.assertTrue(entered.wait(5), "Fixture writer did not start")
                 self.assertFalse(result[0]["settled"], result[0])
+                self.assertEqual(result[0]["transport"], "uncertain" if uncertain else "delivered")
                 return result
             if name == "enactive_result":
                 release.set()
@@ -153,7 +167,8 @@ class StructuredLifecycleTests(creation.MissionCreationFixture, unittest.TestCas
 
         try:
             with patch.object(self.runtime, "_execute_work", side_effect=blocked), \
-                    patch.object(self.player, "call", side_effect=controlled):
+                    patch.object(self.player, "call", side_effect=controlled), \
+                    patch.object(self.player.client, "_json", side_effect=reply):
                 self.observe("pending-original")
         finally:
             release.set()

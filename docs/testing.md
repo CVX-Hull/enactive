@@ -208,8 +208,10 @@ cohort, conditions and retained failures; a fake-clock pass is not a latency res
 
 An asynchronous SDK's initial wait is a convenience, not a settlement guarantee.
 Functional fixtures must collect the same original operation through its supported
-bounded API before asserting its terminal state; never resubmit input to finish
-it. Exercise an intentionally pending writer with causal synchronization. Keep
+bounded API before asserting its terminal state, including an uncertain initial
+transport response. Keep the original identity; never resubmit input to finish it.
+Require actual delivery and settlement of that original. Exercise an intentionally
+pending writer and a lost accepted reply with causal synchronization. Keep
 explicit latency acceptance separate from fixture polling allowances, and retain
 real watchdog failures for diagnosis instead of increasing them without evidence.
 
