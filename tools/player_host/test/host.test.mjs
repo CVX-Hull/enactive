@@ -6,6 +6,8 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { runHost, validateConfiguration, validateMcpConfiguration, INPUT_LIMIT_BYTES } from '../host.mjs';
 
+const realSetTimeout = globalThis.setTimeout;
+const realDelay = ms => new Promise(resolve=>realSetTimeout(resolve,ms));
 const python = process.env.ENACTIVE_TEST_PYTHON;
 const fixture = fileURLToPath(new URL('server.py', import.meta.url));
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
@@ -33,7 +35,11 @@ async function scenario(t, sequence, overrides = {}) {
   const options = {configuration:route(), mcpConfig, context:'Frozen player guide', prompt:'Offline mission', model:model.id, effort:'off', timeoutSeconds:10, env:{OFFLINE_TEST_KEY:'fixture-key', UNRELATED_HOST_SECRET:'must-not-inherit'}, fetch, onEvent:event=>events.push(event), ...overrides};
   if (overrides.fixtureStartupDelay !== undefined) mcpConfig.args.push(String(overrides.fixtureStartupDelay));
   if (overrides.enabledTools) mcpConfig.enabled_tools=overrides.enabledTools;
-  const result = await runHost(options);
+  if (overrides.fixtureToolTimeoutSeconds) mcpConfig.tool_timeout_sec=overrides.fixtureToolTimeoutSeconds;
+  const running = runHost(options);
+  try { await overrides.synchronize?.({log}); }
+  catch (error) { await running; throw error; }
+  const result = await running;
   let calls=[]; try { calls=(await readFile(log,'utf8')).trim().split('\n').filter(Boolean).map(JSON.parse); } catch {}
   const childPid = Number(await readFile(pid,'utf8'));
   assert.throws(()=>process.kill(childPid,0), {code:'ESRCH'}, 'owned MCP child must exit before settlement');
@@ -107,9 +113,34 @@ test('request deadline aborts actual provider stream',async t=>{
   const {result}=await scenario(t,[init=>new Promise((_,reject)=>init.signal.addEventListener('abort',()=>reject(new Error('aborted')),{once:true}))],{configuration});
   assert.equal(result.ok,false); assert.equal(result.reason,'request-timeout');
 });
-test('host deadline includes tool execution and owned child closure',async t=>{
-  const {result}=await scenario(t,[reply(null,[['mutate',{mode:'wait'}]])],{timeoutSeconds:1});
-  assert.equal(result.ok,false); assert.equal(result.reason,'host-timeout');
+test('host deadline interrupts an actually started tool and closes its child',async t=>{
+  // Real initialization cannot consume the controlled deadline. The outer
+  // Python watchdog and this real-timer poll still bound a broken fixture.
+  t.mock.timers.enable({apis:['setTimeout']});
+  const controller=new AbortController();
+  const {result,calls}=await scenario(t,[reply(null,[['mutate',{mode:'wait'}]])],{
+    timeoutSeconds:10,fixtureToolTimeoutSeconds:30,signal:controller.signal,
+    synchronize:async({log})=>{
+      let started=false;
+      try {
+        const deadline=Date.now()+10000;
+        while(Date.now()<deadline) {
+          let recorded=[];
+          try { recorded=(await readFile(log,'utf8')).trim().split('\n').filter(Boolean).map(JSON.parse); }
+          catch(error) { if(error.code!=='ENOENT') throw error; }
+          if(recorded.some(call=>call.tool==='mutate'&&call.phase==='start')) {started=true;break;}
+          await realDelay(20);
+        }
+        assert.ok(started,'fixture tool must start before advancing its host deadline');
+      } finally {
+        if(!started) controller.abort();
+        // Advance the host work/cleanup window before the 30s MCP tool wait.
+        t.mock.timers.tick(10000);
+      }
+    },
+  });
+  assert.equal(result.ok,false);assert.equal(result.reason,'host-timeout');
+  assert.deepEqual(calls.map(call=>[call.tool,call.phase]),[['mutate','start']]);
 });
 test('cancellation aborts provider and closes real child',async t=>{
   const controller=new AbortController();

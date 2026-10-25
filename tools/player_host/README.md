@@ -19,6 +19,9 @@ HTTP fixtures, and official Python MCP servers, including current production
 schema discovery. They make no inference calls and start no game. Reported sample
 timings include fixture process startup and cleanup; they do not measure model
 latency, gameplay competence or a hardware-independent performance threshold.
+The in-flight tool-deadline case uses a controlled Node timeout clock only after
+observing actual fixture tool start; startup/signal cases and outer watchdogs
+retain real time, and all cases retain actual child-closure assertions.
 
 The driver invokes:
 

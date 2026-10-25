@@ -1,12 +1,9 @@
 """Offline boundary fixture using the maintained Python MCP server."""
-import asyncio
 import json
 import os
 from pathlib import Path
 import sys
 import time
-from mcp.server.mcpserver import MCPServer
-from mcp.types import CallToolResult, ImageContent, TextContent
 
 # MCP 2.x deliberately diverts fd1 away from its wire. Keep an owned duplicate
 # solely to inject invalid bytes in the transport-error negative fixture.
@@ -16,6 +13,10 @@ PID = Path(sys.argv[2])
 PID.write_text(str(os.getpid()))
 if len(sys.argv) > 3:
     time.sleep(float(sys.argv[3]))
+# Publish owned process identity before third-party startup can consume a deadline.
+import asyncio
+from mcp.server.mcpserver import MCPServer
+from mcp.types import CallToolResult, ImageContent, TextContent
 server = MCPServer("offline-player-fixture", instructions="Use only the admitted fixture tools.")
 PNG = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII="
 

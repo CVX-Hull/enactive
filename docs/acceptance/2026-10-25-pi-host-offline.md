@@ -27,14 +27,15 @@ schemas and loads explicit context without coding-agent defaults or personal
 resources. The existing mission writer, schema, source bindings, memory, Pause
 and input authority are unchanged.
 
-The final focused command was:
+The focused integration command at candidate `b54d6c2` was:
 
 ```sh
 .venv/bin/python -m pytest -q tests/test_pi_player_host.py tests/test_campaign_player.py tests/test_host_status.py tests/test_ci.py
 ```
 
 It passed **65 Python cases and 206 subtests in 15.25 seconds**. One Python case
-executes the **30-case Node conformance suite**; do not count it as another
+executes the **30-case Node conformance suite**; after the fixture-only clock
+repair below, that wrapper passed again in 7.64 seconds. Do not count it as another
 independent model evaluation. Tests exercised actual Pi serialization and MCP
 clients with synthetic SSE, a loopback HTTP endpoint and official Python MCP
 fixture children. Current production MCP discovery compared exact nested schemas
@@ -94,7 +95,9 @@ responses is declared fixture data, not measured tokens or actual spend.
 Private raw event/call/PID receipts and the one-off measurement script remain in
 project `.runtime/pi-host235/`; the public JSON contains derived fixture receipts,
 not a claim that all private evidence is published. Earlier pre-review measurement
-directories remain distinct from this final receipt.
+directories remain distinct from this receipt. This cohort preceded the later
+fixture-only deadline synchronization repair; production host code is unchanged,
+and the cohort is not a post-repair startup/performance comparison.
 
 ## Failures and limits retained
 
@@ -116,6 +119,19 @@ but eight CLI cases stopped at sandbox loopback `EPERM`, before assertions. The
 same real fixtures passed after loopback permission was granted; no passing mock
 or weaker assertion replaced that failure. Review findings above remain part of
 the evidence rather than being erased by later passes.
+
+The first protected full PR run [40225983226](https://github.com/CVX-Hull/enactive/actions/runs/40225983226)
+failed at `b54d6c2`: 2,120 Python cases and 4,006 subtests passed, while the wrapper
+reported 29/30 Node cases. The one-second tool-deadline test could expire during
+heavy fixture imports before PID publication under CI load. Its earlier local pass
+also lacked proof that tool execution had started. The fixture now records PID
+before those imports. The tool-deadline test holds Node timeout timers during real
+initialization, observes actual `mutate-start` with a bounded real-timer poll, then
+advances host work/cleanup before the longer MCP tool timeout. It asserts no tool
+completion and actual child exit, retaining the independent real startup-timeout
+and signal cases. An outer real watchdog remains. Production timeouts were not
+changed. Targeted checks and independent causal-test review passed; the failed
+protected result remains failed and a new candidate requires fresh full CI.
 
 No game, native build, live provider call or credential retrieval occurred.
 The user's reported DeepInfra credential was not read or stored. The core has no
