@@ -15,6 +15,11 @@ saves or the engine to learn how to call tools. They are not a player knowledge
 base. A missing usable contract is an ergonomics defect to report, rather than a
 reason to read the entire repository during every game.
 
+A filesystem sandbox label does not establish which admitted service tools work.
+Use actual tool results and the frozen role: a read-only local filesystem can
+coexist with authorized MCP gameplay and memory effects. Never bypass an actual
+denial or stop solely because a successful tool ran from a read-only host.
+
 ## Calls and returned evidence
 
 - After admission, first call `enactive_snapshot` in this player context and use
@@ -26,6 +31,10 @@ reason to read the entire repository during every game.
   handle and valid finite limits. Select create/load from its returned menu.
   Source-free means no informing image is required; it does not mean an empty
   snapshot handle is accepted. Keep this entry point in initial player context.
+  The admitted scenario is a setup target, not an observed world/character fact.
+  An absent fresh name does not establish that creation is unsupported. Ground
+  screen claims in the actual view and explore ordinary alternatives before
+  declaring a capability gap; never select a different identity as a substitute.
 - `enactive_snapshot` gives a descriptive snapshot handle and the selected source
   image. Select those exact handles for a new intent. Software supplies mission,
   epoch, source bindings and stable child lineage. A snapshot never Resumes.

@@ -72,6 +72,13 @@ semantic judgment from mechanical SDK identities, staging, original collection
 and progressive detail. The player should decide intent, inspect relevant evidence
 and evaluate outcomes; software handles canonical metadata and provenance.
 
+The [useful-bootstrap trials](acceptance/2026-10-24-useful-bootstrap-trials.md)
+failed before fresh character creation. Their local settlement clocks and one
+independent menu-only normal ending do not qualify useful play. The current
+Luna/low configuration needs truthful evidence reading and organic discovery
+qualification before another full campaign; no memory-architecture conclusion
+follows from runs that never reached memory use.
+
 The [executable-routine substrate](components/memory-learning.md) lets
 the player author observation-conditioned JavaScript procedures over ordinary
 inputs through the same writer. Host bounds and automatic action/result joins

@@ -27,6 +27,11 @@ The [execution-first boundary](changes/064-execution-first-learning.md) connects
 #164/#177/#178 to the [offline local-execution measurement](acceptance/2026-10-24-execution-first-offline.md).
 These source improvements leave graphical, learning-benefit and campaign gates open.
 
+The [request boundary](changes/066-request-receipts.md) adds exact refusal handling
+and machine-only settlement clocks. Its [offline evidence](acceptance/2026-10-24-request-receipts-offline.md)
+is separate from the [failed useful-bootstrap trials](acceptance/2026-10-24-useful-bootstrap-trials.md):
+actual timing and menu-only cleanup do not qualify the player or full campaign.
+
 ## Decisive evidence
 
 | Evidence family | What it establishes; linked records own details and limits |
