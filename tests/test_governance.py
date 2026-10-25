@@ -15,17 +15,37 @@ from tools import governance
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def copy_source_files(root, names):
+    for name in sorted(names):
+        target = root / name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(ROOT / name, target)
+
+
 class GovernanceTests(unittest.TestCase):
     def setUp(self):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         self.root = Path(self.temp.name)
-        for name in ("docs", "harness", "native", "tests", "tools", "web", ".github", ".githooks", "schemas"):
-            shutil.copytree(ROOT / name, self.root / name,
-                            ignore=shutil.ignore_patterns("__pycache__"))
-        for name in ("AGENTS.md", "README.md", "pyproject.toml", "requirements-dev.in", "requirements-dev.lock", "package.json", "package-lock.json", ".puppeteerrc.cjs"):
-            shutil.copyfile(ROOT / name, self.root / name)
-        self.registry = json.loads((self.root / "docs/control-registry.json").read_text())
+        self.registry = json.loads((ROOT / "docs/control-registry.json").read_text())
+        # The checker reads these source forms and schemas; evidence needs only
+        # its referenced file, not the surrounding repository or media assets.
+        names = {
+            "docs/charter.md", "docs/engineering.md", "docs/protocol.md",
+            "schemas/control-registry.schema.json", "schemas/acceptance-manifest.schema.json",
+            "native/cdda_harness.cpp", "harness/controller.py", "harness/server.py",
+            "harness/__main__.py", "harness/gameplay/evidence.py", "web/app.js",
+        }
+        for control in self.registry["controls"]:
+            for record in (control, control["last_exercise"], control["maintenance_review"]):
+                if record is not None:
+                    names.update(reference.split("#", 1)[0] for reference in record["evidence"])
+        # CLI and fresh-clone tests still check every current curated manifest.
+        for manifest in (ROOT / "docs/acceptance").glob("*-manifest.json"):
+            names.add(str(manifest.relative_to(ROOT)))
+            data = json.loads(manifest.read_text())
+            names.update(data[field].split("#", 1)[0] for field in ("report", "upstream_pin"))
+        copy_source_files(self.root, names)
         # Tests control time independently of legitimate future maintenance updates.
         # Production records are validated by the CLI at the actual current date.
         for control in self.registry["controls"]:
@@ -310,6 +330,27 @@ class GovernanceTests(unittest.TestCase):
                      'out.member( "protocol", CURRENT_PROTOCOL )')
         self.assertIn("representation", "\n".join(governance.check_protocol(self.root)))
 
+    def test_manifest_does_not_require_local_media(self):
+        # The fixture deliberately has no .runtime tree; this is a fresh-clone contract.
+        self.assertFalse((self.root / ".runtime").exists())
+        self.assertEqual(governance.check_manifests(self.root), [])
+
+
+class ManifestTests(unittest.TestCase):
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp.cleanup)
+        self.root = Path(self.temp.name)
+        name = "docs/acceptance/2026-10-17-mvp-manifest.json"
+        manifest = json.loads((ROOT / name).read_text())
+        # Fault cases mutate one real manifest. The full corpus remains covered
+        # above, without revalidating unrelated manifests for every mutation.
+        copy_source_files(self.root, {
+            name, "schemas/acceptance-manifest.schema.json",
+            manifest["report"], manifest["upstream_pin"],
+        })
+        self.assertEqual(governance.check_manifests(self.root), [])
+
     def test_manifest_rejects_bad_provenance_hash_and_paths(self):
         path = self.root / "docs/acceptance/2026-10-17-mvp-manifest.json"
         original = json.loads(path.read_text())
@@ -326,11 +367,6 @@ class GovernanceTests(unittest.TestCase):
             data["artifacts"] = {artifact: next(iter(original["artifacts"].values()))}
             path.write_text(json.dumps(data))
             self.assertIn("artifact", "\n".join(governance.check_manifests(self.root)))
-
-    def test_manifest_does_not_require_local_media(self):
-        # The fixture deliberately has no .runtime tree; this is a fresh-clone contract.
-        self.assertFalse((self.root / ".runtime").exists())
-        self.assertEqual(governance.check_manifests(self.root), [])
 
     def test_still_frame_acceptance_needs_no_fabricated_video(self):
         path = self.root / "docs/acceptance/2026-10-17-mvp-manifest.json"

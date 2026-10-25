@@ -4,3 +4,7 @@ import-linter
 ruff
 markdown-it-py
 python-frontmatter
+
+# Existing unittest cases run through maintained process-based test tooling.
+pytest>=9
+pytest-xdist

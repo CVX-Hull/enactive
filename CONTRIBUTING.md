@@ -50,8 +50,9 @@ independent review and require the appropriate successful exact-candidate protec
 CI profile under [the delivery policy](docs/project-management.md#protected-ci-profiles).
 Broad source changes require full regression before merge; an existing valid hosted
 full result satisfies that lane without a duplicate local run. The default local
-`.venv/bin/python tools/check.py` remains full. Report editorial and main-smoke
-results with their narrower scope. Portable checks do not establish native build
+`.venv/bin/python tools/check.py` remains full. Use [the testing guide](docs/testing.md) to choose focused cases and review overlap.
+Report editorial, movement/viewer component and main-smoke results with their
+narrower scope. Portable checks do not establish native build
 or graphical gameplay acceptance. Native bridge, input, renderer, compiler, source-pin or protocol changes
 need the relevant [native acceptance](docs/runbook.md#native-acceptance-lane).
 The current native scope is one tested macOS host; other hosts remain unverified.

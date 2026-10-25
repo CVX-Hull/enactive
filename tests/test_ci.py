@@ -132,7 +132,7 @@ class ProfileTests(unittest.TestCase):
     def test_known_context_and_unknown_paths_never_get_main_reuse(self):
         for path in ("tools/ci.py", "tools/new_shared_helper.py", "tools/__init__.py", "tests/__init__.py",
                      ".github/workflows/check.yml", "requirements-dev.lock", "docs/control-registry.json",
-                     "docs/engineering.md", "AGENTS.md", "unexpected.bin"):
+                     "unexpected.bin"):
             with self.subTest(path=path):
                 self.git("reset", "--hard", self.parent)
                 self.write(path, "Changed\n")
@@ -206,14 +206,53 @@ class ProfileTests(unittest.TestCase):
         self.responses[f"commits/{self.main}/pulls"] = subprocess.CalledProcessError(1, ["gh"])
         self.assertEqual(self.choose().profile, "full")
 
-    def test_editorial_allowlist_excludes_behavioral_guidance_and_executable_assets(self):
-        for name in ("README.md", "docs/research-ci.md", "docs/changes/065-proposal.md", "docs/acceptance/report.json",
-                     "docs/assets/example.png", "docs/diagrams/current.mmd", "docs/diagrams/rendered.json"):
+    def test_document_scope_matches_checked_markdown_and_regular_assets(self):
+        for name in ("README.md", "AGENTS.md", "docs/player-guide.md", "docs/protocol.md",
+                     "docs/setup.md", "docs/runbook.md", "docs/engineering.md", "docs/project-management.md",
+                     "docs/research-ci.md", "docs/acceptance/report.json", "docs/assets/example.png",
+                     "docs/diagrams/current.mmd", "docs/diagrams/rendered.json"):
             with self.subTest(name=name): self.assertTrue(ci.editorial(name))
-        for name in ("AGENTS.md", "docs/player-guide.md", "docs/protocol.md", "docs/setup.md", "docs/runbook.md",
-                     "docs/engineering.md", "docs/project-management.md", "docs/diagrams/config.json",
-                     "docs/acceptance/run.py", "docs/assets/script.js", ".github/workflows/check.yml"):
+        for name in (".github/pull_request_template.md", "elsewhere.md", "docs/diagrams/config.json",
+                     "docs/control-registry.json", "docs/acceptance/run.py", "docs/assets/script.js",
+                     ".github/workflows/check.yml"):
             with self.subTest(name=name): self.assertFalse(ci.editorial(name))
+
+    def test_component_complete_comparisons_run_selected_scope_on_pr_and_main(self):
+        for path, profile in (("harness/movement.py", "movement"), ("web/style.css", "viewer"),
+                              ("web/app.js", "viewer"), ("tests/test_movement.py", "movement")):
+            self.git("reset", "--hard", self.main)
+            self.write(path, "Changed")
+            self.write("docs/architecture.md", "Current explanation")
+            after = self.commit("contained")
+            for name, event in (("push", dict(ref="refs/heads/main", before=self.main, after=after)),
+                                ("pull_request", self.pr(base=self.main, head=after))):
+                with self.subTest(path=path, event=name):
+                    self.assertEqual(ci.choose(self.repository, name, event, after).profile, profile)
+        self.assertEqual(self.repository.reads, [])
+
+    def test_component_cannot_hide_crosscutting_files_renames_or_nonregular_objects(self):
+        def change(path, after="100644"):
+            return ci.Change(path, "100644", after)
+        for paths in (("harness/movement.py", "web/app.js"),
+                      ("web/app.js", "harness/server.py"),
+                      ("harness/movement.py", "tests/test_controller.py"),
+                      ("harness/movement.py", "schemas/gameplay.schema.json"),
+                      ("web/style.css", "tools/check.py"), ("web/style.css", "unknown")):
+            with self.subTest(paths=paths): self.assertIsNone(ci.component([change(p) for p in paths]))
+        self.assertIsNone(ci.component([change("web/app.js", "120000")]))
+        self.assertIsNone(ci.component([]))
+        before = self.main
+        self.write("web/app.js", "Source")
+        base = self.commit("viewer source")
+        (self.root / "docs").mkdir(exist_ok=True)
+        self.git("mv", "web/app.js", "docs/renamed.md")
+        head = self.commit("rename")
+        # Both sides participate: deleting the viewer source is still viewer scope.
+        self.assertEqual(ci.choose(self.repository, "pull_request", self.pr(base=base, head=head), head).profile, "viewer")
+        self.git("reset", "--hard", before)
+        self.git("mv", "harness/example.py", "web/app.js")
+        head = self.commit("cross boundary rename")
+        self.assertEqual(ci.choose(self.repository, "pull_request", self.pr(base=before, head=head), head).profile, "full")
 
     def test_main_reports_closed_profile_and_existing_evidence_without_running_tests(self):
         with tempfile.TemporaryDirectory() as temporary:

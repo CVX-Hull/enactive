@@ -1,4 +1,4 @@
-"""Choose strict validation using existing Git/GitHub evidence; never cache green."""
+"""Choose proportionate validation using complete Git/GitHub comparisons."""
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
@@ -16,9 +16,8 @@ _SHA = re.compile(r"[0-9a-f]{40}\Z")
 _REGULAR = {"000000", "100644", "100755"}
 _ASSETS = {".png", ".jpg", ".jpeg", ".gif", ".webp", ".svg", ".mp4", ".webm"}
 _CONTEXT = {
-    "AGENTS.md", "CONTRIBUTING.md", "pyproject.toml", "package.json", "package-lock.json",
-    ".puppeteerrc.cjs", "tests/__init__.py", "docs/control-registry.json", "docs/controls.md",
-    "docs/engineering.md", "docs/project-management.md", "docs/documentation.md", "docs/charter.md",
+    "pyproject.toml", "package.json", "package-lock.json",
+    ".puppeteerrc.cjs", "tests/__init__.py", "docs/control-registry.json",
     "docs/diagrams/config.json", "docs/diagrams/browser.json",
 }
 
@@ -45,20 +44,49 @@ class Plan:
     qualifying_run: str | None = None
 
 
+# The checker inspects these root documents and every Markdown file in docs/.
+ROOT_DOCUMENTS = {"README.md", "AGENTS.md", "NOTICE.md", "CONTRIBUTING.md", "SECURITY.md"}
+SMOKE_TESTS = (
+    "tests/test_gameplay_contracts.py",
+    "tests/test_gameplay_evidence.py",
+    "tests/test_mission_request_producer.py",
+    "tests/test_mission_ledger.py::LedgerTests::test_measured_counts_use_cumulative_rows_and_preserve_unknowns_across_reopen",
+    "tests/test_mission_ledger.py::LedgerTests::test_read_only_or_unadmitted_request_cannot_become_input",
+    "tests/test_mission_ledger.py::LedgerTests::test_terminal_mission_cannot_restart_or_overwrite_result",
+    "tests/test_mission_http.py::MissionHTTPTests::test_semantic_navigation_context_memory_and_single_ingress",
+)
+# Explicit demonstrated boundaries, not inferred dependency-impact analysis.
+COMPONENT_PATHS = {
+    "movement": {"harness/movement.py", "tests/test_movement.py"},
+    "viewer": {"web/app.js", "web/index.html", "web/style.css", "tests/test_viewer.cjs"},
+}
+COMPONENT_TESTS = {
+    "movement": ("tests/test_movement.py", "tests/test_controller.py", "tests/test_navigation.py",
+                 "tests/test_gameplay_skills.py", "tests/test_gameplay_supervisor.py", *SMOKE_TESTS),
+    "viewer": ("tests/test_server.py", *SMOKE_TESTS),
+}
+
+
 def editorial(path: str) -> bool:
     value = PurePosixPath(path)
-    if path == "README.md":
+    if path in ROOT_DOCUMENTS or path.startswith("docs/") and value.suffix == ".md":
         return True
-    if value.parent == PurePosixPath("docs") and value.name.startswith("research") and value.suffix == ".md":
-        return True
-    if path.startswith("docs/changes/") and value.suffix == ".md":
-        return True
-    if path.startswith("docs/acceptance/") and value.suffix in {".md", ".json", *_ASSETS}:
+    if path.startswith("docs/acceptance/") and value.suffix in {".json", *_ASSETS}:
         return True
     if path.startswith("docs/assets/") and value.suffix in _ASSETS:
         return True
     return value.parent == PurePosixPath("docs/diagrams") and (
         value.suffix in {".mmd", ".svg"} or value.name == "rendered.json")
+
+
+def component(changes: list[Change]) -> str | None:
+    if not changes or any(not change.regular for change in changes):
+        return None
+    paths = {change.path for change in changes if not editorial(change.path)}
+    for name, allowed in COMPONENT_PATHS.items():
+        if paths and paths <= allowed:
+            return name
+    return None
 
 
 def validation_context(path: str) -> bool:
@@ -204,9 +232,11 @@ def choose(repository: Repository, event_name: str, event: dict, sha: str) -> Pl
             raise EvidenceUnavailable("Unsupported event requires full validation")
         if changes and all(change.regular and editorial(change.path) for change in changes):
             return Plan("editorial", "Complete comparison contains only eligible editorial paths")
+        if selected := component(changes):
+            return Plan(selected, f"Complete comparison is contained in the explicit {selected} boundary")
         if event_name == "push":
             return repository.main_coverage(event, changes, head)
-        return Plan("full", "Source, mixed, control or unknown PR changes")
+        return Plan("full", "Cross-cutting, validation or unknown PR changes")
     except (EvidenceUnavailable, subprocess.SubprocessError, OSError, UnicodeError,
             json.JSONDecodeError, KeyError, TypeError) as error:
         # Expected missing/invalid read evidence never grants a reduced lane.

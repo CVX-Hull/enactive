@@ -356,10 +356,13 @@ This compiles Python syntax in memory, runs selected Ruff correctness diagnostic
 checks Import Linter dependency contracts, checks browser JavaScript syntax with
 Node.js, validates required documents and local Markdown file/image targets using
 markdown-it-py, and checks staged/unstaged Git diff whitespace. Full additionally
-runs complete unittest discovery (including real loopback HTTP tests) with the 20 slowest
-durations and delayed-image viewer regressions. Editorial omits runtime/viewer tests;
-main-smoke runs the fixed selection in `tools/check.py` and viewer regressions.
-Both reduced profiles explicitly report that full regression was not run. Commands
+runs existing unittest cases through pinned pytest/pytest-xdist, including real
+loopback HTTP tests, using four processes with work stealing and reporting the 20
+slowest durations. Every behavioral profile also runs delayed-image viewer
+regressions. Editorial omits behavioral/viewer tests; movement/viewer run explicit
+consumer/boundary targets; main-smoke runs its fixed targets serially. The shared
+selection is in `tools/ci.py`; [testing](testing.md) explains responsibilities and
+limits. Reduced profiles explicitly report that full regression was not run. Commands
 print elapsed times in the existing logs. It fails if Node.js is unavailable, a
 link is broken, or a selected check fails. Fragment anchors, raw HTML links and external web availability are not checked. HTTP
 tests require permission to bind loopback; a sandbox denial is a failed check,

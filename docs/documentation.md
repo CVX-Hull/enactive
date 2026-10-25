@@ -27,6 +27,7 @@ constraints or drill-down, not separate processes or approvals at every level.
 | What change should we make, and why? | A scoped GitHub Issue; brief/ADR where consequential | Affected parent/component views, alternatives, contracts and acceptance |
 | How do I operate it? | [Setup](setup.md), [runbook](runbook.md), [walkthrough](walkthrough.md) | Exact CLI/tool reference; [player guide](player-guide.md) for deciding players |
 | What is next, blocked or being delivered? | [GitHub Project](https://github.com/users/CVX-Hull/projects/2) and linked Issues | Implementation PR and actual verification results |
+| What do the tests cover, and which should run? | [Testing guide](testing.md): layer responsibilities and selection | Shared CI manifest and relevant assertions |
 | What evidence supports the claim? | [Work evidence index](work.md), dated acceptance report or CI receipt | Original retained artifacts under their declared scope |
 
 Each architecture view explains a boundary from the outside before exposing its
