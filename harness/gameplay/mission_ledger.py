@@ -56,6 +56,14 @@ class RequestNotFound(LedgerError):
     """An exact request lookup found no row; trusted durable references stay fatal."""
 
 
+class RequestAdmissionRefusal(LedgerError):
+    """A specific new-intent policy check refused before inserting a request.
+
+    Duplicate, budget, persistence and arbitrary validation failures are not this
+    type. The receiver still checks cancellation and exact absence before proof.
+    """
+
+
 class BudgetError(LedgerError):
     """Original budget/reserve cannot admit another side effect."""
 
@@ -742,18 +750,18 @@ class MissionLedger:
                 raise BudgetError("Original mission deadline exhausted")
             mission = data.get("mission_id", data.get("admission", {}).get("mission_id"))
             if mission != self.admission.mission_id or data.get("epoch", state["epoch"]) != state["epoch"]:
-                raise LedgerError("Request belongs to another mission/epoch")
+                raise RequestAdmissionRefusal("Request belongs to another mission/epoch")
             if data["kind"] == "skill" and data["skill_kind"] not in self.admission.allowed_skills:
-                raise LedgerError("Skill not admitted")
+                raise RequestAdmissionRefusal("Skill not admitted")
             if data["kind"] == "skill" and data["procedure"] is not None:
                 if self._db.execute("SELECT 1 FROM requests WHERE json_extract(payload,'$.procedure.use_id')=?",
                                     (data["procedure"]["use_id"],)).fetchone():
                     raise LedgerError("A procedure use identity belongs to one immutable skill root")
             if data["kind"] == "lifecycle":
                 if data["operation"] not in self.admission.allowed_lifecycle:
-                    raise LedgerError("Lifecycle operation not admitted")
+                    raise RequestAdmissionRefusal("Lifecycle operation not admitted")
                 if (data["world"], data["character"]) != (self.admission.scenario.world, self.admission.scenario.character):
-                    raise LedgerError("Lifecycle identity differs from admitted scenario")
+                    raise RequestAdmissionRefusal("Lifecycle identity differs from admitted scenario")
             if data["kind"] == "start" and MissionAdmission.from_dict(data["admission"]) != self.admission:
                 raise LedgerError("Start cannot replace admission")
             if state["phase"] in TERMINAL: raise LedgerError("Mission is terminal")
@@ -892,6 +900,18 @@ class MissionLedger:
             return {"request": json_object(row[0]), "epoch": row[1], "state": row[2],
                     "result": None if row[3] is None else json_object(row[3]),
                     "admitted_at": row[4], "deadline": row[5]}
+
+    def request_timing_state(self, request_id: str) -> dict:
+        """Read only the committed row clocks/state, without decoding its bodies."""
+        _id(request_id)
+        with self._mutex:
+            if self._db is None:
+                raise LedgerError("Ledger is closed")
+            row = self._db.execute("SELECT state,admitted_at,epoch FROM requests WHERE id=?",
+                                   (request_id,)).fetchone()
+            if row is None:
+                raise RequestNotFound("Unknown semantic request")
+            return {"state": row[0], "admitted_at": row[1], "epoch": row[2]}
 
     def request_records(self) -> tuple[dict, ...]:
         """Ordered copied audit history; never restore an executor or process handle."""

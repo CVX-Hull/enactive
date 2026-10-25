@@ -1,16 +1,17 @@
 ---
 owner: lead
 review_trigger: Admission-refusal certification, staging/collection or settlement-clock semantics change
-status: proposed
-scope: Narrow request receipt and measurement boundary; no native engine or new model tier
+status: historical
+date: 2026-10-24
+scope: Adopted request receipt and measurement boundary; source and actual gameplay evidence are separate
 ---
 
 # Truthful refusal and measurable settlement
 
 Parent: [player interface](../components/player-interface.md) and
 [mission execution](../components/mission-execution.md). [#207](https://github.com/CVX-Hull/enactive/issues/207)
-and [#208](https://github.com/CVX-Hull/enactive/issues/208) own delivery; current
-contracts remain authoritative until the coordinated change. The system roles,
+and [#208](https://github.com/CVX-Hull/enactive/issues/208) own delivery. Current
+protocol/component views own the implemented contracts. The system roles,
 single writer, native input and memory architecture remain unchanged.
 
 The [Fresh024 review](../acceptance/2026-10-24-fresh024-execution-review.md)
@@ -86,7 +87,8 @@ current source at settlement is not automatically a useful effect. A small passi
 reducer in the existing evaluation module may summarize these events and omissions;
 there is no new trace framework or model annotation task.
 
-New timing is non-authorizing telemetry. An unavailable timing append is retained
+A journal-only option on the existing writer excludes samples from the recent
+status/UI event ring. New timing is non-authorizing telemetry. An unavailable timing append is retained
 as a diagnostic/missing sample and cannot rewrite a committed operation or revoke
 healthy input. Existing required domain persistence/journal failures retain their
 current behavior. Reuse the journal's configured write contract, add no per-primitive

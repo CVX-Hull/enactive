@@ -11,6 +11,7 @@ from harness.gameplay.mission_contracts import LearningPolicy
 from harness.gameplay.mission_ledger import BudgetError
 from tests.test_reflection_exchange import procedure
 from tests.test_mission_creation import MissionCreationFixture
+from tests.test_request_receipts import settled_timing
 
 
 class MissionFinishTests(MissionCreationFixture, unittest.TestCase):
@@ -53,6 +54,10 @@ class MissionFinishTests(MissionCreationFixture, unittest.TestCase):
             operation = self.finish()
             self.assertTrue(published.wait(3))
             self.assert_advisory_reopened(reflection, operation)
+        timing = settled_timing(self.runtime, "finish")
+        self.assertEqual(timing["row_state"], "completed")
+        self.assertEqual(timing["mission_phase"], "paused")
+        self.assertTrue(timing["writer_finalized"])
 
     def test_real_terminal_ledger_deadline_refusal_reopens_advisory_before_next_tick(self):
         self.a = replace(self.a, learning=LearningPolicy(procedure()["environment"], reflector_id="reflector-a"))
@@ -154,6 +159,10 @@ class MissionFinishTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(operation["result"]["normal_finish"]["disposition"], "stopped")
         self.assertEqual(self.runtime.status()["phase"], "stopped")
         self.assertEqual(len(self.bridge.requests), count)
+        timing = settled_timing(self.runtime, "finish")
+        self.assertEqual(timing["row_state"], "completed")
+        self.assertEqual(timing["mission_phase"], "stopped")
+        self.assertTrue(timing["writer_finalized"])
         self.assertIsNone(self.runtime._native)
         self.assertIsNone(self.runtime._native_owner)
         self.assertIsNone(self.runtime._owned_launch)

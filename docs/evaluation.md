@@ -132,6 +132,59 @@ round trips and unnecessary captures or repeated retrieval. Keep per-primitive
 outcome/authority checks; batch decisions rather than blindly batching input.
 Do not add a broker, telemetry service or new model tier without an observed gap.
 
+### Request settlement clocks
+
+The existing controller journal records `mission_request_settled` with a
+`mission-timing/1` outcome for each original admitted semantic work item, and for
+an explicitly certified no-admission refusal. Cached collection and passive reads
+add no duplicate settlement. The row carries mission/request/epoch/controller-boot
+identity, original ledger admission wall time, process-monotonic receipt/admission/
+settlement endpoints, observed row state, writer-finalization status, mission
+phase, censoring and available source reference. No request body/image is copied.
+
+Receipt is runtime work-handle creation; admission clocks bracket `begin_request`;
+settlement ends after that invocation's post-commit lifecycle/reflection work and
+per-work finally publication/handle cleanup, before timing append overhead. Atomic
+handoff/claim/Observe and Finish share this hook. A completed request row is not
+proof of terminal mission success: Finish may retain its report while withholding
+terminal persistence. Unknown/canceled/failed outcomes retain their actual state;
+missing events do not imply zero cost or no admission.
+
+`request_timing_summary` in the existing passive evaluation module projects the
+same-boot runtime, queue, admission and post-admission service intervals. Supply
+expected durable request IDs to expose absent endpoints. Duplicate settlements
+are censored; missing/invalid clocks and observed wall regression remain explicit.
+Wall correspondence is otherwise unassessed. The wall anchor is bracketed by two
+monotonic samples; do not subtract unrelated process/host clocks or assume a
+constant wall offset. Source/frame joins still need their exact retained records.
+
+These machine-only events are excluded from recent status/UI and default player
+context. The existing journal writer is reused, with no per-primitive event,
+second store or timing service. A timing-only append failure is logged as a
+missing sample without changing the committed operation; required domain
+persistence failures retain their guards. Measure append overhead separately.
+This addition does not retrospectively fill Fresh024's missing endpoints, identify
+model inference, establish physical paint or qualify useful whole-player cadence.
+
+For the next assessment, freeze the useful-decision cohort before play under the
+linked responsiveness criteria. Members are independently meaningful, source-backed
+goal/outcome choices in familiar normal play; keys, procedure invocations and
+program termination are not automatically members. A correction chain retains
+the original decision's start and all repair costs through verified useful effect.
+Loading, long activities and novel deliberation have separately declared finite
+cohorts; none disappears from whole-run accounting. Missing endpoints or too few
+evaluable useful decisions cannot produce a percentile pass. Do not manufacture
+extra decisions by splitting a journey or replaying filler actions.
+
+Use an actual sufficient-evidence receipt as the start where available. Otherwise
+a matched selected capture may provide a conservative earlier start only under
+the explicitly checked same-host clock/identity assumptions; label that proxy and
+its uncertainty. A matched successful browser decode is a declared display proxy,
+not physical paint. New service clocks separate software work from arrival gaps;
+they do not turn those gaps into inference measurements. Source/operation/frame
+joins are automatic; the independent assessor judges usefulness from retained
+intent/effects, without asking the player for per-key annotations or curating play.
+
 The current local spectator snapshot/export is `observer-timing/3`; historical v1/v2 captures
 remain evidence, without a compatibility reader. It retains raw browser epoch
 anchors for status start/response and DOM replacement, plus the native capture

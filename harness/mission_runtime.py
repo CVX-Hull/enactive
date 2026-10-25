@@ -9,6 +9,7 @@ import copy
 from contextlib import ExitStack
 from dataclasses import asdict, dataclass, field, replace
 import hashlib
+import logging
 import math
 import os
 from queue import Empty, Full, Queue
@@ -29,8 +30,8 @@ from .gameplay.contracts import ContractError, EvidenceRef, PrimitiveResult
 from .gameplay.evidence import MAX_AGE_SECONDS, MAX_FRAME_BYTES, CapacityError, CapacityReservation, EvidenceError, EvidenceStore, FreshnessError, same_native_custody, same_native_state, validate_native_progression
 from .gameplay.interaction import MenuIntent, MenuOutcome, MenuSkill
 from .gameplay.contracts import canonical
-from .gameplay.mission_contracts import VERSION, MissionAdmission, InputObservation, SourceBinding, SourceRevalidation, MemoryRequestRefusal, validate_submission
-from .gameplay.mission_ledger import BudgetError, LedgerError, LocalBudgetRefusal, MissionLedger, TERMINAL
+from .gameplay.mission_contracts import VERSION, MissionAdmission, InputObservation, SourceBinding, SourceRevalidation, MemoryRequestRefusal, make_admission_refusal, validate_submission
+from .gameplay.mission_ledger import BudgetError, LedgerError, LocalBudgetRefusal, MissionLedger, RequestAdmissionRefusal, RequestNotFound, TERMINAL
 from .gameplay.native_receipts import compact_native_ack
 from .gameplay.navigation import NavigationIntent, NavigationOutcome, NavigationSkill, ObservedMap
 from .gameplay.input_contracts import ControlIntent, ControlOutcome
@@ -59,6 +60,11 @@ class _Work:
     game_anchor: EvidenceRef | None = None
     finish_epoch: int | None = None
     finish_mark: tuple[str, int] | None = None
+    received_monotonic: float | None = None
+    admission_started_monotonic: float | None = None
+    admitted_monotonic: float | None = None
+    new_admission: bool = False
+    certified_refusal: bool = False
 
 
 @dataclass(frozen=True)
@@ -244,7 +250,7 @@ class MissionRuntime:
             if cached["request"] != data:
                 return self._response("rejected", reason="Request ID reused with different payload")
             return self._response("accepted", operation_id=data["request_id"], operation=cached)
-        work = _Work(data)
+        work = _Work(data, received_monotonic=time.monotonic())
         busy_stop = False
         input_owner = None
         with self._metadata:
@@ -340,6 +346,65 @@ class MissionRuntime:
 
     def _record(self, kind: str, result: dict) -> None:
         self.controller._record({"kind": kind, "mission_id": self._admission.mission_id}, result)
+
+    def _refuse_admission(self, work: _Work, reason: str) -> None:
+        """Finish one explicit no-admission branch; absence is never guessed."""
+        try:
+            self._ledger.request_timing_state(work.request["request_id"])
+        except RequestNotFound:
+            receipt = make_admission_refusal(work.request)
+        else:
+            raise LedgerError("Refusal cannot certify an already admitted request")
+        # The timeout and Pause paths use this lock too. No ledger/file I/O is
+        # performed inside it; a canceled queued attempt never publishes proof.
+        with self._metadata:
+            self._check_cancelled(work)
+            work.response = {"status": "rejected", "reason": reason[:1024],
+                             "admission_refusal": receipt}
+            work.certified_refusal = True
+            work.ready.set()
+
+    def _record_settlement_timing(self, work: _Work, *, finalized: bool) -> None:
+        """Best-effort telemetry after the writer's existing finally cleanup.
+
+        This adds no primitive event or authority check. A missing timing sample
+        cannot rewrite an operation; required domain persistence stays separate.
+        """
+        if not (work.new_admission or work.certified_refusal):
+            return
+        try:
+            settled = time.monotonic()
+            anchor = {"monotonic_before": settled, "wall_seconds": time.time(),
+                      "monotonic_after": time.monotonic()}
+            try:
+                row = self._ledger.request_timing_state(work.request["request_id"])
+            except RequestNotFound:
+                row = None
+            with self._metadata:
+                phase = None if self._snapshot is None else self._snapshot["phase"]
+            value = {"schema": "mission-timing/1", "request_id": work.request["request_id"],
+                "request_kind": work.request["kind"], "phase_id": work.request.get("phase_id"),
+                "controller_boot_id": self.controller.authority["controller_boot_id"],
+                "received_monotonic": work.received_monotonic,
+                "admission_started_monotonic": work.admission_started_monotonic,
+                "admitted_monotonic": work.admitted_monotonic, "settled_monotonic": settled,
+                "clock_anchor": anchor,
+                "admission": "created" if work.new_admission else "not_admitted",
+                "row_state": None if row is None else row["state"],
+                "admitted_at": None if row is None else row["admitted_at"],
+                "epoch": None if row is None else row["epoch"],
+                "writer_finalized": finalized, "mission_phase": phase,
+                "censored_reason": ("writer_finalization_failed" if not finalized else
+                    "admitted_row_unavailable" if work.new_admission and row is None else None),
+                "source": None if self._current is None else self._current.to_dict(),
+                "grants_authority": False}
+            # Keep machine timing out of the recent event ring/status payload.
+            self.controller._record({"kind": "mission_request_settled",
+                                     "mission_id": self._admission.mission_id}, value, recent=False)
+        except Exception:
+            # Existing domain journals still propagate their own failures. This
+            # newly added measurement alone is not a gameplay failure or receipt.
+            logging.getLogger(__name__).warning("Request settlement timing unavailable", exc_info=True)
 
     def _cache_operation(self, operation: dict) -> None:
         with self._metadata:
@@ -3052,8 +3117,7 @@ class MissionRuntime:
             return
         if (data["kind"] in ("skill", "lifecycle") and self._prompt_phase is not None
                 and self._prompt_phase.observation_generation is not None):
-            work.response = {"status": "rejected", "reason": "Fresh explicit Observe is required before another input"}
-            work.ready.set()
+            self._refuse_admission(work, "Fresh explicit Observe is required before another input")
             return
         # Queue consumption owns the current scope. An Observe ahead of this
         # child may have closed its macro after the request was enqueued.
@@ -3061,11 +3125,17 @@ class MissionRuntime:
                 and self._exit_phase is None and self._registered_lifecycle.phase is None
                 and self._registered_activity.phase is None and self._registered_recovery.phase is None
                 and self._registered_recovery.continuation is None):
-            work.response = {"status": "rejected",
-                "reason": "No live prompt owns this child; observe and choose a new root from current evidence"}
-            work.ready.set()
+            self._refuse_admission(work,
+                "No live prompt owns this child; observe and choose a new root from current evidence")
             return
-        admitted = self._ledger.begin_request(data, now=self._wall())
+        work.admission_started_monotonic = time.monotonic()
+        try:
+            admitted = self._ledger.begin_request(data, now=self._wall())
+        except RequestAdmissionRefusal as exc:
+            self._refuse_admission(work, str(exc))
+            return
+        work.admitted_monotonic = time.monotonic()
+        work.new_admission = admitted["created"]
         operation = admitted["operation"]
         self._cache_operation(operation)
         self._publish()
@@ -3187,8 +3257,10 @@ class MissionRuntime:
                     self._fault(exc)
                     continue
                 self._active = work
+                finalized = False
                 try:
                     self._handle(work)
+                    finalized = True
                 except Exception as exc:
                     if not work.ready.is_set():
                         work.response = {"status": "rejected", "reason": f"{type(exc).__name__}: {exc}"[:1024]}
@@ -3207,7 +3279,9 @@ class MissionRuntime:
                         self._registered_reflection.tick()
                         self._publish()
                     except Exception as exc:
+                        finalized = False
                         self._fault(exc)
+                    self._record_settlement_timing(work, finalized=finalized)
         finally:
             self._cancel_queue()
             try:

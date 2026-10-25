@@ -61,6 +61,10 @@ reason to read the entire repository during every game.
   is not the completed text or a cue to confirm. After collection, inspect and
   explicitly select current evidence. An obsolete selection can be refused
   without destroying healthy custody; no key is retargeted or replayed for you.
+- An explicit `submission=not_admitted` resolves a receiver-certified refusal.
+  Inspect its reason/current context and choose a new corrected decision; software
+  assigns the identity. Do not collect or repeat that refused invocation. Generic
+  errors or uncertain delivery still require the original collection path.
 - An eligible Procedure/3 can contain `program={language:javascript/1, source:...}`
   or null for advice. In `enactive_remember` choose the content, evidence,
   counterexamples/status and `parent=null` for a new family or an explicit
@@ -95,7 +99,8 @@ reason to read the entire repository during every game.
   result; do not supply `request_id` or `wait_seconds`. A positively new preparation refusal explicitly
   marked `submission=not_submitted` has no original operation to collect. Correct
   the selected arguments for a new decision under the original limits. Errors
-  during staging, dispatch or presentation retain uncertain collection instead. A new invocation is a new
+  during staging, dispatch or presentation retain uncertain collection unless an
+  actually validated `not_admitted` refusal is preserved. A new invocation is a new
   intent, never a retry. Pending/uncertain results require `enactive_result` with
   the returned original ID. If an error includes `original_collection`, use those
   exact collection arguments when dispatch is uncertain. Validation can fail

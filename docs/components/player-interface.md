@@ -36,12 +36,26 @@ source images are progressively available. Source metadata fits the permitted
 handoff working set; eviction requires an explicit exact reread, not authority
 restoration. A cache is neither durable history nor proof of model attention.
 
+![Known refusal, admitted work and uncertainty have different next decisions.](../diagrams/request-receipts.svg)
+
+The [editable view](../diagrams/request-receipts.mmd) answers when the player can
+correct a request and when the original operation still needs collection.
+
 A positively pure new preparation refusal can be `not_submitted`. Existing stages,
 failed stage lookup and uncertainty from staging onward retain original collection
 arguments. A transport or presentation error proves neither delivery nor
 nondelivery. Restart cannot reconstruct missing settled identities or permission
 to replay. The [binding contract](../protocol.md#skill-request-binding-errors)
 and [operator contract](../protocol.md#designated-campaign-operator) own exact rules.
+
+A narrowly certified receiver refusal is `submission=not_admitted`: the SDK has
+validated an authenticated `mission-refusal/1` against its immutable staged
+request. The player can select a new corrected decision; software assigns its new
+identity. No nonexistent operation is collected, and the refused stage is retained
+without replay. Generic refusals, malformed certificates and lost responses do
+not establish this fact. Machine binding/digest fields stay out of default MCP
+context; raw SDK evidence retains them. See the
+[exact contract](../protocol.md#certified-request-admission-refusal).
 
 An advisory Claim's validated `busy, admitted=false` receipt proves zero admission;
 its local fence can be released for another bounded attempt. Missing receipts,

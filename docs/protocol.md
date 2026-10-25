@@ -264,7 +264,8 @@ Context output remains selective and explicitly bounded; reducing the full store
 frontier can still cost more as history grows. Forecast row/byte fan-out and
 retrieval work alongside frames, requests, inputs, wall time and ending reserves.
 
-The current MCP server is5.3.0; its presentation remains `player-view/4`, marked by `presentation_schema`.
+The [MCP server](../harness/player_mcp.py) reports its implementation version at
+SDK initialization; its presentation is `player-view/4`, marked by `presentation_schema`.
 Its tool arguments omit `request_id` and `wait_seconds`; old MCP payloads are
 rejected, not translated. The adapter assigns one UUID to each invocation whose
 imperative SDK request needs an ID, then uses existing immutable staging and
@@ -1334,6 +1335,34 @@ separately admitted current mission can start anew. Migration never resets input
 costs, renews a stopped attempt or restores execution authority.
 
 ## Transport and state
+
+### Certified request admission refusal
+
+An authenticated response with `status=rejected` may contain `admission_refusal`,
+the closed `mission-refusal/1` record: `schema`, `mission_id`, `request_id`,
+`request_sha256` (SHA-256 of the validated canonical request), `admitted=false`
+and `grants_authority=false`. The pure mission-contract validator binds it to the
+exact original staged request. This digest is not a signature or input authority.
+
+Only explicit typed new-request policy refusals after the ledger's prior-ID check
+and before insertion, or the writer's two specific prompt/Observe guards with
+positive exact no-row proof, issue this receipt. A final cancellation check,
+response assignment and ready signal share the timeout/Pause metadata lock.
+Duplicate IDs, admission timeouts, budget/storage exceptions and generic errors
+never become certificates. Existing busy-owner hints remain a separate bounded
+collection aid, not another certificate format.
+
+The SDK reports a valid certificate as `submission=not_admitted, settled=true`,
+retains the operation ID/staged bytes and does not collect a nonexistent operation.
+The player may explicitly choose a NEW request under unchanged original limits;
+there is no automatic retry, deletion/refund or authority restoration. An existing
+stage still permits collection only, including after restart without the response.
+Missing certificates preserve the ordinary path; malformed/mismatched certificates,
+lost responses and admitted failures retain uncertainty/original collection.
+Tools show reason/current context and hide technical certificate fields from the
+default model view. A formatting failure may preserve only an actually validated
+known refusal; arbitrary staging/presentation errors prove neither delivery nor
+nondelivery. No extra approval/reviewer runs on the gameplay path.
 
 HTTP JSON uses Python's finite compact UTF-8 codec with the same encoding basis
 as canonical bounded advisory contexts. Per-record parser caps do not become

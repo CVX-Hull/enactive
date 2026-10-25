@@ -1000,12 +1000,13 @@ class Controller:
         finally:
             self.command_lock.release()
 
-    def _record(self, request: dict[str, Any], outcome: dict[str, Any]) -> None:
+    def _record(self, request: dict[str, Any], outcome: dict[str, Any], *, recent: bool = True) -> None:
         event = {"timestamp_ms": int(time.time() * 1000), "request": request,
                  "outcome": outcome}
-        with self.data_lock:
-            self.events.append(event)
-            self.events = self.events[-60:]
+        if recent:
+            with self.data_lock:
+                self.events.append(event)
+                self.events = self.events[-60:]
         with self._journal_lock:
             with self.journal.open("a", encoding="utf-8") as stream:
                 stream.write(json.dumps(event, ensure_ascii=True) + "\n")
