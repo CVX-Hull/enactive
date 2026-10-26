@@ -26,7 +26,10 @@ is a separate decision. Engineering Codex owns development and verification.
 Current host evidence includes offline request/process control and basic
 image/tool continuation with one explicit DeepInfra configuration. Its first
 bounded native pilot failed before useful ordinary play and normal ending;
-gameplay quality and speed remain unqualified. The
+broad gameplay quality and speed remain unqualified. A later
+[bounded breadth assessment](acceptance/2026-10-25-program-breadth.md#009-program-assisted-useful-lighting-and-normal-ending)
+combines player-authored conditional item selection, same-root ordinary completion
+of useful lighting, and normal Save/owned exit/Finish. The
 [pilot report](acceptance/2026-10-25-pi-configuration-pilot.md) separates model errors
 from a runtime recovery defect. That failed model/configuration does not cancel
 the required host migration.

@@ -137,7 +137,11 @@ and the mission's original input/time/cleanup limits.
 Request construction and process cleanup can be qualified offline; actual perception,
 play and cadence remain separate. The [first live configuration pilot](../acceptance/2026-10-25-pi-configuration-pilot.md)
 passed basic image/tool/history compatibility but failed useful play and normal
-ending. It does not qualify gameplay adoption or comparative speed.
+ending. It does not qualify gameplay adoption or comparative speed. Later
+[program-breadth009](../acceptance/2026-10-25-program-breadth.md#009-program-assisted-useful-lighting-and-normal-ending)
+combines learned conditional item selection, same-root ordinary completion of
+useful lighting and normal Save/owned exit/Finish; whole-player cadence and
+fully automatic final-menu handling remain unqualified.
 The mandatory host requirement stands independently of that model decision;
 historical Codex trajectories remain comparator evidence, not an execution option.
 [Preparation and limits](../runbook.md#bounded-player-host-activation)
