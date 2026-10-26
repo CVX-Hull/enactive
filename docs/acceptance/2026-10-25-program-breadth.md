@@ -3,7 +3,7 @@ owner: lead
 review_trigger: Correction to program-breadth evidence or a later actual qualification
 status: historical
 date: 2026-10-25
-scope: Represented-UI source probe and two bounded native cases; integrated completion and whole-player responsiveness remain unqualified
+scope: Represented-UI source probe and four bounded native cases; integrated completion and whole-player responsiveness remain unqualified
 ---
 
 # Program breadth: a learned local effect, with incomplete normal ending
@@ -204,6 +204,137 @@ and CLI tests passed35/35 independently in the worker and integrated checkout;
 the campaign fixture passed44 tests/151 subtests. Initial worker sandbox checks
 had eight loopback-bind EPERM failures; the isolated loopback rerun passed.
 The lead's final wording explicitly disclaims source-read proof. Fast governance,
-reference and diff checks passed. Protected publication and actual new-run
-continuation are separate remaining evidence; these fixtures do not qualify
-gameplay or apparent whole-player responsiveness.
+reference and diff checks passed. Protected source publication is recorded in
+[PR243](https://github.com/CVX-Hull/enactive/pull/243), whose reviewed tree became
+`d0b3fa064df59a66e4d27aa7411f100f771150de`. Actual PR and main profiles were both
+full, before subsequent admission. These fixtures do not qualify gameplay or
+apparent whole-player responsiveness.
+
+## Later cases: setup planning and real hydration
+
+Both later cases used that unchanged published source/native/model configuration,
+version2 with30 image parts, low effort,8,192 output tokens and120s provider guard.
+They used fresh actors and legitimate game-owned saves, with no prior actor's
+memory, tactical recipe, adviser, hidden state or revived input authority.
+Actual full source evidence was retained and rechecked before credentials/Start.
+
+| Case | Actual outcome | Limits and closure |
+| --- | --- | --- |
+| `program-breadth-003` |27 requests,318.107s host span; no adoption, Procedure, useful effect or normal Save/exit/Finish. | Actor chose an8-input/120s Load root. It expired during identity work; the world Claim and dismissal were also unfinished. Host return0 was conversation completion; driver correctly returned incomplete. Guardian exceptional SIGTERM/transient defunct flags retained; later all five exact PIDs absent and8766 closed. All242 opaque save identities unchanged. |
+| `program-breadth-004` |52 requests,873.705s host span; normal adoption and one actual learned hydration application, but no normal Save/owned exit/Finish. | One prospectively allocated24-input/600s Load envelope, unchanged global/ending guards. Later wrong-phase poll faulted control while the program root was still live. Same exceptional cleanup and eventual exact-process/port closure. Twelve of242 opaque save identities changed; no save interpretation/edit or hydration-persistence claim. |
+
+The supplied guide already required the entire Load lifecycle to share one finite
+allowance, including identity, Claims, dismissal and adoption. The schema allowed
+more than120s;003's limit was selected by the actor. The successful002 Load used
+24 inputs/300s and adopted about204.3s after opening. After independent review,
+the lead adjudicated one004 case with a prospective resource forecast:
+600s setup +600s useful application +300s normal ending +300s slack =1,800s
+before the protected600s reserve. This supplied no game keys, identity evidence
+or renewed root. The actual allocation worked in004, including corrected world
+grounding, without establishing causal performance improvement. Aggregate active
+agent effort was not reliably metered; elapsed/CI/native clocks are not that total.
+
+In004, memory sequence22 stores a source-grounded Procedure revision. Request30
+deliberately selects it under its own new root and immutable use lineage. Its
+conditional state machine inspects represented consume-list rows and counts,
+intends water then ration consumption, and can navigate or yield on unexpected
+representation. Only **two actual evaluations/returned inputs** occurred: `E`
+opened the consume list; `ENTER` started consumption of the initially selected
+water. There was no native navigation branch, revision, program `done` or `yield`.
+A later program request was blocked before evaluation/input and is not a second
+executed application.
+
+The real before list shows clean water4. The completed-effect frame shows3,
+“You drink your clean water” and Drink **Slaked**. This is useful non-travel
+advancement, rather than cursor movement or program success assertion. The prior
+ordinary ration consumption was exploration; the program did not finish its
+ration/close stages.
+
+![Actual004 completed hydration: clean water3 and Drink Slaked.](assets/program-breadth-004/hydration.png)
+
+Program tool execution took0.663s. Same-process delivery intervals were281.316ms
+opening the list and172.741ms starting consumption. That second endpoint is a
+**6% consuming** frame, not completed hydration. The completed effect reached the
+retained poll result11.648s later, including intervening model/tool decisions;
+this is not isolated native consumption time. Exact frame172/revision43 joins
+browser capture-to-DOM at281ms and decode15.3ms under the shared-wall assumption.
+Other frames share revision43; their identities cannot substitute for this capture.
+No whole-player p95,500ms useful-effect cohort or causal learning benefit follows.
+
+## Wrong-phase poll and bounded source follow-through
+
+The first activity-scope poll at request31 was unsubmitted. Request32 correctly
+used the published prompt scope and returned a menu with `stage:awaiting_control`.
+Request33 explicitly retrieved that state. Request34 nevertheless polled again
+against the menu source. The runtime rejected it **before native observation/input**
+because it was no longer `activity_poll`; generic failure handling then paused
+and revoked the lease. This occurred around454.42 host seconds, before the
+original240s program root's deadline near639.16 host seconds. Later expiry
+compounded failed recovery; it did not cause the original fault.
+
+This is confirmed caller misuse followed by existing fail-closed behavior, not a
+demonstrated native delivery failure. Normal Save and exit attempts were blocked;
+no registered checkpoint or Finish was produced. The actor's final≈42-call,
+≈835s-remaining estimates were wrong: actual counts were52 requests/15 charged
+inputs/49 retained frames, with about1,525.6 mission-wall seconds remaining.
+Tracked game time34s ends at the last normal anchor, not a full post-water total.
+The actor's “unsaved” conclusion is also unproved: no registered checkpoint is
+established, while12 opaque file identities changed. Their contents were not read.
+
+The selected snapshot already exposed the wrong boundary. The bounded follow-through
+adds a pure pre-staging composer refusal for child `poll` when that selected source
+is not `activity_poll`. It preserves live receiver checks, fault stopping, original
+limits and unknown-request collection; it does not infer freshness, close the
+phase, choose an input or restore control. A future qualification needs its own
+prospective source/resource freeze; no further live case follows automatically
+from these closed cases. Neither failure can be repaired retrospectively.
+
+The narrow composer change was authored as `1bacd72e`, integrated as `9e9c5e8`.
+Focused producer, player-tools, invocation and HTTP integration checks passed
+77 tests/188 subtests in the worker and integrated checkout; two existing
+dependency warnings remain. Initial worker sandbox checks had six loopback-bind
+EPERM failures; the isolated rerun passed. Positive fixtures were corrected to
+use actual activity-poll boundaries. Tests retain metadata/schema validation
+precedence, valid inherited root fields and original limits, and verify known
+refusal without staging, submission or refresh. Runtime guards were not changed.
+Fast governance/reference/diff checks passed. These are source fixtures, not a
+new native normal-ending qualification; protected publication belongs to the PR.
+
+## Prompt caching and whole-player performance
+
+[DeepInfra's current automatic caching contract](https://docs.deepinfra.com/chat/prompt-caching)
+matches repeated prompt prefixes. Inspection of the actual requests confirms
+stable system/tool definitions and no explicit cache key or retention options.
+The pinned Pi short-retention option does not send a key on this base URL.
+[Explicit paid retention](https://docs.deepinfra.com/chat/prompt-cache-retention)
+has separate model support; its current table does not list this DeepSeek model.
+Schema presence alone is not evidence of that support.
+
+Known reported input was97.2% cached in002 and97.3% in004;002's per-response range
+was18.8–99.7%, median97.1%. These observations coexist with exposed waits and
+failed ending; they establish no apparent-speed or causal cache benefit.
+Constructed JSON bodies totalled104,870,345 bytes in002 and90,703,955 bytes in004,
+with maxima3,820,017 and2,883,599 bytes. These are uncompressed body sizes, not
+measured wire/upload time or isolated serialization cost.
+
+Neither003 nor004 exercised historical image omission: retained maxima were9
+and22 images. The image-window/cache-prefix tradeoff remains unqualified natively.
+Changing an older image to a marker can shorten prefix reuse; it must be assessed
+from actual usage/request bodies when naturally encountered, rather than assuming
+fewer images means faster progress. No extra paid cache experiment was introduced.
+Context growth, reasoning/output, host projection/serialization/trace I/O, tool/
+native capture/storage, display proxy, useful local coverage and recovery remain
+separate performance lanes. Missing endpoints stay unknown. #164 owns the broader
+whole-player acceptance; cache hits and model-call timing are diagnostic.
+
+Across these fresh allocations, actual requests total173 (37+55+27+52 plus two
+synthetic diagnostics), conservatively reserved at$37.1310592 within the$40 ceiling.
+Known configured-rate estimates across169 reported responses total$0.24035928;
+failed final/synthetic usage and all invoices remain unknown. These are DeepInfra
+estimates, not aggregate lead/agent engineering cost. No failure or cache saving
+refunds the allowance. The old separate44-call allocation stays closed.
+
+The integrated #222 result remains **incomplete**: useful learned non-travel
+advancement is evidenced, while the required normal Save/owned exit/Finish in
+the same assessment is absent. Source fixes, process closure and real hydration
+cannot substitute for that acceptance or qualify campaign readiness.
