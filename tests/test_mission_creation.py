@@ -356,6 +356,19 @@ class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(operation["state"], "blocked" if returned else "unknown", operation)
         return operation
 
+    def test_diagnostic_only_transition_does_not_offer_same_root_reconciliation(self):
+        self.unexpected_setup_input()
+        candidate = self.runtime._registered_lifecycle.candidate
+        primitives = copy.deepcopy(self.runtime._ledger.primitive_records())
+        response = self.runtime.command(self.control("unsupported-child", "Cancel"))
+        self.assertEqual(response["status"], "rejected", response)
+        self.assertIn("diagnostic-only", response["reason"])
+        self.assertIn("cannot establish transition reconciliation", response["reason"])
+        self.assertNotIn("still requires same-root reconciliation", response["reason"])
+        self.assertIs(self.runtime._registered_lifecycle.candidate, candidate)
+        self.assertEqual(self.runtime._ledger.primitive_records(), primitives)
+        self.assertIsNone(self.runtime._lease)
+
     def test_unexpected_published_setup_transition_is_retained_only_as_diagnostic(self):
         original = self.unexpected_setup_input()
         primitive = self.runtime._ledger.primitive_records()[-1]
