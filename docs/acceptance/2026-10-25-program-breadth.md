@@ -3,14 +3,15 @@ owner: lead
 review_trigger: Correction to program-breadth evidence or a later actual qualification
 status: historical
 date: 2026-10-25
-scope: Represented-UI source probe and nine bounded native cases; scoped program-assisted useful effect plus normal ending, without responsiveness qualification
+scope: Represented-UI source probe and ten bounded native cases; scoped useful effects, authoring failures and normal ending without responsiveness qualification
 ---
 
-# Program breadth: useful program-assisted lighting and normal ending
+# Program breadth: useful effects, failures and normal ending
 
-The existing conditional-program runtime can follow a represented non-travel
-UI workflow across reordered rows, yield on missing/disabled/ambiguous required
-representation, and retain ordinary fallback under the original root and limits.
+The tested probe program follows a represented non-travel UI workflow across
+reordered rows, yields on missing/disabled/ambiguous required representation,
+and retains ordinary fallback under the original root and limits. These are
+properties of that tested policy, not automatic semantic checks on learned code.
 The [new probe](../../tests/test_program_ui_execution.py) found no production
 executor gap. It uses real JavaScript, MissionRuntime and its writer with the
 existing synthetic transport and trusted-admission fixture. It is **source-contract
@@ -18,12 +19,16 @@ evidence only**. The separate native cases below supply actual learning and a
 narrow useful effect. Case009 combines player-derived conditional row selection,
 same-root ordinary completion of useful lighting, and registered normal ending.
 This is a program-assisted workflow, without whole-player apparent-latency
-qualification or fully automated final-menu handling.
+qualification or fully automated final-menu handling. Case010 adds a narrow
+knife-equipping effect with an unintended wrapper drop and inaccurate player
+self-report, separating usable authoring syntax from reliable semantic behavior.
 
 [#222](https://github.com/CVX-Hull/enactive/issues/222) owns the useful
 learned-program outcome and its publication/closeout. Every live assessment uses its own frozen finite
 allocation; the source probe itself starts no game or provider call. The
 mandatory generic Pi host remains current independently of model selection.
+The separately scoped #251/#253 follow-through is recorded in010; each actor
+retains its own original conditions and failures.
 
 ## Tested path and causal controls
 
@@ -762,3 +767,62 @@ remain failures. Appropriate publication, current guidance/tracker reconciliatio
 and owned closure complete#222; the full20-useful-decision cohort, whole-player
 responsiveness and seven-day readiness remain#164/#145, without a new live trial
 or causal benchmark from this closeout.
+
+## 010 — Memory-envelope guidance, knife equipping and wrong-item drop
+
+This October26 follow-through belongs to [#251](https://github.com/CVX-Hull/enactive/issues/251)'s completed discovery and [#253](https://github.com/CVX-Hull/enactive/issues/253)'s implementation/assessment. It is a new finite development case, not a resumed009 actor or a controlled speed comparison. The scoped positive is an actual player-derived conditional program equipping a pocket knife, followed by normal Save/owned exit0/Finish. An unintended wrapper drop, malformed program return, semantic-support refusal and inaccurate player self-report remain negative evidence. This does not qualify reliable complete equipment handling or useful apparent cadence.
+
+### Selected improvement and source evidence
+
+The discovery attributed009's complete useful episode rather than optimizing its cursor-only segment. Requests28–41 contained264.580603s of disjoint provider-request spans and2.414385s of subsequent tool spans within267.300749s of host-monotonic request28-start→request41-result; the remaining0.305761s covers unisolated local handoffs/validation/gaps. Those endpoints differ from009's267.135s browser interval. The two malformed memory drafts occupied77.552416s of provider-request spans, not isolated inference or a promised recoverable saving.
+
+Actual request28 placed `entry_type` inside `intent.entry`; request29 duplicated it there and at `intent.entry_type`. Pinned Pi rejected both before MCP dispatch, showing unrelated Claim-branch errors. The corrected envelope passed schema validation; the later unrelated-support refusal remained a different semantic check. An isolated replay used the actual SDK, maintained MCP and original SDK staging against a synthetic sink: both malformed forms were refused and the valid form staged once with unchanged program/support. This proves contract behavior, not live grounding or better model decisions.
+
+[PR254](https://github.com/CVX-Hull/enactive/pull/254) makes the selector/body sibling relationship explicit in the existing memory-tool descriptions and compact guide. The source diff changes one description literal, guide and component explanation; all21 tool schemas/names/read-only flags remain identical. It adds126 UTF-8 description bytes per memory tool, no tool, validator, automatic field movement, schema/persistence migration, executor or dependency. Independent review and63 focused player/Claim/procedure/MCP/Pi cases passed. Exact fullPR40359072802 passed2,176 tests/4,096 subtests; actual merged-main40361092927 passed main-smoke119/373, both attempt1. Main-smoke is not another full regression run.
+
+Frozen source was `24ee0c2c605608e5c2a1987a5bbb04ce8354e1de`, tree-identical to reviewed `8a26fa3`. Native SHA remained `96e58aa08e7f8dd74c42f1bd30bc48a11ebd0eca16deac4cd810e1e843b6fe70`. One fresh Pi1.4.0 player used the same pinned DeepInfra Flash route, requested medium string,16,384 output,240s request guard and30-image policy as009. Actual request bodies confirm the serialized choices, not immutable backend effort. The new prospective mission brief also differs from009's run-specific brief; this is not an isolated prompt ablation. No donor, adviser, successor, lead tactic, hidden-state query or Save edit was supplied.
+
+### What actually happened
+
+The player observed the carried knife, the wielded inactive flashlight and the smartphone's active flashlight label. It selected an equipment-readiness workflow. All54 authored tool calls reached MCP; the retained next-request histories and tool events contain no early SDK schema/normalization refusal. That is observed conformance in this episode, not a causal improvement or model-wide success rate.
+
+| Stage | Retained result and limit |
+| --- | --- |
+| Memory authoring | Request29 had a valid envelope but its evidence was unrelated to the cited request. Request30 corrected that pairing and stored `revision-bc513e18…`. |
+| First program | Request32/root `op-e6d33361983647ea82c8ad2a2b22ad7e` returned `ESC`, `d`, `ENTER`: three counted evaluations/three returned inputs. It opened Multidrop, attempted confirmation without selecting an item, then stopped on an invalid `act` with null input. No input was dispatched for that invalid return. |
+| Informal rewrite | Request33 stored `revision-7e69b9c5…` with the failed run as a counterexample. Both artifacts are separate families at `revision:1,parent:null`, not formal revision1→2. |
+| Ordinary completion of the first stage | Ordinary `SPACE`, `RIGHT`, `ENTER` under the first root dismissed the popup, selected the flashlight and dropped it. Source `1249fb2d…` shows **Wield:fists**. This drop was not performed by the rewritten program. |
+| Second program | Request40 explicitly selected `revision-7e69b9c5…`, `use-d88b1981…`, root `op-fb2470f50e04473db097ccaf8837058d`. Its17 evaluations/16 returned inputs actually equipped the knife, with a wrong-item drop described below. |
+
+The second program sent `d`, `UP×3`, `RIGHT`, `ENTER`, `w`, `DOWN×8`, `ENTER`, then done. Its loose `/flashlight/` selector matched the smartphone's active Flashlight label; the actual selection moved to the wrapper and dropped it. It subsequently found and wielded the pocket knife. The actual trace notes `drop confirm sent`; **the target-absent branch was not taken**. The player's final report claimed that branch and called the second family “Revision2.” Both claims are corrected here; the original final text remains unchanged privately. Its claim of two unsubmitted refusals also undercounts the five actual MCP preparation refusals.
+
+![After ordinary flashlight drop, before the second program: Wield:fists.](assets/program-breadth-010/before-equipping.png)
+
+![After the second program: Wield:pocket knife and the unintended wrapper-drop message.](assets/program-breadth-010/after-equipping.png)
+
+Both images are byte-identical native captures. Before source `1249fb2da24c063af3d6386454e79f9690ec4299e0da67224b97a9b8bd9fe7c8` is revision45/turn5213305; after `1212090b0925afffd0a49815a6730f429210217c76d3aea7862f0a13a55cd408` is revision82/turn5213307. PNG SHA256s are `9e04e19a34c640fe600e417e6dffb10faa8d92749922f1d49c303fccc02f9d9f` and `b7aad46cb3d15155a673b051a83f8b3f069c3082c585b4e169d5c355910e0e47` respectively. The active-lighting and calorie messages are retained game history, not new010 lighting/food outcomes.
+
+Independent review supports only the narrow positive equipment-state effect: supported player authorship, explicit selected executable lineage, conditional row navigation and actual fists→knife change, plus normal ending. It does not credit correct program-controlled flashlight retirement, absent-target recovery, formal parent-linked refinement, combat utility, general workflow reliability or fully automatic completion. The wrong-item drop and invalid return require better semantic control, not a relaxed input validator. These limits remain with #177/#164; the evidence does not establish a new executor or missing native observation boundary.
+
+### Normal ending, costs and apparent latency
+
+Save began at17:00:35, before the frozen17:03:53 begin-ending boundary. Separate Save reconciliation recorded SavedCheckpoint through `op-787a8343dcf5433baec3d3a935f645e8`. OwnedNormalExit0 was recorded through `op-a996b92a4e95488390d76ceb189f144f`, followed by NormalFinish(`stopped`) through `op-1c1ca320257341028597194f47f165ff` at17:02:46, about1,132.697 mission seconds after admission. The1,800-second ending deadline at17:13:53 was not reached; no custodian ending stop occurred. All times here are UTC on2026-10-26.
+
+The55-request host settled in1,175.273s. All five owned PIDs were absent and port8766 unbound. Player/MCP/native received no cleanup signals; controller SIGINT closed the service after normal game ending. Eleven of242 opaque Save identities changed, with no addition/removal or Save-content interpretation.41 charged primitives comprise38 returned and3 unknown Load/Save/Quit ACKs; separate effect proofs do not rewrite those ACKs or authorize replay. The ledger retains41 mission requests and109 source frames, with7,176,517 retained frame bytes; model requests and mission requests are different quantities.
+
+Five MCP `not_submitted` refusals are retained: exact-source availability(request8), exact dismissal question(17), and open prompt(25/35/37). These have actual tool-start/result events; they are not SDK schema failures. The writer's unrelated-support refusal and the program's invalid return are separate again. Related ordinary-macro feedback/recovery was exercised, but #217's exact motivating new-lifecycle refusal remains unqualified.
+
+| Measured interval | Actual coverage |
+| --- | --- |
+| First returned inventory display→knife display: **763.268s** | Exact matching native frame identities in one browser monotonic clock; includes exploration, authoring, support correction, failed program, rewrite, refused roots and ordinary control. First inventory source `137528ee…`, request20, was available at16:47:36.930; this is not an attention/model-ready timestamp. |
+| Fists display after ordinary drop→knife display: **18.916s** | Same browser clock; includes the next model decision and final local program. It is not pure local execution. |
+| Second program tool start→result: **3,625.180ms** | All16 returned inputs, including the wrong wrapper drop; program termination is not by itself useful-effect proof. No≤500ms useful-effect pass follows from this interval or fast individual ACKs. |
+| Exact after-capture→DOM: **43ms** | Native epoch1793034020082→browser epoch1793034020125,5.3ms decode. Shared-host wall-clock proxy, not physical paint or whole-player latency. |
+
+The browser export contains370 frame/4,223 status records without overflow, including failures/stale presentation after closure. Missing endpoints remain unknown. This is one useful equipment change, not17 useful goals or a20-decision routine cohort; no p95/two-second cadence, unexplained-stall or readiness pass is claimed. The first program's907.772ms tool interval ended in error and supplies no useful-effect timing pass.
+
+All55 requests reported usage:476,223 uncached input,5,461,120 cache-read and51,805 output tokens, including29,899 reasoning tokens. Configured estimate **$0.15909432** is not billing. Full-case reservation is$12.0750080; cumulative463 actual requests retain$99.9391232 full reservation. The prospective80-new/408-prior ceiling reserved$105.4277632 under the newly applied$150 cumulative limit. Unused allocation, cache/promotions and failed work renew no actor or cap. Known configured estimates total$1.096550896; four prior usage records, invoices and aggregate engineering effort remain unknown. The earlier separate44-call allocation stays closed.
+
+Cached-input share was91.9792%. Four request projections omitted six repeated historical image parts, maximum32 candidate/30 retained images; none blocked a current result group. These are repeated omission instances, not six distinct lost images. All text/tool pairing and private originals remain. Constructed bodies total111,219,323 bytes(maximum3,745,802),896 repeated image appearances/68,679,778 decoded image bytes. The first system context contains34,145 characters; serialized16-tool declarations occupy50,833 bytes. Different mission briefs, errors, useful tasks and image histories prevent attributing a benefit to these sizes or comparing009/010 as a causal speed experiment. API spans(median9.918s/max126.969s), cache share and request count remain diagnostics; upload, server inference, attention and physical paint are not isolated.
+
+Private evidence is retained under `.runtime/campaigns/program-breadth-010/` and `.runtime/missions/program-breadth-010/`, with independent review, original trace/final text, frozen conditions, closed accounting, source/primitive/procedure joins, browser export, opaque Save manifests and OS closure. This completes the selected implementation and finite scoped assessment, with the adverse effects and corrected claims retained. #164's complete useful cadence and #145's independent campaign remain open; no automatic011 or new policy follows from this closeout.
