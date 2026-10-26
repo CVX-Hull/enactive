@@ -38,6 +38,12 @@ normal lifecycle and useful apparent cadence remain unaccepted. The
 execution and remaining actions. Source repairs do not retrospectively qualify
 failed runs.
 
+The [registered lifecycle](components/mission-execution.md#lifecycle-and-change-review)
+can keep an initial post-Load menu provisional. Explicit bounded dismissal must
+reach actual normal play before identity inspection/adoption; a menu or reconciled
+unknown input alone grants no ordinary gameplay authority. This is a narrow
+CDDA integration path, not general cleanup of unadopted sessions.
+
 The browser spectator shows actual Tiles frames, ownership, progress and
 uncertainty. The game stays windowed and project-local. You can Pause or take
 over in the native window; Pause cannot undo a committed action or cancel an
