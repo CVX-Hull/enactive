@@ -3,7 +3,7 @@ owner: lead
 review_trigger: Correction to program-breadth evidence or a later actual qualification
 status: historical
 date: 2026-10-25
-scope: Represented-UI source probe and four bounded native cases; integrated completion and whole-player responsiveness remain unqualified
+scope: Represented-UI source probe and five bounded native cases; integrated completion and whole-player responsiveness remain unqualified
 ---
 
 # Program breadth: a learned local effect, with incomplete normal ending
@@ -338,3 +338,76 @@ The integrated #222 result remains **incomplete**: useful learned non-travel
 advancement is evidenced, while the required normal Save/owned exit/Finish in
 the same assessment is absent. Source fixes, process closure and real hydration
 cannot substitute for that acceptance or qualify campaign readiness.
+
+## Post-publication005: Load reached a menu, without normal adoption
+
+[PR244](https://github.com/CVX-Hull/enactive/pull/244) published the composer
+refusal on merged source `7dd4ee8bcf3a8a418d82865e68d29e981e5c8a4e`, with the
+same tree as reviewed `4d51e028`. Exact protected full PR validation passed
+2,145 tests/4,075 subtests; actual main validation selected and passed
+main-smoke118/365. The PR owns the independent review and exact run receipts,
+including retained earlier fixture failures. Neither profile is native evidence.
+
+After the user's explicit approval of necessary budget expansions, the lead
+froze one separately reviewed005 assessment on that source. The source/native,
+model and player restrictions remained fixed; this was not restoration of an
+old actor. The cumulative ceiling became$60: at most90 new requests after173
+fully reserved prior requests, or263 total at$56.4477952. The old separate44-call
+allowance remained closed. The complete initial Load root had24 primitives/600s;
+normal ending had to begin by1,200s or before the last16-request reserve and
+complete before1,800s, preserving600s within the2,400s mission. Exact publication
+and final filled-package review preceded credentials, Start and inference.
+
+The actual host ended after298.518s and26 provider requests. Source-free owned
+Launch succeeded. The player opened the registered Load root and confirmed the
+highlighted world, then the highlighted Ellis row in the actual character list.
+The second `ENTER`, native request `08250d82-747a-43ca-9a87-fe08a680b6c7`, became
+unknown across the session transition. The player collected its original
+operation and never replayed it. Actual charges were **three primitives: one
+returned Resume, one returned ENTER and one unknown ENTER**. The actor's final
+description of three returned plus one unknown was incorrect.
+
+Later native observations reported a changed session, `in_game=true`, paused
+with origin `host`, and an INVENTORY/menu receiver with clean water3 and five
+rations. They had no normal-play scene. Lifecycle Observe requires normal play
+with a scene for this Load transition and rejected that menu before ingesting
+a candidate after-source. Subsequent explicit-source reconciliation could not
+satisfy the retained-after-source requirement. Null-source attempts were also
+caller errors; correcting those selections did not produce the absent normal
+endpoint. The native observation's empty request `id` is not an observation
+identity, and does not by itself establish the actor's claimed custody defect.
+
+Native source distinguishes menu receivers from normal play and clears pending
+input on world/session change rather than acknowledge an action from the old
+world. It does not establish that loading must immediately expose normal play.
+This is consistent with the unknown acknowledgment; the exact causal native
+event ordering and reason the inventory appeared remain unproved. No supported
+continuation from this particular post-load menu was demonstrated. A menu, a
+changed session or `in_game=true` cannot substitute for normal evidence, grounded
+identity Claims, explicit dismissal/adoption or input authority. Existing
+unexpected-transition/owned-unadopted work in
+[#176](https://github.com/CVX-Hull/enactive/issues/176) owns that scoped follow-up.
+
+No Claims, Work, Procedure, program execution, normal adoption, useful effect,
+registered Save, owned normal exit or Finish occurred. The005 case therefore did
+not exercise the new poll refusal and cannot qualify it natively. Player Stop
+and custodian SIGTERM were exceptional closure. The original cleanup receipt
+retains its transient defunct/unresolved flag; a later independent OS check
+found all five recorded PIDs absent and port8766 closed. All242 opaque save-file
+identities were unchanged. No save contents were interpreted or edited.
+
+All26 responses reported usage:62,648 uncached input,1,219,968 cached input,
+16,110 output including10,475 reasoning tokens. Configured-rate estimate was
+$0.029515408; the full-case reservation was$5.5803904. Cached input share95.1%
+did not make this blocked whole-player path responsive or useful. No image
+omission occurred (maximum seven images); constructed JSON bodies totalled
+9,798,164 bytes, maximum564,627. These are diagnostic quantities, not isolated
+upload/serialization/cache benefit or useful-effect timings. Browser mid/final
+exports are retained privately, without a useful-decision/paint claim.
+
+Through005, fresh actual requests total199 and conservative full reservations
+$42.7114496 under the new$60 ceiling. Known configured estimates across195
+reported responses total$0.269874688; four earlier failed/synthetic usage records
+and all invoices remain unknown. Cache savings and failures never renew caps.
+No further actor follows from this closed freeze. The integrated #222 result
+and #164 whole-player cohort remain open; #145 remains unaccepted.
