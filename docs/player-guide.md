@@ -121,6 +121,27 @@ denial or stop solely because a successful tool ran from a read-only host.
   described in the [execution contract](changes/061-player-program-execution.md).
   The summary is returned automatically; read exact continuation only when needed
   through `enactive_detail(next_snapshot.snapshot_id, progress)`.
+- Before each program input, check that the current visible interface supports
+  the intended phase and target. Use the supplied purpose, title and rows together;
+  a familiar category or the presence of rows alone does not identify a phase.
+  Match the intended object, including relevant qualifiers and enabled state,
+  rather than accepting the first shared substring. Recompute both the target
+  position and the selected row's position from the current rows. Move toward
+  that position and check equality before selecting or confirming; repeated UP
+  inputs do not establish the top of a wrapping list. Unknown selection,
+  ambiguous targets, missing rendered rows or an unexpected transition call for
+  `yield` with `input:null` and a reason describing the missing evidence. An item
+  absent from rendered rows is not proved absent from the inventory or world.
+  A confirmation can introduce another decision: interpret its current evidence
+  rather than automatically confirming or dismissing it. Retain state as a
+  hypothesis about the phase, not proof that the previous input achieved its
+  effect. Verify the useful outcome separately from program termination.
+  Fictional protocol examples, never current game evidence: a highlighted
+  “specimen record copy” is not the intended “specimen record” merely because
+  the text overlaps; a new “Merge drafts?” prompt is not the earlier selection
+  list merely because both have rows. Yield when those distinctions cannot be
+  established from the supplied view, then choose ordinary image-informed
+  exploration or a grounded correction under the original limits.
 - MCP assigns each new request ID and waits up to15 seconds for its original
   result; do not supply `request_id` or `wait_seconds`. A positively new preparation refusal explicitly
   marked `submission=not_submitted` has no original operation to collect. Follow
