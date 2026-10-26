@@ -96,7 +96,7 @@ export function projectImageContext(messages, maxImages) {
     const sha256 = createHash('sha256').update(Buffer.from(image.part.data, 'base64')).digest('hex');
     const provenance = {tool_call_id:image.toolCallId, image_index:image.imageIndex, sha256};
     projected[image.messageIndex].content[image.contentIndex] = {type:'text',
-      text:`Historical pixels omitted from this request by frozen image policy; toolCallId=${image.toolCallId}; image_index=${image.imageIndex}; SHA256=${sha256}. Pixels were not reread; this marker grants no authority.`};
+      text:`Historical pixels omitted from this request by frozen image policy; toolCallId=${image.toolCallId}; image_index=${image.imageIndex}; SHA256=${sha256}. Pixels were not reread; this marker grants no authority or source-read proof.`};
     if (omissions.length < 16) omissions.push(provenance);
   }
   return {messages:projected, summary:{max_context_images:maxImages, input_images:images.length,

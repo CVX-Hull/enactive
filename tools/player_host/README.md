@@ -49,8 +49,11 @@ Exit zero requires terminal assistant `stop`, no fatal failure latch, successful
 owned MCP closure, and a successful final-file write. `runHost(options)` is the
 programmatic seam; tests inject `fetch` there. No fake-provider CLI is exposed.
 
-The closed route has exactly `schema: "pi-player-host/1"`, `model`,
-`api_key_env`, `max_requests`, and `request_timeout_seconds`. `model` contains Pi's
+The closed route has exactly `schema: "pi-player-host/2"`, `model`,
+`api_key_env`, `max_requests`, `request_timeout_seconds` and the required positive
+integer `max_context_images`. Version1 and missing/invalid limits are rejected;
+closed historical configurations are evidence, not runnable current inputs.
+`model` contains Pi's
 explicit `id`, `name`, `api: "openai-completions"`, `provider`, `baseUrl`,
 `reasoning`, `input`, `cost`, `contextWindow` and `maxTokens`; optional `type`,
 `thinkingLevelMap` and the supported `compat` properties are validated in
@@ -58,6 +61,25 @@ explicit `id`, `name`, `api: "openai-completions"`, `provider`, `baseUrl`,
 query strings and fragments, arbitrary headers, other APIs and unknown fields
 are refused. Model metadata and costs are configuration, not verified provider
 capabilities or billing evidence.
+
+Freeze the actual provider's image-part allowance explicitly; the host imposes no
+universal provider limit. Pi's maintained `transformContext` hook keeps the newest
+historical images within that allowance while preserving all text, reasoning,
+tool calls/results and IDs. The entire latest assistant tool-call batch is protected,
+including when its final result contains only text. If that group alone exceeds
+the allowance, the host stops before another provider request or request charge.
+Historical omitted image parts become explicit text markers with original message/
+image provenance and hash: pixels were not forwarded in this request, and the
+marker grants no source-read proof or authority. Existing source IDs remain in
+their unmodified text; the player can request the exact source again through its
+available tools. No tool is called automatically to restore an image.
+
+Original agent messages and complete MCP `tool-result` trace entries retain the
+pixels. `request-start.payload` records the actual projected provider body; context
+projection events expose the count and omissions. This is a declared image-history
+window, without text summarization, automatic compaction, replay or permission
+renewal. Qualification must include actual continuation and apparent effects;
+reducing images alone is not a latency pass.
 
 For nonreasoning models effort must be `off`. For reasoning models the selected
 Pi effort (`off`, `minimal`, `low`, `medium`, `high`, `xhigh`, `max`) must have a

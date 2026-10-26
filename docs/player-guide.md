@@ -155,6 +155,11 @@ denial or stop solely because a successful tool ran from a read-only host.
   `text(JSON.stringify(result))` prints the whole transport envelope and can
   bury decision data or print image bytes. The MCP producer returns one JSON text
   block and any typed image, without a duplicate `structuredContent` value.
+  The frozen host may explicitly mark older image parts as omitted from the current
+  request to fit its image allowance. Such a marker is neither pixels nor source-read
+  proof. Text/source IDs remain; deliberately reread an exact source with
+  `enactive_source` when its pixels are needed. This grants no renewed input authority.
+  The latest tool-call result group is protected; an oversized group stops the host.
 - A pending/unknown result requires `enactive_result` for its original operation.
   Never invent a fresh ID to replay it. Same-actor tool calls serialize. A local
   refusal can permit a new decision only within the returned documented scope.
@@ -189,6 +194,10 @@ required. A known returned input can need another decision without having an
 unknown delivery. Returning to the owned main menu pauses/cancels this exit attempt;
 a separate exit root is needed to try again within the original mission allowance.
 Normal process exit and final Finish still require the returned registered proofs.
+Finish requires empty `identity_claim_ids` and no active phase. If the post-exit
+snapshot has no source, explicitly read the retained final exit source with
+`enactive_source` and select its returned ID for the separate Finish root.
+Do not substitute identity Claims or infer Finish from process exit.
 
 ## Current registered CDDA lifecycle
 
