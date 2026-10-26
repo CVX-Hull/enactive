@@ -63,7 +63,12 @@ provider errors go into argv, config, stdout or final receipts. Provider keys ar
 resolved only from one explicitly named environment variable when a live call is
 separately admitted. No Keychain discovery or personal settings loader is added.
 
-The frozen route schema is `pi-player-host/1`: exact Pi `model` metadata for an
+The initial frozen route schema was `pi-player-host/1`; current version2 adds the
+required explicit image-history allowance after the measured30-image provider
+limit in the [program-breadth assessment](../acceptance/2026-10-25-program-breadth.md).
+Version1 is rejected; closed run artifacts remain historical. The current
+[route contract](../../tools/player_host/README.md) owns the coordinated migration.
+The route retains exact Pi `model` metadata for an
 `openai-completions` route, a credential-environment name, finite request timeout
 and maximum provider requests. Model ID and effort must match the driver's frozen
 selection. Unsupported config versions/API shapes refuse; no alias/downgrade

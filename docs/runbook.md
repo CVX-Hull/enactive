@@ -581,13 +581,21 @@ arbitrary descendants or aliases are unsupported. Prepare these run-local files:
 - `frozen/pi-player-context.txt`: the actual frozen guide/context content supplied
   to both fresh hosts. The player has no shell or file-reading tools; paths to
   undeclared files are not supplied context.
-- `frozen/player-pi-configuration.json`: closed `pi-player-host/1` route with
-  `model`, `api_key_env`, `max_requests` and `request_timeout_seconds`. The current
+- `frozen/player-pi-configuration.json`: closed `pi-player-host/2` route with
+  `model`, `api_key_env`, `max_requests`, `request_timeout_seconds` and required
+  positive integer `max_context_images`. Freeze the selected provider's verified
+  image-part bound (30 for the tested DeepInfra route); this is not a universal
+  limit. Historical version1 files are not accepted or rewritten. The current
   supported provider contract is explicit Pi `openai-completions` metadata with
   text/image inputs, context/output capacities, cost and reasoning settings.
   Its ID must match `--model`; effort must be explicitly supported rather than
   silently clamped. Declared capabilities and prices require provider verification;
   metadata does not prove actual image understanding, quality or billing.
+  The [host image-history policy](../tools/player_host/README.md) preserves current
+  result-group images and all text/IDs, explicitly marks omitted older pixels and
+  retains originals privately. An oversized protected group stops before inference;
+  neither omissions nor rereads restore input authority. Freeze this context change
+  before requalifying actual continuation and whole-player responsiveness.
 
 Choose the actual frozen model/effort/deadline and existing Node binary:
 

@@ -104,9 +104,17 @@ selected tool schema, without source archaeology or the engineering corpus.
 The campaign driver always uses the generic Pi core host with the same MCP server
 and handoff/custody guards. Both original and successor start fresh, with explicit
 frozen context instead of file-reading tools. Removed Codex launch/resume/host
-selector options are rejected. The host keeps
-returned text/images complete and carries MCP error status into provider-visible
-content. It refuses SDK-coerced arguments before dispatch and stops on transport
+selector options are rejected. The host keeps original MCP text/images complete
+in its private trace and carries all text and MCP error status into provider-visible
+content. Its required frozen `max_context_images` bounds historical image parts
+through Pi's maintained context hook. The newest images are retained; older pixels
+are replaced by explicit provenance/hash markers which grant no read proof or
+authority. The entire latest assistant tool-call result group stays intact, even
+when its final result is text-only; a group exceeding the allowance stops before
+another request. Original messages, tool pairing/IDs, source references and reasoning
+are preserved. An exact source can be deliberately reread with existing tools;
+software performs no automatic retrieval. See the [route contract](../../tools/player_host/README.md).
+The host refuses SDK-coerced arguments before dispatch and stops on transport
 uncertainty rather than reconnecting/replaying. The package has no ambient tool
 discovery, automatic compaction or host-session restoration. Provider-request
 JSON bodies are retained in the existing private host trace so actual forwarded

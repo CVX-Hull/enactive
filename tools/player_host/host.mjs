@@ -1,4 +1,5 @@
 import { isDeepStrictEqual } from 'node:util';
+import { createHash } from 'node:crypto';
 import { Agent } from '@earendil-works/pi-agent-core';
 import { Type, AssistantMessageEventStream } from '@earendil-works/pi-ai';
 import { stream } from '@earendil-works/pi-ai/api/openai-completions';
@@ -32,10 +33,11 @@ function bounded(value) {
 /** One frozen route, without credential values, ambient discovery or effort clamping. */
 export function validateConfiguration(configuration, selectedModel, effort) {
   bounded(configuration);
-  closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'request_timeout_seconds']);
-  requireThat(configuration.schema === 'pi-player-host/1');
+  closed(configuration, ['schema', 'model', 'api_key_env', 'max_requests', 'max_context_images', 'request_timeout_seconds']);
+  requireThat(configuration.schema === 'pi-player-host/2');
   requireThat(/^[A-Za-z_][A-Za-z0-9_]*$/.test(configuration.api_key_env ?? '') && !AMBIENT_PROVIDER_SETTINGS.includes(configuration.api_key_env));
   requireThat(Number.isSafeInteger(configuration.max_requests) && configuration.max_requests > 0);
+  requireThat(Number.isSafeInteger(configuration.max_context_images) && configuration.max_context_images > 0);
   requireThat(finiteMilliseconds(configuration.request_timeout_seconds));
   const model = configuration.model;
   closed(model, ['id', 'name', 'api', 'provider', 'baseUrl', 'input', 'reasoning', 'thinkingLevelMap', 'cost', 'contextWindow', 'maxTokens', 'compat', 'type']);
@@ -70,6 +72,36 @@ export function validateConfiguration(configuration, selectedModel, effort) {
     }
   }
   return configuration;
+}
+
+/** Request-only projection. Canonical messages and original tool traces stay intact. */
+export function projectImageContext(messages, maxImages) {
+  const projected = structuredClone(messages);
+  const latestBatch = messages.findLastIndex(message => message.role === 'assistant'
+    && message.content.some(part => part.type === 'toolCall'));
+  const images = [];
+  for (const [messageIndex, message] of projected.entries()) {
+    let imageIndex = 0;
+    if (!Array.isArray(message.content)) continue;
+    for (const [contentIndex, part] of message.content.entries()) {
+      if (part.type === 'image') images.push({messageIndex, contentIndex, imageIndex:imageIndex++,
+        toolCallId:message.toolCallId ?? null, part});
+    }
+  }
+  const protectedImages = latestBatch < 0 ? 0 : images.filter(image => image.messageIndex >= latestBatch).length;
+  const blocked = protectedImages > maxImages;
+  const omitted = blocked ? [] : images.slice(0, Math.max(0, images.length - maxImages));
+  const omissions = [];
+  for (const image of omitted) {
+    const sha256 = createHash('sha256').update(Buffer.from(image.part.data, 'base64')).digest('hex');
+    const provenance = {tool_call_id:image.toolCallId, image_index:image.imageIndex, sha256};
+    projected[image.messageIndex].content[image.contentIndex] = {type:'text',
+      text:`Historical pixels omitted from this request by frozen image policy; toolCallId=${image.toolCallId}; image_index=${image.imageIndex}; SHA256=${sha256}. Pixels were not reread; this marker grants no authority or source-read proof.`};
+    if (omissions.length < 16) omissions.push(provenance);
+  }
+  return {messages:projected, summary:{max_context_images:maxImages, input_images:images.length,
+    protected_images:protectedImages, retained_images:images.length - omitted.length,
+    omitted_images:omitted.length, blocked, omissions, omitted_provenance_entries:omitted.length - omissions.length}};
 }
 
 export function validateMcpConfiguration(value) {
@@ -152,7 +184,7 @@ export async function runHost(options) {
     const mcp = validateMcpConfiguration(options.mcpConfig);
     requireThat(typeof options.prompt === 'string' && typeof options.context === 'string', 'invalid-input');
     bounded(options.prompt); bounded(options.context);
-    emit('host-start', {schema:configuration.schema, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_requests:configuration.max_requests, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
+    emit('host-start', {schema:configuration.schema, model:configuration.model.id, provider:configuration.model.provider, api:configuration.model.api, effort:options.effort, max_requests:configuration.max_requests, max_context_images:configuration.max_context_images, unsupported_features:['compaction', 'session-restore', 'model-fallback', 'reconnect', 'replay', 'ambient-tools', 'resource-discovery'], missing_endpoints:['model-attention', 'server-inference-start', 'physical-paint'], cleanup_budget_ms:cleanupBudget});
     if (fatal) throw new HostError(fatal);
     requireThat(!AMBIENT_PROVIDER_SETTINGS.some(name => Object.hasOwn(process.env, name)), 'ambient-provider-configuration');
     // The MCP subprocess gets only locale and executable lookup, never provider
@@ -188,6 +220,20 @@ export async function runHost(options) {
     agent = new Agent({
       initialState:{systemPrompt:options.context + (client.instructions ? '\n\nMCP server instructions:\n' + client.instructions : ''), model:configuration.model, thinkingLevel:options.effort, tools},
       toolExecution:'sequential',
+      transformContext:async messages => {
+        if (fatal) return messages;
+        // Pi requires this hook never to throw/reject. Latch a terminal stop and
+        // return safe canonical context; streamFn checks it before charging/fetch.
+        try {
+          const projection = projectImageContext(messages, configuration.max_context_images);
+          emit('context-image-projection', {request_id:`request-${requests + 1}`, ...projection.summary});
+          if (projection.summary.blocked) stop('context-image-limit');
+          return projection.messages;
+        } catch {
+          stop('context-projection-failed');
+          return messages;
+        }
+      },
       beforeToolCall:({toolCall, args}) => {
         if (fatal) return {block:true, reason:fatal, terminate:true};
         if (!isDeepStrictEqual(toolCall.arguments, args)) {

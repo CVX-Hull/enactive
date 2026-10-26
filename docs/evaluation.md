@@ -38,6 +38,7 @@ identity. Missing clock joins remain unknown.
 | Event | Observation and limit |
 | --- | --- |
 | `host-start`, `mcp-connected` | Frozen route/effort, unsupported features, missing endpoints and owned MCP PID; not actual provider/model competence or game authority. |
+| `context-image-projection` | Frozen image allowance, input/protected/retained/omitted counts and bounded omission provenance before serialization. Historical omission is explicit, not a reread or authority. Original MCP evidence stays complete. An oversized current group blocks before the next provider request; this event grants no inference, attention or latency credit. |
 | `request-start` | Constructed provider payload sizes, text/image counts, host request identity and the complete JSON request body in `payload`, including schemas and forwarded assistant/tool history and images. Begins at the selected SDK request boundary, not the user's decision or server inference. |
 | `response-headers`, `response-first-chunk` | HTTP status and first received response-body chunk observed locally; either can precede useful content and neither timestamp isolates queue/inference time. |
 | `response-backend` | Model identifier reported by a parsed provider event; an absent or alias-only identifier does not establish an immutable backend version. |
@@ -54,7 +55,11 @@ body retention adds serialization and disk cost; earlier fixture-only event-sink
 measurements do not establish its overhead. Include this cost in live timings.
 There is no automatic compaction in this core host; its absence is disclosed at
 startup rather than measured as a hidden model service. Finite request/host bounds
-and context/provider errors stop without pruning or fallback. Offline synthetic
+and context/provider errors stop without retry or fallback. The explicit frozen
+image-history window preserves current result groups, all text/tool pairing and
+private originals; it declares older omitted pixels rather than silently pruning
+evidence. Actual projected request bodies and projection counts remain inspectable.
+Offline synthetic
 SSE/MCP probes exercise the real SDK and serialization but perform no inference
 or gameplay. Their elapsed/instrumentation measurements are fixture-only costs.
 Live useful-effect/cadence criteria and all-role costs remain unchanged below;
