@@ -41,6 +41,14 @@ maintenance question rather than expanding bibliography for its own sake.
 
 ## Embodied control / VLA
 
+The [October26 context, prompt and ergonomics review](research-context-engineering.md)
+examines the user's fast, less flagship model direction against current primary
+small-model/tool studies, memory/compaction counterexamples, provider contracts
+and actual Pi context growth. It prioritizes sufficient current context,
+examples and mechanical authoring ergonomics with recoverable evidence; neither
+more context nor fewer tokens guarantees useful apparent speed. The existing
+Issues own selected experiments, scope and unchanged readiness criteria.
+
 The [October24 multi-rate review](research-multirate-agents.md) checks fresh
 control/skill and contrary memory evidence against Fresh024. It recommends
 improving routine coverage and off-path candidate authoring within the existing

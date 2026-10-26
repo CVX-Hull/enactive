@@ -150,6 +150,13 @@ model comparisons, paid providers and causal efficacy studies are separate choic
 One explicitly approved bounded DeepInfra comparison is closed with a negative
 selection decision; its project-local configuration is not a default gameplay service.
 
+The next engineering direction is to make faster, less flagship players effective
+through sufficient current context, ergonomic tools and useful local execution.
+The [context and prompting review](research-context-engineering.md) informs that
+work. Model, prompt and context changes must earn their place through complete
+useful outcomes and apparent latency; no particular smaller model, extra model
+tier or new context policy is qualified by this direction alone.
+
 Prefer existing engine/platform capabilities and maintained tools when they advance
 the overall objective. Useful long-term accelerators can justify investment;
 choices and reversal conditions belong in [ADRs](decisions/002-local-contract.md).
