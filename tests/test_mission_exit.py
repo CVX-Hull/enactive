@@ -21,7 +21,6 @@ class MissionExitTests(unittest.TestCase):
     fake_launch = launch_fixtures.MissionLaunchTests.fake_launch
     start = launch_fixtures.MissionLaunchTests.start
     settled = launch_fixtures.MissionLaunchTests.settled
-    collection_checkpoint = launch_fixtures.MissionLaunchTests.collection_checkpoint
     request = launch_fixtures.MissionLaunchTests.request
     launch = launch_fixtures.MissionLaunchTests.launch
 

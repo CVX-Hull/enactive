@@ -49,7 +49,6 @@ class MissionCreationFixture:
     setUp = launch_fixtures.MissionLaunchTests.setUp
     start = launch_fixtures.MissionLaunchTests.start
     settled = launch_fixtures.MissionLaunchTests.settled
-    collection_checkpoint = launch_fixtures.MissionLaunchTests.collection_checkpoint
     launch = launch_fixtures.MissionLaunchTests.launch
     request = launch_fixtures.MissionLaunchTests.request
 
