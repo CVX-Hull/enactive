@@ -173,6 +173,7 @@ class MissionRequestProducerTests(unittest.TestCase):
             for scope in ("prompt", "activity"):
                 for step in ("poll", "interrupt", "resume"):
                     with self.subTest(kind=kind, scope=scope, step=step):
+                        self.source = bundle(kind="activity_poll") if step == "poll" else bundle()
                         self.status = snapshot(**{scope + "_phase": phase(self.source)})
                         root = activity_root(kind, consent=False)
                         before = deepcopy(root)
@@ -190,6 +191,7 @@ class MissionRequestProducerTests(unittest.TestCase):
                         self.assertEqual(result["epoch"], 3)
 
     def test_ordinary_activity_duration_uses_explicit_ceilings_without_renewing_limits(self):
+        self.source = bundle(kind="activity_poll")
         self.status["prompt_phase"] = phase(self.source)
         for kind in ("direct", "program"):
             root = activity_root(kind, game_seconds=43_200)
@@ -210,6 +212,7 @@ class MissionRequestProducerTests(unittest.TestCase):
                 self.compose(skill("activity", goal=dict(step="poll")), scope="prompt", original_root=root)
 
     def test_activity_child_requires_exact_canonical_original_root_and_minimal_goal(self):
+        self.source = bundle(kind="activity_poll")
         self.status["prompt_phase"] = phase(self.source)
         root = activity_root()
         intent = skill("activity", goal=dict(step="poll"))
@@ -225,6 +228,33 @@ class MissionRequestProducerTests(unittest.TestCase):
         with self.assertRaises(ContractError):
             self.compose(intent, scope="prompt", original_root=root,
                 limits={**self.limits, "game_seconds": 59})
+
+    def test_activity_poll_refuses_selected_nonpoll_checkpoint_without_mutating_context(self):
+        root = activity_root()
+        intent = skill("activity", goal=dict(step="poll"))
+        for scope in ("prompt", "activity"):
+            for kind in ("menu", "normal_play"):
+                with self.subTest(scope=scope, kind=kind):
+                    self.source = bundle(kind=kind)
+                    self.status = snapshot(current_source=bundle(99, kind="activity_poll")["reference"],
+                        **{scope + "_phase": phase(self.source, stage="activity_poll")})
+                    before = deepcopy((self.status, self.source, root, intent, self.limits))
+                    with self.assertRaisesRegex(ContractError, "Selected checkpoint is not an activity poll") as caught:
+                        self.compose(intent, scope=scope, original_root=root)
+                    self.assertIn("returned visible phase", str(caught.exception))
+                    self.assertIn("original root and bounds", str(caught.exception))
+                    self.assertEqual((self.status, self.source, root, intent, self.limits), before)
+
+    def test_activity_poll_checks_metadata_and_schema_before_selected_boundary(self):
+        self.source = bundle(kind="menu")
+        self.status["prompt_phase"] = phase(self.source)
+        root = activity_root()
+        intent = skill("activity", goal=dict(step="poll"))
+        for changes in (dict(source=None), dict(limits={**self.limits, "primitives": 0}),
+                        dict(source={**self.source, "reference": bundle()["reference"]})):
+            with self.subTest(changes=changes), self.assertRaises(ContractError) as caught:
+                self.compose(intent, scope="prompt", original_root=root, **changes)
+            self.assertNotIn("Selected checkpoint is not an activity poll", str(caught.exception))
 
     def test_opaque_headers_and_perception_source_cannot_be_overridden(self):
         for key in ("schema", "mission_id", "epoch", "request_id", "limits", "phase_id", "sources",

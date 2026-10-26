@@ -7,7 +7,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -185,6 +185,99 @@ class PlayerHTTPTests(unittest.TestCase):
         with self.assertRaisesRegex(ContractError, "Snapshot handle unavailable"):
             player.call("enactive_skill", arguments)
         self.assertEqual(self.server.mission.status()["spent_inputs"], 0)
+
+
+class ActivityPollBindingTests(unittest.TestCase):
+    """Real MCP/PlayerTools/SDK staging with synthetic selected checkpoints."""
+
+    def setUp(self):
+        from tests.test_player_claims import StagingClient
+        from tests.test_mission_request_producer import activity_root
+        temporary = tempfile.TemporaryDirectory()
+        self.addCleanup(temporary.cleanup)
+        self.root = Path(temporary.name)
+        (self.root / ".runtime").mkdir()
+        self.backend = StagingClient(self.root)
+        self.player = PlayerTools(self.backend)
+        self.original = activity_root(consent=False)
+        original_json = self.backend._json
+
+        def collect_original(path, *, data=None, **options):
+            body = json.loads(data)
+            if body["kind"] == "result":
+                self.backend.reads.append(body)
+                return dict(status="accepted", operation=dict(request=deepcopy(self.original),
+                    state="partial", result={}))
+            return original_json(path, data=data, **options)
+        self.backend._json = collect_original
+
+    def arguments(self, kind="menu", scope="prompt"):
+        from tests.test_mission_request_producer import bundle, phase, snapshot
+        source = bundle(7, kind=kind)
+        self.player.snapshots["selected"] = dict(snapshot_id="selected", native={}, source=source,
+            mission=snapshot(phase="active", **{scope + "_phase": phase(source, stage="awaiting_control")}))
+        return dict(snapshot_id="selected", scope=scope, source_id=None, supporting_source_ids=[],
+            limits=dict(primitives=1, wall_seconds=7, game_seconds=60),
+            intent=dict(skill_kind="activity", goal=dict(step="poll"),
+                work_id=None, perception=None, procedure=None))
+
+    def run_client(self, exercise):
+        from mcp import Client
+        async def run():
+            async with Client(make_server(self.player)) as client:
+                await exercise(client)
+        asyncio.run(run())
+
+    def test_new_poll_on_selected_menu_is_unsubmitted_without_staging_or_refresh(self):
+        async def exercise(client):
+            for fault in ("menu", "absent", "unread"):
+                arguments = self.arguments()
+                if fault == "absent":
+                    self.player.snapshots["selected"]["source"] = None
+                elif fault == "unread":
+                    arguments["source_id"] = "unreturned-source"
+                selected = deepcopy(self.player.snapshots["selected"])
+                with self.subTest(fault=fault), patch.object(self.backend, "_stage", wraps=self.backend._stage) as stage, \
+                        patch.object(self.backend, "submit", wraps=self.backend.submit) as submit:
+                    reply = await client.call_tool("enactive_skill", arguments)
+                    self.assertTrue(reply.is_error)
+                    value = json.loads(reply.content[0].text)
+                    self.assertEqual(value["submission"], "not_submitted")
+                    self.assertNotIn("original_collection", value)
+                    self.assertNotIn("next_snapshot", value)
+                    if fault == "menu":
+                        self.assertIn("Selected checkpoint is not an activity poll", value["error"])
+                    stage.assert_not_called()
+                    submit.assert_not_called()
+                self.assertEqual(self.player.snapshots["selected"], selected)
+                self.assertEqual(self.backend.writes, [])
+                self.assertEqual(self.backend.events, [])
+                self.assertFalse((self.root / ".runtime/mission-requests").exists())
+        self.run_client(exercise)
+        self.assertEqual(self.backend.reads, [dict(schema="mission/11", kind="result",
+            mission_id="mission-test", operation_id="original-root")])
+
+    def test_actual_activity_poll_submits_exact_child_under_selected_original_root(self):
+        async def exercise(client):
+            for scope in ("prompt", "activity"):
+                arguments = self.arguments("activity_poll", scope)
+                selected = deepcopy(self.player.snapshots["selected"])
+                with self.subTest(scope=scope), patch.object(self.backend, "_stage", wraps=self.backend._stage) as stage:
+                    reply = await client.call_tool("enactive_skill", arguments)
+                    self.assertFalse(reply.is_error, reply)
+                    stage.assert_called_once()
+                request = self.backend.writes[-1]
+                self.assertEqual(request["goal"], {**self.original["goal"], "step": "poll"})
+                self.assertEqual(request["phase_id"], self.original["request_id"])
+                self.assertEqual(request["limits"], arguments["limits"])
+                self.assertEqual(request["sources"], [selected["source"]["reference"]["observation_id"]])
+                self.assertEqual(self.backend.staged_request("mission-test", request["request_id"]), request)
+                self.assertEqual(self.player.snapshots["selected"], selected)
+        original = deepcopy(self.original)
+        self.run_client(exercise)
+        self.assertEqual(self.original, original)
+        self.assertEqual(len(self.backend.writes), 2)
+        self.assertEqual(len(self.backend.reads), 2)
 
 
 class SnapshotDetailTests(unittest.TestCase):

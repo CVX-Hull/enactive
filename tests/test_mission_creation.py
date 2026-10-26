@@ -9,6 +9,7 @@ from dataclasses import replace
 from pathlib import Path
 import threading
 import time
+from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
@@ -282,6 +283,38 @@ class MissionCreationFixture:
 
 
 class MissionCreationTests(MissionCreationFixture, unittest.TestCase):
+    def test_shared_collection_diagnostic_preserves_original_settled_operation(self):
+        self.start()
+        request = self.request("collection-diagnostic-launch")
+        self.runtime.command(request)
+        original = self.settled(request["request_id"])
+        deadline = self.runtime._ledger.request(request["request_id"])["deadline"]
+        inputs = self.runtime.status()["spent_inputs"]
+        command = self.runtime.command
+        reads = []
+
+        def delayed_cache_read(data):
+            response = command(data)
+            reads.append(data["operation_id"])
+            if len(reads) == 1:
+                response = {**response, "operation": None}
+            return response
+
+        # Change only the borrowed collector's clock, never the runtime clock or
+        # execution deadline. One unavailable cache read crosses its diagnostic
+        # threshold; the next collects the same completed original operation.
+        clock = iter((0, 0, 4, 4))
+        with patch.object(launch_fixtures, "time", SimpleNamespace(monotonic=lambda: next(clock))), \
+                patch.object(self.runtime, "command", side_effect=delayed_cache_read), \
+                self.assertWarnsRegex(RuntimeWarning, "Functional collection exceeded 3 seconds"):
+            collected = self.settled(request["request_id"])
+        self.assertEqual(reads, [request["request_id"]] * 2)
+        self.assertEqual(collected, original)
+        self.assertEqual(self.collection_checkpoints[request["request_id"]]["ledger"]["state"], "completed")
+        self.assertFalse(self.collection_checkpoints[request["request_id"]]["cached_result"])
+        self.assertEqual(self.runtime._ledger.request(request["request_id"])["deadline"], deadline)
+        self.assertEqual(self.runtime.status()["spent_inputs"], inputs)
+
     def test_premature_stage_commit_preserves_create_for_player_control(self):
         self.ready()
         self.assertEqual(self.run_request(self.lifecycle("create"))["state"], "partial")

@@ -17,6 +17,26 @@ from tests.test_mission_contracts import admission
 from tests.test_mission_runtime import VisibleBridge
 
 
+def _collection_checkpoint(case, identity, response):
+    """Nonblocking ledger-lock sampling; never wait for writer ownership."""
+    ledger, row = case.runtime._ledger, "unavailable"
+    if ledger is not None:
+        row = "busy"
+        if ledger._mutex.acquire(blocking=False):
+            try:
+                row = ledger.request_timing_state(identity)
+            except Exception as error:
+                row = {"error_type": type(error).__name__}
+            finally:
+                ledger._mutex.release()
+    status = case.runtime.status()
+    receipt = status.get("last_receipt") or {}
+    operation = response.get("operation") or {}
+    return dict(cached_state=operation.get("state"), cached_result=operation.get("result") is not None,
+        ledger=row, active_operation=status.get("active_operation"),
+        last_ack={key: receipt.get(key) for key in ("kind", "transport_disposition", "native_request_id")})
+
+
 class MissionLaunchTests(unittest.TestCase):
     def setUp(self):
         temporary = tempfile.TemporaryDirectory()
@@ -49,25 +69,6 @@ class MissionLaunchTests(unittest.TestCase):
         self.process_state.update(launch_id="owned-launch", pid=1234, running=True, outcome="running")
         return copy.deepcopy(self.process_state)
 
-    def collection_checkpoint(self, identity, response):
-        """Nonblocking ledger-lock sampling; never wait for writer ownership."""
-        ledger, row = self.runtime._ledger, "unavailable"
-        if ledger is not None:
-            row = "busy"
-            if ledger._mutex.acquire(blocking=False):
-                try:
-                    row = ledger.request_timing_state(identity)
-                except Exception as error:
-                    row = {"error_type": type(error).__name__}
-                finally:
-                    ledger._mutex.release()
-        status = self.runtime.status()
-        receipt = status.get("last_receipt") or {}
-        operation = response.get("operation") or {}
-        return dict(cached_state=operation.get("state"), cached_result=operation.get("result") is not None,
-            ledger=row, active_operation=status.get("active_operation"),
-            last_ack={key: receipt.get(key) for key in ("kind", "transport_disposition", "native_request_id")})
-
     def settled(self, identity):
         started = time.monotonic()
         # Functional collection has the supported 15-second read policy, not a
@@ -80,7 +81,7 @@ class MissionLaunchTests(unittest.TestCase):
             if operation is not None and operation["result"] is not None:
                 return operation
             if time.monotonic() - started >= 3 and identity not in self.collection_checkpoints:
-                checkpoint = self.collection_checkpoint(identity, response)
+                checkpoint = _collection_checkpoint(self, identity, response)
                 self.collection_checkpoints[identity] = checkpoint
                 warnings.warn(f"Functional collection exceeded 3 seconds for {identity}: {checkpoint}",
                     RuntimeWarning, stacklevel=2)
@@ -122,7 +123,7 @@ class MissionLaunchTests(unittest.TestCase):
         self.start()
         entered, release, sampled, writer_released = (threading.Event() for _ in range(4))
         self.addCleanup(release.set)
-        cache, sample = self.runtime._cache_operation, self.collection_checkpoint
+        cache, sample = self.runtime._cache_operation, _collection_checkpoint
         record = self.runtime._record_settlement_timing
 
         def held_terminal(operation):
@@ -132,8 +133,8 @@ class MissionLaunchTests(unittest.TestCase):
                     raise AssertionError("Fixture did not release completed operation publication")
             cache(operation)
 
-        def sampled_pending(identity, response):
-            value = sample(identity, response)
+        def sampled_pending(case, identity, response):
+            value = sample(case, identity, response)
             sampled.set()
             return value
 
@@ -144,7 +145,7 @@ class MissionLaunchTests(unittest.TestCase):
 
         try:
             with patch.object(self.runtime, "_cache_operation", side_effect=held_terminal), \
-                    patch.object(self, "collection_checkpoint", side_effect=sampled_pending), \
+                    patch.dict(self.settled.__func__.__globals__, {"_collection_checkpoint": sampled_pending}), \
                     patch.object(self.runtime, "_record_settlement_timing", side_effect=recorded):
                 response = self.runtime.command(self.request())
                 self.assertEqual(response["status"], "accepted", response)

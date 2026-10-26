@@ -267,8 +267,9 @@ class InvocationTests(unittest.TestCase):
         self.assertEqual(args, before)
 
     def activity_arguments(self, *, scope="activity", step="answer_interrupt"):
-        source = bundle(kind='interrupt_confirmation')
-        source['observation']['boundary'].update(interrupt_request_id='owned-interrupt', recovery_operations=['answer_interrupt'])
+        source = bundle(kind='activity_poll' if step == 'poll' else 'interrupt_confirmation')
+        if step != 'poll':
+            source['observation']['boundary'].update(interrupt_request_id='owned-interrupt', recovery_operations=['answer_interrupt'])
         phase = dict(origin_request_id='original-root', checkpoint_id=source['reference']['observation_id'],
             stage='interrupt_confirmation', answered=False, interrupt_request_id='owned-interrupt')
         self.player.snapshots['chosen'] = dict(snapshot_id='chosen',

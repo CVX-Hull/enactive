@@ -200,6 +200,13 @@ def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: di
         _bind_skill_goal(snapshot, data, scope, source, original_root, limits)
     if view is not None:
         view["source_id"] = primary
-    return validate_submission({**data, "schema": VERSION, "mission_id": snapshot["mission_id"],
+    request = validate_submission({**data, "schema": VERSION, "mission_id": snapshot["mission_id"],
         "epoch": snapshot["epoch"], "request_id": request_id, "limits": limits, "phase_id": parent,
         "sources": ([] if primary is None else [primary]) + list(supporting_source_ids), **binding})
+    if (request["kind"] == "skill" and request["skill_kind"] == "activity"
+            and scope in ("prompt", "activity") and request["goal"]["step"] == "poll"
+            and source["observation"]["boundary"]["kind"] != "activity_poll"):
+        raise ContractError("Selected checkpoint is not an activity poll. Inspect the returned visible phase "
+            "and choose the current decision under the original root and bounds. "
+            "This as-of check establishes neither completion nor freshness or renewed authority.")
+    return request

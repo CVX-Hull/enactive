@@ -55,7 +55,7 @@ actual timing and menu-only cleanup do not qualify the player or full campaign.
 | [Pi host offline qualification](acceptance/2026-10-25-pi-host-offline.md) | Pinned provider/MCP serialization, restricted loadout, finite host/process control and fixture-only event costs; no inference, graphical play or speed comparison |
 | [Pi/DeepInfra configuration pilot](acceptance/2026-10-25-pi-configuration-pilot.md) | Four-call basic compatibility, failed twenty-request native pilot, caller error and runtime recovery defect, exceptional closure and cost/timing limits; reject this gameplay configuration and defer model selection |
 | [Mandatory generic-host delivery and fresh qualification](acceptance/2026-10-25-generic-host-qualification.md) | Generic-only source cutover with full PR/main validation; fresh player adopted identity but failed useful play/normal ending at its twenty-call cap; all44 approved provider calls consumed |
-| [Program breadth and bounded native assessment](acceptance/2026-10-25-program-breadth.md) | Represented-UI source probe and actual learned wield effect; failed follow-through, absent Finish and provider image-cap diagnosis; integrated normal ending and whole-player responsiveness remain unqualified |
+| [Program breadth and bounded native assessment](acceptance/2026-10-25-program-breadth.md) | Represented-UI source probe, actual learned wield/hydration effects, provider image-cap and wrong-phase poll follow-through; required normal ending and whole-player responsiveness remain unqualified |
 
 The [acceptance directory](acceptance/) retains other successes, intermediate
 failures and their costs. Original unknown acknowledgments remain distinct from

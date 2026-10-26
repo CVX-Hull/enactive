@@ -39,6 +39,10 @@ by the published phase through the existing read-only result interface. The pure
 composer inherits immutable activity semantics and binds the answer owner from
 the selected checkpoint. Missing or inconsistent context refuses before a new
 child is staged; this read neither refreshes authority nor extends limits.
+For `step=poll`, the selected checkpoint must be `activity_poll`; a known menu or
+other boundary refuses locally before staging. A returned menu/`awaiting_control`
+requires a new player decision under the same published root and limits. This
+as-of check does not replace live runtime validation or repair an unknown action.
 Activity start still requires the player's operation, target, duration and
 interrupt consent. The [protocol](../protocol.md#skill-request-binding-errors)
 owns the distinction between semantic duration and an ordinary root's ceiling.

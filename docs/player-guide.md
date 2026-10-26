@@ -164,6 +164,11 @@ denial or stop solely because a successful tool ran from a read-only host.
   Never invent a fresh ID to replay it. Same-actor tool calls serialize. A local
   refusal can permit a new decision only within the returned documented scope.
   A known native rejection is not an uncertain delivery or successful game effect.
+  Activity `poll` requires the selected source checkpoint to be `activity_poll`.
+  After a poll returns a menu/`awaiting_control`, inspect that view and choose the
+  next ordinary decision under its published phase and original limits. Polling
+  that menu again is a local preparation refusal, not a way to continue an activity.
+  This check does not refresh a source, grant control or renew the root.
   If healthy owned scope remains, explicitly Observe and choose a new action under
   the original limits; do not replay the rejected request or assume an editor changed.
 - `enactive_context` retrieves bounded memory; `enactive_source` retrieves an exact

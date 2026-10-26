@@ -838,6 +838,16 @@ does not require the original root to have the child's current epoch. Missing,
 unavailable or mismatched roots refuse before a new child is staged or submitted;
 no new endpoint, store, replay or authority follows from collection.
 
+A child `step=poll` additionally requires the explicitly selected source's boundary
+kind to be `activity_poll`. A selected menu or other boundary produces a local
+pre-staging refusal. This is an as-of consistency check, not a freshness or
+authority claim: a once-valid selected source can still become stale before
+dispatch, and the receiver retains its live boundary/custody checks. A returned
+`awaiting_control` menu needs another deliberate decision under the published
+phase and original limits; it is not an instruction to poll again. No automatic
+input, refresh, phase closure or budget renewal follows. Existing staged or
+unknown requests retain their original collection obligations.
+
 Current SDK/MCP skill intents also omit navigation `goal.scope` and activity
 `goal.interrupt_request_id`; supplied copies reject, even when null or correct.
 Navigation copies only a published coordinate scope matching this snapshot's
