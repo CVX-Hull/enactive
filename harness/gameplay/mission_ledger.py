@@ -1313,6 +1313,10 @@ class MissionLedger:
             phase = result.get("phase")
             expected_stage = "complete" if keys & {"normal_adoption", "saved_checkpoint"} else (
                 "awaiting_identity" if data["operation"] in ("create", "load") else "awaiting_control")
+            if (keys == {"lifecycle_transition"} and data["operation"] == "load"
+                    and type(phase) is dict and phase.get("stage") == "awaiting_control"):
+                self._initial_load_root(result["lifecycle_transition"]["origin_request_id"])
+                expected_stage = "awaiting_control"
             if (type(phase) is not dict or phase.get("phase_kind") != "lifecycle"
                     or phase.get("operation") != data["operation"] or phase.get("stage") != expected_stage):
                 raise LedgerError("Lifecycle proof lost its typed operation/stage receipt")
@@ -1411,6 +1415,123 @@ class MissionLedger:
         if primitive["state"] == "returned" and receipt.get("source_after") != proof["after_source_id"]:
             raise LedgerError("Returned lifecycle transition lost its exact after-source")
 
+    def _initial_load_root(self, root_id: str) -> None:
+        """Check the original request prefix; source chronology is checked by lifecycle."""
+        root = self.request(root_id)["request"]
+        if (self._get("admission")["scenario"]["mode"] != "load" or root.get("operation") != "load"
+                or root.get("phase_id") is not None or root.get("identity_claim_ids")
+                or root.get("work_id") is not None):
+            raise LedgerError("Initial menu transition requires an admitted initial Load root")
+        for row in self.request_records():
+            if row["request"]["request_id"] == root_id:
+                return
+            if {"normal_adoption", "saved_checkpoint", "lifecycle_transition"} & (row["result"] or {}).keys():
+                raise LedgerError("Initial Load cannot follow retained lifecycle history")
+        raise LedgerError("Initial Load root is absent")
+
+    def initial_load_menu_chain(self, transition_id: str, *, through_request_id: str | None = None,
+                                first_normal_source_id: str | None = None,
+                                allow_pending: bool = False) -> tuple[dict, ...]:
+        """Authenticate charged Resume/dismissal records, never live permission.
+
+        Retained source order/boundaries are the lifecycle reader's responsibility.
+        The writer alone may include its currently running returned dismissal;
+        reopened readers require settled immutable parent results.
+        """
+        rows = self.request_records()
+        by_id = {row["request"]["request_id"]: row for row in rows}
+        order = {identity: index for index, identity in enumerate(by_id)}
+        row = by_id[transition_id]
+        proof = (row["result"] or {}).get("lifecycle_transition")
+        phase = (row["result"] or {}).get("phase", {})
+        if (row["state"] != "completed" or proof is None or proof["operation"] != "load"
+                or phase.get("stage") != "awaiting_control"):
+            raise LedgerError("Initial menu chain requires its completed provisional Load transition")
+        self._initial_load_root(proof["origin_request_id"])
+        self._check_lifecycle_transition(transition_id, row["request"], proof, proof["actor_id"])
+        terminal = self.primitive(proof["terminal_logical_id"])
+        terminal_receipt = terminal["result"]
+        native = validate_published_input(terminal["intent"], terminal_receipt,
+            logical_id=terminal["logical_id"], native_id=terminal["native_id"])
+        original = {"controller_boot_id": proof["controller_boot_id"],
+            "operator_pause_generation": proof["operator_pause_generation"],
+            "takeover_generation": proof["before_takeover_generation"],
+            "actor_id": proof["actor_id"], "epoch": proof["origin_epoch"]}
+        if (any((terminal_receipt.get("dispatch_binding") or {}).get(key) != value for key, value in original.items())
+                or native["authority"]["controller_boot_id"] != proof["controller_boot_id"]
+                or native["takeover_generation"] != proof["before_takeover_generation"]):
+            raise LedgerError("Initial Load menu lost its original published dispatch custody")
+        root_id = proof["origin_request_id"]
+        cutoff = len(rows) - 1 if through_request_id is None else order[through_request_id]
+        if cutoff < order[transition_id]:
+            raise LedgerError("Initial menu chain precedes its transition")
+        chain = []
+        reached = False
+        for primitive in self.primitive_records():
+            owner_id = primitive["request_id"]
+            if not order[transition_id] < order[owner_id] <= cutoff:
+                continue
+            owner = by_id[owner_id]
+            data, intent, receipt = owner["request"], primitive["intent"], primitive["result"] or {}
+            pending = allow_pending and owner_id == through_request_id and owner["state"] in ("accepted", "running")
+            if (data.get("phase_id") != root_id or data.get("work_id") is not None
+                    or data["epoch"] != proof["reconciled_epoch"]
+                    or owner["state"] not in ("completed", "partial") and not pending
+                    or primitive["state"] != "returned" or not receipt.get("source_after")
+                    or receipt.get("processing_error") is not None or receipt.get("evidence_loss") is not None):
+                raise LedgerError("Initial menu chain lost a returned same-root epoch-bound input")
+            expected = {"controller_boot_id": proof["controller_boot_id"],
+                "operator_pause_generation": proof["operator_pause_generation"],
+                "takeover_generation": proof["after_takeover_generation"],
+                "actor_id": proof["actor_id"], "epoch": proof["reconciled_epoch"]}
+            binding = receipt.get("dispatch_binding") or {}
+            if any(binding.get(key) != value for key, value in expected.items()):
+                raise LedgerError("Initial menu chain changed its dispatch custody")
+            if binding.get("game_anchor_source_id") != intent["source_before"]:
+                raise LedgerError("Initial menu input borrowed another game anchor")
+            native = validate_published_input(intent, receipt,
+                logical_id=primitive["logical_id"], native_id=primitive["native_id"])
+            validate_ordinary_mapping(intent, receipt, logical_id=primitive["logical_id"],
+                native_id=primitive["native_id"], disposition="returned")
+            if (native["authority"]["controller_boot_id"] != proof["controller_boot_id"]
+                    or native["takeover_generation"] != proof["after_takeover_generation"]):
+                raise LedgerError("Initial menu chain changed native custody")
+            if not chain:
+                if (data["kind"] != "lifecycle" or data["operation"] != "load"
+                        or data["identity_claim_ids"] or intent["kind"] != "resume"):
+                    raise LedgerError("Initial menu chain requires explicit charged Load readmission first")
+            else:
+                view = data.get("perception") or {}
+                goal = data.get("goal") or {}
+                relation = intent["revalidation"] or {}
+                if (data["kind"] != "skill" or data.get("skill_kind") != "menu"
+                        or view.get("kind") != "dismissal" or goal.get("label") != "Cancel"
+                        or goal.get("outcome") != "dismissed" or intent["kind"] not in ("action", "key")
+                        or relation.get("rule") != "exact_png_bytes"
+                        or relation.get("original", {}).get("source_id") != view.get("source_id")
+                        or view.get("source_id") not in data["sources"]
+                        or relation.get("current", {}).get("source_id") != intent["source_before"]):
+                    raise LedgerError("Initial menu chain permits only explicitly interpreted returned dismissals")
+                self._check_source_transition(intent, proof["reconciled_epoch"],
+                    self._get("admission")["mission_id"], informing_sources=data["sources"], actor_id=proof["actor_id"])
+            if not pending:
+                audit = (owner["result"] or {}).get("phase", {})
+                if (audit.get("origin_request_id") != root_id
+                        or audit.get("stage") != "awaiting_control"
+                        or audit.get("operation") != "load"
+                        or any(audit.get(key) != value for key, value in expected.items() if key != "epoch")
+                        or audit.get("epoch") != proof["reconciled_epoch"]):
+                    raise LedgerError("Initial menu chain lost its immutable phase receipt")
+            chain.append(primitive)
+            if receipt["source_after"] == first_normal_source_id:
+                if len(chain) < 2:
+                    raise LedgerError("Resume cannot establish the first normal source")
+                reached = True
+                break
+        if first_normal_source_id is not None and not reached:
+            raise LedgerError("First normal source lacks its returned initial-menu dismissal chain")
+        return tuple(chain)
+
     def _check_normal_adoption(self, request_id: str, data: dict, value: dict) -> None:
         proof = validate_normal_adoption(value)
         initial_load = data["operation"] == "load" and self._get("admission")["scenario"]["mode"] == "load"
@@ -1429,7 +1550,6 @@ class MissionLedger:
                 or transition["origin_request_id"] != proof["origin_request_id"]
                 or transition_row["request"].get("phase_id") != proof["origin_request_id"]
                 or transition["reconciled_epoch"] != data["epoch"]
-                or proof["first_normal_source_id"] != transition["after_source_id"]
                 or proof["scope"]["mission_id"] != self._get("admission")["mission_id"]
                 or inspect["state"] != "completed" or inspect_data["kind"] != "skill"
                 or inspect_data["skill_kind"] != "inspect" or inspect_data["goal"]["purpose"] != "character_identity"
@@ -1439,6 +1559,12 @@ class MissionLedger:
                 or set(data["identity_claim_ids"]) != {proof["world_claim_id"], proof["character_claim_id"]}
                 or (data["operation"] == "create" or initial_load) != (proof["saved_checkpoint_request_id"] is None)):
             raise LedgerError("Normal adoption lost its transition, inspection, scope or identity claims")
+        if proof["first_normal_source_id"] != transition["after_source_id"]:
+            if not initial_load or proof["saved_checkpoint_request_id"] is not None:
+                raise LedgerError("Only initial Load may enter normal play through a provisional menu")
+            self.initial_load_menu_chain(proof["transition_result_request_id"],
+                through_request_id=proof["identity_inspect_request_id"],
+                first_normal_source_id=proof["first_normal_source_id"])
         claims = {row["entry"]["id"]: row for row in self.memory_records("claim")}
         inspection_inputs = [p for p in self.primitive_records()
             if p["request_id"] == proof["identity_inspect_request_id"]]

@@ -17,7 +17,7 @@ from .gameplay.interaction import MenuOutcome, MenuSkill
 from .gameplay.mission_contracts import VERSION, InputObservation, SourceRevalidation
 from .gameplay.mission_ledger import BudgetError, LedgerError
 from .gameplay.input_contracts import ControlIntent, ControlOutcome
-from .gameplay.semantic_controls import SemanticControlSkill
+from .gameplay.semantic_controls import SemanticControlSkill, dismissal_input
 from .gameplay.ordinary_input import OrdinaryInputSkill
 
 if TYPE_CHECKING:
@@ -218,13 +218,41 @@ class RegisteredLifecycle:
         if latest.turn < first["scene"]["turn"] or latest.turn - phase.first_normal.turn > r._ledger.request(phase.root_id)["request"]["limits"]["game_seconds"]:
             raise BudgetError("Original provisional lifecycle game-time ceiling exceeded")
 
+    def _initial_load(self, phase: NormalPhase) -> bool:
+        """Freeze eligibility at the original pre-transition source prefix."""
+        r = self.runtime
+        if phase.operation != "load" or phase.saved_checkpoint is not None:
+            return False
+        try:
+            r._ledger._initial_load_root(phase.root_id)
+        except LedgerError:
+            return False
+        endpoint = None
+        if phase.transition_request is not None:
+            endpoint = r._ledger.request(phase.transition_request)["result"]["lifecycle_transition"]["after_source_id"]
+        found = False
+        for ref in r._store.historical_references:
+            r._store.observation(ref)
+            if ref.boundary_kind == "normal_play":
+                return False
+            found = found or ref == phase.checkpoint
+            if ref.observation_id == endpoint:
+                return True
+        return endpoint is None and found
+
+    def _menu_provisional(self, phase: NormalPhase) -> bool:
+        return (phase.transition_request is not None and phase.first_normal is None
+                and phase.stage == "awaiting_control" and self._initial_load(phase))
+
     def _paused_identity_diagnostic(self, phase: NormalPhase, ledger: dict, live: tuple) -> None:
         """Validate historical effect proof without activating or acquiring a lease."""
         r = self.runtime
-        if (phase.operation not in ("create", "load") or phase.stage != "awaiting_identity"
-                or phase.first_normal is None or phase.transition_request is None
-                or phase.checkpoint.boundary_kind != "normal_play"
-                or phase.checkpoint.session != phase.first_normal.session
+        menu = self._menu_provisional(phase)
+        if (phase.operation not in ("create", "load") or phase.transition_request is None
+                or not menu and (phase.stage != "awaiting_identity" or phase.first_normal is None
+                    or phase.checkpoint.boundary_kind != "normal_play"
+                    or phase.checkpoint.session != phase.first_normal.session)
+                or menu and phase.checkpoint.boundary_kind != "menu"
                 or ledger["pause_cause"] != "unknown" or r._lease is not None
                 or live[3] is not None or live[5] or not live[4] or live[0] is None
                 or not live[0]["paused"] or live[0]["pause_origin"] not in ("world_change", "host")
@@ -239,17 +267,23 @@ class RegisteredLifecycle:
         r._ledger._check_lifecycle_transition(phase.transition_request, transition["request"], proof, phase.actor_id)
         expected = dict(operation=phase.operation, origin_request_id=phase.root_id,
             launch_request_id=phase.launch.request_id, launch_id=phase.launch.launch_id,
-            after_source_id=phase.first_normal.observation_id, reconciled_epoch=phase.epoch,
+            reconciled_epoch=phase.epoch,
             actor_id=phase.actor_id, controller_boot_id=phase.launch.operator_mark[0],
             operator_pause_generation=phase.launch.operator_mark[1],
             after_takeover_generation=phase.launch.takeover_generation)
         if any(proof[key] != value for key, value in expected.items()):
             raise ControlError("Paused lifecycle observation lost its exact committed transition lineage")
+        if menu or proof["after_source_id"] != phase.first_normal.observation_id:
+            from .gameplay.lifecycle import initial_load_menu_sources
+            initial_load_menu_sources(r._ledger, r._store, transition_id=phase.transition_request,
+                first_normal_source_id=None if menu else phase.first_normal.observation_id)
 
     def guard(self, work: _Work, phase: NormalPhase, proposal: ControlIntent | _ResumeIntent | None = None,
               *, diagnostic: bool = False, ordinary: bool = False) -> None:
         r = self.runtime
         r._check_cancelled(work)
+        if phase.transition_request is not None and (r.controller.frozen or r.controller.closed):
+            raise ControlError("Provisional lifecycle cannot clear a frozen or closed controller")
         launch = self._owned()
         ledger = r._ledger.snapshot(now=r._wall())
         state = r._store.observation(phase.checkpoint)
@@ -288,6 +322,12 @@ class RegisteredLifecycle:
         r._check_lease()
         if r._lease.operation != "lifecycle":
             raise ControlError("Lifecycle input requires its exact lifecycle lease")
+        if self._menu_provisional(phase):
+            if (state["boundary"]["kind"] != "menu" or not state["in_game"]
+                    or actual["boundary"]["kind"] != "menu"
+                    or (proposal.kind, proposal.action) != dismissal_input(state)):
+                raise ControlError("Initial Load provisional menu permits only its registered explicit dismissal")
+            return
         if proposal.kind == "direct" and actual["boundary"]["kind"] != "menu":
             raise ControlError("Lifecycle ordinary input cannot enter unadopted normal play at preflight")
         if state["boundary"]["kind"] == "normal_play":
@@ -320,6 +360,10 @@ class RegisteredLifecycle:
 
     def published(self, phase: NormalPhase, proposal: ControlIntent, native_request: dict,
                   reservation: CapacityReservation) -> None:
+        if self._menu_provisional(phase):
+            # Returned dismissal is a same-session input, never another Load.
+            # An unknown dismissal stops without a reconciliable candidate.
+            return
         expected = (proposal.kind in ("action", "direct") and (
             phase.stage in ("character_confirmation", "points_confirmation", "save_confirmation")
             or phase.operation == "load" and phase.checkpoint.boundary_kind == "menu"))
@@ -395,7 +439,7 @@ class RegisteredLifecycle:
         phase = self.phase
         if phase is None or data["phase_id"] != phase.root_id or data["operation"] != phase.operation:
             raise ControlError("No live matching registered lifecycle phase; history restores no phase")
-        if phase.stage == "awaiting_identity" and self.runtime._store.observation(phase.checkpoint)["paused"]:
+        if (phase.stage == "awaiting_identity" or self._menu_provisional(phase)) and self.runtime._store.observation(phase.checkpoint)["paused"]:
             return self._readmit(work, phase)
         self.guard(work, phase)
         self._binding_request(work, phase.checkpoint)
@@ -566,6 +610,13 @@ class RegisteredLifecycle:
                 "source_ids": [phase.checkpoint.observation_id], "grants_authority": False}
         self.guard(work, phase, ordinary=data["skill_kind"] == "direct")
         self._binding_request(work, phase.checkpoint)
+        if self._menu_provisional(phase):
+            view = data.get("perception") or {}
+            if (data["skill_kind"] != "menu" or view.get("kind") != "dismissal"
+                    or data["goal"].get("label") != "Cancel" or data["goal"].get("outcome") != "dismissed"):
+                return self._adoption_refusal(work, phase,
+                    "Initial Load menu readmission permits only enactive_skill with lifecycle scope, "
+                    "skill_kind=menu and an explicit dismissal interpretation until normal play is observed.")
         if data["skill_kind"] == "inspect":
             return self._inspect(work, phase)
         if data["skill_kind"] not in ("menu", "edit", "direct"):
@@ -637,7 +688,7 @@ class RegisteredLifecycle:
                         # Policy attribution cannot turn known delivery into an
                         # unknown merely because a newer healthy view arrived.
                         outcome = replace(outcome, disposition="partial", pending_logical_id=None)
-                    stage = phase.stage
+                    stage, first_normal = phase.stage, phase.first_normal
                     if (checkpoint != feedback.after and not r._store.equivalent(feedback.after, checkpoint, rule="exact_png_bytes")
                             and stage in ("world_confirmation", "character_confirmation", "points_confirmation", "save_confirmation")):
                         stage = "awaiting_control"
@@ -651,6 +702,16 @@ class RegisteredLifecycle:
                     if after["category"] != "YESNO" and stage in ("world_confirmation", "character_confirmation"):
                         stage = "awaiting_control"
                     if after["boundary"]["kind"] == "normal_play":
+                        if self._menu_provisional(phase):
+                            from .gameplay.lifecycle import initial_load_menu_sources
+                            first = feedback.after
+                            initial_load_menu_sources(r._ledger, r._store,
+                                transition_id=phase.transition_request, first_normal_source_id=first.observation_id,
+                                through_request_id=data["request_id"], allow_pending=True)
+                            if checkpoint.session != first.session or checkpoint.boundary_kind != "normal_play":
+                                raise EvidenceError("Dismissal current capture left its returned first normal session")
+                            first_normal = first
+                            stage = "awaiting_identity"
                         if (phase.operation == "save" and phase.first_normal is not None
                                 and checkpoint.session == phase.first_normal.session):
                             self.phase = None
@@ -661,7 +722,8 @@ class RegisteredLifecycle:
                             return "partial", result
                         if phase.identity_screen is not None:
                             stage = "awaiting_adoption"
-                    phase = self._install(work, replace(phase, checkpoint=checkpoint, stage=stage), previous=phase)
+                    phase = self._install(work, replace(phase, checkpoint=checkpoint, stage=stage,
+                        first_normal=first_normal), previous=phase)
                     if checkpoint != feedback.after and self.candidate is None:
                         self.guard(work, phase, ordinary=data["skill_kind"] == "direct")
                         r._check_lease()
@@ -678,6 +740,10 @@ class RegisteredLifecycle:
                 "awaiting_adoption" if phase.stage == "awaiting_adoption" else "awaiting_control")
             if self.candidate is None or not self.candidate.diagnostic_only:
                 result["phase"] = self.receipt(phase, receipt_stage)
+            if phase.first_normal is not None and phase.transition_request is not None and phase.stage == "awaiting_identity":
+                result["provisional_scope"] = {"mission_id": r._admission.mission_id,
+                    "session": phase.first_normal.session, "coordinate_epoch":
+                        len({ref.session for ref in r._store.historical_references if ref.boundary_kind == "normal_play"}) - 1}
             return outcome.disposition, result
 
     @staticmethod
@@ -700,7 +766,7 @@ class RegisteredLifecycle:
             r._mission_deadline - r._admission.cleanup_reserve.wall_seconds]
         menu_read = (diagnostic and phase.operation in ("create", "load")
             and phase.first_normal is None and phase.checkpoint.boundary_kind == "menu"
-            and self.candidate is None and not self.normal_after_launch())
+            and phase.transition_request is None and self.candidate is None and not self.normal_after_launch())
         if menu_read:
             # This explicit read or zero-input abort cannot renew execution.
             # Its own deadline bounds capture; children still retain the old
@@ -759,23 +825,30 @@ class RegisteredLifecycle:
     def _readmit(self, work: _Work, phase: NormalPhase) -> tuple[str, dict]:
         r, data = self.runtime, work.request
         r._check_cancelled(work)
+        if r.controller.frozen or r.controller.closed:
+            raise ControlError("Provisional readmission cannot clear a frozen or closed controller")
         self._owned()
         self._binding_request(work, phase.checkpoint)
         ledger = r._ledger.snapshot(now=r._wall())
         transition = None if phase.transition_request is None else r._ledger.request(phase.transition_request)
+        menu = self._menu_provisional(phase)
         if (data["identity_claim_ids"] or data["work_id"] is not None
                 or ledger["phase"] != "paused"
                 or ledger["epoch"] != phase.epoch or data["epoch"] != phase.epoch
                 or ledger["player_id"] != phase.actor_id or ledger["unreconciled"]
                 or transition is None or transition["state"] != "completed"
-                or transition["result"].get("lifecycle_transition", {}).get("after_source_id") != phase.first_normal.observation_id):
+                or not menu and phase.first_normal is None):
             raise ControlError("Identity readmission requires the already committed exact transition/effect")
+        # The diagnostic guard authenticates either the direct normal endpoint
+        # or the returned initial-menu dismissal chain to that endpoint.
         self.guard(work, phase, diagnostic=True)
         r._ledger.activate(epoch=phase.epoch, player_id=phase.actor_id, now=r._wall())
         phase = self._refresh(work, phase)
         phase = self._resume(work, phase)
-        return "completed", {"reason": "Explicit provisional readmission; only character identity inspection is eligible",
-            "phase": self.receipt(phase, "awaiting_identity"), "grants_authority": False}
+        return "completed", {"reason": "Explicit provisional readmission; only " + (
+                "enactive_skill with lifecycle scope, skill_kind=menu and a dismissal interpretation "
+                "is eligible until actual normal play is observed" if menu else "character identity inspection is eligible"),
+            "phase": self.receipt(phase, "awaiting_control" if menu else "awaiting_identity"), "grants_authority": False}
 
     def _candidate_guard(self, work: _Work, candidate: _TransitionCandidate) -> None:
         r, phase = self.runtime, candidate.phase
@@ -864,6 +937,8 @@ class RegisteredLifecycle:
         phase = candidate.phase
         expected = (state["category"] == "MAIN_MENU" and not state["in_game"] and state["boundary"]["kind"] == "menu"
             if phase.operation == "save" else state["boundary"]["kind"] == "normal_play" and state["in_game"] and state["scene"] is not None)
+        if self._initial_load(phase) and state["boundary"]["kind"] == "menu" and state["in_game"]:
+            expected = True
         if ((not candidate.diagnostic_only and (not expected or state["session"] == phase.checkpoint.session))
                 or state["error"] or not state["frame_ok"]
                 or not state["paused"] or state["pause_origin"] not in ("world_change", "host")):
@@ -920,9 +995,12 @@ class RegisteredLifecycle:
                 proof=proof,
                 sources=(proof["before_source_id"], proof["after_source_id"]),
                 note=f"Observed lifecycle {phase.operation} transition after {candidate.native_request['id']}; original ACK remains unknown", now=r._wall())
+        normal_entry = phase.operation != "save" and candidate.first_after.boundary_kind == "normal_play"
+        if phase.operation != "save" and not normal_entry and not self._initial_load(phase):
+            raise ControlError("Only initial admitted Load may reconcile a provisional menu")
         phase = replace(phase, checkpoint=candidate.latest_after, epoch=data["epoch"],
-            first_normal=candidate.first_after if phase.operation != "save" else None,
-            transition_request=data["request_id"], stage="awaiting_identity" if phase.operation != "save" else "awaiting_control")
+            first_normal=candidate.first_after if normal_entry else None,
+            transition_request=data["request_id"], stage="awaiting_identity" if normal_entry else "awaiting_control")
         result = {"lifecycle_transition": proof, "grants_authority": False}
         if phase.operation == "save":
             normals = [ref for ref in r._store.historical_references if ref.boundary_kind == "normal_play"]
@@ -938,10 +1016,12 @@ class RegisteredLifecycle:
             result["phase"] = self.receipt(phase, "complete",
                 extra=(self._source(proof["before_source_id"]), normals[-1], candidate.first_after))
         else:
-            result["phase"] = self.receipt(phase, "awaiting_identity", extra=(self._source(proof["before_source_id"]),))
-            result["provisional_scope"] = {"mission_id": r._admission.mission_id,
-                "session": phase.first_normal.session, "coordinate_epoch":
-                    len({ref.session for ref in r._store.historical_references if ref.boundary_kind == "normal_play"}) - 1}
+            result["phase"] = self.receipt(phase, phase.stage,
+                extra=(self._source(proof["before_source_id"]), candidate.first_after))
+            if normal_entry:
+                result["provisional_scope"] = {"mission_id": r._admission.mission_id,
+                    "session": phase.first_normal.session, "coordinate_epoch":
+                        len({ref.session for ref in r._store.historical_references if ref.boundary_kind == "normal_play"}) - 1}
         # Durable effect and typed result precede any provisional Resume/identity
         # input. A later explicit child starts that stage after this commit.
         phase = self._install(work, phase)
