@@ -3,7 +3,7 @@ owner: lead
 review_trigger: Correction to program-breadth evidence or a later actual qualification
 status: historical
 date: 2026-10-25
-scope: Represented-UI source probe and six bounded native cases; integrated completion and whole-player responsiveness remain unqualified
+scope: Represented-UI source probe and seven bounded native cases; integrated completion and whole-player responsiveness remain unqualified
 ---
 
 # Program breadth: a learned local effect, with incomplete normal ending
@@ -467,3 +467,92 @@ with explicit separate-readmission guidance in the transition result. It neither
 automatically readmits nor changes runtime custody/failure checks. A new finite
 assessment must preserve006 as failed; #222's useful-program plus normal-ending
 outcome and the separate #164/#145 gates remain open.
+
+## 007: normal ending, no useful program effect
+
+[PR247](https://github.com/CVX-Hull/enactive/pull/247) published the request-guidance
+correction at `0fcb4cbaf7ac39f9508fa45097b1157bd47d8bb4`, with the identical
+reviewed tree. Exact full PR40267263121 passed2,176 tests/4,096 subtests; actual
+main40268024360 passed its selected main-smoke profile119/373, both attempt1.
+The final independently reviewed007 freeze kept the same native/model/low effort
+and one actor, with80 new requests after226 prior:306 maximum reserved
+$65.6769024 within the prospectively expanded$70 ceiling. The user's necessary
+budget-expansion and necessary visible-game-data/DeepInfra authorization applied.
+
+The actual initial Load reached the same in-game menu. This time the player
+reconciled its transition, separately readmitted, dismissed to actual normal
+play, inspected identity, grounded Claims, returned and adopted. Wrong dismissal
+arguments and a mis-grounded world Claim were corrected without phase loss. This
+is one actual qualification of that bounded recovery sequence, not all#176.
+
+The selected goal was to light the very dark shelter with the carried flashlight.
+Three independently authored/selected program roots ran on actual observations:
+
+| Root and executable | Actual behavior and limit |
+| --- | --- |
+| `op-ec816f39…`, family `eadd0070…` revision1 | Returned `i` once; the next evaluation attempt proposed unsupported `HOME` and failed input-schema validation before native dispatch. This was a policy/input-contract error, not a CDDA engine error. |
+| `op-e8607bc3…`, same family revision2 `c404fd73…` |12 evaluations/12 returned inputs: `i`, one initial `UP`, then ten `UP`s reporting unknown selection. The program treated the supplied row-ID string as a numeric index and exhausted its original allowance. |
+| `op-57b83628…`, new family `ae5d9efa…` revision1 | Four evaluations, three returned inputs `ESC,i,a`, then explicit yield because the flashlight remained off. This did not identify the zero-charge condition. |
+
+Parent retrieval was initially unsubmitted; the24,000-byte context packet later
+omitted that procedure for its byte bound. The new family does not prove the
+parent was globally unavailable. Healthy fallback/correction costs remain in
+the run. The existing player guide did not spell out the selected-row type or
+physical-key enumeration. Its follow-through now clarifies these existing
+contracts; the data/behavior is unchanged.
+
+Later **ordinary** `ENTER` then `ENTER` exposed the actual message that the
+flashlight had0 charges and needed1. It remained off and lighting remained very
+dark. The programs made decision mistakes; the later ordinary attempt uncovered
+an unmet game-item precondition. No program-driven useful effect, missing engine
+capability or new executor requirement is established. Historical food/drink
+messages supply no attributed useful effect in this case. The original actor
+final is retained with these causal/count/contract corrections.
+
+![Actual007 ordinary activation failure: empty flashlight, still off and very dark.](assets/program-breadth-007/zero-charge-flashlight.png)
+
+The unchanged native PNG is retained source `37c86e6b…`, revision72, session
+`1792988289742-12513-1`, capture1792989066359ms. Its exact matching browser frame
+reached DOM replacement248ms later, with9.5ms decode on the shared-host wall-clock
+assumption. This is a failure-frame display proxy, neither paint nor useful-effect
+latency. Final browser export dropped no records.
+
+Normal Save began832.846 mission seconds after admission. SavedCheckpoint,
+owned exit with returncode0 and separate NormalFinish with disposition `stopped`
+were recorded; Finish completed954.985s after admission, within both ending
+deadlines and the inference reserve. Three original ACKs remain unknown with
+separate effect reconciliation: Load/Save use LifecycleTransition; Quit uses
+OwnedNormalExit/process evidence. Quit did not use another Load/Save-style
+Observe transition. Mission charges were35 primitives:32 returned and3 unknown.
+No replay or successor occurred. No native cleanup signal was required. Later
+all five exact PIDs and port8766 were absent.11of242 opaque save identities
+changed, with no additions/removals or content interpretation.
+
+Actual usage was64 requests, all reported:746,993 uncached input,6,951,040
+cache-read and52,061 output tokens, including25,760 reasoning tokens. The
+configured estimate was$0.22234144, not billing; full reservation$13.7363456.
+Fresh cumulative actual requests are290, reserving$62.2428160; known configured
+estimates total$0.523364472. Earlier unknown usage and invoices remain unknown;
+failures/cache savings never renew caps. Cached input share was90.2963%.
+
+This is the first case here to exercise historical-image omission: requests60–64
+omitted1,2,2,3,3 older image parts respectively, with at most33 pre-projection
+images and30 actually forwarded per request. Those11 omissions include repeated
+context, not11 distinct originals. API responses completed normally and originals
+remain retained. Cache-read tokens fell210,560→28,672 between requests59–60,
+recovered at62 and fell again at63. This establishes no isolated or causal
+cache/speed benefit. Constructed bodies totalled128,983,734 bytes, maximum
+3,846,910; these are not wire/upload timings.
+
+Host elapsed was991.169s; provider-request durations totalled930.348s, median
+8.566s and maximum92.180s. Tool durations totalled59.350s. The95 retained PNGs
+occupied6,869,237 bytes; recorded game seconds were0. These diagnostic clocks,
+fast cursor inputs and successful ending supply no useful-decision latency
+cohort. Apparent-response percentiles, causal learning/cache benefit and campaign
+readiness remain unqualified. Independent review checked actual program lineage,
+accounting, native evidence, unknown reconciliation and normal ending.
+
+The integrated#222 outcome remains incomplete. The next offline correction is
+program-authoring contract clarity; a later native assessment requires its own
+explicitly selected finite source/configuration/resource freeze. No automatic
+retry, actor revival or weakening of useful-effect/normal-ending criteria follows.
