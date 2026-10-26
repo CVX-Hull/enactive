@@ -256,6 +256,38 @@ class MissionRequestProducerTests(unittest.TestCase):
                 self.compose(intent, scope="prompt", original_root=root, **changes)
             self.assertNotIn("Selected checkpoint is not an activity poll", str(caught.exception))
 
+    def test_paused_reconciled_load_menu_skill_requires_separate_readmission(self):
+        self.source = bundle(kind="menu")
+        self.status = snapshot(phase="paused", pause_cause="unknown", unreconciled=0,
+            lifecycle_phase=phase(self.source, operation="load", stage="awaiting_control"))
+        intent = skill(goal=dict(purpose="character_identity"))
+        before = deepcopy((self.status, self.source, intent, self.limits))
+        with self.assertRaisesRegex(ContractError, "still paused after reconciliation") as caught:
+            self.compose(intent, scope="lifecycle")
+        self.assertIn("separate readmission", str(caught.exception))
+        self.assertEqual((self.status, self.source, intent, self.limits), before)
+        readmit = self.compose(lifecycle("load"), scope="lifecycle")
+        self.assertEqual(readmit["phase_id"], "original-root")
+        self.assertEqual(readmit["sources"], [self.source["reference"]["observation_id"]])
+        # Active or otherwise different snapshots still go to the receiver's guards.
+        for changes in (dict(phase="active"), dict(pause_cause="user"), dict(unreconciled=1),
+                        *(dict(lifecycle_phase=phase(self.source, operation=op, stage="awaiting_control"))
+                          for op in ("create", "save")),
+                        dict(lifecycle_phase=phase(self.source, operation="load", stage="awaiting_identity"))):
+            with self.subTest(changes=changes):
+                selected = {**self.status, **changes}
+                self.assertEqual(compose_request(selected, request_id="later", intent=intent,
+                    limits=self.limits, scope="lifecycle", source=self.source)["kind"], "skill")
+        normal = bundle()
+        selected = {**self.status, "lifecycle_phase": phase(normal, operation="load", stage="awaiting_identity")}
+        self.assertEqual(compose_request(selected, request_id="normal", intent=intent,
+            limits=self.limits, scope="lifecycle", source=normal)["kind"], "skill")
+        for changes in (dict(limits={**self.limits, "primitives": 0}),
+                        dict(source={**self.source, "reference": bundle()["reference"]})):
+            with self.subTest(changes=changes), self.assertRaises(ContractError) as caught:
+                self.compose(intent, scope="lifecycle", **changes)
+            self.assertNotIn("still paused after reconciliation", str(caught.exception))
+
     def test_opaque_headers_and_perception_source_cannot_be_overridden(self):
         for key in ("schema", "mission_id", "epoch", "request_id", "limits", "phase_id", "sources",
                     "expected_session", "expected_revision", "expected_boundary_id"):

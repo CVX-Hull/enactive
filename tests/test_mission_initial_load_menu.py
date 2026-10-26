@@ -68,6 +68,7 @@ class InitialLoadMenuTests(MissionCreationFixture, unittest.TestCase):
         reconciled = self.run_request(self.lifecycle("reconciled", "load", parent="initial-load"))
         self.assertEqual(reconciled["state"], "completed", reconciled)
         self.assertEqual(reconciled["result"]["phase"]["stage"], "awaiting_control")
+        self.assertIn("separate same-root lifecycle Load call", reconciled["result"]["reason"])
         self.assertNotIn("provisional_scope", reconciled["result"])
         self.assertIsNone(self.runtime._registered_lifecycle.phase.first_normal)
         self.assertIsNone(self.runtime.status()["metrics"]["game_seconds"])
@@ -83,6 +84,40 @@ class InitialLoadMenuTests(MissionCreationFixture, unittest.TestCase):
         self.assertEqual(operation["result"]["phase"]["stage"], "awaiting_control")
         self.assertNotIn("provisional_scope", operation["result"])
         self.assertIsNone(adopted_timeline(self.runtime._ledger, self.runtime._store))
+
+    def test_premature_child_before_reconciliation_names_original_lifecycle_root(self):
+        self.pending_menu(reconcile=False)
+        candidate = self.runtime._registered_lifecycle.candidate
+        primitives = deepcopy(self.runtime._ledger.primitive_records())
+        response = self.runtime.command(self.control("premature-menu", "Cancel", parent="initial-load"))
+        self.assertEqual(response["status"], "rejected", response)
+        self.assertIn("same-root reconciliation", response["reason"])
+        self.assertNotIn("observe and choose a new root", response["reason"])
+        self.assertIs(self.runtime._registered_lifecycle.candidate, candidate)
+        self.assertEqual(self.runtime._ledger.primitive_records(), primitives)
+        self.assertEqual(self.run_request(self.lifecycle("reconciled", "load", parent="initial-load"))["state"], "completed")
+
+    def test_producer_refuses_premature_identity_then_explicit_sequence_adopts(self):
+        from tests.test_mission_request_producer_integration import compose
+        world = self.pending_menu()
+        phase = self.runtime._registered_lifecycle.phase
+        requests = deepcopy(self.runtime._ledger.request_records())
+        primitives = deepcopy(self.runtime._ledger.primitive_records())
+        deadline = self.runtime._mission_deadline
+        delivered = len(self.bridge.delivered)
+        inspect = self.control("premature-inspect", "Character", kind="inspect", parent="initial-load")
+        with self.assertRaisesRegex(ContractError, "separate readmission"):
+            compose(self, inspect, "lifecycle")
+        self.assertIs(self.runtime._registered_lifecycle.phase, phase)
+        self.assertIsNone(self.runtime._lease)
+        self.assertEqual(self.runtime._ledger.request_records(), requests)
+        self.assertEqual(self.runtime._ledger.primitive_records(), primitives)
+        self.assertEqual(self.runtime._mission_deadline, deadline)
+        self.assertEqual(len(self.bridge.delivered), delivered)
+        self.readmit_menu()
+        self.dismiss_menu("first-menu")
+        self.dismiss_menu("second-menu")
+        self.adopt(world)
 
     def dismiss_menu(self, identity):
         operation = self.run_request(self.control(identity, "Cancel", parent="initial-load"))

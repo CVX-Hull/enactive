@@ -3,7 +3,7 @@ owner: lead
 review_trigger: Correction to program-breadth evidence or a later actual qualification
 status: historical
 date: 2026-10-25
-scope: Represented-UI source probe and five bounded native cases; integrated completion and whole-player responsiveness remain unqualified
+scope: Represented-UI source probe and six bounded native cases; integrated completion and whole-player responsiveness remain unqualified
 ---
 
 # Program breadth: a learned local effect, with incomplete normal ending
@@ -411,3 +411,59 @@ reported responses total$0.269874688; four earlier failed/synthetic usage record
 and all invoices remain unknown. Cache savings and failures never renew caps.
 No further actor follows from this closed freeze. The integrated #222 result
 and #164 whole-player cohort remain open; #145 remains unaccepted.
+
+## Post-repair006: reconciled menu, premature identity inspection
+
+[PR246](https://github.com/CVX-Hull/enactive/pull/246) published the initial-Load
+menu path at `dbec27f6b29ae0af9feadf5f5388294b52b50200`. Exact full PR validation
+passed2,171 tests/4,088 subtests; actual merged-main main-smoke passed118/365.
+Those source checks did not themselves establish native recovery.
+
+One independently reviewed006 allocation retained the same native/model and
+allowed80 new requests after199 prior requests, reserving at most$59.8818816
+within$60. The user explicitly authorized the necessary visible game data to
+DeepInfra. An earlier launch was rejected before process creation pending that
+consent; a later overlong configuration label failed before admission/inference.
+Both pre-admission failures remain retained separately; neither consumed a model
+request or started a game. The corrected admission then started one fresh actor.
+
+The actual Load ENTER remained unknown. Diagnostic Observe retained its changed
+in-game INVENTORY/menu source, and request11 completed same-root Load transition
+effect reconciliation. The original ACK and charge remained unknown; the mission
+was still paused, without a lease, at `awaiting_control`. Request12 immediately
+submitted `inspect` with `purpose=character_identity`. It omitted the required
+**separate same-root Load readmission and returned menu dismissal to normal play**.
+The runtime rejected it before input and retired the phase through its active-only
+guard. The actor's final report incorrectly called inspection the next documented
+step; the preserved trace and current guide establish this caller error. The
+destructive applicability failure is also a concrete public-interface ergonomics
+gap, not an authority bypass or evidence that readmission succeeded and failed.
+Before reconciliation, another premature skill received misleading generic
+prompt/new-root guidance; the original lifecycle root was still required.
+
+No Procedure, conditional program, ordinary adoption, useful effect, Save
+checkpoint, owned normal exit or Finish occurred. The host returned0 after
+310.093s; the driver reported incomplete. Player Stop and exceptional native
+SIGTERM closed the runtime. The original transient-defunct/unresolved cleanup flag
+is retained; later all five exact owned PIDs were absent and port8766 was closed.
+All242 opaque save identities were unchanged. No save contents were interpreted.
+The disconnected browser retained the last menu frame; its timing export supplies
+no useful-decision cohort or physical-paint evidence.
+
+Actual006 used27 requests, all with reported usage:64,034 uncached input,
+1,338,624 cache-read and17,183 output tokens, including10,831 reasoning tokens.
+Configured-rate estimated cost was$0.031148344; the full reservation was$5.7950208.
+Cached input share was95.4348%, with no image omissions and at most8 images.
+Constructed request bodies totalled12,809,280 bytes, maximum745,289; these are not
+wire timing or apparent responsiveness. Fresh cumulative actual requests are226,
+fully reserved at$48.5064704; known configured estimates total$0.301023032.
+Earlier unknown usage, invoices and aggregate engineering effort remain unknown;
+no failure/cache saving refunds the allocation. The old separate44 calls remain
+closed. Independent review checked the sequence, accounting and ending limits.
+
+The next bounded correction uses the existing pure request producer to refuse
+a skill selected from that paused, reconciled Load-menu snapshot before staging,
+with explicit separate-readmission guidance in the transition result. It neither
+automatically readmits nor changes runtime custody/failure checks. A new finite
+assessment must preserve006 as failed; #222's useful-program plus normal-ending
+outcome and the separate #164/#145 gates remain open.
