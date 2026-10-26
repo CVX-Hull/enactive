@@ -99,9 +99,18 @@ denial or stop solely because a successful tool ran from a read-only host.
   require null input. Omit click geometry; software binds it from the current view.
   The same writer applies original finite limits, records sources/actions/results
   and stops on unknown delivery. Done is program termination, not verified success.
-  View `program-view/1` contains current category/actions/in_game/ui/scene/geometry
+  View `program-view/1` contains current category/actions/in_game/ui/scene/frame_geometry
   and boundary kind/input_receiver. It contains no pixels; null UI/scene means
-  unavailable. Use ordinary image-informed exploration where the routine lacks
+  unavailable. For supplied UI, `rows` contains current `{id,text,enabled,hotkey}`
+  records and `ui.selected` is a row ID string or null. Locate that ID in the
+  current rows to obtain a position; its spelling is not an item identity or
+  numeric position. Semantic `perception.selected` instead uses the interpreted
+  row's numeric position. UI coverage includes only rendered rows.
+  A physical key is one printable ASCII character or exactly `ENTER`, `ESC`,
+  `UP`, `DOWN`, `LEFT`, `RIGHT`, `TAB`, `BACKSPACE`, `SPACE`, `PAGEUP`, `PAGEDOWN`,
+  with a `modifiers` array drawn from `CTRL`, `ALT`, `SHIFT`. Exposed semantic
+  action names do not expand that physical-key contract.
+  Use ordinary image-informed exploration where the routine lacks
   evidence. Existing prompt children remain ordinary/semantic controls; do not
   replace their root with a new program. Code/state bounds and engine faults are
   described in the [execution contract](changes/061-player-program-execution.md).

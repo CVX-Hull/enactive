@@ -1494,14 +1494,27 @@ success. Engine fault/yield keeps healthy ordinary fallback; Pause/custody/stora
 failures and unknown delivery keep their existing stopping policy. No input is
 replayed, and a pending result is collected by its original operation ID.
 
-Program-view/1 contains only current category/actions/in_game/ui/scene/geometry
+Program-view/1 contains only current category/actions/in_game/ui/scene/frame_geometry
 and boundary kind/input_receiver, with explicit omissions. It has no PNG pixels,
-unseen map/inventory, save access, identifiers or authority fields. Null structured
+unseen map/inventory, save access, mission/source/custody identifiers or authority fields. Null structured
 data is unavailable. The model retains actual PNG presentation and ordinary
 image-informed exploration for unrepresented conditions. Software records exact
 source/revision/continuation and primitive feedback for the existing asynchronous
 reflection path; the player need not narrate each use. This does not establish
 mental attention, semantic success, organic adoption or learning benefit.
+
+The supplied `ui` retains the existing visible-UI shape: `purpose`, `title`,
+`rows`, `selected`, `filter`, `count` and `coverage=rendered_rows_only`. Each row
+has `id`, `text`, `enabled` and nullable `hotkey`; `selected` is null or the ID
+of one current row. These local row IDs carry no hidden item identity or stable
+meaning across views. Obtain a position by matching the current ID to current
+rows, rather than parsing its spelling. Semantic menu `perception.selected`
+separately denotes a numeric position in the player's interpreted rows.
+The [visible-UI schema](../harness/gameplay/mission_contracts.py) and
+[ordinary input schema](../harness/gameplay/native_input.py) remain the shared
+data contracts. Program keys use their existing closed named-key set or one
+printable ASCII character; semantic action labels are not additional physical
+keys. No projection, input capability, format or version changes with this clarification.
 
 Mission10 keeps `skill_kind=direct` on the existing writer, with a passive ordinary
 policy separate from semantic menu planning. Its closed goal contains `input`,
