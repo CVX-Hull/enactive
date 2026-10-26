@@ -15,12 +15,104 @@ from .mission_contracts import (
     validate_normal_adoption, validate_prompt_result, validate_request, validate_saved_checkpoint,
 )
 from .mission_ledger import MissionLedger
+from .native_receipts import compact_native_ack
+from .semantic_controls import dismissal_input
 from .timeline import MAX_TIMELINE_SEGMENTS, GameTimeline, SessionContinuity, game_timeline
 
 
 def _require(condition: bool, reason: str) -> None:
     if not condition:
         raise EvidenceError(reason)
+
+
+def initial_load_menu_sources(ledger: MissionLedger, store: EvidenceStore, *, transition_id: str,
+                              first_normal_source_id: str | None = None,
+                              through_request_id: str | None = None,
+                              allow_pending: bool = False) -> None:
+    """Verify the actual initial-menu prefix, including every retained capture.
+
+    Raw dispatch/Resume/QUIT provenance has one ledger owner. This layer adds
+    canonical source chronology and the boundary/ACK evidence it cannot inspect.
+    Nothing here reconstructs a private phase, lease or game-time anchor.
+    """
+    chain = ledger.initial_load_menu_chain(transition_id, through_request_id=through_request_id,
+        first_normal_source_id=first_normal_source_id, allow_pending=allow_pending)
+    proof = ledger.request(transition_id)["result"]["lifecycle_transition"]
+    references = store.historical_references
+    positions = {ref.observation_id: index for index, ref in enumerate(references)}
+    refs = {ref.observation_id: ref for ref in references}
+
+    def source(identity: str) -> tuple[EvidenceRef, dict]:
+        _require(identity in refs, "Initial Load menu source is absent")
+        return refs[identity], store.observation(refs[identity])
+
+    after, observed = source(proof["after_source_id"])
+    before, _ = source(proof["before_source_id"])
+    _require(before.boundary_kind == "menu" and after.boundary_kind == "menu"
+             and after.session != before.session and observed["in_game"] and observed["paused"]
+             and observed["pause_origin"] in ("host", "world_change")
+             and positions[before.observation_id] < positions[after.observation_id]
+             and not any(ref.boundary_kind == "normal_play"
+                         for ref in references[:positions[after.observation_id]]),
+             "Provisional menu is not the mission's initial Load entry")
+
+    def owned(ref: EvidenceRef, obs: dict, *, normal: bool = False) -> None:
+        _require(ref.session == after.session and obs["in_game"] and obs["status"] == "ready"
+                 and not obs["error"] and obs["frame_ok"]
+                 and obs["takeover_generation"] == proof["after_takeover_generation"]
+                 and obs["pause_origin"] != "human"
+                 and ref.boundary_kind == ("normal_play" if normal else "menu")
+                 and (not normal or obs["scene"] is not None and not obs["paused"]),
+                 "Initial menu prefix left its owned supported session")
+
+    cursor = after
+    owned(after, observed)
+    for index, primitive in enumerate(chain):
+        intent, receipt = primitive["intent"], primitive["result"]
+        start, state = source(intent["source_before"])
+        preflight, preflight_obs = source(intent["preflight_source"])
+        end, end_obs = source(receipt["source_after"])
+        _require(positions[cursor.observation_id] <= positions[start.observation_id]
+                 <= positions[preflight.observation_id] < positions[end.observation_id],
+                 "Initial menu input borrowed a missing, foreign or future source")
+        for ref in references[positions[cursor.observation_id]:positions[preflight.observation_id] + 1]:
+            obs = store.observation(ref)
+            owned(ref, obs)
+            _require(store.equivalent(cursor, ref, rule="exact_png_bytes"),
+                     "Initial menu source changed outside a returned dismissal")
+        _require((intent["expected_session"], intent["expected_revision"], intent["expected_boundary_id"]) ==
+                 (preflight.session, preflight.revision, preflight_obs["boundary"]["id"])
+                 and compact_native_ack(end_obs) == receipt["native_ack"],
+                 "Initial menu input differs from its actual retained preflight or ACK")
+        normal = end.observation_id == first_normal_source_id
+        owned(end, end_obs, normal=normal)
+        if index == 0:
+            _require(state["paused"] and not end_obs["paused"]
+                     and state["category"] == end_obs["category"] and state["ui"] == end_obs["ui"]
+                     and start.frame_sha256 == end.frame_sha256,
+                     "Initial menu Resume changed its visible receiver")
+        else:
+            _require(not state["paused"] and not end_obs["paused"],
+                     "Initial menu dismissal lost its readmitted receiver")
+            _require((intent["kind"], intent["value"]) == dismissal_input(state)
+                     and dismissal_input(state) == dismissal_input(preflight_obs),
+                     "Initial menu input differs from its registered dismissal")
+        # No intermediate retained capture may silently establish another first
+        # normal source, even when a later ACK is normal in the same session.
+        for ref in references[positions[preflight.observation_id] + 1:positions[end.observation_id]]:
+            owned(ref, store.observation(ref))
+        cursor = end
+    if first_normal_source_id is not None:
+        first, _ = source(first_normal_source_id)
+        _require(not any(ref.boundary_kind == "normal_play" for ref in references[:positions[first.observation_id]]),
+                 "Initial menu dismissal skipped the earliest canonical normal source")
+    else:
+        # Interrupted histories may contain only this one menu proof and a
+        # verified returned prefix. A later snapshot cannot repair missing input.
+        for ref in references[positions[cursor.observation_id]:]:
+            owned(ref, store.observation(ref))
+            _require(store.equivalent(cursor, ref, rule="exact_png_bytes"),
+                     "Interrupted initial menu history has an unauthenticated capture")
 
 
 def adopted_timeline(ledger: MissionLedger, store: EvidenceStore) -> GameTimeline | None:
@@ -134,6 +226,10 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
             phase = validate_prompt_result(phase_value, request=data, root=root, actor_id=actor)
             expected_stage = "complete" if key != "lifecycle_transition" or "saved_checkpoint" in (
                 requests[identity]["result"] or {}) else ("awaiting_identity" if data["operation"] in ("create", "load") else "awaiting_control")
+            if (key == "lifecycle_transition" and proof["operation"] == "load"
+                    and source(proof["after_source_id"])[0].boundary_kind == "menu"):
+                ledger._initial_load_root(root_id)
+                expected_stage = "awaiting_control"
             _require(phase["stage"] == expected_stage, "Lifecycle proof has the wrong phase stage")
             for sid in phase["source_ids"]:
                 source(sid)
@@ -221,6 +317,13 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
             _require(receipt.get("source_after") == after.observation_id, "Returned transition points to another after-source")
         if proof["operation"] == "save":
             _require(after.boundary_kind == "menu" and not after_obs["in_game"], "Save did not reach a menu")
+        elif proof["operation"] == "load" and after.boundary_kind == "menu":
+            ledger._initial_load_root(root_id)
+            _require(before.boundary_kind == "menu" and after_obs["in_game"]
+                     and after.session != before.session
+                     and not any(ref.boundary_kind == "normal_play"
+                                 for ref in references[:positions[after.observation_id]]),
+                     "Only initial Load may enter an owned provisional menu")
         else:
             _require(before.boundary_kind == "menu" and after.boundary_kind == "normal_play"
                      and after_obs["in_game"], "Create/load did not enter normal play from a menu")
@@ -244,8 +347,10 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
     adoptions = proofs["normal_adoption"]
     _require(len(adoptions) == len(segments), "Every normal-session segment requires exactly one adoption")
     if not segments:
-        _require(not proofs["saved_checkpoint"] and not proofs["lifecycle_transition"],
+        _require(not proofs["saved_checkpoint"] and len(proofs["lifecycle_transition"]) <= 1,
                  "Lifecycle proofs cannot substitute for absent normal sessions")
+        if proofs["lifecycle_transition"]:
+            initial_load_menu_sources(ledger, store, transition_id=next(iter(proofs["lifecycle_transition"])))
         return None
 
     def identity_claim(identity: str, *, subject: str, scope: dict, coverage: str, value: str, result_id: str) -> dict:
@@ -306,9 +411,15 @@ def _project(ledger: MissionLedger, store: EvidenceStore, *, rows: tuple[dict, .
                  and phase_member(result_id, root_id)
                  and order[adoption["transition_result_request_id"]] <= order[result_id]
                  and adoption["scope"] == expected_scope
-                 and adoption["first_normal_source_id"] == first.observation_id
-                 and proof["after_source_id"] == first.observation_id,
+                 and adoption["first_normal_source_id"] == first.observation_id,
                  "Adoption must cover the exact earliest normal source in canonical segment order")
+        if proof["after_source_id"] != first.observation_id:
+            _require(index == 0 and proof["operation"] == "load"
+                     and adoption["saved_checkpoint_request_id"] is None,
+                     "Only the initial Load may reach normal play through menus")
+            initial_load_menu_sources(ledger, store, transition_id=adoption["transition_result_request_id"],
+                first_normal_source_id=first.observation_id,
+                through_request_id=adoption["identity_inspect_request_id"])
         checkpoint, checkpoint_obs = source(adoption["checkpoint_source_id"])
         adoption_phase = requests[result_id]["result"]["phase"]
         _require(all(adoption_phase[key] == proof[field] for key, field in {

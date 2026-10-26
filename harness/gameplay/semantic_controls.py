@@ -28,6 +28,19 @@ class _ControlBlocked(Exception):
     """Current evidence or remaining budget cannot support another proposal."""
 
 
+def dismissal_input(state: dict) -> tuple[str, str]:
+    """Existing visible-menu dismissal mapping; this grants no input authority."""
+    # The pinned input_context registers the language toggle globally. A
+    # no-choice any-key popup needs a real key, not an absent QUIT. Do not infer
+    # acknowledgement from arbitrary extra controls/rows.
+    if (state["category"] == "POPUP_WAIT" and state["ui"] is None
+            and set(state["actions"]) - {"toggle_language_to_en"} == {"ANY_INPUT", "COORDINATE"}):
+        return "key", "SPACE"
+    action = {"STRING_INPUT": "TEXT.QUIT", "UILIST": "UILIST.QUIT",
+              "WORLDGEN_CONFIRM_DIALOG": "WORLDGEN_CONFIRM.QUIT"}.get(state["category"], "QUIT")
+    return "action", action
+
+
 class SemanticControlSkill:
     """One immutable request; explicit clocks and retained feedback, no executor."""
     def __init__(self, request: dict | str | bytes, *, deadline_monotonic: float):
@@ -222,15 +235,7 @@ class SemanticControlSkill:
         if state["boundary"]["kind"] != "menu":
             raise _ControlBlocked("Interpreted controls require a menu boundary")
         if view["kind"] == "dismissal":
-            # The pinned input_context registers the language toggle globally.
-            # A no-choice any-key popup needs a real key, not an absent QUIT.
-            # Do not infer acknowledgement from arbitrary extra controls/rows.
-            if (state["category"] == "POPUP_WAIT" and state["ui"] is None
-                    and set(state["actions"]) - {"toggle_language_to_en"} == {"ANY_INPUT", "COORDINATE"}):
-                return (("key", "SPACE"),)
-            action = {"STRING_INPUT": "TEXT.QUIT", "UILIST": "UILIST.QUIT",
-                      "WORLDGEN_CONFIRM_DIALOG": "WORLDGEN_CONFIRM.QUIT"}.get(state["category"], "QUIT")
-            return (("action", action),)
+            return (dismissal_input(state),)
         if view["kind"] in ("direction", "confirmation"):
             if view["kind"] == "direction":
                 categories = {"DEFAULTMODE"}

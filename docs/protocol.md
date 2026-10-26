@@ -694,6 +694,43 @@ Neither path grants normal-play authority before separate truthful identity
 Claims/adoption. Ordinary dispatch checks the actual preflight receiver, so a
 menu becoming normal play cannot carry a provisional physical key into gameplay.
 
+An initial admitted Load can first expose an owned in-game menu instead of a
+normal-play receiver. This branch requires admission mode `load`, no saved
+checkpoint and no earlier normal source/adoption/checkpoint in the original
+pre-transition history. It does not extend creation or continuity reload.
+Diagnostic Observe may retain that changed-session menu against the original
+dispatch reservation. A separate same-root Load reconciliation records its
+LifecycleTransition effect with an `awaiting_control` PhaseReceipt. The terminal
+ACK remains unknown with its original charge; the menu proves neither normal
+play nor identity and supplies no provisional normal scope.
+
+Explicit same-root Load readmission may then acquire only the existing bounded
+menu-dismissal control, using the registered `QUIT`/dismissal interpretation.
+Its input comes from the existing semantic dismissal mapping, including its
+category-specific actions and supported no-choice popup key; no second menu
+catalogue or inferred key is introduced.
+Arbitrary menu selection, ordinary physical gameplay and identity adoption remain
+ineligible. Each Resume and dismissal consumes the original root and mission
+allowances. Nothing dismisses or chooses a key automatically. An actually returned
+same-session dismissal chain must establish the earliest retained normal-play
+source with a scene before the phase enters `awaiting_identity`. The normal
+inspection, both grounded identity Claims, explicit return and adoption still
+follow. An unknown dismissal stops; it cannot be recast as another expected Load
+transition. User Pause/takeover, changed custody/session, invalid evidence and
+exhausted limits retain their stopping rules.
+
+Normal-adoption commit/reopen validation authenticates the charged Resume and
+returned dismissal chain; the pure lifecycle projection additionally checks retained boundaries,
+scene, canonical source order and permitted ACK/current-capture relationships.
+The later first normal source cannot be substituted merely because it is current.
+Interrupted initial-menu history may retain its one authenticated transition and
+valid returned prefix without a normal segment, adoption or saved checkpoint.
+Game time stays unavailable and reopening restores no private phase, lease or
+execution. An unknown dismissal remains readable stopped history with its charge,
+not a verified returned prefix or completed recovery. This uses existing proof fields and stages: all semantic readers share
+the current contract, with normal-first transitions still supported. No new wire
+or persisted-format version, compatibility reader or alternate executor is added.
+
 Every actually published lifecycle input with a potentially committed effect also
 retains private dispatch correlation when it was not a registered expected transition.
 An authenticated native rejection means no input committed: retain the original

@@ -111,6 +111,19 @@ consent survives only equivalent evidence, and an identity inspection retains it
 exact completed ACK proof separately from the current checkpoint. Diagnostic
 transitions still require their existing reconciliation and readmission.
 
+The bounded initial-Load menu branch retains the same owners. When the first
+owned in-game receiver is a menu, its reconciled transition remains provisional;
+explicit readmission permits only registered menu dismissal under the original
+root. Actual returned dismissal lineage must reach the earliest normal source
+before identity inspection/adoption. Live guards, ledger commit/reopen checks and
+the pure lifecycle projection authenticate this chain together. Interrupted
+menu-only history retains evidence and costs, with unavailable game time and no
+restored phase or authority. Creation, continuity reload and normal Save retain
+their existing paths; this is not general cleanup of unadopted sessions. Reusing
+RegisteredLifecycle and one ledger helper avoids a second writer, store or
+validator service. The [protocol](../protocol.md#integrated-mission-lifecycle)
+owns the precise initial-history, custody and dismissal restrictions.
+
 An invalid adoption request preserves a positively healthy create/load phase so
 the player can explicitly correct its screen state or identity Claim selection.
 The new zero-input refusal rechecks custody, current exact evidence, lease, storage
