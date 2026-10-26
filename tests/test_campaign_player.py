@@ -117,11 +117,11 @@ class CampaignPlayerTests(unittest.TestCase):
         (self.run / "frozen" / "player-host-configuration.json").write_text(json.dumps(self.configuration))
         (self.run / "frozen" / "original-player-prompt.txt").write_text("original frozen prompt\n")
         (self.run / "frozen" / "successor-player-brief.txt").write_text("generic frozen successor brief\n")
-        self.pi_configuration = dict(schema="pi-player-host/1", model=dict(
+        self.pi_configuration = dict(schema="pi-player-host/2", model=dict(
             id="frozen-model", name="Offline fixture", api="openai-completions", provider="fixture",
             baseUrl="https://fixture.invalid/v1", reasoning=False, input=["text", "image"],
             cost=dict(input=0, output=0, cacheRead=0, cacheWrite=0), contextWindow=100000,
-            maxTokens=1024), api_key_env="OFFLINE_TEST_KEY", max_requests=20,
+            maxTokens=1024), api_key_env="OFFLINE_TEST_KEY", max_requests=20, max_context_images=4,
             request_timeout_seconds=2)
         self.context = "Frozen player guide, mission brief and complete current interface schemas.\n"
         (self.run / "frozen" / "player-pi-configuration.json").write_text(json.dumps(self.pi_configuration))

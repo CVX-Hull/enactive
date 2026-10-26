@@ -4,7 +4,8 @@ import { mkdtemp, readFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { runHost, validateConfiguration, validateMcpConfiguration, INPUT_LIMIT_BYTES } from '../host.mjs';
+import { createHash } from 'node:crypto';
+import { runHost, validateConfiguration, validateMcpConfiguration, projectImageContext, INPUT_LIMIT_BYTES } from '../host.mjs';
 
 const realSetTimeout = globalThis.setTimeout;
 const realDelay = ms => new Promise(resolve=>realSetTimeout(resolve,ms));
@@ -12,9 +13,9 @@ const python = process.env.ENACTIVE_TEST_PYTHON;
 const fixture = fileURLToPath(new URL('server.py', import.meta.url));
 const png = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j1ioAAAAASUVORK5CYII=';
 const model = { id: 'fixture-model', name: 'Offline fixture', api: 'openai-completions', provider: 'fixture', baseUrl: 'https://fixture.invalid/v1', reasoning: false, input: ['text', 'image'], cost: {input:0, output:0, cacheRead:0, cacheWrite:0}, contextWindow: 100000, maxTokens: 1024, compat: { supportsDeveloperRole:false, supportsStore:false, supportsUsageInStreaming:true } };
-const route = () => ({schema:'pi-player-host/1', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, request_timeout_seconds:2});
-function reply(content = 'finished', calls = [], withUsage = true, reasoning) {
-  const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`call-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
+const route = () => ({schema:'pi-player-host/2', model:structuredClone(model), api_key_env:'OFFLINE_TEST_KEY', max_requests:4, max_context_images:4, request_timeout_seconds:2});
+function reply(content = 'finished', calls = [], withUsage = true, reasoning, callPrefix = 'call') {
+  const delta = {role:'assistant', ...(content === null ? {} : {content}), ...(reasoning ? {reasoning_content:reasoning} : {}), ...(calls.length ? {tool_calls:calls.map(([name,args],index)=>({index,id:`${callPrefix}-${index}`,type:'function',function:{name,arguments:JSON.stringify(args)}}))} : {})};
   const chunks = [{id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta,finish_reason:null}]},
     {id:'fixture-response',model:'fixture-backend',choices:[{index:0,delta:{},finish_reason:calls.length?'tool_calls':'stop'}],...(withUsage ? {usage:{prompt_tokens:11,completion_tokens:5,total_tokens:16}} : {})}];
   return new Response(chunks.map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n', {headers:{'content-type':'text/event-stream'}});
@@ -52,6 +53,107 @@ test('route is closed, graphical, finite and model/effort exact', ()=>{
   }
   assert.throws(()=>validateConfiguration(route(),'other','off'));
   assert.throws(()=>validateConfiguration(route(),model.id,'low'));
+  assert.throws(()=>validateConfiguration({...route(),schema:'pi-player-host/1'},model.id,'off'));
+  for (const value of [undefined,0,-1,1.5,true,'2',NaN,Infinity,Number.MAX_SAFE_INTEGER+1]) {
+    assert.throws(()=>validateConfiguration({...route(),max_context_images:value},model.id,'off'));
+  }
+  const missing=route();delete missing.max_context_images;
+  assert.throws(()=>validateConfiguration(missing,model.id,'off'));
+});
+
+test('image projection copies canonical messages and protects the entire latest tool batch',()=>{
+  const image={type:'image',mimeType:'image/png',data:png};
+  const messages=[{role:'assistant',content:[{type:'toolCall',id:'old',name:'observe',arguments:{}}]},
+    {role:'toolResult',toolCallId:'old',content:[image,{type:'text',text:'source-old'}]},
+    {role:'assistant',content:[{type:'thinking',thinking:'keep reasoning'},
+      {type:'toolCall',id:'current-image',name:'observe',arguments:{}},
+      {type:'toolCall',id:'current-text',name:'integer',arguments:{value:1}}]},
+    {role:'toolResult',toolCallId:'current-image',content:[image]},
+    {role:'toolResult',toolCallId:'current-text',content:[{type:'text',text:'source-current'}]}];
+  const original=structuredClone(messages);
+  const freeze=value=>{if(value && typeof value==='object'){Object.values(value).forEach(freeze);Object.freeze(value);}};
+  freeze(messages);
+  const projected=projectImageContext(messages,1);
+  assert.deepEqual(messages,original);
+  assert.notEqual(projected.messages,messages);
+  assert.notEqual(projected.messages[3].content,messages[3].content);
+  assert.deepEqual(projected.messages.slice(2),original.slice(2));
+  assert.equal(projected.summary.protected_images,1);
+  assert.equal(projected.summary.omitted_images,1);
+  const marker=projected.messages[1].content[0];
+  assert.equal(marker.type,'text');
+  assert.ok(marker.text.includes('toolCallId=old'));
+  assert.ok(marker.text.includes('image_index=0'));
+  assert.ok(marker.text.includes(createHash('sha256').update(Buffer.from(png,'base64')).digest('hex')));
+  assert.ok(marker.text.includes('no authority'));
+});
+
+test('projection omits individual historical images and bounds provenance previews',()=>{
+  const images=Array.from({length:20},(_,index)=>({type:'image',mimeType:'image/png',
+    data:Buffer.from(`historical-${index}`).toString('base64')}));
+  const messages=[{role:'assistant',content:[{type:'toolCall',id:'history',name:'observe',arguments:{}}]},
+    {role:'toolResult',toolCallId:'history',content:[{type:'text',text:'keep source-history'},...images]},
+    {role:'assistant',content:[{type:'toolCall',id:'current',name:'integer',arguments:{value:1}}]},
+    {role:'toolResult',toolCallId:'current',content:[{type:'text',text:'current result'}]}];
+  const projected=projectImageContext(messages,2);
+  assert.equal(projected.summary.omitted_images,18);
+  assert.equal(projected.summary.omissions.length,16);
+  assert.equal(projected.summary.omitted_provenance_entries,2);
+  assert.equal(projected.messages[1].content[0].text,'keep source-history');
+  assert.ok(projected.messages[1].content[18].text.includes('image_index=17'));
+  assert.deepEqual(projected.messages[1].content.slice(-2),images.slice(-2));
+  assert.deepEqual(messages[1].content.slice(1),images);
+});
+
+test('actual serializer caps newest history images while retaining text, reasoning, pairs and original traces',async t=>{
+  const configuration=route();configuration.max_context_images=2;
+  const reasoning='Full historical reasoning is retained.';
+  const {result,payloads,events,calls}=await scenario(t,[
+    reply(null,[['observe',{}],['observe',{}]],true,reasoning,'old'),
+    reply(null,[['observe',{}],['integer',{value:7}]],true,reasoning,'current'),
+    reply(null,[['observe',{}]],true,reasoning,'newest'),reply()],{configuration});
+  assert.equal(result.ok,true);assert.equal(result.requests,4);assert.equal(calls.length,5);
+  const imageCount=payload=>payload.messages.flatMap(message=>Array.isArray(message.content)?message.content:[])
+    .filter(part=>part.type==='image_url').length;
+  assert.deepEqual(payloads.map(imageCount),[0,2,2,2]);
+  for(const payload of payloads.slice(2)) {
+    const assistants=payload.messages.filter(message=>message.role==='assistant');
+    const callIds=assistants.flatMap(message=>message.tool_calls?.map(call=>call.id)??[]);
+    assert.deepEqual(payload.messages.filter(message=>message.role==='tool').map(message=>message.tool_call_id),callIds);
+    assert.ok(assistants.every(message=>message.reasoning_content===reasoning));
+    assert.equal(JSON.stringify(payload).split('x'.repeat(30001)).length-1,callIds.length-1);
+    assert.ok(JSON.stringify(payload).includes('source-1'));
+  }
+  const thirdTools=payloads[2].messages.filter(message=>message.role==='tool');
+  assert.ok(thirdTools[0].content.includes('toolCallId=old-0'));
+  assert.ok(!thirdTools[1].content.includes('Historical pixels omitted'));
+  assert.ok(!thirdTools[2].content.includes('Historical pixels omitted'));
+  assert.equal(thirdTools.at(-1).tool_call_id,'current-1');
+  const projections=events.filter(event=>event.type==='context-image-projection');
+  assert.deepEqual(projections.map(event=>event.omitted_images),[0,0,1,2]);
+  assert.equal(projections[2].protected_images,1,'text-only last result must not hide current batch images');
+  assert.deepEqual(projections[3].omissions.map(item=>item.tool_call_id),['old-0','old-1']);
+  const originalResults=events.filter(event=>event.type==='tool-result' && event.tool==='observe');
+  assert.equal(originalResults.length,4);
+  assert.ok(originalResults.every(event=>event.result.content.some(part=>part.type==='image' && part.data===png)));
+  assert.ok(originalResults.every(event=>!JSON.stringify(event).includes('Historical pixels omitted')));
+  assert.deepEqual(events.filter(event=>event.type==='request-start').map(event=>event.payload),payloads);
+  assert.equal(events.find(event=>event.type==='host-start').max_context_images,2);
+});
+
+test('oversized current batch stops without charging or sending its next request',async t=>{
+  const configuration=route();configuration.max_context_images=1;
+  const {result,payloads,events,calls}=await scenario(t,[
+    reply(null,[['observe',{}],['observe',{}],['integer',{value:9}]],true,undefined,'oversized'),
+    reply(null,[['mutate',{mode:'ok',index:99}]],true,undefined,'never-sent')],{configuration});
+  assert.equal(result.ok,false);assert.equal(result.reason,'context-image-limit');
+  assert.equal(result.requests,1);assert.equal(payloads.length,1);
+  assert.deepEqual(calls.map(call=>call.tool),['observe','observe','integer']);
+  assert.equal(events.filter(event=>event.type==='request-start').length,1);
+  const projection=events.filter(event=>event.type==='context-image-projection').at(-1);
+  assert.equal(projection.protected_images,2);assert.equal(projection.blocked,true);
+  assert.equal(projection.omitted_images,0);
+  assert.ok(!events.some(event=>event.type==='tool-start' && event.tool==='mutate'));
 });
 for (const fail of [false,true]) test(`actual provider payload preserves full text, PNG and known error=${fail}`, async t=>{
   const {result,payloads,events,calls} = await scenario(t,[reply(null,[['observe',{fail}]]),reply()]);
@@ -175,7 +277,7 @@ test('real production MCP discovery forwards exact current nested schemas only',
   const root=fileURLToPath(new URL('../../../',import.meta.url));
   const {stdout}=await promisify(execFile)(python,['-c','import json; from harness.player_tools import tool_specs; print(json.dumps({s.name:s.schema for s in tool_specs()}))'],{cwd:root,maxBuffer:INPUT_LIMIT_BYTES});
   const expected=JSON.parse(stdout), payloads=[], events=[];
-  const chosen=['enactive_skill','enactive_result','enactive_snapshot'];
+  const chosen=['enactive_skill','enactive_result','enactive_snapshot','enactive_source'];
   const result=await runHost({configuration:route(),mcpConfig:{command:resolve(python),args:['-m','harness.player_mcp'],cwd:root,enabled:true,enabled_tools:chosen,startup_timeout_sec:5,tool_timeout_sec:1},context:'Frozen context',prompt:'Do not call tools.',model:model.id,effort:'off',timeoutSeconds:10,env:{OFFLINE_TEST_KEY:'fixture-key'},fetch:async(_url,init)=>{payloads.push(JSON.parse(init.body));return reply();},onEvent:e=>events.push(e)});
   assert.equal(result.ok,true);
   assert.deepEqual(payloads[0].tools.map(tool=>tool.function.name),chosen);
