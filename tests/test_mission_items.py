@@ -188,7 +188,9 @@ class MissionItemTests(unittest.TestCase):
         threading.Event().wait(max(0, deadline - self.runtime._wall() + .03))
 
     def test_consumption_observe_after_root_expiry_preserves_lineage_without_input(self):
-        self.begin_consumption_activity(wall_seconds=1)
+        # Establish the activity before testing expiry. The declared root covers
+        # both setup operations; expiry is still awaited against its real deadline.
+        self.begin_consumption_activity(wall_seconds=10)
         root = self.runtime._ledger.request("consume-root")
         phase, lease = self.runtime._prompt_phase, self.runtime._lease
         before, delivered = self.runtime.status()["spent_inputs"], copy.deepcopy(self.bridge.delivered)
@@ -211,7 +213,7 @@ class MissionItemTests(unittest.TestCase):
         self.assertEqual(self.bridge.requests[-1]["kind"], "observe")
 
     def test_expired_consumption_menu_requires_explicit_durable_closure(self):
-        self.begin_consumption_activity(wall_seconds=1)
+        self.begin_consumption_activity(wall_seconds=10)
         root = self.runtime._ledger.request("consume-root")
         phase, lease = self.runtime._prompt_phase, self.runtime._lease
         before, delivered = self.runtime.status()["spent_inputs"], copy.deepcopy(self.bridge.delivered)
