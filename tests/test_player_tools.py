@@ -228,6 +228,32 @@ class ActivityPollBindingTests(unittest.TestCase):
                 await exercise(client)
         asyncio.run(run())
 
+    def test_paused_load_menu_inspect_is_unsubmitted_before_any_staging_or_io(self):
+        from tests.test_mission_request_producer import phase
+        arguments = self.arguments(scope="lifecycle")
+        selected = self.player.snapshots["selected"]
+        selected["mission"].update(phase="paused", pause_cause="unknown", unreconciled=0,
+            lifecycle_phase=phase(selected["source"], operation="load", stage="awaiting_control"))
+        arguments["intent"].update(skill_kind="inspect", goal=dict(purpose="character_identity"))
+        before = deepcopy(selected)
+
+        async def exercise(client):
+            with patch.object(self.backend, "_stage", wraps=self.backend._stage) as stage, \
+                    patch.object(self.backend, "submit", wraps=self.backend.submit) as submit:
+                reply = await client.call_tool("enactive_skill", arguments)
+                self.assertTrue(reply.is_error)
+                value = json.loads(reply.content[0].text)
+                self.assertEqual(value["submission"], "not_submitted")
+                self.assertIn("separate readmission", value["error"])
+                self.assertNotIn("original_collection", value)
+                self.assertNotIn("next_snapshot", value)
+                stage.assert_not_called()
+                submit.assert_not_called()
+        self.run_client(exercise)
+        self.assertEqual(self.player.snapshots["selected"], before)
+        self.assertEqual((self.backend.reads, self.backend.writes, self.backend.events), ([], [], []))
+        self.assertFalse((self.root / ".runtime/mission-requests").exists())
+
     def test_new_poll_on_selected_menu_is_unsubmitted_without_staging_or_refresh(self):
         async def exercise(client):
             for fault in ("menu", "absent", "unread"):

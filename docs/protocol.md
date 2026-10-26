@@ -706,6 +706,11 @@ play nor identity and supplies no provisional normal scope.
 
 Explicit same-root Load readmission may then acquire only the existing bounded
 menu-dismissal control, using the registered `QUIT`/dismissal interpretation.
+The transition result names that separate readmission step. The pure producer
+refuses skill composition from a selected paused, reconciled Load-menu snapshot
+before staging and explains this sequence. This as-of guidance neither refreshes
+the source nor establishes current custody, health or authority; receiver checks
+remain decisive for every submitted request.
 Its input comes from the existing semantic dismissal mapping, including its
 category-specific actions and supported no-choice popup key; no second menu
 catalogue or inferred key is introduced.

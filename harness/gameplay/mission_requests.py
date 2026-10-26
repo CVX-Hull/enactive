@@ -203,6 +203,18 @@ def compose_request(snapshot: dict, *, request_id: str, intent: dict, limits: di
     request = validate_submission({**data, "schema": VERSION, "mission_id": snapshot["mission_id"],
         "epoch": snapshot["epoch"], "request_id": request_id, "limits": limits, "phase_id": parent,
         "sources": ([] if primary is None else [primary]) + list(supporting_source_ids), **binding})
+    phase = snapshot["lifecycle_phase"]
+    if (request["kind"] == "skill" and scope == "lifecycle"
+            and snapshot.get("phase") == "paused" and snapshot.get("pause_cause") == "unknown"
+            and snapshot.get("unreconciled") == 0 and type(phase) is dict
+            and phase.get("operation") == "load" and phase.get("stage") == "awaiting_control"
+            and source["observation"]["in_game"]
+            and source["observation"]["boundary"]["kind"] == "menu"):
+        raise ContractError("The selected Load menu snapshot is still paused after reconciliation. "
+            "Explicitly call enactive_lifecycle with operation=load and scope=lifecycle under the "
+            "same root, selecting this checkpoint, with no identity Claims or Work, for separate readmission. "
+            "Only then may a supported menu dismissal reach actual normal play before identity inspection. "
+            "This as-of guidance establishes neither current custody nor freshness or input authority.")
     if (request["kind"] == "skill" and request["skill_kind"] == "activity"
             and scope in ("prompt", "activity") and request["goal"]["step"] == "poll"
             and source["observation"]["boundary"]["kind"] != "activity_poll"):

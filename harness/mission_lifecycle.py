@@ -1018,6 +1018,10 @@ class RegisteredLifecycle:
         else:
             result["phase"] = self.receipt(phase, phase.stage,
                 extra=(self._source(proof["before_source_id"]), candidate.first_after))
+            if not normal_entry:
+                result["reason"] = ("Load transition reconciled; the menu remains paused without input authority. "
+                    "Select this checkpoint in a separate same-root lifecycle Load call with no identity Claims "
+                    "or Work for readmission. Then dismiss the menu to actual normal play before inspecting identity.")
             if normal_entry:
                 result["provisional_scope"] = {"mission_id": r._admission.mission_id,
                     "session": phase.first_normal.session, "coordinate_epoch":

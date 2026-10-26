@@ -3125,8 +3125,16 @@ class MissionRuntime:
                 and self._exit_phase is None and self._registered_lifecycle.phase is None
                 and self._registered_activity.phase is None and self._registered_recovery.phase is None
                 and self._registered_recovery.continuation is None):
-            self._refuse_admission(work,
-                "No live prompt owns this child; observe and choose a new root from current evidence")
+            candidate = self._registered_lifecycle.candidate
+            reason = "No live prompt owns this child; observe and choose a new root from current evidence"
+            if candidate is not None and data["phase_id"] == candidate.phase.root_id:
+                reason = ("Retained lifecycle evidence is diagnostic-only; it cannot establish transition "
+                    "reconciliation or input authority. Do not replay uncertain input; report the unsupported transition."
+                    if candidate.diagnostic_only else
+                    "The original lifecycle transition still requires same-root reconciliation. "
+                    "Use explicit Observe and the same lifecycle operation/root with its retained diagnostic evidence; "
+                    "do not choose a new root or replay the uncertain input. Reconciliation grants no input authority.")
+            self._refuse_admission(work, reason)
             return
         work.admission_started_monotonic = time.monotonic()
         try:

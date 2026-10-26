@@ -33,6 +33,12 @@ view and image. Mechanical IDs, waits, canonical metadata and joins belong to
 software. It must not guess intent, choose supporting evidence, repair malformed
 arguments, replay input or turn a detail read into a new observation.
 
+For a reconciled initial Load menu, the transition result explains the separate
+same-root readmission required before menu dismissal and identity inspection.
+The producer refuses a premature skill from that selected paused snapshot before
+staging; it does not refresh evidence, Resume or establish current authority.
+The [lifecycle contract](../protocol.md#integrated-mission-lifecycle) owns the sequence.
+
 For an activity child, the player chooses only the step and any explicit YES/NO
 answer. Before staging, player tools collect the exact original request selected
 by the published phase through the existing read-only result interface. The pure
