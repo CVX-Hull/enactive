@@ -164,7 +164,9 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
                 proposal_index={"type": "integer", "minimum": 0, "maximum": 63},
                 candidate_index={"type": "integer", "minimum": 0, "maximum": 3})))
         specs.append(ToolSpec("enactive_" + kind,
-            "Write explicit evidence-linked memory through the existing ledger. For Claims choose key, value, text, coverage, status, grounding and support groups. "
+            "Write explicit evidence-linked memory through the existing ledger. "
+            "Set intent.entry_type alongside intent.entry, never inside entry. The selected entry contains only that memory type's fields. "
+            "For Claims choose key, value, text, coverage, status, grounding and support groups. "
             "Identity keys choose world/character; software supplies the existing name unit/coverage, interpretation kind, schema/record type, Claim ID, scope/native observation order and host receipt time. "
             "Source grounding source_id=null selects the exact cached snapshot source; explicit IDs require a prior source read. "
             "coordinate_epoch=null uses only matching published coordinate_scope; before adoption or without a match, explicitly select the epoch from existing provisional_scope or a historical receipt. "

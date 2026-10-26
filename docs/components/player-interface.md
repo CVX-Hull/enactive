@@ -110,6 +110,11 @@ The actual host's loaded schema, image presentation and context sufficiency need
 qualification; SDK tests alone do not establish those properties. Routine player
 work starts with the compact [guide](../player-guide.md), frozen mission and
 selected tool schema, without source archaeology or the engineering corpus.
+Memory authoring keeps its type selector at `intent.entry_type`, alongside
+`intent.entry`. The tool description and guide make that envelope explicit;
+software neither moves misplaced fields nor adds another memory type's fields
+to repair a draft. Pi can reject malformed arguments before MCP dispatch, so its
+union-schema diagnostics are not evidence of a missing gameplay capability.
 
 The campaign driver always uses the generic Pi core host with the same MCP server
 and handoff/custody guards. Both original and successor start fresh, with explicit

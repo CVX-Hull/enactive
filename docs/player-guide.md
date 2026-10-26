@@ -80,7 +80,12 @@ denial or stop solely because a successful tool ran from a read-only host.
 - An eligible Procedure/3 can contain `program={language:javascript/1, source:...}`
   or null for advice. In `enactive_remember` choose the content, evidence,
   counterexamples/status and `parent=null` for a new family or an explicit
-  qualified parent already returned by `enactive_context`. Omit schema/record/IDs,
+  qualified parent already returned by `enactive_context`. The envelope is
+  `intent={entry_type:"procedure", entry:<semantic procedure body>}` (structure
+  only; the current schema defines the complete body). `entry_type` is alongside
+  `entry`, never inside it. Keep only Procedure fields in that body; an unrelated
+  Claim-branch schema error does not require adding Claim fields to a Procedure.
+  Omit schema/record/IDs,
   mission/family/revision number and environment: software derives these from the
   assigned operation and selected cached snapshot. An unavailable parent needs
   explicit memory retrieval. For background candidates, read
