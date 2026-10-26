@@ -3,10 +3,10 @@ owner: lead
 review_trigger: Correction to program-breadth evidence or a later actual qualification
 status: historical
 date: 2026-10-25
-scope: Represented-UI source probe and eight bounded native cases; integrated completion and whole-player responsiveness remain unqualified
+scope: Represented-UI source probe and nine bounded native cases; scoped program-assisted useful effect plus normal ending, without responsiveness qualification
 ---
 
-# Program breadth: a learned local effect, with incomplete normal ending
+# Program breadth: useful program-assisted lighting and normal ending
 
 The existing conditional-program runtime can follow a represented non-travel
 UI workflow across reordered rows, yield on missing/disabled/ambiguous required
@@ -15,11 +15,13 @@ The [new probe](../../tests/test_program_ui_execution.py) found no production
 executor gap. It uses real JavaScript, MissionRuntime and its writer with the
 existing synthetic transport and trusted-admission fixture. It is **source-contract
 evidence only**. The separate native cases below supply actual learning and a
-narrow useful effect; they do not supply an integrated normal-ending pass or
-whole-player apparent-latency qualification.
+narrow useful effect. Case009 combines player-derived conditional row selection,
+same-root ordinary completion of useful lighting, and registered normal ending.
+This is a program-assisted workflow, without whole-player apparent-latency
+qualification or fully automated final-menu handling.
 
-[#222](https://github.com/CVX-Hull/enactive/issues/222) owns the still-open useful
-learned-program outcome. Every live assessment uses its own frozen finite
+[#222](https://github.com/CVX-Hull/enactive/issues/222) owns the useful
+learned-program outcome and its publication/closeout. Every live assessment uses its own frozen finite
 allocation; the source probe itself starts no game or provider call. The
 mandatory generic Pi host remains current independently of model selection.
 
@@ -66,7 +68,7 @@ Protected exact-candidate PR/main profiles and their actual outcomes belong in
 the implementation PR under the existing delivery policy; these local results
 are not a full-regression or native-build claim.
 
-The required integrated result remains a player-derived/adopted conditional procedure
+The frozen required integrated result is a player-derived/adopted conditional procedure
 actually advancing a useful non-travel workflow, followed by normal registered
 Save/owned exit/Finish. Apparent whole-player latency means useful visible progress,
 exposed stalls and yield/recovery, retaining authorship/revision/wait/failure costs.
@@ -643,3 +645,120 @@ forwarding, accounting, uncertainty and ending. The integrated#222 result is
 still incomplete. The next increment must address the deciding configuration
 or demonstrated planning/verification gap through an explicit bounded decision;
 normal ending and an honestly reported failure do not complete the feature.
+
+
+## 009: program-assisted useful lighting and normal ending
+
+The lead separately selected one configuration assessment after008's reviewed
+missed submenu decisions. [PR249](https://github.com/CVX-Hull/enactive/pull/249)
+published that failure evidence at `c8b89fc5c9f77121c98bd3578be84a48584cf4bc`,
+tree-identical to reviewed `7b41f7d`. Exact editorial PR40273944012 and actual
+main40274221414 passed attempt1 in36.63s and24.08s. Runtime remained unchanged
+from full-qualified `0fcb4cb`: full PR40267263121 passed2,176 tests/4,096 subtests;
+actual main40268024360 passed main-smoke119/373. The immediate admission check
+reused the maintained complete editorial-delta classifier and verified all four
+profiles, exact native/provider/schema and independent final-package review.
+No new runtime, native build, schema or authority path was introduced.
+
+The same pinned Flash version/Pi1.4.0/native ran with medium reasoning,
+16,384 output tokens and a240-second provider guard, instead of low/8,192/120s.
+An injected-fetch SDK smoke used no real provider request, game or credential;
+the actual first provider body then confirmed medium/16,384. This establishes
+serialized configuration, not backend effort attestation or a causal quality
+comparison. Provider reasoning documentation informed a separately bounded
+quality hypothesis; no alternate model, donor procedure, adviser, successor,
+restoration, retries or lead tactics were supplied. The user had approved
+necessary budget expansions and the same game-data-to-DeepInfra LLM use.
+
+Load/reconciliation/readmission and identity adoption completed. A wrong world
+Claim blocked adoption without input; a failed wrong-scope memory correction
+was followed by a fresh grounded Claim and adoption. Ordinary activation found
+the held flashlight had0 charges. The current Use-item menu exposed a disabled
+flashlight and an enabled smartphone with53/56 battery. The player authored and
+explicitly selected a conditional row-selection procedure from those sources.
+
+| Actual application | What happened |
+| --- | --- |
+| Request34, `op-62d6e3e…`, Procedure `revision-1c504a33…` | A proposed DOWN input omitted required `modifiers: []`. Policy validation stopped before any native input. This is an authoring failure, not an executor defect. |
+| Request38, `op-a3b58707…`, Procedure `revision-8561c905…` | Five local evaluations recomputed target/current row positions, sent DOWN three times and ENTER once, then stopped for inspection. The phone function menu opened at source `d89ad86d…`, revision33. Four inputs ran locally in one model-selected application. |
+| Request40 then41 | A new program root was refused before submission because that prompt was still open. The player deliberately used ordinary displayed hotkey0 under the original prompt root. Its inherited ProcedureUse retained root `op-a3b58707…` and corrected executable lineage; lighting actually became bright. |
+
+The corrected executable is a new procedure family, revision1 with parent null.
+An attempted parent-linked write was refused as unavailable before submission;
+it is a semantic correction across two stored families, not a committed revision2
+or demonstrated formal revision transfer. The first memory write also failed
+because cited sources/requests were unrelated. Both failures remain retained.
+The actor final's description of one ENTER omits the three preceding DOWN inputs;
+its request/phase shorthand does not replace the actual ledger.
+
+![Actual009 before: very dark shelter; held flashlight has no charges.](assets/program-breadth-009/before-lighting.png)
+
+![Actual009 after: smartphone flashlight app activated; shelter lighting is bright.](assets/program-breadth-009/after-lighting.png)
+
+The unmodified native before/after sources are `ef6dc5c1…` revision21 and
+`1ba42d7b…` revision37, same owned session. The latter says “You activate the
+flashlight app,” shows `Lighting: bright` and visibly illuminates the floor and
+benches; turn5213302→5213303. The held flashlight remains off because the useful
+light comes from the phone. This is actual useful shelter improvement, not only
+cursor movement or program termination. The selected program substantially
+advances that workflow through conditional item selection and activation, with
+ordinary image-informed completion under its original root, cumulative five
+inputs and original150-second/ten-input envelope. The frozen criterion requires
+advancement of a useful workflow and permits ordinary fallback; it does not
+require every final input to be generated locally. Independent review supports
+that scoped positive result. Fully automatic lighting, live yield/correction
+branches, transfer and causal learning benefit remain unqualified.
+
+Normal registered Save began about595 mission seconds after admission. Two
+semantic confirmation attempts were refused for the nonverbatim stage question;
+ordinary confirmation and separate transition reconciliation established
+SavedCheckpoint. OwnedNormalExit returned0, followed by separate NormalFinish
+with disposition `stopped`, about745.201 mission seconds after admission. That
+truthful disposition leaves broader objectives unclaimed; it does not negate
+the independently verified useful effect. The Load/Save/Quit dispatch ACKs remain
+unknown and charged, with separate lifecycle/exit effect evidence and no replay.
+22 charged inputs comprise19 returned and3 unknown. No native cleanup signal or
+successor occurred. Controller SIGINT closed the service only after normal game
+ending. All five exact PIDs and port8766 were absent;12of242 opaque save file
+identities changed with no additions/removals or save interpretation.
+
+The host settled in773.384 seconds and the driver ran773.763 seconds. The local
+program tool interval was889.872ms for its four inputs and submenu result; it
+is not a useful-effect endpoint. The failed-flashlight capture to bright capture
+was286.845s on the shared host wall clock, including exploration, authorship
+and correction. In the browser's same-process monotonic clock, the first Use-item
+list DOM→bright DOM interval was267.135s; phone submenu DOM→bright DOM was49.670s,
+retaining Observe, the refused new root, player reasoning and ordinary completion.
+These expose the workflow's wait; they are not a validated routine-decision cohort. The exact bright capture at1792993507768 reached DOM replacement at
+1792993507909:141ms, with9.9ms decode. This is a display proxy assuming a stable
+shared host clock, not screen paint or end-to-end useful decision latency. The
+final browser export retains225 frame and2,505 status records with no overflow,
+including failures/stale history after service closure. No p95, two-second cadence
+pass or local useful-effect500ms claim follows.
+
+All60 actual provider requests reported usage:168,846 uncached input,
+6,522,368 cache-read and49,223 output tokens, including24,682 reasoning tokens.
+Configured estimate$0.102437208 is not billing. Full new-case reservation is
+$13.1727360. Prior348 requests retain their original$74.6913792 reservation;
+fresh cumulative408 requests therefore reserve$87.8641152, within the concrete
+$100 ceiling. Known configured estimates total$0.937456576; four earlier unknown
+usage records, invoices and aggregate engineering cost remain unknown. The
+original four-hour forecast is historical, not a claim about actual total effort.
+No failure/cache/promotion refund renews a request or mission limit.
+
+Cached input share was97.4766%. There were no image omissions or blocked
+projections; at most30 images were forwarded. Constructed bodies totalled
+126,844,909 bytes, maximum3,829,339, with934 repeated image appearances and
+78,099,961 decoded image bytes. Request-start→response-complete median7.197s and
+maximum81.904s are diagnostics. High cache share and this single changed-effort
+case establish neither cache speedup nor a faster/better model. Stable-prefix
+caching, context/image work, output/reasoning, upload/compression and display
+cost remain relevant to#164's next complete-player assessment.
+
+Case009 satisfies the small integrated breadth outcome: a deliberately selected
+player-derived conditional program advances a useful non-travel workflow, and
+normal Save/owned exit0/Finish follows in the same assessment. Earlier failures
+remain failures. Appropriate publication, current guidance/tracker reconciliation
+and owned closure complete#222; the full20-useful-decision cohort, whole-player
+responsiveness and seven-day readiness remain#164/#145, without a new live trial
+or causal benchmark from this closeout.
