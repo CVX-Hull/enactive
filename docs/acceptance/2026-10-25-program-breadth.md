@@ -3,7 +3,7 @@ owner: lead
 review_trigger: Correction to program-breadth evidence or a later actual qualification
 status: historical
 date: 2026-10-25
-scope: Represented-UI source probe and seven bounded native cases; integrated completion and whole-player responsiveness remain unqualified
+scope: Represented-UI source probe and eight bounded native cases; integrated completion and whole-player responsiveness remain unqualified
 ---
 
 # Program breadth: a learned local effect, with incomplete normal ending
@@ -556,3 +556,90 @@ The integrated#222 outcome remains incomplete. The next offline correction is
 program-authoring contract clarity; a later native assessment requires its own
 explicitly selected finite source/configuration/resource freeze. No automatic
 retry, actor revival or weakening of useful-effect/normal-ending criteria follows.
+
+## 008: valid local execution, missed submenu decisions
+
+[PR248](https://github.com/CVX-Hull/enactive/pull/248) published the authoring
+clarification and007 closeout at `2689c5034ac271d5631179591112e714d1199d9a`,
+with the identical reviewed `2c8f3a5` tree. Exact editorial PR40270661904 and
+actual-main40270870033 passed attempt1 in35.74s and25.42s. Runtime/native behavior
+was unchanged from full-qualified0fcb4cb. The custodian reused the maintained CI
+editorial selector for that complete five-file delta and rechecked all four
+qualifying/publication profiles before credential access. No full-runtime rerun
+or native rebuild was claimed for the documentation change.
+
+After closed007 review, the lead separately selected one008 assessment with
+clearer existing field/key contracts and healthy replanning within original
+remaining limits. The same model/low effort, native, mandatory Pi and no donor/
+adviser/successor remained fixed. The allocation was80 new requests after290
+prior, or370 maximum reserving$79.4132480 within an$80 ceiling, applying the
+user's necessary-expansion approval. No automatic following trial was authorized
+by that freeze. Useful learned non-travel advancement plus normal ending stayed
+required; task preconditions did not grant new input authority or resources.
+
+Load, identity and adoption succeeded. Ordinary exploration found a crafting
+refusal with the visible message that the player could not see to craft; pickup,
+butcher and disassembly attempts established no material conversion. This does
+not establish that all material work or lighting options were impossible.
+
+Two actual authored/selected program applications ran:
+
+| Program | Local execution and actual outcome |
+| --- | --- |
+| `op-766c9cae…`, revision `726174153840…` | Seven evaluations/six returned inputs selected and activated the smartphone. Its submenu exposed `Turn on flashlight` at row7, but the confirm branch accepted default row0, `Calories intake tracker`. The result was an800-kcal popup, not lighting. The original final's900-kcal figure is incorrect. |
+| `op-c55c2cd6…`, revision `f4697fbeb331…` |17 evaluations/16 returned inputs selected pocket knife and Wield correctly. The next prompt asked what to do with the old flashlight, with `Store in inventory` selected. The generated close branch sent `ESC`, cancelling that required prompt. Wield stayed flashlight off. |
+
+![Actual008 smartphone submenu: flashlight option present; calorie tracker selected.](assets/program-breadth-008/smartphone-options.png)
+
+![Actual008 additional disposition prompt that the generated program cancelled.](assets/program-breadth-008/stop-wielding.png)
+
+These are unmodified native captures, sources `e6e56d56…` and `bd8bfb8f…`. The
+second routine's immediate result `3e0d633d…`, later normal frame `8040ba7…` and
+the saved-checkpoint normal endpoint `a9f955cc…` consistently show flashlight off.
+A delayed HUD or engine refusal is unnecessary to explain the failed wield.
+Provider request43 received the exact current source42 PNG, SHA256
+`9869d183ef69da49fa5b46e7b7ed7f72508ac0ede76369629a4ffb2dae835d54`, image29of29,
+with one protected image and no omission. Missing latest-image delivery is excluded.
+The original actor final is retained with these narrower causal/count corrections.
+
+Neither program established its intended useful effect. The executor ran the
+proposed inputs; generated control flow missed visible additional decisions.
+Program `done`,24 local evaluations and22 returned inputs across two model
+requests demonstrate local execution, not useful progress or a latency pass.
+No new executor, native capability or authority repair is established here.
+Further scope/configuration judgment belongs in#222 before another native case.
+
+Normal ending succeeded. The first Save was cancelled when `ENTER` resolved as
+No; a later lowercase `y` left confirmation unchanged. Uppercase `Y` produced
+SavedCheckpoint. Owned normal exit0 and a separate NormalFinish with disposition
+`stopped` followed, approximately864.247 mission seconds after admission. The
+three original Load/Save/Quit ACKs remain unknown with separate effect evidence;
+Quit uses OwnedNormalExit.48 charged inputs comprise45 returned and3 unknown;
+126 frames were charged and898 remained. No replay, successor or native cleanup
+signal occurred. Later all five exact PIDs and port8766 were absent.10of242
+opaque save identities changed, with no additions/removals or save interpretation.
+
+Actual usage was58 requests, all reported:1,253,987 uncached input,5,094,016
+cache-read and50,489 output tokens, including28,607 reasoning tokens. Configured
+estimate$0.311654896 is not billing; full-case reservation$12.4485632. Fresh
+cumulative actual requests are348, reserving$74.6913792; known configured
+estimates total$0.835019368. Earlier unknown usage/invoices and aggregate
+engineering cost remain unknown. Failure/cache savings never renew caps.
+
+Cached input share was80.24596%.14 request projections omitted69 older image
+appearances, including repeated context; at most38 pre-projection images became
+at most30 forwarded, with no blocked projection. Constructed bodies totalled
+142,110,185 bytes, maximum4,539,380. These are not wire/upload or isolated cache
+benefit measurements. Request-start→response-complete median8.369s and maximum
+53.211s are API diagnostics; driver elapsed was910.164s. The exact calorie-popup
+and unchanged-wield frames reached DOM replacement252ms and177ms after native
+capture, with9.4ms and9.7ms decode, assuming a shared host wall clock. These are
+failure-frame proxies, not paint or useful-effect endpoints. Final browser export
+dropped no records. No useful-response cohort, percentile or causal benefit is
+established;#164 and#145 remain separate.
+
+Independent review verified actual control flow, native frames, exact image
+forwarding, accounting, uncertainty and ending. The integrated#222 result is
+still incomplete. The next increment must address the deciding configuration
+or demonstrated planning/verification gap through an explicit bounded decision;
+normal ending and an honestly reported failure do not complete the feature.
