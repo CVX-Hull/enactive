@@ -54,6 +54,17 @@ class CampaignProcedureTests(unittest.TestCase):
         values = dict(max_bytes=32768, now_monotonic=100, now_timestamp_ms=1_000_000)
         return self.memory.context(scope(), "water", **(values | changes))
 
+    def test_historical_program_selection_refuses_before_support_reads_or_primitives(self):
+        from types import SimpleNamespace
+        from tests.test_procedures import historical
+        old = historical(procedure(status="active", program={"language": "javascript/1", "source": "old code"}))
+        read = unittest.mock.Mock(side_effect=AssertionError("Historical execution must refuse before source reads"))
+        self.memory.library = SimpleNamespace(records=lambda: (old,), source=read)
+        with self.assertRaises(ContractError):
+            self.memory.select_procedure({"mission_id": old["mission_id"], "revision_id": old["id"]})
+        read.assert_not_called()
+        self.assertEqual(self.ledger.primitive_records(), ())
+
     def test_oversized_procedure_closure_is_omitted_before_reading_support_images(self):
         episodes = [self.episode(number) for number in range(30, 47)]
         first = procedure(mission_id=self.admission.mission_id, support=episodes[:8])

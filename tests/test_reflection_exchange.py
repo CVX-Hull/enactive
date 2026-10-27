@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 
 from harness.gameplay.contracts import ContractError, canonical
-from harness.gameplay.procedures import validate_procedure
+from harness.gameplay.procedures import import_procedure, validate_procedure
 from harness.gameplay.mission_contracts import validate_request
 from harness.gameplay import reflection
 from harness.gameplay.reflection import (
@@ -34,7 +34,7 @@ def procedure():
 def job(**changes):
     request = {"schema": "mission/11", "kind": "observe", "request_id": "request-1",
                "mission_id": "mission-a", "epoch": 0}
-    return {"schema": "reflection/2", "record_type": "ReflectionJob", "id": "job-1",
+    return {"schema": "reflection/3", "record_type": "ReflectionJob", "id": "job-1",
             "mission_id": "mission-a", "reflector_id": "reflector-a", "epoch": 0,
             "memory_version": 1, "after_sequence": 0, "through_sequence": 1,
             "included_request_ids": ["request-1"], "omitted_requests": 0,
@@ -46,7 +46,7 @@ def job(**changes):
 
 
 def proposal(**changes):
-    return {"schema": "reflection/2", "record_type": "ReflectionProposal", "id": "proposal-1",
+    return {"schema": "reflection/3", "record_type": "ReflectionProposal", "id": "proposal-1",
             "job_id": "job-1", "mission_id": "mission-a", "reflector_id": "reflector-a",
             "epoch": 0, "cutoff_sequence": 1, "memory_version": 1,
             "candidates": [procedure()],
@@ -57,7 +57,7 @@ def proposal(**changes):
 
 
 def command(command_id="command-1", *, submit=False, **changes):
-    value = {"schema": "reflection/2", "kind": "submit" if submit else "claim",
+    value = {"schema": "reflection/3", "kind": "submit" if submit else "claim",
              "command_id": command_id, "mission_id": "mission-a",
              "reflector_id": "reflector-a", "job_id": "job-1", **changes}
     if submit:
@@ -77,6 +77,39 @@ def publish(exchange, *, phase="active", jobs=None, proposals=None, **changes):
 
 
 class ReflectionValidationTests(unittest.TestCase):
+    def test_old_reflection_versions_refuse_in_jobs_proposals_and_commands(self):
+        for validator, original in ((validate_job, job()), (validate_proposal, proposal()),
+                                    (validate_command, command()), (validate_command, command(submit=True))):
+            for version in ("reflection/1", "reflection/2"):
+                with self.subTest(validator=validator.__name__, version=version), self.assertRaises(ContractError):
+                    validator({**original, "schema": version})
+        envelope = command(submit=True)
+        envelope["proposal"]["schema"] = "reflection/2"
+        with self.assertRaises(ContractError):
+            validate_command(envelope)
+
+    def test_jobs_accept_historical_lineage_inputs_but_candidates_remain_current(self):
+        original = procedure()
+        original["environment"]["native_protocol"] = 6
+        historical = import_procedure(canonical(original), ledger_sha256="b" * 64, index_sha256="c" * 64)
+        value = job(procedures=[historical, procedure()])
+        self.assertEqual(validate_job(value), value)
+        self.assertEqual(validate_proposal(proposal(), value), proposal())
+        envelope = command(submit=True)
+        envelope["proposal"]["candidates"] = [historical]
+        for validator, invalid in ((validate_proposal, proposal(candidates=[historical])),
+                                    (validate_command, envelope),
+                                    (validate_job, job(procedures=[original])),
+                                    (validate_job, job(procedures=[{**historical, "advisory_only": False}])),
+                                    (validate_job, job(procedures=[{**historical, "parameters": [
+                                        {"name": "p", "description": "first"},
+                                        {"name": "p", "description": "second"}]}]))):
+            with self.subTest(validator=validator.__name__), self.assertRaises(ContractError):
+                validator(invalid)
+        exchange = ReflectiveExchange()
+        publish(exchange, jobs=[wrapper(value)], proposals=[proposal()])
+        self.assertEqual(exchange.next_job(mission_id="mission-a", reflector_id="reflector-a")["job"]["job"], value)
+
     def test_adapter_schema_is_defensive(self):
         first = reflection.proposal_schema()
         first["properties"].clear()
@@ -156,6 +189,8 @@ class ReflectionValidationTests(unittest.TestCase):
         historical["mission_id"] = "historical"
         historical["support"][0] = {"mission_id": "historical", "request_ids": ["old-request"],
                                     "source_ids": ["old-source"], "interpretation": "Old example"}
+        historical["environment"]["native_protocol"] = 6
+        historical = import_procedure(canonical(historical), ledger_sha256="b" * 64, index_sha256="c" * 64)
         candidate = procedure()
         candidate["support"] = deepcopy(historical["support"])
         note = {"kind": "question", "text": "Review old example", "request_ids": ["old-request"],

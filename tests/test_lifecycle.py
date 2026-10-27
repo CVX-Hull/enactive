@@ -580,10 +580,12 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(adopted_timeline(self.ledger, self.store), timeline)
 
     def admit_library(self):
-        archive = library_fixtures.ProcedureLibraryTests()
+        archive = library_fixtures.SealedProcedureArchiveTests()
         archive.root = self.root
         archive.environment = library_fixtures.procedure()["environment"]
         _, _, record, pin = archive.archive()
+        from harness.gameplay.advisory_export import export_current
+        export_current(archive.root, [pin], validator_revision="0" * 40)
         self.library = self.enterContext(ProcedureLibrary(self.root, [pin], current_mission_id=self.a.mission_id))
         self.ledger.close()
         self.a = replace(self.a, learning=LearningPolicy(archive.environment, (LibrarySource(**pin),)))

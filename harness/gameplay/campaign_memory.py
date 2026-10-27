@@ -81,7 +81,8 @@ class CampaignMemory:
         policy = self.ledger.admission.learning
         if (records and policy is None or policy is not None and policy.library_sources and self.library is None):
             raise ContractError("Procedure retrieval requires its admitted library and environment")
-        if policy is not None and any(record["environment"] != dict(policy.environment) for record in records):
+        if policy is not None and any(record["schema"] == "procedure/3"
+                                      and record["environment"] != dict(policy.environment) for record in records):
             raise ContractError("Procedure history crosses its admitted environment")
         return project_procedures(records)
 
@@ -168,7 +169,8 @@ class CampaignMemory:
         heads = self._procedure_heads()
         chosen = next((entry for entry in heads.values() if self._procedure_ref(entry) == {
             key: selection[key] for key in ("mission_id", "revision_id")}), None)
-        if chosen is None or chosen["status"] not in ("candidate", "active"):
+        if (chosen is None or chosen["schema"] != "procedure/3"
+                or chosen["status"] not in ("candidate", "active")):
             raise MemoryRequestRefusal("Select an eligible current procedure revision, with scoped applicability")
         self._procedure_support(chosen)
         return _copy(chosen)

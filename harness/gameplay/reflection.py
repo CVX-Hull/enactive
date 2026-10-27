@@ -20,9 +20,11 @@ from .contracts import (
     canonical, json_object, validate_json,
 )
 from .mission_contracts import validate_request
-from .procedures import procedure_schema, validate_procedure
+from .procedures import (
+    lineage_node_schema, procedure_schema, validate_lineage_node, validate_procedure,
+)
 
-VERSION = "reflection/2"
+VERSION = "reflection/3"
 MAX_JOB_BYTES = 65_536
 MAX_PROPOSAL_BYTES = 32_768
 MAX_COMMAND_BYTES = MAX_PROPOSAL_BYTES + 2048
@@ -51,7 +53,7 @@ _JOB_SCHEMA = _object({
     "trajectory": _array(_object({"request": {"type": "object"},
         "state": _enum("completed", "partial", "blocked", "failed", "unknown", "paused"),
         "result": {"type": "object"}}), 32, 1),
-    "procedures": _array(procedure_schema(), 16),
+    "procedures": _array(lineage_node_schema(), 16),
 })
 _PROPOSAL_SCHEMA = _object({
     "schema": {"const": VERSION}, "record_type": {"const": "ReflectionProposal"},
@@ -105,7 +107,7 @@ def validate_job(value: dict | str | bytes) -> dict[str, Any]:
     if request_ids != result["included_request_ids"]:
         raise ContractError("Reflection trajectory must preserve included request IDs and order")
     for record in result["procedures"]:
-        validate_procedure(record)
+        validate_lineage_node(record)
     return result
 
 

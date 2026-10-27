@@ -24,7 +24,7 @@ from .gameplay.mission_contracts import (
 )
 from .gameplay.mission_requests import _source_binding, compose_request
 from .gameplay.policy_program import program_result_schema
-from .gameplay.procedures import author_procedure, procedure_authoring_schema, validate_procedure
+from .gameplay.procedures import author_procedure, procedure_authoring_schema, validate_lineage_node, validate_procedure
 from .gameplay.reflection import (
     MAX_REFLECTION_READ_WAIT_SECONDS, proposal_schema, validate_command, validate_job, validate_proposal,
 )
@@ -210,7 +210,7 @@ def request_tool_specs() -> tuple[ToolSpec, ...]:
         _object({**common, "source_id": identity, "intent": {"anyOf": readmit}})))
     context = _without(request_schema("context", handoff=True), "schema", "kind", "mission_id")
     context["properties"]["scope"] = _without(context["properties"]["scope"], "mission_id")
-    specs.append(ToolSpec("enactive_context", "Retrieve complete current memory/provenance; choose explicit successor binding for required Work. Does not claim or Resume.",
+    specs.append(ToolSpec("enactive_context", "HistoricalProcedure is advisory/exact-parent data and cannot execute; retrieve its historical images explicitly and author a current same-family revision against current evidence. Retrieve complete current memory/provenance; choose explicit successor binding for required Work. Does not claim or Resume.",
         _object(dict(snapshot_id=identity, intent=context)), True))
     proposal = proposal_schema()["properties"]
     reflection_scope = dict(mission_id=identity, reflector_id=identity)
@@ -598,7 +598,7 @@ class PlayerTools:
             if offered["status"] == "claimed":
                 claim = self.client.reflection_collect(mission_id, reflector_id, identity, wait_seconds=wait)
             else:
-                command = validate_command(dict(schema="reflection/2", kind="claim", command_id=identity,
+                command = validate_command(dict(schema="reflection/3", kind="claim", command_id=identity,
                     mission_id=mission_id, reflector_id=reflector_id, job_id=job["id"]))
                 claim = self.client.reflection_command(command, wait_seconds=wait)
             if claim["status"] != "committed":
@@ -652,12 +652,12 @@ class PlayerTools:
                 identity = "candidate-" + hashlib.sha256((data["request_id"] + "\0" + str(index)).encode()).hexdigest()
                 candidates.append(author_procedure(entry, mission_id=mission_id,
                     identity=identity, environment=environment, parent=selected))
-            proposal = validate_proposal(dict(schema="reflection/2", record_type="ReflectionProposal",
+            proposal = validate_proposal(dict(schema="reflection/3", record_type="ReflectionProposal",
                 id="proposal-" + hashlib.sha256(data["request_id"].encode()).hexdigest(),
                 job_id=job["id"], mission_id=job["mission_id"], reflector_id=job["reflector_id"],
                 epoch=job["epoch"], cutoff_sequence=job["through_sequence"], memory_version=job["memory_version"],
                 candidates=candidates, **{field: data[field] for field in ("notes", "reason")}), job)
-            command = validate_command(dict(schema="reflection/2", kind="submit", command_id=data["request_id"],
+            command = validate_command(dict(schema="reflection/3", kind="submit", command_id=data["request_id"],
                 mission_id=mission_id, reflector_id=reflector_id, job_id=job["id"], proposal=proposal))
         except ContractError as exc:
             # Only immutable cache lookup and pure validation precede this
@@ -795,7 +795,7 @@ class PlayerTools:
                 if context.get("mission_id") != snapshot["mission_id"]:
                     raise ContractError("Returned procedure context belongs to another mission")
                 for value in (context.get("packet") or {}).get("procedures", ()):
-                    record = validate_procedure(value)
+                    record = validate_lineage_node(value)
                     self._remember(self.procedures, (record["mission_id"], record["id"]), record)
             return self._finish(envelope)
         try:

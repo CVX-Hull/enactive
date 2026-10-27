@@ -15,8 +15,8 @@ Use the component views for understanding before this exact reference:
 and [observer/operations](components/observer-operations.md). Select the relevant
 section below; routine contributors and players need not read this whole reference.
 Authority rules are [S-PROTOCOL](engineering.md#s-protocol-command-and-observation-authority).
-Current source is native7/mission11/ledger12/archive6, with procedure/3,
-campaign-memory/6, reflection/2 and program-view/2; gameplay/2 is unchanged.
+Current source is native7/mission11/ledger13/archive6, with procedure/3,
+campaign-memory/6, reflection/3 and program-view/2; gameplay/2 is unchanged.
 Matching native7 marker qualification is a separate required lane from the
 historical native6 ordinary-input/normal-lifecycle evidence in
 [capture001](acceptance/2026-10-22-native-capture-preconditions.md). That old run
@@ -1029,7 +1029,7 @@ existing admission and establishes no native survival outcome.
 its Pause reason; former Stop `finish` fields and every prior mission schema
 reject. The current mission/11 contract migrates CLI, viewer, requests, results and fixtures
 without an alias or automatic old-admission import. Campaign-memory/6, procedure/3,
-reflection/2, SQLite ledger12, native wire7 and archive6 migrate together; gameplay/2
+reflection/3, SQLite ledger13, native wire7 and archive6 migrate together; gameplay/2
 remains unchanged. Prior accepted reports and raw older mission/memory/ledger
 artifacts remain historical evidence, not current request inputs. Closed failed
 missions stay closed; a new admission uses a new mission directory, with no
@@ -1420,7 +1420,7 @@ verified terminal suffix or explicit stop. Historical phase IDs grant no authori
 This selected source path does not establish semantic success, native recovery or
 general recovery from already-returned but uninterpretable outcomes.
 
-Mission/10 and ledger12 migrate all current producers, callers and persisted readers
+Mission/11 and ledger13 migrate all current producers, callers and persisted readers
 together. Earlier mission versions, ledger7 and its old untyped effect shape reject
 without conversion. Retain old mission artifacts and saves as evidence; only a
 separately admitted current mission can start anew. Migration never resets input
@@ -1729,18 +1729,42 @@ The memory path has no blanket exemption for `ContractError`. Pause and input
 custody checks remain in their existing writer/controller boundaries; memory
 writes, including after a stop, never acquire or restore authority.
 
-The read-only library uses SQLite over hash-verified bytes, shared archive locks
-and derived project paths. It never reopens a runtime writer, restores a phase or
-imports old-world Claims/Work as current facts. Only current ledger12/archive6
-input with the exact native7/mission11 procedure environment is eligible. Earlier
-contracts, including learning004/006, remain immutable historical evidence,
-unmountable as current libraries. Eligible archive phases are completed, failed,
-stopped and paused, with physical and internal closure required in every case:
-the reader holds both shared archive locks, verifies exact pins and dependency
-closure, and rejects unsettled requests, primitives, effects or reflective work.
-A paused archive cannot be read while its writer holds the exclusive locks.
-Eligibility supplies fallible historical procedures, not a completed learning
-outcome, current-world facts or authority to resume the old mission.
+The live library accepts only `advisory-export/1`, from paths derived from trusted
+root, mission ID and exact original ledger/index SHA256 pins. Raw current or legacy
+donor directories are refused. Offline engineering export first validates physical
+and internal closure under both shared source locks: eligible phases are completed,
+failed, stopped and paused; requests/primitives/effects and reflective work must be
+settled. Current raw donors use ledger13/archive6/native7. Existing exported
+ancestry is an explicit dependency of a new current export, never a raw legacy
+fallback. A paused source writer excludes offline export with its exclusive locks.
+
+One explicit offline migration supports the native6/store5/ledger12 baseline
+validated at Git9a57c57cdd60943edd6029ce8676361041314d4e. Original SQLite, index and
+PNG bytes remain unchanged. The current importer reads bounded original snapshots
+in memory, reconstructs the captured projection and compares it independently with
+the export; validator names or flags are not certification. It retains source,
+path/alias/hash/size, terminal disposition, native correlation, separate unknown-
+effect proof, qualified episode and full ancestry predicates. It imports no legacy
+module, runs no Git/subprocess, reopens no actor and follows no original path.
+Earlier unsupported baselines remain archives, including learning004/006.
+
+A closed `procedure-import/1` HistoricalProcedure preserves original identity,
+family/revision/parent, environment, disposition and program text with stored-body
+and original archive hashes. It is advisory and an exact-parent lineage node only.
+Canonical Procedure/3 remains native7-strict. An explicitly selected historical
+head may parent a new current same-family revision; new writes, current environment,
+source grounding and branch guards stay unchanged. Historical nodes are refused
+before any selected skill input, including program execution. They cannot import
+old Claims/Work, possession, identity, position or current authority.
+
+Historical images use closed `advisory-source/1` with exact mission/source/PNG
+identity. Its current captured-data projection preserves original protocol/UI as
+explicit provenance, with no synthetic marker, current program-view or top-level
+current observation. MissionClient/PlayerTools/MCP/Pi present this data and original
+image; current source binding still refuses it. Full original wire grammar is an
+offline validation duty, while current captured-data correlation is independently
+checked live. All returned advisory data grants no authority or completed learning
+outcome and cannot resume the old mission.
 
 The delivery requirement for a normally closed current-contract learning mission
 before the subsequent fresh seven-day admission remains separate. Reusing a
@@ -1762,7 +1786,7 @@ of presentation/selection, not proof of attention or causal improvement.
 
 This protocol owns the current asynchronous integration boundary; the
 [procedure/exchange design](design/procedure-learning.md) retains rationale and
-remaining proposals. Current records use reflection/2. One private
+remaining proposals. Current records use reflection/3. One private
 RegisteredReflection composes a per-admission
 passive mailbox/cache with the existing writer and SQLite ledger. Four routine
 root skills or original-request age coalesce a job. Capacity is the smaller of
@@ -2269,11 +2293,12 @@ as `retained` or `disputed` after identity/integrity verification. Disputes pers
 across newer observations and reopening, including after damaged bytes are restored.
 Stale current authority alone does not dispute historical truth. Earlier stores
 are archived evidence, not current runtime inputs; create a fresh store for a new
-task. The current donor reader likewise requires store6/native7. Closed
-native6/store5 campaigns remain immutable archival evidence and are not supported
-donors; no synthetic marker insertion, old-format reader or historical hash rewrite
-is provided. Mission/11, campaign-memory/6, Procedure/3 and source-reference shapes
-remain current; new procedure environments name native7. Engine saves remain
+task. Donor retrieval instead requires the explicit current advisory export
+contract above. The selected offline native6/store5 migration preserves original
+bytes and typed historical data; it provides no old runtime reader, synthetic
+marker insertion or historical hash rewrite. Mission/11, campaign-memory/6 and
+canonical Procedure/3 remain current; ledger13/reflection3 migrate persisted jobs
+and all callers together. New procedure environments name native7. Engine saves remain
 engine-owned and can be loaded only under a fresh supported admission, without
 importing an old mission's authority or evidence store. Neither historical status
 grants current input permission.

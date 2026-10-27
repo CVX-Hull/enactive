@@ -60,6 +60,16 @@ class NativeReceiptTests(unittest.TestCase):
             with self.subTest(changed=changed), self.assertRaises(ContractError):
                 self.validate(changed)
 
+    def test_receipt_payload_keeps_its_independent_type_guard_after_correlation_factoring(self):
+        geometry = dict(window_width=10, window_height=10, output_width=10, output_height=10, viewport=[0, 0, 10, 10])
+        proposed = intent(kind="direct", value=dict(type="click", button="left", x=1, y=2, geometry=geometry))
+        receipt = known_receipt(proposed=proposed)
+        self.validate(receipt, proposed)
+        # Python equality equates True and1; receipt shape must still be checked.
+        receipt['value'] = {**receipt['value'], 'x': True}
+        with self.assertRaises(ContractError):
+            self.validate(receipt, proposed)
+
     def test_rejected_hard_fault_or_new_session_is_known_zero_input_without_capture(self):
         receipt = known_receipt(disposition="rejected", source_after=None)
         receipt["native_ack"].update(session="new-session", revision=0, paused=True,

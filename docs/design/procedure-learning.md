@@ -15,8 +15,8 @@ Claims and unfinished Work continue to describe the current campaign; a procedur
 is advisory knowledge about how to attempt a goal under stated conditions.
 The current component architecture and protocol own implemented behavior; dated
 reports own qualification. Remaining research/evaluation proposals here do not
-define a second current contract. Current source uses procedure/3, campaign-memory/6 and reflection/2
-with native7/mission11/ledger12/archive6; gameplay/2 is unchanged. Admission uses
+define a second current contract. Current source uses procedure/3, campaign-memory/6 and reflection/3
+with native7/mission11/ledger13/archive6; gameplay/2 is unchanged. Admission uses
 `facts-procedures-reflection/3`. Remaining research/evaluation proposals below are
 not guarantees. Matching native7 build and marker qualification are separate required lanes;
 native6 graphical results retain only their original scope in dated reports. Learning009 demonstrates
@@ -92,10 +92,15 @@ Freeze transitive closure explicitly: a revision's identity is its owning missio
 plus immutable revision ID; episode request/source IDs are qualified by their own
 mission. Admission lists at most8 source missions with exact ledger/index hashes,
 including every predecessor and evidence mission needed by imported revisions.
-Only the current schema is eligible as library input; old run formats remain
-historical evidence, not a compatibility reader in live retrieval. The read-only
-resolver derives paths from validated mission IDs beneath owned project storage;
-it never accepts a caller path or opens an old ledger as a runtime actor.
+Only `advisory-export/1` is eligible as live donor input; raw missions must be
+exported offline. The known native6/store5/ledger12 baseline can be explicitly
+converted after original-contract validation at pinned historical source. Original
+bytes, program text and capture fields remain provenance, not current wire data.
+A `procedure-import/1` HistoricalProcedure participates in qualified ancestry and
+parent authoring but is refused for execution. Canonical Procedure/3 stays native7;
+reflection/3 jobs accept the lineage union and proposals remain current Procedures.
+The read-only resolver derives artifact paths from validated mission IDs and exact
+original pins; it never follows a stored original path or opens an old actor.
 
 Validate the complete bounded dependency graph, its source availability and
 parent family/revision invariants before exposing an eligible procedure. Resolve
@@ -111,7 +116,7 @@ both verify original bytes and neither refreshes native state or authority.
 
 ## Bounded asynchronous work
 
-Current job/proposal/command records use `reflection/2`; the closed schemas in
+Current job/proposal/command records use `reflection/3`; the closed schemas in
 [reflection.py](../../harness/gameplay/reflection.py) own their exact shapes.
 A job keeps its exact current request/result trajectory, request cutoff, accepted-memory version, at most8 qualified images
 and16 procedures, with explicit request/source/procedure omissions. Bounds remain

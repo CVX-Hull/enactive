@@ -179,6 +179,21 @@ class PlayerProcedureAuthoringTests(unittest.TestCase):
         self.assertEqual(record['revision'], parent['revision']+1)
         self.assertNotEqual(record['id'], parent['id'])
 
+    def test_retrieved_historical_head_is_an_exact_parent_for_current_authorship(self):
+        from tests.test_procedures import historical, successor
+        root = historical()
+        head = historical(successor(root, mission_id="older-mission"))
+        selection = dict(mission_id=head['mission_id'], revision_id=head['id'])
+        with self.assertRaisesRegex(ContractError, 'explicitly retrieve'):
+            self.submit(self.semantic(parent=selection))
+        self.reveal([head])
+        self.submit(self.semantic(parent=selection), identity='current-revision')
+        record = self.client.writes[-1]['entry']
+        self.assertEqual((record['schema'], record['environment']['native_protocol']), ('procedure/3', 7))
+        self.assertEqual((record['procedure_id'], record['revision'], record['parent']),
+                         (head['procedure_id'], 3, selection))
+        self.assertEqual(self.player.procedures[(head['mission_id'], head['id'])], head)
+
     def test_missing_or_malformed_admission_environment_submits_nothing(self):
         for environment in (None, {}, {**procedure()['environment'], 'mission_schema':'mission/10'}):
             with self.subTest(environment=environment):

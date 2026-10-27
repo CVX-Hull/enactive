@@ -64,6 +64,12 @@ then inspect what actually happened. CDDA decides outcomes. The writer accounts
 for original resources and the controller/native bridge checks current ownership
 and delivery. A returned key alone does not establish success.
 
+[Explicit offline advisory export](acceptance/2026-10-27-historical-advisory-import.md)
+preserves selected older routine lineage and original images as historical data.
+Current retrieval and same-family revision plumbing are qualified with an offline
+Pi/MCP fixture. Old code cannot execute as a current routine; useful player
+application and apparent cadence remain separate requirements.
+
 The background adviser reads recorded trajectories and proposes fallible advice
 without pausing ordinary player reasoning. Software links selected procedures,
 actions and results; the player decides applicability and adoption. Historical

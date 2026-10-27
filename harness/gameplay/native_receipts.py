@@ -51,17 +51,33 @@ def validate_published_input(intent: dict, receipt: dict, *, logical_id: str, na
     Unknown delivery alone need not have a valid admission. A separate owned-exit
     effect may only close custody when this existing native mapping is complete.
     """
-    validate_json(receipt.get("expected_revision"), _INT)
-    if (native_id is None or receipt.get("logical_action_id") != logical_id
-            or receipt.get("native_request_id") != native_id or receipt.get("published") is not True
-            or any(key not in receipt or receipt[key] != intent[key] for key in _CORRELATION)):
-        raise ContractError("Ordinary receipt contradicts its immutable logical/native mapping")
+    _published_receipt_mapping(intent, receipt, logical_id=logical_id, native_id=native_id)
     encoded = receipt.get("native_request_json")
     if type(encoded) is not str or len(encoded.encode()) > 4096:
         raise ContractError("Ordinary receipt requires bounded canonical native admission")
     request = json_object(encoded)
     if canonical(request) != encoded:
         raise ContractError("Native admission must be canonical")
+    validate_json(request, _published_input_schema(intent))
+    _published_correlations(intent, receipt, request, native_id=native_id)
+    return request
+
+
+def _published_receipt_mapping(intent: dict, receipt: dict, *, logical_id: str,
+                               native_id: str | None) -> None:
+    """Shared immutable logical mapping, without accepting any native wire."""
+    validate_json(receipt.get("expected_revision"), _INT)
+    if (native_id is None or receipt.get("logical_action_id") != logical_id
+            or receipt.get("native_request_id") != native_id or receipt.get("published") is not True
+            or any(key not in receipt or receipt[key] != intent[key] for key in _CORRELATION)):
+        raise ContractError("Ordinary receipt contradicts its immutable logical/native mapping")
+    if intent["kind"] != "resume":
+        payload = "input" if intent["kind"] == "direct" else intent["kind"]
+        validate_json(receipt["value"], _published_input_schema(intent)["properties"][payload])
+
+
+def _published_input_schema(intent: dict) -> dict:
+    """The current native7 wire schema; no version negotiation parameter."""
     properties = _OBSERVATION["properties"]
     schema = {key: properties[key] for key in ("protocol", "session", "revision", "frame", "takeover_generation")}
     schema.update(id={**_text(128), "pattern": "^[A-Za-z0-9][A-Za-z0-9_-]*$"},
@@ -72,8 +88,12 @@ def validate_published_input(intent: dict, receipt: dict, *, logical_id: str, na
     payload = "input" if intent["kind"] == "direct" else intent["kind"]
     if intent["kind"] != "resume":
         schema[payload] = input_schema() if payload == "input" else _text(160)
-        validate_json(receipt["value"], schema[payload])
-    validate_json(request, _object(schema))
+    return _object(schema)
+
+
+def _published_correlations(intent: dict, receipt: dict, request: dict, *, native_id: str | None) -> None:
+    """Compare independently validated request/captured admission to its intent."""
+    payload = "input" if intent["kind"] == "direct" else intent["kind"]
     if (request["id"] != native_id or request["session"] != intent["expected_session"]
             or request["revision"] != intent["expected_revision"]
             or request["boundary_id"] != intent["expected_boundary_id"]
@@ -84,7 +104,6 @@ def validate_published_input(intent: dict, receipt: dict, *, logical_id: str, na
         validate_input(request["input"])
         if request["require_exact_frame"] is not False:
             raise ContractError("Ordinary input must not require frame equivalence")
-    return request
 
 
 def validate_ordinary_mapping(intent: dict, receipt: dict, *, logical_id: str,
@@ -97,6 +116,13 @@ def validate_ordinary_mapping(intent: dict, receipt: dict, *, logical_id: str,
             raise ContractError("Uncertain or unpublished delivery cannot carry an authenticated ACK")
         return
     request = validate_published_input(intent, receipt, logical_id=logical_id, native_id=native_id)
+    _receipt_diagnostics(receipt, disposition=disposition)
+    ack = _validate_ack(receipt.get("native_ack"))
+    _terminal_correlations(intent, receipt, request, ack, native_id=native_id, disposition=disposition)
+
+
+def _receipt_diagnostics(receipt: dict, *, disposition: str) -> None:
+    """Keep transport state and loss/clock diagnostics independent of wire tags."""
     if receipt.get("transport_disposition") != disposition:
         raise ContractError("Ordinary receipt differs from its delivery disposition")
     for key in ("processing_error", "evidence_loss"):
@@ -106,7 +132,11 @@ def validate_ordinary_mapping(intent: dict, receipt: dict, *, logical_id: str,
     validate_json(receipt.get("received_monotonic"), {"type": "number", "minimum": 0, "maximum": 10**12})
     if not math.isfinite(receipt["received_monotonic"]):
         raise ContractError("Native ACK requires its actual finite receipt clock")
-    ack = _validate_ack(receipt.get("native_ack"))
+
+
+def _terminal_correlations(intent: dict, receipt: dict, request: dict, ack: dict, *,
+                           native_id: str | None, disposition: str) -> None:
+    """Compare validated terminal ACK facts; this confers no capture authority."""
     if ack["id"] != native_id or ack["status"] != ("ready" if disposition == "returned" else "rejected"):
         raise ContractError("Native ACK differs from its exact request/disposition")
     if disposition == "returned" and (ack["session"] != request["session"]
