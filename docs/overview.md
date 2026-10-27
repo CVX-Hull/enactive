@@ -43,8 +43,9 @@ failed runs. Later [fast-player012](acceptance/2026-10-25-program-breadth.md#cor
 stores a same-family correction and completes registered fresh retrieval/normal
 ending, but establishes no executable application; that capability remains incomplete.
 [Current imported-lineage follow-through](acceptance/2026-10-27-imported-correction-follow-through.md)
-retains setup-deadline and target-manufacture failures; useful corrected-program
-application remains unaccepted.
+retains setup-deadline, target-manufacture, player-qualification and provider-timeout
+failures. A fresh current-lineage case adopted identity but reached no routine or
+successor application. Useful corrected-program application remains unaccepted.
 
 The [registered lifecycle](components/mission-execution.md#lifecycle-and-change-review)
 can keep an initial post-Load menu provisional. Explicit bounded dismissal must

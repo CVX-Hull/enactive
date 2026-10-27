@@ -173,6 +173,11 @@ discovery, automatic compaction or host-session restoration. Provider-request
 JSON bodies are retained in the existing private host trace so actual forwarded
 context, schemas, images and reasoning history can be inspected without another
 store. Transport headers, API keys and arbitrary provider errors are excluded.
+Abort and response-completion receipts retain bounded per-attempt stream counters
+and last observed body/parser/field timestamps. These private metadata snapshots
+separate received body data from parsed string fragments without retaining raw
+generated values or renewing deadlines. Missing diagnostics and unobserved backend
+activity remain unknown; see the route contract for units and scope.
 The driver admits exactly one or two hosts through its selected `max_hosts`
 bound; a one-host nonterminal result cannot collect a handoff or assign another
 actor. This bounds participating hosts separately from each host's request cap

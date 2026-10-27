@@ -185,11 +185,14 @@ export async function runHost(options) {
   const emit = (type, fields = {}) => options.onEvent?.({type, wall_time:new Date().toISOString(), monotonic_ms:performance.now() - started, ...fields});
   let agent, client, transport, fatal, closing = false, requests = 0, requestId, requestTimer, requestInFlight = false, requestUsageAvailable = false;
   let workTimer, deadlineTimer;
+  let responseProgress;
+  const progressSnapshot = () => responseProgress ? {...responseProgress,
+    scope:requestInFlight ? 'current-http-attempt' : 'last-http-attempt'} : null;
   const stopped = new AbortController();
   const stop = reason => {
     if (fatal) return;
     fatal = reason;
-    emit('abort', {reason, request_id:requestId});
+    emit('abort', {reason, request_id:requestId, response_progress:progressSnapshot()});
     stopped.abort();
     agent?.abort();
     // Start owned transport closure immediately, including while MCP connect is
@@ -201,7 +204,7 @@ export async function runHost(options) {
     closing = true;
     return closePromise ??= (async () => {
       try { if (client) await client.close(); else if (transport) await transport.close(); }
-      catch { if (!fatal) { fatal = 'mcp-cleanup-failed'; emit('abort', {reason:fatal}); } }
+      catch { if (!fatal) { fatal = 'mcp-cleanup-failed'; emit('abort', {reason:fatal, request_id:requestId, response_progress:progressSnapshot()}); } }
     })();
   }
   const cancellation = () => stop('cancelled');
@@ -314,6 +317,10 @@ export async function runHost(options) {
             requireThat(typeof init?.body === 'string', 'invalid-provider-payload');
             const payload = JSON.parse(init.body);
             const attemptId = requestId = `request-${++requests}`;
+            const attemptProgress = responseProgress = {request_id:attemptId, body_bytes:0, body_chunks:0,
+              provider_events:0, content_bytes:0, reasoning_bytes:0,
+              tool_argument_bytes:0, last_body_chunk_ms:null, last_provider_event_ms:null,
+              last_field_delta_ms:null};
             requestInFlight = true;
             attempts++;
             if (previousRequestId) emit('provider-retry', {stage:'started', request_id:attemptId, previous_request_id:previousRequestId});
@@ -328,6 +335,9 @@ export async function runHost(options) {
             emit('response-headers', {request_id:attemptId, status:response.status});
             let first = false;
             const body = response.body?.pipeThrough(new TransformStream({transform(chunk, controller) {
+              attemptProgress.body_bytes += chunk.byteLength;
+              attemptProgress.body_chunks++;
+              attemptProgress.last_body_chunk_ms = performance.now() - started;
               if (!first) { first = true; emit('response-first-chunk', {request_id:attemptId}); }
               controller.enqueue(chunk);
             }}));
@@ -335,7 +345,7 @@ export async function runHost(options) {
             if (response.status !== 429 || attempts !== 1 || response.headers.get('x-should-retry') === 'false') return response;
             const errorBody = await refusalBody(response, requestSignal);
             if (!retryableRefusal(errorBody)) return new Response(errorBody, {status:response.status, headers:response.headers});
-            emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:429, usage_available:false, usage:null, cost_source:null});
+            emit('response-complete', {request_id:attemptId, model:model.id, provider:model.provider, stop_reason:'error', http_status:429, usage_available:false, usage:null, cost_source:null, response_progress:progressSnapshot()});
             requestInFlight = false;
             if (requests >= configuration.max_requests) {
               stop('request-limit');
@@ -355,6 +365,19 @@ export async function runHost(options) {
           // The outer request timer includes classification, SDK backoff and
           // both HTTP attempts. Disable the provider stream's nested retries.
           return stream(model, context, {...streamOptions, apiKey, fetch:observedFetch, env:{}, signal:requestSignal, maxRetries:0, cacheRetention:'short', maxTokens:model.maxTokens, timeoutMs:configuration.request_timeout_seconds * 1000, reasoningEffort:options.effort === 'off' ? undefined : options.effort, onProviderStreamEvent:chunk => {
+            responseProgress.provider_events++;
+            const eventAt = responseProgress.last_provider_event_ms = performance.now() - started;
+            const delta = Array.isArray(chunk?.choices) ? chunk.choices[0]?.delta : undefined;
+            const bytes = value => typeof value === 'string' ? Buffer.byteLength(value) : 0;
+            const contentBytes = bytes(delta?.content);
+            const reasoning = [delta?.reasoning_content, delta?.reasoning, delta?.reasoning_text].find(text);
+            const reasoningBytes = bytes(reasoning);
+            const toolBytes = (Array.isArray(delta?.tool_calls) ? delta.tool_calls : [])
+              .reduce((total, call) => total + bytes(call?.function?.arguments), 0);
+            responseProgress.content_bytes += contentBytes;
+            responseProgress.reasoning_bytes += reasoningBytes;
+            responseProgress.tool_argument_bytes += toolBytes;
+            if (contentBytes + reasoningBytes + toolBytes > 0) responseProgress.last_field_delta_ms = eventAt;
             const usage = chunk?.usage ?? chunk?.choices?.[0]?.usage;
             // Pi initializes absent usage to zero. Only publish normalized totals
             // when the provider actually reported both input and output counts.
@@ -374,7 +397,7 @@ export async function runHost(options) {
       if (event.type === 'message_end' && event.message.role === 'assistant') {
         clearTimeout(requestTimer);
         const message = event.message;
-        if (requestInFlight) emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? (message.usage?.cost?.totalFromProvider === true ? 'provider' : 'configured-rates') : null});
+        if (requestInFlight) emit('response-complete', {request_id:requestId, model:message.model, provider:message.provider, stop_reason:message.stopReason, usage_available:requestUsageAvailable, usage:requestUsageAvailable ? message.usage : null, cost_source:requestUsageAvailable ? (message.usage?.cost?.totalFromProvider === true ? 'provider' : 'configured-rates') : null, response_progress:progressSnapshot()});
         requestInFlight = false;
         if (['error', 'aborted', 'length', 'deferred'].includes(message.stopReason) && !fatal) stop(message.stopReason === 'error' ? 'provider-error' : `provider-${message.stopReason}`);
       }

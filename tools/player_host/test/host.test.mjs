@@ -220,8 +220,9 @@ test('transport loss suppresses queued mutation and subsequent inference',async 
 });
 test('request maximum is finite and exits unsuccessful if continuation needed',async t=>{
   const configuration=route(); configuration.max_requests=1;
-  const {result,payloads}=await scenario(t,[reply(null,[['observe',{}]]),reply()],{configuration});
+  const {result,payloads,events}=await scenario(t,[reply(null,[['observe',{}]]),reply()],{configuration});
   assert.equal(result.ok,false); assert.equal(result.reason,'request-limit'); assert.equal(payloads.length,1);
+  assert.equal(events.find(event=>event.type==='abort').response_progress.scope,'last-http-attempt');
 });
 test('provider errors are nonzero without leaking exception or key',async t=>{
   const {result,events}=await scenario(t,[()=>{throw new Error('fixture-key private upstream details');}]);
@@ -232,6 +233,91 @@ test('request deadline aborts actual provider stream',async t=>{
   const configuration=route(); configuration.request_timeout_seconds=.05;
   const {result}=await scenario(t,[init=>new Promise((_,reject)=>init.signal.addEventListener('abort',()=>reject(new Error('aborted')),{once:true}))],{configuration});
   assert.equal(result.ok,false); assert.equal(result.reason,'request-timeout');
+});
+test('response diagnostics count UTF8 fragments and reset for each actual request',async t=>{
+  const first=reply('é',[['observe',{}]],true,'思'), second=reply('finished');
+  const firstBytes=Buffer.byteLength(await first.clone().text()), secondBytes=Buffer.byteLength(await second.clone().text());
+  const {result,events}=await scenario(t,[first,second],{onEvent:event=>{
+    if(event.type==='response-complete') Object.freeze(event.response_progress);
+  }});
+  assert.equal(result.ok,true);
+  const completed=events.filter(event=>event.type==='response-complete');
+  const a=completed[0].response_progress,b=completed[1].response_progress;
+  assert.equal(a.request_id,'request-1');assert.equal(b.request_id,'request-2');
+  assert.equal(a.body_bytes,firstBytes);assert.equal(b.body_bytes,secondBytes);
+  assert.ok(a.body_chunks>0);assert.equal(a.provider_events,2);assert.equal(b.provider_events,2);
+  assert.equal(a.content_bytes,2);assert.equal(a.reasoning_bytes,3);assert.equal(a.tool_argument_bytes,2);
+  assert.equal(b.content_bytes,8);assert.equal(b.reasoning_bytes,0);assert.equal(b.tool_argument_bytes,0);
+  assert.ok(a.last_field_delta_ms<=a.last_provider_event_ms);
+  assert.ok(a.last_body_chunk_ms<=completed[0].monotonic_ms);
+  assert.equal(a.scope,'current-http-attempt');
+  assert.ok(!JSON.stringify(a).includes('思'));
+});
+test('partial field output and later heartbeat retain diagnostics without renewing the deadline',async t=>{
+  t.mock.timers.enable({apis:['setTimeout']});
+  const configuration=route();configuration.request_timeout_seconds=1;
+  const controller=new AbortController();let body,parsed=false;
+  const argumentsText='{"mode":"ok"}', content='private π';
+  const first='data: '+JSON.stringify({model:'fixture-stream',choices:[{index:0,delta:{role:'assistant',content,
+    tool_calls:[{index:0,id:'partial',type:'function',function:{name:'mutate',arguments:argumentsText}}]},finish_reason:null}]})+'\n\n';
+  const heartbeat=': keepalive\n\n';
+  const {result,events,payloads,calls}=await scenario(t,[init=>new Response(new ReadableStream({start(c){
+    body=c;c.enqueue(new TextEncoder().encode(first));
+    init.signal.addEventListener('abort',()=>c.error(new Error('aborted')),{once:true});
+  }}),{headers:{'content-type':'text/event-stream'}})],{configuration,signal:controller.signal,
+    onEvent:event=>{if(event.type==='response-backend')parsed=true;},
+    synchronize:async()=>{
+      try {
+        const until=Date.now()+5000;
+        while(!parsed&&Date.now()<until)await realDelay(20);
+        assert.ok(parsed);t.mock.timers.tick(400);
+        body.enqueue(new TextEncoder().encode(heartbeat));await realDelay(20);
+        t.mock.timers.tick(601);
+      } catch(error) {controller.abort();t.mock.timers.tick(10000);throw error;}
+    },
+  });
+  assert.equal(result.reason,'request-timeout');assert.equal(payloads.length,1);assert.equal(calls.length,0);
+  const progress=events.find(event=>event.type==='abort').response_progress;
+  assert.equal(progress.scope,'current-http-attempt');assert.equal(progress.request_id,'request-1');
+  assert.equal(progress.body_bytes,Buffer.byteLength(first+heartbeat));assert.equal(progress.body_chunks,2);
+  assert.equal(progress.provider_events,1);assert.equal(progress.content_bytes,Buffer.byteLength(content));
+  assert.equal(progress.tool_argument_bytes,Buffer.byteLength(argumentsText));
+  assert.ok(progress.last_body_chunk_ms>progress.last_field_delta_ms);
+  assert.ok(!JSON.stringify(progress).includes(content));assert.ok(!JSON.stringify(progress).includes(argumentsText));
+});
+test('diagnostics skip unsupported choice collections just as the pinned parser does',async t=>{
+  const unsupported=[{model:'fixture-backend',choices:{}},123].map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('');
+  const valid=await reply('ok').text();
+  const {result,events}=await scenario(t,[new Response(unsupported+valid,{headers:{'content-type':'text/event-stream'}})]);
+  assert.equal(result.ok,true);assert.equal(result.finalText,'ok');
+  const progress=events.find(event=>event.type==='response-complete').response_progress;
+  assert.equal(progress.provider_events,4);assert.equal(progress.content_bytes,2);
+});
+test('diagnostic reasoning bytes follow first nonempty alias without counting duplicates',async t=>{
+  const chunks=[{choices:[{index:0,delta:{role:'assistant',reasoning_content:'',reasoning:'思',reasoning_text:'duplicate'},finish_reason:null}]},
+    {choices:[{index:0,delta:{reasoning_content:'ρ',reasoning:'ρ'},finish_reason:null}]},
+    {choices:[{index:0,delta:{reasoning_text:'z',content:'ok'},finish_reason:'stop'}]}];
+  const body=chunks.map(chunk=>'data: '+JSON.stringify(chunk)+'\n\n').join('')+'data: [DONE]\n\n';
+  const {result,events}=await scenario(t,[new Response(body,{headers:{'content-type':'text/event-stream'}})]);
+  assert.equal(result.ok,true);assert.equal(result.finalText,'ok');
+  const progress=events.find(event=>event.type==='response-complete').response_progress;
+  assert.equal(progress.reasoning_bytes,6);assert.equal(progress.content_bytes,2);assert.equal(progress.provider_events,3);
+});
+test('abort diagnostics remain unavailable before any actual HTTP attempt',async()=>{
+  const events=[];
+  const result=await runHost({configuration:{},model:'fixture',effort:'off',timeoutSeconds:5,
+    onEvent:event=>events.push(event),fetch:()=>{throw new Error('No provider call allowed');}});
+  assert.equal(result.ok,false);assert.equal(result.requests,0);
+  assert.equal(events.find(event=>event.type==='abort').response_progress,null);
+});
+test('rate-limit diagnostic snapshots remain isolated from retry response counters',async t=>{
+  const refusal=rateLimit(), refusalBytes=Buffer.byteLength(await refusal.clone().text());
+  const {result,events,payloads}=await scenario(t,[refusal,reply('ok')]);
+  assert.equal(result.ok,true);assert.deepEqual(payloads[0],payloads[1]);
+  const [a,b]=events.filter(event=>event.type==='response-complete').map(event=>event.response_progress);
+  assert.equal(a.request_id,'request-1');assert.equal(a.body_bytes,refusalBytes);assert.equal(a.provider_events,0);
+  assert.equal(a.last_field_delta_ms,null);assert.equal(b.request_id,'request-2');
+  assert.equal(b.provider_events,2);assert.equal(b.content_bytes,2);assert.equal(b.tool_argument_bytes,0);
 });
 test('host deadline interrupts an actually started tool and closes its child',async t=>{
   // Real initialization cannot consume the controlled deadline. The outer
@@ -462,6 +548,8 @@ test('request timeout and cancellation interrupt backoff without a second attemp
       return rateLimit(undefined,{'retry-after-ms':'1000'});
     },reply()],{configuration,signal:controller.signal});
     assert.equal(result.reason,cancel?'cancelled':'request-timeout');
+    const progress=events.find(event=>event.type==='abort').response_progress;
+    assert.equal(progress.scope,'last-http-attempt');assert.equal(progress.request_id,'request-1');
     assert.equal(result.requests,1);assert.equal(payloads.length,1);
     assert.equal(events.filter(e=>e.type==='response-complete').length,1);
   });
