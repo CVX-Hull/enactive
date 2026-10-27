@@ -272,7 +272,14 @@ export async function runHost(options) {
           const projection = projectImageContext(messages, configuration.max_context_images);
           emit('context-image-projection', {request_id:`request-${requests + 1}`, ...projection.summary});
           if (projection.summary.blocked) stop('context-image-limit');
-          return projection.messages;
+          // Request-only bookkeeping follows history, preserving the stable
+          // system/tool prefix and canonical messages. Retries reuse this snapshot.
+          return [...projection.messages, {role:'user', timestamp:Date.now(), content:[{type:'text', text:
+            'Host resource status (software-generated at context construction):\n' +
+            `Actual provider HTTP attempts charged before this request: ${requests}/${configuration.max_requests}.\n` +
+            `Remaining allowance including this request: ${configuration.max_requests - requests}.\n` +
+            'An eligible retry can consume another attempt before the next status update. ' +
+            'This is resource bookkeeping, not a human task, gameplay evidence, source-read proof, authority or a latency/quality metric.'}]}];
         } catch {
           stop('context-projection-failed');
           return messages;

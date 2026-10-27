@@ -146,6 +146,15 @@ failures remain terminal. This provider-only recovery neither repeats a tool/inp
 nor revives a closed host or mission. The [host contract](../../tools/player_host/README.md)
 owns exact eligibility, bounds and unknown-usage receipts.
 
+The host appends one software-generated resource-status message after the
+request-only projected history: actual HTTP attempts charged before this request,
+and allowance remaining including it. Retries retain that context snapshot; the
+next assistant turn includes their charges. Original history and the static
+system/tool prefix stay intact. This is bookkeeping, not a human task, gameplay
+evidence, a source-read declaration, input authority or a latency/quality metric.
+It helps the player assess its frozen reserves without changing the cap or
+qualifying actual ending behavior.
+
 Both original and successor start fresh, with explicit
 frozen context instead of file-reading tools. Removed Codex launch/resume/host
 selector options are rejected. The host keeps original MCP text/images complete

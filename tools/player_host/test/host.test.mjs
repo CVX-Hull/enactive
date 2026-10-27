@@ -361,12 +361,40 @@ test('HTTP refusal status is retained before SDK rejection without raw error or 
   assert.ok(!JSON.stringify({result,events}).includes('fixture-key'));
 });
 
+test('request budget is fresh request-only bookkeeping after unchanged history',async t=>{
+  const {result,payloads}=await scenario(t,[reply(null,[['observe',{}]]),reply(null,[['observe',{}]],true,undefined,'next'),reply()]);
+  assert.equal(result.ok,true);assert.equal(result.requests,3);
+  const marker='Host resource status (software-generated at context construction):';
+  const text=message=>typeof message.content==='string'?message.content:(message.content??[]).filter(part=>part.type==='text').map(part=>part.text).join('\n');
+  for(const [index,payload] of payloads.entries()) {
+    const notes=payload.messages.filter(message=>text(message).startsWith(marker));
+    assert.equal(notes.length,1,'prior bookkeeping must not accumulate into canonical history');
+    assert.equal(payload.messages.at(-1),notes[0]);assert.equal(notes[0].role,'user');
+    assert.ok(text(notes[0]).includes(`charged before this request: ${index}/4.`));
+    assert.ok(text(notes[0]).includes(`including this request: ${4-index}.`));
+    assert.ok(text(notes[0]).includes('not a human task, gameplay evidence, source-read proof, authority or a latency/quality metric'));
+    assert.deepEqual(payload.messages[0],payloads[0].messages[0]);
+    assert.deepEqual(payload.messages[1],payloads[0].messages[1]);
+    assert.deepEqual(payload.tools,payloads[0].tools);
+  }
+  assert.deepEqual(payloads[2].messages.filter(message=>message.role==='tool').map(message=>message.tool_call_id),['call-0','next-0']);
+  assert.ok(!text(payloads[0].messages[1]).includes(marker),'original mission remains intact');
+});
+
 test('eligible 429 consumes a separate attempt with identical context and one tool execution',async t=>{
   const {result,events,payloads,calls}=await scenario(t,[
     rateLimit({type:'rate_limit_error',message:'Rate limited; fixture-key private upstream text'}),
     reply(null,[['mutate',{mode:'ok',index:1}]]),reply()]);
   assert.equal(result.ok,true);assert.equal(result.requests,3);
   assert.deepEqual(payloads[0],payloads[1]);
+  const note=payload=>{
+    const content=payload.messages.at(-1).content;
+    return typeof content==='string'?content:content.map(part=>part.text??'').join('\n');
+  };
+  assert.ok(note(payloads[0]).includes('charged before this request: 0/4.'));
+  assert.ok(note(payloads[0]).includes('An eligible retry can consume another attempt'));
+  assert.ok(note(payloads[2]).includes('charged before this request: 2/4.'));
+  assert.ok(note(payloads[2]).includes('including this request: 2.'));
   const starts=events.filter(e=>e.type==='request-start');
   assert.deepEqual(starts.map(e=>e.request_id),['request-1','request-2','request-3']);
   assert.deepEqual(starts.map(e=>e.payload),payloads);
