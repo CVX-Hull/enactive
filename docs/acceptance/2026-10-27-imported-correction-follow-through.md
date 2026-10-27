@@ -3,10 +3,10 @@ owner: lead
 review_trigger: Imported correction follow-through evidence; supersede with new evidence
 status: historical
 date: 2026-10-27
-scope: Closed Pi/DeepInfra cases015/016 and offline host budget-context improvement; no useful corrected-program acceptance
+scope: Closed015/016 and fresh014, rejected017–021 qualifications, and bounded host diagnostics; no useful corrected-program acceptance
 ---
 
-# Imported correction follow-through:015 and016
+# Correction follow-through and player qualification
 
 **[#264](https://github.com/CVX-Hull/enactive/issues/264) remains incomplete.**
 Case015 exhausted its original Load phase before adoption. Case016 completed
@@ -214,3 +214,140 @@ not a general model-incapacity claim. A further source/model qualification or
 native continuation requires its own prospective finite scope, current coupling,
 reviewed screens where selected, filled package and full outcome. No unused
 partition, source fix or metadata declaration automatically admits another case.
+
+
+## Subsequent qualification and fresh014
+
+All following lanes used clean main`99900aa0f9b2837d613368a26e8255af878edd1a`
+after PR272's full PR40584158689 and actual-main40585784510 checks each passed
+2227tests/4276subtests. None ran on the stream-diagnostic change described below.
+The signed native7/store6/program-view2 binary remained unchanged.
+
+| Qualification | Actual attempts | Result retained |
+| --- | ---: | --- |
+|017, Qwen3.8-27B low|2|Highlight passed13/13. Invoke passed nine negatives but yielded on all four positives because it read nonexistent`view.ui.category`; the supplied field was`view.category`.|
+|018, same route plus SDK field card|1|Provider reported tool use, then the one-request cap stopped continuation. No final source or recorded tool identity/payload; no semantic grade.|
+|019, Qwen3-VL-30B-A3B-Instruct off|1|Called a gameplay skill with invented snapshot`1234567890` instead of returning source. The synthetic service refused before MissionClient.|
+|020, same route plus source-only mode|1|Called a menu skill with invented snapshot`snapshot-123`. The fixture refused; no source grade.|
+|021, actual MCP Procedure-authoring capture|2|First response chose`enactive_remember` but placed Procedure fields outside`intent.entry`; SDK validation refused before MCP. Its unsubmitted source also used the wrong category field and an input array. The second tool-call arguments are unavailable. No canonical capture or semantic grade.|
+
+Each lane stopped at its frozen failure and retained the artifact; no failed
+output was replaced or regraded. All unused qualification and conditional-native
+partitions were retired. No image probe or native game ran in017–021. Owned Node
+hosts were reaped and recorded MCP children absent. These exact configurations
+failed the selected development gates; this is no general model-incapacity or
+causal prompting/context conclusion.
+
+The field card contains current SDK field locations, without a policy or solution.
+The021 capture fixture used actual SDK schema/cache/ID binding and canonical
+Procedure validation, intercepting before any client stage/submit. Invalid handles,
+foreign support, wrong tools/memory types and duplicates latched failure. Actual
+injected Pi/MCP fixtures exercised capture followed by a clean terminal response;
+a captured abstaining program still failed21 of24positive cases in independent
+replay. Shape/capture alone was never functional acceptance. Synthetic records,
+policies, handles and source-only instructions were excluded from gameplay.
+
+The later user choice selected a fresh current lineage for014; migration270 was
+already complete. Independent offline replay of all six unmodified260DeepSeek
+policies passed all78current cases, including added marker cases, with zero unsafe
+proposals. This reused limited authored-code evidence and prior native transport
+within scope. It did not repair015/016, demonstrate a new generation, excuse
+manufactured targets or establish native program effect. No old generated policy
+was supplied to014's deciding player.
+
+### Fresh014: adopted, then provider timeout
+
+014 used the exact DeepSeek Flash1017`zRTkTPfs`/medium route, standard rates,
+1048576context/16384output/30images/240second request guard, two-host/120-attempt
+maximum, and an empty historical library. The fresh parent, genuine substantive
+same-family correction, useful original progress, exact fresh-successor program
+application and normal ending all remained required. New budget visibility, SDK
+card and fresh-lineage context were hypotheses, not demonstrated policy repairs.
+The prospective maximum reservation was$180.9891328under a finite$181ceiling,
+recorded against the user's standing necessary-budget-expansion approval.
+
+Admission began22:53:01UTC. The original Load root began22:53:49.850with24inputs/
+600wall seconds. One unknown Load acknowledgement retained its original identity;
+collection, Observe and explicit same-root LifecycleTransition supplied separate
+effect proof without replay. An early identity inspection was correctly refused
+before provisional readmission; the player then explicitly readmitted, inspected,
+recorded identity interpretations, dismissed the screen and adopted at22:57:44.
+That is about234.29seconds from the Load root and also fits420seconds; no causal
+need or isolated benefit for600seconds follows. Inventory opened at22:58:39.
+
+The eight Claims are two player interpretations and six automatic native facts,
+not eight authored lessons. The character interpretation incorrectly describes
+“Female”; its cited original frame reads **“Ellis | Male.”** The exact admitted
+character name is supported. Identity adoption and opening inventory establish no
+independently verified useful task effect.
+
+![Original identity frame: Ellis | Male.](assets/correction-014/identity.png)
+
+![Last ordinary inventory frame before the timed-out request.](assets/correction-014/inventory.png)
+
+| Original source | PNG SHA256 |
+| --- | --- |
+|`7333f84f8277780ecaad35de69527060e498223fac295167bc8c60c7acb187b8`|c4873f2779dfdc5641011e6489edf04651df92740460593b24cd64fa50315901|
+|`453469adb341bbe53a7c59b36a54a79b8593bb9a2651138b1e2bc7a293f714ef`|6bb806f46ed64464a7088c37af77713d48d9e98a97063782d5ccb61737ab76ca|
+
+Request18 received HTTP200, a first body chunk and backend model identification,
+then hit the original240second request timer. No tool call or retained final text
+followed. Its trace cannot establish that the model was authoring, what partial
+content existed, whether traffic stalled, or the underlying cause. No Procedure,
+Work, correction, program request, handoff or successor occurred. Guardian Stop
+and owned native SIGTERM closed the case exceptionally; normal Save/owned exit/
+Finish did not occur. The driver report's`phase:admitted`was stale after host exit;
+the ledger's adoption proof and failed outcome remain authoritative.
+
+The initial cleanup receipt retained a defunct native PID as unresolved. A later
+check found all five recorded PIDs and port8766absent; it does not rewrite the
+original flag. All358original/export hashes and248opaque save identities remained
+unchanged.014retains23PNGs/1,953,572bytes and a434,176byte ledger. No save contents
+were parsed or edited. Loaded game-log messages are historical, not new014effects.
+
+### Updated accounting and limits
+
+| Lane | Attempts | Known configured estimate | Consumed conservative reservation |
+| --- | ---: | ---: | ---: |
+|017–021|7|$0.053192100|$0.4767744|
+|014|18|$0.033729024|$3.9518208|
+|Cumulative|735|$1.949389148known|$158.5954816|
+
+All seven qualification usages are known.014has17known usages and one unknown
+(request18); invoices, four older usages,013request22,015request15 and016request53
+remain unknown too.014's102unused attempts are retired. Its normalized119,934
+uncached input/658,304cache-read/9,654output tokens include5,648reasoning tokens
+within output; no double charge. Standard configured rates are estimates, not
+invoices; promotions/cache savings provide no worst-case capacity credit.
+
+014's request-start to response-complete median was15.424seconds and maximum
+239.997seconds, including the aborted response. Admission through custodian closure
+took about9minutes39seconds without a verified useful task effect. These spans
+do not isolate inference/queueing/upload, qualify apparent latency, establish a
+useful-decision cohort or prove causal cache/context/learning benefit. #264remains
+incomplete and #145remains no-go behind #164. No closed actor resumes and no unused
+partition automatically authorizes another case.
+
+## Bounded stream diagnostics after014
+
+The existing trace could not show mid-response body/parser/field progress on
+request18. The change accompanying this report reuses the existing Fetch transform
+and parsed-provider callback to snapshot constant-size counters/timestamps on
+abort and response completion, including429. It retains body bytes/chunks, parsed
+provider events, observed first-choice UTF8 string-fragment counts and last
+body/event/field times. Scope labels distinguish current from retained last-attempt
+metrics; state resets at each charged HTTP attempt and emitted copies do not
+change later. No raw generated text, reasoning, arguments, headers or keys are added
+to the diagnostic object. The [route contract](../../tools/player_host/README.md)
+defines units and unsupported representations.
+
+These diagnostics were unavailable in014 and cannot retrospectively explain it.
+Zero observed field bytes establishes no backend-generation fact. The change adds
+no timer renewal, retry, model/context change or input authority, and does not
+solve the timeout or qualify useful cadence. Actual Pi/MCP fixtures cover Unicode
+counts, reasoning aliases, partial output plus heartbeat under the original
+deadline, no partial tool dispatch/retry,429isolation, null pre-request data and
+last-attempt scope. A review found an initial unguarded choice-collection iterator
+could change behavior on an SDK-skipped shape; array guards and a focused negative
+fixture corrected it before publication. Appropriate protected source/actual-main
+checks remain a separate evidence lane.

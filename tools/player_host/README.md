@@ -178,3 +178,27 @@ with the preceding request ID; monotonic intervals expose actual waiting without
 inventing the SDK's planned delay. Internal blocked provider attempts create no
 fabricated response-completion receipt. Model attention, provider inference start and
 physical paint timestamps are unavailable and declared at `host-start`.
+
+`abort` and `response-complete` also snapshot constant-size `response_progress`
+metadata for the last charged HTTP attempt, or null before any attempt. Its
+`request_id` and `scope` distinguish the current attempt from a completed attempt
+retained during tool work, backoff or a request-limit refusal. Counters reset at
+each actual fetch, including a429retry; later traffic cannot mutate an emitted
+snapshot. `body_bytes`/`body_chunks` count Fetch response-body data observed by the
+existing stream transform, not compressed wire bytes or physical network arrival.
+`provider_events` counts parsed OpenAI provider events; raw SSE heartbeats can
+advance body counters without advancing parsed events.
+
+For the first choice, `content_bytes`, `reasoning_bytes` and `tool_argument_bytes`
+sum UTF8 lengths of observed string fragments. Reasoning uses Pi1.4.0's first
+nonempty `reasoning_content`/`reasoning`/`reasoning_text` alias; tool arguments use
+`tool_calls[].function.arguments`. These are neither token counts nor final
+source lengths, and do not count opaque reasoning details or other representations.
+`last_body_chunk_ms`, `last_provider_event_ms` and `last_field_delta_ms` use the
+host's monotonic clock; the last field timestamp advances only for a nonempty
+counted fragment. No generated text, reasoning or argument values are added to
+these diagnostics. Missing older diagnostics remain unknown; zero observed bytes
+does not establish absence of backend generation or explain a timeout. Recording
+progress never renews a timer, retries a partial response, changes provider
+context or authorizes tool input. Its observation overhead belongs in subsequent
+live measurements.
