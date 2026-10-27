@@ -966,3 +966,46 @@ The passive background browser retained exact source/frame correspondence: first
 The cumulative known estimate excludes four earlier unknown usage records and all invoices; the older separate44-call allocation stays closed. All59 native responses supplied usage:725,284 uncached input,5,424,896 cache-read,44,203 output including28,269 reported reasoning tokens. Known-input cached share is88.2071%. Stable native system context is32,506 bytes and tool declarations52,709; total constructed bodies119,350,098 bytes, maximum3,673,957. These are constructed JSON, not wire/upload costs. Maximum forwarded images was30; the final projection omitted four older images with provenance retained and no blocked latest group. The [automatic caching contract](https://docs.deepinfra.com/chat/prompt-caching) does not turn cache share into a causal latency result. Native API median/max8.205/95.454s and screen79.713/148.616s remain diagnostic spans, not isolated inference or useful-effect clocks.
 
 Private originals, frozen cases/oracles/helpers, failed/repaired preparation checks, actual payloads/images, ledgers, review receipts, browser timing and closure records remain under `.runtime/iteration260/` and `.runtime/campaigns/program-breadth-011/`. All three published PNGs are byte-identical to their retained native frames. The one unused native request and all old unused partitions are retired, not renewed. No new default, prompt arm, source/runtime/schema/authority change or012 follows. Existing #164/#177 own phase/applicability and exact-parent-detail follow-through; #191 owns the demonstrated marking-representation question without presuming a new framework. #217's distinct lifecycle cue and broader interruption/learning/portability gates remain unqualified; #145 stays no-go under #164.
+
+## Completed-result parent retention — 26 October 2026
+
+The source-only follow-through for [#262](https://github.com/CVX-Hull/enactive/issues/262)
+removes a mechanical obstacle exposed by011. Request29's completed accepted write
+already returned the canonical `revision-425f7365…` Procedure; request42 explicitly
+selected it but the adapter's context-only parent cache refused it. The existing
+finish path now validates the returned record against that original request and
+retains it in the same bounded32-record descriptive cache. Direct completion and
+explicit original-result collection share this behavior. The player still selects
+the qualified parent; the writer still checks current-head, branch, source and
+environment constraints. This adds no tool, store, schema, authority or automatic
+retrieval/adoption.
+
+An isolated replay read the original accepted response, immutable request and
+unchanged failed correction draft. The base adapter reproduced the exact unavailable-
+parent refusal. The changed adapter composed the unchanged semantic draft as
+canonical revision2 with the exact parent/family; no further authoring-contract
+refusal appeared. This was pure composition, with no receiver admission or program
+execution. Original trace and SQLite hashes were identical before/after. The
+historical failed revision, unexecuted program, draft's marking assumptions and
+unsupported12.1-lb baseline remain unchanged; this does not retroactively store a
+correction or establish its semantic quality. A separate valid synthetic successor
+proves actual storage through the real SDK staging, CampaignMemory and MissionLedger
+with no intervening context read. A stale branch remains refused.
+
+Focused validation passed147 tests and425 subtests, including completed-result
+validation, negative/uncertain receipts, qualified bounded copies and eviction,
+restart/explicit collection, advice versus adoption, omitted-context retrieval and
+the official MCP write→result→explicit successor loop. An initial sandboxed run
+retained33 socket-binding failures; the same focused suite passed with loopback
+permitted. A mistaken generic-host test filename collected no tests; the corrected
+existing offline Pi host suite passed in9.53s. It uses injected local HTTP, no
+provider. The21 tool names, argument schemas, read-only flags and order match the
+base; only authoring guidance changes. Fast structural checks passed. Private
+reproduction/check receipts are under `.runtime/iteration262/`; exact protected CI
+and publication evidence belong to the linked PR.
+
+No Keychain access, provider requests, native build, controller or game run was
+performed. Faster apparent play, real counterexample application/reuse, marking
+representation and the full responsiveness cohort remain unqualified under
+#164/#177/#191. The previous540-request accounting and retired allocations are
+unchanged.

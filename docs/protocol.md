@@ -1471,8 +1471,16 @@ The MCP5 `remember` procedure authoring view keeps content, program, parent choi
 evidence/counterexamples and disposition explicit. It rejects supplied copies of
 schema/record/mission/family/revision metadata. Software derives them from the
 assigned operation, frozen environment in the selected cached snapshot and an
-explicit parent previously revealed by `enactive_context`. This bounded cache
-is descriptive, not authority or a second lineage store; the existing receiver
+explicit parent previously revealed by `enactive_context` or the canonical result
+of a completed accepted Procedure write, including explicit original-result
+collection. The shared process-local32-record cache retains validated returned
+records matching the original operation's body and mission; pending, uncertain,
+rejected or malformed results do not reveal parents. Explicit candidate adoption
+uses the same completed-result path; advice exposure alone does not. Restart or
+eviction requires explicit retrieval or original-result collection. Ordinary
+selective context remains bounded to32KiB;128KiB belongs only to an actually issued
+complete handoff, with omissions preserved. This cache is descriptive, not authority
+or a second lineage store; the existing receiver
 still refuses stale/incomparable branches and unrelated support. Composition
 fetches no newer status/source or engine/save data. Canonical Procedure/3 storage
 and existing durable request staging/uncertain collection remain unchanged.

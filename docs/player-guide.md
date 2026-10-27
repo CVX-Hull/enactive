@@ -80,15 +80,20 @@ denial or stop solely because a successful tool ran from a read-only host.
 - An eligible Procedure/3 can contain `program={language:javascript/1, source:...}`
   or null for advice. In `enactive_remember` choose the content, evidence,
   counterexamples/status and `parent=null` for a new family or an explicit
-  qualified parent already returned by `enactive_context`. The envelope is
+  qualified parent already revealed by `enactive_context` or a completed accepted
+  Procedure write result, including explicit original-result collection. The envelope is
   `intent={entry_type:"procedure", entry:<semantic procedure body>}` (structure
   only; the current schema defines the complete body). `entry_type` is alongside
   `entry`, never inside it. Keep only Procedure fields in that body; an unrelated
   Claim-branch schema error does not require adding Claim fields to a Procedure.
   Omit schema/record/IDs,
   mission/family/revision number and environment: software derives these from the
-  assigned operation and selected cached snapshot. An unavailable parent needs
-  explicit memory retrieval. For background candidates, read
+  assigned operation, selected cached parent and frozen snapshot. The process-local
+  parent cache holds32 records; restart or eviction needs an explicit context read
+  or collection of the original completed write result. Ordinary selective context
+  is bounded to32KiB;128KiB is only for an actually issued complete handoff. Inspect
+  omissions and choose retrieval explicitly. Cached parents grant no authority or
+  current-head guarantee. For background candidates, read
   `enactive_advice(snapshot_id,proposal_index=null)` for compact recent candidates,
   then optionally select a returned original proposal index for full detail.
   Choose `enactive_remember` with `intent={entry_type:procedure_candidate,
