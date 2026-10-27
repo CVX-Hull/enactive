@@ -26,6 +26,10 @@ from harness.gameplay.native_input import validate_geometry, validate_input
 
 MAX_REQUEST = 4096
 MAX_WAIT = 15.0
+MAX_HISTORICAL_INCIDENTS = 256
+# The list is also carried in startup/status evidence. Leave room below the
+# existing 1 MiB client envelope for that duplication and normal status fields.
+MAX_HISTORICAL_INCIDENT_BYTES = 128 * 1024
 RECOVERY_KINDS = frozenset({"request_interrupt", "answer_interrupt", "continue_debug_once"})
 CONTROL_TERMINAL = frozenset({"prompt_opened", "answer_delivered", "dismissal_delivered", "not_applicable", "rejected"})
 NAMED_KEYS = frozenset({"ENTER", "ESC", "UP", "DOWN", "LEFT", "RIGHT", "TAB",
@@ -322,7 +326,9 @@ class Controller:
         if value is None:
             return
         if (set(value) != {"schema", "incidents"} or value["schema"] != "incident/1"
-                or not isinstance(value["incidents"], list) or len(value["incidents"]) > 64):
+                or not isinstance(value["incidents"], list)
+                or len(value["incidents"]) > MAX_HISTORICAL_INCIDENTS
+                or len(json.dumps(value["incidents"], ensure_ascii=True).encode()) > MAX_HISTORICAL_INCIDENT_BYTES):
             raise ControlError("Unsupported historical incident references")
         seen = set()
         references = []

@@ -2073,7 +2073,9 @@ before deliberately admitting another recovery. Keep historical unknown outcomes
 and their admissions; reconciliation does not infer what happened or replay input.
 
 Offline migration can preserve older unknown actions through
-`historical-incidents.json`: exact `schema: "incident/1"`, `incidents` (at most 64).
+`historical-incidents.json`: exact `schema: "incident/1"`, `incidents` (at most256
+references and128KiB for the ASCII-escaped JSON list). The aggregate bound leaves
+room for startup/status duplication within the existing client response budget.
 Each record has `id` (1–128 chars), `channel` (`gameplay`/`control`), `source_path`
 (project-relative under `.runtime/incidents/`, at most 1024 chars), `source_sha256`
 (lowercase SHA-256) and `reason` (1–1024 chars). IDs are unique per channel. Startup

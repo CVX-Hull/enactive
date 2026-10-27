@@ -387,6 +387,10 @@ unresolved identities as verified `incident/1` references in
 `historical-incidents.json`; startup validates referenced bytes without parsing
 old protocol records. These remain visible historical unknowns and grant no
 execution permission. Its evidence format3 accepted native4 observations.
+The current `incident/1` reference list admits at most256 individual identities
+and128KiB of ASCII-escaped JSON, preserving room in the existing status/client
+envelope. Larger histories require explicit reshaping; do not bundle or drop IDs
+to make a migration appear resolved.
 For the current native7/mission11/ledger12/archive6/memory6 cutover, apply the same
 stopped, hash-inventoried incident archive procedure. Preserve prior mission
 ledgers/archives as historical evidence; do not relabel them as eligible procedure

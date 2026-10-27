@@ -537,6 +537,45 @@ c.recover('continue_debug_once', expected_session=c.state['session'], expected_c
         with self.assertRaises(ControlError):
             validate_state(state(legacy_frame="old.png"))
 
+    def test_historical_cutover_preserves_individual_references_within_client_envelope(self):
+        from harness.mission_client import MissionClient
+        from harness.server import Server
+        self.controller.close()
+        archive = self.root / ".runtime/incidents/native6/request.json"
+        archive.parent.mkdir(parents=True)
+        original = b'{"protocol":6, archival bytes are not runtime input'
+        archive.write_bytes(original)
+        reference = dict(channel="gameplay", source_path=str(archive.relative_to(self.root)),
+            source_sha256=hashlib.sha256(original).hexdigest(), reason="Original delivery remains unknown")
+        path = self.controller.bridge / "historical-incidents.json"
+        for count, reason in ((133, "Original delivery remains unknown"), (256, "unknown"), (256, "x" * 280)):
+            atomic_json(path, dict(schema="incident/1", incidents=[dict(reference, id=f"original-{i}",
+                reason=reason) for i in range(count)]))
+            self.controller = Controller(self.root)
+            self.addCleanup(self.controller.close)
+            self.assertTrue(self.controller.pause_requested)
+            self.assertIsNone(self.controller._mission_lease)
+            server = Server(self.controller, 0)
+            thread = threading.Thread(target=server.serve_forever, kwargs=dict(poll_interval=.01), daemon=True)
+            thread.start()
+            try:
+                status = MissionClient(self.root).status()
+                self.assertEqual(len(status["historical_unknowns"]), count)
+                self.assertLess(len(json.dumps(status).encode()), 1_048_576)
+            finally:
+                server.shutdown()
+                thread.join(2)
+                server.server_close()
+                self.controller.close()
+        for count, reason in ((257, "unknown"), (256, "x" * 1024), (133, "\u754c" * 1024)):
+            atomic_json(path, dict(schema="incident/1", incidents=[dict(reference, id=f"original-{i}",
+                reason=reason) for i in range(count)]))
+            before = path.read_bytes()
+            with self.subTest(count=count, reason_bytes=len(reason.encode())), self.assertRaises(ControlError):
+                Controller(self.root)
+            self.assertEqual(path.read_bytes(), before)
+            self.assertEqual(archive.read_bytes(), original)
+
     def test_startup_rejects_unsupported_stored_versions_and_preserves_evidence(self):
         self.controller.close()
         request = {"protocol": 7, "id": "uncertain", "kind": "action", "action": "UP",
